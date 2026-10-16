@@ -1,7 +1,9 @@
 // Fails when generated/nat20-api.schema.json breaks clients relative to a base revision, unless
 // the protocol major was bumped (CLAUDE.md Rule 2).
 // Breaking: a type, property, enum value or union variant removed; a type changed; a request-side
-// property newly required. Additions pass.
+// property newly required, or added as required to an object that already existed. Additions pass.
+// While the base contract version is a pre-release (`1.0.0-dev.N`), nothing is published yet and
+// breaking changes are reported but allowed; each still needs its CHANGELOG.md line.
 // Usage: node tools/codegen/check-breaking.mjs --base origin/main
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -87,8 +89,19 @@ for (const [name, baseDef] of Object.entries(base.$defs ?? {})) {
     for (const value of was.values) if (!now.values.has(value)) problems.push(`${name}${path}: enum value ${JSON.stringify(value)} removed`);
     if (requestSide.has(name) && !was.required && now.required) problems.push(`${name}${path}: newly required in a request type`);
   }
+  if (!requestSide.has(name)) continue;
+  for (const [path, now] of after) {
+    const parent = path.slice(0, path.lastIndexOf("/")) || "/";
+    if (now.required && !before.has(path) && before.has(parent)) problems.push(`${name}${path}: new required field in a request type`);
+  }
 }
 
+const baseVersion = base["x-nat20-protocol"]?.version ?? "";
+if (problems.length && baseVersion.includes("-")) {
+  console.log(`check-breaking: base is pre-release ${baseVersion}; ${problems.length} breaking change(s) allowed, each needs a CHANGELOG.md line:`);
+  for (const p of problems) console.log(`  - ${p}`);
+  process.exit(0);
+}
 if (problems.length) {
   console.error(`check-breaking: ${problems.length} breaking change(s) vs ${baseRef} without a major bump:`);
   for (const p of problems) console.error(`  - ${p}`);

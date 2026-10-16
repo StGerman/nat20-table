@@ -3,6 +3,14 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.2 (2026-10-16)
+- All v1 commands from the review draft (CON-2): `new_session`, `load_scene`, `get_state`, `get_sheet`, `legal_actions`, `submit`, `react`, `end_turn`, `move`, `request_check`, `group_check`, `short_rest`, `start_combat`, `end_combat`, `spawn`, `events`, each with a typed result.
+- Views: `State` (`dm` or `player`), `CreatureFull`, `CreatureObserved` (no HP or AC field), `Sheet`, `ActionOption`, `Awaiting` with `prompt_id`.
+- Events: `Event` with `seq`, `visibility` and 19 kinds; `RollView` (`full` for the DM, `player` for players); `hit_points` replaces `hp_after`.
+- Errors: `not_implemented` code and `hint` (`legal_option_ids`, `awaiting`).
+- Envelope, breaking while pre-release: `viewer` is required on every request; `Response` always carries `events`, `awaiting` and `log_head`.
+- Deviations from the review draft are listed at the top of `contract/protocol.md`.
+
 ## 1.0.0-dev.1 (2026-10-16)
 - Envelope: `Request { v, id, cmd }`, `Response { v, id, ok, result, error }`; `result` is tagged by the same `cmd` as the request.
 - Command `hello` returning `protocol`, `version`, `engine_rev`, `schema_sha256`.

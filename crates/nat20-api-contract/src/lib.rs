@@ -8,18 +8,34 @@
 //! JSON object per line on its stdout (a [`Response`]). Ordering, idempotency, lifecycle and
 //! visibility rules that a schema cannot express live in `contract/protocol.md`.
 //!
-//! Status: contract v1 under construction. CON-1 ships the envelope, `hello` and the error
-//! model; CON-2 backfills the remaining v1 commands from the accepted v1 draft.
+//! Modules:
+//! - [`envelope`]: requests, responses, every command and its result.
+//! - [`state`]: state and sheet views, legal action options, what the engine is waiting on.
+//! - [`events`]: the session log and the roll views.
+//! - [`errors`]: error codes, reject reasons and hints.
+//! - [`vocab`]: identifiers, geometry and the rules enums the other modules share.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+pub mod envelope;
+pub mod errors;
+pub mod events;
+pub mod state;
+pub mod vocab;
+
+pub use envelope::*;
+pub use errors::*;
+pub use events::*;
+pub use state::*;
+pub use vocab::*;
 
 /// Protocol name returned by `hello`.
 pub const PROTOCOL_NAME: &str = "nat20-api";
 /// Protocol major version; every request carries it as `v`.
 pub const PROTOCOL_MAJOR: u8 = 1;
 /// Full contract version (semver). Bump with every change and log it in `contract/CHANGELOG.md`.
-pub const CONTRACT_VERSION: &str = "1.0.0-dev.1";
+pub const CONTRACT_VERSION: &str = "1.0.0-dev.2";
 
 /// The protocol major version. Only `1` exists; any other value is rejected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,143 +79,7 @@ impl JsonSchema for V1 {
     }
 }
 
-/// One request line sent to the engine.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct Request {
-    /// Protocol major version.
-    pub v: V1,
-    /// Client-unique request id. A repeated id returns the stored response and does not execute again.
-    pub id: String,
-    /// The command and its fields, tagged by `cmd`.
-    #[serde(flatten)]
-    pub command: Command,
-}
-
-/// Every command the engine accepts, tagged by `cmd`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "cmd", rename_all = "snake_case")]
-pub enum Command {
-    /// Handshake: protocol name, versions and the schema hash. Clients refuse to start on a hash mismatch.
-    Hello,
-}
-
-/// One response line written by the engine, answering exactly one [`Request`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct Response {
-    /// Protocol major version.
-    pub v: V1,
-    /// The request id this answers; `null` only when the request line was too malformed to read an id.
-    pub id: Option<String>,
-    /// `true` when the command succeeded and `result` is set; `false` when `error` is set.
-    pub ok: bool,
-    /// The command's result, tagged by the same `cmd` as the request. Set when `ok` is true.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub result: Option<CommandResult>,
-    /// Why the command failed. Set when `ok` is false.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub error: Option<ApiError>,
-}
-
-/// The typed result of each command, tagged by `cmd`.
-///
-/// Variants are struct variants, never newtype variants: schemars renders a tagged newtype variant
-/// as `$ref` plus sibling keywords, which the TS generator drops, losing the tag.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "cmd", rename_all = "snake_case")]
-pub enum CommandResult {
-    /// What the engine says about itself on `hello`.
-    Hello {
-        /// Always `nat20-api`.
-        protocol: String,
-        /// Full contract version (semver), e.g. `1.0.0`.
-        version: String,
-        /// The `nat20_core` revision the engine was built against.
-        engine_rev: String,
-        /// SHA-256 of `generated/nat20-api.schema.json`. Clients compare it with the hash they were generated from.
-        schema_sha256: String,
-    },
-}
-
-/// A failed request.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct ApiError {
-    /// Machine-readable failure class.
-    pub code: ErrorCode,
-    /// Finer reason for `rejected`; absent for other codes.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub reason: Option<RejectReason>,
-    /// One plain sentence written for a model or a human. Never Rust debug output.
-    pub message: String,
-    /// Whether the same request can succeed after the caller changes its input or waits.
-    pub retryable: bool,
-}
-
-/// Machine-readable failure classes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ErrorCode {
-    /// Malformed JSON, a missing or wrongly typed field, or an unknown `cmd`.
-    BadRequest,
-    /// `v` is not a version this engine speaks.
-    UnsupportedVersion,
-    /// The command needs a session and none exists.
-    NoSession,
-    /// The command needs a loaded scene and none is loaded.
-    NoScene,
-    /// The creature handle is not in this scene.
-    UnknownCreature,
-    /// The option id is not offered by the current prompt.
-    UnknownOption,
-    /// The check id is not defined by the scene.
-    UnknownCheck,
-    /// The anchor id is not defined by the scene.
-    UnknownAnchor,
-    /// The spawn id is not declared by the scene.
-    UnknownSpawn,
-    /// The actor is not the one the engine is waiting on.
-    NotYourTurn,
-    /// The prompt id does not match the pending prompt.
-    StalePrompt,
-    /// The viewer may not see what it asked for.
-    NotVisible,
-    /// A combat command in explore mode, or the reverse.
-    WrongMode,
-    /// The engine refused a well-formed decision; see `reason`.
-    Rejected,
-    /// An engine bug. The request did nothing; details go to stderr.
-    Internal,
-}
-
-/// Why the engine refused a well-formed decision.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum RejectReason {
-    /// The target is beyond the option's range.
-    OutOfRange,
-    /// No creature can be targeted by this option.
-    NoValidTarget,
-    /// The chosen target cannot be targeted by this option.
-    InvalidTarget,
-    /// The actor lacks the resource (slot, use, movement) the option costs.
-    InsufficientResource,
-    /// The action type has already been used this turn.
-    ActionAlreadyUsed,
-    /// A condition on the actor prevents the option.
-    ConditionPrevents,
-    /// The actor does not know this spell or feature.
-    NotKnown,
-    /// The option needs a target.
-    NeedsTarget,
-    /// The option needs a point.
-    NeedsPoint,
-    /// The option needs a variant.
-    NeedsVariant,
-}
-
 /// Schema root: every type that crosses the wire. Exported by `export-schema`; not itself sent.
-///
-/// Its fields carry no doc comments on purpose: a description next to a `$ref` makes the TS
-/// generator emit duplicate types (`Request1`, `Response1`).
 #[derive(JsonSchema)]
 #[allow(dead_code, missing_docs)]
 pub struct Nat20Api {
@@ -213,7 +93,7 @@ mod tests {
 
     #[test]
     fn hello_round_trips() {
-        let line = r#"{"v":1,"id":"c-1","cmd":"hello"}"#;
+        let line = r#"{"v":1,"id":"c-1","viewer":"dm","cmd":"hello"}"#;
         let request: Request = serde_json::from_str(line).unwrap();
         assert_eq!(request.command, Command::Hello);
         assert_eq!(serde_json::to_string(&request).unwrap(), line);
@@ -222,7 +102,8 @@ mod tests {
     #[test]
     fn wrong_version_is_rejected_by_type() {
         let error =
-            serde_json::from_str::<Request>(r#"{"v":2,"id":"c-1","cmd":"hello"}"#).unwrap_err();
+            serde_json::from_str::<Request>(r#"{"v":2,"id":"c-1","viewer":"dm","cmd":"hello"}"#)
+                .unwrap_err();
         assert!(
             error.to_string().contains("unsupported protocol version 2"),
             "{error}"
@@ -232,10 +113,90 @@ mod tests {
     #[test]
     fn unknown_command_names_the_known_ones() {
         let error =
-            serde_json::from_str::<Request>(r#"{"v":1,"id":"c-1","cmd":"helo"}"#).unwrap_err();
+            serde_json::from_str::<Request>(r#"{"v":1,"id":"c-1","viewer":"dm","cmd":"helo"}"#)
+                .unwrap_err();
         assert!(
             error.to_string().contains("unknown variant `helo`"),
             "{error}"
+        );
+    }
+
+    #[test]
+    fn submit_round_trips_without_empty_optionals() {
+        let line = r#"{"v":1,"id":"c-7","viewer":"bren","cmd":"submit","actor":"bren","prompt_id":"p3","option_id":"melee_attack/longsword","targets":["goblin_1"]}"#;
+        let request: Request = serde_json::from_str(line).unwrap();
+        let Command::Submit { targets, point, .. } = &request.command else {
+            panic!("expected submit, got {:?}", request.command);
+        };
+        assert_eq!(targets, &[Handle("goblin_1".into())]);
+        assert_eq!(point, &None);
+        assert_eq!(serde_json::to_string(&request).unwrap(), line);
+    }
+
+    #[test]
+    fn events_flatten_their_kind() {
+        let line = r#"{"seq":4,"round":1,"scene":"mill_yard","visibility":{"scope":"public"},"text":"Bren hits the goblin.","kind":"damage_taken","target":"goblin_1","amount":7,"damage_type":"slashing","source_roll":"r3"}"#;
+        let event: Event = serde_json::from_str(line).unwrap();
+        assert!(matches!(
+            event.kind,
+            EventKind::DamageTaken { amount: 7, .. }
+        ));
+        assert_eq!(serde_json::to_string(&event).unwrap(), line);
+    }
+
+    /// CLAUDE.md Rule 3: the player-facing view types do not have hidden fields at all.
+    #[test]
+    fn player_views_have_no_hidden_fields() {
+        let schema = serde_json::to_value(schemars::schema_for!(Nat20Api)).unwrap();
+        let keys = |def: &serde_json::Value| -> Vec<String> {
+            def["properties"]
+                .as_object()
+                .unwrap_or_else(|| panic!("no properties in {def}"))
+                .keys()
+                .cloned()
+                .collect()
+        };
+        let named = |name: &str| keys(&schema["$defs"][name]);
+        let variant = |name: &str, tag: &str, value: &str| -> Vec<String> {
+            let variants = schema["$defs"][name]["oneOf"]
+                .as_array()
+                .unwrap_or_else(|| panic!("{name} is not a tagged enum"));
+            let found = variants
+                .iter()
+                .find(|v| v["properties"][tag]["const"] == value)
+                .unwrap_or_else(|| panic!("{name} has no {tag}={value} variant"));
+            keys(found)
+        };
+        let hidden = [
+            "hp",
+            "hp_max",
+            "temp_hp",
+            "ac",
+            "against",
+            "modifiers",
+            "dc",
+            "dc_source",
+            "hp_after",
+        ];
+        let player_views = [
+            ("CreatureObserved", named("CreatureObserved")),
+            ("RollView::Player", variant("RollView", "view", "player")),
+        ];
+        for (name, fields) in &player_views {
+            for field in hidden {
+                assert!(
+                    !fields.iter().any(|f| f == field),
+                    "{name} carries hidden field {field}"
+                );
+            }
+        }
+        for field in ["hp", "hp_max", "ac"] {
+            assert!(named("CreatureFull").iter().any(|f| f == field));
+        }
+        assert!(
+            variant("RollView", "view", "full")
+                .iter()
+                .any(|f| f == "against")
         );
     }
 }

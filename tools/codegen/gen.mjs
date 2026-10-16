@@ -25,7 +25,38 @@ const banner = [
   `// Schema sha256: ${sha}`,
 ].join("\n");
 // Root is Nat20Api; every $def is emitted as a named export.
-let ts = await compile(schema, "Nat20Api", { bannerComment: banner, unreachableDefinitions: true, additionalProperties: false });
+let ts = await compile(forTypeScript(schema), "Nat20Api", { bannerComment: banner, unreachableDefinitions: true, additionalProperties: false });
 ts += `\n/** SHA-256 of the schema these types were generated from. Compare with \`hello.schema_sha256\`. */\nexport const SCHEMA_SHA256 = "${sha}";\n`;
 fs.writeFileSync(out("packages/engine-client/src/generated/api.ts"), ts);
 console.log(`generated: schema ${sha.slice(0, 12)}, ${Object.keys(schema.$defs ?? {}).length} types`);
+
+// A copy of the schema reshaped where json-schema-to-typescript mishandles valid JSON Schema.
+// The committed schema and its hash are untouched; only the TS input changes.
+function forTypeScript(schema) {
+  const copy = structuredClone(schema);
+  // 1. `{ $ref, description }`: the generator emits a duplicate type (`PointFt1`) per such field.
+  //    `{ description, allOf: [{ $ref }] }` keeps the field's doc and references the one type.
+  const wrapRefs = (node) => {
+    if (Array.isArray(node)) return node.forEach(wrapRefs);
+    if (!node || typeof node !== "object") return;
+    if (typeof node.$ref === "string" && Object.keys(node).length > 1) {
+      node.allOf = [{ $ref: node.$ref }];
+      delete node.$ref;
+    }
+    Object.values(node).forEach(wrapRefs);
+  };
+  wrapRefs(copy);
+  // 2. A struct with a `#[serde(flatten)]` tagged enum becomes `properties` plus `oneOf`, which the
+  //    generator names `Request1`. Split the union out under the Rust enum's name.
+  const flattened = { Request: "Command", Event: "EventKind" };
+  for (const [name, def] of Object.entries(copy.$defs ?? {})) {
+    if (!def.oneOf || !def.properties) continue;
+    const unionName = flattened[name];
+    if (!unionName) throw new Error(`${name} flattens a tagged enum; add its Rust enum name to \`flattened\` in tools/codegen/gen.mjs`);
+    if (copy.$defs[unionName]) throw new Error(`${unionName} already exists in the schema`);
+    copy.$defs[unionName] = { oneOf: def.oneOf };
+    const { oneOf, description, ...struct } = def;
+    copy.$defs[name] = { description, allOf: [struct, { $ref: `#/$defs/${unionName}` }] };
+  }
+  return copy;
+}

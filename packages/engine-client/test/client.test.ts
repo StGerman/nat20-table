@@ -11,7 +11,7 @@ const binary = process.env.NAT20_API_SERVER ??
 test("hello matches the generated schema hash", async () => {
   const client = await EngineClient.start(binary);
   try {
-    const hello = await client.request({ cmd: "hello" });
+    const hello = await client.request("dm", { cmd: "hello" });
     assert.equal(hello.ok, true);
     assert.equal(hello.result?.cmd, "hello");
     if (hello.result?.cmd === "hello") assert.equal(hello.result.schema_sha256, SCHEMA_SHA256);
@@ -23,9 +23,22 @@ test("hello matches the generated schema hash", async () => {
 test("a repeated request id returns the stored response", async () => {
   const client = await EngineClient.start(binary);
   try {
-    const first = await client.request({ cmd: "hello" }, "same-id");
-    const second = await client.request({ cmd: "hello" }, "same-id");
+    const first = await client.request("dm", { cmd: "hello" }, "same-id");
+    const second = await client.request("dm", { cmd: "hello" }, "same-id");
     assert.deepEqual(second, first);
+  } finally {
+    client.close();
+  }
+});
+
+test("a command the engine does not implement yet fails with not_implemented", async () => {
+  const client = await EngineClient.start(binary);
+  try {
+    const response = await client.request("bren", { cmd: "legal_actions", actor: "bren" });
+    assert.equal(response.ok, false);
+    assert.equal(response.error?.code, "not_implemented");
+    assert.equal(response.error?.retryable, false);
+    assert.deepEqual(response.awaiting, { kind: "no_session" });
   } finally {
     client.close();
   }

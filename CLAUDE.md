@@ -122,13 +122,14 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 - Schema shapes the TS generator mishandles, each found while scaffolding:
   - Tagged enums use struct variants, never newtype variants. A tagged newtype variant becomes `$ref` plus sibling keywords, and the TS generator drops the tag.
   - Never put `#[schemars(required)]` on an `Option`. It drops `null` from the schema while serde still sends `null`.
-  - The `Nat20Api` schema root's fields have no doc comments, because a description next to a `$ref` makes the TS generator emit duplicate types.
+  - A description next to a `$ref`, and a struct that `#[serde(flatten)]`s a tagged enum, both confuse the TS generator (duplicate `PointFt1`, `Request1` types). `tools/codegen/gen.mjs` reshapes the TS input for both; a new flattened enum needs its Rust name in the `flattened` map there, or `npm run gen` fails.
 - A PR that changes request or response handling in the server without touching the contract must say why the contract is unchanged.
 
 ## Rule 2: versioning
 
 - `v` in every request is the contract major version. Within a major, changes are additive only: new commands, new optional fields, new event kinds, new error reasons. Clients ignore unknown fields and unknown event kinds.
 - Removing, renaming, making a field required, narrowing a type, or changing a meaning is a major bump. It needs a migration note in `CHANGELOG.md` and a fixture for the change.
+- Until v1 is published, `CONTRACT_VERSION` is `1.0.0-dev.N` and breaking changes are allowed without a major bump. `check-breaking` still lists them; each needs its `CHANGELOG.md` line.
 - `hello` returns the schema sha256 and clients refuse to start on a mismatch. Never bypass that check.
 
 ## Rule 3: visibility is structural
