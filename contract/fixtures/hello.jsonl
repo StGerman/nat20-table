@@ -1,0 +1,2 @@
+{"request": {"v": 1, "id": "c-1", "cmd": "hello"}, "response": {"v": 1, "id": "c-1", "ok": true, "result": {"cmd": "hello", "protocol": "nat20-api", "version": "$CONTRACT_VERSION", "engine_rev": "$ENGINE_REV", "schema_sha256": "$SCHEMA_SHA256"}}}
+{"request": {"v": 1, "id": "c-1", "cmd": "hello"}, "response": {"v": 1, "id": "c-1", "ok": true, "result": {"cmd": "hello", "protocol": "nat20-api", "version": "$CONTRACT_VERSION", "engine_rev": "$ENGINE_REV", "schema_sha256": "$SCHEMA_SHA256"}}}

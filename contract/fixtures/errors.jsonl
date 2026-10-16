@@ -1,0 +1,4 @@
+{"request_raw": "not json", "response": {"v": 1, "id": null, "ok": false, "error": {"code": "bad_request", "message": "The request line is not valid JSON: expected ident at line 1 column 2.", "retryable": false}}}
+{"request": {"v": 2, "id": "c-2", "cmd": "hello"}, "response": {"v": 1, "id": "c-2", "ok": false, "error": {"code": "unsupported_version", "message": "This engine speaks protocol version 1, not 2.", "retryable": false}}}
+{"request": {"v": 1, "id": "c-3", "cmd": "helo"}, "response": {"v": 1, "id": "c-3", "ok": false, "error": {"code": "bad_request", "message": "The request is malformed: unknown variant `helo`, expected `hello`.", "retryable": false}}}
+{"request": {"v": 1, "cmd": "hello"}, "response": {"v": 1, "id": null, "ok": false, "error": {"code": "bad_request", "message": "The request is malformed: missing field `id`.", "retryable": false}}}

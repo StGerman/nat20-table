@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  contract:
+    name: contract-fresh, contract-compat, contract-pure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: contract-fresh (generated files match the contract crate)
+        run: npm run gen && git diff --exit-code -- generated packages/engine-client/src/generated
+      - name: contract-compat (no breaking change without a major bump)
+        run: node tools/codegen/check-breaking.mjs --base "origin/${{ github.base_ref || 'main' }}"
+        if: github.event_name == 'pull_request'
+      - name: contract-pure (contract crate depends only on serde, serde_json, schemars)
+        run: |
+          extra=$(cargo tree --locked -p nat20-api-contract --edges normal --depth 1 --prefix none \
+            | tail -n +2 | awk '{print $1}' | grep -vxE 'serde|serde_json|schemars' || true)
+          if [ -n "$extra" ]; then echo "contract crate has extra dependencies: $extra"; exit 1; fi
+
+  rust:
+    name: rust (fmt, clippy, tests, fixture replay)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
+
+  ts:
+    name: ts (typecheck, client against the built engine)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: cargo build --locked -p nat20-api-server
+      - run: npm run check:ts

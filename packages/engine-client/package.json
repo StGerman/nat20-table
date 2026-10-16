@@ -1,0 +1,8 @@
+{
+  "name": "@nat20-table/engine-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "description": "Spawns nat20-api-server and speaks its JSON-lines protocol with types generated from the contract."
+}

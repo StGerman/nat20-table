@@ -1,0 +1,17 @@
+[package]
+name = "nat20-api-contract"
+version = "0.1.0"
+description = "Engine API contract for nat20-table: wire types only. Source of truth for the wire (CLAUDE.md Rule 1)."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Only serde, serde_json and schemars are allowed here (CI job contract-pure).
+[dependencies]
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[[bin]]
+name = "export-schema"
+path = "src/bin/export-schema.rs"

@@ -1,0 +1,317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nat20Api",
+  "description": "Schema root: every type that crosses the wire. Exported by `export-schema`; not itself sent.\n\nIts fields carry no doc comments on purpose: a description next to a `$ref` makes the TS\ngenerator emit duplicate types (`Request1`, `Response1`).",
+  "type": "object",
+  "properties": {
+    "request": {
+      "$ref": "#/$defs/Request"
+    },
+    "response": {
+      "$ref": "#/$defs/Response"
+    }
+  },
+  "required": [
+    "request",
+    "response"
+  ],
+  "x-nat20-protocol": {
+    "major": 1,
+    "name": "nat20-api",
+    "version": "1.0.0-dev.1"
+  },
+  "$defs": {
+    "ApiError": {
+      "description": "A failed request.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "description": "Machine-readable failure class.",
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "description": "One plain sentence written for a model or a human. Never Rust debug output.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Finer reason for `rejected`; absent for other codes.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RejectReason"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "description": "Whether the same request can succeed after the caller changes its input or waits.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ]
+    },
+    "CommandResult": {
+      "description": "The typed result of each command, tagged by `cmd`.\n\nVariants are struct variants, never newtype variants: schemars renders a tagged newtype variant\nas `$ref` plus sibling keywords, which the TS generator drops, losing the tag.",
+      "oneOf": [
+        {
+          "description": "What the engine says about itself on `hello`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "hello"
+            },
+            "engine_rev": {
+              "description": "The `nat20_core` revision the engine was built against.",
+              "type": "string"
+            },
+            "protocol": {
+              "description": "Always `nat20-api`.",
+              "type": "string"
+            },
+            "schema_sha256": {
+              "description": "SHA-256 of `generated/nat20-api.schema.json`. Clients compare it with the hash they were generated from.",
+              "type": "string"
+            },
+            "version": {
+              "description": "Full contract version (semver), e.g. `1.0.0`.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "cmd",
+            "protocol",
+            "version",
+            "engine_rev",
+            "schema_sha256"
+          ]
+        }
+      ]
+    },
+    "ErrorCode": {
+      "description": "Machine-readable failure classes.",
+      "oneOf": [
+        {
+          "description": "Malformed JSON, a missing or wrongly typed field, or an unknown `cmd`.",
+          "type": "string",
+          "const": "bad_request"
+        },
+        {
+          "description": "`v` is not a version this engine speaks.",
+          "type": "string",
+          "const": "unsupported_version"
+        },
+        {
+          "description": "The command needs a session and none exists.",
+          "type": "string",
+          "const": "no_session"
+        },
+        {
+          "description": "The command needs a loaded scene and none is loaded.",
+          "type": "string",
+          "const": "no_scene"
+        },
+        {
+          "description": "The creature handle is not in this scene.",
+          "type": "string",
+          "const": "unknown_creature"
+        },
+        {
+          "description": "The option id is not offered by the current prompt.",
+          "type": "string",
+          "const": "unknown_option"
+        },
+        {
+          "description": "The check id is not defined by the scene.",
+          "type": "string",
+          "const": "unknown_check"
+        },
+        {
+          "description": "The anchor id is not defined by the scene.",
+          "type": "string",
+          "const": "unknown_anchor"
+        },
+        {
+          "description": "The spawn id is not declared by the scene.",
+          "type": "string",
+          "const": "unknown_spawn"
+        },
+        {
+          "description": "The actor is not the one the engine is waiting on.",
+          "type": "string",
+          "const": "not_your_turn"
+        },
+        {
+          "description": "The prompt id does not match the pending prompt.",
+          "type": "string",
+          "const": "stale_prompt"
+        },
+        {
+          "description": "The viewer may not see what it asked for.",
+          "type": "string",
+          "const": "not_visible"
+        },
+        {
+          "description": "A combat command in explore mode, or the reverse.",
+          "type": "string",
+          "const": "wrong_mode"
+        },
+        {
+          "description": "The engine refused a well-formed decision; see `reason`.",
+          "type": "string",
+          "const": "rejected"
+        },
+        {
+          "description": "An engine bug. The request did nothing; details go to stderr.",
+          "type": "string",
+          "const": "internal"
+        }
+      ]
+    },
+    "RejectReason": {
+      "description": "Why the engine refused a well-formed decision.",
+      "oneOf": [
+        {
+          "description": "The target is beyond the option's range.",
+          "type": "string",
+          "const": "out_of_range"
+        },
+        {
+          "description": "No creature can be targeted by this option.",
+          "type": "string",
+          "const": "no_valid_target"
+        },
+        {
+          "description": "The chosen target cannot be targeted by this option.",
+          "type": "string",
+          "const": "invalid_target"
+        },
+        {
+          "description": "The actor lacks the resource (slot, use, movement) the option costs.",
+          "type": "string",
+          "const": "insufficient_resource"
+        },
+        {
+          "description": "The action type has already been used this turn.",
+          "type": "string",
+          "const": "action_already_used"
+        },
+        {
+          "description": "A condition on the actor prevents the option.",
+          "type": "string",
+          "const": "condition_prevents"
+        },
+        {
+          "description": "The actor does not know this spell or feature.",
+          "type": "string",
+          "const": "not_known"
+        },
+        {
+          "description": "The option needs a target.",
+          "type": "string",
+          "const": "needs_target"
+        },
+        {
+          "description": "The option needs a point.",
+          "type": "string",
+          "const": "needs_point"
+        },
+        {
+          "description": "The option needs a variant.",
+          "type": "string",
+          "const": "needs_variant"
+        }
+      ]
+    },
+    "Request": {
+      "description": "One request line sent to the engine.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Client-unique request id. A repeated id returns the stored response and does not execute again.",
+          "type": "string"
+        },
+        "v": {
+          "description": "Protocol major version.",
+          "$ref": "#/$defs/V1"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "Handshake: protocol name, versions and the schema hash. Clients refuse to start on a hash mismatch.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "hello"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        }
+      ],
+      "required": [
+        "v",
+        "id"
+      ]
+    },
+    "Response": {
+      "description": "One response line written by the engine, answering exactly one [`Request`].",
+      "type": "object",
+      "properties": {
+        "error": {
+          "description": "Why the command failed. Set when `ok` is false.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApiError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "description": "The request id this answers; `null` only when the request line was too malformed to read an id.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ok": {
+          "description": "`true` when the command succeeded and `result` is set; `false` when `error` is set.",
+          "type": "boolean"
+        },
+        "result": {
+          "description": "The command's result, tagged by the same `cmd` as the request. Set when `ok` is true.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommandResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "v": {
+          "description": "Protocol major version.",
+          "$ref": "#/$defs/V1"
+        }
+      },
+      "required": [
+        "v",
+        "ok"
+      ]
+    },
+    "V1": {
+      "description": "Protocol major version. Only 1 exists.",
+      "type": "integer",
+      "const": 1
+    }
+  }
+}

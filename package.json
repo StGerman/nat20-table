@@ -1,0 +1,17 @@
+{
+  "name": "nat20-table",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=22.6" },
+  "scripts": {
+    "gen": "node tools/codegen/gen.mjs",
+    "check:contract": "node tools/codegen/gen.mjs && git diff --exit-code -- generated packages/engine-client/src/generated && node tools/codegen/check-breaking.mjs --base origin/main",
+    "check:ts": "tsc -p packages/engine-client && node --experimental-strip-types --no-warnings --test packages/engine-client/test/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "json-schema-to-typescript": "15.0.4",
+    "typescript": "5.6.3"
+  }
+}

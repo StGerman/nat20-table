@@ -1,0 +1,20 @@
+[package]
+name = "nat20-api-server"
+version = "0.1.0"
+description = "The nat20-table engine: serves the contract in nat20-api-contract over stdio JSON-lines, backed by nat20_core."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+nat20-api-contract = { workspace = true }
+nat20_core = { workspace = true }
+serde_json = { workspace = true }
+
+[lib]
+name = "nat20_api_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nat20-api-server"
+path = "src/main.rs"
