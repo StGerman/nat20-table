@@ -1,13 +1,13 @@
 # Engine protocol v1
 
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
-Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decisions 2-5 still await Stas; the contract assumes their defaults.
+Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 still await Stas; the contract assumes their defaults.
 
 Status (contract 1.0.0-dev.2): every v1 type is in the contract crate. The engine implements `hello` and request-id idempotency and answers every other command with `not_implemented` until the server port (CON-3) wires it.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
-- A roll's `full` view goes to the DM only. Every player, the roller included, gets the `player` view: dice, total and outcome, no modifiers, no `against`, no `dc_source`. This is stricter than default 5; players read their own modifiers and AC from their sheet.
+- A roll's `full` view goes to the DM only. Every player, the roller included, gets the `player` view: dice, total and outcome, no modifiers, no `against`, no `dc_source`. Stas chose this over the draft's default 5 on 2026-10-16; players read their own modifiers and AC from their sheet.
 - `hp_after` is gone from `damage_taken` and `healed`. Hit Points after a change travel in a separate `hit_points` event with DM or owner visibility, so a player projection drops the whole event instead of redacting a field.
 - Event `visibility` is an object tagged by `scope` (`{"scope":"owner","handle":"lia"}`), not the string `owner:lia`.
 - `request_check` takes `check: {kind:"scenario", check_id} | {kind:"ladder", ability, skill?, dc}` and `advantage: {state, reason}`, so a grant always carries its reason.
@@ -25,7 +25,7 @@ Origin: the v1 draft written by the API contract review on 2026-10-16.
 2. Transport: **stdio JSON-lines only for the demo**. Local HTTP later, reusing the same message types (API-15).
 3. Visibility: **projected by the engine per `viewer`**, as well as by the orchestrator's tool binding.
 4. Player view of enemy health: **health band only** (`unhurt` / `bloodied` / `down`, where bloodied is the SRD 5.2.1 term for half HP or less). No numbers.
-5. Player view of roll targets: **total and outcome visible, AC/DC hidden** unless the viewer owns the target or rolled a save against it. Note this hides save DCs from players, which is stricter than many tables run it.
+5. Player view of rolls: settled (Stas, 2026-10-16), strict. The DM alone sees modifiers, AC/DC and the DC source; every player, the roller included, sees dice, total and outcome. This hides save DCs from players, which is stricter than many tables run it.
 
 ## 1. Transport and envelope
 
