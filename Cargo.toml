@@ -10,7 +10,10 @@ repository = "https://github.com/StGerman/nat20-table"
 [workspace.dependencies]
 nat20-api-contract = { path = "crates/nat20-api-contract" }
 # Pinned by rev. Bump only in its own PR with the full suite green (CLAUDE.md Rule 5).
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "9aaca2fdb061cbd00e4772472cd0937bbe8e1b44" }
+# 236985e = fork branch `pin/milestone-1`: upstream 9aaca2f plus Leather Armor and the
+# Goblin Warrior's shield stopgap effect, which the ported server needs until the
+# content overlay (upstream U1) exists.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "236985e9642a8c3b8a1c7a3502bd6ad7acb7b7c9" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
