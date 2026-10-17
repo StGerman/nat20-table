@@ -126,7 +126,7 @@ Facts that shape the choices:
 
 - Branch protection on `main` needs one required check: `ci-ok`.
 - CON-5 (contract-compat and visibility scan in CI) and CON-6 (weekly core-drift) are served.
-- A new dependency under a licence outside the allow-list fails `deny`; adding it needs a reviewed `deny.toml` change, and a copyleft one is refused under Rule 7.
+- A new dependency under a licence outside the allow-list fails `deny`; adding it needs a reviewed `deny.toml` change. CLAUDE.md Rule 7 now bans strong copyleft (GPL, AGPL, LGPL-only, CC-BY-SA) and allows MPL-2.0 only in an unmodified third-party crate named as an exception; `smartstring` is the only one. This amendment is Stas's call, asked on a decision card in the thread; if he forbids MPL, the exception goes and `deny` stays red until upstream drops `rhai` or `rhai` drops `smartstring`.
 - A clippy release can break CI without a code change; the fix is a code change or a toolchain pin under this record's "Revisit when".
 
 ## Revisit when

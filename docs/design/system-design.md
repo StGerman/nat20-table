@@ -30,7 +30,7 @@ Companion files: [CLAUDE.md](CLAUDE.md) (the rules in a form a Claude Code sessi
 **Constraints**
 - C1. Team: Stas plus Claude sessions. Upstream: one maintainer, pre-1.0, refactors core types often (last three commits all reshape action/registry types).
 - C2. Core loads content from a global `LazyLock` registry rooted at a **compile-time** path (`CARGO_MANIFEST_DIR/../assets/registries`).
-- C3. Licences: core MIT; our content CC-BY-4.0 SRD material or original; no copyleft (see project memory).
+- C3. Licences: core MIT; our content CC-BY-4.0 SRD material or original; no strong copyleft; MPL-2.0 only in an unmodified third-party crate named in `deny.toml` (CLAUDE.md Rule 7, decision 0022).
 
 ## 2. Decomposition
 

@@ -188,7 +188,7 @@ Any change to what crosses the engine boundary (a command, field, event, error c
   - Foundry dnd5e: **structured fields only**, from records tagged CC-BY-4.0. Never its text, art, pregens or 2014 packs;
   - 5e-bits numbers;
   - our own text.
-- Never download, scrape or ingest WotC books or D&D Beyond content, even with a purchased login. Never ship copyleft (GPL, CC-BY-SA) code or data.
+- Never download, scrape or ingest WotC books or D&D Beyond content, even with a purchased login. Never ship strong-copyleft (GPL, AGPL, LGPL-only, CC-BY-SA) code or data. Weak, file-level copyleft (MPL-2.0) is allowed only in an unmodified third-party crate, each named as an exception in `deny.toml` (decision 0022).
 - Known data bugs:
   - 5e-bits applies the Goblin Warrior's extra 1d4 on every hit; the rule is Advantage only.
   - Ancient Red Dragon, Remorhaz and Will-o'-Wisp have scrambled ability scores in the SRD text; use 5e-bits for those three.

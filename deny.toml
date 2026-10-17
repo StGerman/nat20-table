@@ -34,8 +34,9 @@ allow = [
     "Zlib",
 ]
 exceptions = [
-    # File-level (weak) copyleft, reached through nat20_core -> rhai. Linking an unmodified MPL
-    # crate puts no obligation on our code; any other MPL crate needs its own exception.
+    # File-level (weak) copyleft, reached through nat20_core -> rhai (unconditional dependency, no
+    # feature to drop it). Allowed by CLAUDE.md Rule 7 only for an unmodified third-party crate;
+    # any other MPL crate needs its own exception here, reviewed in its PR.
     { crate = "smartstring", allow = ["MPL-2.0"] },
 ]
 
