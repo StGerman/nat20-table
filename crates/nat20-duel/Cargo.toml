@@ -5,6 +5,7 @@ description = "Milestone 1 harness: a scripted Fighter vs Goblin Warrior duel th
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish.workspace = true
 
 [dependencies]
 nat20-api-contract = { workspace = true }

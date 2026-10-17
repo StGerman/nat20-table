@@ -6,6 +6,8 @@ members = ["crates/*"]
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/StGerman/nat20-table"
+# Never published to crates.io; also lets cargo-deny accept our path dependencies.
+publish = false
 
 [workspace.dependencies]
 nat20-api-contract = { path = "crates/nat20-api-contract" }

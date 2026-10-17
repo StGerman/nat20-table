@@ -165,10 +165,12 @@ Pin exact versions of every generator. Generated files are committed, so a Rust-
 | `contract-fresh` | `npm ci && npm run gen && git diff --exit-code` | Someone edited generated code, or changed the contract without regenerating |
 | `contract-compat` | `tools/codegen/check-breaking.mjs base.json head.json` vs the PR base | Within a major version: a def, property, enum value or command removed; a property newly required; a type narrowed. Passes if `CHANGELOG.md` and `v` record a major bump |
 | `contract-pure` (Rust contract only) | `cargo tree -p nat20-api-contract` + grep | The contract crate depends on anything but serde, serde_json, schemars |
-| `rust` | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --locked` | Includes the conformance replay: every `contract/fixtures/*.jsonl` replayed against the server with its seed, byte-identical responses |
-| `visibility` | Fixture replay as each player viewer; scan responses | Any of `hp`, `hp_max`, `ac`, `dc`, `against` appears for a creature the viewer does not own |
-| `ts` | `tsc --noEmit`, client tests spawning the built server | Generated TS out of step with server behaviour |
-| `core-drift` (weekly, non-blocking) | Build against the fork's `demo` HEAD | Upstream moved in a way that breaks `adapter/`; opens a bump task early |
+| `rust` | `cargo fmt --check`, `cargo clippy --all-targets --all-features -D warnings`, `cargo test --locked`, `cargo doc` with warnings denied | Includes the conformance replay: every `contract/fixtures/*.jsonl` replayed against the server with its seed, byte-identical responses |
+| `visibility` | `crates/nat20-api-server/tests/visibility.rs`: replays every fixture and, after each step, asks `get_state` and `events` as every party viewer; scans the responses (binary built once by `rust`) | Another creature's `hp`, `hp_max`, `temp_hp` or `ac`; any `against`, `dc`, `dc_source` or roll modifiers; a DM-only or another owner's event; an AC or DC number in text |
+| `ts` | `tsc`, client tests spawning the server binary built by `rust` | Generated TS out of step with server behaviour |
+| `deny` | `cargo deny check bans licenses sources` (`deny.toml`) | A dependency under a licence outside the permissive allow-list (Rule 7: no copyleft), a wildcard version, or a crate from an unlisted registry or git source |
+| `advisories` (not required) | `cargo deny check advisories`, also weekly on `main` | A RustSec advisory without a recorded ignore |
+| `core-drift` (weekly, non-blocking) | Weekly: clippy and tests against the fork's `demo` HEAD instead of the pinned rev | Upstream moved in a way that breaks `adapter/`; opens a bump task early |
 
 The breaking-change check is our own ~60-line script over the schema bundle rather than a third-party diff tool: the four rules above are all it needs, and it can read our `CHANGELOG.md`.
 
