@@ -214,8 +214,12 @@ impl Server {
                 events: session.events(*since, viewer),
                 next: session.log_head(),
             }),
+            Command::Move {
+                actor,
+                to,
+                prompt_id,
+            } => session.move_creature(&actor.0, to, prompt_id.as_ref().map(|p| p.0.as_str())),
             Command::GetSheet { .. }
-            | Command::Move { .. }
             | Command::RequestCheck { .. }
             | Command::GroupCheck { .. }
             | Command::ShortRest { .. }
@@ -276,6 +280,15 @@ fn for_viewer(mut error: ApiError, viewer: &Viewer) -> ApiError {
     if error.code == ErrorCode::BadScene && *viewer != Viewer::Dm {
         eprintln!("bad_scene: {}", error.message);
         error.message = "The scene is invalid; the DM can see why.".into();
+    }
+    // Scene ids are scenario data: only the DM learns which ones exist.
+    if *viewer != Viewer::Dm
+        && let Some(hint) = &mut error.hint
+    {
+        hint.known_ids.clear();
+        if hint.legal_option_ids.is_empty() && hint.awaiting.is_none() {
+            error.hint = None;
+        }
     }
     error
 }

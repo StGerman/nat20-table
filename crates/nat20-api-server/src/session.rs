@@ -8,7 +8,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use nat20_api_contract::{
     ApiError, Awaiting, CombatOverReason, CommandResult, ErrorCode, Event, EventKind, Handle, Mode,
-    OptionId, PromptId, ReactionTrigger, RollId, RollView, State, Visibility,
+    MoveTarget, OptionId, PromptId, ReactionTrigger, RollId, RollView, State, Visibility,
 };
 
 use crate::{
@@ -251,6 +251,29 @@ impl Session {
         Ok(CommandResult::EndTurn {})
     }
 
+    /// Moves `actor`. In combat it is a decision at the actor's action prompt, so it needs that
+    /// prompt's id; in explore mode any creature may be moved and `prompt_id` is ignored.
+    pub fn move_creature(
+        &mut self,
+        actor: &str,
+        to: &MoveTarget,
+        prompt_id: Option<&str>,
+    ) -> Result<CommandResult, ApiError> {
+        if self.game_mut()?.mode() == Mode::Combat {
+            let Some(prompt_id) = prompt_id else {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    "In combat, move needs the pending prompt_id.",
+                ));
+            };
+            self.require_prompt(actor, Some(prompt_id), false)?;
+        }
+        let result = self.game_mut()?.move_to(actor, to);
+        self.after_decision(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
+        let (moved_ft, provoked) = result.expect("errors returned above");
+        Ok(CommandResult::Move { moved_ft, provoked })
+    }
+
     /// What the engine waits on, with the prompt id to echo.
     pub fn awaiting(&mut self) -> Awaiting {
         let wait = self.game.as_ref().map_or(Wait::Idle, |g| g.wait());
@@ -414,6 +437,7 @@ impl Session {
             round: game.round(),
             initiative: game.initiative(),
             creatures: game.creatures(),
+            anchors: game.anchors().to_vec(),
         };
         projection::state(viewer, full).ok_or_else(|| {
             error(

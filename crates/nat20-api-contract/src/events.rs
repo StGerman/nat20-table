@@ -177,7 +177,7 @@ pub enum EventKind {
         from: PointFt,
         /// To, in feet.
         to: PointFt,
-        /// The anchor it moved to, when it moved to one.
+        /// The anchor it moved to, when it moved to one and got there.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         anchor: Option<String>,
     },

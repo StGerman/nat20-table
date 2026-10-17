@@ -1,6 +1,6 @@
 # 0022. CI: parallel lint and test, one build, one required gate, cargo-deny, advisories and core drift off the gate
 
-- **Status:** Proposed
+- **Status:** Accepted (Stas merged nat20-table #10 on 2026-10-17)
 - **Date:** 2026-10-17
 - **Decided by:** Claude (thread "CI workflows"), defaults picked when Stas asked for "CI with clippy and all other stuff for a project like this"; job split, ordering and the single gate reworked after Stas asked whether to split the slow `rust` job and which jobs should wait on others (same thread, 2026-10-17). Accepted when Stas merges the PR.
 

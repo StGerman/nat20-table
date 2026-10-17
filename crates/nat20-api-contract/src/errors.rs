@@ -32,6 +32,10 @@ pub struct ErrorHint {
     /// The pending prompt, e.g. with the current `prompt_id` after `stale_prompt`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub awaiting: Option<Awaiting>,
+    /// The ids the scene does define, after an unknown id (`unknown_anchor`). Sent to the DM
+    /// only, because ids are scenario data.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub known_ids: Vec<String>,
 }
 
 /// Machine-readable failure classes.
@@ -98,4 +102,6 @@ pub enum RejectReason {
     NeedsPoint,
     /// The option needs a variant.
     NeedsVariant,
+    /// No route leads to the anchor, creature or point a `move` names.
+    NoPath,
 }

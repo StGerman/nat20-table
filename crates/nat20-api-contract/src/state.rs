@@ -29,6 +29,8 @@ pub enum State {
         initiative: Vec<Handle>,
         /// Every creature in the scene.
         creatures: Vec<CreatureFull>,
+        /// The scene's named landmarks, in scene file order.
+        anchors: Vec<AnchorView>,
     },
     /// What one player sees: their own creature in full, the others as observed.
     Player {
@@ -48,7 +50,33 @@ pub enum State {
         me: CreatureFull,
         /// Every other creature the viewer perceives.
         others: Vec<CreatureObserved>,
+        /// The scene's named landmarks, in scene file order, with the distance from the viewer.
+        anchors: Vec<AnchorObserved>,
     },
+}
+
+/// A named landmark as the DM sees it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AnchorView {
+    /// Anchor id from the scene, the `anchor` a `move` names.
+    pub id: String,
+    /// What the characters call it, e.g. "the mill gate".
+    pub name: String,
+    /// Where it is, in feet.
+    pub position_ft: PointFt,
+}
+
+/// A named landmark as one player sees it: the DM's view plus how far away it is.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AnchorObserved {
+    /// Anchor id from the scene, the `anchor` a `move` names.
+    pub id: String,
+    /// What the characters call it, e.g. "the mill gate".
+    pub name: String,
+    /// Where it is, in feet.
+    pub position_ft: PointFt,
+    /// Straight-line distance from the viewer's creature, in feet.
+    pub distance_ft: f32,
 }
 
 /// A creature as its owner and the DM see it.

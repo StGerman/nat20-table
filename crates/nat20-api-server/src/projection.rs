@@ -6,7 +6,8 @@
 //! and gets every roll in the `player` view.
 
 use nat20_api_contract::{
-    CreatureFull, CreatureObserved, Event, EventKind, Handle, Mode, RollView, State, Visibility,
+    Anchor, AnchorObserved, AnchorView, CreatureFull, CreatureObserved, Event, EventKind, Handle,
+    Mode, PointFt, RollView, State, Visibility,
 };
 
 use crate::render;
@@ -38,6 +39,7 @@ pub struct FullState {
     pub round: Option<u32>,
     pub initiative: Vec<Handle>,
     pub creatures: Vec<CreatureFull>,
+    pub anchors: Vec<Anchor>,
 }
 
 /// The state as `viewer` may see it. `None` when a creature viewer is not in the scene.
@@ -48,6 +50,7 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
         round,
         initiative,
         creatures,
+        anchors,
     } = full;
     let handle = match viewer {
         Viewer::Dm => {
@@ -57,6 +60,14 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
                 round,
                 initiative,
                 creatures,
+                anchors: anchors
+                    .into_iter()
+                    .map(|a| AnchorView {
+                        id: a.id,
+                        name: a.name,
+                        position_ft: a.position_ft,
+                    })
+                    .collect(),
             });
         }
         Viewer::Creature(handle) => handle,
@@ -70,7 +81,7 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
             name: c.name.clone(),
             side: c.side,
             position_ft: c.position_ft,
-            distance_ft: distance_ft(&me, c),
+            distance_ft: distance_ft(me.position_ft, c.position_ft),
             health: c.health,
             // Every SRD condition is visible until vision exists; none are modelled yet.
             conditions: c.conditions.clone(),
@@ -82,13 +93,21 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
         scene_id,
         round,
         initiative,
+        anchors: anchors
+            .into_iter()
+            .map(|a| AnchorObserved {
+                distance_ft: distance_ft(me.position_ft, a.position_ft),
+                id: a.id,
+                name: a.name,
+                position_ft: a.position_ft,
+            })
+            .collect(),
         me,
         others,
     })
 }
 
-fn distance_ft(a: &CreatureFull, b: &CreatureFull) -> f32 {
-    let (p, q) = (a.position_ft, b.position_ft);
+fn distance_ft(p: PointFt, q: PointFt) -> f32 {
     let d =
         ((p.x_ft - q.x_ft).powi(2) + (p.y_ft - q.y_ft).powi(2) + (p.z_ft - q.z_ft).powi(2)).sqrt();
     (d * 10.0).round() / 10.0
