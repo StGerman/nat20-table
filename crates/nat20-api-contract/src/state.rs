@@ -201,7 +201,8 @@ pub struct Sheet {
     pub hp_max: u32,
     /// Temporary Hit Points.
     pub temp_hp: u32,
-    /// Hit Point Dice by die size. Empty until the engine tracks a Hit Point Dice pool (ENG-4).
+    /// Hit Point Dice by die size, smallest first: one die per class level, spent on a short
+    /// rest. Empty for a creature without Hit Point Dice, such as a monster.
     pub hit_dice: Vec<HitDicePool>,
     /// Spell slots by level; empty for non-casters.
     pub spell_slots: Vec<SpellSlots>,
