@@ -3,6 +3,11 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.8 (2026-10-17)
+- Docs only, no wire type change: `get_sheet` is served (API-19, Milestone 3 spec §7 step 4). The owner and the DM get the `Sheet`; any other creature viewer gets `not_visible`; an unknown actor gets `unknown_creature`. It is read-only: it rolls nothing, logs nothing, and leaves the seeded dice where they were (protocol.md §4.2).
+- `Sheet` field docs now say what the engine fills in: bonuses are the flat part the engine adds to the d20 (dice such as Bless left out); `skills` are alphabetical; `resources` leave out per-turn action economy and use ids like `fighter.second_wind`; `hit_dice` stays empty until the engine has a Hit Point Dice pool (ENG-4); `conditions` and `exhaustion` stay empty and 0 as in state.
+- Fixture `sheet.jsonl`; `not_implemented.jsonl` loses its `get_sheet` line.
+
 ## 1.0.0-dev.7 (2026-10-17)
 - `move` is served (API-7, MAP-1, Milestone 3 spec §7 step 3): to an anchor, a point, or within 5 ft of a creature. Free in explore mode; in combat it needs the action prompt, the whole route must fit in the movement left, and an opportunity attack stops the mover (protocol.md §4.1). Each move logs a public `moved` event.
 - Additive: `State::Dm.anchors` (`AnchorView`: id, name, position) and `State::Player.anchors` (`AnchorObserved`: the same plus `distance_ft` from the viewer).

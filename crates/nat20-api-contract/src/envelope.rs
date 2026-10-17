@@ -56,6 +56,7 @@ pub enum Command {
     /// The current state, projected for the request's `viewer`.
     GetState,
     /// A creature's full sheet. Only its owner and `dm` may ask; anyone else gets `not_visible`.
+    /// Read-only: it rolls nothing and logs no event.
     GetSheet {
         /// Whose sheet.
         actor: Handle,

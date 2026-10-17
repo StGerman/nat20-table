@@ -12,7 +12,7 @@ use hecs::Entity;
 use nat20_api_contract::{
     ActionCost, ActionOption, Anchor, ApiError, Control, CreatureFull, ErrorCode, ErrorHint,
     EventKind, Handle, HealthBand, Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption,
-    RejectReason, SceneFile, Side, TargetCandidate, Targeting, UnavailableOption,
+    RejectReason, SceneFile, Sheet, Side, TargetCandidate, Targeting, UnavailableOption,
 };
 use nat20_core::{
     components::{
@@ -45,7 +45,7 @@ use crate::{
     adapter::{
         events::{HpTracker, LogWriter, Pending, RollKeys, combat_over, wire_life_state},
         monster::MonsterDef,
-        names, pregen,
+        names, pregen, sheet,
     },
     errors::{error, rejected},
     scene,
@@ -456,6 +456,18 @@ impl Game {
                 }
             })
             .collect()
+    }
+
+    /// The full sheet of `handle`, for its owner or the DM. Reads only; rolls nothing.
+    pub fn sheet(&self, handle: &str) -> Result<Sheet, ApiError> {
+        let entity = self.entity(handle)?;
+        let side = self
+            .scene
+            .creatures
+            .iter()
+            .find(|c| c.entity == entity)
+            .map_or(Side::Neutral, |c| c.side);
+        Ok(sheet::sheet(&self.engine, entity, handle, side))
     }
 
     /// The scene's anchors, in scene file order.

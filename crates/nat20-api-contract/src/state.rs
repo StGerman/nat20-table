@@ -151,9 +151,9 @@ pub struct Sheet {
     pub species: String,
     /// Proficiency Bonus.
     pub proficiency_bonus: u8,
-    /// The six abilities with their saving throws.
+    /// The six abilities with their saving throws, Strength to Charisma.
     pub abilities: Vec<AbilityLine>,
-    /// The eighteen skills.
+    /// The eighteen skills, in alphabetical order.
     pub skills: Vec<SkillLine>,
     /// Armor Class.
     pub ac: u32,
@@ -161,7 +161,7 @@ pub struct Sheet {
     pub speed_ft: u32,
     /// Initiative bonus.
     pub initiative_bonus: i8,
-    /// Passive Perception.
+    /// Passive Perception: 10 plus the Perception bonus.
     pub passive_perception: u8,
     /// Current Hit Points.
     pub hp: u32,
@@ -169,11 +169,12 @@ pub struct Sheet {
     pub hp_max: u32,
     /// Temporary Hit Points.
     pub temp_hp: u32,
-    /// Hit Point Dice by die size.
+    /// Hit Point Dice by die size. Empty until the engine tracks a Hit Point Dice pool (ENG-4).
     pub hit_dice: Vec<HitDicePool>,
     /// Spell slots by level; empty for non-casters.
     pub spell_slots: Vec<SpellSlots>,
-    /// Limited-use features, e.g. Second Wind.
+    /// Limited-use features, e.g. Second Wind, by id. Per-turn action economy (action, bonus
+    /// action, reaction) is not listed; `legal_actions` reports it.
     pub resources: Vec<ResourcePool>,
     /// Active conditions.
     pub conditions: Vec<Condition>,
@@ -183,9 +184,10 @@ pub struct Sheet {
     pub life_state: LifeState,
     /// Death saving throws so far, while unconscious.
     pub death_saves: DeathSaves,
-    /// Carried and equipped items.
+    /// Equipped items in slot order (armor, then weapons), then carried items in the order they
+    /// were picked up.
     pub equipment: Vec<ItemLine>,
-    /// Class, species and background features by name.
+    /// Feats, then features granted by class, species and background, each once.
     pub features: Vec<FeatureLine>,
 }
 
@@ -198,7 +200,7 @@ pub struct AbilityLine {
     pub score: u8,
     /// Modifier.
     pub modifier: i8,
-    /// Saving throw bonus.
+    /// Saving throw bonus: what the engine adds to the d20, without dice bonuses such as Bless.
     pub save_bonus: i8,
     /// Whether the creature is proficient in this saving throw.
     pub save_proficient: bool,
@@ -209,7 +211,7 @@ pub struct AbilityLine {
 pub struct SkillLine {
     /// The skill.
     pub skill: Skill,
-    /// Total bonus.
+    /// Total bonus: what the engine adds to the d20, without dice bonuses such as Bless.
     pub bonus: i8,
     /// Proficiency in it.
     pub proficiency: ProficiencyLevel,
@@ -252,7 +254,7 @@ pub struct SpellSlots {
 /// A limited-use feature.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ResourcePool {
-    /// Resource id, e.g. `second_wind`.
+    /// Resource id, e.g. `fighter.second_wind`.
     pub id: String,
     /// Display name.
     pub name: String,
