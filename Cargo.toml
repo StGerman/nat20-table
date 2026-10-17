@@ -10,10 +10,10 @@ repository = "https://github.com/StGerman/nat20-table"
 [workspace.dependencies]
 nat20-api-contract = { path = "crates/nat20-api-contract" }
 # Pinned by rev. Bump only in its own PR with the full suite green (CLAUDE.md Rule 5).
-# 04d0532 = fork branch `demo`: upstream 9aaca2f plus Leather Armor, the Goblin Warrior's
+# cac1cc5 = fork branch `demo`: upstream 9aaca2f plus Leather Armor, the Goblin Warrior's
 # shield stopgap effect (both needed until our content overlay exists), U2 seedable dice
-# (`components::rng`) and U1 `NAT20_REGISTRY_ROOT`.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "04d0532738da6f48c84519b6d1c32bd3487da19c" }
+# (`components::rng`, plus initiative rolled in a fixed order) and U1 `NAT20_REGISTRY_ROOT`.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "cac1cc5d0ee0500fdf7cdfa920905fc29774c64a" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
