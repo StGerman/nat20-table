@@ -225,7 +225,7 @@ Rule for every item: useful to his GUI and tests on its own, no API vocabulary, 
 | S2 | Backfill v1 in the contract crate from `api/contract-v1-draft.md` (not from v0 code: v0 has no consumers and v1 replaces it outright), plus `protocol.md` and first fixtures | Ours | M | S1, the 4 open defaults in the v1 draft |
 | S3 | Move `server/` from the fork's `demo` into `crates/nat20-api-server`; swap `protocol.rs` for the contract crate's types; isolate core calls in `adapter/` | Ours | M | S2 |
 | S4 | Strip `server/` from fork `demo`; `demo` = upstream main + item branches only. Close PR #1 (it targets `main`, which must equal upstream) and PR #2 (schema derived from server types; its schemars setup can seed the contract crate) | Fork | S | S3 green |
-| S5 | U1 (registry root) and U2 (seedable dice) as one-item branches in the fork, merged into `demo` and pinned. The upstream PRs wait for Milestone 8: demo gaps close first (Stas's rule) | Fork | S each | UPS-1 (Actions on) |
+| S5 | U1 (registry root) and U2 (seedable dice) as one-item branches in the fork, merged into `demo` and pinned. The upstream PRs wait for Milestone 8: demo gaps close first (Stas's rule), except U1 and U2 themselves, which go upstream now (`docs/decisions/0020-send-u1-u2-upstream-early.md`) | Fork | S each | UPS-1 (Actions on) |
 
 Open decision carried from the v1 draft: defaults 2-5 (stdio only, engine-side projection, health bands, hidden AC/DC). Decision 1 there (definition format) is answered by §5.1.
 

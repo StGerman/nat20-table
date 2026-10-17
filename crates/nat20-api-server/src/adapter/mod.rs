@@ -6,7 +6,7 @@ pub mod monster;
 pub mod names;
 pub mod pregen;
 
-use nat20_core::registry::registry::ClassesRegistry;
+use nat20_core::{components::rng, registry::registry::ClassesRegistry};
 
 /// The `nat20_core` git revision this binary was built against, read from Cargo.lock at build time.
 pub fn engine_rev() -> &'static str {
@@ -17,4 +17,11 @@ pub fn engine_rev() -> &'static str {
 /// missing asset folder fails at startup instead of on the first real command.
 pub fn loaded_class_count() -> usize {
     ClassesRegistry::keys().count()
+}
+
+/// Seeds core's dice for this thread. Every roll after the call follows from `seed`, so the same
+/// seed and the same request stream replay the same session. Core keeps one generator per thread;
+/// the server handles every request on one thread.
+pub fn seed_dice(seed: u32) {
+    rng::seed(u64::from(seed));
 }

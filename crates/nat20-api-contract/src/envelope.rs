@@ -36,7 +36,8 @@ pub enum Command {
     /// Starts a session: an empty log and no scene. Replaces any running session.
     NewSession {
         /// Dice seed. The same seed and the same request stream give an identical log. When
-        /// omitted, the engine picks one and logs it in `session_started`.
+        /// omitted, the engine picks one and logs it in `session_started`; replaying with that
+        /// seed reproduces the session. Every value, 0 included, is a real seed.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         seed: Option<u32>,
     },

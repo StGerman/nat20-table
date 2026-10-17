@@ -149,18 +149,13 @@ impl Server {
                 });
             }
             Command::NewSession { seed } => {
-                if seed.is_some() {
-                    return Err(errors::not_implemented(
-                        "A dice seed",
-                        "the core's dice cannot be seeded until upstream item U2 lands; call new_session without a seed",
-                    ));
-                }
+                let seed = seed.unwrap_or_else(random_seed);
+                adapter::seed_dice(seed);
                 self.sessions_started += 1;
-                // Seed 0 means unseeded: the dice use the operating system's randomness.
-                self.session = Some(Session::new(self.data_dir.clone(), CONTRACT_VERSION, 0));
+                self.session = Some(Session::new(self.data_dir.clone(), CONTRACT_VERSION, seed));
                 return Ok(CommandResult::NewSession {
                     session_id: format!("s{}", self.sessions_started),
-                    seed: 0,
+                    seed,
                 });
             }
             _ => {}
@@ -282,4 +277,13 @@ fn for_viewer(mut error: ApiError, viewer: &Viewer) -> ApiError {
         error.message = "The scene is invalid; the DM can see why.".into();
     }
     error
+}
+
+/// A seed for a session that did not ask for one, from the standard library's per-process
+/// random hasher keys, so no RNG dependency is needed here.
+fn random_seed() -> u32 {
+    use std::hash::{BuildHasher, Hasher};
+    std::collections::hash_map::RandomState::new()
+        .build_hasher()
+        .finish() as u32
 }
