@@ -133,16 +133,16 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         hit_dice: Vec<HitDiceSpend>,
     },
-    /// Rolls initiative and enters combat mode.
+    /// Starts one of the scene's encounters: rolls initiative for its participants and enters
+    /// combat mode. Participants, surprise, surrender and end reasons come from the scene file,
+    /// never from the caller (decision D4).
     StartCombat {
-        /// Every creature in the fight.
-        participants: Vec<Handle>,
-        /// Creatures that are surprised (Disadvantage on initiative).
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        surprised: Vec<Handle>,
+        /// Encounter id from the scene file.
+        encounter_id: String,
     },
-    /// Ends combat early, only for a reason the scene allows. A fight that ends by itself (a side
-    /// is down) needs no `end_combat`: the scene is already back in explore mode.
+    /// Ends the running fight early, only for a reason its encounter allows: `surrender` while
+    /// its surrender condition holds, `scenario` when it lists that end reason. A fight that ends
+    /// by itself (a side is down) needs no `end_combat`: the scene is already back in explore mode.
     EndCombat {
         /// Why combat ends.
         reason: EndCombatReason,
@@ -216,11 +216,12 @@ pub struct HitDiceSpend {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EndCombatReason {
-    /// The other side surrendered.
+    /// The encounter's surrender condition holds and the DM calls the surrender. Its surrendering
+    /// creatures that are still conscious become `neutral` and stay in the scene.
     Surrender,
-    /// The other side fled.
+    /// The other side fled. Not served yet (`not_implemented`).
     Fled,
-    /// A scenario trigger ends the fight.
+    /// The story ends the fight; the encounter must list `scenario` in its `end_reasons`.
     Scenario,
 }
 

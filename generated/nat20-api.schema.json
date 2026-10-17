@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.9"
+    "version": "1.0.0-dev.10"
   },
   "$defs": {
     "Ability": {
@@ -1361,21 +1361,44 @@
         "kept"
       ]
     },
+    "EncounterView": {
+      "description": "A scene encounter as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Encounter id from the scene, the `encounter_id` a `start_combat` names.",
+          "type": "string"
+        },
+        "running": {
+          "description": "Whether this encounter is the fight running now.",
+          "type": "boolean"
+        },
+        "surrender_available": {
+          "description": "Whether `end_combat{surrender}` would be accepted now: the encounter is running and its\nsurrender condition holds (decision D5). The engine works this out; the DM decides\nwhether to call it.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "running",
+        "surrender_available"
+      ]
+    },
     "EndCombatReason": {
       "description": "Why the DM ends combat early.",
       "oneOf": [
         {
-          "description": "The other side surrendered.",
+          "description": "The encounter's surrender condition holds and the DM calls the surrender. Its surrendering\ncreatures that are still conscious become `neutral` and stay in the scene.",
           "type": "string",
           "const": "surrender"
         },
         {
-          "description": "The other side fled.",
+          "description": "The other side fled. Not served yet (`not_implemented`).",
           "type": "string",
           "const": "fled"
         },
         {
-          "description": "A scenario trigger ends the fight.",
+          "description": "The story ends the fight; the encounter must list `scenario` in its `end_reasons`.",
           "type": "string",
           "const": "scenario"
         }
@@ -1430,6 +1453,11 @@
           "const": "unknown_spawn"
         },
         {
+          "description": "The encounter id is not declared by the scene.",
+          "type": "string",
+          "const": "unknown_encounter"
+        },
+        {
           "description": "The actor is not the one the engine is waiting on.",
           "type": "string",
           "const": "not_your_turn"
@@ -1453,6 +1481,11 @@
           "description": "The engine refused a well-formed decision; see `reason`.",
           "type": "string",
           "const": "rejected"
+        },
+        {
+          "description": "`end_combat{surrender}` while the running encounter's surrender condition does not hold,\nor for an encounter that declares none. Nothing changed. Not retryable as it stands; the\ncondition may hold later in the fight.",
+          "type": "string",
+          "const": "surrender_not_available"
         },
         {
           "description": "The command is in the contract but this engine build does not implement it yet.",
@@ -1487,7 +1520,7 @@
           ]
         },
         "known_ids": {
-          "description": "The ids the scene does define, after an unknown id (`unknown_anchor`). Sent to the DM\nonly, because ids are scenario data.",
+          "description": "The ids the scene does define, after an unknown id (`unknown_anchor`, `unknown_check`,\n`unknown_encounter`). Sent to the DM only, because ids are scenario data.",
           "type": "array",
           "items": {
             "type": "string"
@@ -1605,6 +1638,27 @@
           "required": [
             "kind",
             "participants"
+          ]
+        },
+        {
+          "description": "Creatures surrendered: the DM called the surrender while their encounter allowed it. They\nare now `neutral` and stay in the scene.",
+          "type": "object",
+          "properties": {
+            "handles": {
+              "description": "The creatures that surrendered, in the encounter's order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "surrendered"
+            }
+          },
+          "required": [
+            "kind",
+            "handles"
           ]
         },
         {
@@ -2579,6 +2633,11 @@
           "description": "The scenario check was already rolled in this scene, by anyone.",
           "type": "string",
           "const": "already_attempted"
+        },
+        {
+          "description": "The running encounter does not allow this way to end it (`end_combat{scenario}` for an\nencounter that does not list `scenario` in its `end_reasons`).",
+          "type": "string",
+          "const": "condition_not_met"
         }
       ]
     },
@@ -2903,35 +2962,25 @@
           ]
         },
         {
-          "description": "Rolls initiative and enters combat mode.",
+          "description": "Starts one of the scene's encounters: rolls initiative for its participants and enters\ncombat mode. Participants, surprise, surrender and end reasons come from the scene file,\nnever from the caller (decision D4).",
           "type": "object",
           "properties": {
             "cmd": {
               "type": "string",
               "const": "start_combat"
             },
-            "participants": {
-              "description": "Every creature in the fight.",
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/Handle"
-              }
-            },
-            "surprised": {
-              "description": "Creatures that are surprised (Disadvantage on initiative).",
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/Handle"
-              }
+            "encounter_id": {
+              "description": "Encounter id from the scene file.",
+              "type": "string"
             }
           },
           "required": [
             "cmd",
-            "participants"
+            "encounter_id"
           ]
         },
         {
-          "description": "Ends combat early, only for a reason the scene allows. A fight that ends by itself (a side\nis down) needs no `end_combat`: the scene is already back in explore mode.",
+          "description": "Ends the running fight early, only for a reason its encounter allows: `surrender` while\nits surrender condition holds, `scenario` when it lists that end reason. A fight that ends\nby itself (a side is down) needs no `end_combat`: the scene is already back in explore mode.",
           "type": "object",
           "properties": {
             "cmd": {
@@ -3766,6 +3815,13 @@
                 "$ref": "#/$defs/CreatureFull"
               }
             },
+            "encounters": {
+              "description": "The loaded scene's encounters, in scene file order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EncounterView"
+              }
+            },
             "flags": {
               "description": "Scene flags set this session, sorted. They persist across scenes.",
               "type": "array",
@@ -3812,7 +3868,8 @@
             "creatures",
             "anchors",
             "flags",
-            "checks"
+            "checks",
+            "encounters"
           ]
         },
         {

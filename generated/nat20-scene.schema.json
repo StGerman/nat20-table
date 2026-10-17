@@ -76,7 +76,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.9"
+    "version": "1.0.0-dev.10"
   },
   "$defs": {
     "Ability": {
@@ -388,17 +388,17 @@
       "description": "Why the DM ends combat early.",
       "oneOf": [
         {
-          "description": "The other side surrendered.",
+          "description": "The encounter's surrender condition holds and the DM calls the surrender. Its surrendering\ncreatures that are still conscious become `neutral` and stay in the scene.",
           "type": "string",
           "const": "surrender"
         },
         {
-          "description": "The other side fled.",
+          "description": "The other side fled. Not served yet (`not_implemented`).",
           "type": "string",
           "const": "fled"
         },
         {
-          "description": "A scenario trigger ends the fight.",
+          "description": "The story ends the fight; the encounter must list `scenario` in its `end_reasons`.",
           "type": "string",
           "const": "scenario"
         }

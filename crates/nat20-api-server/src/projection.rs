@@ -6,8 +6,8 @@
 //! and gets every roll in the `player` view.
 
 use nat20_api_contract::{
-    Anchor, AnchorObserved, AnchorView, CheckView, CreatureFull, CreatureObserved, Event,
-    EventKind, Handle, Mode, PointFt, RollView, Sheet, State, Visibility,
+    Anchor, AnchorObserved, AnchorView, CheckView, CreatureFull, CreatureObserved, EncounterView,
+    Event, EventKind, Handle, Mode, PointFt, RollView, Sheet, State, Visibility,
 };
 
 use crate::render;
@@ -44,6 +44,8 @@ pub struct FullState {
     pub flags: Vec<String>,
     /// The scene's checks with whether each was rolled.
     pub checks: Vec<CheckView>,
+    /// The scene's encounters with which one runs and whether its surrender is available.
+    pub encounters: Vec<EncounterView>,
 }
 
 /// The state as `viewer` may see it. `None` when a creature viewer is not in the scene.
@@ -57,6 +59,7 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
         anchors,
         flags,
         checks,
+        encounters,
     } = full;
     let handle = match viewer {
         Viewer::Dm => {
@@ -76,6 +79,7 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
                     .collect(),
                 flags,
                 checks,
+                encounters,
             });
         }
         Viewer::Creature(handle) => handle,

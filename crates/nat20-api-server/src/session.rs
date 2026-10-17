@@ -7,9 +7,9 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use nat20_api_contract::{
-    ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, ErrorCode, Event, EventKind,
-    Handle, Mode, MoveTarget, OptionId, PromptId, ReactionTrigger, RollId, RollView, State,
-    Visibility,
+    ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, EndCombatReason, ErrorCode,
+    Event, EventKind, Handle, Mode, MoveTarget, OptionId, PromptId, ReactionTrigger, RollId,
+    RollView, State, Visibility,
 };
 
 use crate::{
@@ -17,7 +17,7 @@ use crate::{
         events::Pending,
         game::{Game, Wait},
     },
-    errors::{error, not_implemented, with_awaiting},
+    errors::{error, with_awaiting},
     projection::{self, FullState, Viewer},
     render, scene,
 };
@@ -165,28 +165,23 @@ impl Session {
 
     pub fn start_combat(
         &mut self,
-        participants: &[Handle],
-        surprised: &[Handle],
+        encounter_id: &str,
         viewer: &Viewer,
     ) -> Result<CommandResult, ApiError> {
-        if !surprised.is_empty() {
-            return Err(not_implemented(
-                "Surprise",
-                "initiative with Disadvantage needs a core change; call start_combat without surprised",
-            ));
-        }
-        let game = self.game_mut()?;
-        let handles: Vec<String> = participants.iter().map(|h| h.0.clone()).collect();
-        let result = game.start_combat(&handles);
+        let result = self.game_mut()?.start_combat(encounter_id);
         self.after_decision(result)?;
         Ok(CommandResult::StartCombat {
             state: self.state_for(viewer)?,
         })
     }
 
-    /// Ending a fight early needs scene rules that are not served yet; outside combat, including
-    /// after a fight ended by itself, there is nothing to end.
-    pub fn end_combat(&mut self) -> Result<CommandResult, ApiError> {
+    /// Ends the running fight for a reason its encounter allows. Outside combat, including after
+    /// a fight ended by itself, there is nothing to end.
+    pub fn end_combat(
+        &mut self,
+        reason: EndCombatReason,
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
         let game = self.game_mut()?;
         if game.mode() == Mode::Explore {
             let message = if matches!(game.wait(), Wait::CombatOver { .. }) {
@@ -196,10 +191,11 @@ impl Session {
             };
             return Err(error(ErrorCode::WrongMode, message));
         }
-        Err(not_implemented(
-            "Ending combat early",
-            "the scene file has no end-combat reasons yet",
-        ))
+        let result = game.end_combat(reason);
+        self.after_decision(result)?;
+        Ok(CommandResult::EndCombat {
+            state: self.state_for(viewer)?,
+        })
     }
 
     pub fn state(&self, viewer: &Viewer) -> Result<CommandResult, ApiError> {
@@ -473,6 +469,7 @@ impl Session {
             anchors: game.anchors().to_vec(),
             flags: game.flags(),
             checks: game.checks(),
+            encounters: game.encounters(),
         };
         projection::state(viewer, full).ok_or_else(|| {
             error(

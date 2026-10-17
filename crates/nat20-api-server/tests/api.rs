@@ -48,7 +48,7 @@ impl Api {
         assert_eq!(loaded["ok"], true, "{loaded}");
         let started = self.call(
             viewer,
-            json!({ "cmd": "start_combat", "participants": ["bren", "goblin"] }),
+            json!({ "cmd": "start_combat", "encounter_id": "duel" }),
         );
         assert_eq!(started["ok"], true, "{started}");
         started
@@ -178,7 +178,7 @@ fn invalid_decisions_get_readable_rejections() {
             "not_your_turn",
         ),
         (
-            json!({ "cmd": "start_combat", "participants": ["bren", "goblin"] }),
+            json!({ "cmd": "start_combat", "encounter_id": "duel" }),
             "wrong_mode",
         ),
         (
@@ -216,16 +216,22 @@ fn combat_commands_need_combat() {
     assert_eq!(loaded["awaiting"]["kind"], "none", "{loaded}");
     let legal = api.call("dm", json!({ "cmd": "legal_actions", "actor": "bren" }));
     assert_eq!(legal["error"]["code"], "wrong_mode", "{legal}");
-    let lonely = api.call(
+    let unknown = api.call(
         "dm",
-        json!({ "cmd": "start_combat", "participants": ["bren"] }),
+        json!({ "cmd": "start_combat", "encounter_id": "brawl" }),
     );
-    assert_eq!(lonely["error"]["code"], "bad_request", "{lonely}");
-    let surprised = api.call(
-        "dm",
-        json!({ "cmd": "start_combat", "participants": ["bren", "goblin"], "surprised": ["goblin"] }),
+    assert_eq!(unknown["error"]["code"], "unknown_encounter", "{unknown}");
+    assert_eq!(
+        unknown["error"]["hint"]["known_ids"],
+        json!(["duel"]),
+        "{unknown}"
     );
-    assert_eq!(surprised["error"]["code"], "not_implemented", "{surprised}");
+    let guessed = api.call(
+        "bren",
+        json!({ "cmd": "start_combat", "encounter_id": "brawl" }),
+    );
+    assert_eq!(guessed["error"]["code"], "unknown_encounter", "{guessed}");
+    assert!(guessed["error"].get("hint").is_none(), "{guessed}");
     let end = api.call("dm", json!({ "cmd": "end_combat", "reason": "surrender" }));
     assert_eq!(end["error"]["code"], "wrong_mode", "{end}");
 }
@@ -417,7 +423,7 @@ fn a_second_scene_continues_the_same_log() {
     assert_eq!(events[0]["seq"].as_u64().unwrap(), head + 1, "{reload}");
     let second = api.call(
         "dm",
-        json!({ "cmd": "start_combat", "participants": ["bren", "goblin"] }),
+        json!({ "cmd": "start_combat", "encounter_id": "duel" }),
     );
     let initiative = second["events"]
         .as_array()
@@ -507,7 +513,7 @@ fn a_sheet_leaves_the_dice_alone() {
         }
         let started = api.call(
             "dm",
-            json!({ "cmd": "start_combat", "participants": ["bren", "goblin"] }),
+            json!({ "cmd": "start_combat", "encounter_id": "duel" }),
         );
         assert_eq!(started["ok"], true, "{started}");
         fight_to_the_end(&mut api, started);
@@ -752,7 +758,7 @@ fn stdio_binary_speaks_json_lines() {
         for line in [
             r#"{"v":1,"id":"a","viewer":"dm","cmd":"new_session"}"#,
             r#"{"v":1,"id":"b","viewer":"dm","cmd":"load_scene","scene_id":"duel"}"#,
-            r#"{"v":1,"id":"c","viewer":"dm","cmd":"start_combat","participants":["bren","goblin"]}"#,
+            r#"{"v":1,"id":"c","viewer":"dm","cmd":"start_combat","encounter_id":"duel"}"#,
             r#"{"v":1,"id":"d","viewer":"dm","cmd":"events","since":0}"#,
         ] {
             writeln!(stdin, "{line}").unwrap();
@@ -1024,4 +1030,31 @@ fn a_check_after_a_fight_closes_its_combat_over() {
     let state = api.call("dm", json!({ "cmd": "get_state" }));
     assert_eq!(state["result"]["state"]["mode"], "explore", "{state}");
     assert_eq!(state["awaiting"]["kind"], "none", "{state}");
+}
+
+/// Decision D5: the engine refuses an early end its encounter does not allow, and the refusal
+/// changes nothing. The accepted surrender is in `contract/fixtures/encounter.jsonl`.
+#[test]
+fn a_refused_end_combat_changes_nothing() {
+    let mut api = duel();
+    let started = api.start_duel("dm");
+    let before = api.call("dm", json!({ "cmd": "get_state" }));
+    for (reason, code) in [
+        ("surrender", "surrender_not_available"),
+        ("scenario", "rejected"),
+        ("fled", "not_implemented"),
+    ] {
+        let refused = api.call("dm", json!({ "cmd": "end_combat", "reason": reason }));
+        assert_eq!(refused["error"]["code"], code, "{refused}");
+        assert_eq!(refused["events"], json!([]), "{refused}");
+        assert_eq!(refused["log_head"], started["log_head"], "{refused}");
+        assert_eq!(refused["awaiting"], started["awaiting"], "{refused}");
+    }
+    let after = api.call("dm", json!({ "cmd": "get_state" }));
+    assert_eq!(after["result"], before["result"], "{after}");
+    assert_eq!(
+        after["result"]["state"]["encounters"],
+        json!([{ "id": "duel", "running": true, "surrender_available": false }]),
+        "{after}"
+    );
 }

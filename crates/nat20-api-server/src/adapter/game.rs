@@ -13,10 +13,11 @@ use std::{
 
 use hecs::Entity;
 use nat20_api_contract::{
-    ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, Consequence,
-    Control, CreatureFull, DcSource, ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand,
-    Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption, RejectReason, RollId,
-    ScenarioCheck, SceneFile, Sheet, Side, TargetCandidate, Targeting, UnavailableOption,
+    ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, CombatOverReason,
+    Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
+    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, Mode, MoveTarget, OptionId,
+    Placement, PointFt, ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet,
+    Side, SurrenderCondition, SurrenderTrigger, TargetCandidate, Targeting, UnavailableOption,
     Visibility,
 };
 use nat20_core::{
@@ -29,9 +30,9 @@ use nat20_core::{
         d20::D20CheckDC,
         damage::DamageRoll,
         dice::DiceSet,
-        faction::Attitude,
+        faction::{Attitude, AttitudeOverride, FactionSet},
         health::{hit_points::HitPoints, life_state::LifeState},
-        id::{ActionId, EntityIdentifier, ResourceId},
+        id::{ActionId, EntityIdentifier, FactionId, ResourceId},
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
         resource::ResourceAmount,
         saving_throw::SavingThrowKind,
@@ -86,6 +87,7 @@ struct Scene {
     anchors: Vec<Anchor>,
     checks: Vec<ScenarioCheck>,
     hazards: Vec<Hazard>,
+    encounters: Vec<Encounter>,
     /// Scenario checks already rolled in this scene; each is rolled at most once (decision D3).
     attempted: HashSet<String>,
 }
@@ -149,6 +151,8 @@ pub struct Game {
     scene: Scene,
     /// The running or finished combat, if any.
     encounter: Option<EncounterId>,
+    /// The scene encounter `encounter` was started from.
+    scene_encounter: Option<String>,
     /// Entries not yet taken by the session; it assigns `seq` and roll ids.
     pending: Vec<Pending>,
     /// Hit Points per creature as of the last logged event.
@@ -368,8 +372,10 @@ impl Game {
             anchors: scene.anchors.clone(),
             checks: scene.checks.clone(),
             hazards: scene.hazards.clone(),
+            encounters: scene.encounters.clone(),
             attempted: HashSet::new(),
         };
+        game.scene_encounter = None;
         game.encounter_seen = 0;
         game.winner = None;
         game.scripted_turn = None;
@@ -390,9 +396,11 @@ impl Game {
                 anchors: Vec::new(),
                 checks: Vec::new(),
                 hazards: Vec::new(),
+                encounters: Vec::new(),
                 attempted: HashSet::new(),
             },
             encounter: None,
+            scene_encounter: None,
             pending: Vec::new(),
             hp: HpTracker::new(),
             keys: RollKeys::default(),
@@ -617,9 +625,7 @@ impl Game {
         }
 
         // An explore command that acts closes a finished fight's `combat_over`, as `move` does.
-        if self.winner.take().is_some() {
-            self.encounter = None;
-        }
+        self.close_finished_fight();
         if let Some(scenario) = &scenario {
             self.scene.attempted.insert(scenario.id.clone());
         }
@@ -842,11 +848,8 @@ impl Game {
         } else {
             // Nobody is fighting, so the creature is simply placed at the end of its route.
             systems::geometry::teleport_to(&mut self.engine.world, entity, &end);
-            // An explore command that acts closes a finished fight's `combat_over`. The ended
-            // encounter goes too, or clearing `winner` alone would read as combat again.
-            if self.winner.take().is_some() {
-                self.encounter = None;
-            }
+            // An explore command that acts closes a finished fight's `combat_over`.
+            self.close_finished_fight();
             (
                 route.full_path.length.get::<uom::si::length::meter>(),
                 Vec::new(),
@@ -945,18 +948,43 @@ impl Game {
         }
     }
 
-    /// Rolls initiative for `participants` and runs scripted turns until a client decides.
-    pub fn start_combat(&mut self, participants: &[String]) -> Result<(), ApiError> {
+    /// Starts the scene encounter `encounter_id`: rolls initiative for its participants and
+    /// runs scripted turns until a client decides. Participants not in the scene are left out.
+    pub fn start_combat(&mut self, encounter_id: &str) -> Result<(), ApiError> {
         if self.running_encounter().is_some() {
             return Err(error(ErrorCode::WrongMode, "Combat is already running."));
         }
-        let mut entities = Vec::new();
-        for handle in participants {
-            let entity = self.entity(handle)?;
-            if !entities.contains(&entity) {
-                entities.push(entity);
+        let Some(found) = self.scene.encounters.iter().find(|e| e.id == encounter_id) else {
+            let mut e = error(
+                ErrorCode::UnknownEncounter,
+                format!("Scene {} has no encounter {encounter_id}.", self.scene.id),
+            );
+            let known_ids: Vec<String> =
+                self.scene.encounters.iter().map(|e| e.id.clone()).collect();
+            if !known_ids.is_empty() {
+                e.hint = Some(ErrorHint {
+                    legal_option_ids: Vec::new(),
+                    awaiting: None,
+                    known_ids,
+                });
             }
+            return Err(e);
+        };
+        if let Some(surprise) = &found.surprise
+            && self.flags.contains(&surprise.when_flag)
+        {
+            return Err(error(
+                ErrorCode::NotImplemented,
+                format!(
+                    "{encounter_id} starts with a surprise, and surprise is not implemented by this engine yet: initiative with Disadvantage needs a core change (U5)."
+                ),
+            ));
         }
+        let entities: Vec<Entity> = found
+            .participants
+            .iter()
+            .filter_map(|h| self.entity(&h.0).ok())
+            .collect();
         let standing = |side: Side| {
             entities.iter().any(|e| {
                 self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
@@ -965,13 +993,16 @@ impl Game {
         if !standing(Side::Party) || !standing(Side::Hostile) {
             return Err(error(
                 ErrorCode::BadRequest,
-                "start_combat needs at least one conscious party creature and one conscious hostile creature.",
+                format!(
+                    "{encounter_id} needs at least one conscious party creature and one conscious hostile creature."
+                ),
             ));
         }
         // Whatever happened before this fight is already in the log.
         self.drain();
         let encounter = self.engine.start_encounter(entities.into_iter().collect());
         self.encounter = Some(encounter);
+        self.scene_encounter = Some(encounter_id.to_owned());
         self.encounter_seen = 0;
         self.winner = None;
         self.scripted_turn = None;
@@ -979,6 +1010,168 @@ impl Game {
         self.log_initiative();
         self.advance();
         Ok(())
+    }
+
+    /// Ends the running fight early, for a reason its scene encounter allows. The caller has
+    /// checked that a fight is running.
+    pub fn end_combat(&mut self, reason: EndCombatReason) -> Result<(), ApiError> {
+        let (Some(core_id), Some(found)) = (
+            self.running_encounter(),
+            self.scene_encounter
+                .as_ref()
+                .and_then(|id| self.scene.encounters.iter().find(|e| e.id == *id)),
+        ) else {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "There is no combat in this scene to end.",
+            ));
+        };
+        let id = found.id.clone();
+        let (surrendering, winner, reason) = match reason {
+            EndCombatReason::Fled => {
+                return Err(error(
+                    ErrorCode::NotImplemented,
+                    "Ending a fight because a side fled is not implemented by this engine yet (MON-6).",
+                ));
+            }
+            EndCombatReason::Scenario => {
+                if !found.end_reasons.contains(&EndCombatReason::Scenario) {
+                    return Err(rejected(
+                        RejectReason::ConditionNotMet,
+                        format!("{id} does not list scenario among the ways it can end."),
+                    ));
+                }
+                (Vec::new(), None, CombatOverReason::Scenario)
+            }
+            EndCombatReason::Surrender => {
+                let Some(condition) = found.surrender.as_ref().filter(|c| self.surrender_holds(c))
+                else {
+                    return Err(error(
+                        ErrorCode::SurrenderNotAvailable,
+                        if found.surrender.is_some() {
+                            format!("The surrender condition of {id} does not hold right now.")
+                        } else {
+                            format!("{id} declares no surrender condition.")
+                        },
+                    ));
+                };
+                let creatures: Vec<Entity> = condition
+                    .creatures
+                    .iter()
+                    .filter_map(|h| self.entity(&h.0).ok())
+                    .collect();
+                // The side they surrender to is the other one.
+                let winner = match creatures.first().and_then(|e| self.side_of(*e)) {
+                    Some(Side::Hostile) => Some(Side::Party),
+                    Some(Side::Party) => Some(Side::Hostile),
+                    _ => None,
+                };
+                let surrendering: Vec<Entity> = creatures
+                    .into_iter()
+                    .filter(|e| life_state_name(&self.engine, *e) == "normal")
+                    .collect();
+                (surrendering, winner, CombatOverReason::Surrender)
+            }
+        };
+
+        let round = self.round();
+        self.drain();
+        if reason == CombatOverReason::Surrender {
+            // The winners' factions stop being enemies of the creatures that gave up, in core
+            // too, so they can share a later scene (an interrogation) without a fight.
+            let winners: HashSet<FactionId> = self
+                .scene
+                .creatures
+                .iter()
+                .filter(|c| Some(c.side) == winner)
+                .filter_map(|c| self.engine.world.get::<&FactionSet>(c.entity).ok())
+                .flat_map(|factions| factions.iter().cloned().collect::<Vec<_>>())
+                .collect();
+            for entity in &surrendering {
+                if self.engine.world.get::<&AttitudeOverride>(*entity).is_err() {
+                    let _ = self
+                        .engine
+                        .world
+                        .insert_one(*entity, AttitudeOverride::new());
+                }
+                if let Ok(mut overrides) = self.engine.world.get::<&mut AttitudeOverride>(*entity) {
+                    for faction in &winners {
+                        overrides
+                            .factions
+                            .insert(faction.clone(), Attitude::Neutral);
+                    }
+                }
+            }
+            for creature in &mut self.scene.creatures {
+                if surrendering.contains(&creature.entity) {
+                    creature.side = Side::Neutral;
+                }
+            }
+            let handles = surrendering
+                .iter()
+                .map(|e| Handle(self.handle_of(*e)))
+                .collect();
+            self.pending
+                .push(Pending::public(round, EventKind::Surrendered { handles }));
+        }
+        self.engine.end_encounter(&core_id);
+        self.drain();
+        self.pending.push(combat_over(round, winner, reason));
+        self.encounter = None;
+        self.scene_encounter = None;
+        self.scripted_turn = None;
+        Ok(())
+    }
+
+    /// The scene's encounters as the DM sees them.
+    pub fn encounters(&self) -> Vec<EncounterView> {
+        let running = self
+            .running_encounter()
+            .and(self.scene_encounter.as_deref());
+        self.scene
+            .encounters
+            .iter()
+            .map(|e| {
+                let is_running = running == Some(e.id.as_str());
+                EncounterView {
+                    id: e.id.clone(),
+                    running: is_running,
+                    surrender_available: is_running
+                        && e.surrender
+                            .as_ref()
+                            .is_some_and(|c| self.surrender_holds(c)),
+                }
+            })
+            .collect()
+    }
+
+    /// Whether any trigger of a surrender condition holds, counted over its creatures that are
+    /// in the scene.
+    fn surrender_holds(&self, condition: &SurrenderCondition) -> bool {
+        let creatures: Vec<Entity> = condition
+            .creatures
+            .iter()
+            .filter_map(|h| self.entity(&h.0).ok())
+            .collect();
+        let down = |e: Entity| {
+            !systems::health::is_alive(&self.engine.world, e)
+                || life_state_name(&self.engine, e) != "normal"
+        };
+        condition.any_of.iter().any(|trigger| match trigger {
+            SurrenderTrigger::HpFractionAtMost { fraction } => {
+                let (hp, hp_max) = creatures.iter().fold((0, 0), |(hp, max), e| {
+                    let (h, m, _) = hit_points(&self.engine, *e);
+                    (hp + h, max + m)
+                });
+                hp_max > 0 && (hp as f32) <= fraction * hp_max as f32
+            }
+            SurrenderTrigger::StandingAtMost { count } => {
+                creatures.iter().filter(|e| !down(**e)).count() as u32 <= *count
+            }
+            SurrenderTrigger::LeaderDown { handle } => {
+                self.entity(&handle.0).map(down).unwrap_or(true)
+            }
+        })
     }
 
     /// The options at `actor`'s pending action prompt, and the ones it has but cannot take.
@@ -1522,9 +1715,19 @@ impl Game {
         self.drain();
         self.engine.end_encounter(&encounter);
         self.drain();
-        self.pending.push(combat_over(round, winner));
+        self.pending
+            .push(combat_over(round, winner, CombatOverReason::SideDown));
         self.winner = Some(winner);
         true
+    }
+
+    /// Closes the `combat_over` notice of a fight that ended by itself. The ended encounter goes
+    /// too, or clearing `winner` alone would read as combat again.
+    fn close_finished_fight(&mut self) {
+        if self.winner.take().is_some() {
+            self.encounter = None;
+            self.scene_encounter = None;
+        }
     }
 
     /// The encounter while combat runs; `None` in explore mode or once combat ended by itself.

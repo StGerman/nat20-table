@@ -457,14 +457,8 @@ impl LogWriter<'_> {
 }
 
 /// The entry for the end of combat.
-pub fn combat_over(round: Option<u32>, winner: Option<Side>) -> Pending {
-    Pending::public(
-        round,
-        EventKind::CombatOver {
-            winner,
-            reason: CombatOverReason::SideDown,
-        },
-    )
+pub fn combat_over(round: Option<u32>, winner: Option<Side>, reason: CombatOverReason) -> Pending {
+    Pending::public(round, EventKind::CombatOver { winner, reason })
 }
 
 pub fn wire_life_state(state: &LifeState) -> WireLife {

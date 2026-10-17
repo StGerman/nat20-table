@@ -181,12 +181,9 @@ impl Server {
         match command {
             Command::Hello | Command::NewSession { .. } => unreachable!("handled above"),
             Command::LoadScene { scene_id, party } => session.load_scene(scene_id, party, viewer),
-            Command::StartCombat {
-                participants,
-                surprised,
-            } => session.start_combat(participants, surprised, viewer),
+            Command::StartCombat { encounter_id } => session.start_combat(encounter_id, viewer),
             Command::GetState => session.state(viewer),
-            Command::EndCombat { .. } => session.end_combat(),
+            Command::EndCombat { reason } => session.end_combat(*reason, viewer),
             Command::LegalActions { actor } => session.legal_actions(&actor.0),
             Command::Submit {
                 actor,

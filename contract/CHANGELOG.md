@@ -3,6 +3,14 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.10 (2026-10-17)
+- Encounters are served (API-9, API-22, Milestone 3 spec §7 step 7; protocol.md §4.4). `end_combat` ends a running fight early: `surrender` only while the encounter's surrender condition holds (decision D5), `scenario` only when the encounter lists it in `end_reasons`. A surrender turns the encounter's still-conscious surrendering creatures `neutral`; they stay in the scene. `fled` answers `not_implemented` (MON-6), and so does an encounter whose surprise flag is set (U5, API-12).
+- **Breaking:** `start_combat{participants, surprised}` becomes `start_combat{encounter_id}` (decision D4): participants, surprise, surrender and early ends come from the scene file. Migration: declare the fight under `encounters` in the scene file and pass its id; `duel.json` declares encounter `duel`.
+- Additive: `ErrorCode::unknown_encounter` (with the scene's encounter ids in `hint.known_ids`, DM only) and `ErrorCode::surrender_not_available` (not retryable); `RejectReason::condition_not_met` for `end_combat{scenario}` on an encounter that does not allow it.
+- Additive: event `surrendered{handles}`, public; `combat_over.reason` now also reads `surrender` or `scenario`.
+- Additive: `State::Dm.encounters` (`EncounterView`: id, `running`, `surrender_available`), never in a player view.
+- Fixture `encounter.jsonl` (seeds 3 and 4): a surprise refused, the refused early ends, a surrender once one goblin is down, the surrendered goblin carried into the next scene, and a scenario end. Every fixture with a DM state now shows `encounters`; `not_implemented.jsonl` loses its `surprised` line; `session.jsonl` asks for an unknown encounter instead of a lone or unknown participant. The visibility scan also refuses `encounters` and `surrender_available` in any player view.
+
 ## 1.0.0-dev.9 (2026-10-17)
 - `request_check` is served in explore mode (API-2, CHK-1, CHK-2, CHK-5, Milestone 3 spec §7 step 5; protocol.md §4.3). Scenario checks roll the scene's skill check or saving throw against its DC and run its consequences: flags, hazards (a saving throw for the same creature) and damage. Each scenario check is rolled at most once per scene. Ladder checks take a skill and a DC of 5, 10, 15, 20, 25 or 30. In combat, and for a ladder check without a skill or with another ability than the skill's, it answers `not_implemented`.
 - **Breaking:** `request_check.advantage` and the `AdvantageGrant` type are removed (decision D2): Advantage comes only from what the engine tracks. Migration: drop the field; a reason the DM would have given becomes Help once CHK-4 lands.

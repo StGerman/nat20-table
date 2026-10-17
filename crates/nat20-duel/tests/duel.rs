@@ -1,9 +1,7 @@
 //! Milestone 1: one Fighter against one Goblin Warrior, end to end through the engine API,
 //! with every roll audited against the engine log.
 
-use nat20_api_contract::{
-    Command, CommandResult, Event, EventKind, Handle, RollKind, RollView, State,
-};
+use nat20_api_contract::{Command, CommandResult, Event, EventKind, RollKind, RollView, State};
 use nat20_duel::{
     audit::{audit_transcript, check_roll_arithmetic},
     client::Client,
@@ -119,8 +117,7 @@ fn goblin_warrior_matches_the_srd_stat_block() {
     let started = client.send(
         "dm",
         Command::StartCombat {
-            participants: vec![Handle("bren".into()), Handle("goblin".into())],
-            surprised: Vec::new(),
+            encounter_id: "duel".into(),
         },
     );
     let Some(CommandResult::StartCombat {

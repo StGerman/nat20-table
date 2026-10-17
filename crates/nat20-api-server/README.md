@@ -6,7 +6,7 @@ The engine process: JSON lines on stdin and stdout, speaking the contract in [`n
 cargo run -p nat20-api-server
 {"v":1,"id":"c-1","viewer":"dm","cmd":"new_session"}
 {"v":1,"id":"c-2","viewer":"dm","cmd":"load_scene","scene_id":"duel"}
-{"v":1,"id":"c-3","viewer":"dm","cmd":"start_combat","participants":["bren","goblin"]}
+{"v":1,"id":"c-3","viewer":"dm","cmd":"start_combat","encounter_id":"duel"}
 {"v":1,"id":"c-4","viewer":"bren","cmd":"legal_actions","actor":"bren"}
 ```
 
@@ -20,7 +20,7 @@ cargo run -p nat20-api-server
 - `data/scenes/`, `data/monsters/`: scene files and SRD 5.2.1 stat blocks. `m3_s1_green` to `m3_s5_cellar` are the Milestone 3 test scenario `m3_trail`. Pregens are built in code for now (`adapter/pregen.rs`).
 
 ## Known gaps (milestone 1)
-- Not served yet: `short_rest`, `end_combat`, `spawn`, surprise, point and variant options, `request_check` in combat, a ladder check without a skill or with another ability than the skill's. Each answers `not_implemented`.
+- Not served yet: `short_rest`, `spawn`, an encounter whose surprise rule applies, `end_combat{fled}`, point and variant options, `request_check` in combat, a ladder check without a skill or with another ability than the skill's. Each answers `not_implemented`.
 - Explore checks are rolled outside the engine's event loop, so nothing can react to them: a Fighter's Tactical Mind (spend Second Wind to add 1d10 to a failed check) is not offered yet (CHK-6).
 - Dice are seeded per session (`new_session.seed`, core's `components::rng` from upstream item U2), so a fight replays exactly: `contract/fixtures/duel.jsonl` is the Milestone 1 duel with seed 1. Regenerate it with `cargo run -p nat20-duel -- --seed 1 --fixture contract/fixtures/duel.jsonl` after a deliberate behaviour change.
 - The Goblin Warrior wears a +2 AC stopgap for its missing shield, and its extra 1d4 on Advantage and Nimble Escape are not modelled.
