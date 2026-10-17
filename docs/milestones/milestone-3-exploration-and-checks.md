@@ -17,7 +17,7 @@ The surface is mostly fixed already: contract v1 has `move`, `request_check`, `g
 - Hit Point Dice on a short rest;
 - movement to named anchors;
 - surprise derived from an earlier check;
-- surrender and reinforcements as scene triggers;
+- surrender the DM calls within a scene condition the engine enforces, and reinforcements as scene triggers;
 - one party, with its HP, resources and flags, carried from scene to scene.
 
 **Non-goals** (each has its own milestone or row):
@@ -66,7 +66,8 @@ The engine owns every number and every state change. The DM agent's job is to pi
 ### Scene 3: mill yard (Fight 1)
 1. DM: `load_scene{scene_id:"s3_yard", party:[...]}`, then `start_combat{encounter_id:"yard_fight"}`.
 2. Engine: the encounter declares `surprise: {when_flag:"party_ambushes", surprised:"hostile"}`, so every hostile rolls initiative with Disadvantage. The DM never names who is surprised (decision D4).
-3. The fight runs as in Milestone 1. The encounter declares `surrender: {creatures:[goblin handles], at_most_standing: 1}`. When at most one goblin is still conscious, the engine moves the survivor to `neutral`, logs `surrendered`, and takes it out of initiative. When no hostile is left standing, it logs `combat_over{reason:"surrender"}` (or `side_down` if nobody surrendered) and returns to explore mode (decision D5).
+3. The fight runs as in Milestone 1. The encounter declares a surrender condition, for example `surrender: {creatures:[goblin handles], any_of:[{hp_fraction_at_most: 0.25}, {standing_at_most: 1}]}`. The engine evaluates it after every turn and shows the result in the DM view only, as `surrender_available` on the running encounter. The DM never works out HP fractions itself.
+4. While the condition holds, the DM may end the fight with `end_combat{reason:"surrender"}`, balancing story and engagement as its instructions say. The engine moves the encounter's surrendering creatures that are still conscious to `neutral`, logs `surrendered` and `combat_over{reason:"surrender"}`, and returns to explore mode. The surrendered goblins stay in the scene, so Scene 4 can carry one in and target it with checks. Called while the condition does not hold, `end_combat` answers `surrender_not_available` (not retryable) and changes nothing. The engine never surrenders on its own; it ends combat by itself only when a side is down (decision D5).
 
 ### Scene 4: the captured goblin (social), short rest
 1. DM: `load_scene{scene_id:"s4_prisoner", party:["bren","lia","oren","goblin_2"]}`. The carried prisoner keeps its HP; carried creatures are not limited to PCs.
@@ -102,12 +103,13 @@ ScenarioCheck { id, test: {kind:"skill", skill} | {kind:"save", ability}, dc, at
                 on_success[], on_failure[] }
 Hazard        { id, save: {ability, dc}, on_failure[], on_success[] }
 Consequence   = {kind:"flag", flag} | {kind:"hazard", hazard_id} | {kind:"damage", dice, damage_type}
-Encounter     { id, participants[], surprise?: {when_flag, surprised: side}, surrender?: {creatures[], at_most_standing},
+Encounter     { id, participants[], surprise?: {when_flag, surprised: side}, surrender?: {creatures[], any_of[]: {hp_fraction_at_most} | {standing_at_most} | {leader_down: handle}},
                 end_reasons[] }
 Spawn         { id, creatures[], when: "dm" | {flag} | {round, unless?: "any_party_bloodied"} }
 ```
 - `party_start` lists the anchors where carried creatures are placed, in order.
 - A creature defined in the scene and also carried in is a `bad_scene` error.
+- A surrender condition is DM-only data (Rule 3). No player view carries it, or anything derived from it.
 - Consequences are deliberately few. Anything that only changes the story ("the reeve mentions the debt") stays in the DM's scenario notes, not in the engine.
 
 ### 4.2 Commands
@@ -115,7 +117,7 @@ Spawn         { id, creatures[], when: "dm" | {flag} | {round, unless?: "any_par
 | Command | Change | Visibility of the result |
 |---|---|---|
 | `load_scene` | Served with `party`: the handles carried from the previous scene (any creature, not only PCs). Creatures not carried are removed. Session flags persist. | `State` projected as today |
-| `get_state` | `State::Dm` gains `anchors`, `flags`, `checks` (id, test, DC, attempts left per actor), `encounters` and `spawns`. `State::Player` gains `anchors` only, with `distance_ft` from the viewer. Additive. | Anchors: everyone. Flags, checks, DCs, encounters, spawns: DM only, as fields of the DM type alone (Rule 3) |
+| `get_state` | `State::Dm` gains `anchors`, `flags`, `checks` (id, test, DC, attempts left per actor), `encounters` (with `surrender_available` on the running one) and `spawns`. `State::Player` gains `anchors` only, with `distance_ft` from the viewer. Additive. | Anchors: everyone. Flags, checks, DCs, encounters, spawns: DM only, as fields of the DM type alone (Rule 3) |
 | `get_sheet` | Served (API-19), including `hit_dice` once U4 lands | Owner and DM, else `not_visible` |
 | `move` | Served. Explore: no movement cost, needs a path. Combat: needs `prompt_id`, spends movement, returns `provoked`. | Result to the caller; `moved` event public |
 | `request_check` | Served for `scenario` (skill or save) and `ladder` (skill required; a missing skill answers `not_implemented`). **Breaking:** `advantage` is removed. Advantage now comes only from what the engine knows: a pending Help, conditions, or the scene check itself (decision D2). | Result `{roll_id, total, success}`; `check_resolved` DM only |
@@ -123,7 +125,7 @@ Spawn         { id, creatures[], when: "dm" | {flag} | {round, unless?: "any_par
 | `help` | **New**, explore mode: `{actor, kind:"assist_check", ally, skill}` or `{actor, kind:"stabilize", target}`. In combat, Help is an action option from `legal_actions` once U6 lands. | `action` event public; the stabilise check's roll as any roll |
 | `short_rest` | Served once U4 lands. `hit_dice` stays a count per creature, declared up front: a simplification of "decide after each roll" that the agent can repeat with another `short_rest`. Only allowed in explore mode. | `healed` public; `hit_points` owner and DM |
 | `start_combat` | **Breaking:** `{encounter_id}` replaces `{participants, surprised}`. Participants, surprise, surrender and end reasons come from the scene's encounter (decision D4). | `State` |
-| `end_combat` | Served for the `end_reasons` the encounter declares (`scenario`). `surrender` is automatic (D5). `fled` answers `not_implemented` until MON-6. | `State` |
+| `end_combat` | Served. `surrender` is accepted only while the encounter's surrender condition holds, else error `surrender_not_available` (D5). `scenario` is accepted only when the encounter declares it. `fled` answers `not_implemented` until MON-6. | `State` |
 | `spawn` | Served for spawns declared `when:"dm"`; automatic spawns are refused with `rejected`. | `State` |
 
 ### 4.3 Events, errors, roll view
@@ -139,10 +141,10 @@ Spawn         { id, creatures[], when: "dm" | {flag} | {round, unless?: "any_par
 - New `RejectReason`s, additive:
   - `no_path`: no route to the anchor or point;
   - `already_attempted`: a once-per-actor scenario check (D3);
-  - `condition_not_met`: `end_combat` with a reason whose condition does not hold;
+  - `condition_not_met`: `end_combat{scenario}` for an encounter that does not declare it;
   - `automatic`: a trigger-only spawn.
 - `ErrorHint` gains `known_ids: [string]` for `unknown_check`, `unknown_anchor`, `unknown_spawn` and `unknown_encounter`, so a model recovers within 2 retries (acceptance §6.5). It is filled only for the DM viewer, because ids are scenario data.
-- New error code `unknown_encounter`. Additive.
+- New error codes, additive: `unknown_encounter`; `surrender_not_available` (not retryable), for `end_combat{surrender}` while the encounter's condition does not hold.
 
 ### 4.4 Protocol text
 `contract/protocol.md` changes in the same PRs:
@@ -164,7 +166,7 @@ Spawn         { id, creatures[], when: "dm" | {flag} | {round, unless?: "any_par
 | Retrying a check | Enforces `attempts` | Picks another check or actor, or moves the story on |
 | Surprise | Yes, from encounter rules and flags | No (D4) |
 | Combat start | Rolls initiative | Calls `start_combat{encounter_id}` when the fiction says the fight starts |
-| Combat end | Side down, surrender trigger, declared scenario reason | Calls `end_combat` only for a declared reason; the engine checks it |
+| Combat end | Side down; evaluates the surrender condition every turn and refuses a surrender outside it | Decides whether and when to call `end_combat{surrender}` while `surrender_available` is true. A never-surrender DM persona just never calls it (Milestone 6) |
 | Reinforcements | Flag and round triggers | `spawn` only for `when:"dm"` spawns |
 | Short rest | Rolls Hit Point Dice, recharges, refuses at 0 HP | Offers it when the scene says, passes each character's dice count (the agents choose) |
 | Scene order, narration, NPC voice | | Yes |
@@ -194,7 +196,7 @@ Each step is one PR (Rule 8, one concern), green on all CI jobs, with its contra
 | 4 | `get_sheet` | API-19 (pulled into M3) | 2 | S |
 | 5 | `request_check` (scenario and ladder), `attempts`, hazards with save and damage, `advantage_sources`, `known_ids`; drop `group_check` and `advantage` | API-2, CHK-1, CHK-2, CHK-3, CHK-5, API-13 | 2 | M |
 | 6 | Fork U4 Hit Point Dice; then pin bump PR; then `short_rest` | ENG-4, API-3 | 4, fork | M + S + S |
-| 7 | Encounters: `start_combat{encounter_id}`, surrender trigger, `surrendered`, `end_combat` for declared reasons | API-9, API-22 (new) | 2 | M |
+| 7 | Encounters: `start_combat{encounter_id}`, surrender condition and `surrender_available`, `end_combat{surrender}` gated by it, `surrendered`, `end_combat{scenario}` | API-9, API-22 (new) | 2 | M |
 | 8 | Fork U5 surprise, pin bump, surprise from encounter rules | API-12 | 7, fork | S + S + S |
 | 9 | Spawn triggers: flag spawns at combat start, then fork U7 and a pin bump for round spawns; `spawn` for `when:"dm"` | API-8 | 7, fork | S + S + S |
 | 10 | Fork U6 Help, pin bump, `help` command and the Help option in combat; death saves and stabilise exposed | CHK-4, API-14 | 5, fork | M + S + S |
@@ -223,7 +225,7 @@ Fork PRs (6, 8, 9, 10) can run in parallel with steps 2 to 5 once Milestone 2's 
 | `hazard.jsonl` | A failed Survival check triggers the snare save and 1d6 damage; `hit_points` is in the owner and DM views only |
 | `carry.jsonl` | Two scenes: HP lost in the first is still lost in the second; a carried prisoner; flags persist; a carried handle also defined in the scene answers `bad_scene` |
 | `rest.jsonl` | Short rest spends 1 Hit Point Die, recharges Second Wind, refuses a creature at 0 HP and a spend beyond the pool |
-| `encounter.jsonl` | `start_combat{encounter_id}`; surprise from a flag (hostile initiative rolls show `advantage: disadvantage`); surrender trigger; `combat_over{reason:"surrender"}` |
+| `encounter.jsonl` | `start_combat{encounter_id}`; surprise from a flag (hostile initiative rolls show `advantage: disadvantage`); `end_combat{surrender}` refused with `surrender_not_available` before the condition holds and accepted after it; `combat_over{reason:"surrender"}`; the surrendered goblin stays in the scene |
 | `spawn.jsonl` | A flag spawn at combat start; a round-3 spawn suppressed by `unless`; a manual spawn; an automatic spawn refused |
 | `help.jsonl` | Assist check gives Advantage on the ally's next check (`advantage_sources` in the DM view); stabilise at 0 HP |
 | `sheet.jsonl` | Owner and DM get the sheet; another player gets `not_visible` |
@@ -254,7 +256,7 @@ Other tests:
 
 ## 11. Decisions for Stas
 
-D1, D2, D4 and D6 were decided by Stas on 2026-10-17 in the Milestone 3 spec thread. D3 and D5 are still open; the bold option is the current recommendation, and the spec body still describes the earlier defaults until they are settled.
+D1, D2, D4 and D6 were decided by Stas on 2026-10-17 in the Milestone 3 spec thread. Stas delegated D5 to the coordinator, which decided it on 2026-10-17; the record is [decision 0020](../decisions/0020-surrender-dm-call-engine-gate.md). D3 is still open; the spec body describes once per actor until it is settled.
 
 | # | Question | Status | Answer or options | Why |
 |---|---|---|---|---|
@@ -262,7 +264,7 @@ D1, D2, D4 and D6 were decided by Stas on 2026-10-17 in the Milestone 3 spec thr
 | D2 | DM-granted Advantage on checks | **Decided: remove it.** Advantage comes only from Help, conditions or the scene check | | Scope §7.3: LLM DMs drift toward granting success; free-text Advantage is a ruling by another name |
 | D3 | Retrying a scenario check | Open | **Once per check per scene (one roll for the party; others contribute with Help)**; once per actor; no retries but the scene can mark a check retryable | Once per actor still gives four characters four tries at the same Persuasion, which is close to a free pass |
 | D4 | Who decides surprise | **Decided: the engine**, from encounter rules and flags; `surprised` is dropped from `start_combat` | | Same reason as D2 |
-| D5 | Goblin surrender | Open | **Hybrid: the DM calls `end_combat{surrender}`, and the engine accepts it only when the encounter's surrender condition holds**; DM decides freely; automatic engine trigger | Stas prefers the DM deciding. The hybrid keeps that and stops the DM from ending a lost fight, and the call replays as a request like any other |
+| D5 | Goblin surrender | **Decided: the DM decides, within a scene surrender condition the engine enforces** ([0020](../decisions/0020-surrender-dm-call-engine-gate.md)) | | Keeps the call with the DM, as Stas wants, while stopping it from ending a fight the party is losing; the call replays as a request like any other |
 | D6 | Pull `get_sheet` (API-19) from Milestone 6 into Milestone 3 | **Decided: yes** | | Short-rest and carry-over fixtures need the sheet to show Hit Point Dice and resources; it is size S |
 
 Not asked, because already settled: U4 to U7 go upstream at Milestone 8 (Stas, 2026-10-17); anchors stay ours (design §6).
