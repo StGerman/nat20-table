@@ -210,7 +210,7 @@ Fork PRs (6, 8, 9, 10) can run in parallel with steps 2 to 5 once Milestone 2's 
   - API-23: exit fixture;
   - API-24 (P2): plain ability checks, needs core.
 - Dest and Gate corrected to `Ours`, `N`, per §2: API-2, API-3, API-4, API-5, API-7, API-9, CHK-1, CHK-2, MAP-1. ENG-4 resized to M. CHK-5 moves from `Fork` to `Ours`.
-- CHK-3 group check: status `dropped (D1)` once Stas agrees; until then `todo`.
+- CHK-3 group check: dropped (D1, Stas 2026-10-17).
 - The Milestone 3 row lists the tasks above, with API-19 added.
 - UPS-3 loses the anchors issue.
 
@@ -254,16 +254,16 @@ Other tests:
 
 ## 11. Decisions for Stas
 
-Defaults in **bold** are what this spec assumes. Building them is reversible until the PR that serves them merges.
+D1, D2, D4 and D6 were decided by Stas on 2026-10-17 in the Milestone 3 spec thread. D3 and D5 are still open; the bold option is the current recommendation, and the spec body still describes the earlier defaults until they are settled.
 
-| # | Question | Default | Why |
-|---|---|---|---|
-| D1 | Group checks | **Drop `group_check`** (keep the 2014 rule is the alternative) | SRD 5.2.1 has no group check; Rule 7 allows 2014 data only to fill fields, not to add rules |
-| D2 | DM-granted Advantage on checks | **Remove it**: Advantage only from Help, conditions or the scene check (alternative: keep it with a logged reason) | Scope §7.3: LLM DMs drift toward granting success; free-text Advantage is a ruling by another name |
-| D3 | Retrying a scenario check | **Once per actor per scene unless the scene says `unlimited`** (alternative: no limit) | Without a limit, the DM can re-roll Persuasion until it passes |
-| D4 | Who decides surprise | **The engine, from encounter rules and flags; drop `surprised` from `start_combat`** (alternative: the DM passes the list) | Same reason as D2 |
-| D5 | Goblin surrender | **Automatic engine trigger at "at most 1 goblin standing"** (alternative: DM calls `end_combat{surrender}`, engine checks) | Scope §4.4.6 says the engine ends combat on surrender; "25% strength" of 4 goblins is 1 |
-| D6 | Pull `get_sheet` (API-19) from Milestone 6 into Milestone 3 | **Yes** | Short-rest and carry-over fixtures need the sheet to show Hit Point Dice and resources; it is size S |
+| # | Question | Status | Answer or options | Why |
+|---|---|---|---|---|
+| D1 | Group checks | **Decided: drop `group_check`** | | SRD 5.2.1 has no group check; Rule 7 allows 2014 data only to fill fields, not to add rules |
+| D2 | DM-granted Advantage on checks | **Decided: remove it.** Advantage comes only from Help, conditions or the scene check | | Scope §7.3: LLM DMs drift toward granting success; free-text Advantage is a ruling by another name |
+| D3 | Retrying a scenario check | Open | **Once per check per scene (one roll for the party; others contribute with Help)**; once per actor; no retries but the scene can mark a check retryable | Once per actor still gives four characters four tries at the same Persuasion, which is close to a free pass |
+| D4 | Who decides surprise | **Decided: the engine**, from encounter rules and flags; `surprised` is dropped from `start_combat` | | Same reason as D2 |
+| D5 | Goblin surrender | Open | **Hybrid: the DM calls `end_combat{surrender}`, and the engine accepts it only when the encounter's surrender condition holds**; DM decides freely; automatic engine trigger | Stas prefers the DM deciding. The hybrid keeps that and stops the DM from ending a lost fight, and the call replays as a request like any other |
+| D6 | Pull `get_sheet` (API-19) from Milestone 6 into Milestone 3 | **Decided: yes** | | Short-rest and carry-over fixtures need the sheet to show Hit Point Dice and resources; it is size S |
 
 Not asked, because already settled: U4 to U7 go upstream at Milestone 8 (Stas, 2026-10-17); anchors stay ours (design §6).
 
