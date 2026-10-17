@@ -13,7 +13,7 @@ A roll has dice, modifiers, a total, a target (`against`: AC or DC) and the DC's
 ### A. Strict (built): every player, the roller included, sees dice, total and outcome; never an AC or DC
 - Pro: already built and tested; no extra work.
 - Pro: one player view for every roll, no per-player cases, the simplest rule to keep leak-proof.
-- Pro: players cannot reverse-engineer monster stats; a Goblin Boss's save DC reveals its ability modifier.
+- Pro: players are never told monster stats directly; a Goblin Boss's save DC would state its ability modifier. This stops disclosure, not inference: totals and outcomes still let a player narrow an AC or DC over several rolls (a 14 that misses and a 15 that hits mean AC 15), as at a real table.
 - Pro: the DM keeps the drama ("you failed" versus "you missed by 1").
 - Con: stricter than many tables, where the DM announces save DCs; the human player may find it opaque.
 - Con: hides "goblin rolled 16 vs AC 17", although the player knows their AC from their sheet.
@@ -36,7 +36,7 @@ A. Cheaper and safer for an AI-heavy table. Players read their own modifiers and
 
 ## Revisit when
 
-The human player finds rolls too opaque in a playtest (Milestone 6 or 7). Moving to B is an additive contract change (a new owner view), so nothing is locked in.
+The human player finds rolls too opaque in a playtest (Milestone 6 or 7). Moving to B adds an `owner` variant to `RollView`, which today's clients cannot deserialize (they accept only `full` and `player`). Before v1 ships that is an allowed `1.0.0-dev.N` break with a changelog line and fixture; after v1 it is a major bump with a migration note (CLAUDE.md Rule 2), unless the change instead adds optional fields to the `player` view. Cheap now, more expensive after v1.
 
 ## Sources
 

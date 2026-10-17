@@ -34,7 +34,7 @@ B, plus the orchestrator's tool binding as a second layer. Player-facing view ty
 - CLAUDE.md Rule 3, and the visibility table in `contract/protocol.md`.
 - A player agent's tools bind `viewer` to its own handle; the client sets `viewer` last so tool input cannot override it.
 - Hit Points after a change travel in their own `hit_points` event, so a projection drops the whole event instead of redacting a field.
-- CI job `visibility` replays fixtures as each player and scans for `hp`, `ac`, `dc`, `against`.
+- Planned, not built yet: a CI job `visibility` that replays fixtures as each player and scans for `hp`, `ac`, `dc`, `against` (TASKS.md CON-5). Today the conformance fixtures replay with their recorded viewers and the server test `a_player_never_sees_hidden_numbers` checks a player's duel responses.
 
 ## Revisit when
 

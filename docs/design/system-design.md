@@ -262,4 +262,6 @@ What mobile adds is a second, public contract: game server ↔ clients (terminal
 
 The earlier objection to protobuf (its JSON mapping is not the shape LLM tool calls want) applies to the engine contract, not to this one: no LLM reads the client wire. Two contracts with two audiences, and the game server maps between them, which is exactly where the visibility boundary already sits.
 
+Update 2026-10-17: AG-UI is now a candidate for this contract too, likely the better fit if a web client comes first; the choice between it and protobuf + Connect waits until a real client is planned (`docs/decisions/0016-client-contract-deferred.md`).
+
 What to do now, while mobile is hypothetical: nothing on the wire. Keep the terminal UI behind an in-process boundary in `game/` (player events out, player intents in), so it can later be lifted onto a network contract without touching the engine contract.
