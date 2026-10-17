@@ -679,3 +679,79 @@ fn stdio_binary_speaks_json_lines() {
     let events = lines[3]["result"]["events"].as_array().unwrap();
     assert!(events.iter().any(|e| e["roll"]["kind"] == "initiative"));
 }
+
+#[test]
+fn an_explore_move_walks_the_route_for_free() {
+    let mut api = duel();
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s1_green" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let to_porch = json!({ "cmd": "move", "actor": "bren",
+        "to": { "kind": "anchor", "anchor": "reeve_porch" } });
+    for _ in 0..3 {
+        // No movement is spent outside combat, so the same walk works again and again.
+        let moved = api.call("dm", to_porch.clone());
+        assert_eq!(moved["ok"], true, "{moved}");
+        let back = api.call(
+            "dm",
+            json!({ "cmd": "move", "actor": "bren",
+            "to": { "kind": "anchor", "anchor": "green_well" } }),
+        );
+        assert_eq!(back["result"]["moved_ft"], 22.4, "{back}");
+    }
+    let moved = api.call("dm", to_porch);
+    assert_eq!(moved["result"]["provoked"], json!([]), "{moved}");
+    let state = api.call("bren", json!({ "cmd": "get_state" }));
+    let state = &state["result"]["state"];
+    assert_eq!(state["me"]["position_ft"]["x_ft"], 20.0, "{state}");
+    assert_eq!(state["me"]["position_ft"]["y_ft"], 10.0, "{state}");
+    let porch = &state["anchors"][1];
+    assert_eq!(porch["id"], "reeve_porch", "{state}");
+    assert_eq!(porch["distance_ft"], 0.0, "{state}");
+    // The move is public: the player reads it in the log.
+    let events = api.call("bren", json!({ "cmd": "events", "since": 0 }));
+    let moved: Vec<&Value> = events["result"]["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "moved")
+        .collect();
+    assert_eq!(moved.len(), 7, "{events}");
+    assert_eq!(moved[6]["anchor"], "reeve_porch", "{events}");
+}
+
+#[test]
+fn a_combat_move_spends_movement_and_provokes() {
+    let mut api = duel();
+    let started = api.start_duel("dm");
+    let prompt = started["awaiting"]["prompt_id"].clone();
+    assert_eq!(started["awaiting"]["actor"], "bren", "{started}");
+    let away = |prompt: &Value| {
+        json!({ "cmd": "move", "actor": "bren", "prompt_id": prompt,
+            "to": { "kind": "point", "point": { "x_ft": -20.0, "y_ft": 0.0, "z_ft": 0.0 } } })
+    };
+    // Leaving the goblin's reach gives it an opportunity attack, which stops Bren where he left.
+    let moved = api.call("bren", away(&prompt));
+    assert_eq!(moved["ok"], true, "{moved}");
+    assert_eq!(moved["result"]["provoked"], json!(["goblin"]), "{moved}");
+    let spent = moved["result"]["moved_ft"].as_f64().unwrap();
+    assert!(spent > 0.0 && spent < 5.0, "{moved}");
+    // A route longer than the movement left is refused and moves nobody.
+    let prompt = moved["awaiting"]["prompt_id"].clone();
+    let far = api.call(
+        "bren",
+        json!({ "cmd": "move", "actor": "bren", "prompt_id": prompt,
+        "to": { "kind": "point", "point": { "x_ft": -60.0, "y_ft": 0.0, "z_ft": 0.0 } } }),
+    );
+    assert_eq!(far["error"]["reason"], "insufficient_resource", "{far}");
+    // The rest of the movement still takes him on.
+    let rest = api.call("bren", away(&prompt));
+    assert_eq!(rest["ok"], true, "{rest}");
+    assert_eq!(rest["result"]["provoked"], json!([]), "{rest}");
+    assert!(
+        spent + rest["result"]["moved_ft"].as_f64().unwrap() <= 30.0,
+        "{rest}"
+    );
+}

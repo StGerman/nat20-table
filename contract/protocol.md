@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.6): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat`, `get_state`, `legal_actions`, `submit`, `react`, `end_turn` and `events`, with the §5 projection, and answers `get_sheet`, `move`, `request_check`, `group_check`, `short_rest` and `spawn` with `not_implemented`. `end_combat` answers `wrong_mode` outside combat and `not_implemented` during a fight, since scenes carry no end-combat reasons yet. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: no `surprised` in `start_combat`, no options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.7): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat`, `get_state`, `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1) and `events`, with the §5 projection, and answers `get_sheet`, `request_check`, `group_check`, `short_rest` and `spawn` with `not_implemented`. `end_combat` answers `wrong_mode` outside combat and `not_implemented` during a fight, since scenes carry no end-combat reasons yet. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: no `surprised` in `start_combat`, no options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -77,7 +77,7 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 
 - **Contents.** `anchors` (named landmarks), `creatures` (placed on load, each `at` an anchor or a point), `party_start` (anchors for carried creatures, in party order), `checks` (a skill check or save, a DC, and consequences on success and failure), `hazards` (a save and its consequences), `encounters` (participants, a surprise rule, a surrender condition, other allowed early ends) and `spawns` (creatures placed by the DM, by a flag at combat start, or at a round).
 - **Checked on load.** Besides the schema (unknown fields are refused), the engine refuses a scene with `bad_scene` and changes nothing when: an id (anchor, check, hazard, encounter, spawn, flag, handle) isn't a plain name or repeats; a handle repeats across `creatures` and spawns; any handle, a carried encounter participant's included, is `dm`; a creature names an unknown pregen or stat block, or both or neither; an `at` or `party_start` names an unknown anchor; a consequence names an unknown hazard, a hazard sets off another hazard, or damage dice aren't `NdM` or `NdM+K`; a DC is outside 1 to 30; an encounter has no participants, lists one twice, or names a creature the scene doesn't define while it has no `party_start` (only a carried creature could fill it); a surrender condition names a non-participant, has no trigger, a fraction outside (0, 1), or a leader that isn't one of its creatures; `surrender` appears in `end_reasons` (a surrender condition governs it); a spawn is empty or fires at round 0; the `map` isn't a terrain file under `maps/`.
-- **Served so far.** Placement of `creatures` at anchors or points, `map`, and `party_start` for carried creatures (§2). Everything else in the file is read and checked but not acted on yet; each part is served by its Milestone 3 step (spec §7): flags (with checks, step 5), anchors in state and `move` (MAP-1, API-7), checks and hazards (CHK-1, CHK-2), encounters (API-9, API-22), spawns (API-8). The commands that use them keep answering `not_implemented` until then.
+- **Served so far.** Placement of `creatures` at anchors or points, `map`, `party_start` for carried creatures (§2), and `anchors` in state and as `move` goals (§4.1). Everything else in the file is read and checked but not acted on yet; each part is served by its Milestone 3 step (spec §7): flags (with checks, step 5), checks and hazards (CHK-1, CHK-2), encounters (API-9, API-22), spawns (API-8). The commands that use them keep answering `not_implemented` until then.
 - **Coordinates.** `x_ft` east-west, `y_ft` north-south, `z_ft` up, in feet. The engine places a creature on the ground below its point.
 - **Test scenario.** `m3_s1_green` to `m3_s5_cellar` (`m3_trail`, 5 scenes, Bren and Goblin Warriors) exercise every part of the format; Milestone 3 replays them end to end (API-23).
 
@@ -117,6 +117,14 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 | `spawn` | `spawn_id` (declared in the scene file) | `State` | DM / scenario trigger |
 | `events` | `since`, `viewer` | `{events, next}` | all |
 
+### 4.1 Moving
+
+- `to` is an anchor of the scene, a point, or a creature (the move ends within 5 ft of it). An anchor the scene doesn't define answers `unknown_anchor`; the DM's error carries the scene's anchor ids in `hint.known_ids`, a player's carries none.
+- **Explore mode.** Anyone may be moved and `prompt_id` is ignored. The creature walks the whole route on the map at no movement cost and provokes nobody, since nobody is fighting. A creature at 0 HP can't move (`rejected`, `condition_prevents`).
+- **Combat.** `move` is a decision at the actor's action prompt, so it needs that prompt's id (`bad_request` without one, `stale_prompt` for an old one) and gets a new prompt like `submit`. The whole route must fit in the movement left this turn, else `rejected` with `insufficient_resource` and nobody moves. Leaving a hostile creature's reach gives it an opportunity attack: the mover stops where it provoked, `provoked` names the reactor, and `moved_ft` is the distance actually covered.
+- No route to the goal (off the map, or blocked) answers `rejected` with `no_path`.
+- Every move logs a public `moved` event with `from`, `to` and the anchor, when the creature reached one.
+
 `Option` (from `legal_actions`):
 ```json
 { "option_id": "melee_attack/longsword", "action": "nat20_core::action.melee_attack",
@@ -139,7 +147,8 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 | Damage or healing amount | yes | yes | yes (it is said at the table) |
 | `hit_points` events (HP after a change) | yes | own creature only | no |
 | Scenario data: the scene file's check DCs, hazards, encounters, surrender conditions, flags, spawns | yes | no | no |
-| Anchors: id, name, position | yes | yes | yes |
+| Anchors: id, name, position | yes | yes, with `distance_ft` from the viewer | yes, with `distance_ft` from the viewer |
+| `known_ids` in an error hint (the scene's anchor ids after `unknown_anchor`) | yes | no | no |
 | `unavailable` reasons in `legal_actions` | yes | yes | n/a |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
 
@@ -198,7 +207,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path` | true |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |
 | `internal` | An engine bug. The request did nothing, and the engine logs details to stderr | false |
