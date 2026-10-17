@@ -201,4 +201,4 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 - One concern per PR. Write the PR description as Before / After / How.
 - A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.
 - Never skip, disable or quarantine a test to get green. Never push an empty commit to retrigger CI.
-- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `rust`, `visibility`, `ts`, `deny`, `advisories` (not required), and the weekly non-blocking `core-drift`. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
+- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `rust-lint`, `rust-test`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.

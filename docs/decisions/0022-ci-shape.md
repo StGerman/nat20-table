@@ -1,8 +1,8 @@
-# 0022. CI: build the workspace once, cargo-deny for licences, advisories and core drift off the PR gate
+# 0022. CI: parallel lint and test, one build, one required gate, cargo-deny, advisories and core drift off the gate
 
 - **Status:** Proposed
 - **Date:** 2026-10-17
-- **Decided by:** Claude (thread "CI workflows"), defaults picked when Stas asked for "CI with clippy and all other stuff for a project like this"; accepted when Stas merges the PR.
+- **Decided by:** Claude (thread "CI workflows"), defaults picked when Stas asked for "CI with clippy and all other stuff for a project like this"; job split, ordering and the single gate reworked after Stas asked whether to split the slow `rust` job and which jobs should wait on others (same thread, 2026-10-17). Accepted when Stas merges the PR.
 
 ## Context
 
@@ -16,19 +16,62 @@ Facts that shape the choices:
 
 ## Options
 
+### Job split
+
+#### A. One `rust` job: fmt, clippy, test, doc in sequence
+- Pro: one job, one cache.
+- Con: clippy only builds metadata, so `cargo test` compiles every dependency again with codegen. On a cold cache the two run back to back (first PR run: clippy 4m46s, then the test build on top).
+
+#### B. `rust-lint` (fmt, clippy, doc) and `rust-test` (test) in parallel, each with its own cache
+- Pro: cold wall-clock drops to the slower of the two instead of their sum; no extra compute, because the two builds share almost nothing.
+- Pro: a lint failure and a test failure show as separate checks.
+- Con: two caches instead of one.
+
+#### C. Finer splits (per crate, per test target, nextest partitions)
+- Con: every job pays toolchain, checkout and cache restore again for a test suite that runs in about 2 s; nothing to gain until tests take minutes.
+
 ### Build reuse for `ts` and `visibility`
 
 #### A. Each job builds what it needs
-- Pro: jobs run in parallel; no artifacts.
 - Con: three cold builds of the same workspace per push.
 
-#### B. `rust` builds once and uploads the server and the visibility scan binary; `ts` and `visibility` download them
-- Pro: one build per push; `ts` and `visibility` take about a minute each.
-- Con: they wait for `rust`, so wall-clock time is `rust` plus a minute.
+#### B. `rust-test` uploads the server, the visibility scan binary and core's registries; `ts` and `visibility` download them
+- Pro: one full build per push; the binaries find the registries through `NAT20_REGISTRY_ROOT` (U1), so neither job installs Rust.
+- Con: they wait for `rust-test`.
 
-#### C. Fold `visibility` and `ts` into `rust` as steps
-- Pro: one job, no artifacts.
-- Con: no separate required checks with the names CLAUDE.md promises; Node setup in the Rust job.
+### Ordering between jobs
+
+#### A. Gate expensive jobs on cheap ones (fmt, contract checks first)
+- Pro: saves the build when a cheap check fails.
+- Con: adds the cheap jobs' latency (30-70 s) to every green run to save compute only on red runs, which `cancel-in-progress` already cuts short when the fix is pushed.
+
+#### B. Edges only for real data dependencies
+- Pro: shortest path to green; `ts` and `visibility` wait for `rust-test` because they run its binaries, nothing else waits.
+
+### Docs-only PRs
+
+#### A. Always build
+- Con: decision records, specs and CLAUDE.md edits (most PRs so far) pay a full Rust build for nothing.
+
+#### B. A `changes` job skips the build jobs when a PR touches only Markdown and `docs/`
+- Pro: those PRs finish in about a minute.
+- Con: a required check that is skipped by a path filter leaves a plain required check pending forever, so it needs a gate job (below).
+
+### Required checks
+
+#### A. Mark every job required in branch protection
+- Con: every job rename or split, and every path-filtered skip, needs a settings change by Stas.
+
+#### B. One `ci-ok` job that needs every gating job and passes when each passed or was skipped on purpose
+- Pro: branch protection names one check, forever.
+
+### Build settings
+
+#### A. Keep full debug info in CI
+- Con: larger objects, slower links, bigger caches; nobody attaches a debugger to a CI run.
+
+#### B. `line-tables-only` debug info in CI (panics and backtraces still name file and line)
+- Pro: see the measurement under Context.
 
 ### Dependency policy
 
@@ -70,15 +113,16 @@ Facts that shape the choices:
 
 ## Decision
 
-- Build reuse B: `rust` is the only job that builds the workspace.
+- Job split B, build reuse B, ordering B, docs-only B, required checks B, build settings B.
 - cargo-deny A, with a permissive allow-list, an MPL-2.0 exception for `smartstring` only, a clarification that `nat20_core` is MIT, and the two "unmaintained" advisories ignored with reasons. Our crates set `publish = false` so cargo-deny accepts their path dependencies.
 - Advisories B, toolchain A, update bot A. Dependabot ignores `nat20_core` and `polyanya`, which Rule 5 bumps by hand.
+- Caches are saved only from `main`, so PR runs restore `main`'s dependencies and the repo's 10 GB cache budget is not spent on short-lived PR caches.
 - `core-drift` runs weekly and on demand, never on PRs: it repoints `nat20_core` at fork `demo` HEAD and runs clippy and tests. It opens nothing (Rule 8: no GitHub issues); a red run emails whoever owns the schedule.
 - Third-party actions are pinned to commit SHAs with the version in a comment. `GITHUB_TOKEN` is read-only. Superseded PR runs are cancelled.
 
 ## Consequences
 
-- Required checks on `main` (Stas sets them in branch protection): `contract-fresh`, `contract-compat`, `contract-pure`, `rust`, `visibility`, `ts`, `deny`.
+- Branch protection on `main` needs one required check: `ci-ok`.
 - CON-5 (contract-compat and visibility scan in CI) and CON-6 (weekly core-drift) are served.
 - A new dependency under a licence outside the allow-list fails `deny`; adding it needs a reviewed `deny.toml` change, and a copyleft one is refused under Rule 7.
 - A clippy release can break CI without a code change; the fix is a code change or a toolchain pin under this record's "Revisit when".
@@ -86,7 +130,7 @@ Facts that shape the choices:
 ## Revisit when
 
 - Stable clippy breaks CI on an unchanged `main` more than once a quarter: pin the toolchain (Toolchain B).
-- `rust` runtime exceeds 20 minutes warm: consider splitting tests or a larger runner.
+- `rust-test` exceeds 10 minutes warm, or tests themselves take minutes: partition tests (Job split C) or use a larger runner.
 - Upstream or nalgebra drops `paste` or rhai drops `smartstring`: remove the ignores and the MPL exception.
 - Any advisory with a real vulnerability appears: it is fixed or the dependency replaced, never ignored without Stas.
 
