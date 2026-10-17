@@ -1,0 +1,62 @@
+# cargo-deny: advisories, licences (CLAUDE.md Rule 7: no copyleft), bans and dependency sources.
+# Run locally: cargo deny check
+
+[graph]
+all-features = true
+
+[advisories]
+yanked = "deny"
+# Every ignore names the advisory, the path that pulls it in, and why it is tolerated.
+ignore = [
+    # paste is unmaintained (no vulnerability). Reached through nat20_core and nalgebra/simba; not
+    # ours to replace. Revisit when upstream or nalgebra drops it.
+    { id = "RUSTSEC-2024-0436", reason = "unmaintained, no vulnerability; via nat20_core and simba" },
+    # smartstring is unmaintained (no vulnerability). Reached through nat20_core -> rhai.
+    # Revisit when rhai drops it.
+    { id = "RUSTSEC-2026-0249", reason = "unmaintained, no vulnerability; via nat20_core -> rhai" },
+]
+
+[licenses]
+confidence-threshold = 0.93
+unused-allowed-license = "allow"
+# Permissive licences only. GPL, LGPL-only, AGPL and CC-BY-SA are absent on purpose (Rule 7).
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+exceptions = [
+    # File-level (weak) copyleft, reached through nat20_core -> rhai (unconditional dependency, no
+    # feature to drop it). Allowed by CLAUDE.md Rule 7 only for an unmodified third-party crate;
+    # any other MPL crate needs its own exception here, reviewed in its PR.
+    { crate = "smartstring", allow = ["MPL-2.0"] },
+]
+
+# Upstream nat20 is MIT (LICENSE at its repo root) but core/Cargo.toml has no `license` field.
+[[licenses.clarify]]
+crate = "nat20_core"
+expression = "MIT"
+license-files = []
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = [
+    # Our fork of the rules engine, pinned by rev (Rule 5).
+    "https://github.com/StGerman/nat20",
+    # Upstream nat20's polyanya patch, copied into our workspace [patch] (Rule 5).
+    "https://github.com/MadsWedendahlKruse/polyanya",
+]

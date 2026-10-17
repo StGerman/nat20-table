@@ -59,8 +59,10 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 npm ci && npm run gen                     # regenerate everything from the contract crate: schema bundle, schema hash, TS types
 npm run check:contract                    # regen + `git diff --exit-code` + breaking-change check against origin/main
 cargo fmt --check
-cargo clippy --all-targets -- -D warnings
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --locked                       # unit tests, conformance fixture replay, visibility scan
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --document-private-items   # doc comments build clean
+cargo deny check                          # licences (Rule 7), advisories, bans, sources; config in deny.toml
 cargo test --locked -p nat20-api-server --test conformance -- <fixture_name>   # one fixture
 npm run check:ts                          # tsc + client tests; needs `cargo build -p nat20-api-server` first
 cargo run -p nat20-api-server             # the engine: JSON-lines on stdin/stdout, logs on stderr
@@ -68,7 +70,7 @@ cargo run -p nat20-api-contract --bin export-schema   # step 1 of `npm run gen`
 cargo run -p nat20-duel -- --seed 1 --fixture contract/fixtures/duel.jsonl    # re-record the seeded duel fixture after a deliberate behaviour change
 ```
 
-Run `check:contract`, the three cargo checks and `check:ts` before every push. Never push red.
+Run `check:contract`, the cargo checks above (fmt, clippy, test, doc, deny) and `check:ts` before every push. Never push red.
 
 ## Layout
 
@@ -186,7 +188,7 @@ Any change to what crosses the engine boundary (a command, field, event, error c
   - Foundry dnd5e: **structured fields only**, from records tagged CC-BY-4.0. Never its text, art, pregens or 2014 packs;
   - 5e-bits numbers;
   - our own text.
-- Never download, scrape or ingest WotC books or D&D Beyond content, even with a purchased login. Never ship copyleft (GPL, CC-BY-SA) code or data.
+- Never download, scrape or ingest WotC books or D&D Beyond content, even with a purchased login. Never ship strong-copyleft (GPL, AGPL, LGPL-only, CC-BY-SA) code or data. Weak, file-level copyleft (MPL-2.0) is allowed only in an unmodified third-party crate, each named as an exception in `deny.toml` (decision 0022).
 - Known data bugs:
   - 5e-bits applies the Goblin Warrior's extra 1d4 on every hit; the rule is Advantage only.
   - Ancient Red Dragon, Remorhaz and Will-o'-Wisp have scrambled ability scores in the SRD text; use 5e-bits for those three.
@@ -199,4 +201,4 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 - One concern per PR. Write the PR description as Before / After / How.
 - A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.
 - Never skip, disable or quarantine a test to get green. Never push an empty commit to retrigger CI.
-- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `rust`, `visibility`, `ts`, and `core-drift` (weekly, non-blocking). Each job's purpose is in design §5.3.
+- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `rust-lint`, `rust-test`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.

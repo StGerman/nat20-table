@@ -1,0 +1,37 @@
+# Weekly grouped update PRs. CI is the gate: a bump that changes generated TS, fixture output or
+# licences fails contract-fresh, rust or deny like any other PR.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    ignore:
+      # Pinned by rev to fork branch demo; bumped only in its own PR (Rule 5). core-drift watches it.
+      - dependency-name: nat20_core
+      # Must stay identical to upstream nat20's [patch] entry (Rule 5).
+      - dependency-name: polyanya
+    groups:
+      cargo-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]

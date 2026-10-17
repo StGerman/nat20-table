@@ -5,6 +5,7 @@ description = "The nat20-table engine: serves the contract in nat20-api-contract
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish.workspace = true
 
 [dependencies]
 nat20-api-contract = { workspace = true }
