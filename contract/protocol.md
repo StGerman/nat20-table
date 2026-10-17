@@ -61,12 +61,13 @@ Response:
 hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
                               ├─ request_check / move / short_rest / spawn
                               ├─ start_combat{participants, surprised?}   (mode: combat)
-                              │     └─ submit / react / end_turn …  → combat_over (auto) or end_combat{reason}
+                              │     └─ submit / react / end_turn …  → combat_over (auto) or end_combat{reason}  (mode: explore)
                               └─ load_scene{next}   (party carries over; log continues)
 ```
 - **One log per session.** Sequence numbers and roll ids are unique and monotonic for the whole session and never reused or rewritten. `load_scene` appends a `scene_loaded` event and doesn't clear anything.
 - **The party persists.** PCs keep HP, slots, resources and conditions across scenes (API-5). Monsters belong to their scene.
-- **Seed.** `new_session{seed?}` takes a u64. When it's omitted, the engine picks one and logs it in `session_started`. The same seed plus the same request stream gives an identical log (needs the core RNG change, API-11).
+- **Leaving combat.** Both ways back land in explore mode in the same scene. When a side is down, the engine ends combat by itself: it logs `combat_over`, switches the scene to explore mode and reports `awaiting: combat_over` until the next command, after which `awaiting` reads `none`. Any explore command, `start_combat` or `load_scene` goes on from there; `end_combat` then answers `wrong_mode`, because combat is already over. `end_combat{reason}` is only for ending a fight early.
+- **Seed.** `new_session{seed?}` takes a u32. When it's omitted, the engine picks one and logs it in `session_started`. The same seed plus the same request stream gives an identical log (needs the core RNG change, API-11).
 
 ## 3. Prompts (`awaiting`)
 

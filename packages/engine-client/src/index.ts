@@ -5,6 +5,15 @@ import { SCHEMA_SHA256, type Command, type Request, type Response, type Viewer }
 
 export * from "./generated/api.ts";
 
+/**
+ * Wraps a command in the request envelope. The envelope fields are set after the command's, so a
+ * command carrying its own `viewer`, `v` or `id` (say, tool input from a player agent) cannot
+ * override the viewer its caller bound.
+ */
+export function envelope(viewer: Viewer, command: Command, id: string): Request {
+  return { ...command, v: 1, id, viewer };
+}
+
 export class EngineClient {
   private readonly child: ChildProcessWithoutNullStreams;
   private readonly pending = new Map<string, (response: Response) => void>();
@@ -40,7 +49,7 @@ export class EngineClient {
    * requests in order. A player agent's tools must pass that agent's own handle as `viewer`.
    */
   request(viewer: Viewer, command: Command, id = `c-${this.nextId++}`): Promise<Response> {
-    const request: Request = { v: 1, id, viewer, ...command };
+    const request = envelope(viewer, command, id);
     return new Promise((resolve) => {
       this.pending.set(id, resolve);
       this.child.stdin.write(JSON.stringify(request) + "\n");

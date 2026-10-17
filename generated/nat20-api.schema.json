@@ -404,7 +404,7 @@
           ]
         },
         {
-          "description": "Combat ended by itself. Call `end_combat` or `load_scene` to go on.",
+          "description": "Combat ended by itself because a side is down. The scene is already back in explore mode\nand nothing is pending: reported until the next command, after which it reads `none`.\nGo on with any explore command, `start_combat` or `load_scene`; `end_combat` is not needed.",
           "type": "object",
           "properties": {
             "kind": {
@@ -2823,7 +2823,7 @@
           ]
         },
         {
-          "description": "Ends combat early, only for a reason the scene allows. Combat also ends by itself when a side is down.",
+          "description": "Ends combat early, only for a reason the scene allows. A fight that ends by itself (a side\nis down) needs no `end_combat`: the scene is already back in explore mode.",
           "type": "object",
           "properties": {
             "cmd": {

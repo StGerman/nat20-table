@@ -9,6 +9,7 @@ Within major 1, changes are additive only. Nothing is released yet, so versions 
 - Events: `Event` with `seq`, `visibility` and 19 kinds; `RollView` (`full` for the DM, `player` for players); `hit_points` replaces `hp_after`.
 - Errors: `not_implemented` code and `hint` (`legal_option_ids`, `awaiting`).
 - Envelope, breaking while pre-release: `viewer` is required on every request; `Response` always carries `events`, `awaiting` and `log_head`.
+- Lifecycle: combat that ends by itself (a side is down) returns the scene to explore mode. `awaiting: combat_over` is reported until the next command and needs no `end_combat` (protocol.md §2).
 - Deviations from the review draft are listed at the top of `contract/protocol.md`.
 
 ## 1.0.0-dev.1 (2026-10-16)

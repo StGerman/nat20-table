@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { EngineClient, SCHEMA_SHA256 } from "../src/index.ts";
+import { EngineClient, SCHEMA_SHA256, envelope, type Command } from "../src/index.ts";
 
 const binary = process.env.NAT20_API_SERVER ??
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../target/debug/nat20-api-server");
@@ -42,4 +42,9 @@ test("a command the engine does not implement yet fails with not_implemented", a
   } finally {
     client.close();
   }
+});
+
+test("a command cannot override the bound viewer, version or id", () => {
+  const smuggled = { cmd: "get_state", viewer: "dm", v: 2, id: "other" } as Command;
+  assert.deepEqual(envelope("bren", smuggled, "c-9"), { cmd: "get_state", v: 1, id: "c-9", viewer: "bren" });
 });

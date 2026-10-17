@@ -140,7 +140,8 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         surprised: Vec<Handle>,
     },
-    /// Ends combat early, only for a reason the scene allows. Combat also ends by itself when a side is down.
+    /// Ends combat early, only for a reason the scene allows. A fight that ends by itself (a side
+    /// is down) needs no `end_combat`: the scene is already back in explore mode.
     EndCombat {
         /// Why combat ends.
         reason: EndCombatReason,

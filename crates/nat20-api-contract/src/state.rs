@@ -398,7 +398,9 @@ pub enum Awaiting {
     /// Nothing pending: explore mode, or a session with no scene yet.
     #[serde(rename = "none")]
     Idle,
-    /// Combat ended by itself. Call `end_combat` or `load_scene` to go on.
+    /// Combat ended by itself because a side is down. The scene is already back in explore mode
+    /// and nothing is pending: reported until the next command, after which it reads `none`.
+    /// Go on with any explore command, `start_combat` or `load_scene`; `end_combat` is not needed.
     CombatOver {
         /// The side left standing, if any.
         #[serde(default, skip_serializing_if = "Option::is_none")]
