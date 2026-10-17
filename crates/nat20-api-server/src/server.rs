@@ -1,13 +1,16 @@
 //! Request handling: parse a line into a contract `Request`, execute it once, answer with a `Response`.
 
-use std::collections::{HashMap, VecDeque};
+use std::{
+    collections::{HashMap, VecDeque},
+    path::PathBuf,
+};
 
 use nat20_api_contract::{
     ApiError, Awaiting, CONTRACT_VERSION, Command, CommandResult, ErrorCode, PROTOCOL_MAJOR,
     PROTOCOL_NAME, Request, Response, V1,
 };
 
-use crate::adapter;
+use crate::{adapter, errors, projection::Viewer, session::Session};
 
 /// SHA-256 of `generated/nat20-api.schema.json`, written by `npm run gen`.
 pub const SCHEMA_SHA256: &str = include_str!("../../../generated/nat20-api.schema.sha256");
@@ -15,12 +18,19 @@ pub const SCHEMA_SHA256: &str = include_str!("../../../generated/nat20-api.schem
 /// How many request ids are remembered for idempotent replay (contract/protocol.md §Envelope).
 const REMEMBERED_IDS: usize = 256;
 
-/// One engine session's request handler. Holds no rules state yet: every command but `hello`
-/// answers `not_implemented` until the server port (CON-3) wires it to the core.
-#[derive(Default)]
+/// The engine's request handler: request-id idempotency and at most one session.
 pub struct Server {
+    data_dir: PathBuf,
+    session: Option<Session>,
+    sessions_started: u64,
     answered: HashMap<String, String>,
     order: VecDeque<String>,
+}
+
+impl Default for Server {
+    fn default() -> Self {
+        Self::with_data_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data"))
+    }
 }
 
 impl Server {
@@ -28,16 +38,30 @@ impl Server {
         Self::default()
     }
 
+    /// A server that reads scenes and stat blocks from `data_dir` (`scenes/`, `monsters/`).
+    pub fn with_data_dir(data_dir: PathBuf) -> Self {
+        Self {
+            data_dir,
+            session: None,
+            sessions_started: 0,
+            answered: HashMap::new(),
+            order: VecDeque::new(),
+        }
+    }
+
     /// Handles one request line and returns one response line (no trailing newline).
     pub fn handle_line(&mut self, line: &str) -> String {
         let value: serde_json::Value = match serde_json::from_str(line) {
             Ok(value) => value,
             Err(error) => {
-                return encode(&failure(
+                let failure = self.failure(
                     None,
-                    ErrorCode::BadRequest,
-                    format!("The request line is not valid JSON: {error}."),
-                ));
+                    errors::error(
+                        ErrorCode::BadRequest,
+                        format!("The request line is not valid JSON: {error}."),
+                    ),
+                );
+                return encode(&failure);
             }
         };
         let id = value
@@ -48,21 +72,27 @@ impl Server {
         if let Some(v) = value.get("v").and_then(|v| v.as_u64())
             && v != u64::from(PROTOCOL_MAJOR)
         {
-            return encode(&failure(
+            let failure = self.failure(
                 id,
-                ErrorCode::UnsupportedVersion,
-                format!("This engine speaks protocol version {PROTOCOL_MAJOR}, not {v}."),
-            ));
+                errors::error(
+                    ErrorCode::UnsupportedVersion,
+                    format!("This engine speaks protocol version {PROTOCOL_MAJOR}, not {v}."),
+                ),
+            );
+            return encode(&failure);
         }
 
         let request: Request = match serde_json::from_value(value) {
             Ok(request) => request,
             Err(error) => {
-                return encode(&failure(
+                let failure = self.failure(
                     id,
-                    ErrorCode::BadRequest,
-                    format!("The request is malformed: {error}."),
-                ));
+                    errors::error(
+                        ErrorCode::BadRequest,
+                        format!("The request is malformed: {error}."),
+                    ),
+                );
+                return encode(&failure);
             }
         };
 
@@ -75,36 +105,156 @@ impl Server {
     }
 
     fn execute(&mut self, request: &Request) -> Response {
-        let result = match request.command {
-            Command::Hello => CommandResult::Hello {
-                protocol: PROTOCOL_NAME.to_owned(),
-                version: CONTRACT_VERSION.to_owned(),
-                engine_rev: adapter::engine_rev().to_owned(),
-                schema_sha256: SCHEMA_SHA256.trim().to_owned(),
-            },
-            ref command => {
-                let name = serde_json::to_value(command).expect("commands serialize")["cmd"]
-                    .as_str()
-                    .unwrap_or_default()
-                    .to_owned();
-                return failure(
-                    Some(request.id.clone()),
-                    ErrorCode::NotImplemented,
-                    format!(
-                        "`{name}` is in contract {CONTRACT_VERSION} but this engine does not implement it yet."
-                    ),
-                );
-            }
+        let viewer = Viewer::parse(&request.viewer.0);
+        let session_before = self.sessions_started;
+        let head_before = self.session.as_ref().map_or(0, |s| s.log_head());
+        let result = self.run(&request.command, &viewer);
+        // A new session starts a new log, so all of it is new.
+        let since = if self.sessions_started != session_before {
+            0
+        } else {
+            head_before
+        };
+        // A refused decision can still have logged what the engine did before refusing, so an
+        // error response carries the new events too.
+        let events = self
+            .session
+            .as_ref()
+            .map(|s| s.events(since, &viewer))
+            .unwrap_or_default();
+        let (ok, result, error) = match result {
+            Ok(result) => (true, Some(result), None),
+            Err(error) => (false, None, Some(for_viewer(error, &viewer))),
         };
         Response {
             v: V1::CURRENT,
             id: Some(request.id.clone()),
-            ok: true,
-            result: Some(result),
-            error: None,
+            ok,
+            result,
+            error,
+            events,
+            awaiting: self.awaiting(),
+            log_head: self.session.as_ref().map_or(0, |s| s.log_head()),
+        }
+    }
+
+    fn run(&mut self, command: &Command, viewer: &Viewer) -> Result<CommandResult, ApiError> {
+        match command {
+            Command::Hello => {
+                return Ok(CommandResult::Hello {
+                    protocol: PROTOCOL_NAME.to_owned(),
+                    version: CONTRACT_VERSION.to_owned(),
+                    engine_rev: adapter::engine_rev().to_owned(),
+                    schema_sha256: SCHEMA_SHA256.trim().to_owned(),
+                });
+            }
+            Command::NewSession { seed } => {
+                if seed.is_some() {
+                    return Err(errors::not_implemented(
+                        "A dice seed",
+                        "the core's dice cannot be seeded until upstream item U2 lands; call new_session without a seed",
+                    ));
+                }
+                self.sessions_started += 1;
+                // Seed 0 means unseeded: the dice use the operating system's randomness.
+                self.session = Some(Session::new(self.data_dir.clone(), CONTRACT_VERSION, 0));
+                return Ok(CommandResult::NewSession {
+                    session_id: format!("s{}", self.sessions_started),
+                    seed: 0,
+                });
+            }
+            _ => {}
+        }
+        let Some(session) = self.session.as_mut() else {
+            return Err(errors::error(
+                ErrorCode::NoSession,
+                "Start a session with new_session first.",
+            ));
+        };
+        // A creature viewer must be in the scene, except on load_scene, which checks the new one.
+        // Before any scene a creature viewer gets the same no_scene as the DM.
+        if !matches!(command, Command::LoadScene { .. }) && !session.knows_viewer(viewer) {
+            if !session.has_scene() {
+                return Err(errors::error(ErrorCode::NoScene, "Load a scene first."));
+            }
+            return Err(errors::error(
+                ErrorCode::UnknownCreature,
+                "The viewer must be dm or a creature in this scene.",
+            ));
+        }
+        match command {
+            Command::Hello | Command::NewSession { .. } => unreachable!("handled above"),
+            Command::LoadScene { scene_id, party } => session.load_scene(scene_id, party, viewer),
+            Command::StartCombat {
+                participants,
+                surprised,
+            } => session.start_combat(participants, surprised, viewer),
+            Command::GetState => session.state(viewer),
+            Command::EndCombat { .. } => session.end_combat(),
+            Command::LegalActions { actor } => session.legal_actions(&actor.0),
+            Command::Submit {
+                actor,
+                prompt_id,
+                option_id,
+                targets,
+                point,
+                variant,
+            } => {
+                if point.is_some() || variant.is_some() {
+                    return Err(errors::not_implemented(
+                        "Options with a point or a variant",
+                        "legal_actions does not offer them yet",
+                    ));
+                }
+                session.submit(&actor.0, &prompt_id.0, option_id, targets)
+            }
+            Command::React {
+                actor,
+                prompt_id,
+                choice,
+            } => session.react(&actor.0, &prompt_id.0, *choice),
+            Command::EndTurn { actor, prompt_id } => session.end_turn(&actor.0, &prompt_id.0),
+            Command::Events { since } => Ok(CommandResult::Events {
+                events: session.events(*since, viewer),
+                next: session.log_head(),
+            }),
+            Command::GetSheet { .. }
+            | Command::Move { .. }
+            | Command::RequestCheck { .. }
+            | Command::GroupCheck { .. }
+            | Command::ShortRest { .. }
+            | Command::Spawn { .. } => {
+                let name = serde_json::to_value(command).expect("commands serialize")["cmd"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned();
+                Err(errors::error(
+                    ErrorCode::NotImplemented,
+                    format!(
+                        "`{name}` is in contract {CONTRACT_VERSION} but this engine does not implement it yet."
+                    ),
+                ))
+            }
+        }
+    }
+
+    fn awaiting(&mut self) -> Awaiting {
+        match self.session.as_mut() {
+            Some(session) => session.awaiting(),
+            None => Awaiting::NoSession,
+        }
+    }
+
+    fn failure(&mut self, id: Option<String>, error: ApiError) -> Response {
+        Response {
+            v: V1::CURRENT,
+            id,
+            ok: false,
+            result: None,
+            error: Some(error),
             events: Vec::new(),
-            awaiting: Awaiting::NoSession,
-            log_head: 0,
+            awaiting: self.awaiting(),
+            log_head: self.session.as_ref().map_or(0, |s| s.log_head()),
         }
     }
 
@@ -119,37 +269,17 @@ impl Server {
     }
 }
 
-fn failure(id: Option<String>, code: ErrorCode, message: String) -> Response {
-    // contract/protocol.md §7: these fail again however the caller changes its input or waits.
-    let retryable = !matches!(
-        code,
-        ErrorCode::BadRequest
-            | ErrorCode::UnsupportedVersion
-            | ErrorCode::NoSession
-            | ErrorCode::NoScene
-            | ErrorCode::NotVisible
-            | ErrorCode::WrongMode
-            | ErrorCode::NotImplemented
-            | ErrorCode::Internal
-    );
-    Response {
-        v: V1::CURRENT,
-        id,
-        ok: false,
-        result: None,
-        error: Some(ApiError {
-            code,
-            reason: None,
-            message,
-            retryable,
-            hint: None,
-        }),
-        events: Vec::new(),
-        awaiting: Awaiting::NoSession,
-        log_head: 0,
-    }
-}
-
 fn encode(response: &Response) -> String {
     serde_json::to_string(response).expect("contract types always serialize")
+}
+
+/// Scene validation messages quote stat-block numbers (AC, proficiency bonus) that only the DM
+/// may see (protocol §5), so a creature viewer gets a plain `bad_scene` and the details go to
+/// stderr.
+fn for_viewer(mut error: ApiError, viewer: &Viewer) -> ApiError {
+    if error.code == ErrorCode::BadScene && *viewer != Viewer::Dm {
+        eprintln!("bad_scene: {}", error.message);
+        error.message = "The scene is invalid; the DM can see why.".into();
+    }
+    error
 }

@@ -68,6 +68,8 @@ pub enum ErrorCode {
     Rejected,
     /// The command is in the contract but this engine build does not implement it yet.
     NotImplemented,
+    /// The scene file, or a pregen or stat block it names, is missing or invalid. Nothing changed.
+    BadScene,
     /// An engine bug. The request did nothing; details go to stderr.
     Internal,
 }

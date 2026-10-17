@@ -34,11 +34,13 @@ test("a repeated request id returns the stored response", async () => {
 test("a command the engine does not implement yet fails with not_implemented", async () => {
   const client = await EngineClient.start(binary);
   try {
-    const response = await client.request("bren", { cmd: "legal_actions", actor: "bren" });
+    const started = await client.request("dm", { cmd: "new_session" });
+    assert.equal(started.ok, true);
+    const response = await client.request("dm", { cmd: "spawn", spawn_id: "wolves_arrive" });
     assert.equal(response.ok, false);
     assert.equal(response.error?.code, "not_implemented");
     assert.equal(response.error?.retryable, false);
-    assert.deepEqual(response.awaiting, { kind: "no_session" });
+    assert.deepEqual(response.awaiting, { kind: "none" });
   } finally {
     client.close();
   }

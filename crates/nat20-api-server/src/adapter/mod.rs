@@ -1,5 +1,11 @@
 //! The only module that may `use nat20_core` (CLAUDE.md Rule 5). Upstream churn stays here.
 
+pub mod events;
+pub mod game;
+pub mod monster;
+pub mod names;
+pub mod pregen;
+
 use nat20_core::registry::registry::ClassesRegistry;
 
 /// The `nat20_core` git revision this binary was built against, read from Cargo.lock at build time.

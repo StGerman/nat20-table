@@ -1307,8 +1307,22 @@ dependencies = [
 name = "nat20-api-server"
 version = "0.1.0"
 dependencies = [
+ "hecs",
  "nat20-api-contract",
  "nat20_core",
+ "parry3d",
+ "rerecast",
+ "serde",
+ "serde_json",
+ "uom",
+]
+
+[[package]]
+name = "nat20-duel"
+version = "0.1.0"
+dependencies = [
+ "nat20-api-contract",
+ "nat20-api-server",
  "serde_json",
 ]
 
