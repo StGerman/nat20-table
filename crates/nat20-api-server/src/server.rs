@@ -125,7 +125,11 @@ impl Server {
             .unwrap_or_default();
         let (ok, result, error) = match result {
             Ok(result) => (true, Some(result), None),
-            Err(error) => (false, None, Some(for_viewer(error, &viewer))),
+            Err(error) => (
+                false,
+                None,
+                Some(for_viewer(error, &viewer, &request.command)),
+            ),
         };
         Response {
             v: V1::CURRENT,
@@ -271,14 +275,18 @@ fn encode(response: &Response) -> String {
 /// Scene validation messages quote stat-block numbers (AC, proficiency bonus) that only the DM
 /// may see (protocol §5), so a creature viewer gets a plain `bad_scene` and the details go to
 /// stderr.
-fn for_viewer(mut error: ApiError, viewer: &Viewer) -> ApiError {
+fn for_viewer(mut error: ApiError, viewer: &Viewer, command: &Command) -> ApiError {
     if error.code == ErrorCode::BadScene && *viewer != Viewer::Dm {
         eprintln!("bad_scene: {}", error.message);
         error.message = "The scene is invalid; the DM can see why.".into();
     }
-    // Why an early end is refused names the encounter and its scene rules, scenario data.
+    // Why a fight cannot start or end early names the encounter's scene rules (surprise,
+    // surrender, end reasons), scenario data.
     if *viewer != Viewer::Dm {
         let player_message = match (error.code, error.reason) {
+            (ErrorCode::NotImplemented, _) if matches!(command, Command::StartCombat { .. }) => {
+                Some("This fight cannot start yet; the DM can see why.")
+            }
             (ErrorCode::SurrenderNotAvailable, _) => {
                 Some("Surrender is not available in this fight right now; the DM can see why.")
             }

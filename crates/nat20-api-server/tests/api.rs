@@ -1076,6 +1076,14 @@ fn anchor(id: &str, x_ft: f32) -> Value {
     json!({ "id": id, "name": id, "position_ft": { "x_ft": x_ft, "y_ft": 0.0, "z_ft": 0.0 } })
 }
 
+/// A goblin that waits for a client instead of attacking on its own, so no roll decides how a
+/// test fight starts.
+fn held_goblin() -> Value {
+    let mut goblin = creature("goblin", ("monster", "goblin_warrior"), "hostile", 5.0);
+    goblin["control"] = json!("client");
+    goblin
+}
+
 #[test]
 fn a_party_creature_that_surrenders_can_share_the_next_scene_with_its_captor() {
     let dir = data_dir(
@@ -1086,7 +1094,7 @@ fn a_party_creature_that_surrenders_can_share_the_next_scene_with_its_captor() {
                 json!({ "id": "last_stand",
                     "creatures": [
                         creature("bren", ("pregen", "fighter_l2"), "party", 0.0),
-                        creature("goblin", ("monster", "goblin_warrior"), "hostile", 5.0)
+                        held_goblin()
                     ],
                     "encounters": [{ "id": "stand", "participants": ["bren", "goblin"],
                         "surrender": { "creatures": ["bren"],
@@ -1145,7 +1153,7 @@ fn surrender_needs_its_creatures_and_leader_in_the_scene() {
             (
                 "gate",
                 json!({ "id": "gate", "anchors": [anchor("gate", 0.0)], "party_start": ["gate"],
-                    "creatures": [creature("goblin", ("monster", "goblin_warrior"), "hostile", 5.0)],
+                    "creatures": [held_goblin()],
                     "encounters": [
                         encounter("missing_group", json!({ "creatures": ["mira"],
                             "any_of": [{ "kind": "standing_at_most", "count": 0 }] })),

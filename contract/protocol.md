@@ -150,7 +150,7 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
   - `scenario` is accepted only when the encounter lists it in `end_reasons`; otherwise `rejected` with `condition_not_met`. It logs `combat_over{reason: "scenario"}` with no winner.
   - `fled` answers `not_implemented` until MON-6.
   - Outside combat, including after a fight ended by itself, `end_combat` answers `wrong_mode`.
-  - A player viewer's `surrender_not_available` and `condition_not_met` messages say only that the fight cannot end that way right now; the DM's name the encounter and why (scenario data, §5).
+  - A player viewer's `surrender_not_available` and `condition_not_met` messages say only that the fight cannot end that way right now; the DM's name the encounter and why (scenario data, §5). The same goes for `start_combat`'s `not_implemented` on a surprise: a player learns only that the fight cannot start yet.
 
 `Option` (from `legal_actions`):
 ```json
