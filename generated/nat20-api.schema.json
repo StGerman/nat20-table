@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.7"
+    "version": "1.0.0-dev.8"
   },
   "$defs": {
     "Ability": {
@@ -72,7 +72,7 @@
           "minimum": -128
         },
         "save_bonus": {
-          "description": "Saving throw bonus.",
+          "description": "Saving throw bonus: what the engine adds to the d20, without dice bonuses such as Bless.",
           "type": "integer",
           "format": "int8",
           "maximum": 127,
@@ -2598,7 +2598,7 @@
           ]
         },
         {
-          "description": "A creature's full sheet. Only its owner and `dm` may ask; anyone else gets `not_visible`.",
+          "description": "A creature's full sheet. Only its owner and `dm` may ask; anyone else gets `not_visible`.\nRead-only: it rolls nothing and logs no event.",
           "type": "object",
           "properties": {
             "actor": {
@@ -2959,7 +2959,7 @@
       "type": "object",
       "properties": {
         "id": {
-          "description": "Resource id, e.g. `second_wind`.",
+          "description": "Resource id, e.g. `fighter.second_wind`.",
           "type": "string"
         },
         "max": {
@@ -3333,7 +3333,7 @@
       "type": "object",
       "properties": {
         "abilities": {
-          "description": "The six abilities with their saving throws.",
+          "description": "The six abilities with their saving throws, Strength to Charisma.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbilityLine"
@@ -3364,7 +3364,7 @@
           "$ref": "#/$defs/DeathSaves"
         },
         "equipment": {
-          "description": "Carried and equipped items.",
+          "description": "Equipped items in slot order (armor, then weapons), then carried items in the order they\nwere picked up.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ItemLine"
@@ -3378,7 +3378,7 @@
           "minimum": 0
         },
         "features": {
-          "description": "Class, species and background features by name.",
+          "description": "Feats, then features granted by class, subclass, species and background (as actions,\ne.g. Second Wind, or as lasting effects), each once.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/FeatureLine"
@@ -3389,7 +3389,7 @@
           "$ref": "#/$defs/Handle"
         },
         "hit_dice": {
-          "description": "Hit Point Dice by die size.",
+          "description": "Hit Point Dice by die size. Empty until the engine tracks a Hit Point Dice pool (ENG-4).",
           "type": "array",
           "items": {
             "$ref": "#/$defs/HitDicePool"
@@ -3433,7 +3433,7 @@
           "type": "string"
         },
         "passive_perception": {
-          "description": "Passive Perception.",
+          "description": "Passive Perception: 10 plus the Perception bonus.",
           "type": "integer",
           "format": "uint8",
           "maximum": 255,
@@ -3447,7 +3447,7 @@
           "minimum": 0
         },
         "resources": {
-          "description": "Limited-use features, e.g. Second Wind.",
+          "description": "Limited-use features, e.g. Second Wind, by id. Per-turn action economy (action, bonus\naction, reaction) is not listed; `legal_actions` reports it.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ResourcePool"
@@ -3458,7 +3458,7 @@
           "$ref": "#/$defs/Side"
         },
         "skills": {
-          "description": "The eighteen skills.",
+          "description": "The eighteen skills, in alphabetical order.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SkillLine"
@@ -3641,7 +3641,7 @@
       "type": "object",
       "properties": {
         "bonus": {
-          "description": "Total bonus.",
+          "description": "Total bonus: what the engine adds to the d20, without dice bonuses such as Bless.",
           "type": "integer",
           "format": "int8",
           "maximum": 127,

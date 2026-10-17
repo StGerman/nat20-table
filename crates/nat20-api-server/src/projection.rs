@@ -7,7 +7,7 @@
 
 use nat20_api_contract::{
     Anchor, AnchorObserved, AnchorView, CreatureFull, CreatureObserved, Event, EventKind, Handle,
-    Mode, PointFt, RollView, State, Visibility,
+    Mode, PointFt, RollView, Sheet, State, Visibility,
 };
 
 use crate::render;
@@ -105,6 +105,15 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
         me,
         others,
     })
+}
+
+/// A sheet goes only to its owner and the DM (Rule 3): `None` for anyone else.
+pub fn sheet(viewer: &Viewer, sheet: Sheet) -> Option<Sheet> {
+    match viewer {
+        Viewer::Dm => Some(sheet),
+        Viewer::Creature(handle) if *handle == sheet.handle.0 => Some(sheet),
+        Viewer::Creature(_) => None,
+    }
 }
 
 fn distance_ft(p: PointFt, q: PointFt) -> f32 {

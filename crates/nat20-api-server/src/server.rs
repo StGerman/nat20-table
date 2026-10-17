@@ -219,8 +219,8 @@ impl Server {
                 to,
                 prompt_id,
             } => session.move_creature(&actor.0, to, prompt_id.as_ref().map(|p| p.0.as_str())),
-            Command::GetSheet { .. }
-            | Command::RequestCheck { .. }
+            Command::GetSheet { actor } => session.sheet(&actor.0, viewer),
+            Command::RequestCheck { .. }
             | Command::GroupCheck { .. }
             | Command::ShortRest { .. }
             | Command::Spawn { .. } => {

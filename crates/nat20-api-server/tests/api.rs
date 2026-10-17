@@ -182,8 +182,8 @@ fn invalid_decisions_get_readable_rejections() {
             "wrong_mode",
         ),
         (
-            json!({ "cmd": "get_sheet", "actor": "bren" }),
-            "not_implemented",
+            json!({ "cmd": "get_sheet", "actor": "ogre" }),
+            "unknown_creature",
         ),
         (json!({ "cmd": "fly" }), "bad_request"),
     ];
@@ -460,11 +460,19 @@ fn a_carried_creature_keeps_its_hit_points() {
             .cloned()
             .unwrap_or(Value::Null)
     };
+    let sheet_before = api.call("bren", json!({ "cmd": "get_sheet", "actor": "bren" }));
+    assert_eq!(sheet_before["ok"], true, "{sheet_before}");
     let road = api.call(
         "dm",
         json!({ "cmd": "load_scene", "scene_id": "m3_s2_road", "party": ["bren"] }),
     );
     assert_eq!(road["ok"], true, "{road}");
+    // Everything the sheet shows comes along: HP, resources, slots, equipment, death saves.
+    let sheet_after = api.call("bren", json!({ "cmd": "get_sheet", "actor": "bren" }));
+    assert_eq!(
+        sheet_after["result"], sheet_before["result"],
+        "{sheet_after}"
+    );
     let creatures = road["result"]["state"]["creatures"].as_array().unwrap();
     assert_eq!(creatures.len(), 1, "only the party is carried: {road}");
     for field in ["hp", "hp_max", "temp_hp", "life_state", "health"] {
@@ -481,6 +489,79 @@ fn a_carried_creature_keeps_its_hit_points() {
         json!({ "cmd": "load_scene", "scene_id": "m3_s4_prisoner", "party": ["bren", "goblin"] }),
     );
     assert_eq!(gone["error"]["code"], "unknown_creature", "{gone}");
+}
+
+/// Asking for sheets rolls nothing: the same seed plays the same fight with or without them.
+#[test]
+fn a_sheet_leaves_the_dice_alone() {
+    let fight = |ask_for_sheets: bool| -> Value {
+        let mut api = Api::seeded(5);
+        let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
+        assert_eq!(loaded["ok"], true, "{loaded}");
+        if ask_for_sheets {
+            for (viewer, actor) in [("bren", "bren"), ("dm", "goblin")] {
+                let sheet = api.call(viewer, json!({ "cmd": "get_sheet", "actor": actor }));
+                assert_eq!(sheet["ok"], true, "{sheet}");
+                assert_eq!(sheet["events"], json!([]), "a sheet logs nothing: {sheet}");
+            }
+        }
+        let started = api.call(
+            "dm",
+            json!({ "cmd": "start_combat", "participants": ["bren", "goblin"] }),
+        );
+        assert_eq!(started["ok"], true, "{started}");
+        fight_to_the_end(&mut api, started);
+        api.call("dm", json!({ "cmd": "events", "since": 0 }))["result"].clone()
+    };
+    let plain = fight(false);
+    assert!(plain.to_string().contains("\"roll\""), "{plain}");
+    assert_eq!(fight(true), plain);
+}
+
+/// A sheet lists the features class levels grant as actions, not only feats and effects.
+#[test]
+fn a_sheet_lists_class_features_granted_as_actions() {
+    let mut api = duel();
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let sheet = api.call("bren", json!({ "cmd": "get_sheet", "actor": "bren" }));
+    let ids: Vec<&str> = sheet["result"]["sheet"]["features"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["id"].as_str().unwrap())
+        .collect();
+    for id in [
+        "fighting_style.defense",
+        "fighter.second_wind",
+        "fighter.action_surge",
+        "fighter.tactical_mind",
+    ] {
+        assert!(ids.contains(&id), "{id} missing: {sheet}");
+    }
+    // Generic actions every creature has are not features.
+    assert!(
+        !ids.iter()
+            .any(|id| id.contains("attack") || id.contains("dash")),
+        "{ids:?}"
+    );
+}
+
+/// A sheet follows the fight: HP and life state match the state the DM sees.
+#[test]
+fn a_sheet_shows_the_hit_points_the_fight_left() {
+    let mut api = Api::seeded(3);
+    let started = api.start_duel("dm");
+    fight_to_the_end(&mut api, started);
+    let state = api.call("dm", json!({ "cmd": "get_state" }));
+    for creature in state["result"]["state"]["creatures"].as_array().unwrap() {
+        let handle = creature["handle"].as_str().unwrap();
+        let sheet = api.call("dm", json!({ "cmd": "get_sheet", "actor": handle }));
+        let sheet = &sheet["result"]["sheet"];
+        for field in ["hp", "hp_max", "temp_hp", "ac", "life_state"] {
+            assert_eq!(sheet[field], creature[field], "{handle} {field}: {sheet}");
+        }
+    }
 }
 
 /// A self-targeted option takes no targets; naming one is refused and spends nothing.
