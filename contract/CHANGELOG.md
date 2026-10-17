@@ -3,6 +3,9 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.4 (2026-10-17)
+- Docs only, no wire change: `new_session.seed` is honoured (API-11, core upstream item U2). An explicit seed no longer answers `not_implemented`; an omitted seed is picked by the engine and logged, and is no longer `0`. `0` is now an ordinary seed, not "unseeded". The same seed and request stream replay byte-identical responses (protocol.md §2, fixture `duel.jsonl`, the Milestone 1 duel replayed with seed 1).
+
 ## 1.0.0-dev.3 (2026-10-16)
 - Error code `bad_scene`: the scene file, or a pregen or stat block it names, is missing or invalid (CON-3, the server port).
 - Docs only: `awaiting: combat_over` is reported until a command changes the session (`load_scene`, `start_combat`, or an explore command that acts); read-only and rejected commands keep reporting it. `end_combat`, `legal_actions`, `submit`, `react` and `end_turn` answer `wrong_mode` outside combat, before any prompt check (protocol.md §2, §3). Error responses carry the events a refused command still logged (§1).

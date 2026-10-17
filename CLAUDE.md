@@ -65,6 +65,7 @@ cargo test --locked -p nat20-api-server --test conformance -- <fixture_name>   #
 npm run check:ts                          # tsc + client tests; needs `cargo build -p nat20-api-server` first
 cargo run -p nat20-api-server             # the engine: JSON-lines on stdin/stdout, logs on stderr
 cargo run -p nat20-api-contract --bin export-schema   # step 1 of `npm run gen`
+cargo run -p nat20-duel -- --seed 1 --fixture contract/fixtures/duel.jsonl    # re-record the seeded duel fixture after a deliberate behaviour change
 ```
 
 Run `check:contract`, the three cargo checks and `check:ts` before every push. Never push red.
@@ -167,7 +168,7 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 - Each upstream item gets its own branch off upstream `main` with one change, in the maintainer's style:
   - registry JSON over code;
   - a test in `core/tests/`;
-  - a `docs/PROGRESS.md` row;
+  - a `docs/PROGRESS.md` row, when the item is SRD content (his file tracks SRD coverage only; engine plumbing such as U1 and U2 has no row);
   - regenerated `assets/registries/.schemas` (his freshness test must pass);
   - `cargo test --locked` green.
 
@@ -175,6 +176,7 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 - Upstream items never contain API vocabulary: session, viewer, projection, roll id, prompt id, request id, JSON wire, AI. If upstream would not want a change for his own GUI, it does not go upstream.
 - Design questions, such as new registry formats like monsters, start as an upstream issue, not a PR.
 - Close our demo gaps before proposing anything upstream. Our work never waits on an upstream merge.
+  - Exception: U1 (registry root) and U2 (seedable dice) go upstream now, with the monster-format issue (`docs/decisions/0020-send-u1-u2-upstream-early.md`). Every other item waits for Milestone 8.
 
 ## Rule 7: content and licences
 

@@ -1,5 +1,5 @@
-//! Engine API behaviour that the fixtures cannot pin down because dice are not seedable yet:
-//! prompts and rejections in a live fight, legal actions, scene validation, one log across
+//! Engine API behaviour that is clearer as code than as a fixture transcript, played with
+//! unseeded (engine-picked) dice so it holds for any rolls: prompts and rejections in a live fight, legal actions, scene validation, one log across
 //! scenes, the viewer projection and the stdio binary.
 
 use std::{
@@ -223,9 +223,10 @@ fn combat_commands_need_combat() {
 
 #[test]
 fn unsupported_inputs_say_not_implemented() {
+    // A seed used to be unsupported; it is served now (API-11) and stays here as the setup.
     let mut api = Api::new(Server::new());
     let seeded = api.call("dm", json!({ "cmd": "new_session", "seed": 7 }));
-    assert_eq!(seeded["error"]["code"], "not_implemented", "{seeded}");
+    assert_eq!(seeded["result"]["seed"], 7, "{seeded}");
     let party = api.call(
         "dm",
         json!({ "cmd": "load_scene", "scene_id": "duel", "party": ["bren"] }),

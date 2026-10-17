@@ -2,8 +2,8 @@
 //! a transcript citing every engine roll.
 
 use nat20_api_contract::{
-    Awaiting, Command, CommandResult, Event, EventKind, Handle, OptionId, PromptId, Response,
-    RollView, State,
+    Awaiting, CONTRACT_VERSION, Command, CommandResult, Event, EventKind, Handle, OptionId,
+    PromptId, Response, RollView, State,
 };
 use nat20_api_server::render;
 
@@ -15,16 +15,35 @@ const GOBLIN: &str = "goblin";
 /// Plays one duel. The Fighter takes Second Wind at half HP or less, otherwise attacks the
 /// goblin with the longsword, uses Action Surge once per round for another attack, then ends
 /// the turn. It always takes a reaction. Returns the transcript and the full (DM) session log.
-pub fn run_duel() -> (String, Vec<Event>) {
-    let mut client = Client::default();
+/// `seed` seeds the dice; `None` lets the engine pick one.
+pub fn run_duel(seed: Option<u32>) -> (String, Vec<Event>) {
+    play(&mut Client::default(), seed)
+}
+
+/// Plays one seeded duel and returns it as conformance fixture lines (`contract/fixtures/`):
+/// every request the scripted Fighter sent with the exact response, request ids `d-N`, then the
+/// final state and the whole log in Bren's player view.
+pub fn record_fixture(seed: u32) -> String {
+    let mut client = Client::with_id_prefix(Default::default(), "d");
+    play(&mut client, Some(seed));
+    // The same fight as Bren's player sees it: strict roll views, no goblin HP or AC.
+    client.send("bren", Command::GetState);
+    client.send("bren", Command::Events { since: 0 });
+    client
+        .lines
+        .iter()
+        .map(|(request, response)| {
+            let response = response.replace(CONTRACT_VERSION, "$CONTRACT_VERSION");
+            format!("{{\"request\": {request}, \"response\": {response}}}\n")
+        })
+        .collect()
+}
+
+fn play(client: &mut Client, seed: Option<u32>) -> (String, Vec<Event>) {
     let mut transcript = String::new();
+    call(client, &mut transcript, Command::NewSession { seed });
     call(
-        &mut client,
-        &mut transcript,
-        Command::NewSession { seed: None },
-    );
-    call(
-        &mut client,
+        client,
         &mut transcript,
         Command::LoadScene {
             scene_id: "duel".into(),
@@ -32,7 +51,7 @@ pub fn run_duel() -> (String, Vec<Event>) {
         },
     );
     let mut response = call(
-        &mut client,
+        client,
         &mut transcript,
         Command::StartCombat {
             participants: vec![Handle(FIGHTER.into()), Handle(GOBLIN.into())],
@@ -47,7 +66,7 @@ pub fn run_duel() -> (String, Vec<Event>) {
                 prompt_id, actor, ..
             } => {
                 response = call(
-                    &mut client,
+                    client,
                     &mut transcript,
                     Command::React {
                         actor,
@@ -104,9 +123,9 @@ pub fn run_duel() -> (String, Vec<Event>) {
                 } else {
                     end_turn(prompt_id.clone())
                 };
-                response = call(&mut client, &mut transcript, command);
+                response = call(client, &mut transcript, command);
                 if !response.ok {
-                    response = call(&mut client, &mut transcript, end_turn(prompt_id));
+                    response = call(client, &mut transcript, end_turn(prompt_id));
                 }
             }
             Awaiting::CombatOver { .. } | Awaiting::Idle | Awaiting::NoSession => break,

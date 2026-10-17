@@ -29,10 +29,10 @@ fn kind(roll: &RollView) -> RollKind {
 
 #[test]
 fn duel_finishes_and_every_roll_is_in_the_engine_log() {
-    // Dice are random, so play enough duels to cover hits, misses, crits, Second Wind and
-    // both sides winning at least sometimes.
+    // Play enough seeded duels to cover hits, misses, crits, Second Wind and both sides winning
+    // at least sometimes.
     for run in 0..25 {
-        let (transcript, log) = run_duel();
+        let (transcript, log) = run_duel(Some(run));
 
         assert!(
             log.iter()
@@ -68,7 +68,7 @@ fn duel_finishes_and_every_roll_is_in_the_engine_log() {
 
 #[test]
 fn tampered_transcript_fails_the_audit() {
-    let (transcript, log) = run_duel();
+    let (transcript, log) = run_duel(Some(1));
     let (id, total) = rolls(&log)
         .into_iter()
         .find_map(|r| match r {
@@ -140,8 +140,8 @@ fn goblin_warrior_matches_the_srd_stat_block() {
 
     // Play duels until the goblin has attacked and hit, then check its Scimitar numbers:
     // +4 to hit, 1d6+2 damage.
-    for _ in 0..40 {
-        let (_, log) = run_duel();
+    for seed in 0..40 {
+        let (_, log) = run_duel(Some(seed));
         let goblin_rolls: Vec<_> = rolls(&log)
             .into_iter()
             .filter_map(|r| match r {
@@ -178,4 +178,24 @@ fn goblin_warrior_matches_the_srd_stat_block() {
         return;
     }
     panic!("the goblin never hit in 40 duels");
+}
+
+#[test]
+fn same_seed_replays_the_same_duel() {
+    for seed in [0, 7, u32::MAX] {
+        let first = run_duel(Some(seed));
+        let second = run_duel(Some(seed));
+        assert_eq!(first, second, "seed {seed} played two different duels");
+    }
+}
+
+#[test]
+fn an_omitted_seed_is_picked_and_logged() {
+    let (_, log) = run_duel(None);
+    let Some(EventKind::SessionStarted { seed, .. }) = log.first().map(|e| &e.kind) else {
+        panic!("the log starts with session_started");
+    };
+    // Replaying with the logged seed gives the same log.
+    let (_, replay) = run_duel(Some(*seed));
+    assert_eq!(log, replay);
 }
