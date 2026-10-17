@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.3"
+    "version": "1.0.0-dev.4"
   },
   "$defs": {
     "Ability": {
@@ -2482,7 +2482,7 @@
               "const": "new_session"
             },
             "seed": {
-              "description": "Dice seed. The same seed and the same request stream give an identical log. When\nomitted, the engine picks one and logs it in `session_started`.",
+              "description": "Dice seed. The same seed and the same request stream give an identical log. When\nomitted, the engine picks one and logs it in `session_started`; replaying with that\nseed reproduces the session. Every value, 0 included, is a real seed.",
               "type": [
                 "integer",
                 "null"

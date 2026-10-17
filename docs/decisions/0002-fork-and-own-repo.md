@@ -1,6 +1,6 @@
 # 0002. Keep the fork equal to upstream and put our code in nat20-table
 
-- **Status:** Accepted
+- **Status:** Accepted (amended by [0020](0020-send-u1-u2-upstream-early.md): U1 and U2 go upstream before Milestone 8)
 - **Date:** 2026-10-16
 - **Decided by:** Stas asked for a clean upstream/ours split with "super minimal" upstream changes; layout proposed in the system design, approved by Stas 2026-10-16; repo named and created by Stas
 

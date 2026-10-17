@@ -19,6 +19,6 @@ cargo run -p nat20-api-server
 - `data/scenes/`, `data/monsters/`: scene files and SRD 5.2.1 stat blocks. Pregens are built in code for now (`adapter/pregen.rs`).
 
 ## Known gaps (milestone 1)
-- Not served yet: `get_sheet`, `move`, `request_check`, `group_check`, `short_rest`, `end_combat`, `spawn`, dice seeds, party carry-over, surprise, point and variant options. Each answers `not_implemented`.
-- Dice are not seedable (upstream U2), so fixtures cover only paths without dice; fights are covered by repeated-run tests.
+- Not served yet: `get_sheet`, `move`, `request_check`, `group_check`, `short_rest`, `end_combat`, `spawn`, party carry-over, surprise, point and variant options. Each answers `not_implemented`.
+- Dice are seeded per session (`new_session.seed`, core's `components::rng` from upstream item U2), so a fight replays exactly: `contract/fixtures/duel.jsonl` is the Milestone 1 duel with seed 1. Regenerate it with `cargo run -p nat20-duel -- --seed 1 --fixture contract/fixtures/duel.jsonl` after a deliberate behaviour change.
 - The Goblin Warrior wears a +2 AC stopgap for its missing shield, and its extra 1d4 on Advantage and Nimble Escape are not modelled.
