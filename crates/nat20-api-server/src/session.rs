@@ -97,30 +97,56 @@ impl Session {
         party: &[Handle],
         viewer: &Viewer,
     ) -> Result<CommandResult, ApiError> {
-        if !party.is_empty() {
-            return Err(not_implemented(
-                "Carrying a party into a new scene",
-                "every scene starts from its own scene file for now (API-5)",
-            ));
-        }
-        let scene = scene::read(&self.data_dir, scene_id)?;
-        if scene.creatures.is_empty() && !scene.party_start.is_empty() {
-            return Err(not_implemented(
-                "Loading a scene whose party is all carried in",
-                &format!(
-                    "scene {scene_id} places no creature of its own, and party carry-over comes with API-5"
+        if let Some(game) = &self.game
+            && game.mode() == Mode::Combat
+        {
+            return Err(error(
+                ErrorCode::WrongMode,
+                format!(
+                    "A fight is running in scene {}; another scene can load once it is over.",
+                    game.scene_id()
                 ),
             ));
         }
+        let scene = scene::read(&self.data_dir, scene_id)?;
+        let mut seen = std::collections::HashSet::new();
+        for handle in party {
+            if !seen.insert(handle) {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("The party lists {} twice.", handle.0),
+                ));
+            }
+            if !self
+                .game
+                .as_ref()
+                .is_some_and(|g| g.has_creature(&handle.0))
+            {
+                return Err(error(
+                    ErrorCode::UnknownCreature,
+                    format!(
+                        "There is no creature {} in the current scene to carry over.",
+                        handle.0
+                    ),
+                ));
+            }
+        }
         if let Viewer::Creature(handle) = viewer
             && !scene.creatures.iter().any(|c| c.handle.0 == *handle)
+            && !party.iter().any(|h| h.0 == *handle)
         {
             return Err(error(
                 ErrorCode::UnknownCreature,
                 format!("The viewer {handle} is not a creature in scene {scene_id}."),
             ));
         }
-        self.game = Some(Game::load(&scene, &self.data_dir)?);
+        match Game::load(self.game.take(), &scene, party, &self.data_dir) {
+            Ok(game) => self.game = Some(game),
+            Err((previous, e)) => {
+                self.game = previous;
+                return Err(e);
+            }
+        }
         // Roll keys are per scene; the old scene's rolls are never cited again.
         self.roll_keys.clear();
         self.decided = true;

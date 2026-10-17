@@ -6,16 +6,13 @@
 //! copies new engine events into the log, and runs scripted creatures until a client decision
 //! is needed.
 
-use std::{
-    collections::{HashMap, HashSet},
-    path::Path,
-};
+use std::{collections::HashMap, path::Path};
 
 use hecs::Entity;
 use nat20_api_contract::{
     ActionCost, ActionOption, ApiError, Control, CreatureFull, ErrorCode, Handle, HealthBand, Mode,
-    OptionId, PointFt, ReactionOption, RejectReason, SceneFile, Side, TargetCandidate, Targeting,
-    UnavailableOption,
+    OptionId, Placement, PointFt, ReactionOption, RejectReason, SceneFile, Side, TargetCandidate,
+    Targeting, UnavailableOption,
 };
 use nat20_core::{
     components::{
@@ -120,6 +117,8 @@ enum Awaiting {
 /// A loaded scene and its engine.
 pub struct Game {
     engine: EngineState,
+    /// The terrain the engine's geometry was built from; `None` is the default map.
+    map: Option<String>,
     scene: Scene,
     /// The running or finished combat, if any.
     encounter: Option<EncounterId>,
@@ -136,27 +135,120 @@ pub struct Game {
 }
 
 impl Game {
-    /// Places every creature of `scene`, in explore mode. The scene has been read and checked by
-    /// [`crate::scene::read`]; its spawns, checks, hazards and encounters are not served yet.
-    pub fn load(scene: &SceneFile, data_dir: &Path) -> Result<Self, ApiError> {
-        if scene.creatures.is_empty() {
-            return Err(error(
-                ErrorCode::BadScene,
-                "A scene needs at least one creature.",
-            ));
+    /// Loads `scene` in explore mode. The first scene gets a new engine; every later scene
+    /// reuses the previous one, so the creatures in `party` keep everything the engine tracks
+    /// (Hit Points, resources, spell slots, life state). They are placed at the scene's
+    /// `party_start` anchors in party order, the last anchor taking any extra creatures. Every
+    /// other creature of the previous scene is removed, and a running fight is abandoned.
+    ///
+    /// The scene has been read and checked by [`crate::scene::read`], and the session has
+    /// checked that every party handle is a creature of `previous`. If loading fails, `previous`
+    /// comes back unchanged in the error, so a refused load changes nothing.
+    pub fn load(
+        previous: Option<Game>,
+        scene: &SceneFile,
+        party: &[Handle],
+        data_dir: &Path,
+    ) -> Result<Self, (Option<Game>, ApiError)> {
+        let fail = |previous, e| Err((previous, e));
+        if scene.creatures.is_empty() && party.is_empty() {
+            return fail(
+                previous,
+                if scene.party_start.is_empty() {
+                    error(ErrorCode::BadScene, "A scene needs at least one creature.")
+                } else {
+                    error(
+                        ErrorCode::BadRequest,
+                        format!(
+                            "Scene {} places no creature of its own; carry its party in with load_scene{{party}}.",
+                            scene.id
+                        ),
+                    )
+                },
+            );
         }
-        let mut engine = new_engine_state(scene.map.as_deref());
-        let mut creatures = Vec::new();
-        let mut seen = HashSet::new();
-        for def in &scene.creatures {
-            if !seen.insert(def.handle.0.clone()) {
-                return Err(error(
+        if !party.is_empty() && scene.party_start.is_empty() {
+            return fail(
+                previous,
+                error(
+                    ErrorCode::BadRequest,
+                    format!("Scene {} takes no party (it has no party_start).", scene.id),
+                ),
+            );
+        }
+        if let Some(clash) = party
+            .iter()
+            .find(|h| scene.creatures.iter().any(|c| c.handle == **h))
+        {
+            return fail(
+                previous,
+                error(
                     ErrorCode::BadScene,
-                    format!("The handle {} is used twice.", def.handle.0),
-                ));
+                    format!(
+                        "{} is carried in and also defined by scene {}.",
+                        clash.0, scene.id
+                    ),
+                ),
+            );
+        }
+        // Stat blocks are read before anything is spawned.
+        let mut monsters = HashMap::new();
+        for def in &scene.creatures {
+            if let Some(monster) = &def.monster
+                && !monsters.contains_key(monster)
+            {
+                let loaded = scene::monster_path(data_dir, monster).and_then(|path| {
+                    MonsterDef::load(&path).map_err(|e| {
+                        error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))
+                    })
+                });
+                match loaded {
+                    Ok(loaded) => monsters.insert(monster.clone(), loaded),
+                    Err(e) => return fail(previous, e),
+                };
             }
+        }
+
+        let had_previous = previous.is_some();
+        let (mut game, carried) = match previous {
+            Some(mut game) => {
+                let carried: Vec<SceneCreature> = party
+                    .iter()
+                    .map(|h| {
+                        let c = game
+                            .scene
+                            .creatures
+                            .iter()
+                            .find(|c| c.handle == h.0)
+                            .expect("the session checks party handles");
+                        SceneCreature {
+                            handle: c.handle.clone(),
+                            entity: c.entity,
+                            side: c.side,
+                            control: c.control,
+                        }
+                    })
+                    .collect();
+                game.keys = RollKeys::default();
+                (game, carried)
+            }
+            None => (
+                Self::empty(scene.id.clone(), scene.map.as_deref()),
+                Vec::new(),
+            ),
+        };
+
+        // Spawn the scene's own creatures. On any failure they are removed again.
+        let mut spawned: Vec<SceneCreature> = Vec::new();
+        let rollback = |game: &mut Game, spawned: &[SceneCreature]| {
+            for c in spawned {
+                let _ = game.engine.despawn(c.entity);
+            }
+            game.global_seen = game.engine.event_log.events.len();
+        };
+        for def in &scene.creatures {
             let entity = match (&def.pregen, &def.monster) {
-                (Some(pregen), None) => pregen::spawn(&mut engine, pregen).ok_or_else(|| {
+                (Some(pregen), None) => pregen::spawn(&mut game.engine, pregen).ok_or_else(|| {
                     error(
                         ErrorCode::BadScene,
                         format!(
@@ -164,95 +256,114 @@ impl Game {
                             pregen::PREGENS.join(", ")
                         ),
                     )
-                })?,
-                (None, Some(monster)) => {
-                    let path = scene::monster_path(data_dir, monster)?;
-                    let def = MonsterDef::load(&path).map_err(|e| {
-                        error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))
-                    })?;
-                    def.spawn(&mut engine).map_err(|e| {
-                        error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))
-                    })?
-                }
-                _ => {
-                    return Err(error(
-                        ErrorCode::BadScene,
-                        format!("{} needs exactly one of pregen or monster.", def.handle.0),
-                    ));
-                }
+                }),
+                (None, Some(monster)) => monsters[monster]
+                    .spawn(&mut game.engine)
+                    .map_err(|e| error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))),
+                _ => Err(error(
+                    ErrorCode::BadScene,
+                    format!("{} needs exactly one of pregen or monster.", def.handle.0),
+                )),
             };
-            systems::geometry::teleport_to_ground(
-                &mut engine.world,
-                &engine.geometry,
-                entity,
-                &to_core_point(scene::position(scene, &def.at)),
-            );
-            creatures.push(SceneCreature {
-                handle: def.handle.0.clone(),
-                entity,
-                side: def.side,
-                control: def.control,
-            });
-        }
-
-        // Sides decide who wins; faction attitudes decide who may attack whom. The party and
-        // hostile sides must be hostile to each other, and nobody to their own side or to a
-        // neutral creature, or a fight could never end.
-        for (i, a) in creatures.iter().enumerate() {
-            for b in &creatures[i + 1..] {
-                let hostile = systems::factions::mutual_attitude(&engine.world, a.entity, b.entity)
-                    == Attitude::Hostile;
-                let should_be = matches!(
-                    (a.side, b.side),
-                    (Side::Party, Side::Hostile) | (Side::Hostile, Side::Party)
-                );
-                if hostile != should_be {
-                    return Err(error(
-                        ErrorCode::BadScene,
-                        format!(
-                            "{} ({}) and {} ({}) are {}, so the fight could never end.",
-                            a.handle,
-                            side_word(a.side),
-                            b.handle,
-                            side_word(b.side),
-                            if hostile {
-                                "hostile to each other but not on opposing sides"
-                            } else {
-                                "on opposing sides but not hostile"
-                            }
-                        ),
-                    ));
+            match entity {
+                Ok(entity) => spawned.push(SceneCreature {
+                    handle: def.handle.0.clone(),
+                    entity,
+                    side: def.side,
+                    control: def.control,
+                }),
+                Err(e) => {
+                    rollback(&mut game, &spawned);
+                    return fail(had_previous.then_some(game), e);
                 }
             }
         }
 
-        let handles = creatures
-            .iter()
-            .map(|c| (c.entity, c.handle.clone()))
-            .collect();
-        let hp = creatures
-            .iter()
-            .map(|c| (c.entity, hit_points(&engine, c.entity)))
-            .collect();
-        let mut game = Self {
-            engine,
+        let creatures: Vec<SceneCreature> = carried.into_iter().chain(spawned).collect();
+        if let Err(e) = check_sides(&game.engine, &creatures) {
+            let new: Vec<SceneCreature> = creatures
+                .into_iter()
+                .filter(|c| !party.iter().any(|h| h.0 == c.handle))
+                .collect();
+            rollback(&mut game, &new);
+            return fail(had_previous.then_some(game), e);
+        }
+
+        // Commit: nothing below can fail.
+        if let Some(id) = game.encounter.take()
+            && game.engine.encounter(&id).is_some()
+        {
+            game.engine.end_encounter(&id);
+        }
+        for old in &game.scene.creatures {
+            if !creatures.iter().any(|c| c.entity == old.entity) {
+                let _ = game.engine.despawn(old.entity);
+                game.hp.remove(&old.entity);
+            }
+        }
+        if game.map != scene.map {
+            game.engine.geometry = load_geometry(scene.map.as_deref());
+            game.map = scene.map.clone();
+        }
+        for (i, c) in creatures.iter().enumerate() {
+            let at = if i < party.len() {
+                Placement::Anchor {
+                    anchor: scene.party_start[i.min(scene.party_start.len() - 1)].clone(),
+                }
+            } else {
+                scene
+                    .creatures
+                    .iter()
+                    .find(|d| d.handle.0 == c.handle)
+                    .expect("every new creature comes from the scene")
+                    .at
+                    .clone()
+            };
+            systems::geometry::teleport_to_ground(
+                &mut game.engine.world,
+                &game.engine.geometry,
+                c.entity,
+                &to_core_point(scene::position(scene, &at)),
+            );
+            game.hp
+                .entry(c.entity)
+                .or_insert_with(|| hit_points(&game.engine, c.entity));
+        }
+        game.scene = Scene {
+            id: scene.id.clone(),
+            handles: creatures
+                .iter()
+                .map(|c| (c.entity, c.handle.clone()))
+                .collect(),
+            creatures,
+        };
+        game.encounter_seen = 0;
+        game.winner = None;
+        game.scripted_turn = None;
+        // Spawning, despawning and ending a fight write nothing the log shows; skip them.
+        game.global_seen = game.engine.event_log.events.len();
+        Ok(game)
+    }
+
+    /// A game with a new engine and no creatures, before its first scene is placed.
+    fn empty(scene_id: String, map: Option<&str>) -> Self {
+        Self {
+            engine: EngineState::new(load_geometry(map)),
+            map: map.map(str::to_owned),
             scene: Scene {
-                id: scene.id.clone(),
-                creatures,
-                handles,
+                id: scene_id,
+                creatures: Vec::new(),
+                handles: HashMap::new(),
             },
             encounter: None,
             pending: Vec::new(),
-            hp,
+            hp: HpTracker::new(),
             keys: RollKeys::default(),
             global_seen: 0,
             encounter_seen: 0,
             winner: None,
             scripted_turn: None,
-        };
-        // Spawning writes nothing the log shows; skip it so it is not replayed later.
-        game.global_seen = game.engine.event_log.events.len();
-        Ok(game)
+        }
     }
 
     /// Log entries produced since the last call, in order, without `seq`.
@@ -1160,12 +1271,46 @@ impl Game {
     }
 }
 
-fn new_engine_state(map: Option<&str>) -> EngineState {
+fn load_geometry(map: Option<&str>) -> WorldGeometry {
     let terrain = scene::map_path(map);
-    EngineState::new(WorldGeometry::from_obj_path(
+    WorldGeometry::from_obj_path(
         terrain.to_str().expect("utf-8 path"),
         &rerecast::ConfigBuilder::default().build(),
-    ))
+    )
+}
+
+/// Sides decide who wins; faction attitudes decide who may attack whom. The party and hostile
+/// sides must be hostile to each other, and nobody to their own side or to a neutral creature,
+/// or a fight could never end.
+fn check_sides(engine: &EngineState, creatures: &[SceneCreature]) -> Result<(), ApiError> {
+    for (i, a) in creatures.iter().enumerate() {
+        for b in &creatures[i + 1..] {
+            let hostile = systems::factions::mutual_attitude(&engine.world, a.entity, b.entity)
+                == Attitude::Hostile;
+            let should_be = matches!(
+                (a.side, b.side),
+                (Side::Party, Side::Hostile) | (Side::Hostile, Side::Party)
+            );
+            if hostile != should_be {
+                return Err(error(
+                    ErrorCode::BadScene,
+                    format!(
+                        "{} ({}) and {} ({}) are {}, so the fight could never end.",
+                        a.handle,
+                        side_word(a.side),
+                        b.handle,
+                        side_word(b.side),
+                        if hostile {
+                            "hostile to each other but not on opposing sides"
+                        } else {
+                            "on opposing sides but not hostile"
+                        }
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Contract points are feet with `z_ft` up; core works in metres with `y` up.

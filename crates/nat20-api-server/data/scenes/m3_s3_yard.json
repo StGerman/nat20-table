@@ -1,6 +1,6 @@
 {
     "id": "m3_s3_yard",
-    "description": "Milestone 3 test scenario m3_trail, scene 3 of 5 (Fight 1): two goblin lookouts in the mill yard. Surprised if the party spotted them; they may surrender when beaten.",
+    "description": "Milestone 3 test scenario m3_trail, scene 3 of 5 (Fight 1): two goblin lookouts in the mill yard, within reach of the gate. Surprised if the party spotted them; they may surrender when beaten.",
     "anchors": [
         {
             "id": "yard_gate",
@@ -15,8 +15,8 @@
             "id": "woodpile",
             "name": "the woodpile",
             "position_ft": {
-                "x_ft": 25.0,
-                "y_ft": 5.0,
+                "x_ft": 5.0,
+                "y_ft": 0.0,
                 "z_ft": 0.0
             }
         },
@@ -24,8 +24,8 @@
             "id": "mill_door",
             "name": "the mill door",
             "position_ft": {
-                "x_ft": 30.0,
-                "y_ft": -5.0,
+                "x_ft": 0.0,
+                "y_ft": 5.0,
                 "z_ft": 0.0
             }
         }
