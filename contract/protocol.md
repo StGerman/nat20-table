@@ -1,9 +1,9 @@
 # Engine protocol v1
 
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
-Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 still await Stas; the contract assumes their defaults.
+Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.2): every v1 type is in the contract crate. The engine implements `hello` and request-id idempotency and answers every other command with `not_implemented` until the server port (CON-3) wires it.
+Status (contract 1.0.0-dev.3): every v1 type is in the contract crate. The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat`, `get_state`, `legal_actions`, `submit`, `react`, `end_turn` and `events`, with the §5 projection, and answers `get_sheet`, `move`, `request_check`, `group_check`, `short_rest` and `spawn` with `not_implemented`. `end_combat` answers `wrong_mode` outside combat and `not_implemented` during a fight, since scenes carry no end-combat reasons yet. Limits of this build, each answered with `not_implemented` rather than ignored: no dice `seed` (the core's dice are not seedable until upstream U2; `seed: 0` in `session_started` means unseeded), no `party` carry-over in `load_scene` (API-5), no `surprised` in `start_combat`, no options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -19,12 +19,12 @@ Where the contract differs from the review draft, and why:
 
 Origin: the v1 draft written by the API contract review on 2026-10-16.
 
-## Decisions to confirm (defaults in bold)
+## Decisions (the chosen defaults in bold)
 
 1. Definition format: settled, a standalone Rust contract crate (serde + schemars), see the note at the top.
-2. Transport: **stdio JSON-lines only for the demo**. Local HTTP later, reusing the same message types (API-15).
-3. Visibility: **projected by the engine per `viewer`**, as well as by the orchestrator's tool binding.
-4. Player view of enemy health: **health band only** (`unhurt` / `bloodied` / `down`, where bloodied is the SRD 5.2.1 term for half HP or less). No numbers.
+2. Transport: settled (Stas, 2026-10-17), **stdio JSON-lines only for the demo**. Local HTTP later, reusing the same message types (API-15).
+3. Visibility: settled (Stas, 2026-10-17), **projected by the engine per `viewer`**, as well as by the orchestrator's tool binding.
+4. Player view of enemy health: settled (Stas, 2026-10-17), **health band only** (`unhurt` / `bloodied` / `down`, where bloodied is the SRD 5.2.1 term for half HP or less). No numbers.
 5. Player view of rolls: settled (Stas, 2026-10-16), strict. The DM alone sees modifiers, AC/DC and the DC source; every player, the roller included, sees dice, total and outcome. This hides save DCs from players, which is stricter than many tables run it.
 
 ## 1. Transport and envelope
@@ -66,8 +66,8 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 ```
 - **One log per session.** Sequence numbers and roll ids are unique and monotonic for the whole session and never reused or rewritten. `load_scene` appends a `scene_loaded` event and doesn't clear anything.
 - **The party persists.** PCs keep HP, slots, resources and conditions across scenes (API-5). Monsters belong to their scene.
-- **Leaving combat.** Both ways back land in explore mode in the same scene. When a side is down, the engine ends combat by itself: it logs `combat_over`, switches the scene to explore mode and reports `awaiting: combat_over` until the next command, after which `awaiting` reads `none`. Any explore command, `start_combat` or `load_scene` goes on from there; `end_combat` then answers `wrong_mode`, because combat is already over. `end_combat{reason}` is only for ending a fight early.
-- **Seed.** `new_session{seed?}` takes a u32. When it's omitted, the engine picks one and logs it in `session_started`. The same seed plus the same request stream gives an identical log (needs the core RNG change, API-11).
+- **Leaving combat.** Both ways back land in explore mode in the same scene. When a side is down, the engine ends combat by itself: it logs `combat_over`, switches the scene to explore mode and reports `awaiting: combat_over` until a command changes the session (`load_scene`, `start_combat`, or any explore command that acts), after which `awaiting` reads `none`; read-only and rejected commands keep reporting it. Any explore command, `start_combat` or `load_scene` goes on from there; `end_combat`, `legal_actions`, `submit`, `react` and `end_turn` then answer `wrong_mode` (not retryable), because combat is already over and nothing is pending. `end_combat{reason}` is only for ending a fight early.
+- **Seed.** `new_session{seed?}` takes a u32. When it's omitted, the engine picks one and logs it in `session_started`. The same seed plus the same request stream gives an identical log (needs the core RNG change, API-11). Until then this engine answers an explicit `seed` with `not_implemented`, and `session_started` reports `seed: 0`, meaning unseeded.
 
 ## 3. Prompts (`awaiting`)
 
@@ -80,7 +80,7 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 { "kind": "combat_over", "winner": "party", "reason": "side_down" }
 { "kind": "no_session" }
 ```
-- Every pending decision has a `prompt_id`. `submit`, `react` and `end_turn` must echo it. A missing or old id is rejected with `stale_prompt` and changes nothing. This makes late or duplicated agent decisions harmless.
+- Every pending decision has a `prompt_id`. `submit`, `react` and `end_turn` must echo it. In combat, a missing or old id is rejected with `stale_prompt` and changes nothing; in explore mode the command answers `wrong_mode` first. This makes late or duplicated agent decisions harmless.
 - Several reactors to one trigger are asked one at a time in initiative order (today it's scene order; switch to initiative).
 
 ## 4. Commands
@@ -163,6 +163,8 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
   "total": 19, "against": {"kind":"AC","value":15}, "outcome": "hit",
   "advantage": "advantage", "dc_source": "scenario|ladder|stat_block" }
 ```
+In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC except a death save's fixed DC 10. Only `initiative`, `damage` and `healing` rolls have no `against`.
+
 Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with the same `total`, and with the same `against` when the transcript states it. Every roll in the session log is cited. The audit runs on the `dm` projection.
 
 ## 7. Errors
@@ -185,6 +187,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
 | `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant` | true |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
+| `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |
 | `internal` | An engine bug. The request did nothing, and the engine logs details to stderr | false |
 
 `message` is one plain-English sentence written for a model or a human. It never contains Rust `Debug` output.

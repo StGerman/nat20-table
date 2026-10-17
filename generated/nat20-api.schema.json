@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.2"
+    "version": "1.0.0-dev.3"
   },
   "$defs": {
     "Ability": {
@@ -404,7 +404,7 @@
           ]
         },
         {
-          "description": "Combat ended by itself because a side is down. The scene is already back in explore mode\nand nothing is pending: reported until the next command, after which it reads `none`.\nGo on with any explore command, `start_combat` or `load_scene`; `end_combat` is not needed.",
+          "description": "Combat ended by itself because a side is down. The scene is already back in explore mode\nand nothing is pending. Reported until a command changes the session (`load_scene`,\n`start_combat`, or any explore command that acts), after which it reads `none`; read-only\nand rejected commands keep reporting it.\nGo on with any explore command, `start_combat` or `load_scene`; `end_combat` is not needed.",
           "type": "object",
           "properties": {
             "kind": {
@@ -1376,6 +1376,11 @@
           "description": "The command is in the contract but this engine build does not implement it yet.",
           "type": "string",
           "const": "not_implemented"
+        },
+        {
+          "description": "The scene file, or a pregen or stat block it names, is missing or invalid. Nothing changed.",
+          "type": "string",
+          "const": "bad_scene"
         },
         {
           "description": "An engine bug. The request did nothing; details go to stderr.",
@@ -3100,7 +3105,7 @@
               "$ref": "#/$defs/AdvantageState"
             },
             "against": {
-              "description": "The number the total was compared with, if any.",
+              "description": "The number the total was compared with: always present for `attack` (AC),\n`saving_throw`, `death_save`, `ability_check` and `skill_check` (DC); absent for\n`initiative`, `damage` and `healing`.",
               "anyOf": [
                 {
                   "$ref": "#/$defs/Against"
@@ -3111,7 +3116,7 @@
               ]
             },
             "dc_source": {
-              "description": "Where the DC came from, for checks and saves.",
+              "description": "Where the DC came from: present for every check and save except a death save, whose\nDC 10 is a rule.",
               "anyOf": [
                 {
                   "$ref": "#/$defs/DcSource"

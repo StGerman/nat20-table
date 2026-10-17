@@ -1,0 +1,20 @@
+[package]
+name = "nat20-duel"
+version = "0.1.0"
+description = "Milestone 1 harness: a scripted Fighter vs Goblin Warrior duel through the engine API, and the transcript audit."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+nat20-api-contract = { workspace = true }
+nat20-api-server = { path = "../nat20-api-server" }
+serde_json = { workspace = true }
+
+[lib]
+name = "nat20_duel"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nat20-duel"
+path = "src/bin/duel.rs"

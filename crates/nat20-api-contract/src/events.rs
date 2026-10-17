@@ -244,14 +244,17 @@ pub enum RollView {
         modifiers: Vec<Modifier>,
         /// Dice plus modifiers.
         total: i32,
-        /// The number the total was compared with, if any.
+        /// The number the total was compared with: always present for `attack` (AC),
+        /// `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC); absent for
+        /// `initiative`, `damage` and `healing`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         against: Option<Against>,
         /// The result.
         outcome: RollOutcome,
         /// Advantage state of the d20.
         advantage: AdvantageState,
-        /// Where the DC came from, for checks and saves.
+        /// Where the DC came from: present for every check and save except a death save, whose
+        /// DC 10 is a rule.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         dc_source: Option<DcSource>,
     },

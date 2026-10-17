@@ -1,0 +1,20 @@
+{
+    "id": "duel",
+    "description": "Milestone 1: Bren, a level 2 Fighter, against one SRD Goblin Warrior on open ground, 5 feet apart.",
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "position": { "x_ft": 0, "y_ft": 0, "z_ft": 0 }
+        },
+        {
+            "handle": "goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "position": { "x_ft": 5, "y_ft": 0, "z_ft": 0 }
+        }
+    ]
+}
