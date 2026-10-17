@@ -160,6 +160,7 @@ pub fn check(scene: &SceneFile, data_dir: &Path) -> Result<(), ApiError> {
         }
         let mut seen = HashSet::new();
         for handle in &encounter.participants {
+            check_handle(&handle.0)?;
             if !seen.insert(&handle.0) {
                 return bad(format!("Encounter {id} lists {} twice.", handle.0));
             }
@@ -266,12 +267,7 @@ fn check_creature(
     data_dir: &Path,
 ) -> Result<(), ApiError> {
     let handle = &creature.handle.0;
-    if handle == "dm" || !is_plain_name(handle) {
-        return Err(error(
-            ErrorCode::BadScene,
-            format!("{handle:?} cannot be a creature handle."),
-        ));
-    }
+    check_handle(handle)?;
     match (&creature.pregen, &creature.monster) {
         (Some(pregen), None) => {
             if !pregen::PREGENS.contains(&pregen.as_str()) {
@@ -305,6 +301,18 @@ fn check_creature(
         return Err(error(
             ErrorCode::BadScene,
             format!("{handle} is placed at the unknown anchor {anchor}."),
+        ));
+    }
+    Ok(())
+}
+
+/// A handle is a plain name and not `dm`, whether the scene defines the creature or it is
+/// carried in, so a reference that could never resolve is refused up front.
+fn check_handle(handle: &str) -> Result<(), ApiError> {
+    if handle == "dm" || !is_plain_name(handle) {
+        return Err(error(
+            ErrorCode::BadScene,
+            format!("{handle:?} cannot be a creature handle."),
         ));
     }
     Ok(())
@@ -595,6 +603,21 @@ mod tests {
         assert!(check_value(scene.clone()).is_err());
         scene["party_start"] = serde_json::json!(["gate"]);
         check_value(scene).unwrap();
+    }
+
+    /// A carried participant still has to be a handle that could exist.
+    #[test]
+    fn carried_participants_must_be_valid_handles() {
+        for bad in ["dm", "", "a/b"] {
+            let mut scene = base();
+            scene["party_start"] = serde_json::json!(["gate"]);
+            scene["encounters"][0]["participants"][0] = bad.into();
+            let message = check_value(scene).expect_err(bad);
+            assert!(
+                message.contains("cannot be a creature handle"),
+                "{bad}: {message}"
+            );
+        }
     }
 
     /// Unknown fields are refused, so a typo can't silently drop a rule.
