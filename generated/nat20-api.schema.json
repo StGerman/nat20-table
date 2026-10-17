@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.6"
+    "version": "1.0.0-dev.7"
   },
   "$defs": {
     "Ability": {
@@ -281,6 +281,58 @@
           "type": "string",
           "const": "DC"
         }
+      ]
+    },
+    "AnchorObserved": {
+      "description": "A named landmark as one player sees it: the DM's view plus how far away it is.",
+      "type": "object",
+      "properties": {
+        "distance_ft": {
+          "description": "Straight-line distance from the viewer's creature, in feet.",
+          "type": "number",
+          "format": "float"
+        },
+        "id": {
+          "description": "Anchor id from the scene, the `anchor` a `move` names.",
+          "type": "string"
+        },
+        "name": {
+          "description": "What the characters call it, e.g. \"the mill gate\".",
+          "type": "string"
+        },
+        "position_ft": {
+          "description": "Where it is, in feet.",
+          "$ref": "#/$defs/PointFt"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "position_ft",
+        "distance_ft"
+      ]
+    },
+    "AnchorView": {
+      "description": "A named landmark as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Anchor id from the scene, the `anchor` a `move` names.",
+          "type": "string"
+        },
+        "name": {
+          "description": "What the characters call it, e.g. \"the mill gate\".",
+          "type": "string"
+        },
+        "position_ft": {
+          "description": "Where it is, in feet.",
+          "$ref": "#/$defs/PointFt"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "position_ft"
       ]
     },
     "ApiError": {
@@ -734,7 +786,7 @@
               "const": "move"
             },
             "moved_ft": {
-              "description": "Distance moved, in feet.",
+              "description": "Distance moved, in feet; less than the route when an opportunity attack stopped it.",
               "type": "number",
               "format": "float"
             },
@@ -1404,6 +1456,13 @@
             }
           ]
         },
+        "known_ids": {
+          "description": "The ids the scene does define, after an unknown id (`unknown_anchor`). Sent to the DM\nonly, because ids are scenario data.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "legal_option_ids": {
           "description": "Option ids the actor can take at the pending prompt.",
           "type": "array",
@@ -1865,7 +1924,7 @@
               "$ref": "#/$defs/Handle"
             },
             "anchor": {
-              "description": "The anchor it moved to, when it moved to one.",
+              "description": "The anchor it moved to, when it moved to one and got there.",
               "type": [
                 "string",
                 "null"
@@ -2208,7 +2267,7 @@
           ]
         },
         {
-          "description": "Next to a creature.",
+          "description": "Within 5 feet of a creature.",
           "type": "object",
           "properties": {
             "handle": {
@@ -2439,6 +2498,11 @@
           "description": "The option needs a variant.",
           "type": "string",
           "const": "needs_variant"
+        },
+        {
+          "description": "No route leads to the anchor, creature or point a `move` names.",
+          "type": "string",
+          "const": "no_path"
         }
       ]
     },
@@ -2678,7 +2742,7 @@
           ]
         },
         {
-          "description": "Moves a creature. In combat it spends movement and may provoke opportunity attacks.",
+          "description": "Moves a creature along a route on the map. In explore mode the walk costs no movement\nand provokes nobody. In combat it is a decision at the actor's action prompt: the whole\nroute must fit in the movement left, and an opportunity attack stops the creature where\nit provoked one. No route answers `rejected` with `no_path`.",
           "type": "object",
           "properties": {
             "actor": {
@@ -3635,6 +3699,13 @@
           "description": "What the DM sees: every creature in full.",
           "type": "object",
           "properties": {
+            "anchors": {
+              "description": "The scene's named landmarks, in scene file order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/AnchorView"
+              }
+            },
             "creatures": {
               "description": "Every creature in the scene.",
               "type": "array",
@@ -3678,13 +3749,21 @@
             "view",
             "mode",
             "initiative",
-            "creatures"
+            "creatures",
+            "anchors"
           ]
         },
         {
           "description": "What one player sees: their own creature in full, the others as observed.",
           "type": "object",
           "properties": {
+            "anchors": {
+              "description": "The scene's named landmarks, in scene file order, with the distance from the viewer.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/AnchorObserved"
+              }
+            },
             "initiative": {
               "description": "Initiative order, in combat mode; empty in explore mode.",
               "type": "array",
@@ -3738,7 +3817,8 @@
             "mode",
             "initiative",
             "me",
-            "others"
+            "others",
+            "anchors"
           ]
         }
       ]

@@ -10,17 +10,17 @@ use std::{collections::HashMap, path::Path};
 
 use hecs::Entity;
 use nat20_api_contract::{
-    ActionCost, ActionOption, ApiError, Control, CreatureFull, ErrorCode, Handle, HealthBand, Mode,
-    OptionId, Placement, PointFt, ReactionOption, RejectReason, SceneFile, Side, TargetCandidate,
-    Targeting, UnavailableOption,
+    ActionCost, ActionOption, Anchor, ApiError, Control, CreatureFull, ErrorCode, ErrorHint,
+    EventKind, Handle, HealthBand, Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption,
+    RejectReason, SceneFile, Side, TargetCandidate, Targeting, UnavailableOption,
 };
 use nat20_core::{
     components::{
         actions::{
             action_builder::{ActionBuilder, ActionBuilderState, ReactionBuilder},
-            targeting::TargetingKind,
+            targeting::{LineOfSight, TargetInstance, TargetingKind},
         },
-        activity::ActivityState,
+        activity::{Activity, ActivityState},
         faction::Attitude,
         health::{hit_points::HitPoints, life_state::LifeState},
         id::{ActionId, EntityIdentifier, ResourceId},
@@ -34,7 +34,10 @@ use nat20_core::{
         geometry::WorldGeometry,
         prompt::PromptScopeId,
     },
-    systems::{self, movement::TargetPathFindingResult},
+    systems::{
+        self,
+        movement::{MovementError, TargetPathFindingResult},
+    },
 };
 use parry3d::na::Point3;
 
@@ -71,6 +74,7 @@ struct Scene {
     id: String,
     creatures: Vec<SceneCreature>,
     handles: HashMap<Entity, String>,
+    anchors: Vec<Anchor>,
 }
 
 /// What the engine waits on, in API terms. The session adds prompt ids.
@@ -336,6 +340,7 @@ impl Game {
                 .map(|c| (c.entity, c.handle.clone()))
                 .collect(),
             creatures,
+            anchors: scene.anchors.clone(),
         };
         game.encounter_seen = 0;
         game.winner = None;
@@ -354,6 +359,7 @@ impl Game {
                 id: scene_id,
                 creatures: Vec::new(),
                 handles: HashMap::new(),
+                anchors: Vec::new(),
             },
             encounter: None,
             pending: Vec::new(),
@@ -452,7 +458,179 @@ impl Game {
             .collect()
     }
 
+    /// The scene's anchors, in scene file order.
+    pub fn anchors(&self) -> &[Anchor] {
+        &self.scene.anchors
+    }
+
     // ---- commands -------------------------------------------------------
+
+    /// Moves `actor` and returns the feet it moved and who it provoked. In explore mode the
+    /// creature walks the whole route at no movement cost and provokes nobody, since nobody
+    /// is fighting. In combat the session has checked the prompt: the route must fit in the
+    /// movement left, and an opportunity attack stops the creature where it was provoked.
+    pub fn move_to(
+        &mut self,
+        actor: &str,
+        to: &MoveTarget,
+    ) -> Result<(f32, Vec<Handle>), ApiError> {
+        let entity = self.entity(actor)?;
+        let combat = self.mode() == Mode::Combat;
+        if combat {
+            self.require_action_prompt(entity)?;
+        } else if !systems::health::is_alive(&self.engine.world, entity)
+            || life_state_name(&self.engine, entity) != "normal"
+        {
+            return Err(rejected(
+                RejectReason::ConditionPrevents,
+                format!("{actor} is down and cannot move."),
+            ));
+        }
+        let (goal, anchor) = self.goal(entity, to, combat)?;
+        let from = systems::geometry::get_foot_position(&self.engine.world, entity)
+            .expect("scene creatures have a position");
+        let route = systems::movement::path(&self.engine, entity, &goal, false, combat).map_err(
+            |e| match e {
+                MovementError::NoPathFound => rejected(
+                    RejectReason::NoPath,
+                    format!("There is no route for {actor} to get there."),
+                ),
+                MovementError::InsufficientSpeed => rejected(
+                    RejectReason::InsufficientResource,
+                    format!(
+                        "{actor} has {} ft of movement left this turn, not enough to get there.",
+                        round_ft(
+                            systems::movement::speed(&self.engine, entity)
+                                .remaining_movement()
+                                .get::<uom::si::length::meter>()
+                        )
+                    ),
+                ),
+                other => refusal(&other),
+            },
+        )?;
+        let end = *route.full_path.points.last().unwrap_or(&from);
+
+        let round = self.round();
+        let (moved_m, provoked) = if combat {
+            let before = remaining_movement_m(&self.engine, entity);
+            self.engine
+                .submit_activity(Activity::Move { entity, goal: end })
+                .map_err(|e| refusal(&e))?;
+            self.settle();
+            let provoked = match self.awaiting() {
+                Awaiting::Reaction { reactor, .. } => vec![Handle(self.handle_of(reactor))],
+                _ => Vec::new(),
+            };
+            (
+                before - remaining_movement_m(&self.engine, entity),
+                provoked,
+            )
+        } else {
+            // Nobody is fighting, so the creature is simply placed at the end of its route.
+            systems::geometry::teleport_to(&mut self.engine.world, entity, &end);
+            // An explore command that acts closes a finished fight's `combat_over`. The ended
+            // encounter goes too, or clearing `winner` alone would read as combat again.
+            if self.winner.take().is_some() {
+                self.encounter = None;
+            }
+            (
+                route.full_path.length.get::<uom::si::length::meter>(),
+                Vec::new(),
+            )
+        };
+        let landed = systems::geometry::get_foot_position(&self.engine.world, entity)
+            .expect("scene creatures have a position");
+        let arrived = (landed - end).norm() < 0.05;
+        self.pending.push(Pending::public(
+            round,
+            EventKind::Moved {
+                actor: Handle(actor.to_owned()),
+                from: from_core_point(from),
+                to: from_core_point(landed),
+                anchor: anchor.filter(|_| arrived),
+            },
+        ));
+        self.drain();
+        if combat {
+            self.advance();
+        }
+        Ok((round_ft(moved_m), provoked))
+    }
+
+    /// Where a move ends, in core coordinates, and the anchor it names.
+    fn goal(
+        &mut self,
+        entity: Entity,
+        to: &MoveTarget,
+        combat: bool,
+    ) -> Result<(Point3<f32>, Option<String>), ApiError> {
+        match to {
+            MoveTarget::Point { point } => Ok((to_core_point(*point), None)),
+            MoveTarget::Anchor { anchor } => {
+                let found = self.scene.anchors.iter().find(|a| a.id == *anchor);
+                let Some(found) = found else {
+                    let mut e = error(
+                        ErrorCode::UnknownAnchor,
+                        format!("Scene {} has no anchor {anchor}.", self.scene.id),
+                    );
+                    let known_ids: Vec<String> =
+                        self.scene.anchors.iter().map(|a| a.id.clone()).collect();
+                    if !known_ids.is_empty() {
+                        e.hint = Some(ErrorHint {
+                            legal_option_ids: Vec::new(),
+                            awaiting: None,
+                            known_ids,
+                        });
+                    }
+                    return Err(e);
+                };
+                Ok((to_core_point(found.position_ft), Some(anchor.clone())))
+            }
+            MoveTarget::Creature { handle } => {
+                let target = self.entity(&handle.0)?;
+                if target == entity {
+                    return Err(error(
+                        ErrorCode::BadRequest,
+                        "A creature cannot move next to itself.",
+                    ));
+                }
+                let target = TargetInstance::Entity {
+                    entity: EntityIdentifier::from_world(&self.engine.world, target),
+                    point_on_entity: None,
+                };
+                let near = systems::movement::path_in_range_of_target(
+                    &mut self.engine,
+                    entity,
+                    &target,
+                    uom::si::f32::Length::new::<uom::si::length::foot>(5.0),
+                    false,
+                    LineOfSight::ignore(),
+                    combat,
+                )
+                .map_err(|e| match e {
+                    MovementError::InsufficientSpeed => rejected(
+                        RejectReason::InsufficientResource,
+                        "Not enough movement left this turn to get next to that creature.",
+                    ),
+                    _ => rejected(
+                        RejectReason::NoPath,
+                        format!("There is no route to {}.", handle.0),
+                    ),
+                })?;
+                let here = systems::geometry::get_foot_position(&self.engine.world, entity)
+                    .expect("scene creatures have a position");
+                let end = near
+                    .path_result
+                    .full_path
+                    .points
+                    .last()
+                    .copied()
+                    .unwrap_or(here);
+                Ok((end, None))
+            }
+        }
+    }
 
     /// Rolls initiative for `participants` and runs scripted turns until a client decides.
     pub fn start_combat(&mut self, participants: &[String]) -> Result<(), ApiError> {
@@ -1338,6 +1516,12 @@ fn life_state_name(engine: &EngineState, entity: Entity) -> &'static str {
         Ok(LifeState::Stable) => "stable",
         Ok(LifeState::Dead) | Err(_) => "dead",
     }
+}
+
+fn remaining_movement_m(engine: &EngineState, entity: Entity) -> f32 {
+    systems::movement::speed(engine, entity)
+        .remaining_movement()
+        .get::<uom::si::length::meter>()
 }
 
 fn distance_m(engine: &EngineState, a: Entity, b: Entity) -> Option<f32> {

@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.7 (2026-10-17)
+- `move` is served (API-7, MAP-1, Milestone 3 spec §7 step 3): to an anchor, a point, or within 5 ft of a creature. Free in explore mode; in combat it needs the action prompt, the whole route must fit in the movement left, and an opportunity attack stops the mover (protocol.md §4.1). Each move logs a public `moved` event.
+- Additive: `State::Dm.anchors` (`AnchorView`: id, name, position) and `State::Player.anchors` (`AnchorObserved`: the same plus `distance_ft` from the viewer).
+- Additive: `RejectReason::no_path`; `ErrorHint.known_ids`, filled with the scene's anchor ids after `unknown_anchor` for the DM only.
+- Fixture `explore.jsonl`; every fixture with a state now shows `anchors`. `not_implemented.jsonl` loses its `move` line.
+
 ## 1.0.0-dev.6 (2026-10-17)
 - Docs only, no wire type change: `load_scene{party}` is served (API-5, Milestone 3 spec §7 step 2). The session keeps one engine across scenes; carried creatures keep HP, resources and conditions and are placed at `party_start` (the last anchor takes any extra); every other creature of the previous scene leaves (protocol.md §2). New refusals: `bad_request` for a party listed twice, a party given to a scene with no `party_start`, or no party for a scene that places no creature of its own; `unknown_creature` for a handle not in the current scene; `bad_scene` for a handle both carried and defined by the scene. Fixture `carry.jsonl`.
 - Behaviour change, breaking while pre-release: `load_scene` during a fight answers `wrong_mode` instead of abandoning the fight, so every `combat_started` has its `combat_over`. Migration: end the fight first (a side down, or `end_combat` once API-9 serves it).

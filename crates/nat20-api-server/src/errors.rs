@@ -41,6 +41,7 @@ pub fn with_awaiting(mut error: ApiError, awaiting: Awaiting) -> ApiError {
     error.hint = Some(ErrorHint {
         legal_option_ids: Vec::new(),
         awaiting: Some(awaiting),
+        known_ids: Vec::new(),
     });
     error
 }
