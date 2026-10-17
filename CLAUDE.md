@@ -14,6 +14,7 @@ This file holds the rules and points to everything else. When it disagrees with 
 | How the system is split and why | `docs/design/system-design.md` |
 | What to do next: task list and milestone status | `TASKS.md`; until it moves here (CON-1), the project copy at `/mnt/project-files/engine/TASKS.md` is the only live one |
 | Contract v1 behaviour (commands, events, errors, visibility) | `contract/protocol.md` |
+| Why a decision was made, what was rejected, when to revisit | `docs/decisions/README.md` |
 
 ## Scope: the Demo Run
 
@@ -86,7 +87,8 @@ Run `check:contract`, the three cargo checks and `check:ts` before every push. N
 | `lore/` | Original setting and lore, kept apart from rules content | Yes |
 | `tools/codegen/` | `gen-ts.mjs`, `check-breaking.mjs` | Yes |
 | `tools/data-pipeline/` | Foundry → registry JSON translator, 5e-bits monster import | Yes |
-| `docs/design/` | System design and decision records | Yes |
+| `docs/design/` | System design | Yes |
+| `docs/decisions/` | Decision records: one file per decision, index in `README.md` | Yes; never rewrite an accepted one, supersede it |
 | `docs/scope/` | Demo Run scope (accepted by Stas) | Only with Stas's agreement |
 | `TASKS.md` | Task list and milestone status | Yes, per Rule 8 |
 
@@ -193,5 +195,6 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 - Each row carries Pri (P0 blocks a demo run, P1 needed for acceptance, P2 optional), Dest (Up, Up?, Fork, Ours), Gate (Y blocks the upstream proposal), Size and Status (todo, partial, done).
 - When the last row of a milestone closes and its exit criterion holds, mark the milestone done in `TASKS.md` with the date.
 - One concern per PR. Write the PR description as Before / After / How.
+- A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.
 - Never skip, disable or quarantine a test to get green. Never push an empty commit to retrigger CI.
 - CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `rust`, `visibility`, `ts`, and `core-drift` (weekly, non-blocking). Each job's purpose is in design §5.3.
