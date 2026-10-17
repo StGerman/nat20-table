@@ -12,6 +12,6 @@
   "devDependencies": {
     "@types/node": "22.10.2",
     "json-schema-to-typescript": "16.0.0",
-    "typescript": "5.6.3"
+    "typescript": "7.0.2"
   }
 }
