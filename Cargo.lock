@@ -906,6 +906,9 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+dependencies = [
+ "foldhash",
+]
 
 [[package]]
 name = "heapless"
@@ -930,9 +933,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1cbc675ee8d97b4d206a985137f8ad59666538f56f906474f554467a63c776d"
 dependencies = [
  "hashbrown 0.14.5",
- "hecs-macros",
+ "hecs-macros 0.10.0",
  "serde",
  "spin 0.9.9",
+]
+
+[[package]]
+name = "hecs"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7602e3af4f3f6387532d73a4a0f4d1ee2e8ee3c28078ca657126770aa3a9aa4"
+dependencies = [
+ "foldhash",
+ "hashbrown 0.17.1",
+ "hecs-macros 0.11.1",
+ "serde",
+ "spin 0.12.3",
 ]
 
 [[package]]
@@ -944,6 +960,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "hecs-macros"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31eb5aad58f01a5288d0da978d5ee443150025ea10497a812e6fdf3734276953"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.9",
 ]
 
 [[package]]
@@ -1307,7 +1334,7 @@ dependencies = [
 name = "nat20-api-server"
 version = "0.1.0"
 dependencies = [
- "hecs",
+ "hecs 0.11.2",
  "nat20-api-contract",
  "nat20_core",
  "parry3d",
@@ -1334,7 +1361,7 @@ dependencies = [
  "enum-iterator",
  "enum_dispatch",
  "glam 0.30.10",
- "hecs",
+ "hecs 0.10.5",
  "indexmap 2.14.2",
  "kinded",
  "mlua",
@@ -2133,6 +2160,12 @@ checksum = "023a211cb3138dbc438680b32560ad89f699977624c9f8dbb95a47d5b4c07dd3"
 dependencies = [
  "portable-atomic",
 ]
+
+[[package]]
+name = "spin"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0134f9043ed38b087ac4f7d4af44c79e2c9e5094421fe3164f435ce585953b10"
 
 [[package]]
 name = "stable_deref_trait"
