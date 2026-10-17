@@ -10,7 +10,7 @@
     "check:ts": "tsc -p packages/engine-client && node --experimental-strip-types --no-warnings --test packages/engine-client/test/*.test.ts"
   },
   "devDependencies": {
-    "@types/node": "22.10.2",
+    "@types/node": "26.6.5",
     "json-schema-to-typescript": "15.0.4",
     "typescript": "5.6.3"
   }
