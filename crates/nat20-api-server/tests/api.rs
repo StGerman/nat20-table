@@ -996,3 +996,26 @@ fn a_check_needs_explore_mode_and_a_conscious_creature() {
     assert_eq!(down["error"]["code"], "rejected", "{down}");
     assert_eq!(down["error"]["reason"], "condition_prevents", "{down}");
 }
+
+#[test]
+fn a_check_after_a_fight_closes_its_combat_over() {
+    let mut api = duel();
+    let started = api.start_duel("dm");
+    let (last, _) = fight_to_the_end(&mut api, started);
+    assert_eq!(last["awaiting"]["kind"], "combat_over", "{last}");
+    let refused = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": "bren", "check": { "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 12 } }),
+    );
+    assert_eq!(refused["error"]["code"], "bad_request", "{refused}");
+    assert_eq!(refused["awaiting"]["kind"], "combat_over", "{refused}");
+    let rolled = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": "bren", "check": { "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 10 } }),
+    );
+    assert_eq!(rolled["ok"], true, "{rolled}");
+    assert_eq!(rolled["awaiting"]["kind"], "none", "{rolled}");
+    let state = api.call("dm", json!({ "cmd": "get_state" }));
+    assert_eq!(state["result"]["state"]["mode"], "explore", "{state}");
+    assert_eq!(state["awaiting"]["kind"], "none", "{state}");
+}

@@ -616,6 +616,10 @@ impl Game {
             ));
         }
 
+        // An explore command that acts closes a finished fight's `combat_over`, as `move` does.
+        if self.winner.take().is_some() {
+            self.encounter = None;
+        }
         if let Some(scenario) = &scenario {
             self.scene.attempted.insert(scenario.id.clone());
         }
