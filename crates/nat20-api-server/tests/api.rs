@@ -518,6 +518,35 @@ fn a_sheet_leaves_the_dice_alone() {
     assert_eq!(fight(true), plain);
 }
 
+/// A sheet lists the features class levels grant as actions, not only feats and effects.
+#[test]
+fn a_sheet_lists_class_features_granted_as_actions() {
+    let mut api = duel();
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let sheet = api.call("bren", json!({ "cmd": "get_sheet", "actor": "bren" }));
+    let ids: Vec<&str> = sheet["result"]["sheet"]["features"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["id"].as_str().unwrap())
+        .collect();
+    for id in [
+        "fighting_style.defense",
+        "fighter.second_wind",
+        "fighter.action_surge",
+        "fighter.tactical_mind",
+    ] {
+        assert!(ids.contains(&id), "{id} missing: {sheet}");
+    }
+    // Generic actions every creature has are not features.
+    assert!(
+        !ids.iter()
+            .any(|id| id.contains("attack") || id.contains("dash")),
+        "{ids:?}"
+    );
+}
+
 /// A sheet follows the fight: HP and life state match the state the DM sees.
 #[test]
 fn a_sheet_shows_the_hit_points_the_fight_left() {

@@ -18,7 +18,7 @@ use nat20_core::{
         ability::{Ability, AbilityScoreMap},
         d20::D20Check,
         health::life_state::LifeState,
-        id::{ClassId, EntityIdentifier, FeatId, ItemId, SpeciesId},
+        id::{ActionId, ClassId, EntityIdentifier, FeatId, ItemId, SpeciesId, SubspeciesId},
         items::{
             equipment::slots::EquipmentSlot,
             inventory::{Inventory, ItemContainer},
@@ -32,7 +32,10 @@ use nat20_core::{
         species::CreatureType,
     },
     engine::engine_state::EngineState,
-    registry::registry::{ItemsRegistry, ResourcesRegistry},
+    registry::registry::{
+        ClassesRegistry, ItemsRegistry, ResourcesRegistry, SpeciesRegistry, SubclassesRegistry,
+        SubspeciesRegistry,
+    },
     systems::{self, time::RestKind},
 };
 
@@ -293,7 +296,8 @@ fn item_line(id: &ItemId, equipped: bool) -> ItemLine {
     }
 }
 
-/// Feats, then the lasting effects that class levels, species and background grant, each once.
+/// Feats, then the actions class levels and species grant (Second Wind, Tactical Mind), then
+/// the lasting effects class levels, species and background grant, each once.
 fn features(engine: &EngineState, entity: Entity, owners: &[&str]) -> Vec<FeatureLine> {
     let world = &engine.world;
     let mut lines: Vec<FeatureLine> = Vec::new();
@@ -301,6 +305,9 @@ fn features(engine: &EngineState, entity: Entity, owners: &[&str]) -> Vec<Featur
         for id in feats.iter() {
             push_feature(&mut lines, tail(id.id(), "feat."), owners);
         }
+    }
+    for id in granted_actions(engine, entity) {
+        push_feature(&mut lines, tail(id.id(), "action."), owners);
     }
     let effects = systems::effects::effects(world, entity);
     let mut granted: Vec<String> = effects
@@ -325,6 +332,45 @@ fn features(engine: &EngineState, entity: Entity, owners: &[&str]) -> Vec<Featur
         push_feature(&mut lines, word, owners);
     }
     lines
+}
+
+/// Actions granted by class and subclass levels and by species, in level order. Generic actions
+/// every creature has (attacks, Dash) are not features, and no registry grants them.
+fn granted_actions(engine: &EngineState, entity: Entity) -> Vec<ActionId> {
+    let world = &engine.world;
+    let up_to = |by_level: &std::collections::HashMap<u8, Vec<ActionId>>, level: u8| {
+        (1..=level)
+            .filter_map(|l| by_level.get(&l))
+            .flatten()
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+    let mut actions = Vec::new();
+    let mut total = 0;
+    if let Ok(levels) = world.get::<&CharacterLevels>(entity) {
+        total = levels.total_level();
+        let mut classes: Vec<_> = levels.all_classes().iter().collect();
+        classes.sort_by_key(|(id, _)| id.id().to_string());
+        for (class, progression) in classes {
+            if let Some(class) = ClassesRegistry::get(class) {
+                actions.extend(up_to(&class.base.actions_by_level, progression.level()));
+            }
+            if let Some(subclass) = progression.subclass().and_then(SubclassesRegistry::get) {
+                actions.extend(up_to(&subclass.base.actions_by_level, progression.level()));
+            }
+        }
+    }
+    if let Ok(species) = world.get::<&SpeciesId>(entity)
+        && let Some(species) = SpeciesRegistry::get(&species)
+    {
+        actions.extend(up_to(&species.base.actions_by_level, total));
+    }
+    if let Ok(subspecies) = world.get::<&Option<SubspeciesId>>(entity)
+        && let Some(subspecies) = subspecies.as_ref().and_then(SubspeciesRegistry::get)
+    {
+        actions.extend(up_to(&subspecies.base.actions_by_level, total));
+    }
+    actions
 }
 
 fn push_feature(lines: &mut Vec<FeatureLine>, word: String, owners: &[&str]) {

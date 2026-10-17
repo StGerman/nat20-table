@@ -3378,7 +3378,7 @@
           "minimum": 0
         },
         "features": {
-          "description": "Feats, then features granted by class, species and background, each once.",
+          "description": "Feats, then features granted by class, subclass, species and background (as actions,\ne.g. Second Wind, or as lasting effects), each once.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/FeatureLine"

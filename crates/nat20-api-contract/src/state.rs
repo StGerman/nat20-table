@@ -187,7 +187,8 @@ pub struct Sheet {
     /// Equipped items in slot order (armor, then weapons), then carried items in the order they
     /// were picked up.
     pub equipment: Vec<ItemLine>,
-    /// Feats, then features granted by class, species and background, each once.
+    /// Feats, then features granted by class, subclass, species and background (as actions,
+    /// e.g. Second Wind, or as lasting effects), each once.
     pub features: Vec<FeatureLine>,
 }
 
