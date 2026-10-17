@@ -1,5 +1,5 @@
 # Weekly grouped update PRs. CI is the gate: a bump that changes generated TS, fixture output or
-# licences fails contract-fresh, rust or deny like any other PR.
+# licences fails contract-fresh, rust-lint, rust-test or deny like any other PR.
 version: 2
 updates:
   - package-ecosystem: cargo
@@ -13,6 +13,13 @@ updates:
       - dependency-name: nat20_core
       # Must stay identical to upstream nat20's [patch] entry (Rule 5).
       - dependency-name: polyanya
+      # The adapter names nat20_core's types from these crates, so their versions must match what
+      # the pinned core uses; a lone bump builds two copies and fails with mismatched types. They
+      # move with the core pin (Rule 5).
+      - dependency-name: hecs
+      - dependency-name: parry3d
+      - dependency-name: rerecast
+      - dependency-name: uom
     groups:
       cargo-minor-patch:
         update-types: [minor, patch]
@@ -23,6 +30,10 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    ignore:
+      # Types follow the Node major in .nvmrc; newer majors describe APIs CI's Node does not have.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
