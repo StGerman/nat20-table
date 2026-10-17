@@ -264,7 +264,7 @@ D1, D2, D4 and D6 were decided by Stas on 2026-10-17 in the Milestone 3 spec thr
 | D2 | DM-granted Advantage on checks | **Decided: remove it.** Advantage comes only from Help, conditions or the scene check | | Scope §7.3: LLM DMs drift toward granting success; free-text Advantage is a ruling by another name |
 | D3 | Retrying a scenario check | Open | **Once per check per scene (one roll for the party; others contribute with Help)**; once per actor; no retries but the scene can mark a check retryable | Once per actor still gives four characters four tries at the same Persuasion, which is close to a free pass |
 | D4 | Who decides surprise | **Decided: the engine**, from encounter rules and flags; `surprised` is dropped from `start_combat` | | Same reason as D2 |
-| D5 | Goblin surrender | **Decided: the DM decides, within a scene surrender condition the engine enforces** ([0020](../decisions/0021-surrender-dm-call-engine-gate.md)) | | Keeps the call with the DM, as Stas wants, while stopping it from ending a fight the party is losing; the call replays as a request like any other |
+| D5 | Goblin surrender | **Decided: the DM decides, within a scene surrender condition the engine enforces** ([0021](../decisions/0021-surrender-dm-call-engine-gate.md)) | | Keeps the call with the DM, as Stas wants, while stopping it from ending a fight the party is losing; the call replays as a request like any other |
 | D6 | Pull `get_sheet` (API-19) from Milestone 6 into Milestone 3 | **Decided: yes** | | Short-rest and carry-over fixtures need the sheet to show Hit Point Dice and resources; it is size S |
 
 Not asked, because already settled: U4 to U7 go upstream at Milestone 8 (Stas, 2026-10-17); anchors stay ours (design §6).
