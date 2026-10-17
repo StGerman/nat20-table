@@ -1,0 +1,88 @@
+{
+    "id": "m3_s3_yard",
+    "description": "Milestone 3 test scenario m3_trail, scene 3 of 5 (Fight 1): two goblin lookouts in the mill yard. Surprised if the party spotted them; they may surrender when beaten.",
+    "anchors": [
+        {
+            "id": "yard_gate",
+            "name": "the yard gate",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "woodpile",
+            "name": "the woodpile",
+            "position_ft": {
+                "x_ft": 25.0,
+                "y_ft": 5.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "mill_door",
+            "name": "the mill door",
+            "position_ft": {
+                "x_ft": 30.0,
+                "y_ft": -5.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "yard_gate"
+    ],
+    "creatures": [
+        {
+            "handle": "goblin_1",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "anchor",
+                "anchor": "woodpile"
+            }
+        },
+        {
+            "handle": "goblin_2",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "anchor",
+                "anchor": "mill_door"
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "yard_fight",
+            "participants": [
+                "bren",
+                "goblin_1",
+                "goblin_2"
+            ],
+            "surprise": {
+                "when_flag": "party_ambushes",
+                "surprised": "hostile"
+            },
+            "surrender": {
+                "creatures": [
+                    "goblin_1",
+                    "goblin_2"
+                ],
+                "any_of": [
+                    {
+                        "kind": "hp_fraction_at_most",
+                        "fraction": 0.25
+                    },
+                    {
+                        "kind": "standing_at_most",
+                        "count": 1
+                    }
+                ]
+            }
+        }
+    ]
+}

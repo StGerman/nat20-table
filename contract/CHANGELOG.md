@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.5 (2026-10-17)
+- The scene file joins the contract (API-21, Milestone 3 spec §4.1): module `scene.rs` with `SceneFile`, `Anchor`, `SceneCreature`, `Control`, `Placement`, `ScenarioCheck`, `CheckTest`, `Hazard`, `HazardSave`, `Consequence`, `Encounter`, `Surprise`, `SurrenderCondition`, `SurrenderTrigger`, `Spawn`, `SpawnWhen`, `SpawnUnless`; its own schema `generated/nat20-scene.schema.json` and TS module (`scene` namespace in the engine client). No wire type changes.
+- `hello.schema_sha256` now covers the wire schema followed by the scene schema (protocol.md §8).
+- Scene files, breaking for scene authors (nothing on the wire): a creature's `position` becomes `at: {kind:"anchor", anchor} | {kind:"point", point}`. The engine now checks a scene's cross-references and answers `bad_scene` on a broken one (protocol.md §2.1). Migration: `duel.json` moved to `at`; fixture `scene.jsonl` loads the `m3_trail` test scenes.
+- Docs only: `PointFt.y_ft` is north-south and `z_ft` is up, as documented; the engine now places and reports them that way (it used to pass `y_ft` to the core's vertical axis).
+
 ## 1.0.0-dev.4 (2026-10-17)
 - Docs only, no wire change: `new_session.seed` is honoured (API-11, core upstream item U2). An explicit seed no longer answers `not_implemented`; an omitted seed is picked by the engine and logged, and is no longer `0`. `0` is now an ordinary seed, not "unseeded". The same seed and request stream replay byte-identical responses (protocol.md §2, fixture `duel.jsonl`, the Milestone 1 duel replayed with seed 1).
 

@@ -269,7 +269,8 @@ pub enum CommandResult {
         version: String,
         /// The `nat20_core` revision the engine was built against.
         engine_rev: String,
-        /// SHA-256 of `generated/nat20-api.schema.json`. Clients compare it with the hash they were generated from.
+        /// SHA-256 over `generated/nat20-api.schema.json` followed by `generated/nat20-scene.schema.json`.
+        /// Clients compare it with the hash they were generated from.
         schema_sha256: String,
     },
     /// The new session.

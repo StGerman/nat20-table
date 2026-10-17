@@ -1,0 +1,52 @@
+{
+    "id": "m3_s1_green",
+    "description": "Milestone 3 test scenario m3_trail, scene 1 of 5 (social): Bren at the village green questions the reeve about the silent mill. Bren comes from this scene; later scenes carry the party in.",
+    "anchors": [
+        {
+            "id": "green_well",
+            "name": "the well on the green",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "reeve_porch",
+            "name": "the reeve's porch",
+            "position_ft": {
+                "x_ft": 20.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "anchor",
+                "anchor": "green_well"
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "reeve_insight",
+            "test": {
+                "kind": "skill",
+                "skill": "insight"
+            },
+            "dc": 12,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "reeve_lied"
+                }
+            ]
+        }
+    ]
+}

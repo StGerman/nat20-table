@@ -1,0 +1,138 @@
+{
+    "id": "m3_s5_cellar",
+    "description": "Milestone 3 test scenario m3_trail, scene 5 of 5 (Fight 2, triggers only): a goblin stands in for the boss. A warned boss has an extra warrior; more arrive in round 3 unless the party is already hurt; the DM may call a reserve. Goblin Warriors stand in for the Milestone 5 monsters.",
+    "anchors": [
+        {
+            "id": "cellar_stairs",
+            "name": "the cellar stairs",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "millstone",
+            "name": "the millstone",
+            "position_ft": {
+                "x_ft": 20.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "back_door",
+            "name": "the back door",
+            "position_ft": {
+                "x_ft": 35.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "grain_chute",
+            "name": "the grain chute",
+            "position_ft": {
+                "x_ft": 30.0,
+                "y_ft": -10.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "cellar_stairs"
+    ],
+    "creatures": [
+        {
+            "handle": "boss",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "anchor",
+                "anchor": "millstone"
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "cellar_fight",
+            "participants": [
+                "bren",
+                "boss"
+            ],
+            "end_reasons": [
+                "scenario"
+            ]
+        }
+    ],
+    "spawns": [
+        {
+            "id": "extra_warrior",
+            "when": {
+                "kind": "flag",
+                "flag": "boss_warned"
+            },
+            "creatures": [
+                {
+                    "handle": "goblin_3",
+                    "monster": "goblin_warrior",
+                    "side": "hostile",
+                    "control": "scripted",
+                    "at": {
+                        "kind": "anchor",
+                        "anchor": "back_door"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "rats",
+            "when": {
+                "kind": "round",
+                "round": 3,
+                "unless": "any_party_bloodied"
+            },
+            "creatures": [
+                {
+                    "handle": "goblin_4",
+                    "monster": "goblin_warrior",
+                    "side": "hostile",
+                    "control": "scripted",
+                    "at": {
+                        "kind": "anchor",
+                        "anchor": "grain_chute"
+                    }
+                },
+                {
+                    "handle": "goblin_5",
+                    "monster": "goblin_warrior",
+                    "side": "hostile",
+                    "control": "scripted",
+                    "at": {
+                        "kind": "anchor",
+                        "anchor": "grain_chute"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "reserve",
+            "when": {
+                "kind": "dm"
+            },
+            "creatures": [
+                {
+                    "handle": "goblin_6",
+                    "monster": "goblin_warrior",
+                    "side": "hostile",
+                    "control": "scripted",
+                    "at": {
+                        "kind": "anchor",
+                        "anchor": "back_door"
+                    }
+                }
+            ]
+        }
+    ]
+}

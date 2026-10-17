@@ -1,0 +1,951 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SceneFile",
+  "description": "One scene: where it happens, who is there, and what the engine resolves in it.",
+  "type": "object",
+  "properties": {
+    "anchors": {
+      "description": "Named landmarks creatures are placed at and move to.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Anchor"
+      }
+    },
+    "checks": {
+      "description": "Checks the DM can ask for by id with `request_check{check:{kind:\"scenario\"}}`.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ScenarioCheck"
+      }
+    },
+    "creatures": {
+      "description": "Creatures this scene places when it loads, besides any carried in.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SceneCreature"
+      }
+    },
+    "description": {
+      "description": "What the scene is, for the DM and for humans reading the file.",
+      "type": "string"
+    },
+    "encounters": {
+      "description": "Fights the DM can start by id with `start_combat`.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Encounter"
+      }
+    },
+    "hazards": {
+      "description": "Hazards a check's consequence can set off.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Hazard"
+      }
+    },
+    "id": {
+      "description": "Scene id, a plain name of letters, digits, `-` and `_`. Must match the file name.",
+      "type": "string"
+    },
+    "map": {
+      "description": "The terrain file under `maps/`, without `.obj`. Omitted: `flat_arena`.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "party_start": {
+      "description": "Anchor ids where creatures carried in by `load_scene{party}` are placed, in the order the\nparty lists them. An anchor may repeat. Empty for a scene that takes no party.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "spawns": {
+      "description": "Creatures that join later, on a trigger or when the DM calls `spawn`.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Spawn"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id"
+  ],
+  "x-nat20-protocol": {
+    "major": 1,
+    "name": "nat20-api",
+    "version": "1.0.0-dev.5"
+  },
+  "$defs": {
+    "Ability": {
+      "description": "The six abilities.",
+      "oneOf": [
+        {
+          "description": "Strength.",
+          "type": "string",
+          "const": "strength"
+        },
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "dexterity"
+        },
+        {
+          "description": "Constitution.",
+          "type": "string",
+          "const": "constitution"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "intelligence"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "wisdom"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "charisma"
+        }
+      ]
+    },
+    "Anchor": {
+      "description": "A named landmark, e.g. the mill gate. Everyone in the scene may see anchors.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Anchor id, unique in the scene, e.g. `mill_gate`.",
+          "type": "string"
+        },
+        "name": {
+          "description": "What the characters call it, e.g. \"the mill gate\".",
+          "type": "string"
+        },
+        "position_ft": {
+          "description": "Where it is, in feet. The engine places creatures on the ground below this point.",
+          "$ref": "#/$defs/PointFt"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "position_ft"
+      ]
+    },
+    "CheckTest": {
+      "description": "What a scenario check tests.",
+      "oneOf": [
+        {
+          "description": "An ability check with a skill, e.g. Wisdom (Insight).",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "skill"
+            },
+            "skill": {
+              "description": "The skill; its ability is the SRD default.",
+              "$ref": "#/$defs/Skill"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "skill"
+          ]
+        },
+        {
+          "description": "A saving throw.",
+          "type": "object",
+          "properties": {
+            "ability": {
+              "description": "The ability the save uses.",
+              "$ref": "#/$defs/Ability"
+            },
+            "kind": {
+              "type": "string",
+              "const": "save"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "ability"
+          ]
+        }
+      ]
+    },
+    "Consequence": {
+      "description": "Something the engine does after a check or a hazard save. Story-only effects (\"the reeve\nmentions the debt\") stay in the DM's notes, not here.",
+      "oneOf": [
+        {
+          "description": "Sets a session flag. Flags persist across scenes and are DM-only.",
+          "type": "object",
+          "properties": {
+            "flag": {
+              "description": "The flag's name, e.g. `party_ambushes`.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "flag"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "flag"
+          ]
+        },
+        {
+          "description": "Sets off a hazard of this scene for the same creature.",
+          "type": "object",
+          "properties": {
+            "hazard_id": {
+              "description": "Hazard id from this scene.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "hazard"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "hazard_id"
+          ]
+        },
+        {
+          "description": "The engine rolls damage and applies it to the same creature.",
+          "type": "object",
+          "properties": {
+            "damage_type": {
+              "description": "The damage type.",
+              "$ref": "#/$defs/DamageType"
+            },
+            "dice": {
+              "description": "Dice in `NdM` or `NdM+K` form, e.g. `1d6`.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "damage"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "dice",
+            "damage_type"
+          ]
+        }
+      ]
+    },
+    "Control": {
+      "description": "Who decides for a creature.",
+      "oneOf": [
+        {
+          "description": "The API client decides: an agent or the human.",
+          "type": "string",
+          "const": "client"
+        },
+        {
+          "description": "The engine's scripted monster policy decides.",
+          "type": "string",
+          "const": "scripted"
+        }
+      ]
+    },
+    "DamageType": {
+      "description": "SRD damage types.",
+      "oneOf": [
+        {
+          "description": "Acid.",
+          "type": "string",
+          "const": "acid"
+        },
+        {
+          "description": "Bludgeoning.",
+          "type": "string",
+          "const": "bludgeoning"
+        },
+        {
+          "description": "Cold.",
+          "type": "string",
+          "const": "cold"
+        },
+        {
+          "description": "Fire.",
+          "type": "string",
+          "const": "fire"
+        },
+        {
+          "description": "Force.",
+          "type": "string",
+          "const": "force"
+        },
+        {
+          "description": "Lightning.",
+          "type": "string",
+          "const": "lightning"
+        },
+        {
+          "description": "Necrotic.",
+          "type": "string",
+          "const": "necrotic"
+        },
+        {
+          "description": "Piercing.",
+          "type": "string",
+          "const": "piercing"
+        },
+        {
+          "description": "Poison.",
+          "type": "string",
+          "const": "poison"
+        },
+        {
+          "description": "Psychic.",
+          "type": "string",
+          "const": "psychic"
+        },
+        {
+          "description": "Radiant.",
+          "type": "string",
+          "const": "radiant"
+        },
+        {
+          "description": "Slashing.",
+          "type": "string",
+          "const": "slashing"
+        },
+        {
+          "description": "Thunder.",
+          "type": "string",
+          "const": "thunder"
+        }
+      ]
+    },
+    "Encounter": {
+      "description": "A fight the scene declares. The engine takes its participants, surprise and surrender rules\nfrom here, not from the DM.",
+      "type": "object",
+      "properties": {
+        "end_reasons": {
+          "description": "Other early ends `end_combat` accepts for this fight: `scenario` or `fled`. Surrender is\ngoverned by `surrender`, so it is not listed here.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EndCombatReason"
+          }
+        },
+        "id": {
+          "description": "Encounter id, unique in the scene, e.g. `yard_fight`.",
+          "type": "string"
+        },
+        "participants": {
+          "description": "Every creature in the fight. A handle not defined in the scene must be carried in with\nthe party, so it is allowed only in a scene with a `party_start`.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        },
+        "surprise": {
+          "description": "Who is surprised, and when (decision D4).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Surprise"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "surrender": {
+          "description": "When the DM may end the fight with `end_combat{reason:\"surrender\"}` (decision D5). DM-only.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SurrenderCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "participants"
+      ]
+    },
+    "EndCombatReason": {
+      "description": "Why the DM ends combat early.",
+      "oneOf": [
+        {
+          "description": "The other side surrendered.",
+          "type": "string",
+          "const": "surrender"
+        },
+        {
+          "description": "The other side fled.",
+          "type": "string",
+          "const": "fled"
+        },
+        {
+          "description": "A scenario trigger ends the fight.",
+          "type": "string",
+          "const": "scenario"
+        }
+      ]
+    },
+    "Handle": {
+      "description": "A creature's handle in the session, e.g. `bren` or `goblin_1`. Stable for the creature's life.",
+      "type": "string"
+    },
+    "Hazard": {
+      "description": "A hazard: a saving throw the engine rolls for the creature that set it off.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Hazard id, unique in the scene, e.g. `snare`.",
+          "type": "string"
+        },
+        "on_failure": {
+          "description": "What happens on a failed save, in order. A hazard cannot set off another hazard.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Consequence"
+          }
+        },
+        "on_success": {
+          "description": "What happens on a successful save, in order. A hazard cannot set off another hazard.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Consequence"
+          }
+        },
+        "save": {
+          "description": "The save the creature makes.",
+          "$ref": "#/$defs/HazardSave"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "save"
+      ]
+    },
+    "HazardSave": {
+      "description": "The saving throw a hazard calls for.",
+      "type": "object",
+      "properties": {
+        "ability": {
+          "description": "The ability the save uses.",
+          "$ref": "#/$defs/Ability"
+        },
+        "dc": {
+          "description": "The Difficulty Class, 1 to 30. DM-only.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "ability",
+        "dc"
+      ]
+    },
+    "Placement": {
+      "description": "Where a creature is placed.",
+      "oneOf": [
+        {
+          "description": "At one of the scene's anchors.",
+          "type": "object",
+          "properties": {
+            "anchor": {
+              "description": "Anchor id from this scene.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "anchor"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "anchor"
+          ]
+        },
+        {
+          "description": "At an exact point.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "point"
+            },
+            "point": {
+              "description": "The point, in feet.",
+              "$ref": "#/$defs/PointFt"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "point"
+          ]
+        }
+      ]
+    },
+    "PointFt": {
+      "description": "A point in feet. The engine works in metres internally and converts at the boundary.",
+      "type": "object",
+      "properties": {
+        "x_ft": {
+          "description": "East-west, feet.",
+          "type": "number",
+          "format": "float"
+        },
+        "y_ft": {
+          "description": "North-south, feet.",
+          "type": "number",
+          "format": "float"
+        },
+        "z_ft": {
+          "description": "Height, feet.",
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "required": [
+        "x_ft",
+        "y_ft",
+        "z_ft"
+      ]
+    },
+    "ScenarioCheck": {
+      "description": "A check the scenario defines: what is tested, its DC, and what follows from the result.\nThe engine rolls it at most once per scene (decision D3, Milestone 3 spec).",
+      "type": "object",
+      "properties": {
+        "dc": {
+          "description": "The Difficulty Class, 1 to 30. DM-only.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "id": {
+          "description": "Check id, unique in the scene, e.g. `reeve_insight`.",
+          "type": "string"
+        },
+        "on_failure": {
+          "description": "What the engine does when the check fails, in order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Consequence"
+          }
+        },
+        "on_success": {
+          "description": "What the engine does when the check succeeds, in order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Consequence"
+          }
+        },
+        "test": {
+          "description": "The skill check or saving throw rolled.",
+          "$ref": "#/$defs/CheckTest"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "test",
+        "dc"
+      ]
+    },
+    "SceneCreature": {
+      "description": "One creature a scene or a spawn places: exactly one of `pregen` or `monster`.",
+      "type": "object",
+      "properties": {
+        "at": {
+          "description": "Where it is placed.",
+          "$ref": "#/$defs/Placement"
+        },
+        "control": {
+          "description": "Who decides for it.",
+          "$ref": "#/$defs/Control"
+        },
+        "handle": {
+          "description": "The creature's handle, unique in the scene and its spawns. `dm` is reserved.",
+          "$ref": "#/$defs/Handle"
+        },
+        "monster": {
+          "description": "A stat block id under the engine's `monsters/`, e.g. `goblin_warrior`. Set this or\n`pregen`, not both.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pregen": {
+          "description": "A pregenerated character id, e.g. `fighter_l2`. Set this or `monster`, not both.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "side": {
+          "description": "Which side of a fight it is on.",
+          "$ref": "#/$defs/Side"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "handle",
+        "side",
+        "control",
+        "at"
+      ]
+    },
+    "Side": {
+      "description": "Which side of a fight a creature is on, as seen by the party.",
+      "oneOf": [
+        {
+          "description": "The player characters and their allies.",
+          "type": "string",
+          "const": "party"
+        },
+        {
+          "description": "Enemies of the party.",
+          "type": "string",
+          "const": "hostile"
+        },
+        {
+          "description": "Neither.",
+          "type": "string",
+          "const": "neutral"
+        }
+      ]
+    },
+    "Skill": {
+      "description": "The eighteen skills.",
+      "oneOf": [
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "acrobatics"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "animal_handling"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "arcana"
+        },
+        {
+          "description": "Strength.",
+          "type": "string",
+          "const": "athletics"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "deception"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "history"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "insight"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "intimidation"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "investigation"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "medicine"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "nature"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "perception"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "performance"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "persuasion"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "religion"
+        },
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "sleight_of_hand"
+        },
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "stealth"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "survival"
+        }
+      ]
+    },
+    "Spawn": {
+      "description": "Creatures that join the scene later.",
+      "type": "object",
+      "properties": {
+        "creatures": {
+          "description": "The creatures placed. Their handles are unique across the scene.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SceneCreature"
+          }
+        },
+        "id": {
+          "description": "Spawn id, unique in the scene, e.g. `rats`.",
+          "type": "string"
+        },
+        "when": {
+          "description": "What places them.",
+          "$ref": "#/$defs/SpawnWhen"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "creatures",
+        "when"
+      ]
+    },
+    "SpawnUnless": {
+      "description": "A state that cancels a round spawn.",
+      "oneOf": [
+        {
+          "description": "Any party creature is Bloodied (half Hit Points or fewer) or down.",
+          "type": "string",
+          "const": "any_party_bloodied"
+        }
+      ]
+    },
+    "SpawnWhen": {
+      "description": "What places a spawn.",
+      "oneOf": [
+        {
+          "description": "The DM calls `spawn{spawn_id}`.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "dm"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "description": "The engine places them when combat starts, if this session flag is set.",
+          "type": "object",
+          "properties": {
+            "flag": {
+              "description": "The session flag, e.g. `boss_warned`.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "flag"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "flag"
+          ]
+        },
+        {
+          "description": "The engine places them at the start of this combat round.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "round"
+            },
+            "round": {
+              "description": "The round, 1 or later.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "unless": {
+              "description": "A state that cancels the spawn when it holds at that round.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SpawnUnless"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "round"
+          ]
+        }
+      ]
+    },
+    "Surprise": {
+      "description": "A surprise rule: the named side rolls initiative with Disadvantage when the flag is set.",
+      "type": "object",
+      "properties": {
+        "surprised": {
+          "description": "The side that is surprised.",
+          "$ref": "#/$defs/Side"
+        },
+        "when_flag": {
+          "description": "The session flag that makes the surprise happen, e.g. `party_ambushes`.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "when_flag",
+        "surprised"
+      ]
+    },
+    "SurrenderCondition": {
+      "description": "The condition under which some creatures of a fight may surrender. The engine evaluates it\nafter every turn; the DM decides whether to call the surrender while it holds.",
+      "type": "object",
+      "properties": {
+        "any_of": {
+          "description": "The condition holds when any of these does.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SurrenderTrigger"
+          }
+        },
+        "creatures": {
+          "description": "The creatures that surrender together, e.g. the goblins.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "creatures",
+        "any_of"
+      ]
+    },
+    "SurrenderTrigger": {
+      "description": "One way a surrender condition can hold, counted over its `creatures`.",
+      "oneOf": [
+        {
+          "description": "Their current Hit Points together are at most this fraction of their maximum.",
+          "type": "object",
+          "properties": {
+            "fraction": {
+              "description": "Above 0 and below 1, e.g. `0.25`.",
+              "type": "number",
+              "format": "float"
+            },
+            "kind": {
+              "type": "string",
+              "const": "hp_fraction_at_most"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "fraction"
+          ]
+        },
+        {
+          "description": "At most this many of them are still conscious.",
+          "type": "object",
+          "properties": {
+            "count": {
+              "description": "The number of conscious creatures.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "kind": {
+              "type": "string",
+              "const": "standing_at_most"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "count"
+          ]
+        },
+        {
+          "description": "This creature is at 0 Hit Points or dead.",
+          "type": "object",
+          "properties": {
+            "handle": {
+              "description": "The leader's handle.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "leader_down"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "handle"
+          ]
+        }
+      ]
+    }
+  }
+}

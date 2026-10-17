@@ -1,0 +1,44 @@
+{
+    "id": "m3_s4_prisoner",
+    "description": "Milestone 3 test scenario m3_trail, scene 4 of 5 (social): the party questions the goblin that surrendered, then takes a short rest. A failed interrogation warns the boss.",
+    "anchors": [
+        {
+            "id": "storeroom",
+            "name": "the storeroom",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "prisoner_post",
+            "name": "the post the prisoner is tied to",
+            "position_ft": {
+                "x_ft": 10.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "storeroom",
+        "prisoner_post"
+    ],
+    "checks": [
+        {
+            "id": "interrogate",
+            "test": {
+                "kind": "skill",
+                "skill": "intimidation"
+            },
+            "dc": 13,
+            "on_failure": [
+                {
+                    "kind": "flag",
+                    "flag": "boss_warned"
+                }
+            ]
+        }
+    ]
+}
