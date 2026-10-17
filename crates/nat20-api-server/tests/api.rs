@@ -1,5 +1,5 @@
 //! Engine API behaviour that is clearer as code than as a fixture transcript, played with
-//! unseeded (engine-picked) dice so it holds for any rolls: prompts and rejections in a live fight, legal actions, scene validation, one log across
+//! unseeded (engine-picked) dice so it holds for any rolls (a test whose path depends on the rolls uses `Api::seeded`): prompts and rejections in a live fight, legal actions, scene validation, one log across
 //! scenes, the viewer projection and the stdio binary.
 
 use std::{
@@ -19,8 +19,17 @@ struct Api {
 
 impl Api {
     fn new(server: Server) -> Self {
+        Self::start(server, json!({ "cmd": "new_session" }))
+    }
+
+    /// For a test whose path depends on the rolls: the same seed always plays the same fight.
+    fn seeded(seed: u32) -> Self {
+        Self::start(Server::new(), json!({ "cmd": "new_session", "seed": seed }))
+    }
+
+    fn start(server: Server, new_session: Value) -> Self {
         let mut api = Self { server, next_id: 0 };
-        let started = api.call("dm", json!({ "cmd": "new_session" }));
+        let started = api.call("dm", new_session);
         assert_eq!(started["ok"], true, "{started}");
         api
     }
@@ -724,7 +733,8 @@ fn an_explore_move_walks_the_route_for_free() {
 
 #[test]
 fn a_combat_move_spends_movement_and_provokes() {
-    let mut api = duel();
+    // Seed 3 (as in explore.jsonl): Bren acts first and survives the opportunity attack.
+    let mut api = Api::seeded(3);
     let started = api.start_duel("dm");
     let prompt = started["awaiting"]["prompt_id"].clone();
     assert_eq!(started["awaiting"]["actor"], "bren", "{started}");
@@ -754,4 +764,31 @@ fn a_combat_move_spends_movement_and_provokes() {
         spent + rest["result"]["moved_ft"].as_f64().unwrap() <= 30.0,
         "{rest}"
     );
+}
+
+#[test]
+fn moves_after_a_finished_fight_stay_in_explore_mode() {
+    let mut api = duel();
+    let started = api.start_duel("dm");
+    let (over, _) = fight_to_the_end(&mut api, started);
+    assert_eq!(over["awaiting"]["kind"], "combat_over", "{over}");
+    let standing = if over["awaiting"]["winner"] == "party" {
+        "bren"
+    } else {
+        "goblin"
+    };
+    // The first move closes `combat_over`; neither it nor the next brings combat back.
+    for x_ft in [-10.0, -20.0] {
+        let moved = api.call(
+            "dm",
+            json!({ "cmd": "move", "actor": standing,
+            "to": { "kind": "point", "point": { "x_ft": x_ft, "y_ft": 0.0, "z_ft": 0.0 } } }),
+        );
+        assert_eq!(moved["ok"], true, "{moved}");
+        assert_eq!(moved["awaiting"]["kind"], "none", "{moved}");
+        let state = api.call("dm", json!({ "cmd": "get_state" }));
+        assert_eq!(state["result"]["state"]["mode"], "explore", "{state}");
+    }
+    let again = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
+    assert_eq!(again["ok"], true, "{again}");
 }

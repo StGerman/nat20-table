@@ -529,8 +529,11 @@ impl Game {
         } else {
             // Nobody is fighting, so the creature is simply placed at the end of its route.
             systems::geometry::teleport_to(&mut self.engine.world, entity, &end);
-            // An explore command that acts closes a finished fight's `combat_over`.
-            self.winner = None;
+            // An explore command that acts closes a finished fight's `combat_over`. The ended
+            // encounter goes too, or clearing `winner` alone would read as combat again.
+            if self.winner.take().is_some() {
+                self.encounter = None;
+            }
             (
                 route.full_path.length.get::<uom::si::length::meter>(),
                 Vec::new(),
