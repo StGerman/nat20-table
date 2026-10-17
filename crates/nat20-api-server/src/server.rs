@@ -3,8 +3,8 @@
 use std::collections::{HashMap, VecDeque};
 
 use nat20_api_contract::{
-    ApiError, CONTRACT_VERSION, Command, CommandResult, ErrorCode, PROTOCOL_MAJOR, PROTOCOL_NAME,
-    Request, Response, V1,
+    ApiError, Awaiting, CONTRACT_VERSION, Command, CommandResult, ErrorCode, PROTOCOL_MAJOR,
+    PROTOCOL_NAME, Request, Response, V1,
 };
 
 use crate::adapter;
@@ -15,7 +15,8 @@ pub const SCHEMA_SHA256: &str = include_str!("../../../generated/nat20-api.schem
 /// How many request ids are remembered for idempotent replay (contract/protocol.md §Envelope).
 const REMEMBERED_IDS: usize = 256;
 
-/// One engine session's request handler. Holds no rules state yet (CON-2 adds sessions and scenes).
+/// One engine session's request handler. Holds no rules state yet: every command but `hello`
+/// answers `not_implemented` until the server port (CON-3) wires it to the core.
 #[derive(Default)]
 pub struct Server {
     answered: HashMap<String, String>,
@@ -81,6 +82,19 @@ impl Server {
                 engine_rev: adapter::engine_rev().to_owned(),
                 schema_sha256: SCHEMA_SHA256.trim().to_owned(),
             },
+            ref command => {
+                let name = serde_json::to_value(command).expect("commands serialize")["cmd"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned();
+                return failure(
+                    Some(request.id.clone()),
+                    ErrorCode::NotImplemented,
+                    format!(
+                        "`{name}` is in contract {CONTRACT_VERSION} but this engine does not implement it yet."
+                    ),
+                );
+            }
         };
         Response {
             v: V1::CURRENT,
@@ -88,6 +102,9 @@ impl Server {
             ok: true,
             result: Some(result),
             error: None,
+            events: Vec::new(),
+            awaiting: Awaiting::NoSession,
+            log_head: 0,
         }
     }
 
@@ -103,9 +120,17 @@ impl Server {
 }
 
 fn failure(id: Option<String>, code: ErrorCode, message: String) -> Response {
+    // contract/protocol.md §7: these fail again however the caller changes its input or waits.
     let retryable = !matches!(
         code,
-        ErrorCode::BadRequest | ErrorCode::UnsupportedVersion | ErrorCode::Internal
+        ErrorCode::BadRequest
+            | ErrorCode::UnsupportedVersion
+            | ErrorCode::NoSession
+            | ErrorCode::NoScene
+            | ErrorCode::NotVisible
+            | ErrorCode::WrongMode
+            | ErrorCode::NotImplemented
+            | ErrorCode::Internal
     );
     Response {
         v: V1::CURRENT,
@@ -117,7 +142,11 @@ fn failure(id: Option<String>, code: ErrorCode, message: String) -> Response {
             reason: None,
             message,
             retryable,
+            hint: None,
         }),
+        events: Vec::new(),
+        awaiting: Awaiting::NoSession,
+        log_head: 0,
     }
 }
 

@@ -1,9 +1,20 @@
-# Engine protocol v1 (draft until CON-2)
+# Engine protocol v1
 
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
-Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decisions 2-5 still await Stas.
+Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 still await Stas; the contract assumes their defaults.
 
-Implemented so far (contract 1.0.0-dev.1): envelope, `hello`, error codes, request-id idempotency. Everything else here is the v1 target for CON-2.
+Status (contract 1.0.0-dev.2): every v1 type is in the contract crate. The engine implements `hello` and request-id idempotency and answers every other command with `not_implemented` until the server port (CON-3) wires it.
+
+Where the contract differs from the review draft, and why:
+- `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
+- A roll's `full` view goes to the DM only. Every player, the roller included, gets the `player` view: dice, total and outcome, no modifiers, no `against`, no `dc_source`. Stas chose this over the draft's default 5 on 2026-10-16; players read their own modifiers and AC from their sheet.
+- `hp_after` is gone from `damage_taken` and `healed`. Hit Points after a change travel in a separate `hit_points` event with DM or owner visibility, so a player projection drops the whole event instead of redacting a field.
+- Event `visibility` is an object tagged by `scope` (`{"scope":"owner","handle":"lia"}`), not the string `owner:lia`.
+- `request_check` takes `check: {kind:"scenario", check_id} | {kind:"ladder", ability, skill?, dc}` and `advantage: {state, reason}`, so a grant always carries its reason.
+- `short_rest.hit_dice` is a list of `{handle, count}`; `move.to` is tagged by `kind` (`anchor`, `creature`, `point`).
+- `submit`, `react` and `end_turn` return an empty result (`{"cmd":"submit"}`); what happened is in `events`.
+- `new_session.seed` is a u32, so it survives JavaScript numbers.
+- Error code `not_implemented` is added for commands in the contract that this engine build does not serve yet.
 
 
 Origin: the v1 draft written by the API contract review on 2026-10-16.
@@ -14,7 +25,7 @@ Origin: the v1 draft written by the API contract review on 2026-10-16.
 2. Transport: **stdio JSON-lines only for the demo**. Local HTTP later, reusing the same message types (API-15).
 3. Visibility: **projected by the engine per `viewer`**, as well as by the orchestrator's tool binding.
 4. Player view of enemy health: **health band only** (`unhurt` / `bloodied` / `down`, where bloodied is the SRD 5.2.1 term for half HP or less). No numbers.
-5. Player view of roll targets: **total and outcome visible, AC/DC hidden** unless the viewer owns the target or rolled a save against it. Note this hides save DCs from players, which is stricter than many tables run it.
+5. Player view of rolls: settled (Stas, 2026-10-16), strict. The DM alone sees modifiers, AC/DC and the DC source; every player, the roller included, sees dice, total and outcome. This hides save DCs from players, which is stricter than many tables run it.
 
 ## 1. Transport and envelope
 
@@ -50,12 +61,13 @@ Response:
 hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
                               ├─ request_check / move / short_rest / spawn
                               ├─ start_combat{participants, surprised?}   (mode: combat)
-                              │     └─ submit / react / end_turn …  → combat_over (auto) or end_combat{reason}
+                              │     └─ submit / react / end_turn …  → combat_over (auto) or end_combat{reason}  (mode: explore)
                               └─ load_scene{next}   (party carries over; log continues)
 ```
 - **One log per session.** Sequence numbers and roll ids are unique and monotonic for the whole session and never reused or rewritten. `load_scene` appends a `scene_loaded` event and doesn't clear anything.
 - **The party persists.** PCs keep HP, slots, resources and conditions across scenes (API-5). Monsters belong to their scene.
-- **Seed.** `new_session{seed?}` takes a u64. When it's omitted, the engine picks one and logs it in `session_started`. The same seed plus the same request stream gives an identical log (needs the core RNG change, API-11).
+- **Leaving combat.** Both ways back land in explore mode in the same scene. When a side is down, the engine ends combat by itself: it logs `combat_over`, switches the scene to explore mode and reports `awaiting: combat_over` until the next command, after which `awaiting` reads `none`. Any explore command, `start_combat` or `load_scene` goes on from there; `end_combat` then answers `wrong_mode`, because combat is already over. `end_combat{reason}` is only for ending a fight early.
+- **Seed.** `new_session{seed?}` takes a u32. When it's omitted, the engine picks one and logs it in `session_started`. The same seed plus the same request stream gives an identical log (needs the core RNG change, API-11).
 
 ## 3. Prompts (`awaiting`)
 
@@ -110,9 +122,10 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 | AC, saves, stat block, resources, slots | yes | yes | no |
 | Conditions | yes | yes | only visible ones (all SRD conditions except `invisible` while unseen) |
 | Position, distance (ft) | yes | yes | yes, for creatures the viewer perceives (all of them until vision exists) |
-| Roll: dice, modifiers, total, outcome | yes | yes | dice, total and outcome; modifiers dropped |
-| Roll: `against` (AC/DC) | yes | only if the viewer rolled it **and** owns the target, or rolled the save | no |
-| Damage amount to a creature | yes | yes (to self) | the amount is shown (it is said at the table); `hp_after` is not |
+| Roll: dice, total, outcome | yes (`full` view) | yes (`player` view) | yes (`player` view) |
+| Roll: modifiers, `against` (AC/DC), `dc_source` | yes | no; own modifiers and AC are on the sheet | no |
+| Damage or healing amount | yes | yes | yes (it is said at the table) |
+| `hit_points` events (HP after a change) | yes | own creature only | no |
 | Scenario data: check DCs, spawns, triggers | yes | no | no |
 | `unavailable` reasons in `legal_actions` | yes | yes | n/a |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
@@ -121,28 +134,29 @@ The server projects; it doesn't authenticate. The engine trusts its single clien
 
 ## 6. Events
 
-Every event: `{ seq, kind, round?, scene, visibility, text }` plus a kind-specific payload. `visibility` is `public`, `dm` or `owner:<handle>`, and the projection uses it to filter or redact.
+Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-specific payload. `visibility` is `{scope:"public"}`, `{scope:"dm"}` or `{scope:"owner", handle}`; the projection drops events the viewer may not see and turns `full` rolls into `player` rolls for player viewers.
 
 | `kind` | Payload |
 |---|---|
 | `session_started` | `seed`, `protocol_version` |
 | `scene_loaded` | `scene_id`, `mode` |
 | `combat_started` / `combat_over` | `participants` / `winner`, `reason` |
-| `round` / `turn_start` / `turn_end` | `round` / `actor` |
+| `round` / `turn_start` / `turn_end` | `number` / `actor` |
 | `action` | `actor`, `option_id`, `name`, `targets[]` |
-| `roll` | `roll: Roll` |
-| `damage_taken` | `target`, `amount`, `damage_type`, `source_roll`, `hp_after` (dm/owner only) |
-| `healed` | `target`, `amount`, `source_roll`, `hp_after` (dm/owner only) |
+| `roll` | `roll: RollView` (`view: "full"` or `"player"`) |
+| `damage_taken` | `target`, `amount`, `damage_type`, `source_roll?` |
+| `healed` | `target`, `amount`, `source_roll?` |
+| `hit_points` | `target`, `hp`, `hp_max`, `temp_hp` (DM or owner visibility only) |
 | `condition_added` / `condition_removed` | `target`, `condition`, `source` |
 | `life_state` | `target`, `state: conscious\|unconscious\|stable\|dead` |
 | `moved` | `actor`, `from`, `to` (ft), `anchor?` |
 | `check_resolved` | `check_id?`, `actor`, `roll_id`, `success` |
-| `rest` | `participants`, `kind: short` |
+| `rest` | `participants`, `rest: short\|long` |
 | `spawned` | `spawn_id`, `handles[]` |
 
-`Roll`, unchanged from v0 except for the id format and the added fields:
+`RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against` and `dc_source`):
 ```json
-{ "id": "r412", "kind": "attack|saving_throw|ability_check|skill_check|initiative|damage|healing|death_save",
+{ "view": "full", "id": "r412", "kind": "attack|saving_throw|ability_check|skill_check|initiative|damage|healing|death_save",
   "label": "Longsword attack vs goblin_1", "roller": "bren", "target": "goblin_1",
   "dice": [{"source":"d20","dice":"1d20","results":[14,6],"kept":14}],
   "modifiers": [{"source":"Strength","value":3},{"source":"Proficiency","value":2}],
@@ -170,6 +184,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
 | `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant` | true |
+| `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `internal` | An engine bug. The request did nothing, and the engine logs details to stderr | false |
 
 `message` is one plain-English sentence written for a model or a human. It never contains Rust `Debug` output.

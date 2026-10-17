@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { EngineClient, SCHEMA_SHA256 } from "../src/index.ts";
+import { EngineClient, SCHEMA_SHA256, envelope, type Command } from "../src/index.ts";
 
 const binary = process.env.NAT20_API_SERVER ??
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../target/debug/nat20-api-server");
@@ -11,7 +11,7 @@ const binary = process.env.NAT20_API_SERVER ??
 test("hello matches the generated schema hash", async () => {
   const client = await EngineClient.start(binary);
   try {
-    const hello = await client.request({ cmd: "hello" });
+    const hello = await client.request("dm", { cmd: "hello" });
     assert.equal(hello.ok, true);
     assert.equal(hello.result?.cmd, "hello");
     if (hello.result?.cmd === "hello") assert.equal(hello.result.schema_sha256, SCHEMA_SHA256);
@@ -23,10 +23,28 @@ test("hello matches the generated schema hash", async () => {
 test("a repeated request id returns the stored response", async () => {
   const client = await EngineClient.start(binary);
   try {
-    const first = await client.request({ cmd: "hello" }, "same-id");
-    const second = await client.request({ cmd: "hello" }, "same-id");
+    const first = await client.request("dm", { cmd: "hello" }, "same-id");
+    const second = await client.request("dm", { cmd: "hello" }, "same-id");
     assert.deepEqual(second, first);
   } finally {
     client.close();
   }
+});
+
+test("a command the engine does not implement yet fails with not_implemented", async () => {
+  const client = await EngineClient.start(binary);
+  try {
+    const response = await client.request("bren", { cmd: "legal_actions", actor: "bren" });
+    assert.equal(response.ok, false);
+    assert.equal(response.error?.code, "not_implemented");
+    assert.equal(response.error?.retryable, false);
+    assert.deepEqual(response.awaiting, { kind: "no_session" });
+  } finally {
+    client.close();
+  }
+});
+
+test("a command cannot override the bound viewer, version or id", () => {
+  const smuggled = { cmd: "get_state", viewer: "dm", v: 2, id: "other" } as Command;
+  assert.deepEqual(envelope("bren", smuggled, "c-9"), { cmd: "get_state", v: 1, id: "c-9", viewer: "bren" });
 });

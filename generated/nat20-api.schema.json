@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Nat20Api",
-  "description": "Schema root: every type that crosses the wire. Exported by `export-schema`; not itself sent.\n\nIts fields carry no doc comments on purpose: a description next to a `$ref` makes the TS\ngenerator emit duplicate types (`Request1`, `Response1`).",
+  "description": "Schema root: every type that crosses the wire. Exported by `export-schema`; not itself sent.",
   "type": "object",
   "properties": {
     "request": {
@@ -18,9 +18,271 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.1"
+    "version": "1.0.0-dev.2"
   },
   "$defs": {
+    "Ability": {
+      "description": "The six abilities.",
+      "oneOf": [
+        {
+          "description": "Strength.",
+          "type": "string",
+          "const": "strength"
+        },
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "dexterity"
+        },
+        {
+          "description": "Constitution.",
+          "type": "string",
+          "const": "constitution"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "intelligence"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "wisdom"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "charisma"
+        }
+      ]
+    },
+    "AbilityLine": {
+      "description": "One ability on a sheet.",
+      "type": "object",
+      "properties": {
+        "ability": {
+          "description": "The ability.",
+          "$ref": "#/$defs/Ability"
+        },
+        "modifier": {
+          "description": "Modifier.",
+          "type": "integer",
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128
+        },
+        "save_bonus": {
+          "description": "Saving throw bonus.",
+          "type": "integer",
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128
+        },
+        "save_proficient": {
+          "description": "Whether the creature is proficient in this saving throw.",
+          "type": "boolean"
+        },
+        "score": {
+          "description": "Score, 1 to 30.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "ability",
+        "score",
+        "modifier",
+        "save_bonus",
+        "save_proficient"
+      ]
+    },
+    "ActionCost": {
+      "description": "What an option costs.",
+      "type": "object",
+      "properties": {
+        "action": {
+          "description": "Actions spent.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "bonus_action": {
+          "description": "Bonus Actions spent.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "movement_ft": {
+          "description": "Movement spent, in feet.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "reaction": {
+          "description": "Reactions spent.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "spell_slot": {
+          "description": "Spell slot level spent, for spells.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "action",
+        "bonus_action",
+        "reaction",
+        "movement_ft"
+      ]
+    },
+    "ActionOption": {
+      "description": "One option the actor can take at the pending prompt.",
+      "type": "object",
+      "properties": {
+        "action": {
+          "description": "The engine action id behind the option.",
+          "type": "string"
+        },
+        "cost": {
+          "description": "What taking it spends.",
+          "$ref": "#/$defs/ActionCost"
+        },
+        "max_targets": {
+          "description": "How many targets `submit` may name: 0 for `none`, `self` and `point`, 1 for `single`.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "name": {
+          "description": "Display name, e.g. \"Longsword attack\".",
+          "type": "string"
+        },
+        "option_id": {
+          "description": "Echo it in `submit`.",
+          "$ref": "#/$defs/OptionId"
+        },
+        "range_ft": {
+          "description": "Range in feet, when the option has one.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        },
+        "targeting": {
+          "description": "What `submit` must name as targets.",
+          "$ref": "#/$defs/Targeting"
+        },
+        "targets": {
+          "description": "Creatures the option can target, with their distance.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TargetCandidate"
+          }
+        },
+        "variants": {
+          "description": "Variants `submit` must pick from, e.g. a spell's casting level. Empty when none.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OptionVariant"
+          }
+        }
+      },
+      "required": [
+        "option_id",
+        "action",
+        "name",
+        "cost",
+        "targeting",
+        "max_targets",
+        "targets",
+        "variants"
+      ]
+    },
+    "AdvantageGrant": {
+      "description": "Advantage or Disadvantage granted to a check, with its reason.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "description": "The rules reason, logged with the roll, e.g. \"Help action from Lia\".",
+          "type": "string"
+        },
+        "state": {
+          "description": "`advantage` or `disadvantage`.",
+          "$ref": "#/$defs/AdvantageState"
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ]
+    },
+    "AdvantageState": {
+      "description": "Advantage state of a d20 roll.",
+      "oneOf": [
+        {
+          "description": "One d20.",
+          "type": "string",
+          "const": "normal"
+        },
+        {
+          "description": "Two d20s, keep the higher.",
+          "type": "string",
+          "const": "advantage"
+        },
+        {
+          "description": "Two d20s, keep the lower.",
+          "type": "string",
+          "const": "disadvantage"
+        }
+      ]
+    },
+    "Against": {
+      "description": "The number a roll was compared with.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "Armor Class or Difficulty Class.",
+          "$ref": "#/$defs/AgainstKind"
+        },
+        "value": {
+          "description": "The number.",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ]
+    },
+    "AgainstKind": {
+      "description": "Armor Class or Difficulty Class.",
+      "oneOf": [
+        {
+          "description": "Armor Class.",
+          "type": "string",
+          "const": "AC"
+        },
+        {
+          "description": "Difficulty Class.",
+          "type": "string",
+          "const": "DC"
+        }
+      ]
+    },
     "ApiError": {
       "description": "A failed request.",
       "type": "object",
@@ -29,8 +291,19 @@
           "description": "Machine-readable failure class.",
           "$ref": "#/$defs/ErrorCode"
         },
+        "hint": {
+          "description": "What the caller can do instead, when the engine knows.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorHint"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "message": {
-          "description": "One plain sentence written for a model or a human. Never Rust debug output.",
+          "description": "One plain sentence written for a model or a human. Never Rust debug output, and never a\nnumber the request's `viewer` may not see (CLAUDE.md Rule 3).",
           "type": "string"
         },
         "reason": {
@@ -53,6 +326,210 @@
         "code",
         "message",
         "retryable"
+      ]
+    },
+    "Awaiting": {
+      "description": "Who the engine waits on next, tagged by `kind`.",
+      "oneOf": [
+        {
+          "description": "A creature's turn: `legal_actions`, then `submit`, `move` or `end_turn`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Whose turn it is.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "action"
+            },
+            "prompt_id": {
+              "description": "Echo it in `submit`, `move` and `end_turn`.",
+              "$ref": "#/$defs/PromptId"
+            }
+          },
+          "required": [
+            "kind",
+            "prompt_id",
+            "actor"
+          ]
+        },
+        {
+          "description": "A creature may react to a trigger: answer with `react`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The creature that may react.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "reaction"
+            },
+            "options": {
+              "description": "The reactions it can take.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReactionOption"
+              }
+            },
+            "prompt_id": {
+              "description": "Echo it in `react`.",
+              "$ref": "#/$defs/PromptId"
+            },
+            "trigger": {
+              "description": "What triggered it.",
+              "$ref": "#/$defs/ReactionTrigger"
+            }
+          },
+          "required": [
+            "kind",
+            "prompt_id",
+            "actor",
+            "trigger",
+            "options"
+          ]
+        },
+        {
+          "description": "Nothing pending: explore mode, or a session with no scene yet.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "none"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "description": "Combat ended by itself because a side is down. The scene is already back in explore mode\nand nothing is pending: reported until the next command, after which it reads `none`.\nGo on with any explore command, `start_combat` or `load_scene`; `end_combat` is not needed.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "combat_over"
+            },
+            "reason": {
+              "description": "Why combat ended.",
+              "$ref": "#/$defs/CombatOverReason"
+            },
+            "winner": {
+              "description": "The side left standing, if any.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Side"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ]
+        },
+        {
+          "description": "No session: call `new_session`.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "no_session"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        }
+      ]
+    },
+    "CheckSpec": {
+      "description": "Which check `request_check` rolls.",
+      "oneOf": [
+        {
+          "description": "A check the scenario defines, with its ability, skill and DC.",
+          "type": "object",
+          "properties": {
+            "check_id": {
+              "description": "Check id from the scene.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "scenario"
+            }
+          },
+          "required": [
+            "kind",
+            "check_id"
+          ]
+        },
+        {
+          "description": "A check the DM picks from the SRD DC ladder (5 very easy to 30 nearly impossible).",
+          "type": "object",
+          "properties": {
+            "ability": {
+              "description": "The ability.",
+              "$ref": "#/$defs/Ability"
+            },
+            "dc": {
+              "description": "The DC: one of 5, 10, 15, 20, 25, 30.",
+              "type": "integer",
+              "format": "uint8",
+              "maximum": 255,
+              "minimum": 0
+            },
+            "kind": {
+              "type": "string",
+              "const": "ladder"
+            },
+            "skill": {
+              "description": "The skill, if one applies.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Skill"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "ability",
+            "dc"
+          ]
+        }
+      ]
+    },
+    "CombatOverReason": {
+      "description": "Why combat ended.",
+      "oneOf": [
+        {
+          "description": "Every creature on one side is down.",
+          "type": "string",
+          "const": "side_down"
+        },
+        {
+          "description": "The DM ended it: the other side surrendered.",
+          "type": "string",
+          "const": "surrender"
+        },
+        {
+          "description": "The DM ended it: the other side fled.",
+          "type": "string",
+          "const": "fled"
+        },
+        {
+          "description": "A scenario trigger ended it.",
+          "type": "string",
+          "const": "scenario"
+        }
       ]
     },
     "CommandResult": {
@@ -90,6 +567,735 @@
             "engine_rev",
             "schema_sha256"
           ]
+        },
+        {
+          "description": "The new session.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "new_session"
+            },
+            "seed": {
+              "description": "The dice seed in use, given or picked.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "session_id": {
+              "description": "Session id, logged in `session_started`.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "cmd",
+            "session_id",
+            "seed"
+          ]
+        },
+        {
+          "description": "The state after the scene loaded.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "load_scene"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The current state.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "get_state"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "A full sheet.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "get_sheet"
+            },
+            "sheet": {
+              "description": "The sheet.",
+              "$ref": "#/$defs/Sheet"
+            }
+          },
+          "required": [
+            "cmd",
+            "sheet"
+          ]
+        },
+        {
+          "description": "The actor's options at the pending prompt.",
+          "type": "object",
+          "properties": {
+            "can_end_turn": {
+              "description": "Whether `end_turn` is accepted now.",
+              "type": "boolean"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "legal_actions"
+            },
+            "options": {
+              "description": "Options the actor can take now.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ActionOption"
+              }
+            },
+            "prompt_id": {
+              "description": "The prompt these options belong to; echo it in `submit` and `end_turn`.",
+              "$ref": "#/$defs/PromptId"
+            },
+            "unavailable": {
+              "description": "Options the actor has but cannot take now, with the reason.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UnavailableOption"
+              }
+            }
+          },
+          "required": [
+            "cmd",
+            "prompt_id",
+            "options",
+            "unavailable",
+            "can_end_turn"
+          ]
+        },
+        {
+          "description": "The option was taken; its rolls and effects are in `events`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "submit"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
+          "description": "The reaction was taken or declined; its rolls and effects are in `events`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "react"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
+          "description": "The turn ended; the next prompt is in `awaiting`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "end_turn"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
+          "description": "The move happened.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "move"
+            },
+            "moved_ft": {
+              "description": "Distance moved, in feet.",
+              "type": "number",
+              "format": "float"
+            },
+            "provoked": {
+              "description": "Creatures that got an opportunity attack prompt from this move, in prompt order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "required": [
+            "cmd",
+            "moved_ft",
+            "provoked"
+          ]
+        },
+        {
+          "description": "The check's roll and outcome.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "request_check"
+            },
+            "roll_id": {
+              "description": "The roll, also in `events`.",
+              "$ref": "#/$defs/RollId"
+            },
+            "success": {
+              "description": "Whether the check succeeded. The engine decides, never the caller.",
+              "type": "boolean"
+            },
+            "total": {
+              "description": "The check total.",
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "required": [
+            "cmd",
+            "roll_id",
+            "total",
+            "success"
+          ]
+        },
+        {
+          "description": "The group check's rolls and outcome.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "group_check"
+            },
+            "roll_ids": {
+              "description": "One roll per actor, in the order given.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RollId"
+              }
+            },
+            "success": {
+              "description": "Whether at least half the group succeeded.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "cmd",
+            "roll_ids",
+            "success"
+          ]
+        },
+        {
+          "description": "Hit Points regained on the short rest.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "short_rest"
+            },
+            "healed": {
+              "description": "One entry per participant.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/HitPointsRegained"
+              }
+            }
+          },
+          "required": [
+            "cmd",
+            "healed"
+          ]
+        },
+        {
+          "description": "The state after initiative, in combat mode.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "start_combat"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The state after combat ended, in explore mode.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "end_combat"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The state after the spawn.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "spawn"
+            },
+            "handles": {
+              "description": "Handles of the creatures placed.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state",
+            "handles"
+          ]
+        },
+        {
+          "description": "Log entries after `since`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "events"
+            },
+            "events": {
+              "description": "Projected for the request's `viewer`. Entries the viewer may not see are left out.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Event"
+              }
+            },
+            "next": {
+              "description": "Pass as `since` to read on from here.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "cmd",
+            "events",
+            "next"
+          ]
+        }
+      ]
+    },
+    "Condition": {
+      "description": "The SRD 5.2.1 conditions (Exhaustion is a level on the sheet, not listed here).",
+      "oneOf": [
+        {
+          "description": "Blinded.",
+          "type": "string",
+          "const": "blinded"
+        },
+        {
+          "description": "Charmed.",
+          "type": "string",
+          "const": "charmed"
+        },
+        {
+          "description": "Deafened.",
+          "type": "string",
+          "const": "deafened"
+        },
+        {
+          "description": "Frightened.",
+          "type": "string",
+          "const": "frightened"
+        },
+        {
+          "description": "Grappled.",
+          "type": "string",
+          "const": "grappled"
+        },
+        {
+          "description": "Incapacitated.",
+          "type": "string",
+          "const": "incapacitated"
+        },
+        {
+          "description": "Invisible.",
+          "type": "string",
+          "const": "invisible"
+        },
+        {
+          "description": "Paralyzed.",
+          "type": "string",
+          "const": "paralyzed"
+        },
+        {
+          "description": "Petrified.",
+          "type": "string",
+          "const": "petrified"
+        },
+        {
+          "description": "Poisoned.",
+          "type": "string",
+          "const": "poisoned"
+        },
+        {
+          "description": "Prone.",
+          "type": "string",
+          "const": "prone"
+        },
+        {
+          "description": "Restrained.",
+          "type": "string",
+          "const": "restrained"
+        },
+        {
+          "description": "Stunned.",
+          "type": "string",
+          "const": "stunned"
+        },
+        {
+          "description": "Unconscious.",
+          "type": "string",
+          "const": "unconscious"
+        }
+      ]
+    },
+    "CreatureFull": {
+      "description": "A creature as its owner and the DM see it.",
+      "type": "object",
+      "properties": {
+        "ac": {
+          "description": "Armor Class.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "conditions": {
+          "description": "Active conditions.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Condition"
+          }
+        },
+        "exhaustion": {
+          "description": "Exhaustion level, 0 to 6.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "handle": {
+          "description": "Session handle.",
+          "$ref": "#/$defs/Handle"
+        },
+        "health": {
+          "description": "The health band other players see.",
+          "$ref": "#/$defs/HealthBand"
+        },
+        "hp": {
+          "description": "Current Hit Points.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "hp_max": {
+          "description": "Hit Point maximum.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "life_state": {
+          "description": "Conscious, unconscious, stable or dead.",
+          "$ref": "#/$defs/LifeState"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "position_ft": {
+          "description": "Position, in feet.",
+          "$ref": "#/$defs/PointFt"
+        },
+        "side": {
+          "description": "Which side it is on.",
+          "$ref": "#/$defs/Side"
+        },
+        "speed_ft": {
+          "description": "Speed, in feet.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "temp_hp": {
+          "description": "Temporary Hit Points.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "handle",
+        "name",
+        "side",
+        "position_ft",
+        "hp",
+        "hp_max",
+        "temp_hp",
+        "ac",
+        "speed_ft",
+        "conditions",
+        "exhaustion",
+        "life_state",
+        "health"
+      ]
+    },
+    "CreatureObserved": {
+      "description": "A creature as another player perceives it. Has no Hit Points, Armor Class or stat block, by design.",
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "description": "Conditions the viewer can see.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Condition"
+          }
+        },
+        "distance_ft": {
+          "description": "Distance from the viewer, in feet.",
+          "type": "number",
+          "format": "float"
+        },
+        "handle": {
+          "description": "Session handle.",
+          "$ref": "#/$defs/Handle"
+        },
+        "health": {
+          "description": "Unhurt, bloodied or down.",
+          "$ref": "#/$defs/HealthBand"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "position_ft": {
+          "description": "Position, in feet.",
+          "$ref": "#/$defs/PointFt"
+        },
+        "side": {
+          "description": "Which side it is on.",
+          "$ref": "#/$defs/Side"
+        }
+      },
+      "required": [
+        "handle",
+        "name",
+        "side",
+        "position_ft",
+        "distance_ft",
+        "health",
+        "conditions"
+      ]
+    },
+    "DamageType": {
+      "description": "SRD damage types.",
+      "oneOf": [
+        {
+          "description": "Acid.",
+          "type": "string",
+          "const": "acid"
+        },
+        {
+          "description": "Bludgeoning.",
+          "type": "string",
+          "const": "bludgeoning"
+        },
+        {
+          "description": "Cold.",
+          "type": "string",
+          "const": "cold"
+        },
+        {
+          "description": "Fire.",
+          "type": "string",
+          "const": "fire"
+        },
+        {
+          "description": "Force.",
+          "type": "string",
+          "const": "force"
+        },
+        {
+          "description": "Lightning.",
+          "type": "string",
+          "const": "lightning"
+        },
+        {
+          "description": "Necrotic.",
+          "type": "string",
+          "const": "necrotic"
+        },
+        {
+          "description": "Piercing.",
+          "type": "string",
+          "const": "piercing"
+        },
+        {
+          "description": "Poison.",
+          "type": "string",
+          "const": "poison"
+        },
+        {
+          "description": "Psychic.",
+          "type": "string",
+          "const": "psychic"
+        },
+        {
+          "description": "Radiant.",
+          "type": "string",
+          "const": "radiant"
+        },
+        {
+          "description": "Slashing.",
+          "type": "string",
+          "const": "slashing"
+        },
+        {
+          "description": "Thunder.",
+          "type": "string",
+          "const": "thunder"
+        }
+      ]
+    },
+    "DcSource": {
+      "description": "Where a DC came from.",
+      "oneOf": [
+        {
+          "description": "The scenario file.",
+          "type": "string",
+          "const": "scenario"
+        },
+        {
+          "description": "The SRD DC ladder, picked by the DM.",
+          "type": "string",
+          "const": "ladder"
+        },
+        {
+          "description": "A stat block or spell.",
+          "type": "string",
+          "const": "stat_block"
+        }
+      ]
+    },
+    "DeathSaves": {
+      "description": "Death saving throws so far.",
+      "type": "object",
+      "properties": {
+        "failures": {
+          "description": "Failures, 0 to 3.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "successes": {
+          "description": "Successes, 0 to 3.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "successes",
+        "failures"
+      ]
+    },
+    "DiceRolled": {
+      "description": "One group of dice in a roll.",
+      "type": "object",
+      "properties": {
+        "dice": {
+          "description": "Dice notation, e.g. `1d20` or `2d6`.",
+          "type": "string"
+        },
+        "kept": {
+          "description": "The sum the roll kept, after Advantage or Disadvantage.",
+          "type": "integer",
+          "format": "int32"
+        },
+        "results": {
+          "description": "Every die's face, including dropped ones.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "source": {
+          "description": "What the dice are for, e.g. `d20` or `longsword`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "dice",
+        "results",
+        "kept"
+      ]
+    },
+    "EndCombatReason": {
+      "description": "Why the DM ends combat early.",
+      "oneOf": [
+        {
+          "description": "The other side surrendered.",
+          "type": "string",
+          "const": "surrender"
+        },
+        {
+          "description": "The other side fled.",
+          "type": "string",
+          "const": "fled"
+        },
+        {
+          "description": "A scenario trigger ends the fight.",
+          "type": "string",
+          "const": "scenario"
         }
       ]
     },
@@ -167,9 +1373,1012 @@
           "const": "rejected"
         },
         {
+          "description": "The command is in the contract but this engine build does not implement it yet.",
+          "type": "string",
+          "const": "not_implemented"
+        },
+        {
           "description": "An engine bug. The request did nothing; details go to stderr.",
           "type": "string",
           "const": "internal"
+        }
+      ]
+    },
+    "ErrorHint": {
+      "description": "What the caller can do instead of the failed request.",
+      "type": "object",
+      "properties": {
+        "awaiting": {
+          "description": "The pending prompt, e.g. with the current `prompt_id` after `stale_prompt`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Awaiting"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "legal_option_ids": {
+          "description": "Option ids the actor can take at the pending prompt.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OptionId"
+          }
+        }
+      }
+    },
+    "Event": {
+      "description": "One log entry.",
+      "type": "object",
+      "properties": {
+        "round": {
+          "description": "The combat round, in combat mode.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "scene": {
+          "description": "The scene the event happened in; absent before the first scene loads.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "seq": {
+          "description": "Position in the session log, from 1. Unique and monotonic for the whole session.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "text": {
+          "description": "One plain sentence rendered for the viewer. Never carries a number the viewer may not see.",
+          "type": "string"
+        },
+        "visibility": {
+          "description": "Who may see the event.",
+          "$ref": "#/$defs/Visibility"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "The session started.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "session_started"
+            },
+            "protocol_version": {
+              "description": "Contract version the engine speaks.",
+              "type": "string"
+            },
+            "seed": {
+              "description": "The dice seed in use.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "seed",
+            "protocol_version"
+          ]
+        },
+        {
+          "description": "A scene loaded.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "scene_loaded"
+            },
+            "mode": {
+              "description": "The mode the scene starts in.",
+              "$ref": "#/$defs/Mode"
+            },
+            "scene_id": {
+              "description": "Scene id.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "scene_id",
+            "mode"
+          ]
+        },
+        {
+          "description": "Initiative was rolled; combat started.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "combat_started"
+            },
+            "participants": {
+              "description": "Every creature in the fight, in initiative order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "participants"
+          ]
+        },
+        {
+          "description": "Combat ended.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "combat_over"
+            },
+            "reason": {
+              "description": "Why.",
+              "$ref": "#/$defs/CombatOverReason"
+            },
+            "winner": {
+              "description": "The side left standing, if any.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Side"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ]
+        },
+        {
+          "description": "A new combat round started.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "round"
+            },
+            "number": {
+              "description": "The round number, from 1.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "number"
+          ]
+        },
+        {
+          "description": "A creature's turn started.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Whose turn.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "turn_start"
+            }
+          },
+          "required": [
+            "kind",
+            "actor"
+          ]
+        },
+        {
+          "description": "A creature's turn ended.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Whose turn.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "turn_end"
+            }
+          },
+          "required": [
+            "kind",
+            "actor"
+          ]
+        },
+        {
+          "description": "A creature took an option.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who acted.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "action"
+            },
+            "name": {
+              "description": "Its display name.",
+              "type": "string"
+            },
+            "option_id": {
+              "description": "The option taken.",
+              "$ref": "#/$defs/OptionId"
+            },
+            "targets": {
+              "description": "Its targets.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "option_id",
+            "name",
+            "targets"
+          ]
+        },
+        {
+          "description": "The engine rolled dice.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "roll"
+            },
+            "roll": {
+              "description": "The roll, in the view the viewer may see.",
+              "$ref": "#/$defs/RollView"
+            }
+          },
+          "required": [
+            "kind",
+            "roll"
+          ]
+        },
+        {
+          "description": "A creature took damage. The amount is said at the table; the Hit Points left are not.",
+          "type": "object",
+          "properties": {
+            "amount": {
+              "description": "Damage after resistances and vulnerabilities.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "damage_type": {
+              "description": "Its type.",
+              "$ref": "#/$defs/DamageType"
+            },
+            "kind": {
+              "type": "string",
+              "const": "damage_taken"
+            },
+            "source_roll": {
+              "description": "The damage roll, when one was made.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/RollId"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "target": {
+              "description": "Who took it.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "amount",
+            "damage_type"
+          ]
+        },
+        {
+          "description": "A creature regained Hit Points.",
+          "type": "object",
+          "properties": {
+            "amount": {
+              "description": "Hit Points regained.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "kind": {
+              "type": "string",
+              "const": "healed"
+            },
+            "source_roll": {
+              "description": "The healing roll, when one was made.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/RollId"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "target": {
+              "description": "Who.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "amount"
+          ]
+        },
+        {
+          "description": "A creature's Hit Points changed. DM and owner only.",
+          "type": "object",
+          "properties": {
+            "hp": {
+              "description": "Current Hit Points.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "hp_max": {
+              "description": "Hit Point maximum.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "kind": {
+              "type": "string",
+              "const": "hit_points"
+            },
+            "target": {
+              "description": "Whose.",
+              "$ref": "#/$defs/Handle"
+            },
+            "temp_hp": {
+              "description": "Temporary Hit Points.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "hp",
+            "hp_max",
+            "temp_hp"
+          ]
+        },
+        {
+          "description": "A condition started.",
+          "type": "object",
+          "properties": {
+            "condition": {
+              "description": "Which.",
+              "$ref": "#/$defs/Condition"
+            },
+            "kind": {
+              "type": "string",
+              "const": "condition_added"
+            },
+            "source": {
+              "description": "What caused it, e.g. a spell or feature id.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "target": {
+              "description": "On whom.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "condition"
+          ]
+        },
+        {
+          "description": "A condition ended.",
+          "type": "object",
+          "properties": {
+            "condition": {
+              "description": "Which.",
+              "$ref": "#/$defs/Condition"
+            },
+            "kind": {
+              "type": "string",
+              "const": "condition_removed"
+            },
+            "source": {
+              "description": "What ended it.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "target": {
+              "description": "On whom.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "condition"
+          ]
+        },
+        {
+          "description": "A creature's life state changed.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "life_state"
+            },
+            "state": {
+              "description": "The new state.",
+              "$ref": "#/$defs/LifeState"
+            },
+            "target": {
+              "description": "Whose.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "state"
+          ]
+        },
+        {
+          "description": "A creature moved.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who.",
+              "$ref": "#/$defs/Handle"
+            },
+            "anchor": {
+              "description": "The anchor it moved to, when it moved to one.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "from": {
+              "description": "From, in feet.",
+              "$ref": "#/$defs/PointFt"
+            },
+            "kind": {
+              "type": "string",
+              "const": "moved"
+            },
+            "to": {
+              "description": "To, in feet.",
+              "$ref": "#/$defs/PointFt"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "from",
+            "to"
+          ]
+        },
+        {
+          "description": "A check resolved.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who made it.",
+              "$ref": "#/$defs/Handle"
+            },
+            "check_id": {
+              "description": "The scenario check id, for scenario checks.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "const": "check_resolved"
+            },
+            "roll_id": {
+              "description": "The roll.",
+              "$ref": "#/$defs/RollId"
+            },
+            "success": {
+              "description": "Whether it succeeded.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "roll_id",
+            "success"
+          ]
+        },
+        {
+          "description": "A rest finished.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "rest"
+            },
+            "participants": {
+              "description": "Who rested.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "rest": {
+              "description": "Which rest.",
+              "$ref": "#/$defs/RestKind"
+            }
+          },
+          "required": [
+            "kind",
+            "participants",
+            "rest"
+          ]
+        },
+        {
+          "description": "Creatures were placed by a spawn.",
+          "type": "object",
+          "properties": {
+            "handles": {
+              "description": "The creatures placed.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "spawned"
+            },
+            "spawn_id": {
+              "description": "Spawn id from the scene.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "spawn_id",
+            "handles"
+          ]
+        }
+      ],
+      "required": [
+        "seq",
+        "visibility",
+        "text"
+      ]
+    },
+    "FeatureLine": {
+      "description": "A feature on a sheet.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Feature id, e.g. `fighting_style.defense`.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Handle": {
+      "description": "A creature's handle in the session, e.g. `bren` or `goblin_1`. Stable for the creature's life.",
+      "type": "string"
+    },
+    "HealthBand": {
+      "description": "Coarse health that every viewer may see. SRD 5.2.1: Bloodied means half Hit Points or fewer.",
+      "oneOf": [
+        {
+          "description": "More than half Hit Points.",
+          "type": "string",
+          "const": "unhurt"
+        },
+        {
+          "description": "Half Hit Points or fewer, above 0.",
+          "type": "string",
+          "const": "bloodied"
+        },
+        {
+          "description": "At 0 Hit Points or dead.",
+          "type": "string",
+          "const": "down"
+        }
+      ]
+    },
+    "HitDicePool": {
+      "description": "Hit Point Dice of one size.",
+      "type": "object",
+      "properties": {
+        "die": {
+          "description": "Die size, e.g. `10` for d10.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "max": {
+          "description": "Dice when fully rested.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "remaining": {
+          "description": "Dice left to spend.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "die",
+        "remaining",
+        "max"
+      ]
+    },
+    "HitDiceSpend": {
+      "description": "Hit Point Dice one creature spends on a short rest.",
+      "type": "object",
+      "properties": {
+        "count": {
+          "description": "How many dice to spend.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "handle": {
+          "description": "The creature.",
+          "$ref": "#/$defs/Handle"
+        }
+      },
+      "required": [
+        "handle",
+        "count"
+      ]
+    },
+    "HitPointsRegained": {
+      "description": "Hit Points one creature regained.",
+      "type": "object",
+      "properties": {
+        "amount": {
+          "description": "Hit Points regained.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "handle": {
+          "description": "The creature.",
+          "$ref": "#/$defs/Handle"
+        }
+      },
+      "required": [
+        "handle",
+        "amount"
+      ]
+    },
+    "ItemLine": {
+      "description": "An item on a sheet.",
+      "type": "object",
+      "properties": {
+        "equipped": {
+          "description": "Whether it is equipped or wielded.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "Item id from the registry, e.g. `longsword`.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "quantity": {
+          "description": "How many.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "quantity",
+        "equipped"
+      ]
+    },
+    "LifeState": {
+      "description": "Life state of a creature.",
+      "oneOf": [
+        {
+          "description": "Above 0 Hit Points.",
+          "type": "string",
+          "const": "conscious"
+        },
+        {
+          "description": "At 0 Hit Points, making death saving throws.",
+          "type": "string",
+          "const": "unconscious"
+        },
+        {
+          "description": "At 0 Hit Points and stable.",
+          "type": "string",
+          "const": "stable"
+        },
+        {
+          "description": "Dead.",
+          "type": "string",
+          "const": "dead"
+        }
+      ]
+    },
+    "Mode": {
+      "description": "Whether the session is out of combat or in initiative order.",
+      "oneOf": [
+        {
+          "description": "Exploration and social play: no initiative, checks on request.",
+          "type": "string",
+          "const": "explore"
+        },
+        {
+          "description": "Initiative order: one actor at a time, reactions interrupt.",
+          "type": "string",
+          "const": "combat"
+        }
+      ]
+    },
+    "Modifier": {
+      "description": "One modifier added to a roll.",
+      "type": "object",
+      "properties": {
+        "source": {
+          "description": "What it comes from, e.g. \"Strength\" or \"Proficiency\".",
+          "type": "string"
+        },
+        "value": {
+          "description": "Its value.",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "required": [
+        "source",
+        "value"
+      ]
+    },
+    "MoveTarget": {
+      "description": "Where a `move` goes.",
+      "oneOf": [
+        {
+          "description": "A named landmark the scene defines, e.g. `millwheel`.",
+          "type": "object",
+          "properties": {
+            "anchor": {
+              "description": "Anchor id from the scene.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "anchor"
+            }
+          },
+          "required": [
+            "kind",
+            "anchor"
+          ]
+        },
+        {
+          "description": "Next to a creature.",
+          "type": "object",
+          "properties": {
+            "handle": {
+              "description": "The creature to move next to.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "creature"
+            }
+          },
+          "required": [
+            "kind",
+            "handle"
+          ]
+        },
+        {
+          "description": "An exact point.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "point"
+            },
+            "point": {
+              "description": "The point, in feet.",
+              "$ref": "#/$defs/PointFt"
+            }
+          },
+          "required": [
+            "kind",
+            "point"
+          ]
+        }
+      ]
+    },
+    "OptionId": {
+      "description": "An action option's id, derived from the action and its context (weapon, spell and level),\nnever from a list index, e.g. `melee_attack/longsword`. Stable for the life of a prompt.",
+      "type": "string"
+    },
+    "OptionVariant": {
+      "description": "A variant of an option.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Display name, e.g. \"Level 2 slot\".",
+          "type": "string"
+        },
+        "variant": {
+          "description": "Echo it in `submit.variant`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "variant",
+        "name"
+      ]
+    },
+    "PointFt": {
+      "description": "A point in feet. The engine works in metres internally and converts at the boundary.",
+      "type": "object",
+      "properties": {
+        "x_ft": {
+          "description": "East-west, feet.",
+          "type": "number",
+          "format": "float"
+        },
+        "y_ft": {
+          "description": "North-south, feet.",
+          "type": "number",
+          "format": "float"
+        },
+        "z_ft": {
+          "description": "Height, feet.",
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "required": [
+        "x_ft",
+        "y_ft",
+        "z_ft"
+      ]
+    },
+    "ProficiencyLevel": {
+      "description": "Proficiency in a skill.",
+      "oneOf": [
+        {
+          "description": "Not proficient.",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "Proficient: adds the Proficiency Bonus.",
+          "type": "string",
+          "const": "proficient"
+        },
+        {
+          "description": "Expertise: adds twice the Proficiency Bonus.",
+          "type": "string",
+          "const": "expertise"
+        }
+      ]
+    },
+    "PromptId": {
+      "description": "A pending decision's id, e.g. `p57`. `submit`, `react` and `end_turn` echo it.",
+      "type": "string"
+    },
+    "ReactionOption": {
+      "description": "A reaction the actor can take.",
+      "type": "object",
+      "properties": {
+        "choice": {
+          "description": "Echo it in `react.choice`.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "name": {
+          "description": "Display name, e.g. \"Opportunity Attack\".",
+          "type": "string"
+        },
+        "option_id": {
+          "description": "The option's id.",
+          "$ref": "#/$defs/OptionId"
+        }
+      },
+      "required": [
+        "choice",
+        "option_id",
+        "name"
+      ]
+    },
+    "ReactionTrigger": {
+      "description": "The event that opened a reaction prompt.",
+      "type": "object",
+      "properties": {
+        "event_seq": {
+          "description": "The triggering event's `seq`.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "summary": {
+          "description": "One plain sentence, e.g. \"goblin_1 moves out of Bren's reach\".",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_seq",
+        "summary"
+      ]
+    },
+    "Recharge": {
+      "description": "When a resource recharges.",
+      "oneOf": [
+        {
+          "description": "At the start of each turn.",
+          "type": "string",
+          "const": "turn"
+        },
+        {
+          "description": "On a Short or Long Rest.",
+          "type": "string",
+          "const": "short_rest"
+        },
+        {
+          "description": "On a Long Rest.",
+          "type": "string",
+          "const": "long_rest"
+        },
+        {
+          "description": "Never on its own.",
+          "type": "string",
+          "const": "never"
         }
       ]
     },
@@ -239,6 +2448,10 @@
         "v": {
           "description": "Protocol major version.",
           "$ref": "#/$defs/V1"
+        },
+        "viewer": {
+          "description": "Who the response is for: `dm` or a creature handle. Selects the projection of every state,\nsheet and event in the response (`contract/protocol.md` §5). A player agent's tools bind it\nto that agent's own handle.",
+          "$ref": "#/$defs/Viewer"
         }
       },
       "oneOf": [
@@ -254,17 +2467,469 @@
           "required": [
             "cmd"
           ]
+        },
+        {
+          "description": "Starts a session: an empty log and no scene. Replaces any running session.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "new_session"
+            },
+            "seed": {
+              "description": "Dice seed. The same seed and the same request stream give an identical log. When\nomitted, the engine picks one and logs it in `session_started`.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
+          "description": "Loads a scene from the scenario and enters explore mode. The party carries over.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "load_scene"
+            },
+            "party": {
+              "description": "Creatures carried in from the previous scene, with their HP, resources and conditions.\nEmpty for the first scene, whose party comes from the scenario.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "scene_id": {
+              "description": "Scene id from the scenario file.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "cmd",
+            "scene_id"
+          ]
+        },
+        {
+          "description": "The current state, projected for the request's `viewer`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "get_state"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
+          "description": "A creature's full sheet. Only its owner and `dm` may ask; anyone else gets `not_visible`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Whose sheet.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "get_sheet"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor"
+          ]
+        },
+        {
+          "description": "The options the actor can take at the pending action prompt.\nReturns `not_your_turn` when the engine is waiting on someone else.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The creature whose options are listed.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "legal_actions"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor"
+          ]
+        },
+        {
+          "description": "Takes one option at the pending action prompt.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The acting creature; must be `awaiting.actor`.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "submit"
+            },
+            "option_id": {
+              "description": "One of the option ids `legal_actions` returned for this prompt.",
+              "$ref": "#/$defs/OptionId"
+            },
+            "point": {
+              "description": "Target point, for options whose `targeting` is `point`.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/PointFt"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "prompt_id": {
+              "description": "The pending prompt's id. An old id is rejected with `stale_prompt` and changes nothing.",
+              "$ref": "#/$defs/PromptId"
+            },
+            "targets": {
+              "description": "Targets, for options whose `targeting` is `single` or `multiple`.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "variant": {
+              "description": "One of the option's `variants`, when it has any (e.g. a spell's casting level).",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "prompt_id",
+            "option_id"
+          ]
+        },
+        {
+          "description": "Answers the pending reaction prompt.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The reacting creature; must be `awaiting.actor`.",
+              "$ref": "#/$defs/Handle"
+            },
+            "choice": {
+              "description": "The `choice` of one of the prompt's options, or absent to decline.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "cmd": {
+              "type": "string",
+              "const": "react"
+            },
+            "prompt_id": {
+              "description": "The pending prompt's id.",
+              "$ref": "#/$defs/PromptId"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "prompt_id"
+          ]
+        },
+        {
+          "description": "Ends the actor's turn.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The acting creature; must be `awaiting.actor`.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "end_turn"
+            },
+            "prompt_id": {
+              "description": "The pending prompt's id.",
+              "$ref": "#/$defs/PromptId"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "prompt_id"
+          ]
+        },
+        {
+          "description": "Moves a creature. In combat it spends movement and may provoke opportunity attacks.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The creature that moves.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "move"
+            },
+            "prompt_id": {
+              "description": "The pending prompt's id. Required in combat, ignored in explore mode.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/PromptId"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "to": {
+              "description": "Where to.",
+              "$ref": "#/$defs/MoveTarget"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "to"
+          ]
+        },
+        {
+          "description": "Asks the engine to roll an ability check. The engine rolls and decides success.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The creature that makes the check.",
+              "$ref": "#/$defs/Handle"
+            },
+            "advantage": {
+              "description": "Advantage or Disadvantage, always with the rules reason for it.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/AdvantageGrant"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "check": {
+              "description": "Which check.",
+              "$ref": "#/$defs/CheckSpec"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "request_check"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "check"
+          ]
+        },
+        {
+          "description": "A group check from the scenario: succeeds when at least half the group succeeds.",
+          "type": "object",
+          "properties": {
+            "actors": {
+              "description": "The creatures that make the check.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "check_id": {
+              "description": "Check id from the scene.",
+              "type": "string"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "group_check"
+            }
+          },
+          "required": [
+            "cmd",
+            "actors",
+            "check_id"
+          ]
+        },
+        {
+          "description": "A short rest. Each participant may spend Hit Point Dice.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "short_rest"
+            },
+            "hit_dice": {
+              "description": "Hit Point Dice to spend per creature. A creature not listed spends none.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/HitDiceSpend"
+              }
+            },
+            "participants": {
+              "description": "The creatures that rest.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "required": [
+            "cmd",
+            "participants"
+          ]
+        },
+        {
+          "description": "Rolls initiative and enters combat mode.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "start_combat"
+            },
+            "participants": {
+              "description": "Every creature in the fight.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "surprised": {
+              "description": "Creatures that are surprised (Disadvantage on initiative).",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "required": [
+            "cmd",
+            "participants"
+          ]
+        },
+        {
+          "description": "Ends combat early, only for a reason the scene allows. A fight that ends by itself (a side\nis down) needs no `end_combat`: the scene is already back in explore mode.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "end_combat"
+            },
+            "reason": {
+              "description": "Why combat ends.",
+              "$ref": "#/$defs/EndCombatReason"
+            }
+          },
+          "required": [
+            "cmd",
+            "reason"
+          ]
+        },
+        {
+          "description": "Places creatures the scene declares under a spawn id.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "spawn"
+            },
+            "spawn_id": {
+              "description": "Spawn id from the scene file.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "cmd",
+            "spawn_id"
+          ]
+        },
+        {
+          "description": "Log entries after `since`, projected for the request's `viewer`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "events"
+            },
+            "since": {
+              "description": "The `seq` to read after; `0` reads from the start.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "cmd",
+            "since"
+          ]
         }
       ],
       "required": [
         "v",
-        "id"
+        "id",
+        "viewer"
+      ]
+    },
+    "ResourcePool": {
+      "description": "A limited-use feature.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Resource id, e.g. `second_wind`.",
+          "type": "string"
+        },
+        "max": {
+          "description": "Uses when recharged.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "recharge": {
+          "description": "When it recharges.",
+          "$ref": "#/$defs/Recharge"
+        },
+        "remaining": {
+          "description": "Uses left.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "remaining",
+        "max",
+        "recharge"
       ]
     },
     "Response": {
       "description": "One response line written by the engine, answering exactly one [`Request`].",
       "type": "object",
       "properties": {
+        "awaiting": {
+          "description": "Who the engine waits on next. Never projected away: everyone may know whose turn it is.",
+          "$ref": "#/$defs/Awaiting"
+        },
         "error": {
           "description": "Why the command failed. Set when `ok` is false.",
           "anyOf": [
@@ -276,12 +2941,25 @@
             }
           ]
         },
+        "events": {
+          "description": "The log entries this request produced, projected for the request's `viewer`. Empty on error.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Event"
+          }
+        },
         "id": {
           "description": "The request id this answers; `null` only when the request line was too malformed to read an id.",
           "type": [
             "string",
             "null"
           ]
+        },
+        "log_head": {
+          "description": "The session log length after this request; pass it to `events.since` to read on from here.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
         },
         "ok": {
           "description": "`true` when the command succeeded and `result` is set; `false` when `error` is set.",
@@ -305,13 +2983,905 @@
       },
       "required": [
         "v",
-        "ok"
+        "ok",
+        "events",
+        "awaiting",
+        "log_head"
+      ]
+    },
+    "RestKind": {
+      "description": "Which rest.",
+      "oneOf": [
+        {
+          "description": "A Short Rest.",
+          "type": "string",
+          "const": "short"
+        },
+        {
+          "description": "A Long Rest.",
+          "type": "string",
+          "const": "long"
+        }
+      ]
+    },
+    "RollId": {
+      "description": "A roll's id, `r` plus a number, e.g. `r412`. Unique for the whole session, never reused.",
+      "type": "string"
+    },
+    "RollKind": {
+      "description": "What kind of roll.",
+      "oneOf": [
+        {
+          "description": "An attack roll.",
+          "type": "string",
+          "const": "attack"
+        },
+        {
+          "description": "A saving throw.",
+          "type": "string",
+          "const": "saving_throw"
+        },
+        {
+          "description": "An ability check without a skill.",
+          "type": "string",
+          "const": "ability_check"
+        },
+        {
+          "description": "An ability check with a skill.",
+          "type": "string",
+          "const": "skill_check"
+        },
+        {
+          "description": "Initiative.",
+          "type": "string",
+          "const": "initiative"
+        },
+        {
+          "description": "Damage.",
+          "type": "string",
+          "const": "damage"
+        },
+        {
+          "description": "Healing.",
+          "type": "string",
+          "const": "healing"
+        },
+        {
+          "description": "A death saving throw.",
+          "type": "string",
+          "const": "death_save"
+        }
+      ]
+    },
+    "RollOutcome": {
+      "description": "A roll's result.",
+      "oneOf": [
+        {
+          "description": "An attack hit.",
+          "type": "string",
+          "const": "hit"
+        },
+        {
+          "description": "An attack hit with a natural 20.",
+          "type": "string",
+          "const": "critical_hit"
+        },
+        {
+          "description": "An attack missed.",
+          "type": "string",
+          "const": "miss"
+        },
+        {
+          "description": "A check or save succeeded.",
+          "type": "string",
+          "const": "success"
+        },
+        {
+          "description": "A check or save failed.",
+          "type": "string",
+          "const": "failure"
+        },
+        {
+          "description": "A roll with nothing to compare, such as damage or initiative.",
+          "type": "string",
+          "const": "value"
+        }
+      ]
+    },
+    "RollView": {
+      "description": "A roll, in one of two views, tagged by `view`. `full` goes to the DM only. Every player, the\nroller's own included, gets `player`, which has no modifiers, target number or DC source;\na player reads their own modifiers from their sheet.",
+      "oneOf": [
+        {
+          "description": "Everything the engine knows about the roll. The audit runs on this view.",
+          "type": "object",
+          "properties": {
+            "advantage": {
+              "description": "Advantage state of the d20.",
+              "$ref": "#/$defs/AdvantageState"
+            },
+            "against": {
+              "description": "The number the total was compared with, if any.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Against"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "dc_source": {
+              "description": "Where the DC came from, for checks and saves.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DcSource"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "dice": {
+              "description": "The dice.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/DiceRolled"
+              }
+            },
+            "id": {
+              "description": "Session-unique roll id.",
+              "$ref": "#/$defs/RollId"
+            },
+            "kind": {
+              "description": "What kind of roll.",
+              "$ref": "#/$defs/RollKind"
+            },
+            "label": {
+              "description": "Short label, e.g. \"Longsword attack vs goblin_1\".",
+              "type": "string"
+            },
+            "modifiers": {
+              "description": "Modifiers added to the dice.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Modifier"
+              }
+            },
+            "outcome": {
+              "description": "The result.",
+              "$ref": "#/$defs/RollOutcome"
+            },
+            "roller": {
+              "description": "Who rolled.",
+              "$ref": "#/$defs/Handle"
+            },
+            "target": {
+              "description": "The roll's target, if any.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Handle"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "total": {
+              "description": "Dice plus modifiers.",
+              "type": "integer",
+              "format": "int32"
+            },
+            "view": {
+              "type": "string",
+              "const": "full"
+            }
+          },
+          "required": [
+            "view",
+            "id",
+            "kind",
+            "label",
+            "roller",
+            "dice",
+            "modifiers",
+            "total",
+            "outcome",
+            "advantage"
+          ]
+        },
+        {
+          "description": "What another player sees: the dice, the total and the result.",
+          "type": "object",
+          "properties": {
+            "advantage": {
+              "description": "Advantage state of the d20.",
+              "$ref": "#/$defs/AdvantageState"
+            },
+            "dice": {
+              "description": "The dice.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/DiceRolled"
+              }
+            },
+            "id": {
+              "description": "Session-unique roll id.",
+              "$ref": "#/$defs/RollId"
+            },
+            "kind": {
+              "description": "What kind of roll.",
+              "$ref": "#/$defs/RollKind"
+            },
+            "label": {
+              "description": "Short label, e.g. \"Longsword attack vs goblin_1\".",
+              "type": "string"
+            },
+            "outcome": {
+              "description": "The result.",
+              "$ref": "#/$defs/RollOutcome"
+            },
+            "roller": {
+              "description": "Who rolled.",
+              "$ref": "#/$defs/Handle"
+            },
+            "target": {
+              "description": "The roll's target, if any.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Handle"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "total": {
+              "description": "Dice plus modifiers.",
+              "type": "integer",
+              "format": "int32"
+            },
+            "view": {
+              "type": "string",
+              "const": "player"
+            }
+          },
+          "required": [
+            "view",
+            "id",
+            "kind",
+            "label",
+            "roller",
+            "dice",
+            "total",
+            "outcome",
+            "advantage"
+          ]
+        }
+      ]
+    },
+    "Sheet": {
+      "description": "A creature's full sheet. Only its owner and the DM receive it.",
+      "type": "object",
+      "properties": {
+        "abilities": {
+          "description": "The six abilities with their saving throws.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AbilityLine"
+          }
+        },
+        "ac": {
+          "description": "Armor Class.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "class": {
+          "description": "Class id, e.g. `fighter`. Absent for monsters.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conditions": {
+          "description": "Active conditions.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Condition"
+          }
+        },
+        "death_saves": {
+          "description": "Death saving throws so far, while unconscious.",
+          "$ref": "#/$defs/DeathSaves"
+        },
+        "equipment": {
+          "description": "Carried and equipped items.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ItemLine"
+          }
+        },
+        "exhaustion": {
+          "description": "Exhaustion level, 0 to 6.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "features": {
+          "description": "Class, species and background features by name.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FeatureLine"
+          }
+        },
+        "handle": {
+          "description": "Session handle.",
+          "$ref": "#/$defs/Handle"
+        },
+        "hit_dice": {
+          "description": "Hit Point Dice by die size.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HitDicePool"
+          }
+        },
+        "hp": {
+          "description": "Current Hit Points.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "hp_max": {
+          "description": "Hit Point maximum.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "initiative_bonus": {
+          "description": "Initiative bonus.",
+          "type": "integer",
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128
+        },
+        "level": {
+          "description": "Character level. Absent for monsters.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "life_state": {
+          "description": "Conscious, unconscious, stable or dead.",
+          "$ref": "#/$defs/LifeState"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "passive_perception": {
+          "description": "Passive Perception.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "proficiency_bonus": {
+          "description": "Proficiency Bonus.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "resources": {
+          "description": "Limited-use features, e.g. Second Wind.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourcePool"
+          }
+        },
+        "side": {
+          "description": "Which side it is on.",
+          "$ref": "#/$defs/Side"
+        },
+        "skills": {
+          "description": "The eighteen skills.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SkillLine"
+          }
+        },
+        "species": {
+          "description": "Species id for characters, creature type for monsters.",
+          "type": "string"
+        },
+        "speed_ft": {
+          "description": "Speed, in feet.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "spell_slots": {
+          "description": "Spell slots by level; empty for non-casters.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SpellSlots"
+          }
+        },
+        "subclass": {
+          "description": "Subclass id, once chosen.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "temp_hp": {
+          "description": "Temporary Hit Points.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "handle",
+        "name",
+        "side",
+        "species",
+        "proficiency_bonus",
+        "abilities",
+        "skills",
+        "ac",
+        "speed_ft",
+        "initiative_bonus",
+        "passive_perception",
+        "hp",
+        "hp_max",
+        "temp_hp",
+        "hit_dice",
+        "spell_slots",
+        "resources",
+        "conditions",
+        "exhaustion",
+        "life_state",
+        "death_saves",
+        "equipment",
+        "features"
+      ]
+    },
+    "Side": {
+      "description": "Which side of a fight a creature is on, as seen by the party.",
+      "oneOf": [
+        {
+          "description": "The player characters and their allies.",
+          "type": "string",
+          "const": "party"
+        },
+        {
+          "description": "Enemies of the party.",
+          "type": "string",
+          "const": "hostile"
+        },
+        {
+          "description": "Neither.",
+          "type": "string",
+          "const": "neutral"
+        }
+      ]
+    },
+    "Skill": {
+      "description": "The eighteen skills.",
+      "oneOf": [
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "acrobatics"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "animal_handling"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "arcana"
+        },
+        {
+          "description": "Strength.",
+          "type": "string",
+          "const": "athletics"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "deception"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "history"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "insight"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "intimidation"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "investigation"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "medicine"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "nature"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "perception"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "performance"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "persuasion"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "religion"
+        },
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "sleight_of_hand"
+        },
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "stealth"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "survival"
+        }
+      ]
+    },
+    "SkillLine": {
+      "description": "One skill on a sheet.",
+      "type": "object",
+      "properties": {
+        "bonus": {
+          "description": "Total bonus.",
+          "type": "integer",
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128
+        },
+        "proficiency": {
+          "description": "Proficiency in it.",
+          "$ref": "#/$defs/ProficiencyLevel"
+        },
+        "skill": {
+          "description": "The skill.",
+          "$ref": "#/$defs/Skill"
+        }
+      },
+      "required": [
+        "skill",
+        "bonus",
+        "proficiency"
+      ]
+    },
+    "SpellSlots": {
+      "description": "Spell slots of one level.",
+      "type": "object",
+      "properties": {
+        "level": {
+          "description": "Spell slot level, 1 to 9.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "max": {
+          "description": "Slots when fully rested.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "remaining": {
+          "description": "Slots left.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "level",
+        "remaining",
+        "max"
+      ]
+    },
+    "State": {
+      "description": "The session state, projected for the request's `viewer`, tagged by `view`.",
+      "oneOf": [
+        {
+          "description": "What the DM sees: every creature in full.",
+          "type": "object",
+          "properties": {
+            "creatures": {
+              "description": "Every creature in the scene.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/CreatureFull"
+              }
+            },
+            "initiative": {
+              "description": "Initiative order, in combat mode; empty in explore mode.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "mode": {
+              "description": "Explore or combat.",
+              "$ref": "#/$defs/Mode"
+            },
+            "round": {
+              "description": "The combat round, in combat mode.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "scene_id": {
+              "description": "The loaded scene, if any.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "view": {
+              "type": "string",
+              "const": "dm"
+            }
+          },
+          "required": [
+            "view",
+            "mode",
+            "initiative",
+            "creatures"
+          ]
+        },
+        {
+          "description": "What one player sees: their own creature in full, the others as observed.",
+          "type": "object",
+          "properties": {
+            "initiative": {
+              "description": "Initiative order, in combat mode; empty in explore mode.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "me": {
+              "description": "The viewer's own creature.",
+              "$ref": "#/$defs/CreatureFull"
+            },
+            "mode": {
+              "description": "Explore or combat.",
+              "$ref": "#/$defs/Mode"
+            },
+            "others": {
+              "description": "Every other creature the viewer perceives.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/CreatureObserved"
+              }
+            },
+            "round": {
+              "description": "The combat round, in combat mode.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "scene_id": {
+              "description": "The loaded scene, if any.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "view": {
+              "type": "string",
+              "const": "player"
+            },
+            "viewer": {
+              "description": "The creature whose player is looking.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "view",
+            "viewer",
+            "mode",
+            "initiative",
+            "me",
+            "others"
+          ]
+        }
+      ]
+    },
+    "TargetCandidate": {
+      "description": "A creature an option can target.",
+      "type": "object",
+      "properties": {
+        "distance_ft": {
+          "description": "Distance from the actor, in feet.",
+          "type": "number",
+          "format": "float"
+        },
+        "handle": {
+          "description": "The creature.",
+          "$ref": "#/$defs/Handle"
+        },
+        "in_range": {
+          "description": "Whether it is within the option's range now.",
+          "type": "boolean"
+        },
+        "side": {
+          "description": "Its side.",
+          "$ref": "#/$defs/Side"
+        }
+      },
+      "required": [
+        "handle",
+        "side",
+        "distance_ft",
+        "in_range"
+      ]
+    },
+    "Targeting": {
+      "description": "What an option targets.",
+      "oneOf": [
+        {
+          "description": "No target.",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "The actor itself.",
+          "type": "string",
+          "const": "self"
+        },
+        {
+          "description": "One creature.",
+          "type": "string",
+          "const": "single"
+        },
+        {
+          "description": "Up to `max_targets` creatures.",
+          "type": "string",
+          "const": "multiple"
+        },
+        {
+          "description": "A point.",
+          "type": "string",
+          "const": "point"
+        }
+      ]
+    },
+    "UnavailableOption": {
+      "description": "An option the actor has but cannot take now.",
+      "type": "object",
+      "properties": {
+        "message": {
+          "description": "One plain sentence.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "option_id": {
+          "description": "The option's id.",
+          "$ref": "#/$defs/OptionId"
+        },
+        "reason": {
+          "description": "Why not.",
+          "$ref": "#/$defs/RejectReason"
+        }
+      },
+      "required": [
+        "option_id",
+        "name",
+        "reason",
+        "message"
       ]
     },
     "V1": {
       "description": "Protocol major version. Only 1 exists.",
       "type": "integer",
       "const": 1
+    },
+    "Viewer": {
+      "description": "Who a projection is for: `dm`, or the handle of the creature whose player is looking.",
+      "type": "string"
+    },
+    "Visibility": {
+      "description": "Who may see an event, tagged by `scope`.",
+      "oneOf": [
+        {
+          "description": "Everyone at the table.",
+          "type": "object",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "const": "public"
+            }
+          },
+          "required": [
+            "scope"
+          ]
+        },
+        {
+          "description": "The DM only.",
+          "type": "object",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "const": "dm"
+            }
+          },
+          "required": [
+            "scope"
+          ]
+        },
+        {
+          "description": "The DM and the player of one creature.",
+          "type": "object",
+          "properties": {
+            "handle": {
+              "description": "The creature whose player may see it.",
+              "$ref": "#/$defs/Handle"
+            },
+            "scope": {
+              "type": "string",
+              "const": "owner"
+            }
+          },
+          "required": [
+            "scope",
+            "handle"
+          ]
+        }
+      ]
     }
   }
 }
