@@ -1,4 +1,4 @@
-# 0020. Surrender: the DM decides, within a scene condition the engine enforces
+# 0021. Surrender: the DM decides, within a scene condition the engine enforces
 
 - **Status:** Accepted
 - **Date:** 2026-10-17
