@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use super::{events::wire_life_state, names::title};
 use hecs::Entity;
 use nat20_api_contract::{
-    Ability as WireAbility, AbilityLine, DeathSaves, FeatureLine, Handle, ItemLine,
+    Ability as WireAbility, AbilityLine, DeathSaves, FeatureLine, Handle, HitDicePool, ItemLine,
     ProficiencyLevel as WireProficiency, Recharge, ResourcePool, Sheet, Side, Skill as WireSkill,
     SkillLine, SpellSlots,
 };
@@ -17,7 +17,7 @@ use nat20_core::{
     components::{
         ability::{Ability, AbilityScoreMap},
         d20::D20Check,
-        health::life_state::LifeState,
+        health::{hit_point_dice::HitPointDice, life_state::LifeState},
         id::{ActionId, ClassId, EntityIdentifier, FeatId, ItemId, SpeciesId, SubspeciesId},
         items::{
             equipment::slots::EquipmentSlot,
@@ -172,8 +172,18 @@ pub fn sheet(engine: &EngineState, entity: Entity, handle: &str, side: Side) -> 
         hp,
         hp_max,
         temp_hp,
-        // Hit Point Dice need a pool in the core (upstream item U4, ENG-4).
-        hit_dice: Vec::new(),
+        hit_dice: world
+            .get::<&HitPointDice>(entity)
+            .map(|dice| {
+                dice.pools()
+                    .map(|(die, remaining, max)| HitDicePool {
+                        die: die as u8,
+                        remaining: remaining.into(),
+                        max: max.into(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
         spell_slots,
         resources,
         // The core has no condition or exhaustion model yet.

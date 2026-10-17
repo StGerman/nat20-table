@@ -111,8 +111,13 @@ pub fn text(kind: &EventKind) -> String {
             if *success { "succeeds" } else { "fails" }
         ),
         EventKind::Rest { participants, rest } => format!(
-            "{} finish a {} rest.",
+            "{} {} a {} rest.",
             list(participants),
+            if participants.len() == 1 {
+                "finishes"
+            } else {
+                "finish"
+            },
             snake_words(rest)
         ),
         EventKind::Spawned { handles, .. } => format!("{} appear.", list(handles)),

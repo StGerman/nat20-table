@@ -1225,3 +1225,43 @@ fn surrender_needs_its_creatures_and_leader_in_the_scene() {
     }
     std::fs::remove_dir_all(dir).ok();
 }
+
+#[test]
+fn a_spent_hit_point_die_stays_spent_in_the_next_scene() {
+    let mut api = duel();
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s1_green" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let rested = api.call(
+        "dm",
+        json!({ "cmd": "short_rest", "participants": ["bren"],
+            "hit_dice": [{ "handle": "bren", "count": 1 }] }),
+    );
+    assert_eq!(rested["ok"], true, "{rested}");
+    // Bren is unhurt, so the die is spent for nothing.
+    assert_eq!(
+        rested["result"]["healed"],
+        json!([{ "handle": "bren", "amount": 0 }]),
+        "{rested}"
+    );
+    let kinds: Vec<&str> = rested["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["kind"].as_str().unwrap())
+        .collect();
+    assert_eq!(kinds, ["roll", "healed", "hit_points", "rest"], "{rested}");
+    let carried = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s2_road", "party": ["bren"] }),
+    );
+    assert_eq!(carried["ok"], true, "{carried}");
+    let sheet = api.call("dm", json!({ "cmd": "get_sheet", "actor": "bren" }));
+    assert_eq!(
+        sheet["result"]["sheet"]["hit_dice"],
+        json!([{ "die": 10, "remaining": 1, "max": 2 }]),
+        "{sheet}"
+    );
+}

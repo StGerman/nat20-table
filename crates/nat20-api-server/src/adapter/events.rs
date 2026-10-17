@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use hecs::Entity;
 use nat20_api_contract::{
     AdvantageState, Against, AgainstKind, CombatOverReason, DcSource, DiceRolled, EventKind,
-    Handle, LifeState as WireLife, Modifier, OptionId, RollId, RollKind, RollOutcome, RollView,
-    Side, Visibility,
+    Handle, LifeState as WireLife, Modifier, OptionId, RestKind as WireRest, RollId, RollKind,
+    RollOutcome, RollView, Side, Visibility,
 };
 use nat20_core::{
     components::{
@@ -28,6 +28,7 @@ use nat20_core::{
         engine_state::EngineState,
         event::{EncounterEvent, Event, EventKind as EngineKind},
     },
+    systems::time::RestKind,
 };
 
 use crate::adapter::names;
@@ -336,6 +337,15 @@ impl LogWriter<'_> {
                 target: Handle(self.who(entity)),
                 state: wire_life_state(new_state),
             })],
+            EngineKind::RestFinished { kind, participants } => {
+                vec![self.public(EventKind::Rest {
+                    participants: participants.iter().map(|p| Handle(self.who(p))).collect(),
+                    rest: match kind {
+                        RestKind::Short => WireRest::Short,
+                        RestKind::Long => WireRest::Long,
+                    },
+                })]
+            }
             // Performed events are followed by Resolved events carrying the final result after
             // any reactions; logging both would show every die twice.
             _ => Vec::new(),
@@ -438,6 +448,38 @@ impl LogWriter<'_> {
             }));
         }
         entries
+    }
+
+    /// The entries for one Hit Point Die `entity` spent on a short rest: its roll, `healed`
+    /// citing it and `hit_points`. The roll keeps its raw total; `regained` is what the engine
+    /// healed (at least 1, at most what was missing).
+    pub fn hit_point_die(
+        &mut self,
+        entity: Entity,
+        die: u8,
+        result: &ModifierResult,
+        regained: u32,
+    ) -> Vec<Pending> {
+        let key = self.keys.key();
+        let handle = self.handles.get(&entity).cloned().unwrap_or_default();
+        let roll = keyed(
+            modifier_roll(
+                RollKind::Healing,
+                format!("a d{die} Hit Point Die"),
+                handle.clone(),
+                result,
+            ),
+            &key,
+        );
+        vec![
+            self.public(EventKind::Roll { roll }),
+            self.public(EventKind::Healed {
+                target: Handle(handle.clone()),
+                amount: regained,
+                source_roll: Some(RollId(key)),
+            }),
+            self.hit_points(entity, &handle, regained as i32),
+        ]
     }
 
     /// The initiative roll for one creature.

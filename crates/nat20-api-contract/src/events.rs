@@ -212,7 +212,7 @@ pub enum EventKind {
         /// The creature that set it off and makes the save.
         actor: Handle,
     },
-    /// A rest finished.
+    /// A rest finished, after any Hit Point Dice it spent; resources have recharged. Public.
     Rest {
         /// Who rested.
         participants: Vec<Handle>,

@@ -94,7 +94,8 @@ pub enum RejectReason {
     NoValidTarget,
     /// The chosen target cannot be targeted by this option.
     InvalidTarget,
-    /// The actor lacks the resource (slot, use, movement) the option costs.
+    /// The actor lacks the resource (slot, use, movement) the option costs, or the Hit Point Dice
+    /// a short rest would spend.
     InsufficientResource,
     /// The action type has already been used this turn.
     ActionAlreadyUsed,

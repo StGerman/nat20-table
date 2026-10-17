@@ -8,8 +8,8 @@ use std::{collections::HashMap, path::PathBuf};
 
 use nat20_api_contract::{
     ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, EndCombatReason, ErrorCode,
-    Event, EventKind, Handle, Mode, MoveTarget, OptionId, PromptId, ReactionTrigger, RollId,
-    RollView, State, Visibility,
+    Event, EventKind, Handle, HitDiceSpend, Mode, MoveTarget, OptionId, PromptId, ReactionTrigger,
+    RollId, RollView, State, Visibility,
 };
 
 use crate::{
@@ -300,6 +300,19 @@ impl Session {
                 .expect("the check's roll was logged"),
             total: outcome.total,
             success: outcome.success,
+        })
+    }
+
+    /// A short rest; the dice rolled and Hit Points regained are in the log.
+    pub fn short_rest(
+        &mut self,
+        participants: &[Handle],
+        hit_dice: &[HitDiceSpend],
+    ) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.short_rest(participants, hit_dice);
+        self.after_decision(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
+        Ok(CommandResult::ShortRest {
+            healed: result.expect("errors returned above"),
         })
     }
 
