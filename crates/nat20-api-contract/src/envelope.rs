@@ -4,8 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Ability, AdvantageState, ApiError, Awaiting, Event, Handle, OptionId, PointFt, PromptId,
-    RollId, Sheet, Skill, State, V1, Viewer,
+    Ability, ApiError, Awaiting, Event, Handle, OptionId, PointFt, PromptId, RollId, Sheet, Skill,
+    State, V1, Viewer,
     state::{ActionOption, UnavailableOption},
 };
 
@@ -115,22 +115,15 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         prompt_id: Option<PromptId>,
     },
-    /// Asks the engine to roll an ability check. The engine rolls and decides success.
+    /// Asks the engine to roll an ability check or saving throw in explore mode. The engine rolls
+    /// and decides success, and applies the scenario check's consequences. Each scenario check is
+    /// rolled at most once per scene, by anyone; a second request answers `rejected` with
+    /// `already_attempted`. Advantage comes only from what the engine knows, never from the caller.
     RequestCheck {
         /// The creature that makes the check.
         actor: Handle,
         /// Which check.
         check: CheckSpec,
-        /// Advantage or Disadvantage, always with the rules reason for it.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        advantage: Option<AdvantageGrant>,
-    },
-    /// A group check from the scenario: succeeds when at least half the group succeeds.
-    GroupCheck {
-        /// The creatures that make the check.
-        actors: Vec<Handle>,
-        /// Check id from the scene.
-        check_id: String,
     },
     /// A short rest. Each participant may spend Hit Point Dice.
     ShortRest {
@@ -191,30 +184,23 @@ pub enum MoveTarget {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CheckSpec {
-    /// A check the scenario defines, with its ability, skill and DC.
+    /// A check the scenario defines, with its skill or saving throw and its DC. Rolled at most
+    /// once per scene.
     Scenario {
         /// Check id from the scene.
         check_id: String,
     },
-    /// A check the DM picks from the SRD DC ladder (5 very easy to 30 nearly impossible).
+    /// A check the DM picks from the SRD DC ladder (5 very easy to 30 nearly impossible) when no
+    /// scenario check fits. Not limited per scene.
     Ladder {
-        /// The ability.
+        /// The ability; it must be the skill's own ability.
         ability: Ability,
-        /// The skill, if one applies.
+        /// The skill. A check without one answers `not_implemented`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         skill: Option<Skill>,
-        /// The DC: one of 5, 10, 15, 20, 25, 30.
+        /// The DC: one of 5, 10, 15, 20, 25, 30; anything else is a `bad_request`.
         dc: u8,
     },
-}
-
-/// Advantage or Disadvantage granted to a check, with its reason.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct AdvantageGrant {
-    /// `advantage` or `disadvantage`.
-    pub state: AdvantageState,
-    /// The rules reason, logged with the roll, e.g. "Help action from Lia".
-    pub reason: String,
 }
 
 /// Hit Point Dice one creature spends on a short rest.
@@ -333,13 +319,6 @@ pub enum CommandResult {
         /// The check total.
         total: i32,
         /// Whether the check succeeded. The engine decides, never the caller.
-        success: bool,
-    },
-    /// The group check's rolls and outcome.
-    GroupCheck {
-        /// One roll per actor, in the order given.
-        roll_ids: Vec<RollId>,
-        /// Whether at least half the group succeeded.
         success: bool,
     },
     /// Hit Points regained on the short rest.

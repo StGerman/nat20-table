@@ -6,13 +6,18 @@
 //! copies new engine events into the log, and runs scripted creatures until a client decision
 //! is needed.
 
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::{BTreeSet, HashMap, HashSet},
+    path::Path,
+};
 
 use hecs::Entity;
 use nat20_api_contract::{
-    ActionCost, ActionOption, Anchor, ApiError, Control, CreatureFull, ErrorCode, ErrorHint,
-    EventKind, Handle, HealthBand, Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption,
-    RejectReason, SceneFile, Sheet, Side, TargetCandidate, Targeting, UnavailableOption,
+    ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, Consequence,
+    Control, CreatureFull, DcSource, ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand,
+    Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption, RejectReason, RollId,
+    ScenarioCheck, SceneFile, Sheet, Side, TargetCandidate, Targeting, UnavailableOption,
+    Visibility,
 };
 use nat20_core::{
     components::{
@@ -21,11 +26,15 @@ use nat20_core::{
             targeting::{LineOfSight, TargetInstance, TargetingKind},
         },
         activity::{Activity, ActivityState},
+        d20::D20CheckDC,
+        damage::DamageRoll,
+        dice::DiceSet,
         faction::Attitude,
         health::{hit_points::HitPoints, life_state::LifeState},
         id::{ActionId, EntityIdentifier, ResourceId},
-        modifier::FlatModifiable,
+        modifier::{FlatModifiable, ModifierMap, ModifierSource},
         resource::ResourceAmount,
+        saving_throw::SavingThrowKind,
     },
     engine::{
         action_prompt::{ActionData, ActionPromptKind},
@@ -75,7 +84,21 @@ struct Scene {
     creatures: Vec<SceneCreature>,
     handles: HashMap<Entity, String>,
     anchors: Vec<Anchor>,
+    checks: Vec<ScenarioCheck>,
+    hazards: Vec<Hazard>,
+    /// Scenario checks already rolled in this scene; each is rolled at most once (decision D3).
+    attempted: HashSet<String>,
 }
+
+/// What `request_check` returns: the roll's local key, its total and whether it succeeded.
+pub struct CheckOutcome {
+    pub key: String,
+    pub total: i32,
+    pub success: bool,
+}
+
+/// The SRD DC ladder: very easy to nearly impossible.
+const DC_LADDER: [u8; 6] = [5, 10, 15, 20, 25, 30];
 
 /// What the engine waits on, in API terms. The session adds prompt ids.
 #[derive(Debug, Clone, PartialEq)]
@@ -136,6 +159,8 @@ pub struct Game {
     /// Set when combat ended by itself: the side left standing, if any.
     winner: Option<Option<Side>>,
     scripted_turn: Option<(usize, Entity, usize)>,
+    /// Scene flags set this session; they outlive the scene that set them.
+    flags: BTreeSet<String>,
 }
 
 impl Game {
@@ -341,6 +366,9 @@ impl Game {
                 .collect(),
             creatures,
             anchors: scene.anchors.clone(),
+            checks: scene.checks.clone(),
+            hazards: scene.hazards.clone(),
+            attempted: HashSet::new(),
         };
         game.encounter_seen = 0;
         game.winner = None;
@@ -360,6 +388,9 @@ impl Game {
                 creatures: Vec::new(),
                 handles: HashMap::new(),
                 anchors: Vec::new(),
+                checks: Vec::new(),
+                hazards: Vec::new(),
+                attempted: HashSet::new(),
             },
             encounter: None,
             pending: Vec::new(),
@@ -369,6 +400,7 @@ impl Game {
             encounter_seen: 0,
             winner: None,
             scripted_turn: None,
+            flags: BTreeSet::new(),
         }
     }
 
@@ -475,7 +507,272 @@ impl Game {
         &self.scene.anchors
     }
 
+    /// Session flags, sorted.
+    pub fn flags(&self) -> Vec<String> {
+        self.flags.iter().cloned().collect()
+    }
+
+    /// The scene's checks, in scene file order, with whether each was rolled.
+    pub fn checks(&self) -> Vec<CheckView> {
+        self.scene
+            .checks
+            .iter()
+            .map(|c| CheckView {
+                id: c.id.clone(),
+                test: c.test.clone(),
+                dc: c.dc,
+                rolled: self.scene.attempted.contains(&c.id),
+            })
+            .collect()
+    }
+
     // ---- commands -------------------------------------------------------
+
+    /// Rolls an ability check or saving throw for `actor` in explore mode and applies a scenario
+    /// check's consequences in order. The roll entry comes first, then `check_resolved`, then
+    /// what the consequences log.
+    pub fn request_check(
+        &mut self,
+        actor: &str,
+        check: &CheckSpec,
+    ) -> Result<CheckOutcome, ApiError> {
+        if self.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::NotImplemented,
+                "In combat a check is an action; request_check serves explore mode only for now.",
+            ));
+        }
+        let entity = self.entity(actor)?;
+        let (test, dc, dc_source, scenario) = match check {
+            CheckSpec::Scenario { check_id } => {
+                let Some(found) = self.scene.checks.iter().find(|c| c.id == *check_id) else {
+                    let mut e = error(
+                        ErrorCode::UnknownCheck,
+                        format!("Scene {} has no check {check_id}.", self.scene.id),
+                    );
+                    let known_ids: Vec<String> =
+                        self.scene.checks.iter().map(|c| c.id.clone()).collect();
+                    if !known_ids.is_empty() {
+                        e.hint = Some(ErrorHint {
+                            legal_option_ids: Vec::new(),
+                            awaiting: None,
+                            known_ids,
+                        });
+                    }
+                    return Err(e);
+                };
+                if self.scene.attempted.contains(check_id) {
+                    return Err(rejected(
+                        RejectReason::AlreadyAttempted,
+                        format!(
+                            "{check_id} was already rolled in this scene; each scenario check is rolled once per scene."
+                        ),
+                    ));
+                }
+                (
+                    found.test.clone(),
+                    found.dc,
+                    DcSource::Scenario,
+                    Some(found.clone()),
+                )
+            }
+            CheckSpec::Ladder { ability, skill, dc } => {
+                if !DC_LADDER.contains(dc) {
+                    return Err(error(
+                        ErrorCode::BadRequest,
+                        format!("A ladder DC is one of 5, 10, 15, 20, 25 or 30, not {dc}."),
+                    ));
+                }
+                let Some(skill) = skill else {
+                    return Err(error(
+                        ErrorCode::NotImplemented,
+                        "A ladder check without a skill is not served yet; name the skill.",
+                    ));
+                };
+                if sheet::core_ability(*ability) != sheet::core_skill(*skill).ability() {
+                    return Err(error(
+                        ErrorCode::NotImplemented,
+                        format!(
+                            "{} checks with another ability than {:?} are not served yet.",
+                            sheet::skill_word(*skill),
+                            sheet::core_skill(*skill).ability(),
+                        ),
+                    ));
+                }
+                (
+                    CheckTest::Skill { skill: *skill },
+                    *dc,
+                    DcSource::Ladder,
+                    None,
+                )
+            }
+        };
+        if !systems::health::is_alive(&self.engine.world, entity)
+            || life_state_name(&self.engine, entity) != "normal"
+        {
+            return Err(rejected(
+                RejectReason::ConditionPrevents,
+                format!("{actor} is down and cannot make a check."),
+            ));
+        }
+
+        if let Some(scenario) = &scenario {
+            self.scene.attempted.insert(scenario.id.clone());
+        }
+        let (key, total, success) = self.roll_check(entity, &test, dc, dc_source);
+        self.pending.push(Pending {
+            round: None,
+            visibility: Visibility::Dm,
+            kind: EventKind::CheckResolved {
+                check_id: scenario.as_ref().map(|c| c.id.clone()),
+                actor: Handle(actor.to_owned()),
+                roll_id: RollId(key.clone()),
+                success,
+            },
+        });
+        if let Some(scenario) = scenario {
+            let consequences = if success {
+                &scenario.on_success
+            } else {
+                &scenario.on_failure
+            };
+            self.apply(entity, consequences);
+        }
+        // Anything the engine logged on its own (a concentration save after damage).
+        self.drain();
+        Ok(CheckOutcome {
+            key,
+            total,
+            success,
+        })
+    }
+
+    /// Rolls `test` against `dc` for `entity` and logs the roll. Returns the roll's local key,
+    /// its total and whether it succeeded.
+    fn roll_check(
+        &mut self,
+        entity: Entity,
+        test: &CheckTest,
+        dc: u8,
+        dc_source: DcSource,
+    ) -> (String, i32, bool) {
+        let dc_value = ModifierMap::from(ModifierSource::Base, dc as i32).evaluate();
+        let (dc, label) = match test {
+            CheckTest::Skill { skill } => (
+                D20CheckDC::Skill {
+                    skill: sheet::core_skill(*skill),
+                    dc: dc_value,
+                },
+                format!(
+                    "a {:?} ({}) check",
+                    sheet::core_skill(*skill).ability(),
+                    sheet::skill_word(*skill)
+                ),
+            ),
+            CheckTest::Save { ability } => (
+                D20CheckDC::SavingThrow {
+                    saving_throw: SavingThrowKind::Ability(sheet::core_ability(*ability)),
+                    dc: dc_value,
+                },
+                format!("a {} saving throw", sheet::ability_word(*ability)),
+            ),
+        };
+        let result = systems::d20::check_no_event(&self.engine, entity, &dc, None);
+        let success = result.is_success(&dc);
+        let roller = self.handle_of(entity);
+        let mut writer = self.writer();
+        let (entry, key) = writer.explore_check(&roller, label, &result, &dc, dc_source);
+        self.pending.push(entry);
+        (key, result.total(), success)
+    }
+
+    /// Applies consequences to `entity`, in order.
+    fn apply(&mut self, entity: Entity, consequences: &[Consequence]) {
+        for consequence in consequences {
+            match consequence {
+                Consequence::Flag { flag } => {
+                    if self.flags.insert(flag.clone()) {
+                        self.pending.push(Pending {
+                            round: None,
+                            visibility: Visibility::Dm,
+                            kind: EventKind::FlagSet { flag: flag.clone() },
+                        });
+                    }
+                }
+                Consequence::Hazard { hazard_id } => {
+                    let hazard = self
+                        .scene
+                        .hazards
+                        .iter()
+                        .find(|h| h.id == *hazard_id)
+                        .cloned()
+                        .expect("scene::read checks hazard ids");
+                    self.pending.push(Pending {
+                        round: None,
+                        visibility: Visibility::Dm,
+                        kind: EventKind::HazardTriggered {
+                            hazard_id: hazard.id.clone(),
+                            actor: Handle(self.handle_of(entity)),
+                        },
+                    });
+                    let (_, _, saved) = self.roll_check(
+                        entity,
+                        &CheckTest::Save {
+                            ability: hazard.save.ability,
+                        },
+                        hazard.save.dc,
+                        DcSource::Scenario,
+                    );
+                    // scene::read refuses a hazard that sets off another hazard, so this ends.
+                    let next = if saved {
+                        &hazard.on_success
+                    } else {
+                        &hazard.on_failure
+                    };
+                    self.apply(entity, next);
+                }
+                Consequence::Damage { dice, damage_type } => {
+                    let (count, size, bonus) =
+                        scene::parse_dice(dice).expect("scene::read checks damage dice");
+                    let mut damage = ModifierMap::default();
+                    let source = ModifierSource::Custom("Hazard".into());
+                    damage.add_modifier(
+                        source.clone(),
+                        format!("{count}d{size}")
+                            .parse::<DiceSet>()
+                            .expect("scene::read allows only dice the engine rolls"),
+                    );
+                    damage.add_modifier(source, bonus as i32);
+                    let mut roll =
+                        DamageRoll::new(damage, names::core_damage_type(*damage_type)).roll(false);
+                    let (taken, new_life_state) =
+                        systems::health::damage(&mut self.engine, entity, &mut roll, None, None);
+                    let roller = self.handle_of(entity);
+                    let mut writer = self.writer();
+                    let entries = writer.plain_damage(
+                        &roller,
+                        entity,
+                        &roll,
+                        taken.as_ref(),
+                        new_life_state.as_ref(),
+                    );
+                    self.pending.extend(entries);
+                }
+            }
+        }
+    }
+
+    /// A log writer for entries made outside the engine's own event log.
+    fn writer(&mut self) -> LogWriter<'_> {
+        LogWriter {
+            engine: &self.engine,
+            handles: &self.scene.handles,
+            round: None,
+            hp: &mut self.hp,
+            keys: &mut self.keys,
+            initiative: Vec::new(),
+        }
+    }
 
     /// Moves `actor` and returns the feet it moved and who it provoked. In explore mode the
     /// creature walks the whole route at no movement cost and provokes nobody, since nobody

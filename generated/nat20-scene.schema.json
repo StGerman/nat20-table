@@ -76,7 +76,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.8"
+    "version": "1.0.0-dev.9"
   },
   "$defs": {
     "Ability": {
@@ -231,7 +231,7 @@
               "$ref": "#/$defs/DamageType"
             },
             "dice": {
-              "description": "Dice in `NdM` or `NdM+K` form, e.g. `1d6`.",
+              "description": "Dice in `NdM` or `NdM+K` form, e.g. `1d6`; M is 4, 6, 8, 10, 12, 20 or 100.",
               "type": "string"
             },
             "kind": {

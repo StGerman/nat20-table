@@ -406,6 +406,41 @@ fn tail(id: &str, prefix: &str) -> String {
 }
 
 /// The six abilities in sheet order.
+/// The core ability behind a wire ability.
+pub(super) fn core_ability(ability: WireAbility) -> Ability {
+    ABILITIES
+        .iter()
+        .find(|(_, wire)| *wire == ability)
+        .map(|(core, _)| *core)
+        .expect("ABILITIES lists every wire ability")
+}
+
+/// The core skill behind a wire skill.
+pub(super) fn core_skill(skill: WireSkill) -> Skill {
+    SKILLS
+        .iter()
+        .find(|(_, wire)| *wire == skill)
+        .map(|(core, _)| *core)
+        .expect("SKILLS lists every wire skill")
+}
+
+/// A wire skill's name as the rules write it, e.g. `Sleight of Hand`.
+pub(super) fn skill_word(skill: WireSkill) -> String {
+    let mut out = String::new();
+    for (i, c) in format!("{:?}", core_skill(skill)).chars().enumerate() {
+        if c.is_uppercase() && i > 0 {
+            out.push(' ');
+        }
+        out.push(c);
+    }
+    out.replace(" Of ", " of ")
+}
+
+/// A wire ability's name as the rules write it, e.g. `Wisdom`.
+pub(super) fn ability_word(ability: WireAbility) -> String {
+    format!("{:?}", core_ability(ability))
+}
+
 const ABILITIES: [(Ability, WireAbility); 6] = [
     (Ability::Strength, WireAbility::Strength),
     (Ability::Dexterity, WireAbility::Dexterity),

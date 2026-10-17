@@ -181,7 +181,7 @@ pub enum EventKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         anchor: Option<String>,
     },
-    /// A check resolved.
+    /// A check resolved. DM only: `check_id` is scenario data.
     CheckResolved {
         /// The scenario check id, for scenario checks.
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -192,6 +192,19 @@ pub enum EventKind {
         roll_id: RollId,
         /// Whether it succeeded.
         success: bool,
+    },
+    /// A scene flag was set for the first time this session. DM only.
+    FlagSet {
+        /// The flag.
+        flag: String,
+    },
+    /// A scenario hazard was set off; its saving throw follows. DM only: players see the save
+    /// and any damage.
+    HazardTriggered {
+        /// Hazard id from the scene.
+        hazard_id: String,
+        /// The creature that set it off and makes the save.
+        actor: Handle,
     },
     /// A rest finished.
     Rest {
@@ -257,6 +270,10 @@ pub enum RollView {
         /// DC 10 is a rule.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         dc_source: Option<DcSource>,
+        /// The rules reasons behind `advantage`, as the engine tracked them, e.g. a condition or
+        /// a feature. Empty when the roll is normal.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        advantage_sources: Vec<String>,
     },
     /// What another player sees: the dice, the total and the result.
     Player {

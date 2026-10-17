@@ -3,14 +3,14 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.8): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat`, `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1) and `events`, with the §5 projection, and answers `request_check`, `group_check`, `short_rest` and `spawn` with `not_implemented`. `end_combat` answers `wrong_mode` outside combat and `not_implemented` during a fight, since scenes carry no end-combat reasons yet. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: no `surprised` in `start_combat`, no options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.9): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat`, `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3) and `events`, with the §5 projection, and answers `short_rest` and `spawn` with `not_implemented`. `end_combat` answers `wrong_mode` outside combat and `not_implemented` during a fight, since scenes carry no end-combat reasons yet. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: no `surprised` in `start_combat`, no options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
 - A roll's `full` view goes to the DM only. Every player, the roller included, gets the `player` view: dice, total and outcome, no modifiers, no `against`, no `dc_source`. Stas chose this over the draft's default 5 on 2026-10-16; players read their own modifiers and AC from their sheet.
 - `hp_after` is gone from `damage_taken` and `healed`. Hit Points after a change travel in a separate `hit_points` event with DM or owner visibility, so a player projection drops the whole event instead of redacting a field.
 - Event `visibility` is an object tagged by `scope` (`{"scope":"owner","handle":"lia"}`), not the string `owner:lia`.
-- `request_check` takes `check: {kind:"scenario", check_id} | {kind:"ladder", ability, skill?, dc}` and `advantage: {state, reason}`, so a grant always carries its reason.
+- `request_check` takes `check: {kind:"scenario", check_id} | {kind:"ladder", ability, skill?, dc}` and no Advantage grant: Advantage comes only from what the engine tracks, and its reasons are logged in the roll's `advantage_sources` (decision D2 of the Milestone 3 spec). There is no `group_check` (decision D1): the DM picks who rolls.
 - `short_rest.hit_dice` is a list of `{handle, count}`; `move.to` is tagged by `kind` (`anchor`, `creature`, `point`).
 - `submit`, `react` and `end_turn` return an empty result (`{"cmd":"submit"}`); what happened is in `events`.
 - `new_session.seed` is a u32, so it survives JavaScript numbers.
@@ -66,7 +66,7 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 ```
 - **One log per session.** Sequence numbers and roll ids are unique and monotonic for the whole session and never reused or rewritten. `load_scene` appends a `scene_loaded` event and doesn't clear anything.
 - **The party persists.** PCs keep HP, slots, resources and conditions across scenes (API-5). Monsters belong to their scene.
-- **One engine per session.** Every scene of a session runs in the same engine, so nothing about a carried creature is copied or rebuilt. `load_scene{party}` keeps the listed creatures of the current scene, places them at the new scene's `party_start` anchors in party order (the last anchor takes any creature beyond the list) and removes every other creature of the previous scene. Then the new scene's own `creatures` are placed. A creature can be carried whatever its side, such as a prisoner. A scene that places no creature of its own needs a party (`bad_request` without one); a scene with no `party_start` takes none (`bad_request`). A carried handle must be in the current scene (`unknown_creature`), may be listed only once (`bad_request`) and must not also be defined by the new scene (`bad_scene`). A refused `load_scene` changes nothing.
+- **One engine per session.** Every scene of a session runs in the same engine, so nothing about a carried creature is copied or rebuilt. `load_scene{party}` keeps the listed creatures of the current scene, places them at the new scene's `party_start` anchors in party order (the last anchor takes any creature beyond the list) and removes every other creature of the previous scene. Then the new scene's own `creatures` are placed. A creature can be carried whatever its side, such as a prisoner. A scene that places no creature of its own needs a party (`bad_request` without one); a scene with no `party_start` takes none (`bad_request`). A carried handle must be in the current scene (`unknown_creature`), may be listed only once (`bad_request`) and must not also be defined by the new scene (`bad_scene`). A refused `load_scene` changes nothing. Scene flags (§4.3) belong to the session and outlive every scene.
 - **No scene change mid-fight.** `load_scene` while a fight is running answers `wrong_mode` (not retryable) and changes nothing; the fight ends first, by a side going down or by `end_combat{reason}`. That way every `combat_started` in the log has its `combat_over`.
 - **Leaving combat.** Both ways back land in explore mode in the same scene. When a side is down, the engine ends combat by itself: it logs `combat_over`, switches the scene to explore mode and reports `awaiting: combat_over` until a command changes the session (`load_scene`, `start_combat`, or any explore command that acts), after which `awaiting` reads `none`; read-only and rejected commands keep reporting it. Any explore command, `start_combat` or `load_scene` goes on from there; `end_combat`, `legal_actions`, `submit`, `react` and `end_turn` then answer `wrong_mode` (not retryable), because combat is already over and nothing is pending. `end_combat{reason}` is only for ending a fight early.
 - **Seed.** `new_session{seed?}` takes a u32. When it's omitted, the engine picks one and logs it in `session_started`. The same seed plus the same request stream gives an identical log and identical responses, so any session replays from its logged seed (fixture `duel.jsonl`). Every u32 is a real seed, 0 included. The core keeps one dice generator per thread and `new_session` re-seeds it, so one engine process runs one session at a time.
@@ -76,8 +76,8 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 `load_scene{scene_id}` reads `<data>/scenes/<scene_id>.json`, a `SceneFile` (contract module `scene.rs`, schema `generated/nat20-scene.schema.json`, TS `scene` namespace of the engine client). The DM agent reads the same files, so both sides agree on check ids, anchors, encounters and spawns. A scene file is DM-only data (§5): nothing in it, nor anything derived from it, goes into a player view except anchor names and positions.
 
 - **Contents.** `anchors` (named landmarks), `creatures` (placed on load, each `at` an anchor or a point), `party_start` (anchors for carried creatures, in party order), `checks` (a skill check or save, a DC, and consequences on success and failure), `hazards` (a save and its consequences), `encounters` (participants, a surprise rule, a surrender condition, other allowed early ends) and `spawns` (creatures placed by the DM, by a flag at combat start, or at a round).
-- **Checked on load.** Besides the schema (unknown fields are refused), the engine refuses a scene with `bad_scene` and changes nothing when: an id (anchor, check, hazard, encounter, spawn, flag, handle) isn't a plain name or repeats; a handle repeats across `creatures` and spawns; any handle, a carried encounter participant's included, is `dm`; a creature names an unknown pregen or stat block, or both or neither; an `at` or `party_start` names an unknown anchor; a consequence names an unknown hazard, a hazard sets off another hazard, or damage dice aren't `NdM` or `NdM+K`; a DC is outside 1 to 30; an encounter has no participants, lists one twice, or names a creature the scene doesn't define while it has no `party_start` (only a carried creature could fill it); a surrender condition names a non-participant, has no trigger, a fraction outside (0, 1), or a leader that isn't one of its creatures; `surrender` appears in `end_reasons` (a surrender condition governs it); a spawn is empty or fires at round 0; the `map` isn't a terrain file under `maps/`.
-- **Served so far.** Placement of `creatures` at anchors or points, `map`, `party_start` for carried creatures (§2), and `anchors` in state and as `move` goals (§4.1). Everything else in the file is read and checked but not acted on yet; each part is served by its Milestone 3 step (spec §7): flags (with checks, step 5), checks and hazards (CHK-1, CHK-2), encounters (API-9, API-22), spawns (API-8). The commands that use them keep answering `not_implemented` until then.
+- **Checked on load.** Besides the schema (unknown fields are refused), the engine refuses a scene with `bad_scene` and changes nothing when: an id (anchor, check, hazard, encounter, spawn, flag, handle) isn't a plain name or repeats; a handle repeats across `creatures` and spawns; any handle, a carried encounter participant's included, is `dm`; a creature names an unknown pregen or stat block, or both or neither; an `at` or `party_start` names an unknown anchor; a consequence names an unknown hazard, a hazard sets off another hazard, or damage dice aren't `NdM` or `NdM+K` with M one of 4, 6, 8, 10, 12, 20, 100; a DC is outside 1 to 30; an encounter has no participants, lists one twice, or names a creature the scene doesn't define while it has no `party_start` (only a carried creature could fill it); a surrender condition names a non-participant, has no trigger, a fraction outside (0, 1), or a leader that isn't one of its creatures; `surrender` appears in `end_reasons` (a surrender condition governs it); a spawn is empty or fires at round 0; the `map` isn't a terrain file under `maps/`.
+- **Served so far.** Placement of `creatures` at anchors or points, `map`, `party_start` for carried creatures (§2), `anchors` in state and as `move` goals (§4.1), and `checks`, `hazards` and the flags they set (§4.3). Everything else in the file is read and checked but not acted on yet; each part is served by its Milestone 3 step (spec §7): encounters (API-9, API-22), spawns (API-8). The commands that use them keep answering `not_implemented` until then.
 - **Coordinates.** `x_ft` east-west, `y_ft` north-south, `z_ft` up, in feet. The engine places a creature on the ground below its point.
 - **Test scenario.** `m3_s1_green` to `m3_s5_cellar` (`m3_trail`, 5 scenes, Bren and Goblin Warriors) exercise every part of the format; Milestone 3 replays them end to end (API-23).
 
@@ -109,8 +109,7 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 | `react` | `actor`, `prompt_id`, `choice: int \| null` | `{accepted:true}` | the reactor's agent |
 | `end_turn` | `actor`, `prompt_id` | `{accepted:true}` | as above |
 | `move` | `actor`, `to: {anchor} \| {handle} \| {point}`, `prompt_id?` (required in combat) | `{moved_ft, provoked: handle[]}` | DM (explore), actor (combat) |
-| `request_check` | `actor`, `check_id` \| `{ability, skill?, dc, dc_source:"ladder"}`, `advantage?: "advantage"\|"disadvantage"` (only with a logged reason) | `{roll_id, total, success}` (projected) | DM |
-| `group_check` | `actors[]`, `check_id` | `{roll_ids[], success}` | DM |
+| `request_check` | `actor`, `check: {kind:"scenario", check_id} \| {kind:"ladder", ability, skill?, dc}` | `{roll_id, total, success}` | DM |
 | `short_rest` | `participants[]`, `hit_dice?: {handle: count}` | `{healed: {handle: hp}}` | DM |
 | `start_combat` | `participants[]`, `surprised?: handle[]` | `State` | DM (or a scenario trigger) |
 | `end_combat` | `reason: "surrender"\|"fled"\|"scenario"` | `State` | DM, only when the scenario allows the reason |
@@ -132,6 +131,15 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 - Check and save bonuses are what the engine adds to the d20 when it rolls: ability modifier, proficiency and lasting effects. Dice bonuses such as Bless are left out. `initiative_bonus` is the engine's initiative check; Passive Perception is 10 plus the Perception bonus.
 - Not filled yet: `hit_dice` (empty until the engine has a Hit Point Dice pool, ENG-4), `conditions` and `exhaustion` (as in state).
 
+### 4.3 Checks, hazards and flags
+
+- `request_check` works in explore mode; in combat it answers `not_implemented`, since a check there is an action. The engine rolls, decides success and logs, in order: the `roll` (`full` view with `against` and `dc_source`), `check_resolved` (DM only), then what the check's consequences log. The result's `roll_id` is that roll's id.
+- **Scenario checks.** `check_id` names a check of the loaded scene: a skill check or a saving throw with its DC. An id the scene doesn't define answers `unknown_check`; the DM's error carries the scene's check ids in `hint.known_ids`, a player's carries none. Each scenario check is rolled at most once per scene, by anyone: a second request answers `rejected` with `already_attempted` (decision D3). The once-per-scene record starts empty when a scene loads.
+- **Ladder checks.** For a check no scenario check covers, the DM names a skill and a DC from the SRD ladder: 5, 10, 15, 20, 25 or 30 (`bad_request` otherwise). `ability` must be the skill's own ability. Not served yet, each answering `not_implemented`: a check without a skill, or a skill with another ability. Ladder checks have no consequences and no once-per-scene limit.
+- A creature at 0 Hit Points can't make a check (`rejected`, `condition_prevents`). A refused check rolls nothing and logs nothing.
+- **Consequences** run in scene file order. `flag` sets a session flag and logs `flag_set` (DM only) the first time it is set; flags outlive the scene and appear in the DM state, sorted. `hazard` logs `hazard_triggered` (DM only), rolls the hazard's saving throw for the same creature (`dc_source: "scenario"`), then runs the hazard's own consequences for that save. `damage` rolls the dice and applies them to that creature: a `damage` roll, `damage_taken` citing it, `hit_points` (owner and DM), and `life_state` if it changed.
+- Advantage comes only from what the engine tracks (conditions, features); each reason is in the roll's `advantage_sources`, DM view only. Help comes with Milestone 3 step 10 (U6).
+
 `Option` (from `legal_actions`):
 ```json
 { "option_id": "melee_attack/longsword", "action": "nat20_core::action.melee_attack",
@@ -150,12 +158,12 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 | Conditions | yes | yes | only visible ones (all SRD conditions except `invisible` while unseen) |
 | Position, distance (ft) | yes | yes | yes, for creatures the viewer perceives (all of them until vision exists) |
 | Roll: dice, total, outcome | yes (`full` view) | yes (`player` view) | yes (`player` view) |
-| Roll: modifiers, `against` (AC/DC), `dc_source` | yes | no; own modifiers and AC are on the sheet | no |
+| Roll: modifiers, `against` (AC/DC), `dc_source`, `advantage_sources` | yes | no; own modifiers and AC are on the sheet | no |
 | Damage or healing amount | yes | yes | yes (it is said at the table) |
 | `hit_points` events (HP after a change) | yes | own creature only | no |
-| Scenario data: the scene file's check DCs, hazards, encounters, surrender conditions, flags, spawns | yes | no | no |
+| Scenario data: the scene file's check DCs, hazards, encounters, surrender conditions, flags, spawns; in state, `flags` and `checks`; the events `check_resolved`, `flag_set` and `hazard_triggered` | yes | no | no |
 | Anchors: id, name, position | yes | yes, with `distance_ft` from the viewer | yes, with `distance_ft` from the viewer |
-| `known_ids` in an error hint (the scene's anchor ids after `unknown_anchor`) | yes | no | no |
+| `known_ids` in an error hint (the scene's anchor ids after `unknown_anchor`, its check ids after `unknown_check`) | yes | no | no |
 | `unavailable` reasons in `legal_actions` | yes | yes | n/a |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
 
@@ -179,18 +187,21 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `condition_added` / `condition_removed` | `target`, `condition`, `source` |
 | `life_state` | `target`, `state: conscious\|unconscious\|stable\|dead` |
 | `moved` | `actor`, `from`, `to` (ft), `anchor?` |
-| `check_resolved` | `check_id?`, `actor`, `roll_id`, `success` |
+| `check_resolved` | `check_id?`, `actor`, `roll_id`, `success` (DM only) |
+| `flag_set` | `flag` (DM only) |
+| `hazard_triggered` | `hazard_id`, `actor` (DM only) |
 | `rest` | `participants`, `rest: short\|long` |
 | `spawned` | `spawn_id`, `handles[]` |
 
-`RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against` and `dc_source`):
+`RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
 ```json
 { "view": "full", "id": "r412", "kind": "attack|saving_throw|ability_check|skill_check|initiative|damage|healing|death_save",
   "label": "Longsword attack vs goblin_1", "roller": "bren", "target": "goblin_1",
   "dice": [{"source":"d20","dice":"1d20","results":[14,6],"kept":14}],
   "modifiers": [{"source":"Strength","value":3},{"source":"Proficiency","value":2}],
   "total": 19, "against": {"kind":"AC","value":15}, "outcome": "hit",
-  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block" }
+  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block",
+  "advantage_sources": ["Effect: some_effect (advantage)"] }
 ```
 In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC except a death save's fixed DC 10. Only `initiative`, `damage` and `healing` rolls have no `against`.
 
@@ -214,7 +225,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted` | true |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |
 | `internal` | An engine bug. The request did nothing, and the engine logs details to stderr | false |

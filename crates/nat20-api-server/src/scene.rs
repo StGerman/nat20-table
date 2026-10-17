@@ -336,7 +336,9 @@ fn check_consequence(
         Consequence::Hazard { .. } => Ok(()),
         Consequence::Damage { dice, .. } if parse_dice(dice).is_none() => Err(error(
             ErrorCode::BadScene,
-            format!("The damage dice {dice:?} must look like 1d6 or 2d8+2."),
+            format!(
+                "The damage dice {dice:?} must look like 1d6 or 2d8+2, with a d4, d6, d8, d10, d12, d20 or d100."
+            ),
         )),
         Consequence::Damage { .. } => Ok(()),
     }
@@ -364,7 +366,8 @@ fn check_dc(id: &str, dc: u8) -> Result<(), ApiError> {
     }
 }
 
-/// `NdM` or `NdM+K`: count 1 to 20, die size 2 to 100, bonus 0 to 100.
+/// `NdM` or `NdM+K`: count 1 to 20, a die the engine rolls (d4, d6, d8, d10, d12, d20 or
+/// d100), bonus 0 to 100.
 pub fn parse_dice(dice: &str) -> Option<(u32, u32, u32)> {
     let (count, rest) = dice.split_once('d')?;
     let (size, bonus) = match rest.split_once('+') {
@@ -378,7 +381,7 @@ pub fn parse_dice(dice: &str) -> Option<(u32, u32, u32)> {
         s.parse().ok()
     };
     let (count, size, bonus) = (number(count)?, number(size)?, number(bonus)?);
-    ((1..=20).contains(&count) && (2..=100).contains(&size) && bonus <= 100)
+    ((1..=20).contains(&count) && [4, 6, 8, 10, 12, 20, 100].contains(&size) && bonus <= 100)
         .then_some((count, size, bonus))
 }
 
@@ -431,7 +434,7 @@ mod tests {
         assert_eq!(parse_dice("1d6"), Some((1, 6, 0)));
         assert_eq!(parse_dice("2d8+2"), Some((2, 8, 2)));
         for bad in [
-            "d6", "1d", "1d6+", "1d6-1", "0d6", "1d1", "21d6", "1 d6", "1d6+x",
+            "d6", "1d", "1d6+", "1d6-1", "0d6", "1d1", "1d3", "21d6", "1 d6", "1d6+x",
         ] {
             assert_eq!(parse_dice(bad), None, "{bad}");
         }
