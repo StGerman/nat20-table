@@ -1003,15 +1003,21 @@ fn a_check_after_a_fight_closes_its_combat_over() {
     let started = api.start_duel("dm");
     let (last, _) = fight_to_the_end(&mut api, started);
     assert_eq!(last["awaiting"]["kind"], "combat_over", "{last}");
+    // The session is unseeded, so either side can win; the survivor makes the checks.
+    let standing = if last["awaiting"]["winner"] == "party" {
+        "bren"
+    } else {
+        "goblin"
+    };
     let refused = api.call(
         "dm",
-        json!({ "cmd": "request_check", "actor": "bren", "check": { "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 12 } }),
+        json!({ "cmd": "request_check", "actor": standing, "check": { "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 12 } }),
     );
     assert_eq!(refused["error"]["code"], "bad_request", "{refused}");
     assert_eq!(refused["awaiting"]["kind"], "combat_over", "{refused}");
     let rolled = api.call(
         "dm",
-        json!({ "cmd": "request_check", "actor": "bren", "check": { "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 10 } }),
+        json!({ "cmd": "request_check", "actor": standing, "check": { "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 10 } }),
     );
     assert_eq!(rolled["ok"], true, "{rolled}");
     assert_eq!(rolled["awaiting"]["kind"], "none", "{rolled}");
