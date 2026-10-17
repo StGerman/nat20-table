@@ -7,7 +7,7 @@ use std::{
 
 use nat20_api_contract::{
     ApiError, Awaiting, CONTRACT_VERSION, Command, CommandResult, ErrorCode, PROTOCOL_MAJOR,
-    PROTOCOL_NAME, Request, Response, V1,
+    PROTOCOL_NAME, RejectReason, Request, Response, V1,
 };
 
 use crate::{adapter, errors, projection::Viewer, session::Session};
@@ -275,6 +275,22 @@ fn for_viewer(mut error: ApiError, viewer: &Viewer) -> ApiError {
     if error.code == ErrorCode::BadScene && *viewer != Viewer::Dm {
         eprintln!("bad_scene: {}", error.message);
         error.message = "The scene is invalid; the DM can see why.".into();
+    }
+    // Why an early end is refused names the encounter and its scene rules, scenario data.
+    if *viewer != Viewer::Dm {
+        let player_message = match (error.code, error.reason) {
+            (ErrorCode::SurrenderNotAvailable, _) => {
+                Some("Surrender is not available in this fight right now; the DM can see why.")
+            }
+            (ErrorCode::Rejected, Some(RejectReason::ConditionNotMet)) => {
+                Some("This fight cannot end that way right now; the DM can see why.")
+            }
+            _ => None,
+        };
+        if let Some(message) = player_message {
+            eprintln!("{:?}: {}", error.code, error.message);
+            error.message = message.into();
+        }
     }
     // Scene ids are scenario data: only the DM learns which ones exist.
     if *viewer != Viewer::Dm

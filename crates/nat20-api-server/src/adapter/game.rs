@@ -1077,30 +1077,38 @@ impl Game {
         let round = self.round();
         self.drain();
         if reason == CombatOverReason::Surrender {
-            // The winners' factions stop being enemies of the creatures that gave up, in core
-            // too, so they can share a later scene (an interrogation) without a fight.
-            let winners: HashSet<FactionId> = self
+            // The creatures that gave up and the winners stop being enemies, in core too, so
+            // they can share a later scene (an interrogation) without a fight. Core takes the
+            // more hostile of the two directions, so both change: the surrendered creatures
+            // toward the winners' factions, and each winner toward the surrendered creatures
+            // only, so the rest of their faction stays as it was.
+            let winner_entities: Vec<Entity> = self
                 .scene
                 .creatures
                 .iter()
                 .filter(|c| Some(c.side) == winner)
-                .filter_map(|c| self.engine.world.get::<&FactionSet>(c.entity).ok())
+                .map(|c| c.entity)
+                .collect();
+            let winner_factions: HashSet<FactionId> = winner_entities
+                .iter()
+                .filter_map(|e| self.engine.world.get::<&FactionSet>(*e).ok())
                 .flat_map(|factions| factions.iter().cloned().collect::<Vec<_>>())
                 .collect();
             for entity in &surrendering {
-                if self.engine.world.get::<&AttitudeOverride>(*entity).is_err() {
-                    let _ = self
-                        .engine
-                        .world
-                        .insert_one(*entity, AttitudeOverride::new());
-                }
-                if let Ok(mut overrides) = self.engine.world.get::<&mut AttitudeOverride>(*entity) {
-                    for faction in &winners {
+                self.attitude_overrides(*entity, |overrides| {
+                    for faction in &winner_factions {
                         overrides
                             .factions
                             .insert(faction.clone(), Attitude::Neutral);
                     }
-                }
+                });
+            }
+            for entity in &winner_entities {
+                self.attitude_overrides(*entity, |overrides| {
+                    for surrendered in &surrendering {
+                        overrides.entities.insert(*surrendered, Attitude::Neutral);
+                    }
+                });
             }
             for creature in &mut self.scene.creatures {
                 if surrendering.contains(&creature.entity) {
@@ -1145,14 +1153,31 @@ impl Game {
             .collect()
     }
 
+    /// Changes `entity`'s attitude overrides in core, adding the component the first time.
+    fn attitude_overrides(&mut self, entity: Entity, change: impl FnOnce(&mut AttitudeOverride)) {
+        if self.engine.world.get::<&AttitudeOverride>(entity).is_err() {
+            let _ = self
+                .engine
+                .world
+                .insert_one(entity, AttitudeOverride::new());
+        }
+        if let Ok(mut overrides) = self.engine.world.get::<&mut AttitudeOverride>(entity) {
+            change(&mut overrides);
+        }
+    }
+
     /// Whether any trigger of a surrender condition holds, counted over its creatures that are
-    /// in the scene.
+    /// in the scene. With none of them in the scene nobody can surrender, and a leader who is
+    /// not in the scene is not down.
     fn surrender_holds(&self, condition: &SurrenderCondition) -> bool {
         let creatures: Vec<Entity> = condition
             .creatures
             .iter()
             .filter_map(|h| self.entity(&h.0).ok())
             .collect();
+        if creatures.is_empty() {
+            return false;
+        }
         let down = |e: Entity| {
             !systems::health::is_alive(&self.engine.world, e)
                 || life_state_name(&self.engine, e) != "normal"
@@ -1168,9 +1193,7 @@ impl Game {
             SurrenderTrigger::StandingAtMost { count } => {
                 creatures.iter().filter(|e| !down(**e)).count() as u32 <= *count
             }
-            SurrenderTrigger::LeaderDown { handle } => {
-                self.entity(&handle.0).map(down).unwrap_or(true)
-            }
+            SurrenderTrigger::LeaderDown { handle } => self.entity(&handle.0).is_ok_and(down),
         })
     }
 

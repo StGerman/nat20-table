@@ -1057,4 +1057,131 @@ fn a_refused_end_combat_changes_nothing() {
         json!([{ "id": "duel", "running": true, "surrender_available": false }]),
         "{after}"
     );
+    // A player learns that the fight cannot end that way, not which encounter it is or why.
+    for (reason, code) in [
+        ("surrender", "surrender_not_available"),
+        ("scenario", "rejected"),
+    ] {
+        let refused = api.call("bren", json!({ "cmd": "end_combat", "reason": reason }));
+        assert_eq!(refused["error"]["code"], code, "{refused}");
+        let message = refused["error"]["message"].as_str().unwrap();
+        assert!(
+            !message.contains("duel") && !message.contains("condition"),
+            "{refused}"
+        );
+    }
+}
+
+fn anchor(id: &str, x_ft: f32) -> Value {
+    json!({ "id": id, "name": id, "position_ft": { "x_ft": x_ft, "y_ft": 0.0, "z_ft": 0.0 } })
+}
+
+#[test]
+fn a_party_creature_that_surrenders_can_share_the_next_scene_with_its_captor() {
+    let dir = data_dir(
+        "captured",
+        &[
+            (
+                "last_stand",
+                json!({ "id": "last_stand",
+                    "creatures": [
+                        creature("bren", ("pregen", "fighter_l2"), "party", 0.0),
+                        creature("goblin", ("monster", "goblin_warrior"), "hostile", 5.0)
+                    ],
+                    "encounters": [{ "id": "stand", "participants": ["bren", "goblin"],
+                        "surrender": { "creatures": ["bren"],
+                            "any_of": [{ "kind": "standing_at_most", "count": 1 }] } }] }),
+            ),
+            (
+                "camp",
+                json!({ "id": "camp", "anchors": [anchor("tent", 0.0), anchor("post", 10.0)],
+                    "party_start": ["tent", "post"] }),
+            ),
+        ],
+    );
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "last_stand" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let started = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "stand" }),
+    );
+    assert_eq!(started["ok"], true, "{started}");
+    let ended = api.call("dm", json!({ "cmd": "end_combat", "reason": "surrender" }));
+    assert_eq!(ended["ok"], true, "{ended}");
+    let events = ended["events"].as_array().unwrap();
+    let surrendered = events.iter().find(|e| e["kind"] == "surrendered").unwrap();
+    assert_eq!(surrendered["handles"], json!(["bren"]), "{ended}");
+    let over = events.iter().find(|e| e["kind"] == "combat_over").unwrap();
+    assert_eq!(over["winner"], "hostile", "{ended}");
+    // The goblin no longer counts Bren as an enemy, so both can be carried into one scene.
+    let carried = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "camp", "party": ["goblin", "bren"] }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(carried["ok"], true, "{carried}");
+}
+
+#[test]
+fn surrender_needs_its_creatures_and_leader_in_the_scene() {
+    // Mira is never carried in, so neither condition can hold: nobody of the first group is
+    // here to give up, and a leader who is not here is not down.
+    let encounter = |id: &str, surrender: Value| {
+        json!({ "id": id, "participants": ["bren", "mira", "goblin"],
+            "surrender": surrender, "end_reasons": ["scenario"] })
+    };
+    let dir = data_dir(
+        "absent",
+        &[
+            (
+                "camp",
+                json!({ "id": "camp",
+                    "creatures": [creature("bren", ("pregen", "fighter_l2"), "party", 0.0)] }),
+            ),
+            (
+                "gate",
+                json!({ "id": "gate", "anchors": [anchor("gate", 0.0)], "party_start": ["gate"],
+                    "creatures": [creature("goblin", ("monster", "goblin_warrior"), "hostile", 5.0)],
+                    "encounters": [
+                        encounter("missing_group", json!({ "creatures": ["mira"],
+                            "any_of": [{ "kind": "standing_at_most", "count": 0 }] })),
+                        encounter("missing_leader", json!({ "creatures": ["goblin", "mira"],
+                            "any_of": [{ "kind": "leader_down", "handle": "mira" }] }))
+                    ] }),
+            ),
+        ],
+    );
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let camp = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "camp" }));
+    assert_eq!(camp["ok"], true, "{camp}");
+    let gate = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "gate", "party": ["bren"] }),
+    );
+    assert_eq!(gate["ok"], true, "{gate}");
+    for id in ["missing_group", "missing_leader"] {
+        let started = api.call("dm", json!({ "cmd": "start_combat", "encounter_id": id }));
+        assert_eq!(started["ok"], true, "{started}");
+        let encounters = &started["result"]["state"]["encounters"];
+        let running = encounters
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["id"] == id)
+            .unwrap();
+        assert_eq!(running["running"], true, "{started}");
+        assert_eq!(running["surrender_available"], false, "{started}");
+        let refused = api.call("dm", json!({ "cmd": "end_combat", "reason": "surrender" }));
+        assert_eq!(
+            refused["error"]["code"], "surrender_not_available",
+            "{refused}"
+        );
+        let ended = api.call("dm", json!({ "cmd": "end_combat", "reason": "scenario" }));
+        assert_eq!(ended["ok"], true, "{ended}");
+    }
+    std::fs::remove_dir_all(dir).ok();
 }
