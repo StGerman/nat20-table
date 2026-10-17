@@ -8,13 +8,13 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use hecs::Entity;
 use nat20_api_contract::{
-    ActionCost, ActionOption, ApiError, CreatureFull, ErrorCode, Handle, HealthBand, Mode,
-    OptionId, PointFt, ReactionOption, RejectReason, Side, TargetCandidate, Targeting,
+    ActionCost, ActionOption, ApiError, Control, CreatureFull, ErrorCode, Handle, HealthBand, Mode,
+    OptionId, PointFt, ReactionOption, RejectReason, SceneFile, Side, TargetCandidate, Targeting,
     UnavailableOption,
 };
 use nat20_core::{
@@ -39,7 +39,7 @@ use nat20_core::{
     },
     systems::{self, movement::TargetPathFindingResult},
 };
-use serde::Deserialize;
+use parry3d::na::Point3;
 
 use crate::{
     adapter::{
@@ -48,6 +48,7 @@ use crate::{
         names, pregen,
     },
     errors::{error, rejected},
+    scene,
 };
 
 /// Simulated seconds per engine tick while settling.
@@ -61,43 +62,6 @@ const MAX_SCRIPTED_STEPS: usize = 200;
 const MAX_SCRIPTED_ACTIONS_PER_TURN: usize = 4;
 
 const METERS_PER_FOOT: f32 = 0.3048;
-
-/// A scene file in `data/scenes/`. Scenario content, not wire: the DM names a scene by id.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SceneFile {
-    /// Scene id; must match the file name.
-    pub id: String,
-    /// What the scene is, for humans.
-    #[serde(default)]
-    pub description: String,
-    /// Every creature placed when the scene loads.
-    pub creatures: Vec<SceneCreatureDef>,
-}
-
-/// One creature in a scene file: exactly one of `pregen` or `monster`.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SceneCreatureDef {
-    pub handle: String,
-    #[serde(default)]
-    pub pregen: Option<String>,
-    #[serde(default)]
-    pub monster: Option<String>,
-    pub side: Side,
-    pub control: Control,
-    pub position: PointFt,
-}
-
-/// Who decides for a creature.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Control {
-    /// The API client (an agent or the human) decides.
-    Client,
-    /// The engine's scripted monster policy decides.
-    Scripted,
-}
 
 struct SceneCreature {
     handle: String,
@@ -172,41 +136,8 @@ pub struct Game {
 }
 
 impl Game {
-    /// Reads `data_dir/scenes/<scene_id>.json`.
-    pub fn read_scene(data_dir: &Path, scene_id: &str) -> Result<SceneFile, ApiError> {
-        if scene_id.is_empty()
-            || !scene_id
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
-        {
-            return Err(error(
-                ErrorCode::BadRequest,
-                "scene_id must be a plain name of letters, digits, - and _.",
-            ));
-        }
-        let path = data_dir.join("scenes").join(format!("{scene_id}.json"));
-        let text = std::fs::read_to_string(&path).map_err(|_| {
-            error(
-                ErrorCode::BadScene,
-                format!("There is no scene {scene_id}."),
-            )
-        })?;
-        let scene: SceneFile = serde_json::from_str(&text).map_err(|e| {
-            error(
-                ErrorCode::BadScene,
-                format!("Scene {scene_id} is not valid: {e}."),
-            )
-        })?;
-        if scene.id != scene_id {
-            return Err(error(
-                ErrorCode::BadScene,
-                format!("Scene file {scene_id} declares the id {}.", scene.id),
-            ));
-        }
-        Ok(scene)
-    }
-
-    /// Places every creature of `scene`, in explore mode.
+    /// Places every creature of `scene`, in explore mode. The scene has been read and checked by
+    /// [`crate::scene::read`]; its spawns, checks, hazards and encounters are not served yet.
     pub fn load(scene: &SceneFile, data_dir: &Path) -> Result<Self, ApiError> {
         if scene.creatures.is_empty() {
             return Err(error(
@@ -214,20 +145,14 @@ impl Game {
                 "A scene needs at least one creature.",
             ));
         }
-        let mut engine = new_engine_state();
+        let mut engine = new_engine_state(scene.map.as_deref());
         let mut creatures = Vec::new();
         let mut seen = HashSet::new();
         for def in &scene.creatures {
-            if def.handle == "dm" || def.handle.is_empty() {
+            if !seen.insert(def.handle.0.clone()) {
                 return Err(error(
                     ErrorCode::BadScene,
-                    format!("{:?} cannot be a creature handle.", def.handle),
-                ));
-            }
-            if !seen.insert(def.handle.clone()) {
-                return Err(error(
-                    ErrorCode::BadScene,
-                    format!("The handle {} is used twice.", def.handle),
+                    format!("The handle {} is used twice.", def.handle.0),
                 ));
             }
             let entity = match (&def.pregen, &def.monster) {
@@ -241,7 +166,7 @@ impl Game {
                     )
                 })?,
                 (None, Some(monster)) => {
-                    let path = monster_path(data_dir, monster)?;
+                    let path = scene::monster_path(data_dir, monster)?;
                     let def = MonsterDef::load(&path).map_err(|e| {
                         error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))
                     })?;
@@ -252,24 +177,18 @@ impl Game {
                 _ => {
                     return Err(error(
                         ErrorCode::BadScene,
-                        format!("{} needs exactly one of pregen or monster.", def.handle),
+                        format!("{} needs exactly one of pregen or monster.", def.handle.0),
                     ));
                 }
             };
-            let PointFt { x_ft, y_ft, z_ft } = def.position;
             systems::geometry::teleport_to_ground(
                 &mut engine.world,
                 &engine.geometry,
                 entity,
-                &[
-                    x_ft * METERS_PER_FOOT,
-                    y_ft * METERS_PER_FOOT,
-                    z_ft * METERS_PER_FOOT,
-                ]
-                .into(),
+                &to_core_point(scene::position(scene, &def.at)),
             );
             creatures.push(SceneCreature {
-                handle: def.handle.clone(),
+                handle: def.handle.0.clone(),
                 entity,
                 side: def.side,
                 control: def.control,
@@ -388,11 +307,7 @@ impl Game {
             .map(|c| {
                 let (hp, hp_max, temp_hp) = hit_points(engine, c.entity);
                 let position_ft = systems::geometry::get_foot_position(&engine.world, c.entity)
-                    .map(|p| PointFt {
-                        x_ft: round_ft(p.x),
-                        y_ft: round_ft(p.y),
-                        z_ft: round_ft(p.z),
-                    })
+                    .map(from_core_point)
                     .unwrap_or(PointFt {
                         x_ft: 0.0,
                         y_ft: 0.0,
@@ -1245,25 +1160,30 @@ impl Game {
     }
 }
 
-fn new_engine_state() -> EngineState {
-    let terrain = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../maps/flat_arena.obj");
+fn new_engine_state(map: Option<&str>) -> EngineState {
+    let terrain = scene::map_path(map);
     EngineState::new(WorldGeometry::from_obj_path(
         terrain.to_str().expect("utf-8 path"),
         &rerecast::ConfigBuilder::default().build(),
     ))
 }
 
-fn monster_path(data_dir: &Path, monster: &str) -> Result<PathBuf, ApiError> {
-    if !monster
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '_')
-    {
-        return Err(error(
-            ErrorCode::BadScene,
-            format!("{monster} is not a valid stat block id."),
-        ));
+/// Contract points are feet with `z_ft` up; core works in metres with `y` up.
+fn to_core_point(point: PointFt) -> Point3<f32> {
+    Point3::new(
+        point.x_ft * METERS_PER_FOOT,
+        point.z_ft * METERS_PER_FOOT,
+        point.y_ft * METERS_PER_FOOT,
+    )
+}
+
+/// The inverse of [`to_core_point`], rounded to a tenth of a foot.
+fn from_core_point(point: Point3<f32>) -> PointFt {
+    PointFt {
+        x_ft: round_ft(point.x),
+        y_ft: round_ft(point.z),
+        z_ft: round_ft(point.y),
     }
-    Ok(data_dir.join("monsters").join(format!("{monster}.json")))
 }
 
 fn life_state_name(engine: &EngineState, entity: Entity) -> &'static str {
@@ -1364,7 +1284,8 @@ fn reason_for(debug: &str) -> (RejectReason, String) {
 }
 
 fn round_ft(meters: f32) -> f32 {
-    (meters / METERS_PER_FOOT * 10.0).round() / 10.0
+    // `+ 0.0` turns a rounded -0.0 into 0.0, so the wire never shows "-0.0".
+    (meters / METERS_PER_FOOT * 10.0).round() / 10.0 + 0.0
 }
 
 /// (current, max, temporary) Hit Points.

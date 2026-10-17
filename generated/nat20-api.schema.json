@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.4"
+    "version": "1.0.0-dev.5"
   },
   "$defs": {
     "Ability": {
@@ -552,7 +552,7 @@
               "type": "string"
             },
             "schema_sha256": {
-              "description": "SHA-256 of `generated/nat20-api.schema.json`. Clients compare it with the hash they were generated from.",
+              "description": "SHA-256 over `generated/nat20-api.schema.json` followed by `generated/nat20-scene.schema.json`.\nClients compare it with the hash they were generated from.",
               "type": "string"
             },
             "version": {

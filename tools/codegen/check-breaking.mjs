@@ -1,6 +1,8 @@
-// Fails when generated/nat20-api.schema.json breaks clients relative to a base revision, unless
-// the protocol major was bumped (CLAUDE.md Rule 2).
-// Breaking: a type, property, enum value or union variant removed; a type changed; a request-side
+// Fails when the generated schemas break their readers relative to a base revision, unless the
+// protocol major was bumped (CLAUDE.md Rule 2). Two schemas: the wire (`nat20-api.schema.json`,
+// whose request side is everything reachable from Request) and the scene file
+// (`nat20-scene.schema.json`, all of it input: scene files are written against it).
+// Breaking: a type, property, enum value or union variant removed; a type changed; an input-side
 // property newly required, or added as required to an object that already existed. Additions pass.
 // While the base contract version is a pre-release (`1.0.0-dev.N`), nothing is published yet and
 // breaking changes are reported but allowed; each still needs its CHANGELOG.md line.
@@ -8,26 +10,15 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
-const SCHEMA = "generated/nat20-api.schema.json";
+const SCHEMAS = [
+  // [file, root type name, the type whose reachable types are input-side; null: the whole schema]
+  ["generated/nat20-api.schema.json", "Nat20Api", "Request"],
+  ["generated/nat20-scene.schema.json", "SceneFile", null],
+];
 const baseRef = process.argv[process.argv.indexOf("--base") + 1] || "origin/main";
-
-let baseText;
-try {
-  baseText = execFileSync("git", ["show", `${baseRef}:${SCHEMA}`], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-} catch {
-  console.log(`check-breaking: ${baseRef} has no ${SCHEMA}; nothing to compare.`);
-  process.exit(0);
-}
-const base = JSON.parse(baseText);
-const head = JSON.parse(fs.readFileSync(SCHEMA, "utf8"));
-
 const major = (s) => s["x-nat20-protocol"]?.major ?? 0;
-if (major(head) > major(base)) {
-  console.log(`check-breaking: protocol major ${major(base)} -> ${major(head)}; breaking changes allowed.`);
-  process.exit(0);
-}
 
-// Names of every $def reachable from Request: request-side types, where a new required field breaks senders.
+// Names of every $def reachable from `start`: input-side types, where a new required field breaks senders.
 function reachable(schema, start) {
   const seen = new Set();
   const visit = (node) => {
@@ -69,32 +60,58 @@ function facts(def, path = "", out = new Map()) {
   return out;
 }
 
+// Every named type in a schema, with the root object itself under its own name.
+function types(schema, rootName) {
+  const { $defs, $schema, title, "x-nat20-protocol": _, ...root } = schema;
+  return { ...$defs, [rootName]: root };
+}
+
 const problems = [];
-const requestSide = reachable(head, "Request");
-for (const [name, baseDef] of Object.entries(base.$defs ?? {})) {
-  const headDef = head.$defs?.[name];
-  if (!headDef) {
-    problems.push(`${name}: type removed`);
+let base;
+for (const [file, rootName, inputStart] of SCHEMAS) {
+  let baseText;
+  try {
+    baseText = execFileSync("git", ["show", `${baseRef}:${file}`], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  } catch {
+    console.log(`check-breaking: ${baseRef} has no ${file}; nothing to compare.`);
     continue;
   }
-  const before = facts(baseDef);
-  const after = facts(headDef);
-  for (const [path, was] of before) {
-    const now = after.get(path);
-    if (!now) {
-      problems.push(`${name}${path}: removed`);
+  const baseSchema = JSON.parse(baseText);
+  const headSchema = JSON.parse(fs.readFileSync(file, "utf8"));
+  base ??= baseSchema;
+  if (major(headSchema) > major(baseSchema)) {
+    console.log(`check-breaking: protocol major ${major(baseSchema)} -> ${major(headSchema)}; breaking changes allowed.`);
+    process.exit(0);
+  }
+  const baseTypes = types(baseSchema, rootName);
+  const headTypes = types(headSchema, rootName);
+  const inputSide = inputStart ? reachable(headSchema, inputStart) : new Set(Object.keys(headTypes));
+  for (const [name, baseDef] of Object.entries(baseTypes)) {
+    const headDef = headTypes[name];
+    if (!headDef) {
+      problems.push(`${file} ${name}: type removed`);
       continue;
     }
-    if (was.type !== now.type) problems.push(`${name}${path}: type changed ${was.type} -> ${now.type}`);
-    for (const value of was.values) if (!now.values.has(value)) problems.push(`${name}${path}: enum value ${JSON.stringify(value)} removed`);
-    if (requestSide.has(name) && !was.required && now.required) problems.push(`${name}${path}: newly required in a request type`);
-  }
-  if (!requestSide.has(name)) continue;
-  for (const [path, now] of after) {
-    const parent = path.slice(0, path.lastIndexOf("/")) || "/";
-    if (now.required && !before.has(path) && before.has(parent)) problems.push(`${name}${path}: new required field in a request type`);
+    const before = facts(baseDef);
+    const after = facts(headDef);
+    for (const [path, was] of before) {
+      const now = after.get(path);
+      if (!now) {
+        problems.push(`${file} ${name}${path}: removed`);
+        continue;
+      }
+      if (was.type !== now.type) problems.push(`${file} ${name}${path}: type changed ${was.type} -> ${now.type}`);
+      for (const value of was.values) if (!now.values.has(value)) problems.push(`${file} ${name}${path}: enum value ${JSON.stringify(value)} removed`);
+      if (inputSide.has(name) && !was.required && now.required) problems.push(`${file} ${name}${path}: newly required in an input type`);
+    }
+    if (!inputSide.has(name)) continue;
+    for (const [path, now] of after) {
+      const parent = path.slice(0, path.lastIndexOf("/")) || "/";
+      if (now.required && !before.has(path) && before.has(parent)) problems.push(`${file} ${name}${path}: new required field in an input type`);
+    }
   }
 }
+if (!base) process.exit(0);
 
 const baseVersion = base["x-nat20-protocol"]?.version ?? "";
 if (problems.length && baseVersion.includes("-")) {

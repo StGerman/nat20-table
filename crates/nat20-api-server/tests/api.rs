@@ -67,7 +67,7 @@ fn creature(handle: &str, kind: (&str, &str), side: &str, x_ft: f32) -> Value {
     let mut c = json!({
         "handle": handle, "side": side,
         "control": if kind.0 == "pregen" { "client" } else { "scripted" },
-        "position": { "x_ft": x_ft, "y_ft": 0.0, "z_ft": 0.0 }
+        "at": { "kind": "point", "point": { "x_ft": x_ft, "y_ft": 0.0, "z_ft": 0.0 } }
     });
     c[kind.0] = json!(kind.1);
     c

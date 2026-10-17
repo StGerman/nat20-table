@@ -4,6 +4,8 @@ import { createInterface } from "node:readline";
 import { SCHEMA_SHA256, type Command, type Request, type Response, type Viewer } from "./generated/api.ts";
 
 export * from "./generated/api.ts";
+/** The scene file types (`SceneFile` and what it holds), as read by the engine and the DM agent. */
+export * as scene from "./generated/scene.ts";
 
 /**
  * Wraps a command in the request envelope. The envelope fields are set after the command's, so a
