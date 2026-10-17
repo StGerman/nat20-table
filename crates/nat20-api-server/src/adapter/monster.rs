@@ -155,7 +155,15 @@ impl MonsterDef {
             factions,
         );
         let entity = engine_state.world.spawn(monster);
+        // The engine outlives a refused scene load, so a monster that fails a check leaves it.
+        self.equip(engine_state, entity).inspect_err(|_| {
+            let _ = engine_state.despawn(entity);
+        })?;
+        Ok(entity)
+    }
 
+    /// Gear, effects and the stat-block checks for a freshly spawned monster.
+    fn equip(&self, engine_state: &mut EngineState, entity: Entity) -> Result<(), MonsterError> {
         // The server runs monster turns with its own scripted policy, so the
         // engine's built-in random AI must not act for this creature.
         engine_state
@@ -216,6 +224,6 @@ impl MonsterDef {
             )));
         }
 
-        Ok(entity)
+        Ok(())
     }
 }

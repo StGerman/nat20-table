@@ -1498,3 +1498,19 @@ fn life_state_of(engine: &EngineState, entity: Entity) -> nat20_api_contract::Li
         Err(_) => nat20_api_contract::LifeState::Dead,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_monster_that_fails_its_checks_leaves_no_entity() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("data/monsters/goblin_warrior.json");
+        let mut goblin = MonsterDef::load(&path).unwrap();
+        goblin.armor_class += 1;
+        let mut engine = EngineState::new(load_geometry(None));
+        let before = engine.world.len();
+        assert!(goblin.spawn(&mut engine).is_err());
+        assert_eq!(engine.world.len(), before);
+    }
+}
