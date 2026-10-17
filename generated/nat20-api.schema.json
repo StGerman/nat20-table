@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.10"
+    "version": "1.0.0-dev.11"
   },
   "$defs": {
     "Ability": {
@@ -898,7 +898,7 @@
               "const": "short_rest"
             },
             "healed": {
-              "description": "One entry per participant.",
+              "description": "One entry per participant, in `participants` order; `amount` is 0 for one that spent\nno dice. Each die's roll and `healed` event are in `events`.",
               "type": "array",
               "items": {
                 "$ref": "#/$defs/HitPointsRegained"
@@ -2111,7 +2111,7 @@
           ]
         },
         {
-          "description": "A rest finished.",
+          "description": "A rest finished, after any Hit Point Dice it spent; resources have recharged. Public.",
           "type": "object",
           "properties": {
             "kind": {
@@ -2246,13 +2246,13 @@
       "type": "object",
       "properties": {
         "count": {
-          "description": "How many dice to spend.",
+          "description": "How many dice to spend. More than it has left answers `rejected` with\n`insufficient_resource`. The largest die size it has left goes first; each die rolls\nplus the Constitution modifier, and regains at least 1 Hit Point.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0
         },
         "handle": {
-          "description": "The creature.",
+          "description": "The creature: one of the rest's participants, listed once.",
           "$ref": "#/$defs/Handle"
         }
       },
@@ -2590,7 +2590,7 @@
           "const": "invalid_target"
         },
         {
-          "description": "The actor lacks the resource (slot, use, movement) the option costs.",
+          "description": "The actor lacks the resource (slot, use, movement) the option costs, or the Hit Point Dice\na short rest would spend.",
           "type": "string",
           "const": "insufficient_resource"
         },
@@ -2934,7 +2934,7 @@
           ]
         },
         {
-          "description": "A short rest. Each participant may spend Hit Point Dice.",
+          "description": "A Short Rest, in explore mode only (rolling Initiative interrupts a rest, so combat\nanswers `wrong_mode`). Every participant needs at least 1 Hit Point (`rejected` with\n`condition_prevents` otherwise). Each one spends the Hit Point Dice `hit_dice` gives it,\nthen short-rest resources recharge. A refused rest changes nothing.",
           "type": "object",
           "properties": {
             "cmd": {
@@ -2942,14 +2942,14 @@
               "const": "short_rest"
             },
             "hit_dice": {
-              "description": "Hit Point Dice to spend per creature. A creature not listed spends none.",
+              "description": "Hit Point Dice to spend per participant, declared up front. A participant not listed\nspends none.",
               "type": "array",
               "items": {
                 "$ref": "#/$defs/HitDiceSpend"
               }
             },
             "participants": {
-              "description": "The creatures that rest.",
+              "description": "The creatures that rest, each listed once.",
               "type": "array",
               "items": {
                 "$ref": "#/$defs/Handle"
@@ -3484,7 +3484,7 @@
           "$ref": "#/$defs/Handle"
         },
         "hit_dice": {
-          "description": "Hit Point Dice by die size. Empty until the engine tracks a Hit Point Dice pool (ENG-4).",
+          "description": "Hit Point Dice by die size, smallest first: one die per class level, spent on a short\nrest. Empty for a creature without Hit Point Dice, such as a monster.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/HitDicePool"

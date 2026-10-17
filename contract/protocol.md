@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.10): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3) and `events`, with the §5 projection, and answers `short_rest` and `spawn` with `not_implemented`. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: an encounter whose surprise rule applies, `end_combat{fled}`, options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.11): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5) and `events`, with the §5 projection, and answers `spawn` with `not_implemented`. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: an encounter whose surprise rule applies, `end_combat{fled}`, options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -110,7 +110,7 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 | `end_turn` | `actor`, `prompt_id` | `{accepted:true}` | as above |
 | `move` | `actor`, `to: {anchor} \| {handle} \| {point}`, `prompt_id?` (required in combat) | `{moved_ft, provoked: handle[]}` | DM (explore), actor (combat) |
 | `request_check` | `actor`, `check: {kind:"scenario", check_id} \| {kind:"ladder", ability, skill?, dc}` | `{roll_id, total, success}` | DM |
-| `short_rest` | `participants[]`, `hit_dice?: {handle: count}` | `{healed: {handle: hp}}` | DM |
+| `short_rest` | `participants[]`, `hit_dice?: [{handle, count}]` | `{healed: [{handle, amount}]}` | DM |
 | `start_combat` | `encounter_id` | `State` | DM (or a scenario trigger) |
 | `end_combat` | `reason: "surrender"\|"fled"\|"scenario"` | `State` | DM, only when the encounter allows the reason (§4.4) |
 | `spawn` | `spawn_id` (declared in the scene file) | `State` | DM / scenario trigger |
@@ -129,7 +129,8 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 - `get_sheet` answers the owner (`viewer` = `actor`) and the DM with the full `Sheet`; any other creature viewer gets `not_visible`. An actor not in the scene answers `unknown_creature`.
 - It is read-only and works in either mode: it rolls nothing, logs no event and does not advance the seeded dice, so asking for a sheet never changes what a later roll comes up.
 - Check and save bonuses are what the engine adds to the d20 when it rolls: ability modifier, proficiency and lasting effects. Dice bonuses such as Bless are left out. `initiative_bonus` is the engine's initiative check; Passive Perception is 10 plus the Perception bonus.
-- Not filled yet: `hit_dice` (empty until the engine has a Hit Point Dice pool, ENG-4), `conditions` and `exhaustion` (as in state).
+- `hit_dice` lists the Hit Point Dice by die size, smallest first; a creature without them (a monster) has none.
+- Not filled yet: `conditions` and `exhaustion` (as in state).
 
 ### 4.3 Checks, hazards and flags
 
@@ -160,6 +161,17 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
   "variants": [] }
 ```
 `option_id` stays stable for the life of the prompt and is derived from the action plus its context (weapon slot, spell and level), never from a list index.
+
+### 4.5 Short rest
+
+- `short_rest{participants, hit_dice}` is explore mode only: rolling Initiative interrupts a rest, so during combat it answers `wrong_mode`. After a fight that ended by itself it is an explore command that acts, so it closes `combat_over` as `move` and `request_check` do.
+- Everything is checked first, and a refused rest changes nothing and rolls nothing:
+  - `participants` must be non-empty and list each creature once (`bad_request`), and each must be in the scene (`unknown_creature`).
+  - Every participant needs at least 1 Hit Point (SRD 5.2.1 Short Rest), else `rejected` with `condition_prevents`.
+  - Each `hit_dice` entry names a participant, once (`bad_request`). A count above the dice it has left answers `rejected` with `insufficient_resource`. The message names only the count asked for, since dice left are on the owner's sheet.
+- Then each participant, in order, spends its dice, largest die size first. Each die logs a public `healing` roll labelled "a dN Hit Point Die" (the die plus the Constitution modifier), a public `healed` citing it, with what was regained: at least 1, at most what was missing. It also logs `hit_points` (owner and DM). Last, the engine finishes the rest, short-rest resources recharge, and a public `rest` event names the participants.
+- The result lists the Hit Points each participant regained, in `participants` order, 0 for one that spent none. The dice count is declared up front, a simplification of "decide after each roll": the DM can call `short_rest` again with another die.
+- A rest is never interrupted (ENG-9): the command is atomic, so nothing can happen during it.
 
 ## 5. Visibility (projection per `viewer`)
 

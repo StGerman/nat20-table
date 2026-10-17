@@ -125,11 +125,15 @@ pub enum Command {
         /// Which check.
         check: CheckSpec,
     },
-    /// A short rest. Each participant may spend Hit Point Dice.
+    /// A Short Rest, in explore mode only (rolling Initiative interrupts a rest, so combat
+    /// answers `wrong_mode`). Every participant needs at least 1 Hit Point (`rejected` with
+    /// `condition_prevents` otherwise). Each one spends the Hit Point Dice `hit_dice` gives it,
+    /// then short-rest resources recharge. A refused rest changes nothing.
     ShortRest {
-        /// The creatures that rest.
+        /// The creatures that rest, each listed once.
         participants: Vec<Handle>,
-        /// Hit Point Dice to spend per creature. A creature not listed spends none.
+        /// Hit Point Dice to spend per participant, declared up front. A participant not listed
+        /// spends none.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         hit_dice: Vec<HitDiceSpend>,
     },
@@ -206,9 +210,11 @@ pub enum CheckSpec {
 /// Hit Point Dice one creature spends on a short rest.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct HitDiceSpend {
-    /// The creature.
+    /// The creature: one of the rest's participants, listed once.
     pub handle: Handle,
-    /// How many dice to spend.
+    /// How many dice to spend. More than it has left answers `rejected` with
+    /// `insufficient_resource`. The largest die size it has left goes first; each die rolls
+    /// plus the Constitution modifier, and regains at least 1 Hit Point.
     pub count: u32,
 }
 
@@ -324,7 +330,8 @@ pub enum CommandResult {
     },
     /// Hit Points regained on the short rest.
     ShortRest {
-        /// One entry per participant.
+        /// One entry per participant, in `participants` order; `amount` is 0 for one that spent
+        /// no dice. Each die's roll and `healed` event are in `events`.
         healed: Vec<HitPointsRegained>,
     },
     /// The state after initiative, in combat mode.
