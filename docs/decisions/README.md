@@ -29,6 +29,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0018](0018-original-scenario.md) | Run an original one-shot, The Silent Mill, not a published adventure | Accepted | 2026-10-16 | Stas (scope) |
 | [0019](0019-game-stack.md) | Game side: TypeScript, Ink and the Claude Agent SDK | Accepted, not built | 2026-10-16 | Stas (scope) |
 | [0020](0020-send-u1-u2-upstream-early.md) | Send the engine-plumbing items U1 and U2 upstream now, not at Milestone 8 | Accepted | 2026-10-17 | Stas (decision card) |
+| [0021](0021-surrender-dm-call-engine-gate.md) | Surrender: the DM decides, within a scene condition the engine enforces | Accepted | 2026-10-17 | Stas (direction), delegated to the coordinator |
 
 ## Open questions to watch
 
