@@ -13,6 +13,8 @@
 //! - [`state`]: state and sheet views, legal action options, what the engine is waiting on.
 //! - [`events`]: the session log and the roll views.
 //! - [`errors`]: error codes, reject reasons and hints.
+//! - [`scene`]: the scene file the engine and the DM agent both read. Not sent on the wire; it
+//!   has its own schema root, [`SceneFile`].
 //! - [`vocab`]: identifiers, geometry and the rules enums the other modules share.
 
 use schemars::JsonSchema;
@@ -21,12 +23,14 @@ use serde::{Deserialize, Serialize};
 pub mod envelope;
 pub mod errors;
 pub mod events;
+pub mod scene;
 pub mod state;
 pub mod vocab;
 
 pub use envelope::*;
 pub use errors::*;
 pub use events::*;
+pub use scene::*;
 pub use state::*;
 pub use vocab::*;
 
@@ -35,7 +39,7 @@ pub const PROTOCOL_NAME: &str = "nat20-api";
 /// Protocol major version; every request carries it as `v`.
 pub const PROTOCOL_MAJOR: u8 = 1;
 /// Full contract version (semver). Bump with every change and log it in `contract/CHANGELOG.md`.
-pub const CONTRACT_VERSION: &str = "1.0.0-dev.4";
+pub const CONTRACT_VERSION: &str = "1.0.0-dev.5";
 
 /// The protocol major version. Only `1` exists; any other value is rejected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

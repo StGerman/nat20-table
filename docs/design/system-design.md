@@ -98,8 +98,9 @@ nat20-table/                             # github.com/StGerman/nat20-table (name
 │   ├── fixtures/*.jsonl                 # conformance transcripts (seeded request → exact response)
 │   └── CHANGELOG.md                     # every contract change, with semver
 ├── generated/                           # checked in, never edited by hand, header says so
-│   ├── nat20-api.schema.json            # normalized bundle; its sha256 is served by `hello`
-│   └── nat20-api.schema.sha256
+│   ├── nat20-api.schema.json            # wire bundle; with the scene schema, its sha256 is served by `hello`
+│   ├── nat20-scene.schema.json          # scene file format (root SceneFile), read by the engine and the DM agent
+│   └── nat20-api.schema.sha256          # sha256 over both schemas, in that order
 ├── tools/
 │   ├── codegen/gen-ts.mjs  check-breaking.mjs
 │   └── data-pipeline/                   # Foundry translator, 5e-bits monster import (DAT-1)
@@ -149,10 +150,10 @@ If Stas prefers TypeSpec, every other part of this design stays the same: swap `
 ### 5.2 Build steps (`npm run gen`)
 
 Rust contract crate (recommended):
-1. `cargo run -p nat20-api-contract --bin export-schema` → `generated/nat20-api.schema.json` (one bundle, root type = every wire type).
-2. `node tools/codegen/gen-ts.mjs` → `packages/engine-client/src/generated/api.ts` (discriminated unions; a request missing `prompt_id`, or a `CreaturePublic` with `hp`, fails `tsc`).
+1. `cargo run -p nat20-api-contract --bin export-schema` → `generated/nat20-api.schema.json` (one bundle, root type = every wire type); `export-schema scene` → `generated/nat20-scene.schema.json` (root type `SceneFile`, the scene file format; Milestone 3 spec §4.1).
+2. `node tools/codegen/gen-ts.mjs` → `packages/engine-client/src/generated/api.ts` and `scene.ts` (discriminated unions; a request missing `prompt_id`, or a `CreaturePublic` with `hp`, fails `tsc`).
 3. (Only if an agent is written in Python) `datamodel-codegen` → pydantic v2 models.
-4. `sha256sum` of the bundle → `generated/nat20-api.schema.sha256`, compiled into the server and returned by `hello`; the client refuses to start on mismatch.
+4. sha256 over the wire bundle then the scene bundle → `generated/nat20-api.schema.sha256`, compiled into the server and returned by `hello`; the client refuses to start on mismatch.
 
 TypeSpec replaces step 1 with: `tsp compile contract/` (json-schema emitter, `bundleId`) → `normalize.mjs` (three rewrites, all spike-proven: file `$ref` → `#/$defs/...` or typify panics; string `const` → one-value `enum` or typify emits an untagged enum where `Hello` swallows every request; inline `oneOf` variants so typify emits `#[serde(tag = "cmd")]`) → `cargo typify` into `crates/nat20-api-types/src/generated.rs`.
 

@@ -1,0 +1,82 @@
+{
+    "id": "m3_s2_road",
+    "description": "Milestone 3 test scenario m3_trail, scene 2 of 5 (exploration): the road to the mill. Following the tracks badly sets off a snare; spotting the lookouts lets the party ambush them.",
+    "anchors": [
+        {
+            "id": "road_start",
+            "name": "the fork in the road",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "snare_bend",
+            "name": "the bend by the hedge",
+            "position_ft": {
+                "x_ft": 40.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "mill_gate",
+            "name": "the mill gate",
+            "position_ft": {
+                "x_ft": 80.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "road_start"
+    ],
+    "checks": [
+        {
+            "id": "find_tracks",
+            "test": {
+                "kind": "skill",
+                "skill": "survival"
+            },
+            "dc": 12,
+            "on_failure": [
+                {
+                    "kind": "hazard",
+                    "hazard_id": "snare"
+                }
+            ]
+        },
+        {
+            "id": "spot_lookouts",
+            "test": {
+                "kind": "skill",
+                "skill": "perception"
+            },
+            "dc": 13,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "party_ambushes"
+                }
+            ]
+        }
+    ],
+    "hazards": [
+        {
+            "id": "snare",
+            "save": {
+                "ability": "dexterity",
+                "dc": 12
+            },
+            "on_failure": [
+                {
+                    "kind": "damage",
+                    "dice": "1d6",
+                    "damage_type": "piercing"
+                }
+            ]
+        }
+    ]
+}

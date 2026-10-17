@@ -7,14 +7,14 @@
             "pregen": "fighter_l2",
             "side": "party",
             "control": "client",
-            "position": { "x_ft": 0, "y_ft": 0, "z_ft": 0 }
+            "at": { "kind": "point", "point": { "x_ft": 0.0, "y_ft": 0.0, "z_ft": 0.0 } }
         },
         {
             "handle": "goblin",
             "monster": "goblin_warrior",
             "side": "hostile",
             "control": "scripted",
-            "position": { "x_ft": 5, "y_ft": 0, "z_ft": 0 }
+            "at": { "kind": "point", "point": { "x_ft": 5.0, "y_ft": 0.0, "z_ft": 0.0 } }
         }
     ]
 }

@@ -18,7 +18,7 @@ use crate::{
     },
     errors::{error, not_implemented, with_awaiting},
     projection::{self, FullState, Viewer},
-    render,
+    render, scene,
 };
 
 /// The pending prompt and the id the client must echo.
@@ -103,9 +103,17 @@ impl Session {
                 "every scene starts from its own scene file for now (API-5)",
             ));
         }
-        let scene = Game::read_scene(&self.data_dir, scene_id)?;
+        let scene = scene::read(&self.data_dir, scene_id)?;
+        if scene.creatures.is_empty() && !scene.party_start.is_empty() {
+            return Err(not_implemented(
+                "Loading a scene whose party is all carried in",
+                &format!(
+                    "scene {scene_id} places no creature of its own, and party carry-over comes with API-5"
+                ),
+            ));
+        }
         if let Viewer::Creature(handle) = viewer
-            && !scene.creatures.iter().any(|c| c.handle == *handle)
+            && !scene.creatures.iter().any(|c| c.handle.0 == *handle)
         {
             return Err(error(
                 ErrorCode::UnknownCreature,

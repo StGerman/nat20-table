@@ -9,6 +9,7 @@ pub mod adapter;
 pub mod errors;
 pub mod projection;
 pub mod render;
+pub mod scene;
 pub mod server;
 pub mod session;
 

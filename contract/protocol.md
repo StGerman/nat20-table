@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.4): every v1 type is in the contract crate. The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat`, `get_state`, `legal_actions`, `submit`, `react`, `end_turn` and `events`, with the §5 projection, and answers `get_sheet`, `move`, `request_check`, `group_check`, `short_rest` and `spawn` with `not_implemented`. `end_combat` answers `wrong_mode` outside combat and `not_implemented` during a fight, since scenes carry no end-combat reasons yet. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: no `party` carry-over in `load_scene` (API-5), no `surprised` in `start_combat`, no options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.5): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat`, `get_state`, `legal_actions`, `submit`, `react`, `end_turn` and `events`, with the §5 projection, and answers `get_sheet`, `move`, `request_check`, `group_check`, `short_rest` and `spawn` with `not_implemented`. `end_combat` answers `wrong_mode` outside combat and `not_implemented` during a fight, since scenes carry no end-combat reasons yet. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: no `party` carry-over in `load_scene` (API-5), so a scene that places no creature of its own and only takes a party (`party_start`) can't load yet; no `surprised` in `start_combat`, no options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -69,6 +69,16 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 - **Leaving combat.** Both ways back land in explore mode in the same scene. When a side is down, the engine ends combat by itself: it logs `combat_over`, switches the scene to explore mode and reports `awaiting: combat_over` until a command changes the session (`load_scene`, `start_combat`, or any explore command that acts), after which `awaiting` reads `none`; read-only and rejected commands keep reporting it. Any explore command, `start_combat` or `load_scene` goes on from there; `end_combat`, `legal_actions`, `submit`, `react` and `end_turn` then answer `wrong_mode` (not retryable), because combat is already over and nothing is pending. `end_combat{reason}` is only for ending a fight early.
 - **Seed.** `new_session{seed?}` takes a u32. When it's omitted, the engine picks one and logs it in `session_started`. The same seed plus the same request stream gives an identical log and identical responses, so any session replays from its logged seed (fixture `duel.jsonl`). Every u32 is a real seed, 0 included. The core keeps one dice generator per thread and `new_session` re-seeds it, so one engine process runs one session at a time.
 
+### 2.1 Scene files
+
+`load_scene{scene_id}` reads `<data>/scenes/<scene_id>.json`, a `SceneFile` (contract module `scene.rs`, schema `generated/nat20-scene.schema.json`, TS `scene` namespace of the engine client). The DM agent reads the same files, so both sides agree on check ids, anchors, encounters and spawns. A scene file is DM-only data (§5): nothing in it, nor anything derived from it, goes into a player view except anchor names and positions.
+
+- **Contents.** `anchors` (named landmarks), `creatures` (placed on load, each `at` an anchor or a point), `party_start` (anchors for carried creatures, in party order), `checks` (a skill check or save, a DC, and consequences on success and failure), `hazards` (a save and its consequences), `encounters` (participants, a surprise rule, a surrender condition, other allowed early ends) and `spawns` (creatures placed by the DM, by a flag at combat start, or at a round).
+- **Checked on load.** Besides the schema (unknown fields are refused), the engine refuses a scene with `bad_scene` and changes nothing when: an id (anchor, check, hazard, encounter, spawn, flag, handle) isn't a plain name or repeats; a handle repeats across `creatures` and spawns; any handle, a carried encounter participant's included, is `dm`; a creature names an unknown pregen or stat block, or both or neither; an `at` or `party_start` names an unknown anchor; a consequence names an unknown hazard, a hazard sets off another hazard, or damage dice aren't `NdM` or `NdM+K`; a DC is outside 1 to 30; an encounter has no participants, lists one twice, or names a creature the scene doesn't define while it has no `party_start` (only a carried creature could fill it); a surrender condition names a non-participant, has no trigger, a fraction outside (0, 1), or a leader that isn't one of its creatures; `surrender` appears in `end_reasons` (a surrender condition governs it); a spawn is empty or fires at round 0; the `map` isn't a terrain file under `maps/`.
+- **Served so far.** Placement of `creatures` at anchors or points, and `map`. Everything else in the file is read and checked but not acted on yet; each part is served by its Milestone 3 step (spec §7): carry-over and flags (API-4, API-5), anchors in state and `move` (MAP-1, API-7), checks and hazards (CHK-1, CHK-2), encounters (API-9, API-22), spawns (API-8). The commands that use them keep answering `not_implemented` until then.
+- **Coordinates.** `x_ft` east-west, `y_ft` north-south, `z_ft` up, in feet. The engine places a creature on the ground below its point.
+- **Test scenario.** `m3_s1_green` to `m3_s5_cellar` (`m3_trail`, 5 scenes, Bren and Goblin Warriors) exercise every part of the format; Milestone 3 replays them end to end (API-23).
+
 ## 3. Prompts (`awaiting`)
 
 ```json
@@ -126,7 +136,8 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 | Roll: modifiers, `against` (AC/DC), `dc_source` | yes | no; own modifiers and AC are on the sheet | no |
 | Damage or healing amount | yes | yes | yes (it is said at the table) |
 | `hit_points` events (HP after a change) | yes | own creature only | no |
-| Scenario data: check DCs, spawns, triggers | yes | no | no |
+| Scenario data: the scene file's check DCs, hazards, encounters, surrender conditions, flags, spawns | yes | no | no |
+| Anchors: id, name, position | yes | yes | yes |
 | `unavailable` reasons in `legal_actions` | yes | yes | n/a |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
 
@@ -196,7 +207,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 
 - `v` is the major version. Within a major version, changes are additive only: new commands, new optional fields, new event kinds and new error reasons. Clients must ignore unknown fields and unknown event kinds.
 - Removing, renaming or changing the meaning of anything bumps the major version.
-- `hello.schema_sha256` is a hash of the checked-in schema files. The orchestrator compares it with the hash it was generated against and refuses to start on a mismatch.
+- `hello.schema_sha256` is the sha256 over the checked-in wire schema followed by the scene schema, so a change to either changes it. The orchestrator compares it with the hash it was generated against and refuses to start on a mismatch.
 
 ## 9. Migration from v0 (milestone 1)
 
