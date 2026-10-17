@@ -220,10 +220,8 @@ impl Server {
                 prompt_id,
             } => session.move_creature(&actor.0, to, prompt_id.as_ref().map(|p| p.0.as_str())),
             Command::GetSheet { actor } => session.sheet(&actor.0, viewer),
-            Command::RequestCheck { .. }
-            | Command::GroupCheck { .. }
-            | Command::ShortRest { .. }
-            | Command::Spawn { .. } => {
+            Command::RequestCheck { actor, check } => session.request_check(&actor.0, check),
+            Command::ShortRest { .. } | Command::Spawn { .. } => {
                 let name = serde_json::to_value(command).expect("commands serialize")["cmd"]
                     .as_str()
                     .unwrap_or_default()

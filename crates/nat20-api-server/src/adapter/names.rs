@@ -82,3 +82,25 @@ pub fn damage_type(kind: &DamageType) -> WireDamage {
         DamageType::Thunder => WireDamage::Thunder,
     }
 }
+
+/// The core damage type behind a wire damage type.
+pub fn core_damage_type(wire: WireDamage) -> DamageType {
+    [
+        DamageType::Acid,
+        DamageType::Bludgeoning,
+        DamageType::Cold,
+        DamageType::Fire,
+        DamageType::Force,
+        DamageType::Lightning,
+        DamageType::Necrotic,
+        DamageType::Piercing,
+        DamageType::Poison,
+        DamageType::Psychic,
+        DamageType::Radiant,
+        DamageType::Slashing,
+        DamageType::Thunder,
+    ]
+    .into_iter()
+    .find(|core| damage_type(core) == wire)
+    .expect("every wire damage type has a core one")
+}

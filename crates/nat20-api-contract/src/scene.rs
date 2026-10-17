@@ -186,7 +186,7 @@ pub enum Consequence {
     },
     /// The engine rolls damage and applies it to the same creature.
     Damage {
-        /// Dice in `NdM` or `NdM+K` form, e.g. `1d6`.
+        /// Dice in `NdM` or `NdM+K` form, e.g. `1d6`; M is 4, 6, 8, 10, 12, 20 or 100.
         dice: String,
         /// The damage type.
         damage_type: DamageType,

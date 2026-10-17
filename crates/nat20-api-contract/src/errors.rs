@@ -104,4 +104,6 @@ pub enum RejectReason {
     NeedsVariant,
     /// No route leads to the anchor, creature or point a `move` names.
     NoPath,
+    /// The scenario check was already rolled in this scene, by anyone.
+    AlreadyAttempted,
 }

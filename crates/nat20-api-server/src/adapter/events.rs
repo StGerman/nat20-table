@@ -14,8 +14,10 @@ use nat20_core::{
             action::{ActionResultComponent, DamageResult, HealingResult},
             targeting::TargetInstance,
         },
-        d20::{AdvantageAware, D20CheckDC, D20CheckOutcome, D20CheckResult, RollMode},
-        damage::DamageRollResult,
+        d20::{
+            AdvantageAware, AdvantageType, D20CheckDC, D20CheckOutcome, D20CheckResult, RollMode,
+        },
+        damage::{DamageMitigationResult, DamageRollResult},
         health::life_state::LifeState,
         id::EntityIdentifier,
         modifier::{FlatModifiable, ModifierKindResult, ModifierResult},
@@ -359,6 +361,85 @@ impl LogWriter<'_> {
         }
     }
 
+    /// The roll entry for an ability check or saving throw the session asked for outside combat,
+    /// with its local key, so the caller can cite the roll. `dc` is a skill check or an ability
+    /// saving throw.
+    pub fn explore_check(
+        &mut self,
+        roller: &str,
+        label: String,
+        result: &D20CheckResult,
+        dc: &D20CheckDC,
+        dc_source: DcSource,
+    ) -> (Pending, String) {
+        let (kind, value) = match dc {
+            D20CheckDC::Skill { dc, .. } => (RollKind::SkillCheck, dc.total()),
+            D20CheckDC::SavingThrow { dc, .. } => (RollKind::SavingThrow, dc.total()),
+            D20CheckDC::AttackRoll { .. } => unreachable!("explore checks are never attacks"),
+        };
+        let key = self.keys.key();
+        let roll = keyed(
+            d20_roll(D20Roll {
+                kind,
+                label,
+                roller: roller.to_owned(),
+                target: None,
+                result,
+                against: Some(Against {
+                    kind: AgainstKind::Dc,
+                    value,
+                }),
+                outcome: if result.is_success(dc) {
+                    RollOutcome::Success
+                } else {
+                    RollOutcome::Failure
+                },
+                dc_source: Some(dc_source),
+            }),
+            &key,
+        );
+        (self.public(EventKind::Roll { roll }), key)
+    }
+
+    /// The entries for damage dealt to `target` outside an action: the damage roll, then, if the
+    /// target took damage, `damage_taken` citing that roll and its `hit_points`, then its new life
+    /// state if it changed.
+    pub fn plain_damage(
+        &mut self,
+        roller: &str,
+        target: Entity,
+        roll: &DamageRollResult,
+        taken: Option<&DamageMitigationResult>,
+        new_life_state: Option<&LifeState>,
+    ) -> Vec<Pending> {
+        let key = self.keys.key();
+        let handle = self.handles.get(&target).cloned().unwrap_or_default();
+        let mut entries = vec![self.public(EventKind::Roll {
+            roll: keyed(damage_roll(roller.to_owned(), roll), &key),
+        })];
+        if let Some(taken) = taken {
+            let damage_type = taken
+                .components
+                .first()
+                .map(|c| names::damage_type(&c.damage_type))
+                .unwrap_or(nat20_api_contract::DamageType::Slashing);
+            entries.push(self.public(EventKind::DamageTaken {
+                target: Handle(handle.clone()),
+                amount: taken.total.max(0) as u32,
+                damage_type,
+                source_roll: Some(RollId(key)),
+            }));
+            entries.push(self.hit_points(target, &handle, -taken.total));
+        }
+        if let Some(state) = new_life_state {
+            entries.push(self.public(EventKind::LifeState {
+                target: Handle(handle),
+                state: wire_life_state(state),
+            }));
+        }
+        entries
+    }
+
     /// The initiative roll for one creature.
     pub fn initiative(&self, entity: &EntityIdentifier, result: &D20CheckResult) -> Pending {
         let roll = d20_roll(D20Roll {
@@ -470,6 +551,18 @@ fn d20_roll(roll: D20Roll) -> RollView {
     }];
     let mut modifiers = Vec::new();
     collect_modifiers(result.modifiers(), &mut dice, &mut modifiers);
+    let advantage_sources = result
+        .advantage_tracker()
+        .summary()
+        .iter()
+        .map(|(source, kind)| {
+            let kind = match kind {
+                AdvantageType::Advantage => "advantage",
+                AdvantageType::Disadvantage => "disadvantage",
+            };
+            format!("{source} ({kind})")
+        })
+        .collect();
     RollView::Full {
         id: RollId(String::new()),
         kind: roll.kind,
@@ -483,6 +576,7 @@ fn d20_roll(roll: D20Roll) -> RollView {
         outcome: roll.outcome,
         advantage,
         dc_source: roll.dc_source,
+        advantage_sources,
     }
 }
 
@@ -543,6 +637,7 @@ fn plain_roll(
         outcome: RollOutcome::Value,
         advantage: AdvantageState::Normal,
         dc_source: None,
+        advantage_sources: Vec::new(),
     }
 }
 

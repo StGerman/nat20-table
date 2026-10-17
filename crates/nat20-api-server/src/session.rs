@@ -7,8 +7,9 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use nat20_api_contract::{
-    ApiError, Awaiting, CombatOverReason, CommandResult, ErrorCode, Event, EventKind, Handle, Mode,
-    MoveTarget, OptionId, PromptId, ReactionTrigger, RollId, RollView, State, Visibility,
+    ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, ErrorCode, Event, EventKind,
+    Handle, Mode, MoveTarget, OptionId, PromptId, ReactionTrigger, RollId, RollView, State,
+    Visibility,
 };
 
 use crate::{
@@ -286,6 +287,26 @@ impl Session {
         Ok(CommandResult::Move { moved_ft, provoked })
     }
 
+    /// Rolls a check in explore mode and applies a scenario check's consequences.
+    pub fn request_check(
+        &mut self,
+        actor: &str,
+        check: &CheckSpec,
+    ) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.request_check(actor, check);
+        self.after_decision(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
+        let outcome = result.expect("errors returned above");
+        Ok(CommandResult::RequestCheck {
+            roll_id: self
+                .roll_keys
+                .get(&outcome.key)
+                .cloned()
+                .expect("the check's roll was logged"),
+            total: outcome.total,
+            success: outcome.success,
+        })
+    }
+
     /// What the engine waits on, with the prompt id to echo.
     pub fn awaiting(&mut self) -> Awaiting {
         let wait = self.game.as_ref().map_or(Wait::Idle, |g| g.wait());
@@ -450,6 +471,8 @@ impl Session {
             initiative: game.initiative(),
             creatures: game.creatures(),
             anchors: game.anchors().to_vec(),
+            flags: game.flags(),
+            checks: game.checks(),
         };
         projection::state(viewer, full).ok_or_else(|| {
             error(
@@ -478,6 +501,11 @@ impl Session {
                 *source_roll = source_roll
                     .take()
                     .and_then(|key| self.roll_keys.get(&key.0).cloned());
+            }
+            EventKind::CheckResolved { roll_id, .. } => {
+                if let Some(real) = self.roll_keys.get(&roll_id.0) {
+                    *roll_id = real.clone();
+                }
             }
             _ => {}
         }

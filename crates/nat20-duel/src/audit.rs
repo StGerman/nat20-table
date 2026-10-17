@@ -273,6 +273,7 @@ mod tests {
             outcome: RollOutcome::Hit,
             advantage: AdvantageState::Normal,
             dc_source: None,
+            advantage_sources: Vec::new(),
         }
     }
 

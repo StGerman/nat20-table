@@ -873,3 +873,155 @@ fn moves_after_a_finished_fight_stay_in_explore_mode() {
     let again = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
     assert_eq!(again["ok"], true, "{again}");
 }
+
+/// Loads the road scene with Bren carried in from the green.
+fn road(api: &mut Api) {
+    let green = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s1_green" }),
+    );
+    assert_eq!(green["ok"], true, "{green}");
+    let road = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s2_road", "party": ["bren"] }),
+    );
+    assert_eq!(road["ok"], true, "{road}");
+}
+
+#[test]
+fn explore_checks_log_their_dc_and_cite_their_rolls() {
+    let mut api = duel();
+    road(&mut api);
+    for check in [
+        json!({ "kind": "scenario", "check_id": "find_tracks" }),
+        json!({ "kind": "scenario", "check_id": "spot_lookouts" }),
+        json!({ "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 15 }),
+    ] {
+        let rolled = api.call(
+            "dm",
+            json!({ "cmd": "request_check", "actor": "bren", "check": check }),
+        );
+        assert_eq!(rolled["ok"], true, "{rolled}");
+        let result = &rolled["result"];
+        let events = rolled["events"].as_array().unwrap();
+        let roll = events
+            .iter()
+            .find(|e| e["roll"]["id"] == result["roll_id"])
+            .unwrap_or_else(|| panic!("the result's roll is not in its events: {rolled}"));
+        assert_eq!(roll["roll"]["total"], result["total"], "{rolled}");
+        let resolved = events
+            .iter()
+            .find(|e| e["kind"] == "check_resolved")
+            .unwrap_or_else(|| panic!("no check_resolved: {rolled}"));
+        assert_eq!(resolved["roll_id"], result["roll_id"], "{rolled}");
+        assert_eq!(resolved["success"], result["success"], "{rolled}");
+        assert_eq!(resolved["visibility"]["scope"], "dm", "{rolled}");
+        let source = if check["kind"] == "ladder" {
+            "ladder"
+        } else {
+            "scenario"
+        };
+        assert_eq!(roll["roll"]["dc_source"], source, "{rolled}");
+    }
+    let log = api.call("dm", json!({ "cmd": "events", "since": 0 }));
+    let events = log["result"]["events"].as_array().unwrap();
+    assert_hidden_numbers_logged(events);
+    assert_sources_cited(events);
+}
+
+#[test]
+fn a_refused_check_rolls_nothing() {
+    let mut api = duel();
+    road(&mut api);
+    let first = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": "bren", "check": { "kind": "scenario", "check_id": "spot_lookouts" } }),
+    );
+    assert_eq!(first["ok"], true, "{first}");
+    let head = first["log_head"].clone();
+    for (check, code) in [
+        (
+            json!({ "kind": "scenario", "check_id": "spot_lookouts" }),
+            "rejected",
+        ),
+        (
+            json!({ "kind": "scenario", "check_id": "nothing_here" }),
+            "unknown_check",
+        ),
+        (
+            json!({ "kind": "ladder", "ability": "wisdom", "skill": "perception", "dc": 13 }),
+            "bad_request",
+        ),
+    ] {
+        let refused = api.call(
+            "dm",
+            json!({ "cmd": "request_check", "actor": "bren", "check": check }),
+        );
+        assert_eq!(refused["error"]["code"], code, "{refused}");
+        assert_eq!(refused["log_head"], head, "{refused}");
+    }
+    let state = api.call("dm", json!({ "cmd": "get_state" }));
+    let checks = state["result"]["state"]["checks"].as_array().unwrap();
+    let rolled: Vec<&Value> = checks.iter().filter(|c| c["rolled"] == true).collect();
+    assert_eq!(rolled.len(), 1, "{state}");
+    assert_eq!(rolled[0]["id"], "spot_lookouts", "{state}");
+}
+
+#[test]
+fn a_check_needs_explore_mode_and_a_conscious_creature() {
+    let mut api = duel();
+    let mut last = api.start_duel("dm");
+    let ladder = json!({ "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 10 });
+    let in_combat = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": "bren", "check": ladder }),
+    );
+    assert_eq!(in_combat["error"]["code"], "not_implemented", "{in_combat}");
+    // Bren never attacks, so the goblin wins.
+    for _ in 0..200 {
+        if last["awaiting"]["kind"] != "action" {
+            break;
+        }
+        let prompt = last["awaiting"]["prompt_id"].clone();
+        last = api.call(
+            "dm",
+            json!({ "cmd": "end_turn", "actor": "bren", "prompt_id": prompt }),
+        );
+    }
+    assert_eq!(last["awaiting"]["winner"], "hostile", "{last}");
+    let down = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": "bren", "check": ladder }),
+    );
+    assert_eq!(down["error"]["code"], "rejected", "{down}");
+    assert_eq!(down["error"]["reason"], "condition_prevents", "{down}");
+}
+
+#[test]
+fn a_check_after_a_fight_closes_its_combat_over() {
+    let mut api = duel();
+    let started = api.start_duel("dm");
+    let (last, _) = fight_to_the_end(&mut api, started);
+    assert_eq!(last["awaiting"]["kind"], "combat_over", "{last}");
+    // The session is unseeded, so either side can win; the survivor makes the checks.
+    let standing = if last["awaiting"]["winner"] == "party" {
+        "bren"
+    } else {
+        "goblin"
+    };
+    let refused = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": standing, "check": { "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 12 } }),
+    );
+    assert_eq!(refused["error"]["code"], "bad_request", "{refused}");
+    assert_eq!(refused["awaiting"]["kind"], "combat_over", "{refused}");
+    let rolled = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": standing, "check": { "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 10 } }),
+    );
+    assert_eq!(rolled["ok"], true, "{rolled}");
+    assert_eq!(rolled["awaiting"]["kind"], "none", "{rolled}");
+    let state = api.call("dm", json!({ "cmd": "get_state" }));
+    assert_eq!(state["result"]["state"]["mode"], "explore", "{state}");
+    assert_eq!(state["awaiting"]["kind"], "none", "{state}");
+}

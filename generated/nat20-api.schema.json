@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.8"
+    "version": "1.0.0-dev.9"
   },
   "$defs": {
     "Ability": {
@@ -209,24 +209,6 @@
         "max_targets",
         "targets",
         "variants"
-      ]
-    },
-    "AdvantageGrant": {
-      "description": "Advantage or Disadvantage granted to a check, with its reason.",
-      "type": "object",
-      "properties": {
-        "reason": {
-          "description": "The rules reason, logged with the roll, e.g. \"Help action from Lia\".",
-          "type": "string"
-        },
-        "state": {
-          "description": "`advantage` or `disadvantage`.",
-          "$ref": "#/$defs/AdvantageState"
-        }
-      },
-      "required": [
-        "state",
-        "reason"
       ]
     },
     "AdvantageState": {
@@ -503,7 +485,7 @@
       "description": "Which check `request_check` rolls.",
       "oneOf": [
         {
-          "description": "A check the scenario defines, with its ability, skill and DC.",
+          "description": "A check the scenario defines, with its skill or saving throw and its DC. Rolled at most\nonce per scene.",
           "type": "object",
           "properties": {
             "check_id": {
@@ -521,15 +503,15 @@
           ]
         },
         {
-          "description": "A check the DM picks from the SRD DC ladder (5 very easy to 30 nearly impossible).",
+          "description": "A check the DM picks from the SRD DC ladder (5 very easy to 30 nearly impossible) when no\nscenario check fits. Not limited per scene.",
           "type": "object",
           "properties": {
             "ability": {
-              "description": "The ability.",
+              "description": "The ability; it must be the skill's own ability.",
               "$ref": "#/$defs/Ability"
             },
             "dc": {
-              "description": "The DC: one of 5, 10, 15, 20, 25, 30.",
+              "description": "The DC: one of 5, 10, 15, 20, 25, 30; anything else is a `bad_request`.",
               "type": "integer",
               "format": "uint8",
               "maximum": 255,
@@ -540,7 +522,7 @@
               "const": "ladder"
             },
             "skill": {
-              "description": "The skill, if one applies.",
+              "description": "The skill. A check without one answers `not_implemented`.",
               "anyOf": [
                 {
                   "$ref": "#/$defs/Skill"
@@ -557,6 +539,80 @@
             "dc"
           ]
         }
+      ]
+    },
+    "CheckTest": {
+      "description": "What a scenario check tests.",
+      "oneOf": [
+        {
+          "description": "An ability check with a skill, e.g. Wisdom (Insight).",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "skill"
+            },
+            "skill": {
+              "description": "The skill; its ability is the SRD default.",
+              "$ref": "#/$defs/Skill"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "skill"
+          ]
+        },
+        {
+          "description": "A saving throw.",
+          "type": "object",
+          "properties": {
+            "ability": {
+              "description": "The ability the save uses.",
+              "$ref": "#/$defs/Ability"
+            },
+            "kind": {
+              "type": "string",
+              "const": "save"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "ability"
+          ]
+        }
+      ]
+    },
+    "CheckView": {
+      "description": "A scenario check as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "dc": {
+          "description": "The DC.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "id": {
+          "description": "Check id from the scene.",
+          "type": "string"
+        },
+        "rolled": {
+          "description": "Whether the check was already rolled in this scene; it cannot be rolled again.",
+          "type": "boolean"
+        },
+        "test": {
+          "description": "The skill or saving throw.",
+          "$ref": "#/$defs/CheckTest"
+        }
+      },
+      "required": [
+        "id",
+        "test",
+        "dc",
+        "rolled"
       ]
     },
     "CombatOverReason": {
@@ -830,32 +886,6 @@
             "cmd",
             "roll_id",
             "total",
-            "success"
-          ]
-        },
-        {
-          "description": "The group check's rolls and outcome.",
-          "type": "object",
-          "properties": {
-            "cmd": {
-              "type": "string",
-              "const": "group_check"
-            },
-            "roll_ids": {
-              "description": "One roll per actor, in the order given.",
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/RollId"
-              }
-            },
-            "success": {
-              "description": "Whether at least half the group succeeded.",
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "cmd",
-            "roll_ids",
             "success"
           ]
         },
@@ -1951,7 +1981,7 @@
           ]
         },
         {
-          "description": "A check resolved.",
+          "description": "A check resolved. DM only: `check_id` is scenario data.",
           "type": "object",
           "properties": {
             "actor": {
@@ -1983,6 +2013,47 @@
             "actor",
             "roll_id",
             "success"
+          ]
+        },
+        {
+          "description": "A scene flag was set for the first time this session. DM only.",
+          "type": "object",
+          "properties": {
+            "flag": {
+              "description": "The flag.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "flag_set"
+            }
+          },
+          "required": [
+            "kind",
+            "flag"
+          ]
+        },
+        {
+          "description": "A scenario hazard was set off; its saving throw follows. DM only: players see the save\nand any damage.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The creature that set it off and makes the save.",
+              "$ref": "#/$defs/Handle"
+            },
+            "hazard_id": {
+              "description": "Hazard id from the scene.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "hazard_triggered"
+            }
+          },
+          "required": [
+            "kind",
+            "hazard_id",
+            "actor"
           ]
         },
         {
@@ -2503,6 +2574,11 @@
           "description": "No route leads to the anchor, creature or point a `move` names.",
           "type": "string",
           "const": "no_path"
+        },
+        {
+          "description": "The scenario check was already rolled in this scene, by anyone.",
+          "type": "string",
+          "const": "already_attempted"
         }
       ]
     },
@@ -2776,23 +2852,12 @@
           ]
         },
         {
-          "description": "Asks the engine to roll an ability check. The engine rolls and decides success.",
+          "description": "Asks the engine to roll an ability check or saving throw in explore mode. The engine rolls\nand decides success, and applies the scenario check's consequences. Each scenario check is\nrolled at most once per scene, by anyone; a second request answers `rejected` with\n`already_attempted`. Advantage comes only from what the engine knows, never from the caller.",
           "type": "object",
           "properties": {
             "actor": {
               "description": "The creature that makes the check.",
               "$ref": "#/$defs/Handle"
-            },
-            "advantage": {
-              "description": "Advantage or Disadvantage, always with the rules reason for it.",
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/AdvantageGrant"
-                },
-                {
-                  "type": "null"
-                }
-              ]
             },
             "check": {
               "description": "Which check.",
@@ -2807,32 +2872,6 @@
             "cmd",
             "actor",
             "check"
-          ]
-        },
-        {
-          "description": "A group check from the scenario: succeeds when at least half the group succeeds.",
-          "type": "object",
-          "properties": {
-            "actors": {
-              "description": "The creatures that make the check.",
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/Handle"
-              }
-            },
-            "check_id": {
-              "description": "Check id from the scene.",
-              "type": "string"
-            },
-            "cmd": {
-              "type": "string",
-              "const": "group_check"
-            }
-          },
-          "required": [
-            "cmd",
-            "actors",
-            "check_id"
           ]
         },
         {
@@ -3167,6 +3206,13 @@
             "advantage": {
               "description": "Advantage state of the d20.",
               "$ref": "#/$defs/AdvantageState"
+            },
+            "advantage_sources": {
+              "description": "The rules reasons behind `advantage`, as the engine tracked them, e.g. a condition or\na feature. Empty when the roll is normal.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             },
             "against": {
               "description": "The number the total was compared with: always present for `attack` (AC),\n`saving_throw`, `death_save`, `ability_check` and `skill_check` (DC); absent for\n`initiative`, `damage` and `healing`.",
@@ -3706,11 +3752,25 @@
                 "$ref": "#/$defs/AnchorView"
               }
             },
+            "checks": {
+              "description": "The loaded scene's checks, in scene file order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/CheckView"
+              }
+            },
             "creatures": {
               "description": "Every creature in the scene.",
               "type": "array",
               "items": {
                 "$ref": "#/$defs/CreatureFull"
+              }
+            },
+            "flags": {
+              "description": "Scene flags set this session, sorted. They persist across scenes.",
+              "type": "array",
+              "items": {
+                "type": "string"
               }
             },
             "initiative": {
@@ -3750,7 +3810,9 @@
             "mode",
             "initiative",
             "creatures",
-            "anchors"
+            "anchors",
+            "flags",
+            "checks"
           ]
         },
         {

@@ -7,8 +7,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Ability, Condition, Handle, HealthBand, LifeState, Mode, OptionId, PointFt, PromptId,
-    RejectReason, Side, Skill,
+    Ability, CheckTest, Condition, Handle, HealthBand, LifeState, Mode, OptionId, PointFt,
+    PromptId, RejectReason, Side, Skill,
 };
 
 /// The session state, projected for the request's `viewer`, tagged by `view`.
@@ -31,6 +31,10 @@ pub enum State {
         creatures: Vec<CreatureFull>,
         /// The scene's named landmarks, in scene file order.
         anchors: Vec<AnchorView>,
+        /// Scene flags set this session, sorted. They persist across scenes.
+        flags: Vec<String>,
+        /// The loaded scene's checks, in scene file order.
+        checks: Vec<CheckView>,
     },
     /// What one player sees: their own creature in full, the others as observed.
     Player {
@@ -53,6 +57,19 @@ pub enum State {
         /// The scene's named landmarks, in scene file order, with the distance from the viewer.
         anchors: Vec<AnchorObserved>,
     },
+}
+
+/// A scenario check as the DM sees it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct CheckView {
+    /// Check id from the scene.
+    pub id: String,
+    /// The skill or saving throw.
+    pub test: CheckTest,
+    /// The DC.
+    pub dc: u8,
+    /// Whether the check was already rolled in this scene; it cannot be rolled again.
+    pub rolled: bool,
 }
 
 /// A named landmark as the DM sees it.
