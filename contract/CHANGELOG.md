@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.6 (2026-10-17)
+- Docs only, no wire type change: `load_scene{party}` is served (API-5, Milestone 3 spec §7 step 2). The session keeps one engine across scenes; carried creatures keep HP, resources and conditions and are placed at `party_start` (the last anchor takes any extra); every other creature of the previous scene leaves (protocol.md §2). New refusals: `bad_request` for a party listed twice, a party given to a scene with no `party_start`, or no party for a scene that places no creature of its own; `unknown_creature` for a handle not in the current scene; `bad_scene` for a handle both carried and defined by the scene. Fixture `carry.jsonl`.
+- Behaviour change, breaking while pre-release: `load_scene` during a fight answers `wrong_mode` instead of abandoning the fight, so every `combat_started` has its `combat_over`. Migration: end the fight first (a side down, or `end_combat` once API-9 serves it).
+- Scene flags are not served yet: nothing can set one until checks land (step 5), so they come with that step.
+- Test scene `m3_s3_yard`: the woodpile and mill door anchors moved next to the gate, since nobody can `move` yet.
+
 ## 1.0.0-dev.5 (2026-10-17)
 - The scene file joins the contract (API-21, Milestone 3 spec §4.1): module `scene.rs` with `SceneFile`, `Anchor`, `SceneCreature`, `Control`, `Placement`, `ScenarioCheck`, `CheckTest`, `Hazard`, `HazardSave`, `Consequence`, `Encounter`, `Surprise`, `SurrenderCondition`, `SurrenderTrigger`, `Spawn`, `SpawnWhen`, `SpawnUnless`; its own schema `generated/nat20-scene.schema.json` and TS module (`scene` namespace in the engine client). No wire type changes.
 - `hello.schema_sha256` now covers the wire schema followed by the scene schema (protocol.md §8).

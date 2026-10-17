@@ -41,12 +41,15 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         seed: Option<u32>,
     },
-    /// Loads a scene from the scenario and enters explore mode. The party carries over.
+    /// Loads a scene from the scenario and enters explore mode, in the session's one engine.
+    /// Creatures in `party` carry over; every other creature of the previous scene leaves.
+    /// Refused with `wrong_mode` while a fight is running.
     LoadScene {
         /// Scene id from the scenario file.
         scene_id: String,
-        /// Creatures carried in from the previous scene, with their HP, resources and conditions.
-        /// Empty for the first scene, whose party comes from the scenario.
+        /// Creatures carried in from the previous scene, with their HP, resources and conditions,
+        /// placed at the scene's `party_start` anchors in order (the last anchor takes any extra).
+        /// Empty for a scene that places its own creatures; required by a scene that places none.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         party: Vec<Handle>,
     },

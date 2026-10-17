@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.5"
+    "version": "1.0.0-dev.6"
   },
   "$defs": {
     "Ability": {
@@ -2496,7 +2496,7 @@
           ]
         },
         {
-          "description": "Loads a scene from the scenario and enters explore mode. The party carries over.",
+          "description": "Loads a scene from the scenario and enters explore mode, in the session's one engine.\nCreatures in `party` carry over; every other creature of the previous scene leaves.\nRefused with `wrong_mode` while a fight is running.",
           "type": "object",
           "properties": {
             "cmd": {
@@ -2504,7 +2504,7 @@
               "const": "load_scene"
             },
             "party": {
-              "description": "Creatures carried in from the previous scene, with their HP, resources and conditions.\nEmpty for the first scene, whose party comes from the scenario.",
+              "description": "Creatures carried in from the previous scene, with their HP, resources and conditions,\nplaced at the scene's `party_start` anchors in order (the last anchor takes any extra).\nEmpty for a scene that places its own creatures; required by a scene that places none.",
               "type": "array",
               "items": {
                 "$ref": "#/$defs/Handle"

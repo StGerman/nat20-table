@@ -227,11 +227,13 @@ fn unsupported_inputs_say_not_implemented() {
     let mut api = Api::new(Server::new());
     let seeded = api.call("dm", json!({ "cmd": "new_session", "seed": 7 }));
     assert_eq!(seeded["result"]["seed"], 7, "{seeded}");
+    // Party carry-over used to be unsupported; it is served now (API-5). Carrying a creature
+    // that no scene has placed names an unknown creature.
     let party = api.call(
         "dm",
         json!({ "cmd": "load_scene", "scene_id": "duel", "party": ["bren"] }),
     );
-    assert_eq!(party["error"]["code"], "not_implemented", "{party}");
+    assert_eq!(party["error"]["code"], "unknown_creature", "{party}");
 }
 
 #[test]
@@ -394,7 +396,12 @@ fn monster_with_the_wrong_proficiency_bonus_is_rejected() {
 fn a_second_scene_continues_the_same_log() {
     let mut api = duel();
     let first = api.start_duel("dm");
-    let head = first["log_head"].as_u64().unwrap();
+    // A running fight has to end before another scene loads; the refusal changes nothing.
+    let refused = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
+    assert_eq!(refused["error"]["code"], "wrong_mode", "{refused}");
+    assert_eq!(refused["awaiting"], first["awaiting"], "{refused}");
+    let (over, _) = fight_to_the_end(&mut api, first);
+    let head = over["log_head"].as_u64().unwrap();
     let reload = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
     let events = reload["events"].as_array().unwrap();
     assert_eq!(events[0]["kind"], "scene_loaded", "{reload}");
@@ -424,6 +431,47 @@ fn a_second_scene_continues_the_same_log() {
     let unique: HashSet<_> = ids.iter().collect();
     assert_eq!(unique.len(), ids.len(), "roll ids repeat: {ids:?}");
     assert_sources_cited(events);
+}
+
+/// One engine per session: a carried creature keeps what the fight did to it, and every other
+/// creature of the old scene is gone.
+#[test]
+fn a_carried_creature_keeps_its_hit_points() {
+    let mut api = duel();
+    let started = api.start_duel("dm");
+    let (over, _) = fight_to_the_end(&mut api, started);
+    assert_eq!(over["awaiting"]["kind"], "combat_over", "{over}");
+    let before = api.call("dm", json!({ "cmd": "get_state" }));
+    let bren = |state: &Value| -> Value {
+        state["result"]["state"]["creatures"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["handle"] == "bren")
+            .cloned()
+            .unwrap_or(Value::Null)
+    };
+    let road = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s2_road", "party": ["bren"] }),
+    );
+    assert_eq!(road["ok"], true, "{road}");
+    let creatures = road["result"]["state"]["creatures"].as_array().unwrap();
+    assert_eq!(creatures.len(), 1, "only the party is carried: {road}");
+    for field in ["hp", "hp_max", "temp_hp", "life_state", "health"] {
+        assert_eq!(bren(&road)[field], bren(&before)[field], "{field}: {road}");
+    }
+    assert_eq!(
+        bren(&road)["position_ft"],
+        json!({ "x_ft": 0.0, "y_ft": 0.0, "z_ft": 0.0 }),
+        "placed at road_start: {road}"
+    );
+    // The goblin left with its scene, so it can't be carried any more.
+    let gone = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s4_prisoner", "party": ["bren", "goblin"] }),
+    );
+    assert_eq!(gone["error"]["code"], "unknown_creature", "{gone}");
 }
 
 /// A self-targeted option takes no targets; naming one is refused and spends nothing.
@@ -459,10 +507,9 @@ fn a_self_targeted_option_refuses_targets() {
 
 /// A fight that ends by itself puts the scene back in explore mode: `combat_over` is reported
 /// until the next scene command, `end_combat` has nothing to end, and `load_scene` reads `none`.
-#[test]
-fn a_finished_fight_returns_the_scene_to_explore_mode() {
-    let mut api = duel();
-    let mut last = api.start_duel("dm");
+/// Plays the duel to its end from `last`, Bren attacking the goblin whenever he can.
+/// Returns the last response and Bren's last prompt id.
+fn fight_to_the_end(api: &mut Api, mut last: Value) -> (Value, Value) {
     let mut prompt = Value::Null;
     for _ in 0..200 {
         if last["awaiting"]["kind"] != "action" {
@@ -482,6 +529,14 @@ fn a_finished_fight_returns_the_scene_to_explore_mode() {
             )
         };
     }
+    (last, prompt)
+}
+
+#[test]
+fn a_finished_fight_returns_the_scene_to_explore_mode() {
+    let mut api = duel();
+    let started = api.start_duel("dm");
+    let (last, prompt) = fight_to_the_end(&mut api, started);
     assert_eq!(last["awaiting"]["kind"], "combat_over", "{last}");
     assert_eq!(last["awaiting"]["reason"], "side_down", "{last}");
     let over = last["events"]
