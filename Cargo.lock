@@ -1314,7 +1314,7 @@ dependencies = [
  "rerecast",
  "serde",
  "serde_json",
- "uom",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1355,7 +1355,7 @@ dependencies = [
  "strum",
  "tracing",
  "tracing-subscriber",
- "uom",
+ "uom 0.37.0",
  "uuid",
 ]
 
@@ -2432,6 +2432,20 @@ dependencies = [
  "num-rational",
  "num-traits",
  "serde",
+ "typenum",
+]
+
+[[package]]
+name = "uom"
+version = "0.38.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a739f83872836c82a4f2527d4e54b37007b3de68cafe7edde95fd695968bf4b9"
+dependencies = [
+ "num-bigint",
+ "num-complex",
+ "num-rational",
+ "num-traits",
+ "serde_core",
  "typenum",
 ]
 
