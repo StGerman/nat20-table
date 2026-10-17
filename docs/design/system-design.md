@@ -30,7 +30,7 @@ Companion files: [CLAUDE.md](CLAUDE.md) (the rules in a form a Claude Code sessi
 **Constraints**
 - C1. Team: Stas plus Claude sessions. Upstream: one maintainer, pre-1.0, refactors core types often (last three commits all reshape action/registry types).
 - C2. Core loads content from a global `LazyLock` registry rooted at a **compile-time** path (`CARGO_MANIFEST_DIR/../assets/registries`).
-- C3. Licences: core MIT; our content CC-BY-4.0 SRD material or original; no copyleft (see project memory).
+- C3. Licences: core MIT; our content CC-BY-4.0 SRD material or original; no strong copyleft; MPL-2.0 only in an unmodified third-party crate named in `deny.toml` (CLAUDE.md Rule 7, decision 0022).
 
 ## 2. Decomposition
 
@@ -166,10 +166,14 @@ Pin exact versions of every generator. Generated files are committed, so a Rust-
 | `contract-fresh` | `npm ci && npm run gen && git diff --exit-code` | Someone edited generated code, or changed the contract without regenerating |
 | `contract-compat` | `tools/codegen/check-breaking.mjs base.json head.json` vs the PR base | Within a major version: a def, property, enum value or command removed; a property newly required; a type narrowed. Passes if `CHANGELOG.md` and `v` record a major bump |
 | `contract-pure` (Rust contract only) | `cargo tree -p nat20-api-contract` + grep | The contract crate depends on anything but serde, serde_json, schemars |
-| `rust` | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --locked` | Includes the conformance replay: every `contract/fixtures/*.jsonl` replayed against the server with its seed, byte-identical responses |
-| `visibility` | Fixture replay as each player viewer; scan responses | Any of `hp`, `hp_max`, `ac`, `dc`, `against` appears for a creature the viewer does not own |
-| `ts` | `tsc --noEmit`, client tests spawning the built server | Generated TS out of step with server behaviour |
-| `core-drift` (weekly, non-blocking) | Build against the fork's `demo` HEAD | Upstream moved in a way that breaks `adapter/`; opens a bump task early |
+| `rust-lint` | `cargo fmt --check`, `cargo clippy --all-targets --all-features -D warnings`, `cargo doc` with warnings denied (check-only build) | Formatting, a lint, or a broken doc comment or link |
+| `rust-test` | `cargo test --locked`; the only job that builds binaries, and uploads the engine, the visibility scan and core's registries | Includes the conformance replay: every `contract/fixtures/*.jsonl` replayed against the server with its seed, byte-identical responses |
+| `visibility` | `crates/nat20-api-server/tests/visibility.rs` (binary from `rust-test`): replays every fixture and, after each step, asks `get_state` and `events` as every party viewer; scans the responses | Another creature's `hp`, `hp_max`, `temp_hp` or `ac`; any `against`, `dc`, `dc_source` or roll modifiers; a DM-only or another owner's event; an AC or DC number in text |
+| `ts` | `tsc`, client tests spawning the server binary from `rust-test` (no Rust toolchain in the job) | Generated TS out of step with server behaviour |
+| `deny` | `cargo deny check bans licenses sources` (`deny.toml`) | A dependency under a licence outside the permissive allow-list (Rule 7: no copyleft), a wildcard version, or a crate from an unlisted registry or git source |
+| `advisories` (not gating) | `cargo deny check advisories`, also weekly on `main` | A RustSec advisory without a recorded ignore |
+| `core-drift` (weekly, non-blocking) | Weekly: clippy and tests against the fork's `demo` HEAD instead of the pinned rev | Upstream moved in a way that breaks `adapter/`; opens a bump task early |
+| `ci-ok` (the required check) | Waits for every gating job | Any gating job failed or was cancelled. A skip passes: build jobs skip on a PR that touches only Markdown and `docs/` (job `changes`), `contract-compat` skips on push |
 
 The breaking-change check is our own ~60-line script over the schema bundle rather than a third-party diff tool: the four rules above are all it needs, and it can read our `CHANGELOG.md`.
 
