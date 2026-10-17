@@ -12,6 +12,8 @@ Facts that shape the choices:
 
 - A cold debug build of the workspace takes about 5 minutes on a 16-core machine and longer on a hosted runner; `nat20_core` and its geometry crates dominate. The repo is private, so runner minutes are billed.
 - The server binary reads `nat20_core`'s registries from its cargo git checkout at run time, so a job that reuses a built binary must still run `cargo fetch`.
+- Measured on PR #10 with a cold cache: the single `rust` job spent 4m46s in clippy and was still building tests 7m40s later; split into parallel jobs, `rust-lint` took 3m28s and `rust-test` 8m06s, and the whole run 9m21s. Downstream `ts` and `visibility` take 15 s and 8 s on downloaded binaries. Before this PR, warm runs on `main` took about 1 minute.
+- Local cold build of all test targets (16 cores): full debug info 276 s and 3.3 GB of `target/`; `line-tables-only` 233 s and 1.9 GB; no debug info 216 s and 1.1 GB. Tests run in 2-3 s in every case.
 - Today's graph (cargo-deny 0.18.9): every licence is permissive except `smartstring` (MPL-2.0, file-level copyleft) via `nat20_core -> rhai`. `nat20_core` declares no licence in its manifest; upstream's LICENSE is MIT. Two RustSec advisories, both "unmaintained" with no vulnerability: `paste` (RUSTSEC-2024-0436) and `smartstring` (RUSTSEC-2026-0249), both reached through upstream.
 
 ## Options
