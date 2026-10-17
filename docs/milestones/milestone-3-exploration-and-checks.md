@@ -55,7 +55,7 @@ The engine owns every number and every state change. The DM agent's job is to pi
 1. DM: `load_scene{scene_id:"s1_green"}`. The party comes from the scene file; mode is `explore`.
 2. Human: "Does the reeve seem to be hiding something?" The DM maps this to scenario check `reeve_insight` (Insight DC from the scene) and calls `request_check{actor:"bren", check:{kind:"scenario", check_id:"reeve_insight"}}`.
 3. Engine: rolls; logs `roll` (DM sees `full` with `against` and `dc_source:"scenario"`, players see `player`), then `check_resolved` (DM only) and `flag_set` (DM only) if the scene declares a flag on success. Result `{roll_id, total, success}`.
-4. DM narrates what the scene file says success unlocks. A second Insight attempt on the same check by the same actor is refused (`rejected`, `already_attempted`, decision D3).
+4. DM narrates what the scene file says success unlocks. A second roll of the same check in this scene, by anyone, is refused (`rejected`, `already_attempted`, decision D3). Others contribute through Help, which gives the roller Advantage.
 
 ### Scene 2: road to the mill (exploration)
 1. DM: `load_scene{scene_id:"s2_road", party:["bren","lia","oren"]}`. The party keeps HP, slots, resources and session flags.
@@ -99,7 +99,7 @@ Today `SceneFile` is a private serde struct in `adapter/game.rs`. The DM agent n
 SceneFile { id, description, map?, anchors[], creatures[], party_start[], checks[], hazards[], encounters[], spawns[] }
 Anchor        { id, name, position_ft }
 SceneCreature { handle, pregen | monster, side, control, at: anchor | position_ft }
-ScenarioCheck { id, test: {kind:"skill", skill} | {kind:"save", ability}, dc, attempts: "once_per_actor" | "unlimited",
+ScenarioCheck { id, test: {kind:"skill", skill} | {kind:"save", ability}, dc,
                 on_success[], on_failure[] }
 Hazard        { id, save: {ability, dc}, on_failure[], on_success[] }
 Consequence   = {kind:"flag", flag} | {kind:"hazard", hazard_id} | {kind:"damage", dice, damage_type}
@@ -117,7 +117,7 @@ Spawn         { id, creatures[], when: "dm" | {flag} | {round, unless?: "any_par
 | Command | Change | Visibility of the result |
 |---|---|---|
 | `load_scene` | Served with `party`: the handles carried from the previous scene (any creature, not only PCs). Creatures not carried are removed. Session flags persist. | `State` projected as today |
-| `get_state` | `State::Dm` gains `anchors`, `flags`, `checks` (id, test, DC, attempts left per actor), `encounters` (with `surrender_available` on the running one) and `spawns`. `State::Player` gains `anchors` only, with `distance_ft` from the viewer. Additive. | Anchors: everyone. Flags, checks, DCs, encounters, spawns: DM only, as fields of the DM type alone (Rule 3) |
+| `get_state` | `State::Dm` gains `anchors`, `flags`, `checks` (id, test, DC, whether it has been rolled in this scene), `encounters` (with `surrender_available` on the running one) and `spawns`. `State::Player` gains `anchors` only, with `distance_ft` from the viewer. Additive. | Anchors: everyone. Flags, checks, DCs, encounters, spawns: DM only, as fields of the DM type alone (Rule 3) |
 | `get_sheet` | Served (API-19), including `hit_dice` once U4 lands | Owner and DM, else `not_visible` |
 | `move` | Served. Explore: no movement cost, needs a path. Combat: needs `prompt_id`, spends movement, returns `provoked`. | Result to the caller; `moved` event public |
 | `request_check` | Served for `scenario` (skill or save) and `ladder` (skill required; a missing skill answers `not_implemented`). **Breaking:** `advantage` is removed. Advantage now comes only from what the engine knows: a pending Help, conditions, or the scene check itself (decision D2). | Result `{roll_id, total, success}`; `check_resolved` DM only |
@@ -140,7 +140,7 @@ Spawn         { id, creatures[], when: "dm" | {flag} | {round, unless?: "any_par
 - `RollView::Full` gains `advantage_sources: [string]`, the logged reason behind any Advantage or Disadvantage, so the audit can check it. It is additive and stays out of `RollView::Player`.
 - New `RejectReason`s, additive:
   - `no_path`: no route to the anchor or point;
-  - `already_attempted`: a once-per-actor scenario check (D3);
+  - `already_attempted`: a scenario check already rolled in this scene (D3);
   - `condition_not_met`: `end_combat{scenario}` for an encounter that does not declare it;
   - `automatic`: a trigger-only spawn.
 - `ErrorHint` gains `known_ids: [string]` for `unknown_check`, `unknown_anchor`, `unknown_spawn` and `unknown_encounter`, so a model recovers within 2 retries (acceptance §6.5). It is filled only for the DM viewer, because ids are scenario data.
@@ -163,7 +163,7 @@ Spawn         { id, creatures[], when: "dm" | {flag} | {round, unless?: "any_par
 | Who rolls | | Names the actor |
 | DC, success, damage, HP | Yes | Never; it reads the result |
 | Advantage on a check | Yes, from Help, conditions or the scene check | No grants (D2) |
-| Retrying a check | Enforces `attempts` | Picks another check or actor, or moves the story on |
+| Retrying a check | Allows one roll per scenario check per scene | Picks who rolls, offers Help to the others, or moves the story on |
 | Surprise | Yes, from encounter rules and flags | No (D4) |
 | Combat start | Rolls initiative | Calls `start_combat{encounter_id}` when the fiction says the fight starts |
 | Combat end | Side down; evaluates the surrender condition every turn and refuses a surrender outside it | Decides whether and when to call `end_combat{surrender}` while `surrender_available` is true. A never-surrender DM persona just never calls it (Milestone 6) |
@@ -194,7 +194,7 @@ Each step is one PR (Rule 8, one concern), green on all CI jobs, with its contra
 | 2 | One engine per session: carry-over in `load_scene`, despawn the rest, `party_start`, geometry swap, session flags, `flag_set` | API-4, API-5 | 1 | M |
 | 3 | Anchors and `move` (explore and combat), anchors in state, `no_path` | MAP-1, API-7 | 2 | M |
 | 4 | `get_sheet` | API-19 (pulled into M3) | 2 | S |
-| 5 | `request_check` (scenario and ladder), `attempts`, hazards with save and damage, `advantage_sources`, `known_ids`; drop `group_check` and `advantage` | API-2, CHK-1, CHK-2, CHK-3, CHK-5, API-13 | 2 | M |
+| 5 | `request_check` (scenario and ladder), one roll per check per scene, hazards with save and damage, `advantage_sources`, `known_ids`; drop `group_check` and `advantage` | API-2, CHK-1, CHK-2, CHK-3, CHK-5, API-13 | 2 | M |
 | 6 | Fork U4 Hit Point Dice; then pin bump PR; then `short_rest` | ENG-4, API-3 | 4, fork | M + S + S |
 | 7 | Encounters: `start_combat{encounter_id}`, surrender condition and `surrender_available`, `end_combat{surrender}` gated by it, `surrendered`, `end_combat{scenario}` | API-9, API-22 (new) | 2 | M |
 | 8 | Fork U5 surprise, pin bump, surprise from encounter rules | API-12 | 7, fork | S + S + S |
@@ -247,7 +247,7 @@ Other tests:
 |---|---|
 | 1. Scene 1 to 6 unattended | Scene transitions, carry-over and the combat-to-explore joins run without manual steps in `m3_trail` |
 | 2. Every roll in the engine log | Checks, saves, hazards, Hit Point Dice and initiative under surprise all carry `rN` ids; the audit passes on `m3_trail` |
-| 3. No narration contradicts state | Carried HP and flags are engine state the narration-vs-state check (AGT-9) can read; `get_state` for the DM exposes flags and attempts |
+| 3. No narration contradicts state | Carried HP and flags are engine state the narration-vs-state check (AGT-9) can read; `get_state` for the DM exposes flags and which checks were rolled |
 | 4. Latency | Not measured here; `move` path probes are timed in the fixture run and logged to stderr as a baseline |
 | 5. Recovery within 2 retries | Every new refusal has a sentence, `retryable`, and `known_ids` or `awaiting`; `checks.jsonl` and `explore.jsonl` show a wrong id followed by a correct one |
 | 6. First-time player | `get_sheet` serves `/sheet` (API-19) |
@@ -256,13 +256,13 @@ Other tests:
 
 ## 11. Decisions for Stas
 
-D1, D2, D4 and D6 were decided by Stas on 2026-10-17 in the Milestone 3 spec thread. Stas delegated D5 to the coordinator, which decided it on 2026-10-17; the record is [decision 0021](../decisions/0021-surrender-dm-call-engine-gate.md). D3 is still open; the spec body describes once per actor until it is settled.
+D1 to D4 and D6 were decided by Stas on 2026-10-17 in the Milestone 3 spec thread. Stas delegated D5 to the coordinator, which decided it on 2026-10-17; the record is [decision 0021](../decisions/0021-surrender-dm-call-engine-gate.md).
 
 | # | Question | Status | Answer or options | Why |
 |---|---|---|---|---|
 | D1 | Group checks | **Decided: drop `group_check`** | | SRD 5.2.1 has no group check; Rule 7 allows 2014 data only to fill fields, not to add rules |
 | D2 | DM-granted Advantage on checks | **Decided: remove it.** Advantage comes only from Help, conditions or the scene check | | Scope §7.3: LLM DMs drift toward granting success; free-text Advantage is a ruling by another name |
-| D3 | Retrying a scenario check | Open | **Once per check per scene (one roll for the party; others contribute with Help)**; once per actor; no retries but the scene can mark a check retryable | Once per actor still gives four characters four tries at the same Persuasion, which is close to a free pass |
+| D3 | Retrying a scenario check | **Decided: one roll per check per scene.** The other characters help through Help (Advantage) instead of rolling again. Ladder checks have no id, so the limit covers scenario checks only | | Once per actor would give four characters four tries at the same Persuasion, which is close to a free pass |
 | D4 | Who decides surprise | **Decided: the engine**, from encounter rules and flags; `surprised` is dropped from `start_combat` | | Same reason as D2 |
 | D5 | Goblin surrender | **Decided: the DM decides, within a scene surrender condition the engine enforces** ([0021](../decisions/0021-surrender-dm-call-engine-gate.md)) | | Keeps the call with the DM, as Stas wants, while stopping it from ending a fight the party is losing; the call replays as a request like any other |
 | D6 | Pull `get_sheet` (API-19) from Milestone 6 into Milestone 3 | **Decided: yes** | | Short-rest and carry-over fixtures need the sheet to show Hit Point Dice and resources; it is size S |
