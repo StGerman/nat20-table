@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.7): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat`, `get_state`, `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1) and `events`, with the §5 projection, and answers `get_sheet`, `request_check`, `group_check`, `short_rest` and `spawn` with `not_implemented`. `end_combat` answers `wrong_mode` outside combat and `not_implemented` during a fight, since scenes carry no end-combat reasons yet. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: no `surprised` in `start_combat`, no options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.8): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat`, `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1) and `events`, with the §5 projection, and answers `request_check`, `group_check`, `short_rest` and `spawn` with `not_implemented`. `end_combat` answers `wrong_mode` outside combat and `not_implemented` during a fight, since scenes carry no end-combat reasons yet. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: no `surprised` in `start_combat`, no options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -124,6 +124,13 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 - **Combat.** `move` is a decision at the actor's action prompt, so it needs that prompt's id (`bad_request` without one, `stale_prompt` for an old one) and gets a new prompt like `submit`. The whole route must fit in the movement left this turn, else `rejected` with `insufficient_resource` and nobody moves. Leaving a hostile creature's reach gives it an opportunity attack: the mover stops where it provoked, `provoked` names the reactor, and `moved_ft` is the distance actually covered.
 - No route to the goal (off the map, or blocked) answers `rejected` with `no_path`.
 - Every move logs a public `moved` event with `from`, `to` and the anchor, when the creature reached one.
+
+### 4.2 Sheets
+
+- `get_sheet` answers the owner (`viewer` = `actor`) and the DM with the full `Sheet`; any other creature viewer gets `not_visible`. An actor not in the scene answers `unknown_creature`.
+- It is read-only and works in either mode: it rolls nothing, logs no event and does not advance the seeded dice, so asking for a sheet never changes what a later roll comes up.
+- Check and save bonuses are what the engine adds to the d20 when it rolls: ability modifier, proficiency and lasting effects. Dice bonuses such as Bless are left out. `initiative_bonus` is the engine's initiative check; Passive Perception is 10 plus the Perception bonus.
+- Not filled yet: `hit_dice` (empty until the engine has a Hit Point Dice pool, ENG-4), `conditions` and `exhaustion` (as in state).
 
 `Option` (from `legal_actions`):
 ```json

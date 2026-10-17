@@ -207,6 +207,18 @@ impl Session {
         })
     }
 
+    /// `actor`'s full sheet, for its owner or the DM; anyone else gets `not_visible`.
+    pub fn sheet(&mut self, actor: &str, viewer: &Viewer) -> Result<CommandResult, ApiError> {
+        let sheet = self.game_mut()?.sheet(actor)?;
+        let sheet = projection::sheet(viewer, sheet).ok_or_else(|| {
+            error(
+                ErrorCode::NotVisible,
+                format!("Only {actor}'s player and the DM can see {actor}'s sheet."),
+            )
+        })?;
+        Ok(CommandResult::GetSheet { sheet })
+    }
+
     pub fn legal_actions(&mut self, actor: &str) -> Result<CommandResult, ApiError> {
         let prompt_id = self.require_prompt(actor, None, false)?;
         let (options, unavailable) = self.game_mut()?.legal_actions(actor)?;

@@ -5,6 +5,7 @@ pub mod game;
 pub mod monster;
 pub mod names;
 pub mod pregen;
+pub mod sheet;
 
 use nat20_core::{components::rng, registry::registry::ClassesRegistry};
 
