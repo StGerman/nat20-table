@@ -1,0 +1,43 @@
+{
+  "_comment": "The optional Barbarian for an AI seat (Milestone 4 spec §3): a Human Soldier with a Greataxe and no armour, AC 13 from Unarmored Defense and 23 Hit Points. The Potion of Healing comes with step 9 (ITM-4).",
+  "id": "barbarian_l2",
+  "name": "Torva",
+  "species": "nat20_core::species.human",
+  "background": "nat20_core::background.soldier",
+  "class": "nat20_core::class.barbarian",
+  "level": 2,
+  "ability_scores": {
+    "_comment": "The SRD 5.2.1 standard array as the Barbarian assigns it; the Soldier adds 2 and 1.",
+    "strength": 15,
+    "dexterity": 13,
+    "constitution": 14,
+    "intelligence": 10,
+    "wisdom": 12,
+    "charisma": 8,
+    "plus_2": "strength",
+    "plus_1": "constitution"
+  },
+  "choices": [
+    {
+      "_comment": "Versatile: the Soldier already grants Savage Attacker.",
+      "prompt_id": "choice.human.versatile",
+      "picks": ["nat20_core::feat.skilled"]
+    }
+  ],
+  "skills": ["animal_handling", "perception"],
+  "skill_choices": [
+    {
+      "_comment": "Skillful.",
+      "source": "nat20_core::species.human",
+      "skills": ["survival"]
+    },
+    {
+      "source": "nat20_core::feat.skilled",
+      "skills": ["insight", "medicine", "stealth"]
+    }
+  ],
+  "equipment": [
+    { "item": "nat20_core::item.greataxe", "quantity": 1, "equip": "melee_main_hand" }
+  ],
+  "money": "15 GP"
+}

@@ -1715,7 +1715,7 @@ fn a_helpers_next_turn_ends_what_it_gave_before() {
 
     // A help Bren is refused moves nothing on, so the one he gave still stands.
     assert_eq!(help(&mut api, "bren", assist("athletics"))["ok"], true);
-    let refused = help(&mut api, "bren", assist("medicine"));
+    let refused = help(&mut api, "bren", assist("arcana"));
     assert_eq!(refused["error"]["reason"], "not_proficient", "{refused}");
     let moved = api.call(
         "dm",
@@ -1797,11 +1797,11 @@ fn a_refused_help_rolls_and_logs_nothing() {
         assert_eq!(answer["error"]["reason"], reason, "{answer}");
         assert_eq!(answer["events"], json!([]), "{answer}");
     };
-    // Bren has no Medicine proficiency, cannot help himself, and Ana is not dying.
+    // Bren has no Arcana proficiency, cannot help himself, and Ana is not dying.
     refused(
         &mut api,
         "bren",
-        json!({ "kind": "assist_check", "ally": "ana", "skill": "medicine" }),
+        json!({ "kind": "assist_check", "ally": "ana", "skill": "arcana" }),
         "not_proficient",
     );
     refused(
@@ -1941,7 +1941,8 @@ fn in_combat_help_is_an_option_with_a_variant_per_skill() {
         .iter()
         .find(|o| o["option_id"] == "help/assist_ability_check")
         .unwrap_or_else(|| panic!("{listed}"));
-    // Bren's skills: Athletics and Perception from the class, Intimidation from Soldier.
+    // Bren's skills: Acrobatics and Perception from the class, Athletics and Intimidation from
+    // Soldier, Insight from Skillful, Medicine, Persuasion and Survival from Skilled.
     let variants: Vec<&str> = assist["variants"]
         .as_array()
         .unwrap()
@@ -1950,10 +1951,19 @@ fn in_combat_help_is_an_option_with_a_variant_per_skill() {
         .collect();
     assert_eq!(
         variants,
-        ["help/athletics", "help/intimidation", "help/perception"],
+        [
+            "help/acrobatics",
+            "help/athletics",
+            "help/insight",
+            "help/intimidation",
+            "help/medicine",
+            "help/perception",
+            "help/persuasion",
+            "help/survival"
+        ],
         "{assist}"
     );
-    assert_eq!(assist["variants"][0]["name"], "Athletics", "{assist}");
+    assert_eq!(assist["variants"][0]["name"], "Acrobatics", "{assist}");
     let targets: Vec<&str> = assist["targets"]
         .as_array()
         .unwrap()
@@ -1977,7 +1987,7 @@ fn in_combat_help_is_an_option_with_a_variant_per_skill() {
     };
     let bare = submit(&mut api, None);
     assert_eq!(bare["error"]["reason"], "needs_variant", "{bare}");
-    let unknown = submit(&mut api, Some("help/medicine"));
+    let unknown = submit(&mut api, Some("help/arcana"));
     assert_eq!(unknown["error"]["code"], "unknown_option", "{unknown}");
     let other = api.call(
         "dm",

@@ -1,0 +1,34 @@
+{
+    "id": "party",
+    "description": "Pregen test scene (Milestone 4 spec §7 step 4): the demo Fighter and the Barbarian side by side, to read their sheets.",
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "torva",
+            "pregen": "barbarian_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ]
+}

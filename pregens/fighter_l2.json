@@ -1,9 +1,8 @@
 {
-  "_comment": "Bren, the level 2 Fighter Milestones 1 to 3 were played with. Stand-ins until core has them: Dragonborn instead of Human and no Shield, so AC 17 instead of the demo Fighter's 19 (Milestone 4 spec, step 4). Core's Soldier still grants a placeholder feat (Fighting Style: Archery).",
+  "_comment": "Bren, the demo Fighter for the human seat (Milestone 4 spec §3, decision D2): a Human Soldier with Defense, Chain Mail and a Shield, AC 19 and 20 Hit Points. The Potion of Healing comes with step 9 (ITM-4).",
   "id": "fighter_l2",
   "name": "Bren",
-  "species": "nat20_core::species.dragonborn",
-  "subspecies": "nat20_core::subspecies.dragonborn.white",
+  "species": "nat20_core::species.human",
   "background": "nat20_core::background.soldier",
   "class": "nat20_core::class.fighter",
   "level": 2,
@@ -20,16 +19,31 @@
   },
   "choices": [
     {
+      "_comment": "Versatile: the Soldier already grants Savage Attacker.",
+      "prompt_id": "choice.human.versatile",
+      "picks": ["nat20_core::feat.skilled"]
+    },
+    {
       "prompt_id": "choice.fighting_style",
       "picks": ["nat20_core::feat.fighting_style.defense"]
     }
   ],
-  "skills": ["athletics", "perception"],
+  "skills": ["acrobatics", "perception"],
+  "skill_choices": [
+    {
+      "_comment": "Skillful.",
+      "source": "nat20_core::species.human",
+      "skills": ["insight"]
+    },
+    {
+      "source": "nat20_core::feat.skilled",
+      "skills": ["medicine", "persuasion", "survival"]
+    }
+  ],
   "equipment": [
     { "item": "nat20_core::item.chainmail", "quantity": 1, "equip": "armor" },
     { "item": "nat20_core::item.longsword", "quantity": 1, "equip": "melee_main_hand" },
-    { "item": "nat20_core::item.flail", "quantity": 1 },
-    { "item": "nat20_core::item.javelin", "quantity": 8 }
+    { "item": "nat20_core::item.shield", "quantity": 1, "equip": "melee_off_hand" }
   ],
   "money": "54 GP"
 }

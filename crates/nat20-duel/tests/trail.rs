@@ -57,8 +57,8 @@ fn every_trail_roll_is_cited_and_adds_up() {
 
 #[test]
 fn the_seeded_trail_shows_every_milestone_3_feature() {
-    // Seed 4 is the one `contract/fixtures/m3_trail.jsonl` records.
-    let (transcript, log) = run_trail(Some(4));
+    // Seed 5 is the one `contract/fixtures/m3_trail.jsonl` records.
+    let (transcript, log) = run_trail(Some(5));
     let log = json_log(&log);
     let rolls: Vec<&Value> = log
         .iter()
