@@ -2113,6 +2113,58 @@ fn a_dying_creature_makes_death_saves_and_an_ally_can_stabilize_it_in_a_fight() 
 }
 
 #[test]
+fn scripted_monsters_take_no_opportunity_attack_on_an_ally() {
+    let mut held = held_goblin();
+    held["handle"] = json!("goblin_a");
+    held["at"]["point"]["x_ft"] = json!(0.0);
+    let dir = data_dir(
+        "ally_reach",
+        &[(
+            "camp",
+            json!({ "id": "camp",
+                "creatures": [
+                    held,
+                    creature("goblin_b", ("monster", "goblin_warrior"), "hostile", 5.0),
+                    creature("bren", ("pregen", "fighter_l2"), "party", 200.0)
+                ],
+                "encounters": [{ "id": "camp", "participants": ["goblin_a", "goblin_b", "bren"] }] }),
+        )],
+    );
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "camp" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let started = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "camp" }),
+    );
+    assert_eq!(started["ok"], true, "{started}");
+    let turn = until_turn_of(&mut api, started, "goblin_a");
+
+    // Goblin A walks out of Goblin B's reach. The engine offers B an opportunity attack, which
+    // a scripted monster declines against its own side.
+    let moved = api.call(
+        "dm",
+        json!({ "cmd": "move", "actor": "goblin_a", "prompt_id": turn["awaiting"]["prompt_id"],
+            "to": { "kind": "point", "point": { "x_ft": -25.0, "y_ft": 0.0, "z_ft": 0.0 } } }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(moved["ok"], true, "{moved}");
+    assert_eq!(moved["awaiting"]["actor"], "goblin_a", "{moved}");
+    let attacks: Vec<&Value> = moved["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "roll" && e["roll"]["kind"] == "attack")
+        .collect();
+    assert!(attacks.is_empty(), "{moved}");
+    // The reaction was offered, so the move stopped where it provoked (protocol §4.1).
+    assert_eq!(moved["result"]["provoked"], json!(["goblin_b"]), "{moved}");
+}
+
+#[test]
 fn a_hit_on_a_stabilized_creature_is_a_failed_death_save() {
     // Seed 1: Ana stabilizes Bren, then strikes him with unarmed attacks on her next turns until
     // one hits. SRD 5.2.1: damage at 0 Hit Points is a failed death save, two on a Critical Hit,

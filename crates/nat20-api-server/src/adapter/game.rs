@@ -2326,12 +2326,19 @@ impl Game {
                 Awaiting::Action { actor } if self.control_of(actor) == Some(Control::Scripted) => {
                     self.scripted_action(actor);
                 }
-                Awaiting::Reaction { reactor, .. }
-                    if self.control_of(reactor) == Some(Control::Scripted) =>
-                {
-                    // Scripted creatures always take the first reaction offered
-                    // (for a goblin, the opportunity attack).
-                    if self.react_entity(reactor, Some(0)).is_err()
+                Awaiting::Reaction {
+                    reactor, trigger, ..
+                } if self.control_of(reactor) == Some(Control::Scripted) => {
+                    // Scripted creatures take the first reaction offered (for a goblin, the
+                    // opportunity attack) when an enemy set it off, and decline otherwise: the
+                    // engine offers an opportunity attack on any creature leaving reach, ally
+                    // or not.
+                    let enemy = trigger.is_some_and(|t| {
+                        systems::factions::mutual_attitude(&self.engine.world, reactor, t)
+                            == Attitude::Hostile
+                    });
+                    let choice = enemy.then_some(0);
+                    if self.react_entity(reactor, choice).is_err()
                         && let Err(e) = self.react_entity(reactor, None)
                     {
                         // Neither taking nor declining moved the engine on: retrying the
