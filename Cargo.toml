@@ -12,7 +12,8 @@ publish = false
 [workspace.dependencies]
 nat20-api-contract = { path = "crates/nat20-api-contract" }
 # Pinned by rev. Bump only in its own PR with the full suite green (CLAUDE.md Rule 5).
-# 031f7a2 = fork branch `demo`: upstream 9aaca2f plus Leather Armor, the Goblin Warrior's
+# b63b2bb = core #13 (crates.io polyanya 0.16.0 in place of the git patch, UPS-11) on top
+# of fork branch `demo` 031f7a2: upstream 9aaca2f plus Leather Armor, the Goblin Warrior's
 # shield stopgap effect (both needed until our content overlay exists), U2 seedable dice
 # (`components::rng`, plus initiative rolled in a fixed order), U1 `NAT20_REGISTRY_ROOT`,
 # U4 Hit Point Dice spent on a short rest (core #3), a natural 20 or 1 deciding only
@@ -22,15 +23,10 @@ nat20-api-contract = { path = "crates/nat20-api-contract" }
 # Tactical Mind turning a failed check into a success (core #8), damage to a Stable
 # creature counting as a failed death save (core #9) and effects tied to a turn ending on
 # creatures outside the fight (core #10).
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "031f7a25a6131fd6b30d249d7a28050ad85308dd" }
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "b63b2bba83efea5b2aa4b0741768e69f61687d2e" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
-
-# Copied verbatim from upstream nat20's workspace. Cargo ignores a dependency's [patch],
-# so without this nat20_core resolves crates.io polyanya instead of the patched branch.
-[patch.crates-io]
-polyanya = { git = "https://github.com/MadsWedendahlKruse/polyanya", branch = "fix-path-with-height-oob" }
 
 [profile.dev.package."*"]
 opt-level = 3
