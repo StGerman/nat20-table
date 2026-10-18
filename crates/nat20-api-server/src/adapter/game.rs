@@ -24,9 +24,8 @@ use nat20_api_contract::{
 use nat20_core::{
     components::{
         actions::{
-            action_builder::{
-                ActionBuilder, ActionBuilderError, ActionBuilderState, ReactionBuilder,
-            },
+            action::ActionCooldownMap,
+            action_builder::{ActionBuilder, ActionBuilderState, ReactionBuilder},
             targeting::{LineOfSight, TargetInstance, TargetingKind},
         },
         activity::{Activity, ActivityState},
@@ -37,7 +36,7 @@ use nat20_core::{
         health::{hit_point_dice::HitPointDice, hit_points::HitPoints, life_state::LifeState},
         id::{ActionId, ActionVariantId, EntityIdentifier, FactionId, ResourceId},
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
-        resource::ResourceAmount,
+        resource::{RechargeRule, ResourceAmount, ResourceMap},
         saving_throw::SavingThrowKind,
         time::{TimeStep, TurnBoundary},
     },
@@ -179,6 +178,8 @@ pub struct Game {
     /// The highest round of this scene's fights whose round spawns were looked at, so each
     /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
+    /// How many times the engine did not settle this session; each is a bug, reported on stderr.
+    stalls: usize,
 }
 
 impl Game {
@@ -361,27 +362,29 @@ impl Game {
         {
             game.engine.end_encounter(&id);
         }
-        for old in &game.scene.creatures {
-            if !creatures.iter().any(|c| c.entity == old.entity) {
-                let _ = game.engine.despawn(old.entity);
-                game.hp.remove(&old.entity);
-            }
-        }
-        // More than a turn passes between scenes, so whatever lasts until the start of a carried
-        // creature's next turn (a Help's Advantage) ends now.
+        // More than a turn passes between scenes, so whatever lasts until the start of someone's
+        // next turn (a Help's Advantage) ends now. Every creature of the scene being left counts,
+        // including a helper the new scene leaves behind.
         let carried: Vec<Entity> = creatures
             .iter()
             .take(party.len())
             .map(|c| c.entity)
             .collect();
+        let turns: Vec<Entity> = game.scene.creatures.iter().map(|c| c.entity).collect();
         for &entity in &carried {
-            for &turn in &carried {
+            for &turn in &turns {
                 systems::effects::effects_mut(&mut game.engine.world, entity).advance_time(
                     TimeStep::TurnBoundary {
                         entity: turn,
                         boundary: TurnBoundary::Start,
                     },
                 );
+            }
+        }
+        for old in &game.scene.creatures {
+            if !creatures.iter().any(|c| c.entity == old.entity) {
+                let _ = game.engine.despawn(old.entity);
+                game.hp.remove(&old.entity);
             }
         }
         // The update sweeps what expired.
@@ -469,6 +472,7 @@ impl Game {
             scripted_turn: None,
             flags: BTreeSet::new(),
             spawn_round: 0,
+            stalls: 0,
         }
     }
 
@@ -905,16 +909,17 @@ impl Game {
             variant.map(|v| v.parse().expect("every skill has a Help variant"));
         let goal = (other_entity, other.0.as_str());
         // Everything is checked before the helper's turn moves on, so a refused help changes
-        // nothing; only a helper whose action is spent (after a fight, or a help before) needs
-        // the new turn first.
-        let mut probe = ActionBuilder::available(&self.engine, entity);
-        probe.action(&self.engine, &action);
-        if !matches!(
-            probe.state(),
-            Err(ActionBuilderError::ActionNotAvailable { .. })
-        ) {
-            self.help_builder(entity, actor, &action, variant.as_ref(), goal)?;
-        }
+        // nothing. The check runs as if the new turn had begun: the action a fight or an earlier
+        // help spent is back for it, and taken away again after.
+        let world = &mut self.engine.world;
+        let resources = systems::helpers::get_component_clone::<ResourceMap>(world, entity);
+        let cooldowns = systems::helpers::get_component_clone::<ActionCooldownMap>(world, entity);
+        systems::resources::recharge(world, entity, &RechargeRule::Turn);
+        let checked = self.check_help(entity, actor, &action, variant.as_ref(), goal);
+        let world = &mut self.engine.world;
+        *systems::helpers::get_component_mut::<ResourceMap>(world, entity) = resources;
+        *systems::helpers::get_component_mut::<ActionCooldownMap>(world, entity) = cooldowns;
+        checked?;
         self.next_explore_turn(entity);
         let builder = self.help_builder(entity, actor, &action, variant.as_ref(), goal)?;
         let engine = &mut self.engine;
@@ -2040,6 +2045,42 @@ impl Game {
         engine.submit_activity(activity).map_err(|e| refusal(&e))
     }
 
+    /// Whether `entity` can take one of the Help actions on `goal` now: the target within reach,
+    /// and the variant's own requirement (proficiency in the skill) met.
+    fn check_help(
+        &mut self,
+        entity: Entity,
+        actor: &str,
+        action: &ActionId,
+        variant: Option<&ActionVariantId>,
+        goal: (Entity, &str),
+    ) -> Result<(), ApiError> {
+        self.help_builder(entity, actor, action, variant, goal)?;
+        let engine = &self.engine;
+        let contexts = systems::actions::all_actions(engine, entity)
+            .remove(action)
+            .unwrap_or_default();
+        let mut problem = None;
+        for (context, cost) in &contexts {
+            match systems::actions::action_usable(
+                engine,
+                entity,
+                action,
+                variant,
+                context,
+                cost,
+                &[],
+            ) {
+                Ok(()) => return Ok(()),
+                Err(e) => problem = problem.or(Some(e)),
+            }
+        }
+        Err(match problem {
+            Some(problem) => refusal(&problem),
+            None => refusal(&"ActionNotKnown"),
+        })
+    }
+
     /// A builder for one of the Help actions aimed at `goal`, its target within reach.
     fn help_builder(
         &mut self,
@@ -2086,12 +2127,17 @@ impl Game {
     fn next_explore_turn(&mut self, entity: Entity) {
         self.drain();
         let mark = self.pending.len();
+        // What the creature gave others (a Help's Advantage) lives on them and ends at its turn
+        // too, so every creature's effects see the boundary.
+        let creatures: Vec<Entity> = self.scene.creatures.iter().map(|c| c.entity).collect();
         for boundary in [TurnBoundary::End, TurnBoundary::Start] {
-            systems::time::advance_time(
-                &mut self.engine,
-                entity,
-                TimeStep::TurnBoundary { entity, boundary },
-            );
+            for &creature in &creatures {
+                systems::time::advance_time(
+                    &mut self.engine,
+                    creature,
+                    TimeStep::TurnBoundary { entity, boundary },
+                );
+            }
         }
         // The update sweeps effects that expired at the boundary.
         self.engine.update(0.0);
@@ -2138,7 +2184,11 @@ impl Game {
             }
             self.engine.update(TICK_SECONDS);
         }
-        eprintln!("engine did not settle within {MAX_TICKS} ticks");
+        self.stalls += 1;
+        eprintln!(
+            "engine did not settle within {MAX_TICKS} ticks ({} times this session)",
+            self.stalls
+        );
     }
 
     fn quiescent(&self) -> bool {
@@ -2151,7 +2201,12 @@ impl Game {
                 .unwrap_or(true)
         });
         let Some(encounter) = self.encounter else {
-            return all_idle;
+            // A reaction window out of combat (Tactical Mind after a failed check) holds the
+            // action that opened it until someone declines it.
+            let reaction = engine
+                .next_prompt(PromptScopeId::Global)
+                .is_some_and(|p| matches!(p.kind, ActionPromptKind::Reactions { .. }));
+            return all_idle || reaction;
         };
         let scope = engine.prompts.scope(&PromptScopeId::Encounter(encounter));
         let waiting_on_reaction = engine
@@ -2889,5 +2944,32 @@ mod tests {
         let before = engine.world.len();
         assert!(goblin.spawn(&mut engine).is_err());
         assert_eq!(engine.world.len(), before);
+    }
+
+    /// A fighter's failed stabilize out of combat opens Tactical Mind while the Help is still
+    /// acting; the engine waits on that window, which is declined, instead of ticking on.
+    #[test]
+    fn a_failed_stabilize_out_of_combat_settles_at_the_tactical_mind_window() {
+        let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+        let scene = scene::read(&data, "help_yard").unwrap();
+        // With seed 5 Ana's first DC 10 Medicine check fails.
+        crate::adapter::seed_dice(5);
+        let Ok(mut game) = Game::load(None, &scene, &[], &data) else {
+            panic!("help_yard loads");
+        };
+        let fall = CheckSpec::Scenario {
+            check_id: "loft_fall".to_owned(),
+        };
+        game.request_check("bren", &fall).unwrap();
+        let bren = game.entity("bren").unwrap();
+        assert_eq!(life_state_name(&game.engine, bren), "unconscious");
+
+        let stabilize = HelpSpec::Stabilize {
+            target: Handle("bren".to_owned()),
+        };
+        game.help("ana", &stabilize).unwrap();
+        assert_eq!(life_state_name(&game.engine, bren), "unconscious");
+        assert_eq!(game.stalls, 0);
+        assert!(game.engine.next_prompt(PromptScopeId::Global).is_none());
     }
 }

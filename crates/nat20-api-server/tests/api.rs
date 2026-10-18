@@ -1696,6 +1696,49 @@ fn help_gives_an_ally_advantage_on_their_next_check_with_the_skill() {
 }
 
 #[test]
+fn a_helpers_next_turn_ends_what_it_gave_before() {
+    let dir = help_dir("help_expiry");
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "yard" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let assist = |skill: &str| json!({ "kind": "assist_check", "ally": "ana", "skill": skill });
+
+    // Bren's second help starts his next turn, so the first one ends even though Ana kept it.
+    assert_eq!(help(&mut api, "bren", assist("athletics"))["ok"], true);
+    assert_eq!(help(&mut api, "bren", assist("perception"))["ok"], true);
+    assert_eq!(athletics(&mut api, "ana")["advantage"], "normal");
+
+    // A help Bren is refused moves nothing on, so the one he gave still stands.
+    assert_eq!(help(&mut api, "bren", assist("athletics"))["ok"], true);
+    let refused = help(&mut api, "bren", assist("medicine"));
+    assert_eq!(refused["error"]["reason"], "not_proficient", "{refused}");
+    let moved = api.call(
+        "dm",
+        json!({ "cmd": "move", "actor": "ana", "to": { "kind": "anchor", "anchor": "corner" } }),
+    );
+    assert_eq!(moved["ok"], true, "{moved}");
+    let refused = help(&mut api, "bren", assist("perception"));
+    assert_eq!(refused["error"]["reason"], "out_of_range", "{refused}");
+    assert_eq!(athletics(&mut api, "ana")["advantage"], "advantage");
+
+    // A helper the next scene leaves behind still ends the Help it gave.
+    let moved = api.call(
+        "dm",
+        json!({ "cmd": "move", "actor": "ana", "to": { "kind": "creature", "handle": "bren" } }),
+    );
+    assert_eq!(moved["ok"], true, "{moved}");
+    assert_eq!(help(&mut api, "bren", assist("athletics"))["ok"], true);
+    let carried = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "lane", "party": ["ana"] }),
+    );
+    assert_eq!(carried["ok"], true, "{carried}");
+    let roll = athletics(&mut api, "ana");
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(roll["advantage"], "normal", "{roll}");
+}
+
+#[test]
 fn a_refused_help_rolls_and_logs_nothing() {
     let dir = help_dir("help_refused");
     let mut api = Api::new(Server::with_data_dir(dir.clone()));
@@ -1756,7 +1799,11 @@ fn a_refused_help_rolls_and_logs_nothing() {
 #[test]
 fn help_stabilizes_a_creature_at_0_hit_points_on_a_dc_10_medicine_check() {
     let dir = help_dir("help_stabilize");
-    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    // With seed 5 the first two checks fail and the third succeeds.
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 5 }),
+    );
     let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "yard" }));
     assert_eq!(loaded["ok"], true, "{loaded}");
     let fell = api.call(
