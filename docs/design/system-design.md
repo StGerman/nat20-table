@@ -242,7 +242,7 @@ Open decision carried from the v1 draft: defaults 2-5 (stdio only, engine-side p
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Upstream refactors break `adapter/` on every bump | High (3 type reshapes in the last 3 commits) | One module, hours per bump | Pin rev; weekly `core-drift` job; bumps are their own PRs |
-| Maintainer ignores or rejects U1-U4 | Happened 2026-10-18 (decision 0023) | We carry every core change on `demo` indefinitely: 10 so far, U9 to U18 next | Merge syncs, never rebase (Rule 6); upstream's patterns kept so conflicts stay small; decision 0023 says when a sync costs too much |
+| Maintainer ignores or rejects U1-U4 | Happened 2026-10-18 (decision 0023) | We carry every core change on `demo` indefinitely: about a dozen merged items (20 commits) so far, U9 to U18 next | Merge syncs, never rebase (Rule 6); upstream's patterns kept so conflicts stay small; decision 0023 says when a sync costs too much |
 | Generator output shifts on upgrade (schemars, json-schema-to-typescript; plus TypeSpec/typify if chosen) | Medium | Generated diff noise | Exact pins; upgrade only in a dedicated PR with fixtures green |
 | Contract crate becomes a dumping ground (logic, helpers, core types creep in) | Medium | Contract stops being reviewable as a contract | `contract-pure` CI job; CLAUDE.md rule; reviewers reject logic there |
 | Global registry = one ruleset per process | Certain | Can't host two content sets in one process | One engine process per game; fine for the demo |
