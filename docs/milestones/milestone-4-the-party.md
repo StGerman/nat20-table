@@ -37,22 +37,22 @@ Findings at fork `demo` 031f7a2 (the rev table pins):
 | Healing in the action pipeline (ENG-3) | `ActionPayloadComponent::Healing` with a dice expression (`2d8 + spell_level`), used by Second Wind; `systems::health::heal` caps at max HP and revives a creature at 0 HP; spells exclude dead targets through `allowed_targets` | **Mostly done.** ENG-3 shrinks to a regression test in `core/tests/` (cap, revive from 0 HP and from Stable, dead excluded). Size S. |
 | Spellcasting for a prepared caster | `SpellAccessModel::EntireClassList` (its doc names Cleric), `CastingReadinessModel::Prepared`, spell slots, concentration (one at a time, the save after damage), `spell_level`, `character_level` and `<ability>.modifier` in expressions | **Ours plus data.** The Cleric is a class JSON and spell JSON, no engine code |
 | Cleric class | No `class.cleric` | **Fork item U9 (CHR-1)**: class JSON levels 1 and 2, Divine Order as a level 1 prompt (Protector and Thaumaturge as feats, as Fighting Style is), Channel Divinity resource, Divine Spark action with variants (heal, radiant, necrotic) |
-| Channel Divinity regains one use on a Short Rest | `RechargeRule` is `Turn`, `Rest(kind)`, `Daily` or `Never`; nothing regains one use | **Fork item U10**: a partial recharge rule. The same gap is ENG-10 (Second Wind); one item fixes both. A new registry format, so an upstream issue at Milestone 8 before the PR |
+| Channel Divinity regains one use on a Short Rest | `RechargeRule` is `Turn`, `Rest(kind)`, `Daily` or `Never`; nothing regains one use | **Fork item U10**: a partial recharge rule. The same gap is ENG-10 (Second Wind); one item fixes both. A new registry format |
 | Cleric spells | None of Sacred Flame, Guidance, Spare the Dying, Cure Wounds, Healing Word, Bless, Guiding Bolt, Shield of Faith exist | **Fork item U11 (CHR-2)**. Cure Wounds, Healing Word and Sacred Flame are plain JSON. Shield of Faith is an `on_armor_class` buff. Guiding Bolt reuses the pattern of Help's assist attack (core #7). Spare the Dying reuses `systems::health::stabilize`. Bless and Guidance add a d4 to a d20 test, which static modifiers can't (they take flat bonuses), so each needs a Lua hook, as Tactical Mind's 1d10 does. Guidance also needs a skill variant (action variants exist: Hex) |
-| Human species | Only `species.dragonborn` | **Fork item U12 (CHR-3)**. Skillful and Versatile are choices, and the species format has no `prompts` (only classes and feats do), so this adds `prompts_by_level` to species: a format addition (Milestone 8 issue first) |
+| Human species | Only `species.dragonborn` | **Fork item U12 (CHR-3)**. Skillful and Versatile are choices, and the species format has no `prompts` (only classes and feats do), so this adds `prompts_by_level` to species: a format addition |
 | Origin feats | Every background's feat is a placeholder, `feat.fighting_style.archery` (`_comment: "Placeholder feat"`); no origin feat exists | **Fork item U13 (CHR-8, new)**: Savage Attacker and Skilled. Magic Initiate and Alert only if D5 needs them |
 | Background data | Soldier lists Strength, Constitution, Charisma (SRD 5.2.1: Strength, Dexterity, Constitution); Sage lists Wisdom, Intelligence, Charisma (SRD: Constitution, Intelligence, Wisdom); Criminal lists Dexterity, Intelligence, Charisma (SRD: Dexterity, Constitution, Intelligence) | **Same item U13**: data fix |
 | Shield | No shield item kind; `EquipmentSlot` has no shield slot; armour proficiencies are light, medium, heavy only; the Goblin Warrior carries `effect.item.shield_stopgap` (+2 AC) | **Fork item U14 (ITM-1)**: a Shield that occupies the off hand (a versatile weapon then rolls its one-handed die, which `is_wielding_weapon_with_both_hands` already does), +2 AC, and shield training. `shield_stopgap` stays until MON-2 replaces it |
-| Mace, Chain Shirt | Neither item exists; Chain Mail does | **Fork item U15 (ITM-2, ITM-3)**: item JSON. ITM-3 only if D3 keeps the Chain Shirt. Leather Armor (ITM-5) gets its test and PROGRESS row in the same item |
-| Potions | No consumable item kind, no item-granted action, no quantity spent on use | **Fork item U16 (ITM-4)**: a consumable item with an action (Bonus Action; drink, or give to a creature within 5 feet, SRD 5.2.1 "Using a Potion"), used up on use. Format addition: Milestone 8 issue first |
+| Mace, Chain Shirt | Neither item exists; Chain Mail does | **Fork item U15 (ITM-2, ITM-3)**: item JSON. ITM-3 only if D3 keeps the Chain Shirt. Leather Armor (ITM-5) gets its test in the same item |
+| Potions | No consumable item kind, no item-granted action, no quantity spent on use | **Fork item U16 (ITM-4)**: a consumable item with an action (Bonus Action; drink, or give to a creature within 5 feet, SRD 5.2.1 "Using a Potion"), used up on use. A format addition |
 | Dragonborn Breath Weapon | `species/dragonborn.json`: `"_comment": "Missing breath weapon, darkvision and draconic flight!"` | **Fork item U17 (CHR-9, new)** if D6 says build: an action that replaces one attack of the Attack action, 15-foot cone or 30-foot line, Dexterity save, 1d10 of the ancestry's type, uses equal to the Proficiency Bonus per Long Rest |
 | Area spells | `TargetingKind::Area { fixed_on_actor }` for Burning Hands (cone) and Thunderwave; table's `legal_actions` skips every area option (`TargetingKind::Area { .. } => continue`) and `submit.point` answers `not_implemented` | **Ours (API-10)**, no core change. TASKS.md lists it as `Up?`, Gate Y; §8 moves it to `Ours`, Gate N |
 | Reactions | Opportunity Attack and the Shield spell exist; table's `react` serves Tactical Mind (fixture `help_combat.jsonl`) and scripted opportunity attacks (`explore.jsonl`) | **Ours (ENG-1)**: a client answering an Opportunity Attack and the Wizard's Shield, and `trigger.event_seq` pointing at the triggering event instead of the log head. TASKS.md lists ENG-1 as `Up`, Gate Y; §8 moves it to `Ours`, Gate N |
 | Conditions | Effects exist for Incapacitated, Paralyzed and Poisoned only; Unconscious comes from the life state | **Ours (API-20)**: map those four. Prone and Frightened come with Monsters (MON-4) |
-| Event order across core's two logs (API-16) | Core event ids are random UUIDs, so the table cannot interleave the encounter log and the global log | **Fork item U18**: a sequence number on core events. Engine plumbing, so no PROGRESS row |
+| Event order across core's two logs (API-16) | Core event ids are random UUIDs, so the table cannot interleave the encounter log and the global log | **Fork item U18**: a sequence number on core events |
 | Time passing between scenes | `systems::time::advance_time(engine, entity, step)` exists | **Ours**, if D9 says time passes |
 
-**Result:** the Cleric, Human, origin feats, Shield, items, Potion, partial recharge, Breath Weapon and event sequence are fork items (U9 to U18), all going upstream at Milestone 8 (Rule 6). ENG-3 shrinks to a test. API-10, ENG-1 and API-20 need no core change.
+**Result:** the Cleric, Human, origin feats, Shield, items, Potion, partial recharge, Breath Weapon and event sequence are fork items (U9 to U18), landing in the fork's `demo` (§6). ENG-3 shrinks to a test. API-10, ENG-1 and API-20 need no core change.
 
 ## 3. The pregens
 
@@ -131,9 +131,9 @@ PregenFile { _comment?, id, name, species, subspecies?, background, class, level
 | Reaction: take or decline | Offers it with its trigger | The reactor's agent answers `react` |
 | Time between scenes | Applies 10 minutes per scene change (D9 = A) | Narrates it |
 
-## 6. Fork and upstream items
+## 6. Fork items
 
-Fork rules (Rule 6): one branch per item off upstream `main`, in the maintainer's style (registry JSON over code, Lua only where logic needs it, a test in `core/tests/`, a PROGRESS row for SRD content, regenerated `.schemas`, `cargo test --locked` green), merged into `demo`, pinned in its own table PR. All go upstream at Milestone 8; the format additions (U10, U12, U16) start as upstream issues then, under Stas's account.
+Upstream declined outside contributions on 2026-10-18, and Stas chose to keep the fork as our own (the decision record and the new Rule 6 text come from that thread, not this spec). So each item is a `core/<topic>` branch off `demo` and a `core:` PR into `demo`, with a test in `core/tests/`, regenerated `.schemas` and `cargo test --locked` green; registry JSON stays preferred over code, Lua only where logic needs it. No one-item branches off upstream `main`, no upstream issues, no PROGRESS rows, no Milestone 8 upstream PRs. Each pin bump stays its own table PR with the full suite green (Rule 5).
 
 | Item | Change in core | Row | Size |
 |---|---|---|---|
@@ -143,7 +143,7 @@ Fork rules (Rule 6): one branch per item off upstream `main`, in the maintainer'
 | U12 Human | `species.human` (Medium or Small, 30 feet); species `prompts_by_level`; Skillful (one skill), Versatile (one Origin feat). Resourceful omitted (Heroic Inspiration) | CHR-3 | S |
 | U13 Origin feats and backgrounds | Savage Attacker (once per turn, roll the weapon's damage dice twice and keep the higher), Skilled (three skills); background ability lists per SRD 5.2.1; Soldier's feat becomes Savage Attacker. With D5 = A also Magic Initiate (feat-granted spells and a free cast per Long Rest) and the cantrips it needs; with D5 = C, Alert | CHR-8 | S (A: L) |
 | U14 Shield | Shield item kind in the off hand, +2 AC, shield training in armour proficiencies | ITM-1 | S |
-| U15 Weapons and armour | Mace; Chain Shirt (only if D3 keeps it); Leather Armor test and PROGRESS row | ITM-2, ITM-3, ITM-5 | S |
+| U15 Weapons and armour | Mace; Chain Shirt (only if D3 keeps it); Leather Armor test | ITM-2, ITM-3, ITM-5 | S |
 | U16 Potions | Consumable item kind with an action, quantity spent on use; Potion of Healing (2d4 + 2, Bonus Action, self or a creature within 5 feet) | ITM-4 | M |
 | U17 Breath Weapon | Dragonborn Breath Weapon (D6 = A) | CHR-9 | S |
 | U18 Event sequence | A monotonic sequence number on core events so a client can interleave both logs | API-16 | S |
@@ -219,7 +219,7 @@ Other tests:
 
 ## 11. Decisions for Stas
 
-Stas decided D1 to D9 on 2026-10-18 (decider: Stas): D2 to D9 as recommended, D1 as JSON with a `_comment` key for notes, as core's registry JSON does. The first implementation PR records the accepted decisions in `docs/decisions/` (next number 0023).
+Stas decided D1 to D9 on 2026-10-18 (decider: Stas): D2 to D9 as recommended, D1 as JSON with a `_comment` key for notes, as core's registry JSON does. The first implementation PR records the accepted decisions in `docs/decisions/` (the next free number after the fork decision's record).
 
 | # | Question | Recommend | Options | Why |
 |---|---|---|---|---|
@@ -233,7 +233,7 @@ Stas decided D1 to D9 on 2026-10-18 (decider: Stas): D2 to D9 as recommended, D1
 | D8 | Aiming an area | **Aim plus preview** (decided, Stas, 2026-10-18) | **Aim plus preview**: aim at a creature, anchor or point, and `legal_actions` lists who each aim catches · **Point**: `submit.point` only, the agent works out the geometry | Agents can't see the map; a preview stops friendly fire by accident and keeps rejected decisions under 2 retries (acceptance §6.5) |
 | D9 | Time between scenes | **10 minutes** (decided, Stas, 2026-10-18) | **10 minutes**: each `load_scene` passes 10 minutes for carried creatures, ending Bless, Guidance and Shield of Faith · **None**: no time passes, buffs carry over indefinitely · **DM says**: `load_scene` takes an elapsed time from the DM | Without time passing, a Bless cast in Scene 2 lasts the whole adventure. A fixed step keeps the DM from ruling on numbers; 10 minutes is the shortest gap any scene transition in *The Silent Mill* implies |
 
-Not asked, because already settled: fork items go upstream at Milestone 8 (Stas, 2026-10-17); scenario and pregen formats never go upstream (design §6); 2024 rules over 2014 (decision 0009).
+Not asked, because already settled: the fork is ours and items stay in `demo` (Stas, 2026-10-18); scenario and pregen formats never go upstream (design §6); 2024 rules over 2014 (decision 0009).
 
 ## Sources
 
