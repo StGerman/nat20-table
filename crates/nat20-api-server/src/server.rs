@@ -12,8 +12,9 @@ use nat20_api_contract::{
 
 use crate::{adapter, errors, projection::Viewer, session::Session};
 
-/// SHA-256 over the wire and scene schemas (`generated/nat20-api.schema.json`, then
-/// `generated/nat20-scene.schema.json`), written by `npm run gen`.
+/// SHA-256 over the wire, scene and pregen schemas (`generated/nat20-api.schema.json`, then
+/// `generated/nat20-scene.schema.json`, then `generated/nat20-pregen.schema.json`), written by
+/// `npm run gen`.
 pub const SCHEMA_SHA256: &str = include_str!("../../../generated/nat20-api.schema.sha256");
 
 /// How many request ids are remembered for idempotent replay (contract/protocol.md §Envelope).

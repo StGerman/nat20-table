@@ -99,9 +99,10 @@ nat20-table/                             # github.com/StGerman/nat20-table (name
 │   ├── fixtures/*.jsonl                 # conformance transcripts (seeded request → exact response)
 │   └── CHANGELOG.md                     # every contract change, with semver
 ├── generated/                           # checked in, never edited by hand, header says so
-│   ├── nat20-api.schema.json            # wire bundle; with the scene schema, its sha256 is served by `hello`
+│   ├── nat20-api.schema.json            # wire bundle; with the scene and pregen schemas, its sha256 is served by `hello`
 │   ├── nat20-scene.schema.json          # scene file format (root SceneFile), read by the engine and the DM agent
-│   └── nat20-api.schema.sha256          # sha256 over both schemas, in that order
+│   ├── nat20-pregen.schema.json         # pregen file format (root PregenFile), read by the engine
+│   └── nat20-api.schema.sha256          # sha256 over the three schemas, in that order
 ├── tools/
 │   ├── codegen/gen-ts.mjs  check-breaking.mjs
 │   └── data-pipeline/                   # Foundry translator, 5e-bits monster import (DAT-1)

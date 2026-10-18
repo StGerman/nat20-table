@@ -1,7 +1,8 @@
 // Fails when the generated schemas break their readers relative to a base revision, unless the
-// protocol major was bumped (CLAUDE.md Rule 2). Two schemas: the wire (`nat20-api.schema.json`,
-// whose request side is everything reachable from Request) and the scene file
-// (`nat20-scene.schema.json`, all of it input: scene files are written against it).
+// protocol major was bumped (CLAUDE.md Rule 2). Three schemas: the wire (`nat20-api.schema.json`,
+// whose request side is everything reachable from Request), the scene file
+// (`nat20-scene.schema.json`) and the pregen file (`nat20-pregen.schema.json`), both all input:
+// the files are written against them.
 // Breaking: a type, property, enum value or union variant removed; a type changed; an input-side
 // property newly required, or added as required to an object that already existed. Additions pass.
 // While the base contract version is a pre-release (`1.0.0-dev.N`), nothing is published yet and
@@ -14,6 +15,7 @@ const SCHEMAS = [
   // [file, root type name, the type whose reachable types are input-side; null: the whole schema]
   ["generated/nat20-api.schema.json", "Nat20Api", "Request"],
   ["generated/nat20-scene.schema.json", "SceneFile", null],
+  ["generated/nat20-pregen.schema.json", "PregenFile", null],
 ];
 const baseRef = process.argv[process.argv.indexOf("--base") + 1] || "origin/main";
 const major = (s) => s["x-nat20-protocol"]?.major ?? 0;

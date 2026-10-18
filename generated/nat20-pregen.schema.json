@@ -1,0 +1,400 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PregenFile",
+  "description": "One pregenerated character.",
+  "type": "object",
+  "properties": {
+    "_comment": {
+      "description": "Notes for humans reading the file. The engine ignores it.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ability_scores": {
+      "description": "Ability scores before the background's increases.",
+      "$ref": "#/$defs/PregenAbilityScores"
+    },
+    "background": {
+      "description": "Background registry id, e.g. `nat20_core::background.soldier`.",
+      "type": "string"
+    },
+    "choices": {
+      "description": "Answers to the choice prompts core asks while levelling up (a Fighting Style, a Divine\nOrder, ...), each by its prompt id. Species, subspecies, background, class, ability\nscores, skills and starting equipment have their own fields and are not listed here.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PregenChoice"
+      }
+    },
+    "class": {
+      "description": "Class registry id, e.g. `nat20_core::class.fighter`. Every level is in this class.",
+      "type": "string"
+    },
+    "equipment": {
+      "description": "What the character carries, in the order it is put on or picked up. It replaces the\nclass's and background's starting equipment, for which the engine takes the gold option.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PregenItem"
+      }
+    },
+    "id": {
+      "description": "Pregen id, a plain name of letters, digits and `_`. Must match the file name.",
+      "type": "string"
+    },
+    "level": {
+      "description": "Character level, 1 to 20.",
+      "type": "integer",
+      "format": "uint8",
+      "maximum": 255,
+      "minimum": 0
+    },
+    "money": {
+      "description": "Coins carried, e.g. `54 GP`.",
+      "type": "string"
+    },
+    "name": {
+      "description": "The character's name, e.g. \"Bren\".",
+      "type": "string"
+    },
+    "skills": {
+      "description": "The skills picked from the class's skill list, as many as the class grants.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Skill"
+      }
+    },
+    "species": {
+      "description": "Species registry id, e.g. `nat20_core::species.dragonborn`.",
+      "type": "string"
+    },
+    "subspecies": {
+      "description": "Subspecies registry id, when the species asks for one, e.g.\n`nat20_core::subspecies.dragonborn.white`.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "species",
+    "background",
+    "class",
+    "level",
+    "ability_scores",
+    "skills",
+    "money"
+  ],
+  "x-nat20-protocol": {
+    "major": 1,
+    "name": "nat20-api",
+    "version": "1.0.0-dev.17"
+  },
+  "$defs": {
+    "Ability": {
+      "description": "The six abilities.",
+      "oneOf": [
+        {
+          "description": "Strength.",
+          "type": "string",
+          "const": "strength"
+        },
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "dexterity"
+        },
+        {
+          "description": "Constitution.",
+          "type": "string",
+          "const": "constitution"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "intelligence"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "wisdom"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "charisma"
+        }
+      ]
+    },
+    "EquipSlot": {
+      "description": "Where an item is worn or wielded.",
+      "oneOf": [
+        {
+          "description": "Body armour.",
+          "type": "string",
+          "const": "armor"
+        },
+        {
+          "description": "A melee weapon in the main hand; a two-handed weapon takes both hands.",
+          "type": "string",
+          "const": "melee_main_hand"
+        },
+        {
+          "description": "A melee weapon in the off hand.",
+          "type": "string",
+          "const": "melee_off_hand"
+        },
+        {
+          "description": "A ranged weapon in the main hand.",
+          "type": "string",
+          "const": "ranged_main_hand"
+        },
+        {
+          "description": "A ranged weapon in the off hand.",
+          "type": "string",
+          "const": "ranged_off_hand"
+        }
+      ]
+    },
+    "PregenAbilityScores": {
+      "description": "Ability scores before the background's increases, plus which abilities those increase.",
+      "type": "object",
+      "properties": {
+        "_comment": {
+          "description": "Notes for humans reading the file. The engine ignores it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "charisma": {
+          "description": "Charisma.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "constitution": {
+          "description": "Constitution.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "dexterity": {
+          "description": "Dexterity.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "intelligence": {
+          "description": "Intelligence.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "plus_1": {
+          "description": "The ability the background increases by 1.",
+          "$ref": "#/$defs/Ability"
+        },
+        "plus_2": {
+          "description": "The ability the background increases by 2.",
+          "$ref": "#/$defs/Ability"
+        },
+        "strength": {
+          "description": "Strength, from the standard array or point buy.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "wisdom": {
+          "description": "Wisdom.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+        "plus_2",
+        "plus_1"
+      ]
+    },
+    "PregenChoice": {
+      "description": "The answer to one choice prompt.",
+      "type": "object",
+      "properties": {
+        "_comment": {
+          "description": "Notes for humans reading the file. The engine ignores it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "picks": {
+          "description": "The registry ids picked from the prompt's options, as many as it asks for, e.g.\n`[\"nat20_core::feat.fighting_style.defense\"]`.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "prompt_id": {
+          "description": "The prompt's id in core, e.g. `choice.fighting_style`.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "prompt_id",
+        "picks"
+      ]
+    },
+    "PregenItem": {
+      "description": "One item the character carries.",
+      "type": "object",
+      "properties": {
+        "_comment": {
+          "description": "Notes for humans reading the file. The engine ignores it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "equip": {
+          "description": "The slot it is worn or wielded in. Omitted: carried. Only a quantity of 1 can be equipped.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EquipSlot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "item": {
+          "description": "Item registry id, e.g. `nat20_core::item.longsword`.",
+          "type": "string"
+        },
+        "quantity": {
+          "description": "How many, at least 1.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "quantity"
+      ]
+    },
+    "Skill": {
+      "description": "The eighteen skills.",
+      "oneOf": [
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "acrobatics"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "animal_handling"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "arcana"
+        },
+        {
+          "description": "Strength.",
+          "type": "string",
+          "const": "athletics"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "deception"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "history"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "insight"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "intimidation"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "investigation"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "medicine"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "nature"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "perception"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "performance"
+        },
+        {
+          "description": "Charisma.",
+          "type": "string",
+          "const": "persuasion"
+        },
+        {
+          "description": "Intelligence.",
+          "type": "string",
+          "const": "religion"
+        },
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "sleight_of_hand"
+        },
+        {
+          "description": "Dexterity.",
+          "type": "string",
+          "const": "stealth"
+        },
+        {
+          "description": "Wisdom.",
+          "type": "string",
+          "const": "survival"
+        }
+      ]
+    }
+  }
+}

@@ -33,6 +33,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0022](0022-ci-shape.md) | CI: parallel lint and test, one build, one required gate, cargo-deny, advisories and core drift off the gate | Accepted | 2026-10-17 | Claude (defaults for Stas's CI ask); Stas accepted by merging #10 |
 | [0023](0023-long-lived-fork.md) | Upstream declines our contributions: keep a long-lived fork that syncs upstream main | Accepted | 2026-10-18 | Stas (thread "Mads's reply") |
 | [0024](0024-dependency-policy.md) | Dependencies: stay current behind a cooldown and hard gates, in both repos | Accepted (by merging table #44) | 2026-10-18 | Stas asked; specifics by Claude |
+| [0025](0025-pregen-files-json.md) | Pregen files are JSON with a `_comment` key, typed in the contract crate | Accepted | 2026-10-18 | Stas (Milestone 4 spec D1) |
 
 ## Open questions to watch
 

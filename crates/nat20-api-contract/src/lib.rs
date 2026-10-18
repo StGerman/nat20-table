@@ -15,6 +15,8 @@
 //! - [`errors`]: error codes, reject reasons and hints.
 //! - [`scene`]: the scene file the engine and the DM agent both read. Not sent on the wire; it
 //!   has its own schema root, [`SceneFile`].
+//! - [`pregen`]: the pregenerated character file a scene names. Not sent on the wire; it has its
+//!   own schema root, [`PregenFile`].
 //! - [`vocab`]: identifiers, geometry and the rules enums the other modules share.
 
 use schemars::JsonSchema;
@@ -23,6 +25,7 @@ use serde::{Deserialize, Serialize};
 pub mod envelope;
 pub mod errors;
 pub mod events;
+pub mod pregen;
 pub mod scene;
 pub mod state;
 pub mod vocab;
@@ -30,6 +33,7 @@ pub mod vocab;
 pub use envelope::*;
 pub use errors::*;
 pub use events::*;
+pub use pregen::*;
 pub use scene::*;
 pub use state::*;
 pub use vocab::*;
@@ -39,7 +43,7 @@ pub const PROTOCOL_NAME: &str = "nat20-api";
 /// Protocol major version; every request carries it as `v`.
 pub const PROTOCOL_MAJOR: u8 = 1;
 /// Full contract version (semver). Bump with every change and log it in `contract/CHANGELOG.md`.
-pub const CONTRACT_VERSION: &str = "1.0.0-dev.16";
+pub const CONTRACT_VERSION: &str = "1.0.0-dev.17";
 
 /// The protocol major version. Only `1` exists; any other value is rejected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
