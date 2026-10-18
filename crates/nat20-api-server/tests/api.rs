@@ -929,6 +929,38 @@ fn explore_checks_log_their_dc_and_cite_their_rolls() {
     assert_sources_cited(events);
 }
 
+/// SRD 5.2.1 "D20 Tests" step 6: a check is decided by its total. A natural 20 or 1 decides
+/// only attack rolls (and death saves), so it never beats or misses a check's DC on its own.
+#[test]
+fn a_natural_20_or_1_does_not_decide_a_check() {
+    let mut api = Api::seeded(1);
+    road(&mut api);
+    for (natural, dc, success) in [(20, 30, false), (1, 5, true)] {
+        let check =
+            json!({ "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": dc });
+        let mut seen = false;
+        for _ in 0..1000 {
+            let rolled = api.call(
+                "dm",
+                json!({ "cmd": "request_check", "actor": "bren", "check": check }),
+            );
+            assert_eq!(rolled["ok"], true, "{rolled}");
+            let roll = rolled["events"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|e| e["roll"]["id"] == rolled["result"]["roll_id"])
+                .unwrap();
+            if roll["roll"]["dice"][0]["kept"] == natural {
+                assert_eq!(rolled["result"]["success"], success, "{rolled}");
+                seen = true;
+                break;
+            }
+        }
+        assert!(seen, "no natural {natural} in 1000 checks");
+    }
+}
+
 #[test]
 fn a_refused_check_rolls_nothing() {
     let mut api = duel();
