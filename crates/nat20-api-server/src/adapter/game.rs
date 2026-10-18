@@ -172,7 +172,8 @@ pub struct Game {
     scripted_turn: Option<(usize, Entity, usize)>,
     /// Scene flags set this session; they outlive the scene that set them.
     flags: BTreeSet<String>,
-    /// The last combat round whose round spawns were looked at.
+    /// The highest round of this scene's fights whose round spawns were looked at, so each
+    /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
 }
 
@@ -1185,7 +1186,6 @@ impl Game {
         self.encounter_seen = 0;
         self.winner = None;
         self.scripted_turn = None;
-        self.spawn_round = 0;
         self.drain();
         self.log_initiative();
         self.advance();

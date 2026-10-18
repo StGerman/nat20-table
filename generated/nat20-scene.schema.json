@@ -805,7 +805,7 @@
           ]
         },
         {
-          "description": "The engine places them when a fight in this scene reaches this round, unless `unless`\nholds then, and they join that fight with their own initiative. A spawn cancelled at its\nround is not placed later.",
+          "description": "The engine places them when a fight in this scene reaches this round, unless `unless`\nholds then, and they join that fight with their own initiative. A spawn cancelled at its\nround is not placed later, in any fight of the scene.",
           "type": "object",
           "properties": {
             "kind": {

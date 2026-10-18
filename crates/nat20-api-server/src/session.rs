@@ -319,10 +319,13 @@ impl Session {
     /// Places a `when: dm` spawn's creatures.
     pub fn spawn(&mut self, spawn_id: &str, viewer: &Viewer) -> Result<CommandResult, ApiError> {
         let result = self.game_mut()?.spawn(spawn_id);
-        self.after_decision(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
+        // A spawn is not a decision: a pending prompt keeps its id, and a pending reaction keeps
+        // the event it answers.
+        self.push_entries();
+        let handles = result?;
         Ok(CommandResult::Spawn {
             state: self.state_for(viewer)?,
-            handles: result.expect("errors returned above"),
+            handles,
         })
     }
 
@@ -464,6 +467,15 @@ impl Session {
     fn after_decision(&mut self, result: Result<(), ApiError>) -> Result<(), ApiError> {
         // A refused decision can still have produced log entries (an engine-side partial
         // resolution); the log never drops what the engine did.
+        self.push_entries();
+        if result.is_ok() {
+            self.decided = true;
+        }
+        result
+    }
+
+    /// Logs the entries the engine produced since the last call.
+    fn push_entries(&mut self) {
         let entries = self
             .game
             .as_mut()
@@ -472,10 +484,6 @@ impl Session {
         for entry in entries {
             self.push(entry);
         }
-        if result.is_ok() {
-            self.decided = true;
-        }
-        result
     }
 
     fn state_for(&self, viewer: &Viewer) -> Result<State, ApiError> {

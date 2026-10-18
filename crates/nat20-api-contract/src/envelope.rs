@@ -156,8 +156,8 @@ pub enum Command {
     /// A spawn is placed at most once per scene (`rejected` / `already_spawned`); one the engine
     /// places on its own trigger answers `rejected` / `automatic`. During a fight the creatures
     /// join it: each rolls initiative and acts at its place in the order, this round if its
-    /// count has not come up yet, otherwise from the next. After a fight they join a later one
-    /// only if its encounter lists them.
+    /// count has not come up yet, otherwise from the next. A pending prompt keeps its id. After a
+    /// fight they join a later one only if its encounter lists them.
     Spawn {
         /// Spawn id from the scene file.
         spawn_id: String,

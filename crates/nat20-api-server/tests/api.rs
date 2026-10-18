@@ -1448,8 +1448,9 @@ fn spawn_creatures_are_checked_when_their_scene_loads() {
     );
 }
 
-/// Ends Bren's turns until the cellar fight reaches round 3, then returns the DM state.
-fn cellar_round_3(seed: u32) -> Value {
+/// Ends Bren's turns until the cellar fight reaches round 3, then returns the session and the
+/// DM state.
+fn cellar_round_3(seed: u32) -> (Api, Value) {
     let mut api = Api::seeded(seed);
     for (scene, party) in [
         ("m3_s1_green", json!([])),
@@ -1461,6 +1462,12 @@ fn cellar_round_3(seed: u32) -> Value {
         );
         assert_eq!(loaded["ok"], true, "{loaded}");
     }
+    let state = fight_to_round_3(&mut api);
+    (api, state)
+}
+
+/// Starts the cellar fight and ends Bren's turns until it reaches round 3; returns the DM state.
+fn fight_to_round_3(api: &mut Api) -> Value {
     let mut last = api.call(
         "dm",
         json!({ "cmd": "start_combat", "encounter_id": "cellar_fight" }),
@@ -1482,22 +1489,101 @@ fn cellar_round_3(seed: u32) -> Value {
     panic!("the cellar fight never reached round 3");
 }
 
-#[test]
-fn round_spawns_join_at_their_round_unless_the_party_is_bloodied() {
-    // Seed 1: Bren has 13 of 20 Hit Points at round 3, so the rats come and join.
-    let state = cellar_round_3(1);
-    let initiative = state["initiative"].as_array().unwrap();
-    assert!(initiative.contains(&json!("goblin_4")), "{state}");
-    assert!(initiative.contains(&json!("goblin_5")), "{state}");
-    // Seed 6: Bren is down to 6, bloodied, so they stay away.
-    let state = cellar_round_3(6);
-    let initiative = state["initiative"].as_array().unwrap();
-    assert!(!initiative.contains(&json!("goblin_4")), "{state}");
-    let rats = state["spawns"]
+fn rats_placed(state: &Value) -> &Value {
+    &state["spawns"]
         .as_array()
         .unwrap()
         .iter()
         .find(|s| s["id"] == "rats")
-        .unwrap();
-    assert_eq!(rats["placed"], false, "{state}");
+        .unwrap()["placed"]
+}
+
+#[test]
+fn round_spawns_join_at_their_round_unless_the_party_is_bloodied() {
+    // Seed 1: Bren has 13 of 20 Hit Points at round 3, so the rats come and join.
+    let (_, state) = cellar_round_3(1);
+    let initiative = state["initiative"].as_array().unwrap();
+    assert!(initiative.contains(&json!("goblin_4")), "{state}");
+    assert!(initiative.contains(&json!("goblin_5")), "{state}");
+    // Seed 6: Bren is down to 6, bloodied, so they stay away.
+    let (_, state) = cellar_round_3(6);
+    let initiative = state["initiative"].as_array().unwrap();
+    assert!(!initiative.contains(&json!("goblin_4")), "{state}");
+    assert_eq!(rats_placed(&state), false, "{state}");
+}
+
+#[test]
+fn a_cancelled_round_spawn_stays_cancelled_in_a_later_fight() {
+    let (mut api, state) = cellar_round_3(6);
+    assert_eq!(rats_placed(&state), false, "{state}");
+    let ended = api.call("dm", json!({ "cmd": "end_combat", "reason": "scenario" }));
+    assert_eq!(ended["ok"], true, "{ended}");
+    let rested = api.call(
+        "dm",
+        json!({ "cmd": "short_rest", "participants": ["bren"],
+            "hit_dice": [{ "handle": "bren", "count": 2 }] }),
+    );
+    assert_eq!(rested["ok"], true, "{rested}");
+    let rested = api.call("dm", json!({ "cmd": "get_state" }));
+    let bren = &rested["result"]["state"]["creatures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["handle"] == "bren")
+        .unwrap()["health"];
+    assert_ne!(bren, "bloodied", "{rested}");
+
+    // Bren is no longer Bloodied, but the rats were cancelled at round 3 of the first fight.
+    let state = fight_to_round_3(&mut api);
+    assert!(
+        !state["initiative"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("goblin_4")),
+        "{state}"
+    );
+    assert_eq!(rats_placed(&state), false, "{state}");
+}
+
+#[test]
+fn a_spawn_leaves_a_pending_reaction_prompt_alone() {
+    let mut reserve = creature("goblin_2", ("monster", "goblin_warrior"), "hostile", 40.0);
+    reserve["control"] = json!("client");
+    let dir = data_dir(
+        "spawn_reaction",
+        &[(
+            "standoff",
+            json!({ "id": "standoff",
+                "creatures": [creature("bren", ("pregen", "fighter_l2"), "party", 0.0), held_goblin()],
+                "encounters": [{ "id": "standoff", "participants": ["bren", "goblin"] }],
+                "spawns": [{ "id": "reserve", "when": { "kind": "dm" }, "creatures": [reserve] }] }),
+        )],
+    );
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let started = api.call("dm", json!({ "cmd": "new_session", "seed": 3 }));
+    assert_eq!(started["ok"], true, "{started}");
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "standoff" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let mut last = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "standoff" }),
+    );
+    if last["awaiting"]["actor"] == "goblin" {
+        last = api.call(
+            "dm",
+            json!({ "cmd": "end_turn", "actor": "goblin",
+                "prompt_id": last["awaiting"]["prompt_id"] }),
+        );
+    }
+    assert_eq!(last["awaiting"]["actor"], "bren", "{last}");
+    let moved = api.call(
+        "dm",
+        json!({ "cmd": "move", "actor": "bren", "prompt_id": last["awaiting"]["prompt_id"],
+            "to": { "kind": "point", "point": { "x_ft": -20.0, "y_ft": 0.0, "z_ft": 0.0 } } }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(moved["awaiting"]["kind"], "reaction", "{moved}");
+    let spawned = api.call("dm", json!({ "cmd": "spawn", "spawn_id": "reserve" }));
+    assert_eq!(spawned["ok"], true, "{spawned}");
+    assert_eq!(spawned["awaiting"], moved["awaiting"], "{spawned}");
 }
