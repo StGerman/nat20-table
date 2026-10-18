@@ -223,6 +223,7 @@ impl Server {
                 hit_dice,
             } => session.short_rest(participants, hit_dice),
             Command::Spawn { spawn_id } => session.spawn(spawn_id, viewer),
+            Command::Help { actor, help } => session.help(&actor.0, help),
         }
     }
 

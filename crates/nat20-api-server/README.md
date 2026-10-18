@@ -17,7 +17,7 @@ cargo run -p nat20-api-server
 - `src/render.rs`: the one-line text of each event, rendered from the projected event, so the text never says more than the fields.
 - `src/scene.rs`: reads a scene file (the contract's `SceneFile`) and checks what its schema can't: ids that refer to each other, dice, DCs (protocol §2.1).
 - `src/adapter/`: the only code that uses `nat20_core` (CLAUDE.md Rule 5). It places a scene's creatures, loads monsters and pregens, runs scripted turns, reads sheets (`adapter/sheet.rs`), rolls explore checks and applies their consequences, and turns engine events into contract events.
-- `data/scenes/`, `data/monsters/`: scene files and SRD 5.2.1 stat blocks. `m3_s1_green` to `m3_s5_cellar` are the Milestone 3 test scenario `m3_trail`. Pregens are built in code for now (`adapter/pregen.rs`).
+- `data/scenes/`, `data/monsters/`: scene files and SRD 5.2.1 stat blocks. `m3_s1_green` to `m3_s5_cellar` are the Milestone 3 test scenario `m3_trail`; `help_yard` puts two fighters side by side for the Help fixture. Pregens are built in code for now (`adapter/pregen.rs`).
 
 ## Known gaps (milestone 1)
 - Not served yet: `end_combat{fled}`, point and variant options, `request_check` in combat, a ladder check without a skill or with another ability than the skill's. Each answers `not_implemented`.

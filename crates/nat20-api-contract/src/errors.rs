@@ -121,4 +121,6 @@ pub enum RejectReason {
     Automatic,
     /// The spawn's creatures are already placed in this scene.
     AlreadySpawned,
+    /// The actor lacks the skill proficiency the option needs (Help with a check).
+    NotProficient,
 }

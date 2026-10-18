@@ -15,16 +15,18 @@ use hecs::Entity;
 use nat20_api_contract::{
     ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, CombatOverReason,
     Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
-    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HitDiceSpend, HitPointsRegained,
-    Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption, RejectReason, RollId,
-    ScenarioCheck, SceneFile, Sheet, Side, Spawn, SpawnUnless, SpawnView, SpawnWhen,
-    SurrenderCondition, SurrenderTrigger, TargetCandidate, Targeting, UnavailableOption,
+    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec, HitDiceSpend,
+    HitPointsRegained, Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption,
+    RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn, SpawnUnless, SpawnView,
+    SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate, Targeting, UnavailableOption,
     Visibility,
 };
 use nat20_core::{
     components::{
         actions::{
-            action_builder::{ActionBuilder, ActionBuilderState, ReactionBuilder},
+            action_builder::{
+                ActionBuilder, ActionBuilderError, ActionBuilderState, ReactionBuilder,
+            },
             targeting::{LineOfSight, TargetInstance, TargetingKind},
         },
         activity::{Activity, ActivityState},
@@ -33,15 +35,17 @@ use nat20_core::{
         dice::DiceSet,
         faction::{Attitude, AttitudeOverride, FactionSet},
         health::{hit_point_dice::HitPointDice, hit_points::HitPoints, life_state::LifeState},
-        id::{ActionId, EntityIdentifier, FactionId, ResourceId},
+        id::{ActionId, ActionVariantId, EntityIdentifier, FactionId, ResourceId},
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
         resource::ResourceAmount,
         saving_throw::SavingThrowKind,
+        time::{TimeStep, TurnBoundary},
     },
     engine::{
         action_prompt::{ActionData, ActionPromptKind},
         encounter::EncounterId,
         engine_state::EngineState,
+        event::EventKind as EngineKind,
         geometry::WorldGeometry,
         prompt::PromptScopeId,
     },
@@ -363,6 +367,25 @@ impl Game {
                 game.hp.remove(&old.entity);
             }
         }
+        // More than a turn passes between scenes, so whatever lasts until the start of a carried
+        // creature's next turn (a Help's Advantage) ends now.
+        let carried: Vec<Entity> = creatures
+            .iter()
+            .take(party.len())
+            .map(|c| c.entity)
+            .collect();
+        for &entity in &carried {
+            for &turn in &carried {
+                systems::effects::effects_mut(&mut game.engine.world, entity).advance_time(
+                    TimeStep::TurnBoundary {
+                        entity: turn,
+                        boundary: TurnBoundary::Start,
+                    },
+                );
+            }
+        }
+        // The update sweeps what expired.
+        game.engine.update(0.0);
         if game.map != scene.map {
             game.engine.geometry = load_geometry(scene.map.as_deref());
             game.map = scene.map.clone();
@@ -724,7 +747,37 @@ impl Game {
                 format!("a {} saving throw", sheet::ability_word(*ability)),
             ),
         };
-        let result = systems::d20::check_no_event(&self.engine, entity, &dc, None);
+        // The check goes through the engine's event handling, so whatever waits on it acts: the
+        // Advantage of a Help is spent by the check it was for.
+        self.drain();
+        let event = systems::d20::check(&mut self.engine, entity, &dc);
+        let EngineKind::D20CheckPerformed { result, .. } = &event.kind else {
+            unreachable!("a check makes a D20CheckPerformed event");
+        };
+        let mut result = result.clone();
+        self.engine.process_event(event);
+        self.decline_explore_reactions();
+        // The roll is logged below with its DC's source, so the engine's own record of it is
+        // left out; anything else the check set off is logged as usual.
+        let mut writer = LogWriter {
+            engine: &self.engine,
+            handles: &self.scene.handles,
+            round: None,
+            hp: &mut self.hp,
+            keys: &mut self.keys,
+            initiative: Vec::new(),
+        };
+        let mut entries = Vec::new();
+        for event in self.engine.event_log.events.iter().skip(self.global_seen) {
+            match &event.kind {
+                EngineKind::D20CheckResolved {
+                    result: resolved, ..
+                } => result = resolved.clone(),
+                _ => entries.extend(writer.entries(event)),
+            }
+        }
+        self.global_seen = self.engine.event_log.events.len();
+        self.pending.extend(entries);
         let success = result.is_success(&dc);
         let roller = self.handle_of(entity);
         let mut writer = self.writer();
@@ -807,6 +860,72 @@ impl Game {
                 }
             }
         }
+    }
+
+    /// The Help action out of combat: `actor` assists `ally`'s next check with a skill, or tries
+    /// to stabilize a creature at 0 Hit Points. The engine runs its own Help action, so the
+    /// range, the proficiency and the Medicine check are its rules.
+    pub fn help(&mut self, actor: &str, help: &HelpSpec) -> Result<(), ApiError> {
+        if self.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "In combat, Help is one of the options legal_actions lists.",
+            ));
+        }
+        let entity = self.entity(actor)?;
+        if !systems::health::is_alive(&self.engine.world, entity)
+            || life_state_name(&self.engine, entity) != "normal"
+        {
+            return Err(rejected(
+                RejectReason::ConditionPrevents,
+                format!("{actor} is down and cannot help."),
+            ));
+        }
+        let (action, variant, other) = match help {
+            HelpSpec::AssistCheck { ally, skill } => {
+                let word = serde_json::to_value(skill).expect("a skill serializes");
+                let word = word.as_str().expect("a skill serializes as a string");
+                (
+                    "nat20_core::action.help.assist_ability_check",
+                    Some(format!("nat20_core::variant.help.{word}")),
+                    ally,
+                )
+            }
+            HelpSpec::Stabilize { target } => ("nat20_core::action.help.stabilize", None, target),
+        };
+        let other_entity = self.entity(&other.0)?;
+        if other_entity == entity {
+            return Err(rejected(
+                RejectReason::InvalidTarget,
+                format!("{actor} cannot help itself."),
+            ));
+        }
+        let action: ActionId = action.parse().expect("core has the Help actions");
+        let variant: Option<ActionVariantId> =
+            variant.map(|v| v.parse().expect("every skill has a Help variant"));
+        let goal = (other_entity, other.0.as_str());
+        // Everything is checked before the helper's turn moves on, so a refused help changes
+        // nothing; only a helper whose action is spent (after a fight, or a help before) needs
+        // the new turn first.
+        let mut probe = ActionBuilder::available(&self.engine, entity);
+        probe.action(&self.engine, &action);
+        if !matches!(
+            probe.state(),
+            Err(ActionBuilderError::ActionNotAvailable { .. })
+        ) {
+            self.help_builder(entity, actor, &action, variant.as_ref(), goal)?;
+        }
+        self.next_explore_turn(entity);
+        let builder = self.help_builder(entity, actor, &action, variant.as_ref(), goal)?;
+        let engine = &mut self.engine;
+        let activity = builder.build(engine).map_err(|e| refusal(&e))?;
+        engine.submit_activity(activity).map_err(|e| refusal(&e))?;
+        // An explore command that acts closes a finished fight's `combat_over`, as `move` does.
+        self.close_finished_fight();
+        self.settle();
+        self.decline_explore_reactions();
+        self.drain();
+        Ok(())
     }
 
     /// A Short Rest for `participants` in explore mode: each spends the Hit Point Dice
@@ -1921,6 +2040,95 @@ impl Game {
         engine.submit_activity(activity).map_err(|e| refusal(&e))
     }
 
+    /// A builder for one of the Help actions aimed at `goal`, its target within reach.
+    fn help_builder(
+        &mut self,
+        entity: Entity,
+        actor: &str,
+        action: &ActionId,
+        variant: Option<&ActionVariantId>,
+        (target, target_handle): (Entity, &str),
+    ) -> Result<ActionBuilder, ApiError> {
+        let engine = &mut self.engine;
+        let mut builder = ActionBuilder::available(engine, entity);
+        builder.action(engine, action);
+        if let Some(variant) = variant {
+            builder.variant(&engine.world, variant);
+        }
+        if !pick_context(&mut builder, &engine.world, 0) {
+            return Err(match builder.state() {
+                Err(problem) => refusal(problem),
+                Ok(_) => refusal(&"InvalidTarget"),
+            });
+        }
+        builder.target_entity(engine, target);
+        match builder.state() {
+            Ok(ActionBuilderState::Targets {
+                path_to_target: Some(TargetPathFindingResult::AlreadyInRange(_)),
+                ..
+            }) => Ok(builder),
+            Ok(ActionBuilderState::Targets {
+                path_to_target: Some(_),
+                ..
+            }) => Err(rejected(
+                RejectReason::OutOfRange,
+                format!("{actor} must be within 5 feet of {target_handle}; move there first."),
+            )),
+            Ok(_) => Err(refusal(&"InvalidTarget")),
+            Err(problem) => Err(refusal(problem)),
+        }
+    }
+
+    /// Out of combat a creature's turns pass with the story: each action it takes in explore mode
+    /// starts its next turn first, as the engine does for a creature outside an encounter. Its
+    /// action is back, and whatever lasted until the start of its next turn ends. The turn
+    /// boundaries themselves are not logged; nobody is taking turns.
+    fn next_explore_turn(&mut self, entity: Entity) {
+        self.drain();
+        let mark = self.pending.len();
+        for boundary in [TurnBoundary::End, TurnBoundary::Start] {
+            systems::time::advance_time(
+                &mut self.engine,
+                entity,
+                TimeStep::TurnBoundary { entity, boundary },
+            );
+        }
+        // The update sweeps effects that expired at the boundary.
+        self.engine.update(0.0);
+        self.drain();
+        let mut index = 0;
+        self.pending.retain(|entry| {
+            index += 1;
+            index <= mark
+                || !matches!(
+                    entry.kind,
+                    EventKind::TurnStart { .. } | EventKind::TurnEnd { .. }
+                )
+        });
+    }
+
+    /// Out of combat nobody is asked to react: a reaction window that opens in explore mode
+    /// (Tactical Mind after a failed check) is declined, so the check or action resolves as
+    /// rolled (TASKS CHK-6).
+    fn decline_explore_reactions(&mut self) {
+        for _ in 0..MAX_SCRIPTED_STEPS {
+            let Some(prompt) = self.engine.next_prompt(PromptScopeId::Global) else {
+                return;
+            };
+            let ActionPromptKind::Reactions { options, .. } = &prompt.kind else {
+                return;
+            };
+            let reactors: Vec<Entity> = options.keys().copied().collect();
+            for reactor in reactors {
+                if let Err(e) = self.react_entity(reactor, None) {
+                    eprintln!("nat20-api-server: could not decline an explore reaction: {e:?}");
+                    return;
+                }
+            }
+            self.settle();
+        }
+    }
+
     /// Ticks the engine until no creature is moving or acting and no event is
     /// waiting on anything but a reaction decision.
     fn settle(&mut self) {
@@ -2533,7 +2741,12 @@ fn refusal(problem: &impl std::fmt::Debug) -> ApiError {
 
 /// Maps an engine error's Debug text to a reject reason and one plain sentence.
 fn reason_for(debug: &str) -> (RejectReason, String) {
-    let table: [(&str, RejectReason, &str); 9] = [
+    let table: [(&str, RejectReason, &str); 10] = [
+        (
+            "Requires proficiency",
+            RejectReason::NotProficient,
+            "The actor is not proficient in the skill this option needs.",
+        ),
         (
             "OutOfRange",
             RejectReason::OutOfRange,

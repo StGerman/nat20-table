@@ -197,7 +197,7 @@ impl LogWriter<'_> {
                             value: dc.total(),
                         },
                         None,
-                        None,
+                        Some(DcSource::Rule),
                     ),
                     D20CheckDC::SavingThrow { saving_throw, dc } => (
                         RollKind::SavingThrow,
@@ -209,15 +209,22 @@ impl LogWriter<'_> {
                         None,
                         Some(DcSource::StatBlock),
                     ),
+                    // The engine rolls a skill check itself only for an action's own rule,
+                    // such as Help's DC 10 Medicine check to stabilize; the table's checks are
+                    // logged by `explore_check`.
                     D20CheckDC::Skill { skill, dc } => (
                         RollKind::SkillCheck,
-                        format!("a {} check", words(&format!("{skill:?}"))),
+                        format!(
+                            "a {:?} ({}) check",
+                            skill.ability(),
+                            super::sheet::core_skill_word(*skill)
+                        ),
                         Against {
                             kind: AgainstKind::Dc,
                             value: dc.total(),
                         },
                         None,
-                        Some(DcSource::StatBlock),
+                        Some(DcSource::Rule),
                     ),
                 };
                 let success = result.is_success(dc);

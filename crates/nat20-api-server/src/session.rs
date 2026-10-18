@@ -8,8 +8,8 @@ use std::{collections::HashMap, path::PathBuf};
 
 use nat20_api_contract::{
     ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, EndCombatReason, ErrorCode,
-    Event, EventKind, Handle, HitDiceSpend, Mode, MoveTarget, OptionId, PromptId, ReactionTrigger,
-    RollId, RollView, State, Visibility,
+    Event, EventKind, Handle, HelpSpec, HitDiceSpend, Mode, MoveTarget, OptionId, PromptId,
+    ReactionTrigger, RollId, RollView, State, Visibility,
 };
 
 use crate::{
@@ -314,6 +314,13 @@ impl Session {
         Ok(CommandResult::ShortRest {
             healed: result.expect("errors returned above"),
         })
+    }
+
+    /// The Help action in explore mode; what it rolled and changed is in the log.
+    pub fn help(&mut self, actor: &str, help: &HelpSpec) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.help(actor, help);
+        self.after_decision(result.clone())?;
+        Ok(CommandResult::Help {})
     }
 
     /// Places a `when: dm` spawn's creatures.

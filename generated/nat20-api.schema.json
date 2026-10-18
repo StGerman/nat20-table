@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.14"
+    "version": "1.0.0-dev.15"
   },
   "$defs": {
     "Ability": {
@@ -973,6 +973,19 @@
           ]
         },
         {
+          "description": "The help was given; what it rolled and changed is in `events`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "help"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
           "description": "Log entries after `since`.",
           "type": "object",
           "properties": {
@@ -1300,6 +1313,11 @@
           "description": "A stat block or spell.",
           "type": "string",
           "const": "stat_block"
+        },
+        {
+          "description": "A rule of the game: the DC 10 of a death save, or of the Medicine check of a Help that\nstabilizes.",
+          "type": "string",
+          "const": "rule"
         }
       ]
     },
@@ -2211,6 +2229,52 @@
         }
       ]
     },
+    "HelpSpec": {
+      "description": "What a `help` does (SRD 5.2.1, Rules Glossary, Help).",
+      "oneOf": [
+        {
+          "description": "Gives `ally` Advantage on their next ability check with `skill`. The helper needs\nproficiency in the skill (`rejected` / `not_proficient` otherwise). The benefit is spent by\nthat check and ends at the start of the helper's next turn; out of combat that is the\nhelper's first turn in a fight, or the next scene.",
+          "type": "object",
+          "properties": {
+            "ally": {
+              "description": "The creature that gets Advantage; not the helper.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "assist_check"
+            },
+            "skill": {
+              "description": "The skill of the check.",
+              "$ref": "#/$defs/Skill"
+            }
+          },
+          "required": [
+            "kind",
+            "ally",
+            "skill"
+          ]
+        },
+        {
+          "description": "A DC 10 Wisdom (Medicine) check to make `target`, a creature at 0 Hit Points, Stable.\nA target that is not dying answers `rejected` / `invalid_target`.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "stabilize"
+            },
+            "target": {
+              "description": "The creature at 0 Hit Points.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "target"
+          ]
+        }
+      ]
+    },
     "HitDicePool": {
       "description": "Hit Point Dice of one size.",
       "type": "object",
@@ -2648,6 +2712,11 @@
           "description": "The spawn's creatures are already placed in this scene.",
           "type": "string",
           "const": "already_spawned"
+        },
+        {
+          "description": "The actor lacks the skill proficiency the option needs (Help with a check).",
+          "type": "string",
+          "const": "not_proficient"
         }
       ]
     },
@@ -3026,6 +3095,29 @@
           ]
         },
         {
+          "description": "The Help action in explore mode; in combat Help is one of the `legal_actions` options.\nThe helper must be conscious and within 5 feet of the other creature (`rejected` /\n`out_of_range` otherwise; `move` there first). The `action` event, the Medicine roll of a\nstabilize and any `life_state` change are in `events`. Combat answers `wrong_mode`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The helper.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "help"
+            },
+            "help": {
+              "description": "What kind of help, and for whom.",
+              "$ref": "#/$defs/HelpSpec"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "help"
+          ]
+        },
+        {
           "description": "Log entries after `since`, projected for the request's `viewer`.",
           "type": "object",
           "properties": {
@@ -3285,7 +3377,7 @@
               ]
             },
             "dc_source": {
-              "description": "Where the DC came from: present for every check and save except a death save, whose\nDC 10 is a rule.",
+              "description": "Where the DC came from: present on every check and save.",
               "anyOf": [
                 {
                   "$ref": "#/$defs/DcSource"

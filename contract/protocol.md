@@ -139,7 +139,8 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 - **Ladder checks.** For a check no scenario check covers, the DM names a skill and a DC from the SRD ladder: 5, 10, 15, 20, 25 or 30 (`bad_request` otherwise). `ability` must be the skill's own ability. Not served yet, each answering `not_implemented`: a check without a skill, or a skill with another ability. Ladder checks have no consequences and no once-per-scene limit.
 - A creature at 0 Hit Points can't make a check (`rejected`, `condition_prevents`). A refused check rolls nothing and logs nothing.
 - **Consequences** run in scene file order. `flag` sets a session flag and logs `flag_set` (DM only) the first time it is set; flags outlive the scene and appear in the DM state, sorted. `hazard` logs `hazard_triggered` (DM only), rolls the hazard's saving throw for the same creature (`dc_source: "scenario"`), then runs the hazard's own consequences for that save. `damage` rolls the dice and applies them to that creature: a `damage` roll, `damage_taken` citing it, `hit_points` (owner and DM), and `life_state` if it changed.
-- Advantage comes only from what the engine tracks (conditions, features); each reason is in the roll's `advantage_sources`, DM view only. Help comes with Milestone 3 step 10 (U6).
+- Advantage comes only from what the engine tracks (a pending Help, conditions, features); each reason is in the roll's `advantage_sources`, DM view only.
+- A check goes through the engine's own event handling, so whatever waits on it acts: a pending Help for that skill is spent by it (§4.7). A reaction a check would offer out of combat (the Fighter's Tactical Mind after a failed check) is declined, since explore mode has no reaction prompt (CHK-6).
 
 ### 4.4 Encounters and ending a fight
 
@@ -182,6 +183,14 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 - **Joining a running fight.** Creatures placed during a fight (a DM spawn or a round spawn) join it: each rolls initiative, logged as an `initiative` roll after `spawned`, and takes its turn at its place in the order, this round if its count has not come up yet, otherwise from the next round. Ties go after the creatures already in the order. A spawn is not a decision: a pending action or reaction prompt keeps its `prompt_id`, and a reaction keeps its `trigger.event_seq`.
 - `spawn` refuses, changing nothing: an id the scene doesn't declare (`unknown_spawn`; the DM's error carries the scene's spawn ids in `hint.known_ids`), a flag or round spawn (`rejected` with `automatic`), and a spawn already placed in this scene (`rejected` with `already_spawned`). A player viewer's `automatic` message doesn't name the trigger.
 - Each placement logs `spawned{spawn_id, handles}`, DM only; players see the new creatures in their state. The DM state lists the scene's `spawns` (`SpawnView`): id, `when` as the scene declares it, and whether it was `placed`.
+
+### 4.7 Help
+
+- `help{actor, help}` is the Help action out of combat (SRD 5.2.1 Rules Glossary, Help). The engine runs its own Help action (core U6), so its range, proficiency and Medicine check are the engine's rules. In combat Help is an option at the action prompt (`legal_actions`), and `help` answers `wrong_mode`. After a fight that ended by itself it closes `combat_over`, as `move` does.
+- `assist_check{ally, skill}` gives the ally Advantage on their next ability check with that skill. The helper needs proficiency in the skill. The benefit is spent by that check, made with `request_check` (the roll's `advantage_sources` names it, DM view only), and lasts until the start of the helper's next turn: out of combat that is the helper's first turn of a fight, or the next scene.
+- `stabilize{target}` makes a DC 10 Wisdom (Medicine) check for a creature at 0 Hit Points that is not yet Stable. The roll is logged like any roll, with `dc_source: "rule"`. On a success the target becomes Stable (`life_state`, public); on a failure nothing changes and the helper can try again.
+- Each `help` is an action, and out of combat each one starts the helper's next turn first, as the engine does for a creature outside an encounter: its action is back, and whatever lasted until the start of its turn ends. No `turn_start` or `turn_end` is logged.
+- Every `help` logs a public `action` event with the helper and the other creature; its result is empty. Refused, rolling and logging nothing: a helper who is down (`condition_prevents`), the helper as the other creature or a target that is not dying (`invalid_target`), a skill the helper is not proficient in (`not_proficient`), and a creature more than 5 feet away (`out_of_range`; `move` there first).
 
 ## 5. Visibility (projection per `viewer`)
 
@@ -235,10 +244,10 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
   "dice": [{"source":"d20","dice":"1d20","results":[14,6],"kept":14}],
   "modifiers": [{"source":"Strength","value":3},{"source":"Proficiency","value":2}],
   "total": 19, "against": {"kind":"AC","value":15}, "outcome": "hit",
-  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block",
+  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block|rule",
   "advantage_sources": ["Effect: some_effect (advantage)"] }
 ```
-In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC except a death save's fixed DC 10. Only `initiative`, `damage` and `healing` rolls have no `against`.
+In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC: `rule` for the fixed DC 10 of a death save and of Help's stabilize. Only `initiative`, `damage` and `healing` rolls have no `against`.
 
 Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with the same `total`, and with the same `against` when the transcript states it. Every roll in the session log is cited. The audit runs on the `dm` projection.
 

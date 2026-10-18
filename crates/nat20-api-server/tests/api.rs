@@ -93,11 +93,10 @@ fn assert_hidden_numbers_logged(events: &[Value]) {
         let against = &roll["against"];
         match kind {
             "attack" => assert_eq!(against["kind"], "AC", "{event}"),
-            "saving_throw" | "ability_check" | "skill_check" => {
+            "saving_throw" | "ability_check" | "skill_check" | "death_save" => {
                 assert_eq!(against["kind"], "DC", "{event}");
                 assert!(roll["dc_source"].is_string(), "{event}");
             }
-            "death_save" => assert_eq!(against["kind"], "DC", "{event}"),
             _ => assert!(against.is_null(), "{event}"),
         }
         if !against.is_null() {
@@ -1586,4 +1585,228 @@ fn a_spawn_leaves_a_pending_reaction_prompt_alone() {
     let spawned = api.call("dm", json!({ "cmd": "spawn", "spawn_id": "reserve" }));
     assert_eq!(spawned["ok"], true, "{spawned}");
     assert_eq!(spawned["awaiting"], moved["awaiting"], "{spawned}");
+}
+
+/// Bren and Ana side by side on a yard, a far corner, a fall that drops whoever fails it to 0
+/// Hit Points (Bren has 20; 20 to 23 damage leaves less than that over, so nobody dies), a
+/// quiet second scene, and a fight with a goblin.
+fn help_dir(name: &str) -> PathBuf {
+    data_dir(
+        name,
+        &[
+            (
+                "yard",
+                json!({ "id": "yard", "anchors": [anchor("corner", 30.0)],
+                    "creatures": [
+                        creature("bren", ("pregen", "fighter_l2"), "party", 0.0),
+                        creature("ana", ("pregen", "fighter_l2"), "party", 5.0),
+                        held_goblin_at(60.0)
+                    ],
+                    "checks": [{ "id": "fall", "test": { "kind": "save", "ability": "dexterity" },
+                        "dc": 30,
+                        "on_failure": [{ "kind": "damage", "dice": "1d4+19", "damage_type": "bludgeoning" }] }],
+                    "encounters": [{ "id": "brawl", "participants": ["bren", "ana", "goblin"] }] }),
+            ),
+            (
+                "lane",
+                json!({ "id": "lane", "anchors": [anchor("a", 0.0), anchor("b", 5.0)],
+                    "party_start": ["a", "b"] }),
+            ),
+        ],
+    )
+}
+
+fn held_goblin_at(x_ft: f32) -> Value {
+    let mut goblin = held_goblin();
+    goblin["at"]["point"]["x_ft"] = json!(x_ft);
+    goblin
+}
+
+fn help(api: &mut Api, actor: &str, help: Value) -> Value {
+    api.call("dm", json!({ "cmd": "help", "actor": actor, "help": help }))
+}
+
+fn athletics(api: &mut Api, actor: &str) -> Value {
+    let checked = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": actor,
+            "check": { "kind": "ladder", "ability": "strength", "skill": "athletics", "dc": 10 } }),
+    );
+    assert_eq!(checked["ok"], true, "{checked}");
+    checked["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["kind"] == "roll")
+        .cloned()
+        .unwrap()["roll"]
+        .clone()
+}
+
+#[test]
+fn help_gives_an_ally_advantage_on_their_next_check_with_the_skill() {
+    let dir = help_dir("help_assist");
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "yard" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let assist = json!({ "kind": "assist_check", "ally": "ana", "skill": "athletics" });
+
+    let helped = help(&mut api, "bren", assist.clone());
+    assert_eq!(helped["ok"], true, "{helped}");
+    assert_eq!(helped["result"], json!({ "cmd": "help" }), "{helped}");
+    let events = helped["events"].as_array().unwrap();
+    let action = events.iter().find(|e| e["kind"] == "action").unwrap();
+    assert_eq!(action["visibility"]["scope"], "public", "{helped}");
+    assert_eq!(action["actor"], "bren", "{helped}");
+    assert_eq!(action["targets"], json!(["ana"]), "{helped}");
+    assert!(!events.iter().any(|e| e["kind"] == "roll"), "{helped}");
+
+    // A check with another skill leaves the Help alone; the next Athletics check spends it.
+    let perception = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": "ana",
+            "check": { "kind": "ladder", "ability": "wisdom", "skill": "perception", "dc": 10 } }),
+    );
+    assert_eq!(perception["ok"], true, "{perception}");
+    let roll = athletics(&mut api, "ana");
+    assert_eq!(roll["advantage"], "advantage", "{roll}");
+    assert_eq!(roll["dice"][0]["dice"], "2d20", "{roll}");
+    let sources = roll["advantage_sources"].as_array().unwrap();
+    assert!(
+        sources.iter().any(|s| s.as_str().unwrap().contains("help")),
+        "{roll}"
+    );
+    let roll = athletics(&mut api, "ana");
+    assert_eq!(roll["advantage"], "normal", "{roll}");
+
+    // Out of combat a helper can help again; Bren's own checks are not helped.
+    let again = help(&mut api, "bren", assist.clone());
+    assert_eq!(again["ok"], true, "{again}");
+    assert_eq!(athletics(&mut api, "bren")["advantage"], "normal");
+
+    // A Help left unused does not last into the next scene.
+    let carried = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "lane", "party": ["bren", "ana"] }),
+    );
+    assert_eq!(carried["ok"], true, "{carried}");
+    let roll = athletics(&mut api, "ana");
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(roll["advantage"], "normal", "{roll}");
+}
+
+#[test]
+fn a_refused_help_rolls_and_logs_nothing() {
+    let dir = help_dir("help_refused");
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "yard" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let refused = |api: &mut Api, actor: &str, help_spec: Value, reason: &str| {
+        let answer = help(api, actor, help_spec);
+        assert_eq!(answer["ok"], false, "{answer}");
+        assert_eq!(answer["error"]["code"], "rejected", "{answer}");
+        assert_eq!(answer["error"]["reason"], reason, "{answer}");
+        assert_eq!(answer["events"], json!([]), "{answer}");
+    };
+    // Bren has no Medicine proficiency, cannot help himself, and Ana is not dying.
+    refused(
+        &mut api,
+        "bren",
+        json!({ "kind": "assist_check", "ally": "ana", "skill": "medicine" }),
+        "not_proficient",
+    );
+    refused(
+        &mut api,
+        "bren",
+        json!({ "kind": "assist_check", "ally": "bren", "skill": "athletics" }),
+        "invalid_target",
+    );
+    refused(
+        &mut api,
+        "bren",
+        json!({ "kind": "stabilize", "target": "ana" }),
+        "invalid_target",
+    );
+    let moved = api.call(
+        "dm",
+        json!({ "cmd": "move", "actor": "ana", "to": { "kind": "anchor", "anchor": "corner" } }),
+    );
+    assert_eq!(moved["ok"], true, "{moved}");
+    refused(
+        &mut api,
+        "bren",
+        json!({ "kind": "assist_check", "ally": "ana", "skill": "athletics" }),
+        "out_of_range",
+    );
+
+    let started = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "brawl" }),
+    );
+    assert_eq!(started["ok"], true, "{started}");
+    let in_combat = help(
+        &mut api,
+        "bren",
+        json!({ "kind": "assist_check", "ally": "ana", "skill": "athletics" }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(in_combat["error"]["code"], "wrong_mode", "{in_combat}");
+}
+
+#[test]
+fn help_stabilizes_a_creature_at_0_hit_points_on_a_dc_10_medicine_check() {
+    let dir = help_dir("help_stabilize");
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "yard" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let fell = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": "bren",
+            "check": { "kind": "scenario", "check_id": "fall" } }),
+    );
+    let fall_events = fell["events"].as_array().unwrap();
+    let down = fall_events
+        .iter()
+        .find(|e| e["kind"] == "life_state")
+        .unwrap();
+    assert_eq!(down["state"], "unconscious", "{fell}");
+
+    // Each try is one DC 10 Medicine check; a failure leaves Bren dying, a success makes him
+    // Stable. Out of combat Ana can keep trying.
+    let mut stable = false;
+    for _ in 0..40 {
+        let tried = help(
+            &mut api,
+            "ana",
+            json!({ "kind": "stabilize", "target": "bren" }),
+        );
+        assert_eq!(tried["ok"], true, "{tried}");
+        let events = tried["events"].as_array().unwrap();
+        let rolls: Vec<&Value> = events.iter().filter(|e| e["kind"] == "roll").collect();
+        assert_eq!(rolls.len(), 1, "{tried}");
+        let roll = &rolls[0]["roll"];
+        assert_eq!(roll["kind"], "skill_check", "{roll}");
+        assert_eq!(roll["roller"], "ana", "{roll}");
+        assert_eq!(
+            roll["against"],
+            json!({ "kind": "DC", "value": 10 }),
+            "{roll}"
+        );
+        assert_eq!(roll["dc_source"], "rule", "{roll}");
+        let changed = events.iter().find(|e| e["kind"] == "life_state");
+        if roll["outcome"] == "success" {
+            assert_eq!(changed.unwrap()["state"], "stable", "{tried}");
+            stable = true;
+            break;
+        }
+        assert!(changed.is_none(), "{tried}");
+    }
+    assert!(stable, "forty DC 10 Medicine checks all failed");
+    let again = help(
+        &mut api,
+        "ana",
+        json!({ "kind": "stabilize", "target": "bren" }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(again["error"]["reason"], "invalid_target", "{again}");
 }

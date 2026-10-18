@@ -162,6 +162,16 @@ pub enum Command {
         /// Spawn id from the scene file.
         spawn_id: String,
     },
+    /// The Help action in explore mode; in combat Help is one of the `legal_actions` options.
+    /// The helper must be conscious and within 5 feet of the other creature (`rejected` /
+    /// `out_of_range` otherwise; `move` there first). The `action` event, the Medicine roll of a
+    /// stabilize and any `life_state` change are in `events`. Combat answers `wrong_mode`.
+    Help {
+        /// The helper.
+        actor: Handle,
+        /// What kind of help, and for whom.
+        help: HelpSpec,
+    },
     /// Log entries after `since`, projected for the request's `viewer`.
     Events {
         /// The `seq` to read after; `0` reads from the start.
@@ -210,6 +220,28 @@ pub enum CheckSpec {
         skill: Option<Skill>,
         /// The DC: one of 5, 10, 15, 20, 25, 30; anything else is a `bad_request`.
         dc: u8,
+    },
+}
+
+/// What a `help` does (SRD 5.2.1, Rules Glossary, Help).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum HelpSpec {
+    /// Gives `ally` Advantage on their next ability check with `skill`. The helper needs
+    /// proficiency in the skill (`rejected` / `not_proficient` otherwise). The benefit is spent by
+    /// that check and ends at the start of the helper's next turn; out of combat that is the
+    /// helper's first turn in a fight, or the next scene.
+    AssistCheck {
+        /// The creature that gets Advantage; not the helper.
+        ally: Handle,
+        /// The skill of the check.
+        skill: Skill,
+    },
+    /// A DC 10 Wisdom (Medicine) check to make `target`, a creature at 0 Hit Points, Stable.
+    /// A target that is not dying answers `rejected` / `invalid_target`.
+    Stabilize {
+        /// The creature at 0 Hit Points.
+        target: Handle,
     },
 }
 
@@ -357,6 +389,8 @@ pub enum CommandResult {
         /// Handles of the creatures placed.
         handles: Vec<Handle>,
     },
+    /// The help was given; what it rolled and changed is in `events`.
+    Help {},
     /// Log entries after `since`.
     Events {
         /// Projected for the request's `viewer`. Entries the viewer may not see are left out.
