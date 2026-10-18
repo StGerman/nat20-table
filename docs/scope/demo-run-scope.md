@@ -71,7 +71,7 @@ The engine owns every number. Nothing the AI says changes state unless the engin
 
 **Build list (Nat20 gaps for this scenario):**
 
-Strategy (Stas, 2026-10-16): fork Nat20 and contribute generic work back upstream. "Upstream" items are generic SRD content or engine features and go as small PRs to Nat20; "Ours" items are scenario- or product-specific and stay in our fork or our own repo.
+Strategy (Stas, 2026-10-16; superseded 2026-10-18 by `docs/decisions/0023-long-lived-fork.md`: nothing goes upstream, and "Upstream" below now means fork `demo`): fork Nat20 and contribute generic work back upstream. "Upstream" items are generic SRD content or engine features and go as small PRs to Nat20; "Ours" items are scenario- or product-specific and stay in our fork or our own repo.
 
 | # | Item | Size | Where |
 |---|---|---|---|
@@ -85,7 +85,7 @@ Strategy (Stas, 2026-10-16): fork Nat20 and contribute generic work back upstrea
 | E8 | Out-of-combat checks: skill check against a scenario-defined DC, group check, Help action | S | Upstream |
 | E9 | Four pregenerated character files | S | Ours |
 
-**Fork workflow**
+**Fork workflow** (superseded 2026-10-18 by `docs/decisions/0023-long-lived-fork.md`: upstream declines AI-authored contributions, so nothing goes upstream; `demo` is synced from upstream `main` by merge, never rebased; CLAUDE.md Rule 6 has the current workflow)
 1. Fork to `StGerman/nat20`. Keep `main` identical to upstream; do demo work on a `demo` branch on top of it and rebase it regularly.
 2. Each upstream item is its own branch and PR off upstream `main`, matching his conventions: JSON in `assets/registries`, Lua only where logic needs it, a test in `core/tests`, a row in `docs/PROGRESS.md`, regenerated schemas.
 3. Open an issue before the large items (E1, E2). One maintainer means his roadmap wins; ask before building.

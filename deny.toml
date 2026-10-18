@@ -8,8 +8,8 @@ all-features = true
 yanked = "deny"
 # Every ignore names the advisory, the path that pulls it in, and why it is tolerated.
 ignore = [
-    # paste is unmaintained (no vulnerability). Reached through nat20_core and nalgebra/simba; not
-    # ours to replace. Revisit when upstream or nalgebra drops it.
+    # paste is unmaintained (no vulnerability). Reached through nat20_core (a direct dependency of
+    # core, which is ours since decision 0023) and nalgebra/simba. Revisit with UPS-16.
     { id = "RUSTSEC-2024-0436", reason = "unmaintained, no vulnerability; via nat20_core and simba" },
     # smartstring is unmaintained (no vulnerability). Reached through nat20_core -> rhai.
     # Revisit when rhai drops it.
@@ -57,6 +57,6 @@ unknown-git = "deny"
 allow-git = [
     # Our fork of the rules engine, pinned by rev (Rule 5).
     "https://github.com/StGerman/nat20",
-    # Upstream nat20's polyanya patch, copied into our workspace [patch] (Rule 5).
+    # The polyanya patch shared with fork demo (Rule 5); removed by UPS-11.
     "https://github.com/MadsWedendahlKruse/polyanya",
 ]

@@ -11,7 +11,7 @@ updates:
     ignore:
       # Pinned by rev to fork branch demo; bumped only in its own PR (Rule 5). core-drift watches it.
       - dependency-name: nat20_core
-      # Must stay identical to upstream nat20's [patch] entry (Rule 5).
+      # Must stay identical to the fork demo's [patch] entry until UPS-11 drops it (Rule 5).
       - dependency-name: polyanya
       # The adapter names nat20_core's types from these crates, so their versions must match what
       # the pinned core uses; a lone bump builds two copies and fails with mismatched types. They
@@ -21,8 +21,10 @@ updates:
       - dependency-name: rerecast
       - dependency-name: uom
     groups:
-      cargo-minor-patch:
-        update-types: [minor, patch]
+      # Patch only: Dependabot reads a 0.x minor (a breaking bump under Cargo semver) as minor, so
+      # every cargo minor gets its own PR (CLAUDE.md Rule 9).
+      cargo-patch:
+        update-types: [patch]
 
   - package-ecosystem: npm
     directory: /

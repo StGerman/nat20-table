@@ -9,8 +9,9 @@ Companion files: [CLAUDE.md](CLAUDE.md) (the rules in a form a Claude Code sessi
 
 1. **Yes, detach the API, and go one step further: take it out of the fork entirely.** The API becomes its own Cargo packages (`nat20-api-contract` for wire types, `nat20-api-server` for behaviour) in our own repo, depending on `nat20_core` by pinned git rev. Evidence: milestone 1's `server/` crate needed **zero changes to `core/`** (`git diff main demo -- core/src` is empty), so core's public surface already carries a headless API.
 2. **The fork shrinks to an upstream staging area.** `main` == upstream; every other branch is one upstream-bound item. No server, no product code, no CLAUDE.md ever lands there.
+   *Superseded 2026-10-18 ([decision 0023](../decisions/0023-long-lived-fork.md)): upstream declines AI-authored contributions. `main` still mirrors upstream, and `demo` is now our long-lived engine branch, synced by merge. Still no server or product code in it.*
 3. **Contract-first: recommend a standalone Rust contract crate (serde + schemars), TypeSpec as the alternative.** The contract crate holds only wire types, no logic, no core dependency; JSON Schema and TS types are generated from it. Both pipelines spiked on the same slice (§5.4): the Rust crate needs no fix-up step and rejects `v: 2` by type; TypeSpec needs a normalizer before typify will produce correct Rust. Generated code is checked in; CI regenerates and fails on any diff.
-4. **Upstream needs four small code PRs, not one of which mentions an API** (built on the fork now, proposed upstream only at Milestone 8): configurable registry root (resolves the maintainer's own `TODO` at `core/src/registry/registry.rs:47`), seedable dice, fractional CR, Hit Point Dice on short rest. Everything else upstream is content in his existing JSON format.
+4. **Upstream needs four small code PRs, not one of which mentions an API** (built on the fork now; the upstream proposal was dropped with Milestone 8 on 2026-10-18, decision 0023, so they stay in the fork): configurable registry root (resolves the maintainer's own `TODO` at `core/src/registry/registry.rs:47`), seedable dice, fractional CR, Hit Point Dice on short rest. Everything else upstream is content in his existing JSON format.
 
 ## 1. Requirements
 
@@ -202,6 +203,8 @@ A fresh crate outside the fork with `nat20_core = { git = "https://github.com/St
 
 ## 6. Minimal upstream change list
 
+> Historical since 2026-10-18 ([decision 0023](../decisions/0023-long-lived-fork.md)): nothing goes upstream. The items below live in fork `demo`; CLAUDE.md Rule 6 says how core changes are made now.
+
 Rule for every item: useful to his GUI and tests on its own, no API vocabulary, his conventions (registry JSON where possible, test in `core/tests`, `docs/PROGRESS.md` row, regenerated `.schemas`, `cargo test --locked` green), one item per PR, branch off upstream `main`.
 
 **Code (4 required, 2 optional)**
@@ -229,7 +232,7 @@ Rule for every item: useful to his GUI and tests on its own, no API vocabulary, 
 | S1 | Scaffold: workspace, `nat20-api-contract` + `contract/` with the pipeline from the spike, CI jobs `contract-fresh`, `contract-compat`, `contract-pure`, `rust`, `ts` | Ours | S | S0 |
 | S2 | Backfill v1 in the contract crate from `api/contract-v1-draft.md` (not from v0 code: v0 has no consumers and v1 replaces it outright), plus `protocol.md` and first fixtures | Ours | M | S1, the 4 open defaults in the v1 draft |
 | S3 | Move `server/` from the fork's `demo` into `crates/nat20-api-server`; swap `protocol.rs` for the contract crate's types; isolate core calls in `adapter/` | Ours | M | S2 |
-| S4 | Strip `server/` from fork `demo`; `demo` = upstream main + item branches only. Close PR #1 (it targets `main`, which must equal upstream) and PR #2 (schema derived from server types; its schemars setup can seed the contract crate) | Fork | S | S3 green |
+| S4 | Strip `server/` from fork `demo`; `demo` = upstream main + item branches only (since 2026-10-18: upstream main merged in plus our core changes, CLAUDE.md Rule 6). Close PR #1 (it targets `main`, which must equal upstream) and PR #2 (schema derived from server types; its schemars setup can seed the contract crate) | Fork | S | S3 green |
 | S5 | U1 (registry root) and U2 (seedable dice) as one-item branches in the fork, merged into `demo` and pinned. The upstream PRs wait for Milestone 8: demo gaps close first (Stas's rule), except U1 and U2 themselves, which go upstream now (`docs/decisions/0020-send-u1-u2-upstream-early.md`) | Fork | S each | UPS-1 (Actions on) |
 
 Open decision carried from the v1 draft: defaults 2-5 (stdio only, engine-side projection, health bands, hidden AC/DC). Decision 1 there (definition format) is answered by §5.1.
@@ -239,7 +242,7 @@ Open decision carried from the v1 draft: defaults 2-5 (stdio only, engine-side p
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Upstream refactors break `adapter/` on every bump | High (3 type reshapes in the last 3 commits) | One module, hours per bump | Pin rev; weekly `core-drift` job; bumps are their own PRs |
-| Maintainer ignores or rejects U1-U4 | Medium | We carry 4 small patches on `demo` indefinitely | Each is tiny and self-contained; rebase cost is near zero |
+| Maintainer ignores or rejects U1-U4 | Happened 2026-10-18 (decision 0023) | We carry every core change on `demo` indefinitely: about a dozen merged items (20 commits) so far, U9 to U18 next | Merge syncs, never rebase (Rule 6); upstream's patterns kept so conflicts stay small; decision 0023 says when a sync costs too much |
 | Generator output shifts on upgrade (schemars, json-schema-to-typescript; plus TypeSpec/typify if chosen) | Medium | Generated diff noise | Exact pins; upgrade only in a dedicated PR with fixtures green |
 | Contract crate becomes a dumping ground (logic, helpers, core types creep in) | Medium | Contract stops being reviewable as a contract | `contract-pure` CI job; CLAUDE.md rule; reviewers reject logic there |
 | Global registry = one ruleset per process | Certain | Can't host two content sets in one process | One engine process per game; fine for the demo |

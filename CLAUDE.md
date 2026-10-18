@@ -4,7 +4,7 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 
 ## What this is
 
-An AI-run D&D 5e game (2024 rules, SRD 5.2.1). An AI DM agent and AI player agents (Claude Agent SDK), plus one human player, play through a text UI. Every rule is resolved by the Nat20 rules engine (`nat20_core`, upstream https://github.com/MadsWedendahlKruse/nat20, our fork https://github.com/StGerman/nat20), which this repo (https://github.com/StGerman/nat20-table) wraps in a typed JSON-lines API over stdio.
+An AI-run D&D 5e game (2024 rules, SRD 5.2.1). An AI DM agent and AI player agents (Claude Agent SDK), plus one human player, play through a text UI. Every rule is resolved by the Nat20 rules engine (`nat20_core`, upstream https://github.com/MadsWedendahlKruse/nat20, our long-lived fork https://github.com/StGerman/nat20), which this repo (https://github.com/StGerman/nat20-table) wraps in a typed JSON-lines API over stdio.
 
 This file holds the rules and points to everything else. When it disagrees with a doc, this file wins and the doc gets fixed.
 
@@ -35,23 +35,24 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 
 1. Fighter vs Goblin Warrior through the headless API (done 2026-10-16)
 2. Repo split and contract v1
-3. Exploration and checks
+3. Exploration and checks (done 2026-10-18)
 4. The party: Cleric and healing, Human, items, pregens
 5. Monsters
 6. Agents at the table: one full scene with the DM agent, player agents and a human
 7. Demo acceptance: three timed playthroughs
-8. Upstream proposal
+
+Milestone 8 (upstream proposal) was dropped on 2026-10-18: upstream declines AI-authored contributions (`docs/decisions/0023-long-lived-fork.md`).
 
 ## Design in brief
 
-- **Upstream core** (`nat20_core`) owns the rules. Our fork stages one-item upstream PRs and nothing else.
+- **Core** (`nat20_core`) owns the rules. It lives in our fork: `main` mirrors upstream, and `demo` is upstream `main` merged in regularly plus our own core changes (Rule 6).
 - **This repo** holds everything that is ours:
   - the API package: the contract crate and the server;
   - the game side: game loop, agents, text UI, scenarios, pregens, maps, lore;
   - the data pipeline: Foundry structured fields and 5e-bits numbers into registry JSON.
 - Two contracts:
   - the engine wire is ours and contract-first (Rule 1);
-  - the registry formats are upstream's, generated from his code, and we consume them as pinned by the core rev.
+  - the registry formats are core's (upstream's plus ours on `demo`), generated from core code, and we consume them as pinned by the core rev.
 
 ## Commands
 
@@ -84,7 +85,7 @@ Run `check:contract`, the cargo checks above (fmt, clippy, test, doc, deny) and 
 | `crates/nat20-api-server/src/adapter/` | The only code that imports `nat20_core` | Yes |
 | `crates/nat20-api-server/src/` (rest) | Session log, roll and prompt ids, idempotency, projection, stdio loop, monster stat blocks | Yes |
 | `packages/engine-client/` | Thin TS client that spawns the server; uses the generated types | Yes, outside `generated/` |
-| `content/registries/` | Our registry overlay, namespace `nat20_demo::` (needs upstream U1) | Yes |
+| `content/registries/` | Our registry overlay, namespace `nat20_demo::` (needs U1, in fork `demo`) | Yes |
 | `game/` | Game loop, DM and player agents, per-agent tool bindings, text UI, transcripts, audit | Yes |
 | `scenarios/`, `pregens/`, `maps/` | Our adventure content, CC-BY-4.0 | Yes |
 | `lore/` | Original setting and lore, kept apart from rules content | Yes |
@@ -154,31 +155,31 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 ## Rule 5: the core boundary
 
 - `nat20_core` is a git dependency pinned by `rev` to `StGerman/nat20`. Bump the rev only in its own PR, with the full suite green.
-- Keep this entry in the workspace `Cargo.toml`, identical to upstream's. Cargo ignores a dependency's `[patch]`, so without it core builds against the wrong polyanya:
+- Keep this entry in the workspace `Cargo.toml`, identical to the one in fork `demo`, until core moves to crates.io polyanya 0.16 or later (UPS-11) and both drop it. Cargo ignores a dependency's `[patch]`, so without it core builds against the wrong polyanya:
   ```toml
   [patch.crates-io]
   polyanya = { git = "https://github.com/MadsWedendahlKruse/polyanya", branch = "fix-path-with-height-oob" }
   ```
-- Only `crates/nat20-api-server/src/adapter/` may `use nat20_core`. Upstream churn stays inside that module.
-- Never work around a core rule in our code. If core is wrong or missing something, fix it in the fork as an upstream item (Rule 6) and pin to it.
+- Only `crates/nat20-api-server/src/adapter/` may `use nat20_core`. Core churn stays inside that module.
+- Never work around a core rule in our code. If core is wrong or missing something, fix it in the fork (Rule 6) and pin to it.
 - To develop against a local fork checkout, add `[patch."https://github.com/StGerman/nat20"] nat20_core = { path = "../nat20/core" }` to `.cargo/config.toml`. Never commit it.
 
 ## Rule 6: working in the fork (`StGerman/nat20`)
 
-- The fork's `main` equals upstream `main`. Change it only by syncing from upstream.
-- `demo` is upstream `main` plus our pending upstream items, nothing else: no server, no contract, no game code, no CLAUDE.md, no scenario data.
-- Each upstream item gets its own branch off upstream `main` with one change, in the maintainer's style:
+Upstream declines AI-authored contributions, so nothing goes upstream and the fork is ours for good (`docs/decisions/0023-long-lived-fork.md`).
+
+- The fork's `main` mirrors upstream `main` exactly. Change it only by fast-forwarding it to upstream.
+- `demo` is our engine branch: upstream `main` plus our core changes. Sync it by merging the fork's `main` into `demo` in a `core/sync-upstream` PR when upstream moves. Never rebase or force-push `demo`, because nat20-table pins its commits by rev.
+- PRs into `demo` merge with a merge commit, never squash or rebase-merge. That keeps a pinned branch head reachable from `demo`, and keeps upstream as a merge parent so the next sync doesn't re-conflict. A table pin may name an open core PR's head (stacked work); once that PR merges, the merge commit keeps the head reachable from `demo`.
+- `demo` holds core and fork upkeep only: core code, registry JSON, core tests, plus the fork's CI workflows, `dependabot.yml` and `deny.toml`. Never the server, the contract, game code, CLAUDE.md, scenario data or lore.
+- Generic SRD content (classes, species, spells, items) goes into core's own registry tree on `demo`, with core's ids, as the Milestone 4 spec does. If upstream later adds the same id, the sync PR keeps one copy and says which. Content that exists only for our adventure goes into this repo's `content/registries/` overlay under `nat20_demo::`.
+- Core never contains API vocabulary: session, viewer, projection, roll id, prompt id, request id, JSON wire, AI. Core stays a rules engine; anything about the API lives in this repo's adapter.
+- Each core change gets its own `core/<topic>` branch off `demo` and a PR into `demo`. Keep it close to the maintainer's patterns so syncs stay cheap:
   - registry JSON over code;
   - a test in `core/tests/`;
-  - a `docs/PROGRESS.md` row, when the item is SRD content (his file tracks SRD coverage only; engine plumbing such as U1 and U2 has no row);
   - regenerated `assets/registries/.schemas` (his freshness test must pass);
   - `cargo test --locked` green.
-
-  Merge the branch into `demo` for our use, and open the upstream PR from the same branch.
-- Upstream items never contain API vocabulary: session, viewer, projection, roll id, prompt id, request id, JSON wire, AI. If upstream would not want a change for his own GUI, it does not go upstream.
-- Design questions, such as new registry formats like monsters, start as an upstream issue, not a PR.
-- Close our demo gaps before proposing anything upstream. Our work never waits on an upstream merge.
-  - Exception: U1 (registry root) and U2 (seedable dice) go upstream now, with the monster-format issue (`docs/decisions/0020-send-u1-u2-upstream-early.md`). Every other item waits for Milestone 8.
+- Keep his MIT `LICENSE` and commit history intact. Core commits take the normal attribution; the upstream-bound authorship convention is retired.
 
 ## Rule 7: content and licences
 
@@ -196,10 +197,28 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 ## Rule 8: tasks, PRs, CI
 
 - `TASKS.md` is the only task list: no GitHub issues and no TODO comments without a row. Every PR that closes or creates a gap updates its row in the same PR. ID prefixes: API, ENG, MON, CHR, ITM, CHK, MAP, AGT, UPS, DAT, CON.
-- Each row carries Pri (P0 blocks a demo run, P1 needed for acceptance, P2 optional), Dest (Up, Up?, Fork, Ours), Gate (Y blocks the upstream proposal), Size and Status (todo, partial, done).
+- Each row carries Pri (P0 blocks a demo run, P1 needed for acceptance, P2 optional), Dest (Fork, Ours; older `Up` and `Up?` rows read as Fork), Size and Status (todo, partial, done, won't do; won't do counts as closed and says why). The Gate column is retired with Milestone 8.
 - When the last row of a milestone closes and its exit criterion holds, mark the milestone done in `TASKS.md` with the date.
 - One concern per PR. Write the PR description as Before / After / How.
-- Name PRs and branches after their repo. A PR title is a lowercase repo prefix, a colon and plain English: `table:` for this repo, `core:` for the fork `StGerman/nat20`, `upstream:` for `MadsWedendahlKruse/nat20` (`table: Character sheets (get_sheet)`). Branches use the same stem as `<repo>/<topic>` in kebab-case (`table/short-rest`, `core/hit-point-dice`, `upstream/<item>`). Refer to PRs as `table #N`, `core #N` or `upstream #N`, never by a bare number. Dependabot PRs and branches keep their own names.
+- Every PR we open, code or docs, gets a Claude code review (`/engineering:code-review`) against `.github/copilot-instructions.md` before it goes to Stas.
+  - Each finding is fixed or answered the way Copilot findings are: a reply quoting the fix commit's message, or the reason it stays, with the Claude Code footer.
+  - The verdict goes on the PR as a review comment in this shape: 🟢 Approved (no open findings) or 🟠 Changes recommended (open findings, listed), and the review re-runs on every new head until it is 🟢.
+  - A Copilot round is extra, when its quota allows.
+- Name PRs and branches after their repo. A PR title is a lowercase repo prefix, a colon and plain English: `table:` for this repo, `core:` for the fork `StGerman/nat20` (`table: Character sheets (get_sheet)`). Branches use the same stem as `<repo>/<topic>` in kebab-case (`table/short-rest`, `core/hit-point-dice`). Refer to PRs as `table #N` or `core #N`, never by a bare number; `upstream #N` names the closed upstream PRs and issue. Dependabot PRs and branches keep their own names.
 - A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.
 - Never skip, disable or quarantine a test to get green. Never push an empty commit to retrigger CI.
 - CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `rust-lint`, `rust-test`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
+
+## Rule 9: dependencies
+
+Stay current, behind a cooldown and hard gates, in both repos (`docs/decisions/0024-dependency-policy.md`). The config that enforces it is TASKS.md UPS-11 to UPS-15. Where a line below says "until UPS-n", the interim rule applies until that row is done.
+
+- Dependabot runs weekly on cargo, npm and GitHub Actions; in the fork it targets `demo`. It waits 3 days after a patch release and 7 after a minor or major one (UPS-14). Until UPS-14, Claude merges a Dependabot PR only once every release in it is that old. Security updates skip the wait and merge within 48 hours.
+- Breaking means a new major, or a new minor of a 0.x crate (Cargo semver). Dependabot can't tell a 0.x minor from a 1.x minor, so the grouped cargo PR carries patch updates only, and each cargo minor arrives as its own PR.
+- Grouped patch PRs, npm and Actions minor and patch PRs, and cargo minor PRs of crates at 1.0 or later are merged by Claude once CI is green, within 7 days.
+- A breaking bump becomes its own `core/deps-<crate>` or `table/deps-<crate>` PR with the code it needs, reviewed by Stas, adopted within 30 days. A crate held back longer needs a TASKS.md row saying why.
+- Nothing merges on red. `cargo deny check bans licenses sources` gates PRs in both repos. `advisories` stays off the gate (decision 0022) and runs on a schedule, daily from UPS-14 (weekly until then); a red run gets a P0 row the same day. In the fork, deny covers `nat20_core`, not his GUI (UPS-13).
+- Lockfiles are committed and builds run `--locked`. Our workflows pin Actions by commit SHA; upstream's own workflow files in the fork are left as he wrote them, so syncs don't conflict. Committed manifests take git dependencies only from our own repos, pinned by `rev`, never `branch`. The one exception is the polyanya `[patch]` in Rule 5, until UPS-11 removes it.
+- The Rust toolchain is pinned to an exact stable release in `rust-toolchain.toml` (UPS-14), bumped in its own PR at least 7 days after that release, with any new lints fixed in the same PR. Claude checks for a new stable with each weekly Dependabot round, since Dependabot doesn't update the toolchain file. Until UPS-14, CI runs latest stable, and a lint failure caused by a new release is fixed in its own PR the same day.
+- Once UPS-15 lands, the crates whose types cross the core boundary (hecs, parry3d, uom, rerecast) reach this repo only through `nat20_core`'s re-exports, so they move with the core pin and nowhere else. Until then they stay direct dependencies of the server, ignored by Dependabot, and move only with a pin bump.
+- In an upstream sync, Cargo.toml keeps the higher version of each crate and Cargo.lock is regenerated with cargo, never merged by hand.
