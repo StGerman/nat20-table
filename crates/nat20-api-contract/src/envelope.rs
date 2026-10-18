@@ -152,11 +152,12 @@ pub enum Command {
         /// Why combat ends.
         reason: EndCombatReason,
     },
-    /// Places the creatures of a spawn the scene declares `when: dm`, in explore mode, each at
-    /// its own placement. A spawn is placed at most once per scene (`rejected` /
-    /// `already_spawned`); one the engine places on its own trigger answers `rejected` /
-    /// `automatic`. In combat it answers `not_implemented` until a creature can join a running
-    /// fight (API-8). The creatures join a later fight only if its encounter lists them.
+    /// Places the creatures of a spawn the scene declares `when: dm`, each at its own placement.
+    /// A spawn is placed at most once per scene (`rejected` / `already_spawned`); one the engine
+    /// places on its own trigger answers `rejected` / `automatic`. During a fight the creatures
+    /// join it: each rolls initiative and acts at its place in the order, this round if its
+    /// count has not come up yet, otherwise from the next. After a fight they join a later one
+    /// only if its encounter lists them.
     Spawn {
         /// Spawn id from the scene file.
         spawn_id: String,

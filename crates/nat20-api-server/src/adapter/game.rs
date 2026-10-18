@@ -17,8 +17,9 @@ use nat20_api_contract::{
     Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
     ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HitDiceSpend, HitPointsRegained,
     Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption, RejectReason, RollId,
-    ScenarioCheck, SceneFile, Sheet, Side, Spawn, SpawnView, SpawnWhen, SurrenderCondition,
-    SurrenderTrigger, TargetCandidate, Targeting, UnavailableOption, Visibility,
+    ScenarioCheck, SceneFile, Sheet, Side, Spawn, SpawnUnless, SpawnView, SpawnWhen,
+    SurrenderCondition, SurrenderTrigger, TargetCandidate, Targeting, UnavailableOption,
+    Visibility,
 };
 use nat20_core::{
     components::{
@@ -58,7 +59,7 @@ use crate::{
         monster::MonsterDef,
         names, pregen, sheet,
     },
-    errors::{self, error, rejected},
+    errors::{error, rejected},
     scene,
 };
 
@@ -171,6 +172,8 @@ pub struct Game {
     scripted_turn: Option<(usize, Entity, usize)>,
     /// Scene flags set this session; they outlive the scene that set them.
     flags: BTreeSet<String>,
+    /// The last combat round whose round spawns were looked at.
+    spawn_round: u32,
 }
 
 impl Game {
@@ -407,6 +410,7 @@ impl Game {
         game.encounter_seen = 0;
         game.winner = None;
         game.scripted_turn = None;
+        game.spawn_round = 0;
         // Spawning, despawning and ending a fight write nothing the log shows; skip them.
         game.global_seen = game.engine.event_log.events.len();
         Ok(game)
@@ -440,6 +444,7 @@ impl Game {
             winner: None,
             scripted_turn: None,
             flags: BTreeSet::new(),
+            spawn_round: 0,
         }
     }
 
@@ -1180,13 +1185,15 @@ impl Game {
         self.encounter_seen = 0;
         self.winner = None;
         self.scripted_turn = None;
+        self.spawn_round = 0;
         self.drain();
         self.log_initiative();
         self.advance();
         Ok(())
     }
 
-    /// Places the creatures of the scene spawn `spawn_id`, declared `when: dm`, in explore mode.
+    /// Places the creatures of the scene spawn `spawn_id`, declared `when: dm`. During a fight
+    /// they join it.
     pub fn spawn(&mut self, spawn_id: &str) -> Result<Vec<Handle>, ApiError> {
         let Some(found) = self.scene.spawns.iter().find(|s| s.id == spawn_id).cloned() else {
             let mut e = error(
@@ -1224,12 +1231,6 @@ impl Game {
                 format!("{spawn_id} is already placed in this scene."),
             ));
         }
-        if self.running_encounter().is_some() {
-            return Err(errors::not_implemented(
-                "Spawning into a running fight",
-                "core cannot add a creature to an encounter yet (API-8, U7)",
-            ));
-        }
         // A fight that ended by itself is closed before anything new is placed.
         self.drain();
         self.close_finished_fight();
@@ -1238,7 +1239,8 @@ impl Game {
     }
 
     /// Places every creature of `spawns` at its placement, logs `spawned` for each spawn and
-    /// returns the new creatures. On any failure nothing is placed.
+    /// returns the new creatures. During a fight they join it, each rolling initiative. On any
+    /// failure nothing is placed.
     fn place(&mut self, spawns: &[Spawn]) -> Result<Vec<Entity>, ApiError> {
         let mut new: Vec<SceneCreature> = Vec::new();
         let mut failed = None;
@@ -1316,9 +1318,61 @@ impl Game {
                 },
             });
         }
-        let entities = new.iter().map(|c| c.entity).collect();
+        let entities: Vec<Entity> = new.iter().map(|c| c.entity).collect();
         self.scene.creatures.extend(new);
+        if let Some(encounter) = self.running_encounter() {
+            for entity in &entities {
+                self.engine.join_encounter(&encounter, *entity);
+            }
+            self.log_joined_initiative(&entities);
+        }
         Ok(entities)
+    }
+
+    /// Places the round spawns due since the last look, unless their `unless` holds then.
+    fn round_spawns(&mut self) {
+        let Some(round) = self.running_encounter().and(self.round()) else {
+            return;
+        };
+        if round <= self.spawn_round {
+            return;
+        }
+        let from = self.spawn_round;
+        self.spawn_round = round;
+        let due: Vec<Spawn> = self
+            .scene
+            .spawns
+            .iter()
+            .filter(|s| !self.scene.placed.contains(&s.id))
+            .filter(|s| match &s.when {
+                SpawnWhen::Round { round: r, unless } => {
+                    *r > from && *r <= round && !unless.is_some_and(|u| self.spawn_cancelled(u))
+                }
+                _ => false,
+            })
+            .cloned()
+            .collect();
+        if due.is_empty() {
+            return;
+        }
+        if let Err(e) = self.place(&due) {
+            eprintln!("round spawn not placed: {}", e.message);
+        }
+    }
+
+    /// Whether `unless` holds now.
+    fn spawn_cancelled(&self, unless: SpawnUnless) -> bool {
+        match unless {
+            SpawnUnless::AnyPartyBloodied => self
+                .scene
+                .creatures
+                .iter()
+                .filter(|c| c.side == Side::Party)
+                .any(|c| {
+                    let (hp, hp_max, _) = hit_points(&self.engine, c.entity);
+                    life_state_name(&self.engine, c.entity) != "normal" || 2 * hp <= hp_max
+                }),
+        }
     }
 
     /// The scene's spawns as the DM sees them.
@@ -1908,6 +1962,7 @@ impl Game {
             if self.check_combat_over() {
                 return;
             }
+            self.round_spawns();
             match self.awaiting() {
                 Awaiting::Action { actor } if self.control_of(actor) == Some(Control::Scripted) => {
                     self.scripted_action(actor);
@@ -2267,6 +2322,31 @@ impl Game {
         let tail = self.pending.split_off(insert_at);
         self.pending.extend(entries);
         self.pending.extend(tail);
+    }
+
+    /// Logs the initiative rolls of creatures that joined a running fight.
+    fn log_joined_initiative(&mut self, joined: &[Entity]) {
+        let engine = &self.engine;
+        let Some(encounter) = self.encounter.and_then(|id| engine.encounter(&id)) else {
+            return;
+        };
+        let writer = LogWriter {
+            engine,
+            handles: &self.scene.handles,
+            round: Some(encounter.round() as u32),
+            hp: &mut self.hp,
+            keys: &mut self.keys,
+            initiative: Vec::new(),
+        };
+        let entries: Vec<Pending> = encounter
+            .initiative_order()
+            .iter()
+            .filter(|(entity, _)| joined.contains(entity))
+            .map(|(entity, roll)| {
+                writer.initiative(&EntityIdentifier::from_world(&engine.world, *entity), roll)
+            })
+            .collect();
+        self.pending.extend(entries);
     }
 
     // ---- lookups --------------------------------------------------------

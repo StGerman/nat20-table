@@ -1447,3 +1447,57 @@ fn spawn_creatures_are_checked_when_their_scene_loads() {
         "{state}"
     );
 }
+
+/// Ends Bren's turns until the cellar fight reaches round 3, then returns the DM state.
+fn cellar_round_3(seed: u32) -> Value {
+    let mut api = Api::seeded(seed);
+    for (scene, party) in [
+        ("m3_s1_green", json!([])),
+        ("m3_s5_cellar", json!(["bren"])),
+    ] {
+        let loaded = api.call(
+            "dm",
+            json!({ "cmd": "load_scene", "scene_id": scene, "party": party }),
+        );
+        assert_eq!(loaded["ok"], true, "{loaded}");
+    }
+    let mut last = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "cellar_fight" }),
+    );
+    for _ in 0..40 {
+        let state = api.call("dm", json!({ "cmd": "get_state" }));
+        if state["result"]["state"]["round"].as_u64() >= Some(3) {
+            return state["result"]["state"].clone();
+        }
+        let awaiting = &last["awaiting"];
+        assert_eq!(awaiting["kind"], "action", "{last}");
+        last = api.call(
+            "dm",
+            json!({ "cmd": "end_turn", "actor": awaiting["actor"],
+                "prompt_id": awaiting["prompt_id"] }),
+        );
+        assert_eq!(last["ok"], true, "{last}");
+    }
+    panic!("the cellar fight never reached round 3");
+}
+
+#[test]
+fn round_spawns_join_at_their_round_unless_the_party_is_bloodied() {
+    // Seed 1: Bren has 13 of 20 Hit Points at round 3, so the rats come and join.
+    let state = cellar_round_3(1);
+    let initiative = state["initiative"].as_array().unwrap();
+    assert!(initiative.contains(&json!("goblin_4")), "{state}");
+    assert!(initiative.contains(&json!("goblin_5")), "{state}");
+    // Seed 6: Bren is down to 6, bloodied, so they stay away.
+    let state = cellar_round_3(6);
+    let initiative = state["initiative"].as_array().unwrap();
+    assert!(!initiative.contains(&json!("goblin_4")), "{state}");
+    let rats = state["spawns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["id"] == "rats")
+        .unwrap();
+    assert_eq!(rats["placed"], false, "{state}");
+}

@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.14 (2026-10-18)
+- Round spawns and `spawn` during a fight are served (API-8, Milestone 3 spec §7 step 9, second slice; protocol.md §4.6). Creatures placed during a fight join it through core U7 (core #6, pinned by table #33): each rolls initiative, logged after `spawned`, and acts at its place in the order. A round spawn is placed when a fight in the scene reaches its round, unless its `unless` holds then; a cancelled one is not placed later. `spawn` during a fight used to answer `not_implemented`. Docs only, no wire type change: `Spawn` (the command), `SpawnWhen::Round` and `spawned` now say this.
+- Fixture `spawn.jsonl` (seeds 2, 1 and 6): the DM's reserve now joins the cellar fight with its initiative roll and is then refused as already spawned; with seed 1 the rats arrive at round 3 and roll initiative; with seed 6 Bren is Bloodied by round 3, so the rats never come.
+
 ## 1.0.0-dev.13 (2026-10-18)
 - `spawn` is served for spawns declared `when: dm`, in explore mode (API-8, Milestone 3 spec §7 step 9, first slice; protocol.md §4.6). Flag spawns are placed by the engine when a fight starts in the scene while their flag is set, and join that fight. A spawn is placed at most once per scene. `spawn` during a fight answers `not_implemented`, and round spawns are not placed yet; both wait for core U7.
 - Additive: `RejectReason::automatic` (a flag or round spawn named in `spawn`) and `RejectReason::already_spawned`; `State::Dm.spawns` (`SpawnView`: id, `when`, `placed`), never in a player view. `unknown_spawn` now carries the scene's spawn ids in `hint.known_ids`, for the DM only. `spawned` is documented as DM only.

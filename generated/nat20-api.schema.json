@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.13"
+    "version": "1.0.0-dev.14"
   },
   "$defs": {
     "Ability": {
@@ -2137,7 +2137,7 @@
           ]
         },
         {
-          "description": "Creatures were placed by a spawn: on `spawn`, or by the engine when a flag spawn's fight\nstarts. DM only, because the spawn id is scenario data; players see the creatures in\ntheir state.",
+          "description": "Creatures were placed by a spawn: on `spawn`, or by the engine when a flag spawn's fight\nstarts or a round spawn's round comes. In a running fight their `initiative` rolls follow.\nDM only, because the spawn id is scenario data; players see the creatures in\ntheir state.",
           "type": "object",
           "properties": {
             "handles": {
@@ -3008,7 +3008,7 @@
           ]
         },
         {
-          "description": "Places the creatures of a spawn the scene declares `when: dm`, in explore mode, each at\nits own placement. A spawn is placed at most once per scene (`rejected` /\n`already_spawned`); one the engine places on its own trigger answers `rejected` /\n`automatic`. In combat it answers `not_implemented` until a creature can join a running\nfight (API-8). The creatures join a later fight only if its encounter lists them.",
+          "description": "Places the creatures of a spawn the scene declares `when: dm`, each at its own placement.\nA spawn is placed at most once per scene (`rejected` / `already_spawned`); one the engine\nplaces on its own trigger answers `rejected` / `automatic`. During a fight the creatures\njoin it: each rolls initiative and acts at its place in the order, this round if its\ncount has not come up yet, otherwise from the next. After a fight they join a later one\nonly if its encounter lists them.",
           "type": "object",
           "properties": {
             "cmd": {
@@ -3837,7 +3837,7 @@
           ]
         },
         {
-          "description": "The engine places them at the start of this combat round.",
+          "description": "The engine places them when a fight in this scene reaches this round, unless `unless`\nholds then, and they join that fight with their own initiative. A spawn cancelled at its\nround is not placed later.",
           "type": "object",
           "properties": {
             "kind": {
