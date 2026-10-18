@@ -1314,3 +1314,61 @@ fn only_the_surprised_side_rolls_initiative_with_disadvantage() {
         }
     }
 }
+
+#[test]
+fn a_flag_spawn_joins_the_fight_it_starts_once() {
+    // Seed 2: Bren fails the interrogation, which sets boss_warned.
+    let mut api = Api::seeded(2);
+    let green = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s1_green" }),
+    );
+    assert_eq!(green["ok"], true, "{green}");
+    let prisoner = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s4_prisoner", "party": ["bren"] }),
+    );
+    assert_eq!(prisoner["ok"], true, "{prisoner}");
+    let asked = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": "bren",
+            "check": { "kind": "scenario", "check_id": "interrogate" } }),
+    );
+    assert_eq!(asked["result"]["success"], false, "{asked}");
+    let cellar = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s5_cellar", "party": ["bren"] }),
+    );
+    assert_eq!(cellar["ok"], true, "{cellar}");
+    let refused = api.call("dm", json!({ "cmd": "spawn", "spawn_id": "extra_warrior" }));
+    assert_eq!(refused["error"]["reason"], "automatic", "{refused}");
+    assert_eq!(refused["events"], json!([]), "{refused}");
+    let handles = |state: &Value| -> Vec<String> {
+        state["creatures"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["handle"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    for fight in 0..2 {
+        let started = api.call(
+            "dm",
+            json!({ "cmd": "start_combat", "encounter_id": "cellar_fight" }),
+        );
+        assert_eq!(started["ok"], true, "{started}");
+        let state = &started["result"]["state"];
+        assert_eq!(handles(state), ["bren", "boss", "goblin_3"], "{started}");
+        let initiative = state["initiative"].as_array().unwrap();
+        assert!(initiative.contains(&json!("goblin_3")), "{started}");
+        let spawned = started["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|e| e["kind"] == "spawned")
+            .count();
+        assert_eq!(spawned, usize::from(fight == 0), "{started}");
+        let ended = api.call("dm", json!({ "cmd": "end_combat", "reason": "scenario" }));
+        assert_eq!(ended["ok"], true, "{ended}");
+    }
+}

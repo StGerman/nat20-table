@@ -7,7 +7,7 @@
 
 use nat20_api_contract::{
     Anchor, AnchorObserved, AnchorView, CheckView, CreatureFull, CreatureObserved, EncounterView,
-    Event, EventKind, Handle, Mode, PointFt, RollView, Sheet, State, Visibility,
+    Event, EventKind, Handle, Mode, PointFt, RollView, Sheet, SpawnView, State, Visibility,
 };
 
 use crate::render;
@@ -46,6 +46,8 @@ pub struct FullState {
     pub checks: Vec<CheckView>,
     /// The scene's encounters with which one runs and whether its surrender is available.
     pub encounters: Vec<EncounterView>,
+    /// The scene's spawns with whether each was placed.
+    pub spawns: Vec<SpawnView>,
 }
 
 /// The state as `viewer` may see it. `None` when a creature viewer is not in the scene.
@@ -60,6 +62,7 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
         flags,
         checks,
         encounters,
+        spawns,
     } = full;
     let handle = match viewer {
         Viewer::Dm => {
@@ -80,6 +83,7 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
                 flags,
                 checks,
                 encounters,
+                spawns,
             });
         }
         Viewer::Creature(handle) => handle,

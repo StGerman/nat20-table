@@ -116,4 +116,9 @@ pub enum RejectReason {
     /// The running encounter does not allow this way to end it (`end_combat{scenario}` for an
     /// encounter that does not list `scenario` in its `end_reasons`).
     ConditionNotMet,
+    /// The spawn is placed by the engine on its own trigger (a flag at combat start, or a
+    /// round); `spawn` places only spawns declared `when: dm`.
+    Automatic,
+    /// The spawn's creatures are already placed in this scene.
+    AlreadySpawned,
 }

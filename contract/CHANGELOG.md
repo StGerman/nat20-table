@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.13 (2026-10-18)
+- `spawn` is served for spawns declared `when: dm`, in explore mode (API-8, Milestone 3 spec §7 step 9, first slice; protocol.md §4.6). Flag spawns are placed by the engine when a fight starts in the scene while their flag is set, and join that fight. A spawn is placed at most once per scene. `spawn` during a fight answers `not_implemented`, and round spawns are not placed yet; both wait for core U7.
+- Additive: `RejectReason::automatic` (a flag or round spawn named in `spawn`) and `RejectReason::already_spawned`; `State::Dm.spawns` (`SpawnView`: id, `when`, `placed`), never in a player view. `unknown_spawn` now carries the scene's spawn ids in `hint.known_ids`, for the DM only. `spawned` is documented as DM only.
+- Docs only: `Spawn` (the command) and `SpawnWhen::Flag` say when the creatures arrive and which fight they join.
+- New fixture `spawn.jsonl` (seed 2): Bren fails the interrogation, so `boss_warned` is set; `spawn` is refused for an unknown id (with the DM's and a player's error) and for both automatic spawns; the cellar fight starts with `goblin_3` arriving into it; the DM's reserve is refused mid-fight with `not_implemented`, then placed after the fight, then refused as already spawned. Every fixture with a DM state now shows `spawns`. `not_implemented.jsonl` swaps its `spawn` line for a `submit` with a `point`. The visibility scan also refuses `spawns` in any player view.
+
 ## 1.0.0-dev.12 (2026-10-18)
 - Surprise is served (API-12, Milestone 3 spec §7 step 8; protocol.md §4.4). When an encounter's surprise flag is set, `start_combat` starts the fight, and every participant on the rule's `surprised` side rolls initiative with Disadvantage (core #5, pinned by table #30). It used to answer `not_implemented`. The DM's `initiative` rolls name the reason in `advantage_sources`. Docs only, no wire type change: `StartCombat` now says this.
 - A player viewer no longer gets a generic `start_combat` refusal message, since a surprise is no longer refused.

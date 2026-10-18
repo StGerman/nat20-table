@@ -36,7 +36,14 @@ test("a command the engine does not implement yet fails with not_implemented", a
   try {
     const started = await client.request("dm", { cmd: "new_session" });
     assert.equal(started.ok, true);
-    const response = await client.request("dm", { cmd: "spawn", spawn_id: "wolves_arrive" });
+    const response = await client.request("dm", {
+      cmd: "submit",
+      actor: "bren",
+      prompt_id: "p1",
+      option_id: "melee_attack/longsword",
+      targets: [],
+      point: { x_ft: 5, y_ft: 0, z_ft: 0 },
+    });
     assert.equal(response.ok, false);
     assert.equal(response.error?.code, "not_implemented");
     assert.equal(response.error?.retryable, false);

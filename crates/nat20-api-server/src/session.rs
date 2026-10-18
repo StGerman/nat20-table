@@ -316,6 +316,16 @@ impl Session {
         })
     }
 
+    /// Places a `when: dm` spawn's creatures.
+    pub fn spawn(&mut self, spawn_id: &str, viewer: &Viewer) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.spawn(spawn_id);
+        self.after_decision(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
+        Ok(CommandResult::Spawn {
+            state: self.state_for(viewer)?,
+            handles: result.expect("errors returned above"),
+        })
+    }
+
     /// What the engine waits on, with the prompt id to echo.
     pub fn awaiting(&mut self) -> Awaiting {
         let wait = self.game.as_ref().map_or(Wait::Idle, |g| g.wait());
@@ -483,6 +493,7 @@ impl Session {
             flags: game.flags(),
             checks: game.checks(),
             encounters: game.encounters(),
+            spawns: game.spawns(),
         };
         projection::state(viewer, full).ok_or_else(|| {
             error(

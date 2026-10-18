@@ -219,7 +219,9 @@ pub enum EventKind {
         /// Which rest.
         rest: RestKind,
     },
-    /// Creatures were placed by a spawn.
+    /// Creatures were placed by a spawn: on `spawn`, or by the engine when a flag spawn's fight
+    /// starts. DM only, because the spawn id is scenario data; players see the creatures in
+    /// their state.
     Spawned {
         /// Spawn id from the scene.
         spawn_id: String,

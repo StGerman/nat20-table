@@ -59,7 +59,11 @@
             "id": "cellar_fight",
             "participants": [
                 "bren",
-                "boss"
+                "boss",
+                "goblin_3",
+                "goblin_4",
+                "goblin_5",
+                "goblin_6"
             ],
             "end_reasons": [
                 "scenario"

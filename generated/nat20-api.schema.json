@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.12"
+    "version": "1.0.0-dev.13"
   },
   "$defs": {
     "Ability": {
@@ -2137,7 +2137,7 @@
           ]
         },
         {
-          "description": "Creatures were placed by a spawn.",
+          "description": "Creatures were placed by a spawn: on `spawn`, or by the engine when a flag spawn's fight\nstarts. DM only, because the spawn id is scenario data; players see the creatures in\ntheir state.",
           "type": "object",
           "properties": {
             "handles": {
@@ -2638,6 +2638,16 @@
           "description": "The running encounter does not allow this way to end it (`end_combat{scenario}` for an\nencounter that does not list `scenario` in its `end_reasons`).",
           "type": "string",
           "const": "condition_not_met"
+        },
+        {
+          "description": "The spawn is placed by the engine on its own trigger (a flag at combat start, or a\nround); `spawn` places only spawns declared `when: dm`.",
+          "type": "string",
+          "const": "automatic"
+        },
+        {
+          "description": "The spawn's creatures are already placed in this scene.",
+          "type": "string",
+          "const": "already_spawned"
         }
       ]
     },
@@ -2998,7 +3008,7 @@
           ]
         },
         {
-          "description": "Places creatures the scene declares under a spawn id.",
+          "description": "Places the creatures of a spawn the scene declares `when: dm`, in explore mode, each at\nits own placement. A spawn is placed at most once per scene (`rejected` /\n`already_spawned`); one the engine places on its own trigger answers `rejected` /\n`automatic`. In combat it answers `not_implemented` until a creature can join a running\nfight (API-8). The creatures join a later fight only if its encounter lists them.",
           "type": "object",
           "properties": {
             "cmd": {
@@ -3757,6 +3767,109 @@
         "proficiency"
       ]
     },
+    "SpawnUnless": {
+      "description": "A state that cancels a round spawn.",
+      "oneOf": [
+        {
+          "description": "Any party creature is Bloodied (half Hit Points or fewer) or down.",
+          "type": "string",
+          "const": "any_party_bloodied"
+        }
+      ]
+    },
+    "SpawnView": {
+      "description": "A scene spawn as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Spawn id from the scene, the `spawn_id` a `spawn` names.",
+          "type": "string"
+        },
+        "placed": {
+          "description": "Whether its creatures have been placed in this scene. A spawn is placed at most once\nper scene.",
+          "type": "boolean"
+        },
+        "when": {
+          "description": "What places it, as the scene file declares it. Only `dm` spawns answer `spawn`.",
+          "$ref": "#/$defs/SpawnWhen"
+        }
+      },
+      "required": [
+        "id",
+        "when",
+        "placed"
+      ]
+    },
+    "SpawnWhen": {
+      "description": "What places a spawn.",
+      "oneOf": [
+        {
+          "description": "The DM calls `spawn{spawn_id}`.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "dm"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "description": "The engine places them when a fight starts in this scene while this session flag is set,\nand they join that fight.",
+          "type": "object",
+          "properties": {
+            "flag": {
+              "description": "The session flag, e.g. `boss_warned`.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "flag"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "flag"
+          ]
+        },
+        {
+          "description": "The engine places them at the start of this combat round.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "round"
+            },
+            "round": {
+              "description": "The round, 1 or later.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "unless": {
+              "description": "A state that cancels the spawn when it holds at that round.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SpawnUnless"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "round"
+          ]
+        }
+      ]
+    },
     "SpellSlots": {
       "description": "Spell slots of one level.",
       "type": "object",
@@ -3856,6 +3969,13 @@
                 "null"
               ]
             },
+            "spawns": {
+              "description": "The loaded scene's spawns, in scene file order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SpawnView"
+              }
+            },
             "view": {
               "type": "string",
               "const": "dm"
@@ -3869,7 +3989,8 @@
             "anchors",
             "flags",
             "checks",
-            "encounters"
+            "encounters",
+            "spawns"
           ]
         },
         {

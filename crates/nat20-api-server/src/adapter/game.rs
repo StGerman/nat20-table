@@ -17,8 +17,8 @@ use nat20_api_contract::{
     Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
     ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HitDiceSpend, HitPointsRegained,
     Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption, RejectReason, RollId,
-    ScenarioCheck, SceneFile, Sheet, Side, SurrenderCondition, SurrenderTrigger, TargetCandidate,
-    Targeting, UnavailableOption, Visibility,
+    ScenarioCheck, SceneFile, Sheet, Side, Spawn, SpawnView, SpawnWhen, SurrenderCondition,
+    SurrenderTrigger, TargetCandidate, Targeting, UnavailableOption, Visibility,
 };
 use nat20_core::{
     components::{
@@ -58,7 +58,7 @@ use crate::{
         monster::MonsterDef,
         names, pregen, sheet,
     },
-    errors::{error, rejected},
+    errors::{self, error, rejected},
     scene,
 };
 
@@ -91,6 +91,11 @@ struct Scene {
     encounters: Vec<Encounter>,
     /// Scenario checks already rolled in this scene; each is rolled at most once (decision D3).
     attempted: HashSet<String>,
+    spawns: Vec<Spawn>,
+    /// Spawns already placed in this scene; each is placed at most once.
+    placed: BTreeSet<String>,
+    /// Stat blocks of the spawns' monsters, read with the scene.
+    monsters: HashMap<String, MonsterDef>,
 }
 
 /// What `request_check` returns: the roll's local key, its total and whether it succeeded.
@@ -225,9 +230,10 @@ impl Game {
                 ),
             );
         }
-        // Stat blocks are read before anything is spawned.
+        // Stat blocks are read before anything is spawned, the spawns' with the scene's own.
         let mut monsters = HashMap::new();
-        for def in &scene.creatures {
+        let spawned_later = scene.spawns.iter().flat_map(|s| s.creatures.iter());
+        for def in scene.creatures.iter().chain(spawned_later) {
             if let Some(monster) = &def.monster
                 && !monsters.contains_key(monster)
             {
@@ -281,25 +287,7 @@ impl Game {
             game.global_seen = game.engine.event_log.events.len();
         };
         for def in &scene.creatures {
-            let entity = match (&def.pregen, &def.monster) {
-                (Some(pregen), None) => pregen::spawn(&mut game.engine, pregen).ok_or_else(|| {
-                    error(
-                        ErrorCode::BadScene,
-                        format!(
-                            "There is no pregen {pregen}; known pregens: {}.",
-                            pregen::PREGENS.join(", ")
-                        ),
-                    )
-                }),
-                (None, Some(monster)) => monsters[monster]
-                    .spawn(&mut game.engine)
-                    .map_err(|e| error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))),
-                _ => Err(error(
-                    ErrorCode::BadScene,
-                    format!("{} needs exactly one of pregen or monster.", def.handle.0),
-                )),
-            };
-            match entity {
+            match spawn_creature(&mut game.engine, def, &monsters) {
                 Ok(entity) => spawned.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -375,6 +363,9 @@ impl Game {
             hazards: scene.hazards.clone(),
             encounters: scene.encounters.clone(),
             attempted: HashSet::new(),
+            spawns: scene.spawns.clone(),
+            placed: BTreeSet::new(),
+            monsters,
         };
         game.scene_encounter = None;
         game.encounter_seen = 0;
@@ -399,6 +390,9 @@ impl Game {
                 hazards: Vec::new(),
                 encounters: Vec::new(),
                 attempted: HashSet::new(),
+                spawns: Vec::new(),
+                placed: BTreeSet::new(),
+                monsters: HashMap::new(),
             },
             encounter: None,
             scene_encounter: None,
@@ -1093,29 +1087,38 @@ impl Game {
             }
             return Err(e);
         };
-        let entities: Vec<Entity> = found
+        let mut entities: Vec<Entity> = found
             .participants
             .iter()
             .filter_map(|h| self.entity(&h.0).ok())
             .collect();
+        // Flag spawns whose flag is set arrive as the fight starts and join it.
+        let arriving: Vec<Spawn> = self
+            .scene
+            .spawns
+            .iter()
+            .filter(|s| {
+                !self.scene.placed.contains(&s.id)
+                    && matches!(&s.when, SpawnWhen::Flag { flag } if self.flags.contains(flag))
+            })
+            .cloned()
+            .collect();
+        let arriving_sides: Vec<Side> = arriving
+            .iter()
+            .flat_map(|s| s.creatures.iter().map(|c| c.side))
+            .collect();
         // The surprised side rolls initiative with Disadvantage once the scene's flag is set
         // (decision D4, SRD 5.2.1 Surprise).
-        let surprised: HashSet<Entity> = found
+        let surprised_side: Option<Side> = found
             .surprise
             .as_ref()
             .filter(|surprise| self.flags.contains(&surprise.when_flag))
-            .map(|surprise| {
-                entities
-                    .iter()
-                    .copied()
-                    .filter(|e| self.side_of(*e) == Some(surprise.surprised))
-                    .collect()
-            })
-            .unwrap_or_default();
+            .map(|surprise| surprise.surprised);
         let standing = |side: Side| {
-            entities.iter().any(|e| {
-                self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
-            })
+            arriving_sides.contains(&side)
+                || entities.iter().any(|e| {
+                    self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
+                })
         };
         if !standing(Side::Party) || !standing(Side::Hostile) {
             return Err(error(
@@ -1127,6 +1130,12 @@ impl Game {
         }
         // Whatever happened before this fight is already in the log.
         self.drain();
+        entities.extend(self.place(&arriving)?);
+        let surprised: HashSet<Entity> = entities
+            .iter()
+            .copied()
+            .filter(|e| surprised_side.is_some() && self.side_of(*e) == surprised_side)
+            .collect();
         let encounter = self
             .engine
             .start_surprised_encounter(entities.into_iter().collect(), surprised);
@@ -1139,6 +1148,154 @@ impl Game {
         self.log_initiative();
         self.advance();
         Ok(())
+    }
+
+    /// Places the creatures of the scene spawn `spawn_id`, declared `when: dm`, in explore mode.
+    pub fn spawn(&mut self, spawn_id: &str) -> Result<Vec<Handle>, ApiError> {
+        let Some(found) = self.scene.spawns.iter().find(|s| s.id == spawn_id).cloned() else {
+            let mut e = error(
+                ErrorCode::UnknownSpawn,
+                format!("Scene {} has no spawn {spawn_id}.", self.scene.id),
+            );
+            let known_ids: Vec<String> = self.scene.spawns.iter().map(|s| s.id.clone()).collect();
+            if !known_ids.is_empty() {
+                e.hint = Some(ErrorHint {
+                    legal_option_ids: Vec::new(),
+                    awaiting: None,
+                    known_ids,
+                });
+            }
+            return Err(e);
+        };
+        match &found.when {
+            SpawnWhen::Dm => {}
+            SpawnWhen::Flag { flag } => {
+                return Err(rejected(
+                    RejectReason::Automatic,
+                    format!("{spawn_id} arrives by itself when a fight starts with {flag} set."),
+                ));
+            }
+            SpawnWhen::Round { round, .. } => {
+                return Err(rejected(
+                    RejectReason::Automatic,
+                    format!("{spawn_id} arrives by itself in round {round}."),
+                ));
+            }
+        }
+        if self.scene.placed.contains(spawn_id) {
+            return Err(rejected(
+                RejectReason::AlreadySpawned,
+                format!("{spawn_id} is already placed in this scene."),
+            ));
+        }
+        if self.running_encounter().is_some() {
+            return Err(errors::not_implemented(
+                "Spawning into a running fight",
+                "core cannot add a creature to an encounter yet (API-8, U7)",
+            ));
+        }
+        // A fight that ended by itself is closed before anything new is placed.
+        self.drain();
+        self.close_finished_fight();
+        let placed = self.place(std::slice::from_ref(&found))?;
+        Ok(placed.iter().map(|e| Handle(self.handle_of(*e))).collect())
+    }
+
+    /// Places every creature of `spawns` at its placement, logs `spawned` for each spawn and
+    /// returns the new creatures. On any failure nothing is placed.
+    fn place(&mut self, spawns: &[Spawn]) -> Result<Vec<Entity>, ApiError> {
+        let mut new: Vec<SceneCreature> = Vec::new();
+        let mut failed = None;
+        for def in spawns.iter().flat_map(|s| &s.creatures) {
+            match spawn_creature(&mut self.engine, def, &self.scene.monsters) {
+                Ok(entity) => new.push(SceneCreature {
+                    handle: def.handle.0.clone(),
+                    entity,
+                    side: def.side,
+                    control: def.control,
+                }),
+                Err(e) => {
+                    failed = Some(e);
+                    break;
+                }
+            }
+        }
+        if failed.is_none() {
+            let all: Vec<SceneCreature> = self
+                .scene
+                .creatures
+                .iter()
+                .chain(&new)
+                .map(|c| SceneCreature {
+                    handle: c.handle.clone(),
+                    entity: c.entity,
+                    side: c.side,
+                    control: c.control,
+                })
+                .collect();
+            failed = check_sides(&self.engine, &all).err();
+        }
+        if let Some(e) = failed {
+            for c in &new {
+                let _ = self.engine.despawn(c.entity);
+            }
+            self.global_seen = self.engine.event_log.events.len();
+            return Err(e);
+        }
+        for def in spawns.iter().flat_map(|s| &s.creatures) {
+            let c = new
+                .iter()
+                .find(|c| c.handle == def.handle.0)
+                .expect("every spawn creature was placed");
+            let at = match &def.at {
+                Placement::Point { point } => *point,
+                Placement::Anchor { anchor } => {
+                    self.scene
+                        .anchors
+                        .iter()
+                        .find(|a| a.id == *anchor)
+                        .expect("anchors are checked when the scene is read")
+                        .position_ft
+                }
+            };
+            systems::geometry::teleport_to_ground(
+                &mut self.engine.world,
+                &self.engine.geometry,
+                c.entity,
+                &to_core_point(at),
+            );
+            self.hp.insert(c.entity, hit_points(&self.engine, c.entity));
+            self.scene.handles.insert(c.entity, c.handle.clone());
+        }
+        // Spawning writes nothing the log shows; skip it.
+        self.global_seen = self.engine.event_log.events.len();
+        for spawn in spawns {
+            self.scene.placed.insert(spawn.id.clone());
+            self.pending.push(Pending {
+                round: self.round(),
+                visibility: Visibility::Dm,
+                kind: EventKind::Spawned {
+                    spawn_id: spawn.id.clone(),
+                    handles: spawn.creatures.iter().map(|c| c.handle.clone()).collect(),
+                },
+            });
+        }
+        let entities = new.iter().map(|c| c.entity).collect();
+        self.scene.creatures.extend(new);
+        Ok(entities)
+    }
+
+    /// The scene's spawns as the DM sees them.
+    pub fn spawns(&self) -> Vec<SpawnView> {
+        self.scene
+            .spawns
+            .iter()
+            .map(|s| SpawnView {
+                id: s.id.clone(),
+                when: s.when.clone(),
+                placed: self.scene.placed.contains(&s.id),
+            })
+            .collect()
     }
 
     /// Ends the running fight early, for a reason its scene encounter allows. The caller has
@@ -2128,6 +2285,32 @@ fn load_geometry(map: Option<&str>) -> WorldGeometry {
 /// Sides decide who wins; faction attitudes decide who may attack whom. The party and hostile
 /// sides must be hostile to each other, and nobody to their own side or to a neutral creature,
 /// or a fight could never end.
+/// Spawns one scene or spawn creature in the engine, unplaced.
+fn spawn_creature(
+    engine: &mut EngineState,
+    def: &nat20_api_contract::SceneCreature,
+    monsters: &HashMap<String, MonsterDef>,
+) -> Result<Entity, ApiError> {
+    match (&def.pregen, &def.monster) {
+        (Some(pregen), None) => pregen::spawn(engine, pregen).ok_or_else(|| {
+            error(
+                ErrorCode::BadScene,
+                format!(
+                    "There is no pregen {pregen}; known pregens: {}.",
+                    pregen::PREGENS.join(", ")
+                ),
+            )
+        }),
+        (None, Some(monster)) => monsters[monster]
+            .spawn(engine)
+            .map_err(|e| error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))),
+        _ => Err(error(
+            ErrorCode::BadScene,
+            format!("{} needs exactly one of pregen or monster.", def.handle.0),
+        )),
+    }
+}
+
 fn check_sides(engine: &EngineState, creatures: &[SceneCreature]) -> Result<(), ApiError> {
     for (i, a) in creatures.iter().enumerate() {
         for b in &creatures[i + 1..] {

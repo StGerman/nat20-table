@@ -275,7 +275,8 @@ pub struct Spawn {
 pub enum SpawnWhen {
     /// The DM calls `spawn{spawn_id}`.
     Dm,
-    /// The engine places them when combat starts, if this session flag is set.
+    /// The engine places them when a fight starts in this scene while this session flag is set,
+    /// and they join that fight.
     Flag {
         /// The session flag, e.g. `boss_warned`.
         flag: String,

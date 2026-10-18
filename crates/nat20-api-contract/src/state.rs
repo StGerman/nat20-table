@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     Ability, CheckTest, Condition, Handle, HealthBand, LifeState, Mode, OptionId, PointFt,
-    PromptId, RejectReason, Side, Skill,
+    PromptId, RejectReason, Side, Skill, SpawnWhen,
 };
 
 /// The session state, projected for the request's `viewer`, tagged by `view`.
@@ -37,6 +37,8 @@ pub enum State {
         checks: Vec<CheckView>,
         /// The loaded scene's encounters, in scene file order.
         encounters: Vec<EncounterView>,
+        /// The loaded scene's spawns, in scene file order.
+        spawns: Vec<SpawnView>,
     },
     /// What one player sees: their own creature in full, the others as observed.
     Player {
@@ -72,6 +74,18 @@ pub struct EncounterView {
     /// surrender condition holds (decision D5). The engine works this out; the DM decides
     /// whether to call it.
     pub surrender_available: bool,
+}
+
+/// A scene spawn as the DM sees it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct SpawnView {
+    /// Spawn id from the scene, the `spawn_id` a `spawn` names.
+    pub id: String,
+    /// What places it, as the scene file declares it. Only `dm` spawns answer `spawn`.
+    pub when: SpawnWhen,
+    /// Whether its creatures have been placed in this scene. A spawn is placed at most once
+    /// per scene.
+    pub placed: bool,
 }
 
 /// A scenario check as the DM sees it.

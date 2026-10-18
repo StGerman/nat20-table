@@ -76,7 +76,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.12"
+    "version": "1.0.0-dev.13"
   },
   "$defs": {
     "Ability": {
@@ -786,7 +786,7 @@
           ]
         },
         {
-          "description": "The engine places them when combat starts, if this session flag is set.",
+          "description": "The engine places them when a fight starts in this scene while this session flag is set,\nand they join that fight.",
           "type": "object",
           "properties": {
             "flag": {
