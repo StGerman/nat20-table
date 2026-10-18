@@ -202,7 +202,7 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 - One concern per PR. Write the PR description as Before / After / How.
 - Every PR we open, code or docs, gets a Claude code review (`/engineering:code-review`) against `.github/copilot-instructions.md` before it goes to Stas.
   - Each finding is fixed or answered the way Copilot findings are: a reply quoting the fix commit's message, or the reason it stays, with the Claude Code footer.
-  - The verdict goes on the PR as a review comment in Copilot's shape (🟢 Approved or 🟡 Changes recommended), and the review re-runs on every new head until it is 🟢.
+  - The verdict goes on the PR as a review comment in this shape: 🟢 Approved (no open findings) or 🟠 Changes recommended (open findings, listed), and the review re-runs on every new head until it is 🟢.
   - A Copilot round is extra, when its quota allows.
 - Name PRs and branches after their repo. A PR title is a lowercase repo prefix, a colon and plain English: `table:` for this repo, `core:` for the fork `StGerman/nat20` (`table: Character sheets (get_sheet)`). Branches use the same stem as `<repo>/<topic>` in kebab-case (`table/short-rest`, `core/hit-point-dice`). Refer to PRs as `table #N` or `core #N`, never by a bare number; `upstream #N` names the closed upstream PRs and issue. Dependabot PRs and branches keep their own names.
 - A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.
