@@ -120,7 +120,15 @@ pub fn text(kind: &EventKind) -> String {
             },
             snake_words(rest)
         ),
-        EventKind::Spawned { handles, .. } => format!("{} appear.", list(handles)),
+        EventKind::Spawned { handles, .. } => format!(
+            "{} {}.",
+            list(handles),
+            if handles.len() == 1 {
+                "appears"
+            } else {
+                "appear"
+            }
+        ),
         EventKind::FlagSet { flag } => format!("Flag {flag} is set."),
         EventKind::HazardTriggered { hazard_id, actor } => {
             format!("{} sets off {hazard_id}.", actor.0)
