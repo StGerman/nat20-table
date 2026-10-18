@@ -170,7 +170,9 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 
 - The fork's `main` mirrors upstream `main` exactly. Change it only by fast-forwarding it to upstream.
 - `demo` is our engine branch: upstream `main` plus our core changes. Sync it by merging the fork's `main` into `demo` in a `core/sync-upstream` PR when upstream moves. Never rebase or force-push `demo`, because nat20-table pins its commits by rev.
+- PRs into `demo` merge with a merge commit, never squash or rebase-merge. That keeps a pinned branch head reachable from `demo`, and keeps upstream as a merge parent so the next sync doesn't re-conflict. nat20-table pins only commits reachable from `demo` once their PR merges.
 - `demo` holds core and fork upkeep only: core code, registry JSON, core tests, plus the fork's CI workflows, `dependabot.yml` and `deny.toml`. Never the server, the contract, game code, CLAUDE.md, scenario data or lore.
+- Generic SRD content (classes, species, spells, items) goes into core's own registry tree on `demo`, with core's ids, as the Milestone 4 spec does. If upstream later adds the same id, the sync PR keeps one copy and says which. Content that exists only for our adventure goes into this repo's `content/registries/` overlay under `nat20_demo::`.
 - Core never contains API vocabulary: session, viewer, projection, roll id, prompt id, request id, JSON wire, AI. Core stays a rules engine; anything about the API lives in this repo's adapter.
 - Each core change gets its own `core/<topic>` branch off `demo` and a PR into `demo`. Keep it close to the maintainer's patterns so syncs stay cheap:
   - registry JSON over code;
@@ -195,7 +197,7 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 ## Rule 8: tasks, PRs, CI
 
 - `TASKS.md` is the only task list: no GitHub issues and no TODO comments without a row. Every PR that closes or creates a gap updates its row in the same PR. ID prefixes: API, ENG, MON, CHR, ITM, CHK, MAP, AGT, UPS, DAT, CON.
-- Each row carries Pri (P0 blocks a demo run, P1 needed for acceptance, P2 optional), Dest (Fork, Ours; older `Up` and `Up?` rows read as Fork), Size and Status (todo, partial, done). The Gate column is retired with Milestone 8.
+- Each row carries Pri (P0 blocks a demo run, P1 needed for acceptance, P2 optional), Dest (Fork, Ours; older `Up` and `Up?` rows read as Fork), Size and Status (todo, partial, done, won't do; won't do counts as closed and says why). The Gate column is retired with Milestone 8.
 - When the last row of a milestone closes and its exit criterion holds, mark the milestone done in `TASKS.md` with the date.
 - One concern per PR. Write the PR description as Before / After / How.
 - Name PRs and branches after their repo. A PR title is a lowercase repo prefix, a colon and plain English: `table:` for this repo, `core:` for the fork `StGerman/nat20` (`table: Character sheets (get_sheet)`). Branches use the same stem as `<repo>/<topic>` in kebab-case (`table/short-rest`, `core/hit-point-dice`). Refer to PRs as `table #N` or `core #N`, never by a bare number; `upstream #N` names the closed upstream PRs and issue. Dependabot PRs and branches keep their own names.
@@ -205,12 +207,14 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 
 ## Rule 9: dependencies
 
-Stay current, behind a cooldown and hard gates, in both repos (`docs/decisions/0024-dependency-policy.md`).
+Stay current, behind a cooldown and hard gates, in both repos (`docs/decisions/0024-dependency-policy.md`). The config that enforces it is TASKS.md UPS-13 to UPS-15. Where a line below says "until UPS-n", the interim rule applies until that row is done.
 
-- Dependabot runs weekly on cargo, npm and GitHub Actions; in the fork it targets `demo`. It waits 3 days after a minor or patch release and 7 after a breaking one. Security updates skip the wait and merge within 48 hours.
-- Minor, patch and Actions updates come as one grouped PR per ecosystem. Claude merges them once CI is green. Merge them within 7 days.
-- A breaking bump (a new major, or a new minor of a 0.x crate) becomes its own `core/deps-<crate>` or `table/deps-<crate>` PR with the code it needs, adopted within 30 days. A crate held back longer needs a TASKS.md row saying why.
-- Nothing merges on red. `cargo deny check` gates PRs in both repos, and `advisories` runs daily; a red run gets a P0 row the same day.
-- Lockfiles are committed and builds run `--locked`. Actions are pinned by commit SHA. Git dependencies are allowed only for our own repos, pinned by `rev`, never `branch`.
-- The crates whose types cross the core boundary (hecs, parry3d, uom, rerecast) reach this repo only through `nat20_core`'s re-exports (UPS-15), so they move with the core pin and nowhere else.
+- Dependabot runs weekly on cargo, npm and GitHub Actions; in the fork it targets `demo`. It waits 3 days after a patch release and 7 after a minor or major one (UPS-14). Until UPS-14, Claude merges a Dependabot PR only once every release in it is that old. Security updates skip the wait and merge within 48 hours.
+- Breaking means a new major, or a new minor of a 0.x crate (Cargo semver). Dependabot can't tell a 0.x minor from a 1.x minor, so the grouped cargo PR carries patch updates only, and each cargo minor arrives as its own PR.
+- Grouped patch PRs, npm and Actions minor and patch PRs, and cargo minor PRs of crates at 1.0 or later are merged by Claude once CI is green, within 7 days.
+- A breaking bump becomes its own `core/deps-<crate>` or `table/deps-<crate>` PR with the code it needs, reviewed by Stas, adopted within 30 days. A crate held back longer needs a TASKS.md row saying why.
+- Nothing merges on red. `cargo deny check bans licenses sources` gates PRs in both repos. `advisories` stays off the gate (decision 0022) and runs on a schedule, daily from UPS-14 (weekly until then); a red run gets a P0 row the same day. In the fork, deny covers `nat20_core`, not his GUI (UPS-13).
+- Lockfiles are committed and builds run `--locked`. Our workflows pin Actions by commit SHA; upstream's own workflow files in the fork are left as he wrote them, so syncs don't conflict. Committed manifests take git dependencies only from our own repos, pinned by `rev`, never `branch`. The one exception is the polyanya `[patch]` in Rule 5, until UPS-11 removes it.
+- The Rust toolchain is pinned to an exact stable release in `rust-toolchain.toml` (UPS-14), bumped in its own PR at least 7 days after that release, with any new lints fixed in the same PR. Until UPS-14, CI runs latest stable, and a lint failure caused by a new release is fixed in its own PR the same day.
+- Once UPS-15 lands, the crates whose types cross the core boundary (hecs, parry3d, uom, rerecast) reach this repo only through `nat20_core`'s re-exports, so they move with the core pin and nowhere else. Until then they stay direct dependencies of the server, ignored by Dependabot, and move only with a pin bump.
 - In an upstream sync, Cargo.toml keeps the higher version of each crate and Cargo.lock is regenerated with cargo, never merged by hand.

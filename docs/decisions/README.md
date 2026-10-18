@@ -32,8 +32,8 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0021](0021-surrender-dm-call-engine-gate.md) | Surrender: the DM decides, within a scene condition the engine enforces | Accepted | 2026-10-17 | Stas (direction), delegated to the coordinator |
 | [0022](0022-ci-shape.md) | CI: parallel lint and test, one build, one required gate, cargo-deny, advisories and core drift off the gate | Accepted | 2026-10-17 | Claude (defaults for Stas's CI ask); Stas accepted by merging #10 |
 | [0023](0023-long-lived-fork.md) | Upstream declines our contributions: keep a long-lived fork that syncs upstream main | Accepted | 2026-10-18 | Stas (thread "Mads's reply") |
-| [0024](0024-dependency-policy.md) | Dependencies: stay current behind a cooldown and hard gates, in both repos | Proposed | 2026-10-18 | Stas asked; specifics by Claude |
+| [0024](0024-dependency-policy.md) | Dependencies: stay current behind a cooldown and hard gates, in both repos | Accepted (by merging table #44) | 2026-10-18 | Stas asked; specifics by Claude |
 
 ## Open questions to watch
 
-0024 is proposed until Stas merges it. The likeliest to reopen: 0006 (if the human finds rolls opaque in playtests), 0012 (if anchors prove too coarse), 0016 (when a real client is planned).
+None are open as of 2026-10-18. The likeliest to reopen: 0006 (if the human finds rolls opaque in playtests), 0012 (if anchors prove too coarse), 0016 (when a real client is planned).

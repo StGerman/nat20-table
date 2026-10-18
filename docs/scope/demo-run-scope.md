@@ -71,7 +71,7 @@ The engine owns every number. Nothing the AI says changes state unless the engin
 
 **Build list (Nat20 gaps for this scenario):**
 
-Strategy (Stas, 2026-10-16): fork Nat20 and contribute generic work back upstream. "Upstream" items are generic SRD content or engine features and go as small PRs to Nat20; "Ours" items are scenario- or product-specific and stay in our fork or our own repo.
+Strategy (Stas, 2026-10-16; superseded 2026-10-18 by `docs/decisions/0023-long-lived-fork.md`: nothing goes upstream, and "Upstream" below now means fork `demo`): fork Nat20 and contribute generic work back upstream. "Upstream" items are generic SRD content or engine features and go as small PRs to Nat20; "Ours" items are scenario- or product-specific and stay in our fork or our own repo.
 
 | # | Item | Size | Where |
 |---|---|---|---|
