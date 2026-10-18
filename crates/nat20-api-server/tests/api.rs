@@ -1901,3 +1901,270 @@ fn help_stabilizes_a_creature_at_0_hit_points_on_a_dc_10_medicine_check() {
     std::fs::remove_dir_all(dir).ok();
     assert_eq!(again["error"]["reason"], "invalid_target", "{again}");
 }
+
+/// Ends turns until `actor`'s action prompt comes up, failing after a few rounds.
+fn until_turn_of(api: &mut Api, mut last: Value, actor: &str) -> Value {
+    for _ in 0..12 {
+        if last["awaiting"]["kind"] == "action" && last["awaiting"]["actor"] == actor {
+            return last;
+        }
+        assert_eq!(last["awaiting"]["kind"], "action", "{last}");
+        let current = last["awaiting"]["actor"].clone();
+        last = api.call(
+            "dm",
+            json!({ "cmd": "end_turn", "actor": current, "prompt_id": last["awaiting"]["prompt_id"] }),
+        );
+        assert_eq!(last["ok"], true, "{last}");
+    }
+    panic!("{actor} never got a turn: {last}");
+}
+
+#[test]
+fn in_combat_help_is_an_option_with_a_variant_per_skill() {
+    let dir = help_dir("help_combat");
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "yard" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let started = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "brawl" }),
+    );
+    assert_eq!(started["ok"], true, "{started}");
+    let turn = until_turn_of(&mut api, started, "bren");
+    let prompt_id = turn["awaiting"]["prompt_id"].clone();
+
+    let listed = api.call("dm", json!({ "cmd": "legal_actions", "actor": "bren" }));
+    let options = listed["result"]["options"].as_array().unwrap();
+    let assist = options
+        .iter()
+        .find(|o| o["option_id"] == "help/assist_ability_check")
+        .unwrap_or_else(|| panic!("{listed}"));
+    // Bren's skills: Athletics and Perception from the class, Intimidation from Soldier.
+    let variants: Vec<&str> = assist["variants"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v["variant"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        variants,
+        ["help/athletics", "help/intimidation", "help/perception"],
+        "{assist}"
+    );
+    assert_eq!(assist["variants"][0]["name"], "Athletics", "{assist}");
+    let targets: Vec<&str> = assist["targets"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["handle"].as_str().unwrap())
+        .collect();
+    assert_eq!(targets, ["ana"], "{assist}");
+    // Nobody is dying, so there is nobody to stabilize.
+    assert!(
+        !options.iter().any(|o| o["option_id"] == "help/stabilize"),
+        "{listed}"
+    );
+
+    let submit = |api: &mut Api, variant: Option<&str>| {
+        let mut request = json!({ "cmd": "submit", "actor": "bren", "prompt_id": prompt_id,
+            "option_id": "help/assist_ability_check", "targets": ["ana"] });
+        if let Some(variant) = variant {
+            request["variant"] = json!(variant);
+        }
+        api.call("dm", request)
+    };
+    let bare = submit(&mut api, None);
+    assert_eq!(bare["error"]["reason"], "needs_variant", "{bare}");
+    let unknown = submit(&mut api, Some("help/medicine"));
+    assert_eq!(unknown["error"]["code"], "unknown_option", "{unknown}");
+    let other = api.call(
+        "dm",
+        json!({ "cmd": "submit", "actor": "bren", "prompt_id": prompt_id,
+            "option_id": "dash", "variant": "help/athletics" }),
+    );
+    assert_eq!(other["error"]["code"], "bad_request", "{other}");
+
+    let helped = submit(&mut api, Some("help/athletics"));
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(helped["ok"], true, "{helped}");
+    let action = helped["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["kind"] == "action")
+        .unwrap();
+    assert_eq!(action["option_id"], "help/assist_ability_check", "{helped}");
+    assert_eq!(action["targets"], json!(["ana"]), "{helped}");
+}
+
+/// A session on `help_dir`'s yard, seed 1, with Bren at 0 Hit Points from the fall.
+fn bren_down_in_a_brawl(dir: &Path) -> Api {
+    let mut api = Api::start(
+        Server::with_data_dir(dir.to_path_buf()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "yard" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let fell = api.call(
+        "dm",
+        json!({ "cmd": "request_check", "actor": "bren",
+            "check": { "kind": "scenario", "check_id": "fall" } }),
+    );
+    assert_eq!(fell["ok"], true, "{fell}");
+    api
+}
+
+/// Ana uses Help to stabilize Bren on each of her turns, declining Tactical Mind, until he is
+/// Stable or she can't. Returns the last response, her Medicine checks and whether he is Stable.
+fn ana_stabilizes_bren(api: &mut Api, mut last: Value) -> (Value, usize, bool) {
+    let mut stabilize_rolls = 0;
+    let mut stable = false;
+    for _ in 0..8 {
+        last = until_turn_of(api, last, "ana");
+        let listed = api.call("dm", json!({ "cmd": "legal_actions", "actor": "ana" }));
+        let options = listed["result"]["options"].as_array().unwrap();
+        let Some(stabilize) = options.iter().find(|o| o["option_id"] == "help/stabilize") else {
+            break;
+        };
+        assert_eq!(stabilize["targets"][0]["handle"], "bren", "{stabilize}");
+        last = api.call(
+            "dm",
+            json!({ "cmd": "submit", "actor": "ana", "prompt_id": last["awaiting"]["prompt_id"],
+                "option_id": "help/stabilize", "targets": ["bren"] }),
+        );
+        assert_eq!(last["ok"], true, "{last}");
+        // Tactical Mind can be offered after a failed check; decline it.
+        while last["awaiting"]["kind"] == "reaction" {
+            last = api.call(
+                "dm",
+                json!({ "cmd": "react", "actor": last["awaiting"]["actor"],
+                    "prompt_id": last["awaiting"]["prompt_id"] }),
+            );
+            assert_eq!(last["ok"], true, "{last}");
+        }
+        stabilize_rolls += 1;
+        let read = api.call("dm", json!({ "cmd": "events", "since": 0 }));
+        if read["result"]["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["kind"] == "life_state" && e["target"] == "bren" && e["state"] == "stable")
+        {
+            stable = true;
+            break;
+        }
+        last = api.call(
+            "dm",
+            json!({ "cmd": "end_turn", "actor": "ana", "prompt_id": last["awaiting"]["prompt_id"] }),
+        );
+        assert_eq!(last["ok"], true, "{last}");
+    }
+    (last, stabilize_rolls, stable)
+}
+
+#[test]
+fn a_dying_creature_makes_death_saves_and_an_ally_can_stabilize_it_in_a_fight() {
+    // Seed 1: Bren fails a death save and Ana fails her first Medicine check before she succeeds.
+    let dir = help_dir("help_dying");
+    let mut api = bren_down_in_a_brawl(&dir);
+    let started = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "brawl" }),
+    );
+    assert_eq!(started["ok"], true, "{started}");
+    let (_, stabilize_rolls, stable) = ana_stabilizes_bren(&mut api, started);
+    let read = api.call("dm", json!({ "cmd": "events", "since": 0 }));
+    let events = read["result"]["events"].as_array().unwrap();
+    let rolls = |kind: &str| {
+        events
+            .iter()
+            .filter(|e| e["kind"] == "roll" && e["roll"]["kind"] == kind)
+            .map(|e| e["roll"].clone())
+            .collect::<Vec<_>>()
+    };
+    let death_saves = rolls("death_save");
+    for save in &death_saves {
+        assert_eq!(save["roller"], "bren", "{save}");
+        assert_eq!(
+            save["against"],
+            json!({ "kind": "DC", "value": 10 }),
+            "{save}"
+        );
+        assert_eq!(save["dc_source"], "rule", "{save}");
+    }
+    let medicine: Vec<Value> = rolls("skill_check")
+        .into_iter()
+        .filter(|r| r["roller"] == "ana")
+        .collect();
+    assert_eq!(medicine.len(), stabilize_rolls, "{read}");
+    for roll in &medicine {
+        assert_eq!(roll["label"], "a Wisdom (Medicine) check", "{roll}");
+        assert_eq!(
+            roll["against"],
+            json!({ "kind": "DC", "value": 10 }),
+            "{roll}"
+        );
+        assert_eq!(roll["dc_source"], "rule", "{roll}");
+    }
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(death_saves.len(), 2, "{read}");
+    assert_eq!(stabilize_rolls, 2, "{read}");
+    assert!(stable, "{read}");
+}
+
+#[test]
+fn a_hit_on_a_stabilized_creature_is_a_failed_death_save() {
+    // Seed 1: Ana stabilizes Bren, then strikes him with unarmed attacks on her next turns until
+    // one hits. SRD 5.2.1: damage at 0 Hit Points is a failed death save, two on a Critical Hit,
+    // and a Stable creature that takes damage starts making death saves again.
+    let dir = help_dir("help_stable_hit");
+    let mut api = bren_down_in_a_brawl(&dir);
+    let started = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "brawl" }),
+    );
+    assert_eq!(started["ok"], true, "{started}");
+    let (mut last, _, stable) = ana_stabilizes_bren(&mut api, started);
+    assert!(stable, "{last}");
+    let mut hit = None;
+    for _ in 0..8 {
+        last = api.call(
+            "dm",
+            json!({ "cmd": "end_turn", "actor": "ana", "prompt_id": last["awaiting"]["prompt_id"] }),
+        );
+        assert_eq!(last["ok"], true, "{last}");
+        last = until_turn_of(&mut api, last, "ana");
+        last = api.call(
+            "dm",
+            json!({ "cmd": "submit", "actor": "ana", "prompt_id": last["awaiting"]["prompt_id"],
+                "option_id": "unarmed_attack", "targets": ["bren"] }),
+        );
+        assert_eq!(last["ok"], true, "{last}");
+        let attack = last["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["kind"] == "roll" && e["roll"]["kind"] == "attack")
+            .unwrap()["roll"]
+            .clone();
+        if attack["outcome"] != "miss" {
+            hit = Some(attack);
+            break;
+        }
+    }
+    let sheet = api.call("dm", json!({ "cmd": "get_sheet", "actor": "bren" }));
+    std::fs::remove_dir_all(dir).ok();
+    let hit = hit.expect("eight unarmed attacks all missed");
+    let failures = if hit["outcome"] == "critical_hit" {
+        2
+    } else {
+        1
+    };
+    let sheet = &sheet["result"]["sheet"];
+    assert_eq!(sheet["life_state"], "unconscious", "{hit} {sheet}");
+    assert_eq!(
+        sheet["death_saves"],
+        json!({ "successes": 0, "failures": failures }),
+        "{hit} {sheet}"
+    );
+}

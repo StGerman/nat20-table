@@ -233,10 +233,13 @@ impl Session {
         prompt_id: &str,
         option_id: &OptionId,
         targets: &[Handle],
+        variant: Option<&str>,
     ) -> Result<CommandResult, ApiError> {
         self.require_prompt(actor, Some(prompt_id), false)?;
         let targets: Vec<String> = targets.iter().map(|t| t.0.clone()).collect();
-        let result = self.game_mut()?.submit(actor, &option_id.0, &targets);
+        let result = self
+            .game_mut()?
+            .submit(actor, &option_id.0, &targets, variant);
         self.after_decision(result)?;
         Ok(CommandResult::Submit {})
     }

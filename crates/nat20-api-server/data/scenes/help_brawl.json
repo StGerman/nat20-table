@@ -1,0 +1,86 @@
+{
+    "id": "help_brawl",
+    "description": "Help in a fight: Bren and Ana side by side, a goblin next to Ana, and the loft fall from help_yard to drop Bren to 0 Hit Points before the fight.",
+    "anchors": [
+        {
+            "id": "yard",
+            "name": "the mill yard",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "ana",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 10.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "loft_fall",
+            "test": {
+                "kind": "save",
+                "ability": "dexterity"
+            },
+            "dc": 30,
+            "on_failure": [
+                {
+                    "kind": "damage",
+                    "dice": "1d4+19",
+                    "damage_type": "bludgeoning"
+                }
+            ]
+        }
+    ],
+    "encounters": [
+        {
+            "id": "brawl",
+            "participants": [
+                "bren",
+                "ana",
+                "goblin"
+            ]
+        }
+    ]
+}

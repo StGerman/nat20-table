@@ -3,6 +3,13 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.16 (2026-10-18)
+- Help in combat (CHK-4, API-14, Milestone 3 spec §7 step 10, second slice; protocol.md §4.7). `legal_actions` offers core's Help as options: `help/assist_ability_check`, with a `variant` per skill the helper is proficient in (`help/athletics`, ...), `help/assist_attack_roll` against a hostile within 5 feet of the helper, and `help/stabilize` for a creature at 0 Hit Points within 5 feet. Docs only, no wire type change.
+- `submit.variant` is served: an option with `variants` needs one of them (`rejected` with `needs_variant`), a variant the option does not list answers `unknown_option`, and a `variant` on an option without variants answers `bad_request`. It used to answer `not_implemented`; only `submit.point` still does, with the message "Targeting a point".
+- **Changed meaning:** `legal_actions` targets now include creatures at 0 Hit Points that are not dead (only dead creatures are left out), since Help can stabilize them and an attack may target them. The scripted monsters still attack only creatures that are up.
+- A dying creature's turn in a fight is its death save: the engine rolls it at the start of the turn (`death_save`, `dc_source: "rule"`) and ends the turn. Docs only.
+- New fixture `help_combat.jsonl` (new test scene `help_brawl`): with seed 4 Bren's options list Help with his three skills, a submit without a variant is refused as `needs_variant`, `help/medicine` as `unknown_option`, and `help/athletics` is taken; with seed 1 Bren falls before the fight, fails two death saves, and Ana stabilizes him on her second try, declining Tactical Mind after the first; with seed 7 Ana takes Tactical Mind after a failed Medicine check, and 1d20 (3) + 1d10 (7) = 10 makes Bren Stable (core #7 and core #8, pinned by table #35). `not_implemented.jsonl` carries the new message.
+
 ## 1.0.0-dev.15 (2026-10-18)
 - New command `help{actor, help}`, explore mode only (CHK-4, Milestone 3 spec §7 step 10, first slice; protocol.md §4.7). `HelpSpec::assist_check{ally, skill}` gives the ally Advantage on their next check with the skill; `HelpSpec::stabilize{target}` makes a DC 10 Wisdom (Medicine) check to make a creature at 0 Hit Points Stable. The engine runs core's Help action (U6, core #7, pinned by table #35). Result `help{}`; the `action` event, the Medicine roll and any `life_state` are in `events`. In combat it answers `wrong_mode`; Help as a combat option comes next.
 - Additive: `RejectReason::not_proficient`; `DcSource::rule`.

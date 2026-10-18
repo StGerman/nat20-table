@@ -193,13 +193,19 @@ impl Server {
                 point,
                 variant,
             } => {
-                if point.is_some() || variant.is_some() {
+                if point.is_some() {
                     return Err(errors::not_implemented(
-                        "Options with a point or a variant",
+                        "Targeting a point",
                         "legal_actions does not offer them yet",
                     ));
                 }
-                session.submit(&actor.0, &prompt_id.0, option_id, targets)
+                session.submit(
+                    &actor.0,
+                    &prompt_id.0,
+                    option_id,
+                    targets,
+                    variant.as_deref(),
+                )
             }
             Command::React {
                 actor,

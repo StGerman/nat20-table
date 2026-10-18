@@ -16,10 +16,10 @@ use nat20_api_contract::{
     ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, CombatOverReason,
     Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
     ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec, HitDiceSpend,
-    HitPointsRegained, Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption,
-    RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn, SpawnUnless, SpawnView,
-    SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate, Targeting, UnavailableOption,
-    Visibility,
+    HitPointsRegained, Mode, MoveTarget, OptionId, OptionVariant, Placement, PointFt,
+    ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn,
+    SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate,
+    Targeting, UnavailableOption, Visibility,
 };
 use nat20_core::{
     components::{
@@ -134,6 +134,8 @@ struct OptionEntry {
     option: ActionOption,
     action_id: ActionId,
     context: usize,
+    /// The engine variants behind `option.variants`, in the same order.
+    variants: Vec<ActionVariantId>,
 }
 
 /// What the engine needs next.
@@ -1761,6 +1763,7 @@ impl Game {
         actor: &str,
         option_id: &str,
         targets: &[String],
+        variant: Option<&str>,
     ) -> Result<(), ApiError> {
         let entity = self.entity(actor)?;
         self.require_action_prompt(entity)?;
@@ -1781,7 +1784,43 @@ impl Game {
                 )
             })?;
 
-        self.submit_entity(entity, &option.action_id, option.context, &target_entities)?;
+        let variant = match (variant, option.variants.is_empty()) {
+            (None, true) => None,
+            (Some(_), true) => {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{option_id} has no variants; send it without one."),
+                ));
+            }
+            (None, false) => {
+                return Err(rejected(
+                    RejectReason::NeedsVariant,
+                    format!("{option_id} needs one of its variants; see legal_actions."),
+                ));
+            }
+            (Some(wanted), false) => Some(
+                option
+                    .variants
+                    .iter()
+                    .find(|v| names::variant_stem(v) == wanted)
+                    .ok_or_else(|| {
+                        error(
+                            ErrorCode::UnknownOption,
+                            format!(
+                                "{wanted} is not one of {option_id}'s variants right now; see legal_actions."
+                            ),
+                        )
+                    })?
+                    .clone(),
+            ),
+        };
+        self.submit_entity(
+            entity,
+            &option.action_id,
+            variant.as_ref(),
+            option.context,
+            &target_entities,
+        )?;
         self.settle();
         self.drain();
         self.advance();
@@ -1886,40 +1925,59 @@ impl Game {
 
         let mut out: Vec<OptionEntry> = Vec::new();
         for (action_id, contexts) in &actions {
+            // An action with variants (Help with a check: which skill) is one option; its
+            // variants are the ones the actor can use on at least one target.
+            let mut builder = ActionBuilder::available(engine, entity);
+            builder.action(engine, action_id);
+            let variant_ids: Vec<Option<ActionVariantId>> = match builder.state() {
+                Ok(ActionBuilderState::Variant { variants, .. }) => {
+                    variants.iter().cloned().map(Some).collect()
+                }
+                _ => vec![None],
+            };
             for (index, (context, cost)) in contexts.iter().enumerate() {
-                let mut builder = ActionBuilder::available(engine, entity);
-                builder.action(engine, action_id);
-                if let Ok(ActionBuilderState::Variant { .. }) = builder.state() {
-                    continue;
-                }
-                if !pick_context(&mut builder, &engine.world, index) {
-                    continue;
-                }
-                let Ok(ActionBuilderState::Targets { action, .. }) = builder.state() else {
-                    continue;
+                let start = |engine: &mut EngineState, variant: Option<&ActionVariantId>| {
+                    let mut builder = ActionBuilder::available(engine, entity);
+                    builder.action(engine, action_id);
+                    if let Some(variant) = variant {
+                        builder.variant(&engine.world, variant);
+                    }
+                    pick_context(&mut builder, &engine.world, index).then_some(builder)
                 };
-                let targeting_context =
-                    systems::actions::targeting_context_data(&engine.world, action);
-                let range_m: f32 = targeting_context
-                    .range
-                    .max()
-                    .get::<uom::si::length::meter>();
-                let weapon = names::weapon_of(engine, entity, context);
-
-                let (targeting, max_targets, targets) = match targeting_context.kind {
-                    TargetingKind::SelfTarget => (Targeting::OnSelf, 0, Vec::new()),
-                    TargetingKind::Single | TargetingKind::Multiple { .. } => {
-                        let mut targets = Vec::new();
+                let mut usable: Vec<ActionVariantId> = Vec::new();
+                let mut targets: Vec<TargetCandidate> = Vec::new();
+                let mut shape = None;
+                for variant in &variant_ids {
+                    let Some(builder) = start(engine, variant.as_ref()) else {
+                        continue;
+                    };
+                    let Ok(ActionBuilderState::Targets { action, .. }) = builder.state() else {
+                        continue;
+                    };
+                    let targeting_context =
+                        systems::actions::targeting_context_data(&engine.world, action);
+                    let range_m: f32 = targeting_context
+                        .range
+                        .max()
+                        .get::<uom::si::length::meter>();
+                    let (targeting, max_targets) = match targeting_context.kind {
+                        TargetingKind::SelfTarget => (Targeting::OnSelf, 0),
+                        TargetingKind::Single => (Targeting::Single, 1),
+                        TargetingKind::Multiple { max_targets, .. } => {
+                            (Targeting::Multiple, max_targets as u32)
+                        }
+                        TargetingKind::Area { .. } => continue,
+                    };
+                    let mut found = Vec::new();
+                    if targeting != Targeting::OnSelf {
                         for (handle, other, side) in &scene_entities {
-                            if *other == entity || !systems::health::is_alive(&engine.world, *other)
-                            {
+                            // A creature at 0 Hit Points stays a target: Help can stabilize it.
+                            if *other == entity || life_state_name(engine, *other) == "dead" {
                                 continue;
                             }
-                            let mut probe = ActionBuilder::available(engine, entity);
-                            probe.action(engine, action_id);
-                            if !pick_context(&mut probe, &engine.world, index) {
+                            let Some(mut probe) = start(engine, variant.as_ref()) else {
                                 continue;
-                            }
+                            };
                             probe.target_entity(engine, *other);
                             let in_range = match probe.state() {
                                 Ok(ActionBuilderState::Targets {
@@ -1932,7 +1990,7 @@ impl Game {
                                 }) if path.path_result.reaches_goal() => false,
                                 _ => continue,
                             };
-                            targets.push(TargetCandidate {
+                            found.push(TargetCandidate {
                                 handle: Handle(handle.clone()),
                                 side: *side,
                                 distance_ft: distance_m(engine, entity, *other)
@@ -1941,18 +1999,26 @@ impl Game {
                                 in_range,
                             });
                         }
-                        match targeting_context.kind {
-                            TargetingKind::Multiple { max_targets, .. } => {
-                                (Targeting::Multiple, max_targets as u32, targets)
-                            }
-                            _ => (Targeting::Single, 1, targets),
+                        if found.is_empty() {
+                            continue;
                         }
                     }
-                    TargetingKind::Area { .. } => continue,
-                };
-                if targeting != Targeting::OnSelf && targets.is_empty() {
-                    continue;
+                    if let Some(variant) = variant {
+                        usable.push(variant.clone());
+                    }
+                    for candidate in found {
+                        match targets.iter_mut().find(|t| t.handle == candidate.handle) {
+                            Some(known) => known.in_range |= candidate.in_range,
+                            None => targets.push(candidate),
+                        }
+                    }
+                    shape.get_or_insert((targeting, max_targets, range_m));
                 }
+                let Some((targeting, max_targets, range_m)) = shape else {
+                    continue;
+                };
+                usable.sort_by_key(names::variant_stem);
+                let weapon = names::weapon_of(engine, entity, context);
                 let (mut option_id, name) = names::option_id_and_name(action_id, weapon.as_deref());
                 if out.iter().any(|o| o.option.option_id.0 == option_id) {
                     option_id = format!("{option_id}/{index}");
@@ -1967,10 +2033,17 @@ impl Game {
                         max_targets,
                         range_ft: (targeting != Targeting::OnSelf).then(|| round_ft(range_m)),
                         targets,
-                        variants: Vec::new(),
+                        variants: usable
+                            .iter()
+                            .map(|v| OptionVariant {
+                                variant: names::variant_stem(v),
+                                name: names::variant_name(v),
+                            })
+                            .collect(),
                     },
                     action_id: action_id.clone(),
                     context: index,
+                    variants: usable,
                 });
             }
         }
@@ -1984,6 +2057,7 @@ impl Game {
         &mut self,
         entity: Entity,
         action_id: &ActionId,
+        variant: Option<&ActionVariantId>,
         context: usize,
         targets: &[Entity],
     ) -> Result<(), ApiError> {
@@ -1991,10 +2065,13 @@ impl Game {
         let mut builder = ActionBuilder::available(engine, entity);
         builder.action(engine, action_id);
         if let Ok(ActionBuilderState::Variant { .. }) = builder.state() {
-            return Err(rejected(
-                RejectReason::NeedsVariant,
-                "Options with variants are not supported by this engine yet.",
-            ));
+            let Some(variant) = variant else {
+                return Err(rejected(
+                    RejectReason::NeedsVariant,
+                    "This option needs one of its variants.",
+                ));
+            };
+            builder.variant(&engine.world, variant);
         }
         if !pick_context(&mut builder, &engine.world, context) {
             return Err(error(
@@ -2290,7 +2367,7 @@ impl Game {
         };
         if let Some((action_id, context, target)) = choice
             && self
-                .submit_entity(actor, &action_id, context, &[target])
+                .submit_entity(actor, &action_id, None, context, &[target])
                 .is_ok()
         {
             self.scripted_turn = Some((round, actor, taken + 1));
