@@ -1372,3 +1372,78 @@ fn a_flag_spawn_joins_the_fight_it_starts_once() {
         assert_eq!(ended["ok"], true, "{ended}");
     }
 }
+
+#[test]
+fn spawn_creatures_are_checked_when_their_scene_loads() {
+    let spawn = |creature: Value| json!([{ "id": "later", "when": { "kind": "dm" }, "creatures": [creature] }]);
+    let bren = creature("bren", ("pregen", "fighter_l2"), "party", 0.0);
+    let goblin = |side: &str| creature("goblin", ("monster", "goblin_warrior"), side, 5.0);
+    let dir = data_dir(
+        "spawn_checks",
+        &[
+            (
+                "start",
+                json!({ "id": "start", "creatures": [bren.clone()] }),
+            ),
+            // Bren is carried in and also arrives by spawn.
+            (
+                "clash",
+                json!({ "id": "clash", "anchors": [anchor("door", 0.0)], "party_start": ["door"],
+                    "spawns": spawn(bren.clone()) }),
+            ),
+            (
+                "bad_block",
+                json!({ "id": "bad_block", "creatures": [bren.clone()],
+                    "spawns": spawn(creature("goblin", ("monster", "bad_goblin"), "hostile", 5.0)) }),
+            ),
+            // Bren is hostile to the goblin, so it cannot arrive on the party side.
+            (
+                "turncoat",
+                json!({ "id": "turncoat", "creatures": [bren.clone()], "spawns": spawn(goblin("party")) }),
+            ),
+        ],
+    );
+    let mut goblin_block: Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.join("monsters/goblin_warrior.json")).unwrap(),
+    )
+    .unwrap();
+    goblin_block["proficiency_bonus"] = json!(3);
+    std::fs::write(
+        dir.join("monsters/bad_goblin.json"),
+        goblin_block.to_string(),
+    )
+    .unwrap();
+
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "start" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let refused = [
+        ("clash", json!(["bren"]), "carried in"),
+        ("bad_block", json!([]), "proficiency_bonus"),
+        ("turncoat", json!([]), "goblin"),
+    ]
+    .map(|(id, party, why)| {
+        let response = api.call(
+            "dm",
+            json!({ "cmd": "load_scene", "scene_id": id, "party": party }),
+        );
+        (id, why, response)
+    });
+    let state = api.call("dm", json!({ "cmd": "get_state" }));
+    std::fs::remove_dir_all(dir).ok();
+    for (id, why, response) in refused {
+        assert_eq!(response["error"]["code"], "bad_scene", "{id}: {response}");
+        let message = response["error"]["message"].as_str().unwrap();
+        assert!(message.contains(why), "{id}: {response}");
+    }
+    // Every refusal left the first scene as it was.
+    assert_eq!(state["result"]["state"]["scene_id"], "start", "{state}");
+    assert_eq!(
+        state["result"]["state"]["creatures"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1,
+        "{state}"
+    );
+}

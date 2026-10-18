@@ -215,10 +215,14 @@ impl Game {
                 ),
             );
         }
-        if let Some(clash) = party
-            .iter()
-            .find(|h| scene.creatures.iter().any(|c| c.handle == **h))
-        {
+        // Carried creatures share the scene's handle space, spawn creatures included.
+        let scene_defs = || {
+            scene
+                .creatures
+                .iter()
+                .chain(scene.spawns.iter().flat_map(|s| &s.creatures))
+        };
+        if let Some(clash) = party.iter().find(|h| scene_defs().any(|c| c.handle == **h)) {
             return fail(
                 previous,
                 error(
@@ -232,8 +236,7 @@ impl Game {
         }
         // Stat blocks are read before anything is spawned, the spawns' with the scene's own.
         let mut monsters = HashMap::new();
-        let spawned_later = scene.spawns.iter().flat_map(|s| s.creatures.iter());
-        for def in scene.creatures.iter().chain(spawned_later) {
+        for def in scene_defs() {
             if let Some(monster) = &def.monster
                 && !monsters.contains_key(monster)
             {
@@ -301,8 +304,41 @@ impl Game {
             }
         }
 
+        // Spawn creatures are placed later. Spawning each one now, and removing it again, runs
+        // every check placing it will, so a scene that loads can always place its spawns.
+        let mut trial: Vec<SceneCreature> = Vec::new();
+        let mut failed = None;
+        for def in scene.spawns.iter().flat_map(|s| &s.creatures) {
+            match spawn_creature(&mut game.engine, def, &monsters) {
+                Ok(entity) => trial.push(SceneCreature {
+                    handle: def.handle.0.clone(),
+                    entity,
+                    side: def.side,
+                    control: def.control,
+                }),
+                Err(e) => {
+                    failed = Some(e);
+                    break;
+                }
+            }
+        }
+
         let creatures: Vec<SceneCreature> = carried.into_iter().chain(spawned).collect();
-        if let Err(e) = check_sides(&game.engine, &creatures) {
+        if failed.is_none() {
+            let all: Vec<SceneCreature> = creatures
+                .iter()
+                .chain(&trial)
+                .map(|c| SceneCreature {
+                    handle: c.handle.clone(),
+                    entity: c.entity,
+                    side: c.side,
+                    control: c.control,
+                })
+                .collect();
+            failed = check_sides(&game.engine, &all).err();
+        }
+        rollback(&mut game, &trial);
+        if let Some(e) = failed {
             let new: Vec<SceneCreature> = creatures
                 .into_iter()
                 .filter(|c| !party.iter().any(|h| h.0 == c.handle))
