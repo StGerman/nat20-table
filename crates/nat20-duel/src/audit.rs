@@ -82,9 +82,12 @@ pub fn audit_transcript(transcript: &str, log: &[Event], require_all: bool) -> A
         };
         // Nothing else on the line may look like more arithmetic, before or after the summary.
         // The engine's own label for the roll may name a die ("a d10 Hit Point Die"), so it is
-        // left out once.
-        let rest = format!("{} {}", &line[..at], &line[at + summary.len()..]);
-        let rest = rest.replacen(roll_label(roll), "", 1);
+        // left out where the transcript puts it, right before the summary ("rolls <label>: ").
+        let before = &line[..at];
+        let before = before
+            .strip_suffix(&format!("rolls {}: ", roll_label(roll)))
+            .unwrap_or(before);
+        let rest = format!("{} {}", before, &line[at + summary.len()..]);
         if looks_like_roll(&rest) || rest.contains(" vs AC ") || rest.contains(" vs DC ") {
             report.problems.push(format!(
                 "line {line_no}: {id} comes with extra roll arithmetic: {rest}"
@@ -337,9 +340,13 @@ mod tests {
         let line = "[r3] bren rolls a d10 Hit Point Die: 1d10 (4) +2 = 6.";
         let report = audit_transcript(line, &log, true);
         assert!(report.passed(), "{:?}", report.problems);
-        // The label is left out once; another die on the line still fails.
+        // The label is left out only right before the summary; another die on the line still
+        // fails, even one that repeats the label.
         let extra = "[r3] bren rolls a d10 Hit Point Die: 1d10 (4) +2 = 6, and a d6 for luck.";
         assert!(!audit_transcript(extra, &log, true).passed());
+        let appended =
+            "[r3] bren heals: 1d10 (4) +2 = 6. The goblin also rolls a d10 Hit Point Die (7).";
+        assert!(!audit_transcript(appended, &log, true).passed());
     }
 
     #[test]
