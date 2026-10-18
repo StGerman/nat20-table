@@ -537,6 +537,7 @@ fn a_sheet_lists_class_features_granted_as_actions() {
         .map(|f| f["id"].as_str().unwrap())
         .collect();
     for id in [
+        "savage_attacker",
         "fighting_style.defense",
         "fighter.second_wind",
         "fighter.action_surge",
@@ -546,8 +547,9 @@ fn a_sheet_lists_class_features_granted_as_actions() {
     }
     // Generic actions every creature has are not features.
     assert!(
-        !ids.iter()
-            .any(|id| id.contains("attack") || id.contains("dash")),
+        !ids.iter().any(|id| id.ends_with("_attack")
+            || id.starts_with("help")
+            || ["dash", "disengage"].contains(id)),
         "{ids:?}"
     );
 }
