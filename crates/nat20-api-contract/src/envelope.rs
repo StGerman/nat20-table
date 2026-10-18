@@ -139,7 +139,8 @@ pub enum Command {
     },
     /// Starts one of the scene's encounters: rolls initiative for its participants and enters
     /// combat mode. Participants, surprise, surrender and end reasons come from the scene file,
-    /// never from the caller (decision D4).
+    /// never from the caller (decision D4). When the encounter's surprise flag is set, the
+    /// surprised side rolls initiative with Disadvantage.
     StartCombat {
         /// Encounter id from the scene file.
         encounter_id: String,

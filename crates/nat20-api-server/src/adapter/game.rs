@@ -1070,8 +1070,9 @@ impl Game {
         }
     }
 
-    /// Starts the scene encounter `encounter_id`: rolls initiative for its participants and
-    /// runs scripted turns until a client decides. Participants not in the scene are left out.
+    /// Starts the scene encounter `encounter_id`: rolls initiative for its participants, the
+    /// surprised side with Disadvantage, and runs scripted turns until a client decides.
+    /// Participants not in the scene are left out.
     pub fn start_combat(&mut self, encounter_id: &str) -> Result<(), ApiError> {
         if self.running_encounter().is_some() {
             return Err(error(ErrorCode::WrongMode, "Combat is already running."));
@@ -1092,21 +1093,25 @@ impl Game {
             }
             return Err(e);
         };
-        if let Some(surprise) = &found.surprise
-            && self.flags.contains(&surprise.when_flag)
-        {
-            return Err(error(
-                ErrorCode::NotImplemented,
-                format!(
-                    "{encounter_id} starts with a surprise, and surprise is not implemented by this engine yet: initiative with Disadvantage needs a core change (U5)."
-                ),
-            ));
-        }
         let entities: Vec<Entity> = found
             .participants
             .iter()
             .filter_map(|h| self.entity(&h.0).ok())
             .collect();
+        // The surprised side rolls initiative with Disadvantage once the scene's flag is set
+        // (decision D4, SRD 5.2.1 Surprise).
+        let surprised: HashSet<Entity> = found
+            .surprise
+            .as_ref()
+            .filter(|surprise| self.flags.contains(&surprise.when_flag))
+            .map(|surprise| {
+                entities
+                    .iter()
+                    .copied()
+                    .filter(|e| self.side_of(*e) == Some(surprise.surprised))
+                    .collect()
+            })
+            .unwrap_or_default();
         let standing = |side: Side| {
             entities.iter().any(|e| {
                 self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
@@ -1122,7 +1127,9 @@ impl Game {
         }
         // Whatever happened before this fight is already in the log.
         self.drain();
-        let encounter = self.engine.start_encounter(entities.into_iter().collect());
+        let encounter = self
+            .engine
+            .start_surprised_encounter(entities.into_iter().collect(), surprised);
         self.encounter = Some(encounter);
         self.scene_encounter = Some(encounter_id.to_owned());
         self.encounter_seen = 0;

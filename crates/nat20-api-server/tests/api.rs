@@ -1265,3 +1265,52 @@ fn a_spent_hit_point_die_stays_spent_in_the_next_scene() {
         "{sheet}"
     );
 }
+
+/// Each initiative roll's roller and Advantage state, in initiative order.
+fn initiative_rolls(started: &Value) -> Vec<(String, String)> {
+    started["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "roll" && e["roll"]["kind"] == "initiative")
+        .map(|e| {
+            (
+                e["roll"]["roller"].as_str().unwrap().to_owned(),
+                e["roll"]["advantage"].as_str().unwrap().to_owned(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn only_the_surprised_side_rolls_initiative_with_disadvantage() {
+    for (seed, spot) in [(3, true), (4, false)] {
+        let mut api = Api::seeded(seed);
+        road(&mut api);
+        if spot {
+            let spotted = api.call(
+                "dm",
+                json!({ "cmd": "request_check", "actor": "bren",
+                    "check": { "kind": "scenario", "check_id": "spot_lookouts" } }),
+            );
+            assert_eq!(spotted["result"]["success"], true, "{spotted}");
+        }
+        let yard = api.call(
+            "dm",
+            json!({ "cmd": "load_scene", "scene_id": "m3_s3_yard", "party": ["bren"] }),
+        );
+        assert_eq!(yard["ok"], true, "{yard}");
+        let started = api.call(
+            "dm",
+            json!({ "cmd": "start_combat", "encounter_id": "yard_fight" }),
+        );
+        assert_eq!(started["ok"], true, "{started}");
+        let rolls = initiative_rolls(&started);
+        assert_eq!(rolls.len(), 3, "{started}");
+        for (roller, advantage) in rolls {
+            let surprised = spot && roller != "bren";
+            let expected = if surprised { "disadvantage" } else { "normal" };
+            assert_eq!(advantage, expected, "{roller}: {started}");
+        }
+    }
+}
