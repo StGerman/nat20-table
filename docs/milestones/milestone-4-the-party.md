@@ -80,7 +80,7 @@ Each change lands in the PR that serves it (§7), with its fixture and a CHANGEL
 - Files live in `pregens/` (CLAUDE.md layout: our content, CC-BY-4.0). A scene's `SceneCreature.pregen` names one by id; an unknown id is a `bad_scene` error naming the known ids.
 
 ```text
-PregenFile { id, name, notes?, species, subspecies?, background, class, level,
+PregenFile { _comment?, id, name, species, subspecies?, background, class, level,
              ability_scores: {strength..charisma}, choices[]: {prompt_id, pick},
              skills[], spells?: {cantrips[], prepared[], spellbook[]},
              equipment[]: {item, quantity, equip?: slot}, money }
@@ -219,11 +219,11 @@ Other tests:
 
 ## 11. Decisions for Stas
 
-Stas accepted D2 to D9 as recommended on 2026-10-18 (decider: Stas). D1 is open on one point: he prefers YAML and asked whether JSON can carry comments. Plain JSON has none; the recommendation is JSON with an optional `notes` string on the pregen file and on each section, as the scene file already has `description` (§4.1). The first implementation PR records the accepted decisions in `docs/decisions/` (next number 0023).
+Stas decided D1 to D9 on 2026-10-18 (decider: Stas): D2 to D9 as recommended, D1 as JSON with a `_comment` key for notes, as core's registry JSON does. The first implementation PR records the accepted decisions in `docs/decisions/` (next number 0023).
 
 | # | Question | Recommend | Options | Why |
 |---|---|---|---|---|
-| D1 | Pregen format | **JSON with `notes`** (open: Stas prefers YAML) | **JSON with `notes`**: files in `pregens/`, format in the contract crate (a third schema), an optional `notes` string for comments · **JSONC or JSON5**: comments in the file, but a second parser, and the generated schema no longer validates the file as written · **YAML**: comments natively; the serde YAML crate `serde_yaml` is archived by its author and its forks are young or flagged, so cargo-deny's advisory and maintenance checks would need an exception · **Rust**: keep them as code in `adapter/pregen.rs` | The layout already reserves `pregens/` for content; a scene names a pregen by id, so the loader can say which ids exist; four characters as data are reviewable without reading Rust. Costs one M step |
+| D1 | Pregen format | **JSON with `_comment`** (decided, Stas, 2026-10-18) | **JSON with `_comment`**: files in `pregens/`, format in the contract crate (a third schema), an optional `_comment` string on the file and on each section for notes, as core's registry JSON has · **JSONC or JSON5**: comments in the file, but a second parser, and the generated schema no longer validates the file as written · **YAML**: comments natively, but `serde_yaml` is archived by its author, so cargo-deny's checks would need an exception, and nothing else in either repo is YAML | Both repos keep their data as JSON (core: 224 registry files with `_comment`; table: scene files, stat blocks, fixtures). Notes ride in the schema, and the scene files' strict key check stays |
 | D2 | What happens to Bren (`fighter_l2`) | **Replace** (decided, Stas, 2026-10-18) | **Replace**: Bren becomes the Human demo Fighter with a shield, and Bren's fixtures re-record once · **Keep**: Bren stays as a test character beside a new demo Fighter | Step 3 re-records Bren's fixtures anyway (Soldier's real feat changes his damage rolls). Two Fighters double the fixtures to maintain |
 | D3 | Cleric armour | **Chain Mail** (decided, Stas, 2026-10-18) | **Chain Mail**: Protector, Chain Mail and Shield, AC 18; Chain Shirt (ITM-3) drops to P2 · **Chain Shirt**: Protector, Chain Shirt and Shield (the SRD starting kit), AC 14 with Dex 8 · **Thaumaturge**: Chain Shirt, AC 14, one more cantrip | Protector's Heavy armour training is wasted under a Chain Shirt; the Cleric's Strength 15 meets Chain Mail's 13; one item fewer to build. Decision 0014 named the Chain Shirt, so the ADR supersedes that line |
 | D4 | Cleric spells | **Yes** (decided, Stas, 2026-10-18) | **Yes**: cantrips Guidance, Sacred Flame, Spare the Dying; prepared Bless, Cure Wounds, Guiding Bolt, Healing Word, Shield of Faith · **No**: say which to swap | The SRD recommends Thaumaturgy as the third cantrip; it has no effect the engine resolves, and Spare the Dying keeps a downed ally from dying at range. The rest are the SRD's recommended four plus Healing Word |
