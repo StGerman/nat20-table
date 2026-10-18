@@ -160,7 +160,7 @@ fn end_turn(prompt_id: PromptId) -> Command {
 
 /// Sends a command as the DM and writes it and the events it produced into the transcript.
 /// Roll lines carry their engine citation.
-fn call(client: &mut Client, transcript: &mut String, command: Command) -> Response {
+pub(crate) fn call(client: &mut Client, transcript: &mut String, command: Command) -> Response {
     let echo = serde_json::to_value(&command).expect("commands serialize");
     transcript.push_str(&format!("  api> {echo}\n"));
     let response = client.send("dm", command);

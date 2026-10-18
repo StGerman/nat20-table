@@ -6,3 +6,4 @@
 pub mod audit;
 pub mod client;
 pub mod duel;
+pub mod trail;
