@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.12): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5) and `events`, with the §5 projection, and answers `spawn` with `not_implemented`. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}`, options with a `point` or `variant` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.16): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}` and options with a `point` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -76,8 +76,8 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 `load_scene{scene_id}` reads `<data>/scenes/<scene_id>.json`, a `SceneFile` (contract module `scene.rs`, schema `generated/nat20-scene.schema.json`, TS `scene` namespace of the engine client). The DM agent reads the same files, so both sides agree on check ids, anchors, encounters and spawns. A scene file is DM-only data (§5): nothing in it, nor anything derived from it, goes into a player view except anchor names and positions.
 
 - **Contents.** `anchors` (named landmarks), `creatures` (placed on load, each `at` an anchor or a point), `party_start` (anchors for carried creatures, in party order), `checks` (a skill check or save, a DC, and consequences on success and failure), `hazards` (a save and its consequences), `encounters` (participants, a surprise rule, a surrender condition, other allowed early ends) and `spawns` (creatures placed by the DM, by a flag at combat start, or at a round).
-- **Checked on load.** Besides the schema (unknown fields are refused), the engine refuses a scene with `bad_scene` and changes nothing when: an id (anchor, check, hazard, encounter, spawn, flag, handle) isn't a plain name or repeats; a handle repeats across `creatures` and spawns; any handle, a carried encounter participant's included, is `dm`; a creature names an unknown pregen or stat block, or both or neither; an `at` or `party_start` names an unknown anchor; a consequence names an unknown hazard, a hazard sets off another hazard, or damage dice aren't `NdM` or `NdM+K` with M one of 4, 6, 8, 10, 12, 20, 100; a DC is outside 1 to 30; an encounter has no participants, lists one twice, or names a creature the scene doesn't define while it has no `party_start` (only a carried creature could fill it); a surrender condition names a non-participant, has no trigger, a fraction outside (0, 1), or a leader that isn't one of its creatures; `surrender` appears in `end_reasons` (a surrender condition governs it); a spawn is empty or fires at round 0; the `map` isn't a terrain file under `maps/`.
-- **Served so far.** Placement of `creatures` at anchors or points, `map`, `party_start` for carried creatures (§2), `anchors` in state and as `move` goals (§4.1), `checks`, `hazards` and the flags they set (§4.3), and `encounters` with their surprise rules (§4.4). Everything else in the file is read and checked but not acted on yet; each part is served by its Milestone 3 step (spec §7): spawns (API-8). The commands that use them keep answering `not_implemented` until then.
+- **Checked on load.** Besides the schema (unknown fields are refused), the engine refuses a scene with `bad_scene` and changes nothing when: an id (anchor, check, hazard, encounter, spawn, flag, handle) isn't a plain name or repeats; a handle repeats across `creatures` and spawns; any handle, a carried encounter participant's included, is `dm`; a creature names an unknown pregen or stat block, or both or neither; an `at` or `party_start` names an unknown anchor; a consequence names an unknown hazard, a hazard sets off another hazard, or damage dice aren't `NdM` or `NdM+K` with M one of 4, 6, 8, 10, 12, 20, 100; a DC is outside 1 to 30; an encounter has no participants, lists one twice, or names a creature the scene doesn't define while it has no `party_start` (only a carried creature could fill it); a surrender condition names a non-participant, has no trigger, a fraction outside (0, 1), or a leader that isn't one of its creatures; `surrender` appears in `end_reasons` (a surrender condition governs it); a spawn is empty or fires at round 0; a carried creature shares a handle with the scene's creatures or spawns; a spawn's creature fails a check its placement would run (its stat block, or a side it cannot take beside the scene's and the carried creatures), so a scene that loads can always place its spawns; the `map` isn't a terrain file under `maps/`.
+- **Served so far.** Placement of `creatures` at anchors or points, `map`, `party_start` for carried creatures (§2), `anchors` in state and as `move` goals (§4.1), `checks`, `hazards` and the flags they set (§4.3), `encounters` with their surprise rules (§4.4), and `spawns` of every kind (§4.3).
 - **Coordinates.** `x_ft` east-west, `y_ft` north-south, `z_ft` up, in feet. The engine places a creature on the ground below its point.
 - **Test scenario.** `m3_s1_green` to `m3_s5_cellar` (`m3_trail`, 5 scenes, Bren and Goblin Warriors) exercise every part of the format; Milestone 3 replays them end to end (API-23).
 
@@ -120,7 +120,7 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 
 - `to` is an anchor of the scene, a point, or a creature (the move ends within 5 ft of it). An anchor the scene doesn't define answers `unknown_anchor`; the DM's error carries the scene's anchor ids in `hint.known_ids`, a player's carries none.
 - **Explore mode.** Anyone may be moved and `prompt_id` is ignored. The creature walks the whole route on the map at no movement cost and provokes nobody, since nobody is fighting. A creature at 0 HP can't move (`rejected`, `condition_prevents`).
-- **Combat.** `move` is a decision at the actor's action prompt, so it needs that prompt's id (`bad_request` without one, `stale_prompt` for an old one) and gets a new prompt like `submit`. The whole route must fit in the movement left this turn, else `rejected` with `insufficient_resource` and nobody moves. Leaving a hostile creature's reach gives it an opportunity attack: the mover stops where it provoked, `provoked` names the reactor, and `moved_ft` is the distance actually covered.
+- **Combat.** `move` is a decision at the actor's action prompt, so it needs that prompt's id (`bad_request` without one, `stale_prompt` for an old one) and gets a new prompt like `submit`. The whole route must fit in the movement left this turn, else `rejected` with `insufficient_resource` and nobody moves. Leaving a creature's reach offers it an opportunity attack, an ally's included, as SRD 5.2.1 allows one against any creature the reactor can see: the mover stops where it provoked, whether the reactor takes the attack or not, `provoked` names the reactor, and `moved_ft` is the distance actually covered. A scripted monster takes an opportunity attack only against a creature hostile to it; a client decides for its own creatures.
 - No route to the goal (off the map, or blocked) answers `rejected` with `no_path`.
 - Every move logs a public `moved` event with `from`, `to` and the anchor, when the creature reached one.
 
@@ -139,7 +139,8 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 - **Ladder checks.** For a check no scenario check covers, the DM names a skill and a DC from the SRD ladder: 5, 10, 15, 20, 25 or 30 (`bad_request` otherwise). `ability` must be the skill's own ability. Not served yet, each answering `not_implemented`: a check without a skill, or a skill with another ability. Ladder checks have no consequences and no once-per-scene limit.
 - A creature at 0 Hit Points can't make a check (`rejected`, `condition_prevents`). A refused check rolls nothing and logs nothing.
 - **Consequences** run in scene file order. `flag` sets a session flag and logs `flag_set` (DM only) the first time it is set; flags outlive the scene and appear in the DM state, sorted. `hazard` logs `hazard_triggered` (DM only), rolls the hazard's saving throw for the same creature (`dc_source: "scenario"`), then runs the hazard's own consequences for that save. `damage` rolls the dice and applies them to that creature: a `damage` roll, `damage_taken` citing it, `hit_points` (owner and DM), and `life_state` if it changed.
-- Advantage comes only from what the engine tracks (conditions, features); each reason is in the roll's `advantage_sources`, DM view only. Help comes with Milestone 3 step 10 (U6).
+- Advantage comes only from what the engine tracks (a pending Help, conditions, features); each reason is in the roll's `advantage_sources`, DM view only.
+- A check goes through the engine's own event handling, so whatever waits on it acts: a pending Help for that skill is spent by it (§4.7). A reaction a check would offer out of combat (the Fighter's Tactical Mind after a failed check) is declined, since explore mode has no reaction prompt (CHK-6).
 
 ### 4.4 Encounters and ending a fight
 
@@ -162,6 +163,10 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 ```
 `option_id` stays stable for the life of the prompt and is derived from the action plus its context (weapon slot, spell and level), never from a list index.
 
+- An option is listed only when it has a target, if it needs one. `targets` are the creatures in the scene that the action may target, except the actor and dead creatures: a creature at 0 Hit Points is a target, for Help's stabilize and for an attack.
+- An option with `variants` (Help's skills, §4.7) needs one in `submit.variant`: without one it is `rejected` with `needs_variant`, and a variant the option does not list answers `unknown_option`. A `variant` on an option without variants answers `bad_request`.
+- A dying creature's turn is its death save: the engine rolls it at the start of the turn (`death_save`, DC 10, `dc_source: "rule"`) and ends the turn, so the creature gets no prompt.
+
 ### 4.5 Short rest
 
 - `short_rest{participants, hit_dice}` is explore mode only: rolling Initiative interrupts a rest, so during combat it answers `wrong_mode`. After a fight that ended by itself it is an explore command that acts, so it closes `combat_over` as `move` and `request_check` do.
@@ -172,6 +177,25 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 - Then each participant, in order, spends its dice, largest die size first. Each die logs a public `healing` roll labelled "a dN Hit Point Die" (the die plus the Constitution modifier), a public `healed` citing it, with what was regained: at least 1, at most what was missing. It also logs `hit_points` (owner and DM). Last, the engine finishes the rest, short-rest resources recharge, and a public `rest` event names the participants.
 - The result lists the Hit Points each participant regained, in `participants` order, 0 for one that spent none. The dice count is declared up front, a simplification of "decide after each roll": the DM can call `short_rest` again with another die.
 - A rest is never interrupted (ENG-9): the command is atomic, so nothing can happen during it.
+
+### 4.6 Spawns
+
+- A scene's `spawns` place more creatures later, each at its own `at`. A spawn is placed at most once per scene, and its creatures then stay in the scene like any other: they can be carried into the next scene, and a later encounter that lists them among its `participants` includes them.
+- **Flag spawns** (`when: {kind: "flag"}`): when `start_combat` starts any fight in the scene while the flag is set, the engine places the spawn's creatures before rolling initiative, and they join that fight whether or not the encounter lists them. They count toward the conscious party and hostile creatures a fight needs, and they are surprised with their side.
+- **DM spawns** (`when: {kind: "dm"}`): `spawn{spawn_id}` places them and answers the state plus their `handles`. During a fight they join it (below).
+- **Round spawns** (`when: {kind: "round", round}`): when a fight in the scene reaches that round, the engine places them, unless the spawn's `unless` holds then (`any_party_bloodied`: a party creature is down or at half its Hit Points or fewer). A cancelled spawn is not placed later, not even in a later fight of the scene. A round spawn fires in the first fight of the scene that reaches its round.
+- **Joining a running fight.** Creatures placed during a fight (a DM spawn or a round spawn) join it: each rolls initiative, logged as an `initiative` roll after `spawned`, and takes its turn at its place in the order, this round if its count has not come up yet, otherwise from the next round. Ties go after the creatures already in the order. A spawn is not a decision: a pending action or reaction prompt keeps its `prompt_id`, and a reaction keeps its `trigger.event_seq`.
+- `spawn` refuses, changing nothing: an id the scene doesn't declare (`unknown_spawn`; the DM's error carries the scene's spawn ids in `hint.known_ids`), a flag or round spawn (`rejected` with `automatic`), and a spawn already placed in this scene (`rejected` with `already_spawned`). A player viewer's `automatic` message doesn't name the trigger.
+- Each placement logs `spawned{spawn_id, handles}`, DM only; players see the new creatures in their state. The DM state lists the scene's `spawns` (`SpawnView`): id, `when` as the scene declares it, and whether it was `placed`.
+
+### 4.7 Help
+
+- `help{actor, help}` is the Help action out of combat (SRD 5.2.1 Rules Glossary, Help). The engine runs its own Help action (core U6), so its range, proficiency and Medicine check are the engine's rules. In combat Help is an option at the action prompt (below), and `help` answers `wrong_mode`. After a fight that ended by itself it closes `combat_over`, as `move` does.
+- `assist_check{ally, skill}` gives the ally Advantage on their next ability check with that skill. The helper needs proficiency in the skill. The benefit is spent by that check, made with `request_check` (the roll's `advantage_sources` names it, DM view only), and lasts until the start of the helper's next turn: out of combat that is the helper's next `help`, the helper's first turn of a fight, or the next scene (even one the helper is left out of).
+- `stabilize{target}` makes a DC 10 Wisdom (Medicine) check for a creature at 0 Hit Points that is not yet Stable. The roll is logged like any roll, with `dc_source: "rule"`. On a success the target becomes Stable (`life_state`, public); on a failure nothing changes and the helper can try again.
+- Each `help` is an action, and out of combat each one starts the helper's next turn first, as the engine does for a creature outside an encounter: its action is back, and whatever lasted until the start of its turn ends, on any creature (a Help it gave before). Out of combat time passes only with these turns, never while the engine plays out a move or an action, and a creature outside a fight sees the turns of the creatures in it. No `turn_start` or `turn_end` is logged.
+- **In combat**, `legal_actions` offers Help as up to three options, each costing the action and each listed only when it has a target (`in_range` for one within 5 feet; for one farther away the engine walks the helper into reach first, spending movement, as it does for an attack (API-25: that walk logs no `moved` yet)): `help/assist_ability_check` (an ally; one `variant` per skill the helper is proficient in, such as `help/athletics`, which `submit` must name), `help/assist_attack_roll` (a hostile creature: the next attack roll an ally makes against it has Advantage, until the start of the helper's next turn) and `help/stabilize` (a creature at 0 Hit Points that is not yet Stable). The `action` event and the rolls are logged as for any submit. A failed Medicine check can open Tactical Mind for a fighter helper, as any failed check does: taking it adds 1d10 to the check, which can turn it into a success, and the Help goes on with the new result.
+- Every `help` logs a public `action` event with the helper and the other creature; its result is empty. Refused, rolling and logging nothing: a helper who is down (`condition_prevents`), the helper as the other creature or a target that is not dying (`invalid_target`), a skill the helper is not proficient in (`not_proficient`), and a creature more than 5 feet away (`out_of_range`; `move` there first). A refused `help` does not start the helper's next turn, so a Help it gave before still stands. A fighter's Tactical Mind after a failed Medicine check is declined, as for any check out of combat (§4.3).
 
 ## 5. Visibility (projection per `viewer`)
 
@@ -185,7 +209,7 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 | Roll: modifiers, `against` (AC/DC), `dc_source`, `advantage_sources` | yes | no; own modifiers and AC are on the sheet | no |
 | Damage or healing amount | yes | yes | yes (it is said at the table) |
 | `hit_points` events (HP after a change) | yes | own creature only | no |
-| Scenario data: the scene file's check DCs, hazards, encounters, surrender conditions, flags, spawns; in state, `flags`, `checks` and `encounters` (with `surrender_available`); the events `check_resolved`, `flag_set` and `hazard_triggered` | yes | no | no |
+| Scenario data: the scene file's check DCs, hazards, encounters, surrender conditions, flags, spawns; in state, `flags`, `checks`, `encounters` (with `surrender_available`) and `spawns`; the events `check_resolved`, `flag_set`, `hazard_triggered` and `spawned` | yes | no | no |
 | Anchors: id, name, position | yes | yes, with `distance_ft` from the viewer | yes, with `distance_ft` from the viewer |
 | `known_ids` in an error hint (the scene's anchor ids after `unknown_anchor`, its check ids after `unknown_check`, its encounter ids after `unknown_encounter`) | yes | no | no |
 | `unavailable` reasons in `legal_actions` | yes | yes | n/a |
@@ -216,7 +240,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `flag_set` | `flag` (DM only) |
 | `hazard_triggered` | `hazard_id`, `actor` (DM only) |
 | `rest` | `participants`, `rest: short\|long` |
-| `spawned` | `spawn_id`, `handles[]` |
+| `spawned` | `spawn_id`, `handles[]` (DM only) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
 ```json
@@ -225,10 +249,10 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
   "dice": [{"source":"d20","dice":"1d20","results":[14,6],"kept":14}],
   "modifiers": [{"source":"Strength","value":3},{"source":"Proficiency","value":2}],
   "total": 19, "against": {"kind":"AC","value":15}, "outcome": "hit",
-  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block",
+  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block|rule",
   "advantage_sources": ["Effect: some_effect (advantage)"] }
 ```
-In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC except a death save's fixed DC 10. Only `initiative`, `damage` and `healing` rolls have no `against`.
+In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC: `rule` for the fixed DC 10 of a death save and of Help's stabilize. Only `initiative`, `damage` and `healing` rolls have no `against`.
 
 Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with the same `total`, and with the same `against` when the transcript states it. Every roll in the session log is cited. The audit runs on the `dm` projection.
 
@@ -250,7 +274,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned` | true |
 | `surrender_not_available` | `end_combat{surrender}` while the running encounter's surrender condition does not hold, or it declares none; nothing changed | false |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |

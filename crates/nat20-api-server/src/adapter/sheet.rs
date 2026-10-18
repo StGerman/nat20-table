@@ -436,8 +436,13 @@ pub(super) fn core_skill(skill: WireSkill) -> Skill {
 
 /// A wire skill's name as the rules write it, e.g. `Sleight of Hand`.
 pub(super) fn skill_word(skill: WireSkill) -> String {
+    core_skill_word(core_skill(skill))
+}
+
+/// A core skill's name as the rules write it, e.g. `Sleight of Hand`.
+pub(super) fn core_skill_word(skill: Skill) -> String {
     let mut out = String::new();
-    for (i, c) in format!("{:?}", core_skill(skill)).chars().enumerate() {
+    for (i, c) in format!("{skill:?}").chars().enumerate() {
         if c.is_uppercase() && i > 0 {
             out.push(' ');
         }

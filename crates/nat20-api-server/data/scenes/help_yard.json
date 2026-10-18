@@ -1,0 +1,62 @@
+{
+    "id": "help_yard",
+    "description": "Help test scene: Bren and Ana side by side on a mill yard, and a fall from the loft that drops whoever fails it to 0 Hit Points (Bren has 20; 20 to 23 damage leaves less than that over, so nobody dies outright).",
+    "anchors": [
+        {
+            "id": "yard",
+            "name": "the mill yard",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "ana",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "loft_fall",
+            "test": {
+                "kind": "save",
+                "ability": "dexterity"
+            },
+            "dc": 30,
+            "on_failure": [
+                {
+                    "kind": "damage",
+                    "dice": "1d4+19",
+                    "damage_type": "bludgeoning"
+                }
+            ]
+        }
+    ]
+}

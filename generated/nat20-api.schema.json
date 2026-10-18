@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.12"
+    "version": "1.0.0-dev.16"
   },
   "$defs": {
     "Ability": {
@@ -973,6 +973,19 @@
           ]
         },
         {
+          "description": "The help was given; what it rolled and changed is in `events`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "help"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
           "description": "Log entries after `since`.",
           "type": "object",
           "properties": {
@@ -1300,6 +1313,11 @@
           "description": "A stat block or spell.",
           "type": "string",
           "const": "stat_block"
+        },
+        {
+          "description": "A rule of the game: the DC 10 of a death save, or of the Medicine check of a Help that\nstabilizes.",
+          "type": "string",
+          "const": "rule"
         }
       ]
     },
@@ -2137,7 +2155,7 @@
           ]
         },
         {
-          "description": "Creatures were placed by a spawn.",
+          "description": "Creatures were placed by a spawn: on `spawn`, or by the engine when a flag spawn's fight\nstarts or a round spawn's round comes. In a running fight their `initiative` rolls follow.\nDM only, because the spawn id is scenario data; players see the creatures in\ntheir state.",
           "type": "object",
           "properties": {
             "handles": {
@@ -2208,6 +2226,52 @@
           "description": "At 0 Hit Points or dead.",
           "type": "string",
           "const": "down"
+        }
+      ]
+    },
+    "HelpSpec": {
+      "description": "What a `help` does (SRD 5.2.1, Rules Glossary, Help).",
+      "oneOf": [
+        {
+          "description": "Gives `ally` Advantage on their next ability check with `skill`. The helper needs\nproficiency in the skill (`rejected` / `not_proficient` otherwise). The benefit is spent by\nthat check and ends at the start of the helper's next turn; out of combat that is the\nhelper's first turn in a fight, or the next scene.",
+          "type": "object",
+          "properties": {
+            "ally": {
+              "description": "The creature that gets Advantage; not the helper.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "assist_check"
+            },
+            "skill": {
+              "description": "The skill of the check.",
+              "$ref": "#/$defs/Skill"
+            }
+          },
+          "required": [
+            "kind",
+            "ally",
+            "skill"
+          ]
+        },
+        {
+          "description": "A DC 10 Wisdom (Medicine) check to make `target`, a creature at 0 Hit Points, Stable.\nA target that is not dying answers `rejected` / `invalid_target`.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "stabilize"
+            },
+            "target": {
+              "description": "The creature at 0 Hit Points.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "target"
+          ]
         }
       ]
     },
@@ -2638,6 +2702,21 @@
           "description": "The running encounter does not allow this way to end it (`end_combat{scenario}` for an\nencounter that does not list `scenario` in its `end_reasons`).",
           "type": "string",
           "const": "condition_not_met"
+        },
+        {
+          "description": "The spawn is placed by the engine on its own trigger (a flag at combat start, or a\nround); `spawn` places only spawns declared `when: dm`.",
+          "type": "string",
+          "const": "automatic"
+        },
+        {
+          "description": "The spawn's creatures are already placed in this scene.",
+          "type": "string",
+          "const": "already_spawned"
+        },
+        {
+          "description": "The actor lacks the skill proficiency the option needs (Help with a check).",
+          "type": "string",
+          "const": "not_proficient"
         }
       ]
     },
@@ -2998,7 +3077,7 @@
           ]
         },
         {
-          "description": "Places creatures the scene declares under a spawn id.",
+          "description": "Places the creatures of a spawn the scene declares `when: dm`, each at its own placement.\nA spawn is placed at most once per scene (`rejected` / `already_spawned`); one the engine\nplaces on its own trigger answers `rejected` / `automatic`. During a fight the creatures\njoin it: each rolls initiative and acts at its place in the order, this round if its\ncount has not come up yet, otherwise from the next. A pending prompt keeps its id. After a\nfight they join a later one only if its encounter lists them.",
           "type": "object",
           "properties": {
             "cmd": {
@@ -3013,6 +3092,29 @@
           "required": [
             "cmd",
             "spawn_id"
+          ]
+        },
+        {
+          "description": "The Help action in explore mode; in combat Help is one of the `legal_actions` options.\nThe helper must be conscious and within 5 feet of the other creature (`rejected` /\n`out_of_range` otherwise; `move` there first). The `action` event, the Medicine roll of a\nstabilize and any `life_state` change are in `events`. Combat answers `wrong_mode`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The helper.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "help"
+            },
+            "help": {
+              "description": "What kind of help, and for whom.",
+              "$ref": "#/$defs/HelpSpec"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "help"
           ]
         },
         {
@@ -3275,7 +3377,7 @@
               ]
             },
             "dc_source": {
-              "description": "Where the DC came from: present for every check and save except a death save, whose\nDC 10 is a rule.",
+              "description": "Where the DC came from: present on every check and save.",
               "anyOf": [
                 {
                   "$ref": "#/$defs/DcSource"
@@ -3757,6 +3859,109 @@
         "proficiency"
       ]
     },
+    "SpawnUnless": {
+      "description": "A state that cancels a round spawn.",
+      "oneOf": [
+        {
+          "description": "Any party creature is Bloodied (half Hit Points or fewer) or down.",
+          "type": "string",
+          "const": "any_party_bloodied"
+        }
+      ]
+    },
+    "SpawnView": {
+      "description": "A scene spawn as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Spawn id from the scene, the `spawn_id` a `spawn` names.",
+          "type": "string"
+        },
+        "placed": {
+          "description": "Whether its creatures have been placed in this scene. A spawn is placed at most once\nper scene.",
+          "type": "boolean"
+        },
+        "when": {
+          "description": "What places it, as the scene file declares it. Only `dm` spawns answer `spawn`.",
+          "$ref": "#/$defs/SpawnWhen"
+        }
+      },
+      "required": [
+        "id",
+        "when",
+        "placed"
+      ]
+    },
+    "SpawnWhen": {
+      "description": "What places a spawn.",
+      "oneOf": [
+        {
+          "description": "The DM calls `spawn{spawn_id}`.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "dm"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "description": "The engine places them when a fight starts in this scene while this session flag is set,\nand they join that fight.",
+          "type": "object",
+          "properties": {
+            "flag": {
+              "description": "The session flag, e.g. `boss_warned`.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "flag"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "flag"
+          ]
+        },
+        {
+          "description": "The engine places them when a fight in this scene reaches this round, unless `unless`\nholds then, and they join that fight with their own initiative. A spawn cancelled at its\nround is not placed later, in any fight of the scene.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "round"
+            },
+            "round": {
+              "description": "The round, 1 or later.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "unless": {
+              "description": "A state that cancels the spawn when it holds at that round.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SpawnUnless"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "round"
+          ]
+        }
+      ]
+    },
     "SpellSlots": {
       "description": "Spell slots of one level.",
       "type": "object",
@@ -3856,6 +4061,13 @@
                 "null"
               ]
             },
+            "spawns": {
+              "description": "The loaded scene's spawns, in scene file order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SpawnView"
+              }
+            },
             "view": {
               "type": "string",
               "const": "dm"
@@ -3869,7 +4081,8 @@
             "anchors",
             "flags",
             "checks",
-            "encounters"
+            "encounters",
+            "spawns"
           ]
         },
         {

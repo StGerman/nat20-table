@@ -15,14 +15,16 @@ use hecs::Entity;
 use nat20_api_contract::{
     ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, CombatOverReason,
     Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
-    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HitDiceSpend, HitPointsRegained,
-    Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption, RejectReason, RollId,
-    ScenarioCheck, SceneFile, Sheet, Side, SurrenderCondition, SurrenderTrigger, TargetCandidate,
+    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec, HitDiceSpend,
+    HitPointsRegained, Mode, MoveTarget, OptionId, OptionVariant, Placement, PointFt,
+    ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn,
+    SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate,
     Targeting, UnavailableOption, Visibility,
 };
 use nat20_core::{
     components::{
         actions::{
+            action::ActionCooldownMap,
             action_builder::{ActionBuilder, ActionBuilderState, ReactionBuilder},
             targeting::{LineOfSight, TargetInstance, TargetingKind},
         },
@@ -32,15 +34,17 @@ use nat20_core::{
         dice::DiceSet,
         faction::{Attitude, AttitudeOverride, FactionSet},
         health::{hit_point_dice::HitPointDice, hit_points::HitPoints, life_state::LifeState},
-        id::{ActionId, EntityIdentifier, FactionId, ResourceId},
+        id::{ActionId, ActionVariantId, EntityIdentifier, FactionId, ResourceId},
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
-        resource::ResourceAmount,
+        resource::{RechargeRule, ResourceAmount, ResourceMap},
         saving_throw::SavingThrowKind,
+        time::{TimeMode, TimeStep, TurnBoundary},
     },
     engine::{
         action_prompt::{ActionData, ActionPromptKind},
         encounter::EncounterId,
         engine_state::EngineState,
+        event::EventKind as EngineKind,
         geometry::WorldGeometry,
         prompt::PromptScopeId,
     },
@@ -91,6 +95,11 @@ struct Scene {
     encounters: Vec<Encounter>,
     /// Scenario checks already rolled in this scene; each is rolled at most once (decision D3).
     attempted: HashSet<String>,
+    spawns: Vec<Spawn>,
+    /// Spawns already placed in this scene; each is placed at most once.
+    placed: BTreeSet<String>,
+    /// Stat blocks of the spawns' monsters, read with the scene.
+    monsters: HashMap<String, MonsterDef>,
 }
 
 /// What `request_check` returns: the roll's local key, its total and whether it succeeded.
@@ -125,6 +134,8 @@ struct OptionEntry {
     option: ActionOption,
     action_id: ActionId,
     context: usize,
+    /// The engine variants behind `option.variants`, in the same order.
+    variants: Vec<ActionVariantId>,
 }
 
 /// What the engine needs next.
@@ -166,6 +177,11 @@ pub struct Game {
     scripted_turn: Option<(usize, Entity, usize)>,
     /// Scene flags set this session; they outlive the scene that set them.
     flags: BTreeSet<String>,
+    /// The highest round of this scene's fights whose round spawns were looked at, so each
+    /// round spawn is placed or cancelled once per scene.
+    spawn_round: u32,
+    /// How many times the engine did not settle this session; each is a bug, reported on stderr.
+    stalls: usize,
 }
 
 impl Game {
@@ -210,10 +226,14 @@ impl Game {
                 ),
             );
         }
-        if let Some(clash) = party
-            .iter()
-            .find(|h| scene.creatures.iter().any(|c| c.handle == **h))
-        {
+        // Carried creatures share the scene's handle space, spawn creatures included.
+        let scene_defs = || {
+            scene
+                .creatures
+                .iter()
+                .chain(scene.spawns.iter().flat_map(|s| &s.creatures))
+        };
+        if let Some(clash) = party.iter().find(|h| scene_defs().any(|c| c.handle == **h)) {
             return fail(
                 previous,
                 error(
@@ -225,9 +245,9 @@ impl Game {
                 ),
             );
         }
-        // Stat blocks are read before anything is spawned.
+        // Stat blocks are read before anything is spawned, the spawns' with the scene's own.
         let mut monsters = HashMap::new();
-        for def in &scene.creatures {
+        for def in scene_defs() {
             if let Some(monster) = &def.monster
                 && !monsters.contains_key(monster)
             {
@@ -281,25 +301,7 @@ impl Game {
             game.global_seen = game.engine.event_log.events.len();
         };
         for def in &scene.creatures {
-            let entity = match (&def.pregen, &def.monster) {
-                (Some(pregen), None) => pregen::spawn(&mut game.engine, pregen).ok_or_else(|| {
-                    error(
-                        ErrorCode::BadScene,
-                        format!(
-                            "There is no pregen {pregen}; known pregens: {}.",
-                            pregen::PREGENS.join(", ")
-                        ),
-                    )
-                }),
-                (None, Some(monster)) => monsters[monster]
-                    .spawn(&mut game.engine)
-                    .map_err(|e| error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))),
-                _ => Err(error(
-                    ErrorCode::BadScene,
-                    format!("{} needs exactly one of pregen or monster.", def.handle.0),
-                )),
-            };
-            match entity {
+            match spawn_creature(&mut game.engine, def, &monsters) {
                 Ok(entity) => spawned.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -313,8 +315,41 @@ impl Game {
             }
         }
 
+        // Spawn creatures are placed later. Spawning each one now, and removing it again, runs
+        // every check placing it will, so a scene that loads can always place its spawns.
+        let mut trial: Vec<SceneCreature> = Vec::new();
+        let mut failed = None;
+        for def in scene.spawns.iter().flat_map(|s| &s.creatures) {
+            match spawn_creature(&mut game.engine, def, &monsters) {
+                Ok(entity) => trial.push(SceneCreature {
+                    handle: def.handle.0.clone(),
+                    entity,
+                    side: def.side,
+                    control: def.control,
+                }),
+                Err(e) => {
+                    failed = Some(e);
+                    break;
+                }
+            }
+        }
+
         let creatures: Vec<SceneCreature> = carried.into_iter().chain(spawned).collect();
-        if let Err(e) = check_sides(&game.engine, &creatures) {
+        if failed.is_none() {
+            let all: Vec<SceneCreature> = creatures
+                .iter()
+                .chain(&trial)
+                .map(|c| SceneCreature {
+                    handle: c.handle.clone(),
+                    entity: c.entity,
+                    side: c.side,
+                    control: c.control,
+                })
+                .collect();
+            failed = check_sides(&game.engine, &all).err();
+        }
+        rollback(&mut game, &trial);
+        if let Some(e) = failed {
             let new: Vec<SceneCreature> = creatures
                 .into_iter()
                 .filter(|c| !party.iter().any(|h| h.0 == c.handle))
@@ -329,12 +364,33 @@ impl Game {
         {
             game.engine.end_encounter(&id);
         }
+        // More than a turn passes between scenes, so whatever lasts until the start of someone's
+        // next turn (a Help's Advantage) ends now. Every creature of the scene being left counts,
+        // including a helper the new scene leaves behind.
+        let carried: Vec<Entity> = creatures
+            .iter()
+            .take(party.len())
+            .map(|c| c.entity)
+            .collect();
+        let turns: Vec<Entity> = game.scene.creatures.iter().map(|c| c.entity).collect();
+        for &entity in &carried {
+            for &turn in &turns {
+                systems::effects::effects_mut(&mut game.engine.world, entity).advance_time(
+                    TimeStep::TurnBoundary {
+                        entity: turn,
+                        boundary: TurnBoundary::Start,
+                    },
+                );
+            }
+        }
         for old in &game.scene.creatures {
             if !creatures.iter().any(|c| c.entity == old.entity) {
                 let _ = game.engine.despawn(old.entity);
                 game.hp.remove(&old.entity);
             }
         }
+        // The update sweeps what expired.
+        game.engine.update(0.0);
         if game.map != scene.map {
             game.engine.geometry = load_geometry(scene.map.as_deref());
             game.map = scene.map.clone();
@@ -375,11 +431,15 @@ impl Game {
             hazards: scene.hazards.clone(),
             encounters: scene.encounters.clone(),
             attempted: HashSet::new(),
+            spawns: scene.spawns.clone(),
+            placed: BTreeSet::new(),
+            monsters,
         };
         game.scene_encounter = None;
         game.encounter_seen = 0;
         game.winner = None;
         game.scripted_turn = None;
+        game.spawn_round = 0;
         // Spawning, despawning and ending a fight write nothing the log shows; skip them.
         game.global_seen = game.engine.event_log.events.len();
         Ok(game)
@@ -399,6 +459,9 @@ impl Game {
                 hazards: Vec::new(),
                 encounters: Vec::new(),
                 attempted: HashSet::new(),
+                spawns: Vec::new(),
+                placed: BTreeSet::new(),
+                monsters: HashMap::new(),
             },
             encounter: None,
             scene_encounter: None,
@@ -410,6 +473,8 @@ impl Game {
             winner: None,
             scripted_turn: None,
             flags: BTreeSet::new(),
+            spawn_round: 0,
+            stalls: 0,
         }
     }
 
@@ -688,7 +753,37 @@ impl Game {
                 format!("a {} saving throw", sheet::ability_word(*ability)),
             ),
         };
-        let result = systems::d20::check_no_event(&self.engine, entity, &dc, None);
+        // The check goes through the engine's event handling, so whatever waits on it acts: the
+        // Advantage of a Help is spent by the check it was for.
+        self.drain();
+        let event = systems::d20::check(&mut self.engine, entity, &dc);
+        let EngineKind::D20CheckPerformed { result, .. } = &event.kind else {
+            unreachable!("a check makes a D20CheckPerformed event");
+        };
+        let mut result = result.clone();
+        self.engine.process_event(event);
+        self.decline_explore_reactions();
+        // The roll is logged below with its DC's source, so the engine's own record of it is
+        // left out; anything else the check set off is logged as usual.
+        let mut writer = LogWriter {
+            engine: &self.engine,
+            handles: &self.scene.handles,
+            round: None,
+            hp: &mut self.hp,
+            keys: &mut self.keys,
+            initiative: Vec::new(),
+        };
+        let mut entries = Vec::new();
+        for event in self.engine.event_log.events.iter().skip(self.global_seen) {
+            match &event.kind {
+                EngineKind::D20CheckResolved {
+                    result: resolved, ..
+                } => result = resolved.clone(),
+                _ => entries.extend(writer.entries(event)),
+            }
+        }
+        self.global_seen = self.engine.event_log.events.len();
+        self.pending.extend(entries);
         let success = result.is_success(&dc);
         let roller = self.handle_of(entity);
         let mut writer = self.writer();
@@ -771,6 +866,73 @@ impl Game {
                 }
             }
         }
+    }
+
+    /// The Help action out of combat: `actor` assists `ally`'s next check with a skill, or tries
+    /// to stabilize a creature at 0 Hit Points. The engine runs its own Help action, so the
+    /// range, the proficiency and the Medicine check are its rules.
+    pub fn help(&mut self, actor: &str, help: &HelpSpec) -> Result<(), ApiError> {
+        if self.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "In combat, Help is one of the options legal_actions lists.",
+            ));
+        }
+        let entity = self.entity(actor)?;
+        if !systems::health::is_alive(&self.engine.world, entity)
+            || life_state_name(&self.engine, entity) != "normal"
+        {
+            return Err(rejected(
+                RejectReason::ConditionPrevents,
+                format!("{actor} is down and cannot help."),
+            ));
+        }
+        let (action, variant, other) = match help {
+            HelpSpec::AssistCheck { ally, skill } => {
+                let word = serde_json::to_value(skill).expect("a skill serializes");
+                let word = word.as_str().expect("a skill serializes as a string");
+                (
+                    "nat20_core::action.help.assist_ability_check",
+                    Some(format!("nat20_core::variant.help.{word}")),
+                    ally,
+                )
+            }
+            HelpSpec::Stabilize { target } => ("nat20_core::action.help.stabilize", None, target),
+        };
+        let other_entity = self.entity(&other.0)?;
+        if other_entity == entity {
+            return Err(rejected(
+                RejectReason::InvalidTarget,
+                format!("{actor} cannot help itself."),
+            ));
+        }
+        let action: ActionId = action.parse().expect("core has the Help actions");
+        let variant: Option<ActionVariantId> =
+            variant.map(|v| v.parse().expect("every skill has a Help variant"));
+        let goal = (other_entity, other.0.as_str());
+        // Everything is checked before the helper's turn moves on, so a refused help changes
+        // nothing. The check runs as if the new turn had begun: the action a fight or an earlier
+        // help spent is back for it, and taken away again after.
+        let world = &mut self.engine.world;
+        let resources = systems::helpers::get_component_clone::<ResourceMap>(world, entity);
+        let cooldowns = systems::helpers::get_component_clone::<ActionCooldownMap>(world, entity);
+        systems::resources::recharge(world, entity, &RechargeRule::Turn);
+        let checked = self.check_help(entity, actor, &action, variant.as_ref(), goal);
+        let world = &mut self.engine.world;
+        *systems::helpers::get_component_mut::<ResourceMap>(world, entity) = resources;
+        *systems::helpers::get_component_mut::<ActionCooldownMap>(world, entity) = cooldowns;
+        checked?;
+        self.next_explore_turn(entity);
+        let builder = self.help_builder(entity, actor, &action, variant.as_ref(), goal)?;
+        let engine = &mut self.engine;
+        let activity = builder.build(engine).map_err(|e| refusal(&e))?;
+        engine.submit_activity(activity).map_err(|e| refusal(&e))?;
+        // An explore command that acts closes a finished fight's `combat_over`, as `move` does.
+        self.close_finished_fight();
+        self.settle();
+        self.decline_explore_reactions();
+        self.drain();
+        Ok(())
     }
 
     /// A Short Rest for `participants` in explore mode: each spends the Hit Point Dice
@@ -1093,29 +1255,38 @@ impl Game {
             }
             return Err(e);
         };
-        let entities: Vec<Entity> = found
+        let mut entities: Vec<Entity> = found
             .participants
             .iter()
             .filter_map(|h| self.entity(&h.0).ok())
             .collect();
+        // Flag spawns whose flag is set arrive as the fight starts and join it.
+        let arriving: Vec<Spawn> = self
+            .scene
+            .spawns
+            .iter()
+            .filter(|s| {
+                !self.scene.placed.contains(&s.id)
+                    && matches!(&s.when, SpawnWhen::Flag { flag } if self.flags.contains(flag))
+            })
+            .cloned()
+            .collect();
+        let arriving_sides: Vec<Side> = arriving
+            .iter()
+            .flat_map(|s| s.creatures.iter().map(|c| c.side))
+            .collect();
         // The surprised side rolls initiative with Disadvantage once the scene's flag is set
         // (decision D4, SRD 5.2.1 Surprise).
-        let surprised: HashSet<Entity> = found
+        let surprised_side: Option<Side> = found
             .surprise
             .as_ref()
             .filter(|surprise| self.flags.contains(&surprise.when_flag))
-            .map(|surprise| {
-                entities
-                    .iter()
-                    .copied()
-                    .filter(|e| self.side_of(*e) == Some(surprise.surprised))
-                    .collect()
-            })
-            .unwrap_or_default();
+            .map(|surprise| surprise.surprised);
         let standing = |side: Side| {
-            entities.iter().any(|e| {
-                self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
-            })
+            arriving_sides.contains(&side)
+                || entities.iter().any(|e| {
+                    self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
+                })
         };
         if !standing(Side::Party) || !standing(Side::Hostile) {
             return Err(error(
@@ -1127,6 +1298,12 @@ impl Game {
         }
         // Whatever happened before this fight is already in the log.
         self.drain();
+        entities.extend(self.place(&arriving)?);
+        let surprised: HashSet<Entity> = entities
+            .iter()
+            .copied()
+            .filter(|e| surprised_side.is_some() && self.side_of(*e) == surprised_side)
+            .collect();
         let encounter = self
             .engine
             .start_surprised_encounter(entities.into_iter().collect(), surprised);
@@ -1139,6 +1316,202 @@ impl Game {
         self.log_initiative();
         self.advance();
         Ok(())
+    }
+
+    /// Places the creatures of the scene spawn `spawn_id`, declared `when: dm`. During a fight
+    /// they join it.
+    pub fn spawn(&mut self, spawn_id: &str) -> Result<Vec<Handle>, ApiError> {
+        let Some(found) = self.scene.spawns.iter().find(|s| s.id == spawn_id).cloned() else {
+            let mut e = error(
+                ErrorCode::UnknownSpawn,
+                format!("Scene {} has no spawn {spawn_id}.", self.scene.id),
+            );
+            let known_ids: Vec<String> = self.scene.spawns.iter().map(|s| s.id.clone()).collect();
+            if !known_ids.is_empty() {
+                e.hint = Some(ErrorHint {
+                    legal_option_ids: Vec::new(),
+                    awaiting: None,
+                    known_ids,
+                });
+            }
+            return Err(e);
+        };
+        match &found.when {
+            SpawnWhen::Dm => {}
+            SpawnWhen::Flag { flag } => {
+                return Err(rejected(
+                    RejectReason::Automatic,
+                    format!("{spawn_id} arrives by itself when a fight starts with {flag} set."),
+                ));
+            }
+            SpawnWhen::Round { round, .. } => {
+                return Err(rejected(
+                    RejectReason::Automatic,
+                    format!("{spawn_id} arrives by itself in round {round}."),
+                ));
+            }
+        }
+        if self.scene.placed.contains(spawn_id) {
+            return Err(rejected(
+                RejectReason::AlreadySpawned,
+                format!("{spawn_id} is already placed in this scene."),
+            ));
+        }
+        // A fight that ended by itself is closed before anything new is placed.
+        self.drain();
+        self.close_finished_fight();
+        let placed = self.place(std::slice::from_ref(&found))?;
+        Ok(placed.iter().map(|e| Handle(self.handle_of(*e))).collect())
+    }
+
+    /// Places every creature of `spawns` at its placement, logs `spawned` for each spawn and
+    /// returns the new creatures. During a fight they join it, each rolling initiative. On any
+    /// failure nothing is placed.
+    fn place(&mut self, spawns: &[Spawn]) -> Result<Vec<Entity>, ApiError> {
+        let mut new: Vec<SceneCreature> = Vec::new();
+        let mut failed = None;
+        for def in spawns.iter().flat_map(|s| &s.creatures) {
+            match spawn_creature(&mut self.engine, def, &self.scene.monsters) {
+                Ok(entity) => new.push(SceneCreature {
+                    handle: def.handle.0.clone(),
+                    entity,
+                    side: def.side,
+                    control: def.control,
+                }),
+                Err(e) => {
+                    failed = Some(e);
+                    break;
+                }
+            }
+        }
+        if failed.is_none() {
+            let all: Vec<SceneCreature> = self
+                .scene
+                .creatures
+                .iter()
+                .chain(&new)
+                .map(|c| SceneCreature {
+                    handle: c.handle.clone(),
+                    entity: c.entity,
+                    side: c.side,
+                    control: c.control,
+                })
+                .collect();
+            failed = check_sides(&self.engine, &all).err();
+        }
+        if let Some(e) = failed {
+            for c in &new {
+                let _ = self.engine.despawn(c.entity);
+            }
+            self.global_seen = self.engine.event_log.events.len();
+            return Err(e);
+        }
+        for def in spawns.iter().flat_map(|s| &s.creatures) {
+            let c = new
+                .iter()
+                .find(|c| c.handle == def.handle.0)
+                .expect("every spawn creature was placed");
+            let at = match &def.at {
+                Placement::Point { point } => *point,
+                Placement::Anchor { anchor } => {
+                    self.scene
+                        .anchors
+                        .iter()
+                        .find(|a| a.id == *anchor)
+                        .expect("anchors are checked when the scene is read")
+                        .position_ft
+                }
+            };
+            systems::geometry::teleport_to_ground(
+                &mut self.engine.world,
+                &self.engine.geometry,
+                c.entity,
+                &to_core_point(at),
+            );
+            self.hp.insert(c.entity, hit_points(&self.engine, c.entity));
+            self.scene.handles.insert(c.entity, c.handle.clone());
+        }
+        // Spawning writes nothing the log shows; skip it.
+        self.global_seen = self.engine.event_log.events.len();
+        for spawn in spawns {
+            self.scene.placed.insert(spawn.id.clone());
+            self.pending.push(Pending {
+                round: self.round(),
+                visibility: Visibility::Dm,
+                kind: EventKind::Spawned {
+                    spawn_id: spawn.id.clone(),
+                    handles: spawn.creatures.iter().map(|c| c.handle.clone()).collect(),
+                },
+            });
+        }
+        let entities: Vec<Entity> = new.iter().map(|c| c.entity).collect();
+        self.scene.creatures.extend(new);
+        if let Some(encounter) = self.running_encounter() {
+            for entity in &entities {
+                self.engine.join_encounter(&encounter, *entity);
+            }
+            self.log_joined_initiative(&entities);
+        }
+        Ok(entities)
+    }
+
+    /// Places the round spawns due since the last look, unless their `unless` holds then.
+    fn round_spawns(&mut self) {
+        let Some(round) = self.running_encounter().and(self.round()) else {
+            return;
+        };
+        if round <= self.spawn_round {
+            return;
+        }
+        let from = self.spawn_round;
+        self.spawn_round = round;
+        let due: Vec<Spawn> = self
+            .scene
+            .spawns
+            .iter()
+            .filter(|s| !self.scene.placed.contains(&s.id))
+            .filter(|s| match &s.when {
+                SpawnWhen::Round { round: r, unless } => {
+                    *r > from && *r <= round && !unless.is_some_and(|u| self.spawn_cancelled(u))
+                }
+                _ => false,
+            })
+            .cloned()
+            .collect();
+        if due.is_empty() {
+            return;
+        }
+        if let Err(e) = self.place(&due) {
+            eprintln!("round spawn not placed: {}", e.message);
+        }
+    }
+
+    /// Whether `unless` holds now.
+    fn spawn_cancelled(&self, unless: SpawnUnless) -> bool {
+        match unless {
+            SpawnUnless::AnyPartyBloodied => self
+                .scene
+                .creatures
+                .iter()
+                .filter(|c| c.side == Side::Party)
+                .any(|c| {
+                    let (hp, hp_max, _) = hit_points(&self.engine, c.entity);
+                    life_state_name(&self.engine, c.entity) != "normal" || 2 * hp <= hp_max
+                }),
+        }
+    }
+
+    /// The scene's spawns as the DM sees them.
+    pub fn spawns(&self) -> Vec<SpawnView> {
+        self.scene
+            .spawns
+            .iter()
+            .map(|s| SpawnView {
+                id: s.id.clone(),
+                when: s.when.clone(),
+                placed: self.scene.placed.contains(&s.id),
+            })
+            .collect()
     }
 
     /// Ends the running fight early, for a reason its scene encounter allows. The caller has
@@ -1390,6 +1763,7 @@ impl Game {
         actor: &str,
         option_id: &str,
         targets: &[String],
+        variant: Option<&str>,
     ) -> Result<(), ApiError> {
         let entity = self.entity(actor)?;
         self.require_action_prompt(entity)?;
@@ -1410,7 +1784,43 @@ impl Game {
                 )
             })?;
 
-        self.submit_entity(entity, &option.action_id, option.context, &target_entities)?;
+        let variant = match (variant, option.variants.is_empty()) {
+            (None, true) => None,
+            (Some(_), true) => {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{option_id} has no variants; send it without one."),
+                ));
+            }
+            (None, false) => {
+                return Err(rejected(
+                    RejectReason::NeedsVariant,
+                    format!("{option_id} needs one of its variants; see legal_actions."),
+                ));
+            }
+            (Some(wanted), false) => Some(
+                option
+                    .variants
+                    .iter()
+                    .find(|v| names::variant_stem(v) == wanted)
+                    .ok_or_else(|| {
+                        error(
+                            ErrorCode::UnknownOption,
+                            format!(
+                                "{wanted} is not one of {option_id}'s variants right now; see legal_actions."
+                            ),
+                        )
+                    })?
+                    .clone(),
+            ),
+        };
+        self.submit_entity(
+            entity,
+            &option.action_id,
+            variant.as_ref(),
+            option.context,
+            &target_entities,
+        )?;
         self.settle();
         self.drain();
         self.advance();
@@ -1515,40 +1925,59 @@ impl Game {
 
         let mut out: Vec<OptionEntry> = Vec::new();
         for (action_id, contexts) in &actions {
+            // An action with variants (Help with a check: which skill) is one option; its
+            // variants are the ones the actor can use on at least one target.
+            let mut builder = ActionBuilder::available(engine, entity);
+            builder.action(engine, action_id);
+            let variant_ids: Vec<Option<ActionVariantId>> = match builder.state() {
+                Ok(ActionBuilderState::Variant { variants, .. }) => {
+                    variants.iter().cloned().map(Some).collect()
+                }
+                _ => vec![None],
+            };
             for (index, (context, cost)) in contexts.iter().enumerate() {
-                let mut builder = ActionBuilder::available(engine, entity);
-                builder.action(engine, action_id);
-                if let Ok(ActionBuilderState::Variant { .. }) = builder.state() {
-                    continue;
-                }
-                if !pick_context(&mut builder, &engine.world, index) {
-                    continue;
-                }
-                let Ok(ActionBuilderState::Targets { action, .. }) = builder.state() else {
-                    continue;
+                let start = |engine: &mut EngineState, variant: Option<&ActionVariantId>| {
+                    let mut builder = ActionBuilder::available(engine, entity);
+                    builder.action(engine, action_id);
+                    if let Some(variant) = variant {
+                        builder.variant(&engine.world, variant);
+                    }
+                    pick_context(&mut builder, &engine.world, index).then_some(builder)
                 };
-                let targeting_context =
-                    systems::actions::targeting_context_data(&engine.world, action);
-                let range_m: f32 = targeting_context
-                    .range
-                    .max()
-                    .get::<uom::si::length::meter>();
-                let weapon = names::weapon_of(engine, entity, context);
-
-                let (targeting, max_targets, targets) = match targeting_context.kind {
-                    TargetingKind::SelfTarget => (Targeting::OnSelf, 0, Vec::new()),
-                    TargetingKind::Single | TargetingKind::Multiple { .. } => {
-                        let mut targets = Vec::new();
+                let mut usable: Vec<ActionVariantId> = Vec::new();
+                let mut targets: Vec<TargetCandidate> = Vec::new();
+                let mut shape = None;
+                for variant in &variant_ids {
+                    let Some(builder) = start(engine, variant.as_ref()) else {
+                        continue;
+                    };
+                    let Ok(ActionBuilderState::Targets { action, .. }) = builder.state() else {
+                        continue;
+                    };
+                    let targeting_context =
+                        systems::actions::targeting_context_data(&engine.world, action);
+                    let range_m: f32 = targeting_context
+                        .range
+                        .max()
+                        .get::<uom::si::length::meter>();
+                    let (targeting, max_targets) = match targeting_context.kind {
+                        TargetingKind::SelfTarget => (Targeting::OnSelf, 0),
+                        TargetingKind::Single => (Targeting::Single, 1),
+                        TargetingKind::Multiple { max_targets, .. } => {
+                            (Targeting::Multiple, max_targets as u32)
+                        }
+                        TargetingKind::Area { .. } => continue,
+                    };
+                    let mut found = Vec::new();
+                    if targeting != Targeting::OnSelf {
                         for (handle, other, side) in &scene_entities {
-                            if *other == entity || !systems::health::is_alive(&engine.world, *other)
-                            {
+                            // A creature at 0 Hit Points stays a target: Help can stabilize it.
+                            if *other == entity || life_state_name(engine, *other) == "dead" {
                                 continue;
                             }
-                            let mut probe = ActionBuilder::available(engine, entity);
-                            probe.action(engine, action_id);
-                            if !pick_context(&mut probe, &engine.world, index) {
+                            let Some(mut probe) = start(engine, variant.as_ref()) else {
                                 continue;
-                            }
+                            };
                             probe.target_entity(engine, *other);
                             let in_range = match probe.state() {
                                 Ok(ActionBuilderState::Targets {
@@ -1561,7 +1990,7 @@ impl Game {
                                 }) if path.path_result.reaches_goal() => false,
                                 _ => continue,
                             };
-                            targets.push(TargetCandidate {
+                            found.push(TargetCandidate {
                                 handle: Handle(handle.clone()),
                                 side: *side,
                                 distance_ft: distance_m(engine, entity, *other)
@@ -1570,18 +1999,26 @@ impl Game {
                                 in_range,
                             });
                         }
-                        match targeting_context.kind {
-                            TargetingKind::Multiple { max_targets, .. } => {
-                                (Targeting::Multiple, max_targets as u32, targets)
-                            }
-                            _ => (Targeting::Single, 1, targets),
+                        if found.is_empty() {
+                            continue;
                         }
                     }
-                    TargetingKind::Area { .. } => continue,
-                };
-                if targeting != Targeting::OnSelf && targets.is_empty() {
-                    continue;
+                    if let Some(variant) = variant {
+                        usable.push(variant.clone());
+                    }
+                    for candidate in found {
+                        match targets.iter_mut().find(|t| t.handle == candidate.handle) {
+                            Some(known) => known.in_range |= candidate.in_range,
+                            None => targets.push(candidate),
+                        }
+                    }
+                    shape.get_or_insert((targeting, max_targets, range_m));
                 }
+                let Some((targeting, max_targets, range_m)) = shape else {
+                    continue;
+                };
+                usable.sort_by_key(names::variant_stem);
+                let weapon = names::weapon_of(engine, entity, context);
                 let (mut option_id, name) = names::option_id_and_name(action_id, weapon.as_deref());
                 if out.iter().any(|o| o.option.option_id.0 == option_id) {
                     option_id = format!("{option_id}/{index}");
@@ -1596,10 +2033,17 @@ impl Game {
                         max_targets,
                         range_ft: (targeting != Targeting::OnSelf).then(|| round_ft(range_m)),
                         targets,
-                        variants: Vec::new(),
+                        variants: usable
+                            .iter()
+                            .map(|v| OptionVariant {
+                                variant: names::variant_stem(v),
+                                name: names::variant_name(v),
+                            })
+                            .collect(),
                     },
                     action_id: action_id.clone(),
                     context: index,
+                    variants: usable,
                 });
             }
         }
@@ -1613,6 +2057,7 @@ impl Game {
         &mut self,
         entity: Entity,
         action_id: &ActionId,
+        variant: Option<&ActionVariantId>,
         context: usize,
         targets: &[Entity],
     ) -> Result<(), ApiError> {
@@ -1620,10 +2065,13 @@ impl Game {
         let mut builder = ActionBuilder::available(engine, entity);
         builder.action(engine, action_id);
         if let Ok(ActionBuilderState::Variant { .. }) = builder.state() {
-            return Err(rejected(
-                RejectReason::NeedsVariant,
-                "Options with variants are not supported by this engine yet.",
-            ));
+            let Some(variant) = variant else {
+                return Err(rejected(
+                    RejectReason::NeedsVariant,
+                    "This option needs one of its variants.",
+                ));
+            };
+            builder.variant(&engine.world, variant);
         }
         if !pick_context(&mut builder, &engine.world, context) {
             return Err(error(
@@ -1674,16 +2122,169 @@ impl Game {
         engine.submit_activity(activity).map_err(|e| refusal(&e))
     }
 
+    /// Whether `entity` can take one of the Help actions on `goal` now: the target within reach,
+    /// and the variant's own requirement (proficiency in the skill) met.
+    fn check_help(
+        &mut self,
+        entity: Entity,
+        actor: &str,
+        action: &ActionId,
+        variant: Option<&ActionVariantId>,
+        goal: (Entity, &str),
+    ) -> Result<(), ApiError> {
+        self.help_builder(entity, actor, action, variant, goal)?;
+        let engine = &self.engine;
+        let contexts = systems::actions::all_actions(engine, entity)
+            .remove(action)
+            .unwrap_or_default();
+        let mut problem = None;
+        for (context, cost) in &contexts {
+            match systems::actions::action_usable(
+                engine,
+                entity,
+                action,
+                variant,
+                context,
+                cost,
+                &[],
+            ) {
+                Ok(()) => return Ok(()),
+                Err(e) => problem = problem.or(Some(e)),
+            }
+        }
+        Err(match problem {
+            Some(problem) => refusal(&problem),
+            None => refusal(&"ActionNotKnown"),
+        })
+    }
+
+    /// A builder for one of the Help actions aimed at `goal`, its target within reach.
+    fn help_builder(
+        &mut self,
+        entity: Entity,
+        actor: &str,
+        action: &ActionId,
+        variant: Option<&ActionVariantId>,
+        (target, target_handle): (Entity, &str),
+    ) -> Result<ActionBuilder, ApiError> {
+        let engine = &mut self.engine;
+        let mut builder = ActionBuilder::available(engine, entity);
+        builder.action(engine, action);
+        if let Some(variant) = variant {
+            builder.variant(&engine.world, variant);
+        }
+        if !pick_context(&mut builder, &engine.world, 0) {
+            return Err(match builder.state() {
+                Err(problem) => refusal(problem),
+                Ok(_) => refusal(&"InvalidTarget"),
+            });
+        }
+        builder.target_entity(engine, target);
+        match builder.state() {
+            Ok(ActionBuilderState::Targets {
+                path_to_target: Some(TargetPathFindingResult::AlreadyInRange(_)),
+                ..
+            }) => Ok(builder),
+            Ok(ActionBuilderState::Targets {
+                path_to_target: Some(_),
+                ..
+            }) => Err(rejected(
+                RejectReason::OutOfRange,
+                format!("{actor} must be within 5 feet of {target_handle}; move there first."),
+            )),
+            Ok(_) => Err(refusal(&"InvalidTarget")),
+            Err(problem) => Err(refusal(problem)),
+        }
+    }
+
+    /// Out of combat a creature's turns pass with the story: each action it takes in explore mode
+    /// starts its next turn first, as the engine does for a creature outside an encounter. Its
+    /// action is back, and whatever lasted until the start of its next turn ends. The turn
+    /// boundaries themselves are not logged; nobody is taking turns.
+    fn next_explore_turn(&mut self, entity: Entity) {
+        self.drain();
+        let mark = self.pending.len();
+        // What the creature gave others (a Help's Advantage) lives on them and ends at its turn
+        // too, so every creature's effects see the boundary.
+        // Their clocks run for the boundaries only (see `pause_story_clocks`).
+        let creatures: Vec<Entity> = self.scene.creatures.iter().map(|c| c.entity).collect();
+        for &creature in &creatures {
+            systems::time::set_time_mode(&mut self.engine.world, creature, TimeMode::RealTime);
+        }
+        for boundary in [TurnBoundary::End, TurnBoundary::Start] {
+            for &creature in &creatures {
+                systems::time::advance_time(
+                    &mut self.engine,
+                    creature,
+                    TimeStep::TurnBoundary { entity, boundary },
+                );
+            }
+        }
+        self.pause_story_clocks();
+        // The update sweeps effects that expired at the boundary.
+        self.engine.update(0.0);
+        self.drain();
+        let mut index = 0;
+        self.pending.retain(|entry| {
+            index += 1;
+            index <= mark
+                || !matches!(
+                    entry.kind,
+                    EventKind::TurnStart { .. } | EventKind::TurnEnd { .. }
+                )
+        });
+    }
+
+    /// Out of combat nobody is asked to react: a reaction window that opens in explore mode
+    /// (Tactical Mind after a failed check) is declined, so the check or action resolves as
+    /// rolled (TASKS CHK-6).
+    fn decline_explore_reactions(&mut self) {
+        for _ in 0..MAX_SCRIPTED_STEPS {
+            let Some(prompt) = self.engine.next_prompt(PromptScopeId::Global) else {
+                return;
+            };
+            let ActionPromptKind::Reactions { options, .. } = &prompt.kind else {
+                return;
+            };
+            let reactors: Vec<Entity> = options.keys().copied().collect();
+            for reactor in reactors {
+                if let Err(e) = self.react_entity(reactor, None) {
+                    eprintln!("nat20-api-server: could not decline an explore reaction: {e:?}");
+                    return;
+                }
+            }
+            self.settle();
+        }
+    }
+
+    /// Out of combat time passes with the story, not with the ticks that play out a move or an
+    /// action: the clock of every creature outside a fight is paused, so what lasts until
+    /// someone's next turn (a Help) lasts until that turn, however long the engine takes to
+    /// settle. Core gives a creature outside an encounter a real-time clock; a fight's
+    /// participants keep the turn-based clocks core gives them.
+    fn pause_story_clocks(&mut self) {
+        for c in &self.scene.creatures {
+            if self.engine.encounter_for_entity(c.entity).is_none() {
+                systems::time::set_time_mode(&mut self.engine.world, c.entity, TimeMode::Paused);
+            }
+        }
+    }
+
     /// Ticks the engine until no creature is moving or acting and no event is
     /// waiting on anything but a reaction decision.
     fn settle(&mut self) {
+        self.pause_story_clocks();
         for tick in 0..MAX_TICKS {
             if tick >= 2 && self.quiescent() {
                 return;
             }
             self.engine.update(TICK_SECONDS);
         }
-        eprintln!("engine did not settle within {MAX_TICKS} ticks");
+        self.stalls += 1;
+        eprintln!(
+            "engine did not settle within {MAX_TICKS} ticks ({} times this session)",
+            self.stalls
+        );
     }
 
     fn quiescent(&self) -> bool {
@@ -1696,7 +2297,12 @@ impl Game {
                 .unwrap_or(true)
         });
         let Some(encounter) = self.encounter else {
-            return all_idle;
+            // A reaction window out of combat (Tactical Mind after a failed check) holds the
+            // action that opened it until someone declines it.
+            let reaction = engine
+                .next_prompt(PromptScopeId::Global)
+                .is_some_and(|p| matches!(p.kind, ActionPromptKind::Reactions { .. }));
+            return all_idle || reaction;
         };
         let scope = engine.prompts.scope(&PromptScopeId::Encounter(encounter));
         let waiting_on_reaction = engine
@@ -1715,16 +2321,24 @@ impl Game {
             if self.check_combat_over() {
                 return;
             }
+            self.round_spawns();
             match self.awaiting() {
                 Awaiting::Action { actor } if self.control_of(actor) == Some(Control::Scripted) => {
                     self.scripted_action(actor);
                 }
-                Awaiting::Reaction { reactor, .. }
-                    if self.control_of(reactor) == Some(Control::Scripted) =>
-                {
-                    // Scripted creatures always take the first reaction offered
-                    // (for a goblin, the opportunity attack).
-                    if self.react_entity(reactor, Some(0)).is_err()
+                Awaiting::Reaction {
+                    reactor, trigger, ..
+                } if self.control_of(reactor) == Some(Control::Scripted) => {
+                    // Scripted creatures take the first reaction offered (for a goblin, the
+                    // opportunity attack) when an enemy set it off, and decline otherwise: the
+                    // engine offers an opportunity attack on any creature leaving reach, ally
+                    // or not.
+                    let enemy = trigger.is_some_and(|t| {
+                        systems::factions::mutual_attitude(&self.engine.world, reactor, t)
+                            == Attitude::Hostile
+                    });
+                    let choice = enemy.then_some(0);
+                    if self.react_entity(reactor, choice).is_err()
                         && let Err(e) = self.react_entity(reactor, None)
                     {
                         // Neither taking nor declining moved the engine on: retrying the
@@ -1760,7 +2374,7 @@ impl Game {
         };
         if let Some((action_id, context, target)) = choice
             && self
-                .submit_entity(actor, &action_id, context, &[target])
+                .submit_entity(actor, &action_id, None, context, &[target])
                 .is_ok()
         {
             self.scripted_turn = Some((round, actor, taken + 1));
@@ -2076,6 +2690,31 @@ impl Game {
         self.pending.extend(tail);
     }
 
+    /// Logs the initiative rolls of creatures that joined a running fight.
+    fn log_joined_initiative(&mut self, joined: &[Entity]) {
+        let engine = &self.engine;
+        let Some(encounter) = self.encounter.and_then(|id| engine.encounter(&id)) else {
+            return;
+        };
+        let writer = LogWriter {
+            engine,
+            handles: &self.scene.handles,
+            round: Some(encounter.round() as u32),
+            hp: &mut self.hp,
+            keys: &mut self.keys,
+            initiative: Vec::new(),
+        };
+        let entries: Vec<Pending> = encounter
+            .initiative_order()
+            .iter()
+            .filter(|(entity, _)| joined.contains(entity))
+            .map(|(entity, roll)| {
+                writer.initiative(&EntityIdentifier::from_world(&engine.world, *entity), roll)
+            })
+            .collect();
+        self.pending.extend(entries);
+    }
+
     // ---- lookups --------------------------------------------------------
 
     fn entity(&self, handle: &str) -> Result<Entity, ApiError> {
@@ -2128,6 +2767,32 @@ fn load_geometry(map: Option<&str>) -> WorldGeometry {
 /// Sides decide who wins; faction attitudes decide who may attack whom. The party and hostile
 /// sides must be hostile to each other, and nobody to their own side or to a neutral creature,
 /// or a fight could never end.
+/// Spawns one scene or spawn creature in the engine, unplaced.
+fn spawn_creature(
+    engine: &mut EngineState,
+    def: &nat20_api_contract::SceneCreature,
+    monsters: &HashMap<String, MonsterDef>,
+) -> Result<Entity, ApiError> {
+    match (&def.pregen, &def.monster) {
+        (Some(pregen), None) => pregen::spawn(engine, pregen).ok_or_else(|| {
+            error(
+                ErrorCode::BadScene,
+                format!(
+                    "There is no pregen {pregen}; known pregens: {}.",
+                    pregen::PREGENS.join(", ")
+                ),
+            )
+        }),
+        (None, Some(monster)) => monsters[monster]
+            .spawn(engine)
+            .map_err(|e| error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))),
+        _ => Err(error(
+            ErrorCode::BadScene,
+            format!("{} needs exactly one of pregen or monster.", def.handle.0),
+        )),
+    }
+}
+
 fn check_sides(engine: &EngineState, creatures: &[SceneCreature]) -> Result<(), ApiError> {
     for (i, a) in creatures.iter().enumerate() {
         for b in &creatures[i + 1..] {
@@ -2234,7 +2899,12 @@ fn refusal(problem: &impl std::fmt::Debug) -> ApiError {
 
 /// Maps an engine error's Debug text to a reject reason and one plain sentence.
 fn reason_for(debug: &str) -> (RejectReason, String) {
-    let table: [(&str, RejectReason, &str); 9] = [
+    let table: [(&str, RejectReason, &str); 10] = [
+        (
+            "Requires proficiency",
+            RejectReason::NotProficient,
+            "The actor is not proficient in the skill this option needs.",
+        ),
         (
             "OutOfRange",
             RejectReason::OutOfRange,
@@ -2377,5 +3047,32 @@ mod tests {
         let before = engine.world.len();
         assert!(goblin.spawn(&mut engine).is_err());
         assert_eq!(engine.world.len(), before);
+    }
+
+    /// A fighter's failed stabilize out of combat opens Tactical Mind while the Help is still
+    /// acting; the engine waits on that window, which is declined, instead of ticking on.
+    #[test]
+    fn a_failed_stabilize_out_of_combat_settles_at_the_tactical_mind_window() {
+        let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+        let scene = scene::read(&data, "help_yard").unwrap();
+        // With seed 5 Ana's first DC 10 Medicine check fails.
+        crate::adapter::seed_dice(5);
+        let Ok(mut game) = Game::load(None, &scene, &[], &data) else {
+            panic!("help_yard loads");
+        };
+        let fall = CheckSpec::Scenario {
+            check_id: "loft_fall".to_owned(),
+        };
+        game.request_check("bren", &fall).unwrap();
+        let bren = game.entity("bren").unwrap();
+        assert_eq!(life_state_name(&game.engine, bren), "unconscious");
+
+        let stabilize = HelpSpec::Stabilize {
+            target: Handle("bren".to_owned()),
+        };
+        game.help("ana", &stabilize).unwrap();
+        assert_eq!(life_state_name(&game.engine, bren), "unconscious");
+        assert_eq!(game.stalls, 0);
+        assert!(game.engine.next_prompt(PromptScopeId::Global).is_none());
     }
 }

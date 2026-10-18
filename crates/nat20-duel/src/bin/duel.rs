@@ -2,21 +2,21 @@
 //! the JSON API with a scripted Fighter, then audits the transcript against
 //! the engine log.
 //!
-//! Usage: nat20-duel [--seed N] [transcript.txt] [log.json]
+//! Usage: nat20-duel [--trail] [--seed N] [transcript.txt] [log.json]
 //!        nat20-duel --seed N --fixture contract/fixtures/duel.jsonl
+//!        nat20-duel --trail --seed N --fixture contract/fixtures/m3_trail.jsonl
 //!
-//! `--fixture` writes the seeded duel as a conformance fixture instead.
+//! `--trail` plays Milestone 3's five-scene `m3_trail` instead of the duel. `--fixture` writes
+//! the seeded run as a conformance fixture instead.
 
 use std::fs;
 
-use nat20_duel::{
-    audit::audit_transcript,
-    duel::{record_fixture, run_duel},
-};
+use nat20_duel::{audit::audit_transcript, duel, trail};
 
 fn main() {
     let mut seed = None;
     let mut fixture = None;
+    let mut on_trail = false;
     let mut paths = Vec::new();
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -26,17 +26,27 @@ fn main() {
                 seed = Some(value.parse::<u32>().expect("--seed takes a u32"));
             }
             "--fixture" => fixture = Some(args.next().expect("--fixture needs a path")),
+            "--trail" => on_trail = true,
             _ => paths.push(arg),
         }
     }
 
     if let Some(path) = fixture {
         let seed = seed.expect("--fixture needs --seed, so the fixture replays");
-        fs::write(&path, record_fixture(seed)).expect("write fixture");
+        let fixture = if on_trail {
+            trail::record_fixture(seed)
+        } else {
+            duel::record_fixture(seed)
+        };
+        fs::write(&path, fixture).expect("write fixture");
         return;
     }
 
-    let (transcript, log) = run_duel(seed);
+    let (transcript, log) = if on_trail {
+        trail::run_trail(seed)
+    } else {
+        duel::run_duel(seed)
+    };
 
     let report = audit_transcript(&transcript, &log, true);
     let summary = format!(

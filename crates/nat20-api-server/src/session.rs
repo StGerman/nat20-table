@@ -8,8 +8,8 @@ use std::{collections::HashMap, path::PathBuf};
 
 use nat20_api_contract::{
     ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, EndCombatReason, ErrorCode,
-    Event, EventKind, Handle, HitDiceSpend, Mode, MoveTarget, OptionId, PromptId, ReactionTrigger,
-    RollId, RollView, State, Visibility,
+    Event, EventKind, Handle, HelpSpec, HitDiceSpend, Mode, MoveTarget, OptionId, PromptId,
+    ReactionTrigger, RollId, RollView, State, Visibility,
 };
 
 use crate::{
@@ -233,10 +233,13 @@ impl Session {
         prompt_id: &str,
         option_id: &OptionId,
         targets: &[Handle],
+        variant: Option<&str>,
     ) -> Result<CommandResult, ApiError> {
         self.require_prompt(actor, Some(prompt_id), false)?;
         let targets: Vec<String> = targets.iter().map(|t| t.0.clone()).collect();
-        let result = self.game_mut()?.submit(actor, &option_id.0, &targets);
+        let result = self
+            .game_mut()?
+            .submit(actor, &option_id.0, &targets, variant);
         self.after_decision(result)?;
         Ok(CommandResult::Submit {})
     }
@@ -313,6 +316,26 @@ impl Session {
         self.after_decision(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
         Ok(CommandResult::ShortRest {
             healed: result.expect("errors returned above"),
+        })
+    }
+
+    /// The Help action in explore mode; what it rolled and changed is in the log.
+    pub fn help(&mut self, actor: &str, help: &HelpSpec) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.help(actor, help);
+        self.after_decision(result.clone())?;
+        Ok(CommandResult::Help {})
+    }
+
+    /// Places a `when: dm` spawn's creatures.
+    pub fn spawn(&mut self, spawn_id: &str, viewer: &Viewer) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.spawn(spawn_id);
+        // A spawn is not a decision: a pending prompt keeps its id, and a pending reaction keeps
+        // the event it answers.
+        self.push_entries();
+        let handles = result?;
+        Ok(CommandResult::Spawn {
+            state: self.state_for(viewer)?,
+            handles,
         })
     }
 
@@ -454,6 +477,15 @@ impl Session {
     fn after_decision(&mut self, result: Result<(), ApiError>) -> Result<(), ApiError> {
         // A refused decision can still have produced log entries (an engine-side partial
         // resolution); the log never drops what the engine did.
+        self.push_entries();
+        if result.is_ok() {
+            self.decided = true;
+        }
+        result
+    }
+
+    /// Logs the entries the engine produced since the last call.
+    fn push_entries(&mut self) {
         let entries = self
             .game
             .as_mut()
@@ -462,10 +494,6 @@ impl Session {
         for entry in entries {
             self.push(entry);
         }
-        if result.is_ok() {
-            self.decided = true;
-        }
-        result
     }
 
     fn state_for(&self, viewer: &Viewer) -> Result<State, ApiError> {
@@ -483,6 +511,7 @@ impl Session {
             flags: game.flags(),
             checks: game.checks(),
             encounters: game.encounters(),
+            spawns: game.spawns(),
         };
         projection::state(viewer, full).ok_or_else(|| {
             error(

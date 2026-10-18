@@ -193,13 +193,19 @@ impl Server {
                 point,
                 variant,
             } => {
-                if point.is_some() || variant.is_some() {
+                if point.is_some() {
                     return Err(errors::not_implemented(
-                        "Options with a point or a variant",
+                        "Targeting a point",
                         "legal_actions does not offer them yet",
                     ));
                 }
-                session.submit(&actor.0, &prompt_id.0, option_id, targets)
+                session.submit(
+                    &actor.0,
+                    &prompt_id.0,
+                    option_id,
+                    targets,
+                    variant.as_deref(),
+                )
             }
             Command::React {
                 actor,
@@ -222,18 +228,8 @@ impl Server {
                 participants,
                 hit_dice,
             } => session.short_rest(participants, hit_dice),
-            Command::Spawn { .. } => {
-                let name = serde_json::to_value(command).expect("commands serialize")["cmd"]
-                    .as_str()
-                    .unwrap_or_default()
-                    .to_owned();
-                Err(errors::error(
-                    ErrorCode::NotImplemented,
-                    format!(
-                        "`{name}` is in contract {CONTRACT_VERSION} but this engine does not implement it yet."
-                    ),
-                ))
-            }
+            Command::Spawn { spawn_id } => session.spawn(spawn_id, viewer),
+            Command::Help { actor, help } => session.help(&actor.0, help),
         }
     }
 
@@ -281,7 +277,7 @@ fn for_viewer(mut error: ApiError, viewer: &Viewer) -> ApiError {
         error.message = "The scene is invalid; the DM can see why.".into();
     }
     // Why a fight cannot end early names the encounter's scene rules (surrender, end reasons),
-    // scenario data.
+    // and an automatic spawn names its trigger: scenario data.
     if *viewer != Viewer::Dm {
         let player_message = match (error.code, error.reason) {
             (ErrorCode::SurrenderNotAvailable, _) => {
@@ -289,6 +285,9 @@ fn for_viewer(mut error: ApiError, viewer: &Viewer) -> ApiError {
             }
             (ErrorCode::Rejected, Some(RejectReason::ConditionNotMet)) => {
                 Some("This fight cannot end that way right now; the DM can see why.")
+            }
+            (ErrorCode::Rejected, Some(RejectReason::Automatic)) => {
+                Some("Those creatures arrive by themselves; the DM can see when.")
             }
             _ => None,
         };

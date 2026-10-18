@@ -275,12 +275,15 @@ pub struct Spawn {
 pub enum SpawnWhen {
     /// The DM calls `spawn{spawn_id}`.
     Dm,
-    /// The engine places them when combat starts, if this session flag is set.
+    /// The engine places them when a fight starts in this scene while this session flag is set,
+    /// and they join that fight.
     Flag {
         /// The session flag, e.g. `boss_warned`.
         flag: String,
     },
-    /// The engine places them at the start of this combat round.
+    /// The engine places them when a fight in this scene reaches this round, unless `unless`
+    /// holds then, and they join that fight with their own initiative. A spawn cancelled at its
+    /// round is not placed later, in any fight of the scene.
     Round {
         /// The round, 1 or later.
         round: u32,

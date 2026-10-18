@@ -219,7 +219,10 @@ pub enum EventKind {
         /// Which rest.
         rest: RestKind,
     },
-    /// Creatures were placed by a spawn.
+    /// Creatures were placed by a spawn: on `spawn`, or by the engine when a flag spawn's fight
+    /// starts or a round spawn's round comes. In a running fight their `initiative` rolls follow.
+    /// DM only, because the spawn id is scenario data; players see the creatures in
+    /// their state.
     Spawned {
         /// Spawn id from the scene.
         spawn_id: String,
@@ -272,8 +275,7 @@ pub enum RollView {
         outcome: RollOutcome,
         /// Advantage state of the d20.
         advantage: AdvantageState,
-        /// Where the DC came from: present for every check and save except a death save, whose
-        /// DC 10 is a rule.
+        /// Where the DC came from: present on every check and save.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         dc_source: Option<DcSource>,
         /// The rules reasons behind `advantage`, as the engine tracked them, e.g. a condition or
@@ -397,4 +399,7 @@ pub enum DcSource {
     Ladder,
     /// A stat block or spell.
     StatBlock,
+    /// A rule of the game: the DC 10 of a death save, or of the Medicine check of a Help that
+    /// stabilizes.
+    Rule,
 }

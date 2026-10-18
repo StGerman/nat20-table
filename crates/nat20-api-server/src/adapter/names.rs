@@ -4,7 +4,9 @@ use hecs::Entity;
 use nat20_api_contract::DamageType as WireDamage;
 use nat20_core::{
     components::{
-        actions::action::ActionContext, damage::DamageType, id::ActionId,
+        actions::action::ActionContext,
+        damage::DamageType,
+        id::{ActionId, ActionVariantId},
         items::equipment::slots::EquipmentSlot,
     },
     engine::engine_state::EngineState,
@@ -16,6 +18,21 @@ use nat20_core::{
 pub fn option_stem(id: &ActionId) -> String {
     let id = id.id();
     id.strip_prefix("action.").unwrap_or(id).replace('.', "/")
+}
+
+/// The wire id of an action variant: `nat20_core::variant.help.sleight_of_hand` becomes
+/// `help/sleight_of_hand`.
+pub fn variant_stem(id: &ActionVariantId) -> String {
+    let id = id.id();
+    id.strip_prefix("variant.").unwrap_or(id).replace('.', "/")
+}
+
+/// A variant's display name from its last word: `help/sleight_of_hand` becomes
+/// `Sleight of Hand`.
+pub fn variant_name(id: &ActionVariantId) -> String {
+    let id = id.id();
+    let last = id.rsplit('.').next().unwrap_or(id);
+    title(&last.replace('_', " ")).replace(" Of ", " of ")
 }
 
 /// The action's words: `nat20_core::action.melee_attack` becomes `melee attack`.
