@@ -1589,7 +1589,7 @@ fn a_spawn_leaves_a_pending_reaction_prompt_alone() {
 
 /// Bren and Ana side by side on a yard, a far corner, a fall that drops whoever fails it to 0
 /// Hit Points (Bren has 20; 20 to 23 damage leaves less than that over, so nobody dies), a
-/// quiet second scene, and a fight with a goblin.
+/// quiet second scene, and a fight with a goblin, with or without Ana.
 fn help_dir(name: &str) -> PathBuf {
     data_dir(
         name,
@@ -1605,7 +1605,10 @@ fn help_dir(name: &str) -> PathBuf {
                     "checks": [{ "id": "fall", "test": { "kind": "save", "ability": "dexterity" },
                         "dc": 30,
                         "on_failure": [{ "kind": "damage", "dice": "1d4+19", "damage_type": "bludgeoning" }] }],
-                    "encounters": [{ "id": "brawl", "participants": ["bren", "ana", "goblin"] }] }),
+                    "encounters": [
+                        { "id": "brawl", "participants": ["bren", "ana", "goblin"] },
+                        { "id": "duel", "participants": ["bren", "goblin"], "end_reasons": ["scenario"] }
+                    ] }),
             ),
             (
                 "lane",
@@ -1721,18 +1724,59 @@ fn a_helpers_next_turn_ends_what_it_gave_before() {
     assert_eq!(refused["error"]["reason"], "out_of_range", "{refused}");
     assert_eq!(athletics(&mut api, "ana")["advantage"], "advantage");
 
-    // A helper the next scene leaves behind still ends the Help it gave.
+    // Other creatures' actions take no time off it: only Bren's next turn ends it.
     let moved = api.call(
         "dm",
         json!({ "cmd": "move", "actor": "ana", "to": { "kind": "creature", "handle": "bren" } }),
     );
     assert_eq!(moved["ok"], true, "{moved}");
     assert_eq!(help(&mut api, "bren", assist("athletics"))["ok"], true);
+    for _ in 0..10 {
+        let helped = help(
+            &mut api,
+            "ana",
+            json!({ "kind": "assist_check", "ally": "bren", "skill": "perception" }),
+        );
+        assert_eq!(helped["ok"], true, "{helped}");
+    }
+    assert_eq!(athletics(&mut api, "ana")["advantage"], "advantage");
+
+    // A helper the next scene leaves behind still ends the Help it gave.
+    assert_eq!(help(&mut api, "bren", assist("athletics"))["ok"], true);
     let carried = api.call(
         "dm",
         json!({ "cmd": "load_scene", "scene_id": "lane", "party": ["ana"] }),
     );
     assert_eq!(carried["ok"], true, "{carried}");
+    let roll = athletics(&mut api, "ana");
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(roll["advantage"], "normal", "{roll}");
+}
+
+#[test]
+fn a_help_ends_at_the_helpers_first_turn_of_a_fight_its_ally_is_not_in() {
+    let dir = help_dir("help_fight_without_ally");
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "yard" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let assist = json!({ "kind": "assist_check", "ally": "ana", "skill": "athletics" });
+    assert_eq!(help(&mut api, "bren", assist)["ok"], true);
+
+    let mut last = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "duel" }),
+    );
+    assert_eq!(last["ok"], true, "{last}");
+    if last["awaiting"]["actor"] == "goblin" {
+        last = api.call(
+            "dm",
+            json!({ "cmd": "end_turn", "actor": "goblin", "prompt_id": last["awaiting"]["prompt_id"] }),
+        );
+        assert_eq!(last["ok"], true, "{last}");
+    }
+    assert_eq!(last["awaiting"]["actor"], "bren", "{last}");
+    let ended = api.call("dm", json!({ "cmd": "end_combat", "reason": "scenario" }));
+    assert_eq!(ended["ok"], true, "{ended}");
     let roll = athletics(&mut api, "ana");
     std::fs::remove_dir_all(dir).ok();
     assert_eq!(roll["advantage"], "normal", "{roll}");

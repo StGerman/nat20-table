@@ -38,7 +38,7 @@ use nat20_core::{
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
         resource::{RechargeRule, ResourceAmount, ResourceMap},
         saving_throw::SavingThrowKind,
-        time::{TimeStep, TurnBoundary},
+        time::{TimeMode, TimeStep, TurnBoundary},
     },
     engine::{
         action_prompt::{ActionData, ActionPromptKind},
@@ -2129,7 +2129,11 @@ impl Game {
         let mark = self.pending.len();
         // What the creature gave others (a Help's Advantage) lives on them and ends at its turn
         // too, so every creature's effects see the boundary.
+        // Their clocks run for the boundaries only (see `pause_story_clocks`).
         let creatures: Vec<Entity> = self.scene.creatures.iter().map(|c| c.entity).collect();
+        for &creature in &creatures {
+            systems::time::set_time_mode(&mut self.engine.world, creature, TimeMode::RealTime);
+        }
         for boundary in [TurnBoundary::End, TurnBoundary::Start] {
             for &creature in &creatures {
                 systems::time::advance_time(
@@ -2139,6 +2143,7 @@ impl Game {
                 );
             }
         }
+        self.pause_story_clocks();
         // The update sweeps effects that expired at the boundary.
         self.engine.update(0.0);
         self.drain();
@@ -2175,9 +2180,23 @@ impl Game {
         }
     }
 
+    /// Out of combat time passes with the story, not with the ticks that play out a move or an
+    /// action: the clock of every creature outside a fight is paused, so what lasts until
+    /// someone's next turn (a Help) lasts until that turn, however long the engine takes to
+    /// settle. Core gives a creature outside an encounter a real-time clock; a fight's
+    /// participants keep the turn-based clocks core gives them.
+    fn pause_story_clocks(&mut self) {
+        for c in &self.scene.creatures {
+            if self.engine.encounter_for_entity(c.entity).is_none() {
+                systems::time::set_time_mode(&mut self.engine.world, c.entity, TimeMode::Paused);
+            }
+        }
+    }
+
     /// Ticks the engine until no creature is moving or acting and no event is
     /// waiting on anything but a reaction decision.
     fn settle(&mut self) {
+        self.pause_story_clocks();
         for tick in 0..MAX_TICKS {
             if tick >= 2 && self.quiescent() {
                 return;
