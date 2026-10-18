@@ -15,10 +15,10 @@ use hecs::Entity;
 use nat20_api_contract::{
     ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, CombatOverReason,
     Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
-    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, Mode, MoveTarget, OptionId,
-    Placement, PointFt, ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet,
-    Side, SurrenderCondition, SurrenderTrigger, TargetCandidate, Targeting, UnavailableOption,
-    Visibility,
+    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HitDiceSpend, HitPointsRegained,
+    Mode, MoveTarget, OptionId, Placement, PointFt, ReactionOption, RejectReason, RollId,
+    ScenarioCheck, SceneFile, Sheet, Side, SurrenderCondition, SurrenderTrigger, TargetCandidate,
+    Targeting, UnavailableOption, Visibility,
 };
 use nat20_core::{
     components::{
@@ -31,7 +31,7 @@ use nat20_core::{
         damage::DamageRoll,
         dice::DiceSet,
         faction::{Attitude, AttitudeOverride, FactionSet},
-        health::{hit_points::HitPoints, life_state::LifeState},
+        health::{hit_point_dice::HitPointDice, hit_points::HitPoints, life_state::LifeState},
         id::{ActionId, EntityIdentifier, FactionId, ResourceId},
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
         resource::ResourceAmount,
@@ -47,6 +47,7 @@ use nat20_core::{
     systems::{
         self,
         movement::{MovementError, TargetPathFindingResult},
+        time::RestKind,
     },
 };
 use parry3d::na::Point3;
@@ -772,6 +773,127 @@ impl Game {
         }
     }
 
+    /// A Short Rest for `participants` in explore mode: each spends the Hit Point Dice
+    /// `hit_dice` gives it (largest die first), then the engine finishes the rest and recharges
+    /// short-rest resources. Everything is checked before anything changes. Returns the Hit
+    /// Points each participant regained, in `participants` order.
+    pub fn short_rest(
+        &mut self,
+        participants: &[Handle],
+        hit_dice: &[HitDiceSpend],
+    ) -> Result<Vec<HitPointsRegained>, ApiError> {
+        if self.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "Nobody can take a short rest during combat: rolling Initiative interrupts a rest.",
+            ));
+        }
+        if participants.is_empty() {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "A short rest needs at least one participant.",
+            ));
+        }
+        let mut entities = Vec::new();
+        for handle in participants {
+            let entity = self.entity(&handle.0)?;
+            if entities.contains(&entity) {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{} is listed twice in participants.", handle.0),
+                ));
+            }
+            entities.push(entity);
+        }
+        for (handle, entity) in participants.iter().zip(&entities) {
+            // SRD 5.2.1 Short Rest: you need at least 1 Hit Point to start one.
+            if !systems::health::is_alive(&self.engine.world, *entity)
+                || life_state_name(&self.engine, *entity) != "normal"
+            {
+                return Err(rejected(
+                    RejectReason::ConditionPrevents,
+                    format!(
+                        "{} is at 0 Hit Points and cannot take a short rest.",
+                        handle.0
+                    ),
+                ));
+            }
+        }
+        let mut spends: HashMap<Entity, u32> = HashMap::new();
+        for spend in hit_dice {
+            let Some(entity) = participants
+                .iter()
+                .position(|h| *h == spend.handle)
+                .map(|i| entities[i])
+            else {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!(
+                        "{} spends Hit Point Dice but is not among the participants.",
+                        spend.handle.0
+                    ),
+                ));
+            };
+            if spends.insert(entity, spend.count).is_some() {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{} is listed twice in hit_dice.", spend.handle.0),
+                ));
+            }
+            // The message names only the count asked for: dice left are on the owner's sheet.
+            if spend.count > hit_dice_left(&self.engine, entity) {
+                return Err(rejected(
+                    RejectReason::InsufficientResource,
+                    format!(
+                        "{} does not have {} Hit Point Dice left to spend.",
+                        spend.handle.0, spend.count
+                    ),
+                ));
+            }
+        }
+
+        // Whatever happened before the rest is already in the log.
+        self.drain();
+        // An explore command that acts closes a finished fight's `combat_over`.
+        self.close_finished_fight();
+        systems::time::start_rest(&mut self.engine, entities.clone(), &RestKind::Short)
+            .expect("explore mode: nobody is in combat");
+        let mut healed = Vec::new();
+        for (handle, entity) in participants.iter().zip(&entities) {
+            let mut regained_total = 0;
+            for _ in 0..spends.get(entity).copied().unwrap_or(0) {
+                let die = self
+                    .engine
+                    .world
+                    .get::<&HitPointDice>(*entity)
+                    .ok()
+                    .and_then(|dice| {
+                        dice.pools()
+                            .filter(|(_, remaining, _)| *remaining > 0)
+                            .map(|(die, _, _)| die)
+                            .max()
+                    })
+                    .expect("checked above: enough dice left");
+                let before = hit_points(&self.engine, *entity).0;
+                let result = systems::health::spend_hit_point_die(&mut self.engine, *entity, die)
+                    .expect("checked above: resting, out of combat, a die left");
+                let regained = hit_points(&self.engine, *entity).0.saturating_sub(before);
+                regained_total += regained;
+                let mut writer = self.writer();
+                let entries = writer.hit_point_die(*entity, die as u8, &result, regained);
+                self.pending.extend(entries);
+            }
+            healed.push(HitPointsRegained {
+                handle: handle.clone(),
+                amount: regained_total,
+            });
+        }
+        systems::time::finish_rest(&mut self.engine, entities)
+            .expect("every participant started this short rest");
+        self.drain();
+        Ok(healed)
+    }
+
     /// A log writer for entries made outside the engine's own event log.
     fn writer(&mut self) -> LogWriter<'_> {
         LogWriter {
@@ -948,8 +1070,9 @@ impl Game {
         }
     }
 
-    /// Starts the scene encounter `encounter_id`: rolls initiative for its participants and
-    /// runs scripted turns until a client decides. Participants not in the scene are left out.
+    /// Starts the scene encounter `encounter_id`: rolls initiative for its participants, the
+    /// surprised side with Disadvantage, and runs scripted turns until a client decides.
+    /// Participants not in the scene are left out.
     pub fn start_combat(&mut self, encounter_id: &str) -> Result<(), ApiError> {
         if self.running_encounter().is_some() {
             return Err(error(ErrorCode::WrongMode, "Combat is already running."));
@@ -970,21 +1093,25 @@ impl Game {
             }
             return Err(e);
         };
-        if let Some(surprise) = &found.surprise
-            && self.flags.contains(&surprise.when_flag)
-        {
-            return Err(error(
-                ErrorCode::NotImplemented,
-                format!(
-                    "{encounter_id} starts with a surprise, and surprise is not implemented by this engine yet: initiative with Disadvantage needs a core change (U5)."
-                ),
-            ));
-        }
         let entities: Vec<Entity> = found
             .participants
             .iter()
             .filter_map(|h| self.entity(&h.0).ok())
             .collect();
+        // The surprised side rolls initiative with Disadvantage once the scene's flag is set
+        // (decision D4, SRD 5.2.1 Surprise).
+        let surprised: HashSet<Entity> = found
+            .surprise
+            .as_ref()
+            .filter(|surprise| self.flags.contains(&surprise.when_flag))
+            .map(|surprise| {
+                entities
+                    .iter()
+                    .copied()
+                    .filter(|e| self.side_of(*e) == Some(surprise.surprised))
+                    .collect()
+            })
+            .unwrap_or_default();
         let standing = |side: Side| {
             entities.iter().any(|e| {
                 self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
@@ -1000,7 +1127,9 @@ impl Game {
         }
         // Whatever happened before this fight is already in the log.
         self.drain();
-        let encounter = self.engine.start_encounter(entities.into_iter().collect());
+        let encounter = self
+            .engine
+            .start_surprised_encounter(entities.into_iter().collect(), surprised);
         self.encounter = Some(encounter);
         self.scene_encounter = Some(encounter_id.to_owned());
         self.encounter_seen = 0;
@@ -2046,6 +2175,19 @@ fn from_core_point(point: Point3<f32>) -> PointFt {
         y_ft: round_ft(point.z),
         z_ft: round_ft(point.y),
     }
+}
+
+/// Hit Point Dice `entity` has left, over every die size; 0 without a pool.
+fn hit_dice_left(engine: &EngineState, entity: Entity) -> u32 {
+    engine
+        .world
+        .get::<&HitPointDice>(entity)
+        .map(|dice| {
+            dice.pools()
+                .map(|(_, remaining, _)| u32::from(remaining))
+                .sum()
+        })
+        .unwrap_or(0)
 }
 
 fn life_state_name(engine: &EngineState, entity: Entity) -> &'static str {

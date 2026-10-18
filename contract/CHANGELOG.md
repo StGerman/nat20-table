@@ -3,6 +3,16 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.12 (2026-10-18)
+- Surprise is served (API-12, Milestone 3 spec §7 step 8; protocol.md §4.4). When an encounter's surprise flag is set, `start_combat` starts the fight, and every participant on the rule's `surprised` side rolls initiative with Disadvantage (core #5, pinned by table #30). It used to answer `not_implemented`. The DM's `initiative` rolls name the reason in `advantage_sources`. Docs only, no wire type change: `StartCombat` now says this.
+- A player viewer no longer gets a generic `start_combat` refusal message, since a surprise is no longer refused.
+- Fixture `encounter.jsonl`: the surprised yard fight now starts, with both goblins rolling initiative on 2d20 keeping the lower. `en-6p` is now Bren's `events` read of the same start, so it shows the player view of those rolls.
+
+## 1.0.0-dev.11 (2026-10-17)
+- `short_rest` is served (API-3, ENG-4, Milestone 3 spec §7 step 6; protocol.md §4.5). It works in explore mode only (`wrong_mode` in combat) and needs every participant at 1 Hit Point or more (`rejected`/`condition_prevents`). Each participant spends its declared Hit Point Dice, largest first, and each die logs a `healing` roll, `healed` and `hit_points`; then short-rest resources recharge and `rest` is logged. A count above the dice left answers `rejected`/`insufficient_resource`. A refused rest changes nothing. Docs only, no wire type change: `ShortRest`, `HitDiceSpend`, `CommandResult::ShortRest`, `Sheet.hit_dice`, `RejectReason::insufficient_resource` and `rest` now say this.
+- `Sheet.hit_dice` is filled from the engine's Hit Point Dice pool (core #3, pinned by table #28).
+- Fixture `rest.jsonl` (seed 7): a rest refused in combat, the duel won with Action Surge spent, five refused rests, then one Hit Point Die spent and Action Surge recharged, shown on the sheet before and after. `sheet.jsonl` now shows Bren's Hit Point Dice; `not_implemented.jsonl` loses its `short_rest` line.
+
 ## 1.0.0-dev.10 (2026-10-17)
 - Encounters are served (API-9, API-22, Milestone 3 spec §7 step 7; protocol.md §4.4). `end_combat` ends a running fight early: `surrender` only while the encounter's surrender condition holds (decision D5), `scenario` only when the encounter lists it in `end_reasons`. A surrender turns the encounter's still-conscious surrendering creatures `neutral`, and they and the winners stop being enemies in the engine; they stay in the scene. A condition never holds while none of its creatures is in the scene, and an absent leader is not down. A player viewer's refusal messages, the surprise refusal included, don't name the encounter or its rules. `fled` answers `not_implemented` (MON-6), and so does an encounter whose surprise flag is set (U5, API-12).
 - **Breaking:** `start_combat{participants, surprised}` becomes `start_combat{encounter_id}` (decision D4): participants, surprise, surrender and early ends come from the scene file. Migration: declare the fight under `encounters` in the scene file and pass its id; `duel.json` declares encounter `duel`.

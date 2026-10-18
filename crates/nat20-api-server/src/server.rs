@@ -125,11 +125,7 @@ impl Server {
             .unwrap_or_default();
         let (ok, result, error) = match result {
             Ok(result) => (true, Some(result), None),
-            Err(error) => (
-                false,
-                None,
-                Some(for_viewer(error, &viewer, &request.command)),
-            ),
+            Err(error) => (false, None, Some(for_viewer(error, &viewer))),
         };
         Response {
             v: V1::CURRENT,
@@ -222,7 +218,11 @@ impl Server {
             } => session.move_creature(&actor.0, to, prompt_id.as_ref().map(|p| p.0.as_str())),
             Command::GetSheet { actor } => session.sheet(&actor.0, viewer),
             Command::RequestCheck { actor, check } => session.request_check(&actor.0, check),
-            Command::ShortRest { .. } | Command::Spawn { .. } => {
+            Command::ShortRest {
+                participants,
+                hit_dice,
+            } => session.short_rest(participants, hit_dice),
+            Command::Spawn { .. } => {
                 let name = serde_json::to_value(command).expect("commands serialize")["cmd"]
                     .as_str()
                     .unwrap_or_default()
@@ -275,18 +275,15 @@ fn encode(response: &Response) -> String {
 /// Scene validation messages quote stat-block numbers (AC, proficiency bonus) that only the DM
 /// may see (protocol §5), so a creature viewer gets a plain `bad_scene` and the details go to
 /// stderr.
-fn for_viewer(mut error: ApiError, viewer: &Viewer, command: &Command) -> ApiError {
+fn for_viewer(mut error: ApiError, viewer: &Viewer) -> ApiError {
     if error.code == ErrorCode::BadScene && *viewer != Viewer::Dm {
         eprintln!("bad_scene: {}", error.message);
         error.message = "The scene is invalid; the DM can see why.".into();
     }
-    // Why a fight cannot start or end early names the encounter's scene rules (surprise,
-    // surrender, end reasons), scenario data.
+    // Why a fight cannot end early names the encounter's scene rules (surrender, end reasons),
+    // scenario data.
     if *viewer != Viewer::Dm {
         let player_message = match (error.code, error.reason) {
-            (ErrorCode::NotImplemented, _) if matches!(command, Command::StartCombat { .. }) => {
-                Some("This fight cannot start yet; the DM can see why.")
-            }
             (ErrorCode::SurrenderNotAvailable, _) => {
                 Some("Surrender is not available in this fight right now; the DM can see why.")
             }
