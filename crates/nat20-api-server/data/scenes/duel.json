@@ -16,5 +16,8 @@
             "control": "scripted",
             "at": { "kind": "point", "point": { "x_ft": 5.0, "y_ft": 0.0, "z_ft": 0.0 } }
         }
+    ],
+    "encounters": [
+        { "id": "duel", "participants": ["bren", "goblin"] }
     ]
 }

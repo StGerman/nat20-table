@@ -7,7 +7,7 @@ use std::{
 
 use nat20_api_contract::{
     ApiError, Awaiting, CONTRACT_VERSION, Command, CommandResult, ErrorCode, PROTOCOL_MAJOR,
-    PROTOCOL_NAME, Request, Response, V1,
+    PROTOCOL_NAME, RejectReason, Request, Response, V1,
 };
 
 use crate::{adapter, errors, projection::Viewer, session::Session};
@@ -125,7 +125,11 @@ impl Server {
             .unwrap_or_default();
         let (ok, result, error) = match result {
             Ok(result) => (true, Some(result), None),
-            Err(error) => (false, None, Some(for_viewer(error, &viewer))),
+            Err(error) => (
+                false,
+                None,
+                Some(for_viewer(error, &viewer, &request.command)),
+            ),
         };
         Response {
             v: V1::CURRENT,
@@ -181,12 +185,9 @@ impl Server {
         match command {
             Command::Hello | Command::NewSession { .. } => unreachable!("handled above"),
             Command::LoadScene { scene_id, party } => session.load_scene(scene_id, party, viewer),
-            Command::StartCombat {
-                participants,
-                surprised,
-            } => session.start_combat(participants, surprised, viewer),
+            Command::StartCombat { encounter_id } => session.start_combat(encounter_id, viewer),
             Command::GetState => session.state(viewer),
-            Command::EndCombat { .. } => session.end_combat(),
+            Command::EndCombat { reason } => session.end_combat(*reason, viewer),
             Command::LegalActions { actor } => session.legal_actions(&actor.0),
             Command::Submit {
                 actor,
@@ -274,10 +275,30 @@ fn encode(response: &Response) -> String {
 /// Scene validation messages quote stat-block numbers (AC, proficiency bonus) that only the DM
 /// may see (protocol §5), so a creature viewer gets a plain `bad_scene` and the details go to
 /// stderr.
-fn for_viewer(mut error: ApiError, viewer: &Viewer) -> ApiError {
+fn for_viewer(mut error: ApiError, viewer: &Viewer, command: &Command) -> ApiError {
     if error.code == ErrorCode::BadScene && *viewer != Viewer::Dm {
         eprintln!("bad_scene: {}", error.message);
         error.message = "The scene is invalid; the DM can see why.".into();
+    }
+    // Why a fight cannot start or end early names the encounter's scene rules (surprise,
+    // surrender, end reasons), scenario data.
+    if *viewer != Viewer::Dm {
+        let player_message = match (error.code, error.reason) {
+            (ErrorCode::NotImplemented, _) if matches!(command, Command::StartCombat { .. }) => {
+                Some("This fight cannot start yet; the DM can see why.")
+            }
+            (ErrorCode::SurrenderNotAvailable, _) => {
+                Some("Surrender is not available in this fight right now; the DM can see why.")
+            }
+            (ErrorCode::Rejected, Some(RejectReason::ConditionNotMet)) => {
+                Some("This fight cannot end that way right now; the DM can see why.")
+            }
+            _ => None,
+        };
+        if let Some(message) = player_message {
+            eprintln!("{:?}: {}", error.code, error.message);
+            error.message = message.into();
+        }
     }
     // Scene ids are scenario data: only the DM learns which ones exist.
     if *viewer != Viewer::Dm

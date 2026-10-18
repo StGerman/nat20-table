@@ -35,6 +35,8 @@ pub enum State {
         flags: Vec<String>,
         /// The loaded scene's checks, in scene file order.
         checks: Vec<CheckView>,
+        /// The loaded scene's encounters, in scene file order.
+        encounters: Vec<EncounterView>,
     },
     /// What one player sees: their own creature in full, the others as observed.
     Player {
@@ -57,6 +59,19 @@ pub enum State {
         /// The scene's named landmarks, in scene file order, with the distance from the viewer.
         anchors: Vec<AnchorObserved>,
     },
+}
+
+/// A scene encounter as the DM sees it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct EncounterView {
+    /// Encounter id from the scene, the `encounter_id` a `start_combat` names.
+    pub id: String,
+    /// Whether this encounter is the fight running now.
+    pub running: bool,
+    /// Whether `end_combat{surrender}` would be accepted now: the encounter is running and its
+    /// surrender condition holds (decision D5). The engine works this out; the DM decides
+    /// whether to call it.
+    pub surrender_available: bool,
 }
 
 /// A scenario check as the DM sees it.

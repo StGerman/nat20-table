@@ -54,8 +54,7 @@ fn play(client: &mut Client, seed: Option<u32>) -> (String, Vec<Event>) {
         client,
         &mut transcript,
         Command::StartCombat {
-            participants: vec![Handle(FIGHTER.into()), Handle(GOBLIN.into())],
-            surprised: Vec::new(),
+            encounter_id: "duel".into(),
         },
     );
     let mut surged_round = None;

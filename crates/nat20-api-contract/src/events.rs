@@ -70,6 +70,12 @@ pub enum EventKind {
         /// Every creature in the fight, in initiative order.
         participants: Vec<Handle>,
     },
+    /// Creatures surrendered: the DM called the surrender while their encounter allowed it. They
+    /// are now `neutral` and stay in the scene.
+    Surrendered {
+        /// The creatures that surrendered, in the encounter's order.
+        handles: Vec<Handle>,
+    },
     /// Combat ended.
     CombatOver {
         /// The side left standing, if any.

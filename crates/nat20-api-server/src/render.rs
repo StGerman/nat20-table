@@ -2,8 +2,8 @@
 //! text can never carry a number the view type left out (CLAUDE.md Rule 3).
 
 use nat20_api_contract::{
-    AgainstKind, DamageType, DiceRolled, EventKind, Handle, LifeState, Mode, RollKind, RollOutcome,
-    RollView, Side,
+    AgainstKind, CombatOverReason, DamageType, DiceRolled, EventKind, Handle, LifeState, Mode,
+    RollKind, RollOutcome, RollView, Side,
 };
 
 /// The sentence for one event.
@@ -19,10 +19,28 @@ pub fn text(kind: &EventKind) -> String {
         EventKind::CombatStarted { participants } => {
             format!("Combat begins: {}.", list(participants))
         }
-        EventKind::CombatOver { winner, .. } => match winner {
-            Some(side) => format!("Combat is over. The {} side wins.", side_word(*side)),
-            None => "Combat is over with nobody left standing.".into(),
+        EventKind::CombatOver { winner, reason } => match (reason, winner) {
+            (CombatOverReason::Surrender, _) => {
+                "Combat is over: the other side surrendered.".into()
+            }
+            (CombatOverReason::Fled, _) => "Combat is over: the other side fled.".into(),
+            (CombatOverReason::Scenario, _) => "Combat is over.".into(),
+            (CombatOverReason::SideDown, Some(side)) => {
+                format!("Combat is over. The {} side wins.", side_word(*side))
+            }
+            (CombatOverReason::SideDown, None) => {
+                "Combat is over with nobody left standing.".into()
+            }
         },
+        EventKind::Surrendered { handles } => format!(
+            "{} {}.",
+            list(handles),
+            if handles.len() == 1 {
+                "surrenders"
+            } else {
+                "surrender"
+            }
+        ),
         EventKind::Round { number } => format!("Round {number} begins."),
         EventKind::TurnStart { actor } => format!("{actor}'s turn.", actor = actor.0),
         EventKind::TurnEnd { actor } => format!("{}'s turn ends.", actor.0),

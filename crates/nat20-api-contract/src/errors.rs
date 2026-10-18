@@ -32,8 +32,8 @@ pub struct ErrorHint {
     /// The pending prompt, e.g. with the current `prompt_id` after `stale_prompt`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub awaiting: Option<Awaiting>,
-    /// The ids the scene does define, after an unknown id (`unknown_anchor`). Sent to the DM
-    /// only, because ids are scenario data.
+    /// The ids the scene does define, after an unknown id (`unknown_anchor`, `unknown_check`,
+    /// `unknown_encounter`). Sent to the DM only, because ids are scenario data.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub known_ids: Vec<String>,
 }
@@ -60,6 +60,8 @@ pub enum ErrorCode {
     UnknownAnchor,
     /// The spawn id is not declared by the scene.
     UnknownSpawn,
+    /// The encounter id is not declared by the scene.
+    UnknownEncounter,
     /// The actor is not the one the engine is waiting on.
     NotYourTurn,
     /// The prompt id does not match the pending prompt.
@@ -70,6 +72,10 @@ pub enum ErrorCode {
     WrongMode,
     /// The engine refused a well-formed decision; see `reason`.
     Rejected,
+    /// `end_combat{surrender}` while the running encounter's surrender condition does not hold,
+    /// or for an encounter that declares none. Nothing changed. Not retryable as it stands; the
+    /// condition may hold later in the fight.
+    SurrenderNotAvailable,
     /// The command is in the contract but this engine build does not implement it yet.
     NotImplemented,
     /// The scene file, or a pregen or stat block it names, is missing or invalid. Nothing changed.
@@ -106,4 +112,7 @@ pub enum RejectReason {
     NoPath,
     /// The scenario check was already rolled in this scene, by anyone.
     AlreadyAttempted,
+    /// The running encounter does not allow this way to end it (`end_combat{scenario}` for an
+    /// encounter that does not list `scenario` in its `end_reasons`).
+    ConditionNotMet,
 }

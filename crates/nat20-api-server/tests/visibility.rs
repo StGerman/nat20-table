@@ -2,7 +2,8 @@
 //! `contract/fixtures/*.jsonl` and, after each step, asks for `get_state` and `events since 0` as
 //! every party creature's player viewer. Nothing a player may not know may appear in what that
 //! player receives: another creature's HP, max HP, temp HP or AC; any roll target (`against`,
-//! `dc`, `dc_source`) or roll modifiers; scenario data (`flags`, `checks`, `known_ids`) or the
+//! `dc`, `dc_source`) or roll modifiers; scenario data (`flags`, `checks`, `encounters`,
+//! `surrender_available`, `known_ids`) or the
 //! reasons behind Advantage (`advantage_sources`); a DM-only or another owner's event, or a
 //! scenario event kind (`check_resolved`, `flag_set`, `hazard_triggered`, `spawned`) whatever its
 //! visibility; another creature's `hit_points` event; an AC or DC number in free text.
@@ -97,6 +98,8 @@ fn scan(viewer: &str, node: &Value, path: &str, found: &mut Vec<String>) {
                 "dc_source",
                 "flags",
                 "checks",
+                "encounters",
+                "surrender_available",
                 "known_ids",
                 "advantage_sources",
             ] {
