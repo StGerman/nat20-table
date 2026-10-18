@@ -1,6 +1,6 @@
 # 0020. Send the engine-plumbing items U1 and U2 upstream now, not at Milestone 8
 
-- **Status:** Accepted
+- **Status:** Superseded by [0023](0023-long-lived-fork.md) (upstream closed both PRs and the issue on 2026-10-18)
 - **Date:** 2026-10-17
 - **Decided by:** Stas, on a decision card in the project chat after asking for next steps (2026-10-17). Amends [0002](0002-fork-and-own-repo.md), which held every upstream PR until Milestone 8.
 

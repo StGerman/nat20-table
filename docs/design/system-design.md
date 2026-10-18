@@ -9,8 +9,9 @@ Companion files: [CLAUDE.md](CLAUDE.md) (the rules in a form a Claude Code sessi
 
 1. **Yes, detach the API, and go one step further: take it out of the fork entirely.** The API becomes its own Cargo packages (`nat20-api-contract` for wire types, `nat20-api-server` for behaviour) in our own repo, depending on `nat20_core` by pinned git rev. Evidence: milestone 1's `server/` crate needed **zero changes to `core/`** (`git diff main demo -- core/src` is empty), so core's public surface already carries a headless API.
 2. **The fork shrinks to an upstream staging area.** `main` == upstream; every other branch is one upstream-bound item. No server, no product code, no CLAUDE.md ever lands there.
+   *Superseded 2026-10-18 ([decision 0023](../decisions/0023-long-lived-fork.md)): upstream declines AI-authored contributions. `main` still mirrors upstream, and `demo` is now our long-lived engine branch, synced by merge. Still no server or product code in it.*
 3. **Contract-first: recommend a standalone Rust contract crate (serde + schemars), TypeSpec as the alternative.** The contract crate holds only wire types, no logic, no core dependency; JSON Schema and TS types are generated from it. Both pipelines spiked on the same slice (§5.4): the Rust crate needs no fix-up step and rejects `v: 2` by type; TypeSpec needs a normalizer before typify will produce correct Rust. Generated code is checked in; CI regenerates and fails on any diff.
-4. **Upstream needs four small code PRs, not one of which mentions an API** (built on the fork now, proposed upstream only at Milestone 8): configurable registry root (resolves the maintainer's own `TODO` at `core/src/registry/registry.rs:47`), seedable dice, fractional CR, Hit Point Dice on short rest. Everything else upstream is content in his existing JSON format.
+4. **Upstream needs four small code PRs, not one of which mentions an API** (built on the fork now; the upstream proposal was dropped with Milestone 8 on 2026-10-18, decision 0023, so they stay in the fork): configurable registry root (resolves the maintainer's own `TODO` at `core/src/registry/registry.rs:47`), seedable dice, fractional CR, Hit Point Dice on short rest. Everything else upstream is content in his existing JSON format.
 
 ## 1. Requirements
 
@@ -201,6 +202,8 @@ Spike layout: TypeSpec in `contract-spike/` (root), Rust contract crate in `cont
 A fresh crate outside the fork with `nat20_core = { git = "https://github.com/StGerman/nat20", rev = "9aaca2f" }` plus the copied `polyanya` patch builds and loads registries: `classes loaded: 4; root = ~/.cargo/git/checkouts/nat20-…/9aaca2f/core/../assets/registries`. `Cargo.lock` resolves `polyanya` to the patched git branch. Cargo ignores `[patch]` tables in dependencies (documented behaviour), so without the copied entry core would resolve crates.io `polyanya 0.15.1`. Spike manifest: `contract-spike/depcheck/`.
 
 ## 6. Minimal upstream change list
+
+> Historical since 2026-10-18 ([decision 0023](../decisions/0023-long-lived-fork.md)): nothing goes upstream. The items below live in fork `demo`; CLAUDE.md Rule 6 says how core changes are made now.
 
 Rule for every item: useful to his GUI and tests on its own, no API vocabulary, his conventions (registry JSON where possible, test in `core/tests`, `docs/PROGRESS.md` row, regenerated `.schemas`, `cargo test --locked` green), one item per PR, branch off upstream `main`.
 

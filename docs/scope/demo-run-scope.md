@@ -85,7 +85,7 @@ Strategy (Stas, 2026-10-16): fork Nat20 and contribute generic work back upstrea
 | E8 | Out-of-combat checks: skill check against a scenario-defined DC, group check, Help action | S | Upstream |
 | E9 | Four pregenerated character files | S | Ours |
 
-**Fork workflow**
+**Fork workflow** (superseded 2026-10-18 by `docs/decisions/0023-long-lived-fork.md`: upstream declines AI-authored contributions, so nothing goes upstream; `demo` is synced from upstream `main` by merge, never rebased; CLAUDE.md Rule 6 has the current workflow)
 1. Fork to `StGerman/nat20`. Keep `main` identical to upstream; do demo work on a `demo` branch on top of it and rebase it regularly.
 2. Each upstream item is its own branch and PR off upstream `main`, matching his conventions: JSON in `assets/registries`, Lua only where logic needs it, a test in `core/tests`, a row in `docs/PROGRESS.md`, regenerated schemas.
 3. Open an issue before the large items (E1, E2). One maintainer means his roadmap wins; ask before building.

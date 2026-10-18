@@ -10,7 +10,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 |---|---|---|---|---|
 | [0000](0000-record-decisions.md) | Record decisions as numbered decision records | Accepted | 2026-10-17 | Stas asked; format by Claude |
 | [0001](0001-nat20-as-rules-engine.md) | Use Nat20 as the rules engine instead of building our own | Accepted | 2026-10-16 | Stas |
-| [0002](0002-fork-and-own-repo.md) | Keep the fork equal to upstream and put our code in nat20-table | Accepted, amended by 0020 | 2026-10-16 | Stas (design approval) |
+| [0002](0002-fork-and-own-repo.md) | Keep the fork equal to upstream and put our code in nat20-table | Accepted, amended by 0020, upstream parts superseded by 0023 | 2026-10-16 | Stas (design approval) |
 | [0003](0003-contract-first-rust-crate.md) | Contract-first, written as a Rust contract crate | Accepted | 2026-10-16 | Stas (contract-first); Claude (format) |
 | [0004](0004-visibility-in-types.md) | Visibility is structural: separate view types, projected by the engine | Accepted | 2026-10-16 | Stas confirmed |
 | [0005](0005-engine-rolls.md) | The engine decides and resolves every roll, never the LLM | Accepted | 2026-10-16 | Stas (scope; AC/DC in log) |
@@ -28,10 +28,12 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0017](0017-tasks-md-only-list.md) | TASKS.md is the only task list | Accepted | 2026-10-16 | Stas (design approval) |
 | [0018](0018-original-scenario.md) | Run an original one-shot, The Silent Mill, not a published adventure | Accepted | 2026-10-16 | Stas (scope) |
 | [0019](0019-game-stack.md) | Game side: TypeScript, Ink and the Claude Agent SDK | Accepted, not built | 2026-10-16 | Stas (scope) |
-| [0020](0020-send-u1-u2-upstream-early.md) | Send the engine-plumbing items U1 and U2 upstream now, not at Milestone 8 | Accepted | 2026-10-17 | Stas (decision card) |
+| [0020](0020-send-u1-u2-upstream-early.md) | Send the engine-plumbing items U1 and U2 upstream now, not at Milestone 8 | Superseded by 0023 | 2026-10-17 | Stas (decision card) |
 | [0021](0021-surrender-dm-call-engine-gate.md) | Surrender: the DM decides, within a scene condition the engine enforces | Accepted | 2026-10-17 | Stas (direction), delegated to the coordinator |
 | [0022](0022-ci-shape.md) | CI: parallel lint and test, one build, one required gate, cargo-deny, advisories and core drift off the gate | Accepted | 2026-10-17 | Claude (defaults for Stas's CI ask); Stas accepted by merging #10 |
+| [0023](0023-long-lived-fork.md) | Upstream declines our contributions: keep a long-lived fork that syncs upstream main | Accepted | 2026-10-18 | Stas (thread "Mads's reply") |
+| [0024](0024-dependency-policy.md) | Dependencies: stay current behind a cooldown and hard gates, in both repos | Proposed | 2026-10-18 | Stas asked; specifics by Claude |
 
 ## Open questions to watch
 
-None are open as of 2026-10-17. The likeliest to reopen: 0006 (if the human finds rolls opaque in playtests), 0012 (if anchors prove too coarse), 0016 (when a real client is planned).
+0024 is proposed until Stas merges it. The likeliest to reopen: 0006 (if the human finds rolls opaque in playtests), 0012 (if anchors prove too coarse), 0016 (when a real client is planned).
