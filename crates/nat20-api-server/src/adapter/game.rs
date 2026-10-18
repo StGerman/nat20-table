@@ -16,7 +16,7 @@ use nat20_api_contract::{
     ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, CombatOverReason,
     Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
     ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec, HitDiceSpend,
-    HitPointsRegained, Mode, MoveTarget, OptionId, OptionVariant, Placement, PointFt,
+    HitPointsRegained, Mode, MoveTarget, OptionId, OptionVariant, Placement, PointFt, PregenFile,
     ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn,
     SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate,
     Targeting, UnavailableOption, Visibility,
@@ -100,6 +100,8 @@ struct Scene {
     placed: BTreeSet<String>,
     /// Stat blocks of the spawns' monsters, read with the scene.
     monsters: HashMap<String, MonsterDef>,
+    /// Pregen files of the spawns' characters, read with the scene.
+    pregens: HashMap<String, PregenFile>,
 }
 
 /// What `request_check` returns: the roll's local key, its total and whether it succeeded.
@@ -245,9 +247,19 @@ impl Game {
                 ),
             );
         }
-        // Stat blocks are read before anything is spawned, the spawns' with the scene's own.
+        // Stat blocks and pregen files are read before anything is spawned, the spawns' with
+        // the scene's own.
         let mut monsters = HashMap::new();
+        let mut pregens = HashMap::new();
         for def in scene_defs() {
+            if let Some(id) = &def.pregen
+                && !pregens.contains_key(id)
+            {
+                match pregen::read(id) {
+                    Ok(file) => pregens.insert(id.clone(), file),
+                    Err(m) => return fail(previous, error(ErrorCode::BadScene, m)),
+                };
+            }
             if let Some(monster) = &def.monster
                 && !monsters.contains_key(monster)
             {
@@ -301,7 +313,7 @@ impl Game {
             game.global_seen = game.engine.event_log.events.len();
         };
         for def in &scene.creatures {
-            match spawn_creature(&mut game.engine, def, &monsters) {
+            match spawn_creature(&mut game.engine, def, &monsters, &pregens) {
                 Ok(entity) => spawned.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -320,7 +332,7 @@ impl Game {
         let mut trial: Vec<SceneCreature> = Vec::new();
         let mut failed = None;
         for def in scene.spawns.iter().flat_map(|s| &s.creatures) {
-            match spawn_creature(&mut game.engine, def, &monsters) {
+            match spawn_creature(&mut game.engine, def, &monsters, &pregens) {
                 Ok(entity) => trial.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -434,6 +446,7 @@ impl Game {
             spawns: scene.spawns.clone(),
             placed: BTreeSet::new(),
             monsters,
+            pregens,
         };
         game.scene_encounter = None;
         game.encounter_seen = 0;
@@ -462,6 +475,7 @@ impl Game {
                 spawns: Vec::new(),
                 placed: BTreeSet::new(),
                 monsters: HashMap::new(),
+                pregens: HashMap::new(),
             },
             encounter: None,
             scene_encounter: None,
@@ -1371,7 +1385,12 @@ impl Game {
         let mut new: Vec<SceneCreature> = Vec::new();
         let mut failed = None;
         for def in spawns.iter().flat_map(|s| &s.creatures) {
-            match spawn_creature(&mut self.engine, def, &self.scene.monsters) {
+            match spawn_creature(
+                &mut self.engine,
+                def,
+                &self.scene.monsters,
+                &self.scene.pregens,
+            ) {
                 Ok(entity) => new.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -2756,7 +2775,7 @@ impl Game {
     }
 }
 
-fn load_geometry(map: Option<&str>) -> WorldGeometry {
+pub(super) fn load_geometry(map: Option<&str>) -> WorldGeometry {
     let terrain = scene::map_path(map);
     WorldGeometry::from_obj_path(
         terrain.to_str().expect("utf-8 path"),
@@ -2772,17 +2791,12 @@ fn spawn_creature(
     engine: &mut EngineState,
     def: &nat20_api_contract::SceneCreature,
     monsters: &HashMap<String, MonsterDef>,
+    pregens: &HashMap<String, PregenFile>,
 ) -> Result<Entity, ApiError> {
     match (&def.pregen, &def.monster) {
-        (Some(pregen), None) => pregen::spawn(engine, pregen).ok_or_else(|| {
-            error(
-                ErrorCode::BadScene,
-                format!(
-                    "There is no pregen {pregen}; known pregens: {}.",
-                    pregen::PREGENS.join(", ")
-                ),
-            )
-        }),
+        (Some(pregen), None) => {
+            pregen::spawn(engine, &pregens[pregen]).map_err(|m| error(ErrorCode::BadScene, m))
+        }
         (None, Some(monster)) => monsters[monster]
             .spawn(engine)
             .map_err(|e| error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))),

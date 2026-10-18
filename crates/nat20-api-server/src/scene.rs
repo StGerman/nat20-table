@@ -270,15 +270,7 @@ fn check_creature(
     check_handle(handle)?;
     match (&creature.pregen, &creature.monster) {
         (Some(pregen), None) => {
-            if !pregen::PREGENS.contains(&pregen.as_str()) {
-                return Err(error(
-                    ErrorCode::BadScene,
-                    format!(
-                        "There is no pregen {pregen}; known pregens: {}.",
-                        pregen::PREGENS.join(", ")
-                    ),
-                ));
-            }
+            pregen::read(pregen).map_err(|m| error(ErrorCode::BadScene, m))?;
         }
         (None, Some(monster)) => {
             if !monster_path(data_dir, monster)?.is_file() {

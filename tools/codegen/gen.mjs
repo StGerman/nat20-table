@@ -1,4 +1,4 @@
-// `npm run gen`: contract crate -> JSON Schema bundles (wire, scene file) -> schema hash -> TS types.
+// `npm run gen`: contract crate -> JSON Schema bundles (wire, scene file, pregen file) -> schema hash -> TS types.
 // Everything it writes is generated: never edit those files by hand (CLAUDE.md Rule 1).
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -16,13 +16,16 @@ const exportSchema = (which) =>
     encoding: "utf8",
     stdio: ["ignore", "pipe", "inherit"],
   });
-// Two schemas: the wire (root Nat20Api) and the scene file (root SceneFile). One hash covers both,
-// in that order, so `hello.schema_sha256` changes when either does.
+// Three schemas: the wire (root Nat20Api), the scene file (root SceneFile) and the pregen file
+// (root PregenFile). One hash covers all three, in that order, so `hello.schema_sha256` changes
+// when any of them does.
 const schemaText = exportSchema("api");
 const sceneText = exportSchema("scene");
+const pregenText = exportSchema("pregen");
 fs.writeFileSync(out("generated/nat20-api.schema.json"), schemaText);
 fs.writeFileSync(out("generated/nat20-scene.schema.json"), sceneText);
-const sha = createHash("sha256").update(schemaText).update(sceneText).digest("hex");
+fs.writeFileSync(out("generated/nat20-pregen.schema.json"), pregenText);
+const sha = createHash("sha256").update(schemaText).update(sceneText).update(pregenText).digest("hex");
 fs.writeFileSync(out("generated/nat20-api.schema.sha256"), sha + "\n");
 
 const banner = [
@@ -42,7 +45,15 @@ const scene = JSON.parse(sceneText);
 // re-exports this module as the `scene` namespace so the names don't clash.
 const sceneTs = await compile(forTypeScript(scene), "SceneFile", compileOptions);
 fs.writeFileSync(out("packages/engine-client/src/generated/scene.ts"), sceneTs);
-console.log(`generated: schema ${sha.slice(0, 12)}, ${Object.keys(schema.$defs ?? {}).length} wire types, ${Object.keys(scene.$defs ?? {}).length + 1} scene types`);
+
+const pregen = JSON.parse(pregenText);
+// Root is PregenFile; the client re-exports it as the `pregen` namespace, as it does `scene`.
+const pregenTs = await compile(forTypeScript(pregen), "PregenFile", compileOptions);
+fs.writeFileSync(out("packages/engine-client/src/generated/pregen.ts"), pregenTs);
+console.log(
+  `generated: schema ${sha.slice(0, 12)}, ${Object.keys(schema.$defs ?? {}).length} wire types, ` +
+    `${Object.keys(scene.$defs ?? {}).length + 1} scene types, ${Object.keys(pregen.$defs ?? {}).length + 1} pregen types`,
+);
 
 // A copy of the schema reshaped where json-schema-to-typescript mishandles valid JSON Schema.
 // The committed schema and its hash are untouched; only the TS input changes.

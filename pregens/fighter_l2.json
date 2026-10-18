@@ -1,0 +1,35 @@
+{
+  "_comment": "Bren, the level 2 Fighter Milestones 1 to 3 were played with. Stand-ins until core has them: Dragonborn instead of Human and no Shield, so AC 17 instead of the demo Fighter's 19 (Milestone 4 spec, step 4). Core's Soldier still grants a placeholder feat (Fighting Style: Archery).",
+  "id": "fighter_l2",
+  "name": "Bren",
+  "species": "nat20_core::species.dragonborn",
+  "subspecies": "nat20_core::subspecies.dragonborn.white",
+  "background": "nat20_core::background.soldier",
+  "class": "nat20_core::class.fighter",
+  "level": 2,
+  "ability_scores": {
+    "_comment": "The SRD 5.2.1 standard array as the Fighter assigns it; the Soldier adds 2 and 1.",
+    "strength": 15,
+    "dexterity": 14,
+    "constitution": 13,
+    "intelligence": 8,
+    "wisdom": 10,
+    "charisma": 12,
+    "plus_2": "strength",
+    "plus_1": "constitution"
+  },
+  "choices": [
+    {
+      "prompt_id": "choice.fighting_style",
+      "picks": ["nat20_core::feat.fighting_style.defense"]
+    }
+  ],
+  "skills": ["athletics", "perception"],
+  "equipment": [
+    { "item": "nat20_core::item.chainmail", "quantity": 1, "equip": "armor" },
+    { "item": "nat20_core::item.longsword", "quantity": 1, "equip": "melee_main_hand" },
+    { "item": "nat20_core::item.flail", "quantity": 1 },
+    { "item": "nat20_core::item.javelin", "quantity": 8 }
+  ],
+  "money": "54 GP"
+}
