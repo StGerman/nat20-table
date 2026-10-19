@@ -786,6 +786,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative: Vec::new(),
+            concentration: Default::default(),
         };
         let mut entries = Vec::new();
         for event in self.engine.event_log.events.iter().skip(self.global_seen) {
@@ -1079,6 +1080,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative: Vec::new(),
+            concentration: Default::default(),
         }
     }
 
@@ -1764,7 +1766,10 @@ impl Game {
                     "It cannot be used again this turn.".to_string(),
                 ),
             };
-            let (option_id, name) = names::option_id_and_name(&action_id, None);
+            let (option_id, name) = match contexts.first() {
+                Some((context, _)) => names::option_for(engine, entity, &action_id, context),
+                None => names::option_id_and_name(&action_id, None),
+            };
             unavailable.push(UnavailableOption {
                 option_id: OptionId(option_id),
                 name,
@@ -1912,9 +1917,8 @@ impl Game {
                         .iter()
                         .enumerate()
                         .map(|(i, o)| {
-                            let weapon = names::weapon_of(&self.engine, reactor, &o.context);
                             let (option_id, name) =
-                                names::option_id_and_name(&o.action_id, weapon.as_deref());
+                                names::option_for(&self.engine, reactor, &o.action_id, &o.context);
                             ReactionOption {
                                 choice: i as u32,
                                 option_id: OptionId(option_id),
@@ -2037,8 +2041,7 @@ impl Game {
                     continue;
                 };
                 usable.sort_by_key(names::variant_stem);
-                let weapon = names::weapon_of(engine, entity, context);
-                let (mut option_id, name) = names::option_id_and_name(action_id, weapon.as_deref());
+                let (mut option_id, name) = names::option_for(engine, entity, action_id, context);
                 if out.iter().any(|o| o.option.option_id.0 == option_id) {
                     option_id = format!("{option_id}/{index}");
                 }
@@ -2059,6 +2062,7 @@ impl Game {
                                 name: names::variant_name(v),
                             })
                             .collect(),
+                        spell: names::option_spell(context),
                     },
                     action_id: action_id.clone(),
                     context: index,
@@ -2616,6 +2620,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative,
+            concentration: Default::default(),
         };
 
         let mut entries = Vec::new();
@@ -2689,6 +2694,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative: Vec::new(),
+            concentration: Default::default(),
         };
         let entries: Vec<Pending> = encounter
             .initiative_order()
@@ -2722,6 +2728,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative: Vec::new(),
+            concentration: Default::default(),
         };
         let entries: Vec<Pending> = encounter
             .initiative_order()

@@ -12,10 +12,11 @@ publish = false
 [workspace.dependencies]
 nat20-api-contract = { path = "crates/nat20-api-contract" }
 # Pinned by rev. Bump only in its own PR with the full suite green (CLAUDE.md Rule 5).
-# 0478492 = fork branch `demo` (upstream main plus our core changes; see the fork's history):
-# since 031f7a2 it adds the Human species, Savage Attacker, Skilled and the SRD background
-# lists (core #12), Shield and Mace (core #11), and crates.io polyanya 0.16 (core #13).
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "0478492157d135cfd9e8e6c2fe21f05534ebc5b0" }
+# 9d70516 = head of open core #18 (Heavy armour ignores a negative Dexterity modifier), stacked
+# on core #16 (Cleric) and core #15 (partial recharge), all on fork `demo` 0478492: it adds
+# Second Wind's and Rage's one use back on a short rest, the Cleric levels 1 and 2, and the
+# Milestone 4 Cleric spells. Repointed to `demo`'s tip once they merge.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "9d705160a5819ca6886d089fdb3d81c43d7e02fd" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"

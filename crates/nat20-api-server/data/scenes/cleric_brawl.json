@@ -1,0 +1,90 @@
+{
+    "id": "cleric_brawl",
+    "description": "The Cleric in a fight (Milestone 4 spec §7 step 7): Maren a step behind Bren with a clear line past him, two goblins in front of Bren, and help_brawl's loft fall to drop Bren to 0 Hit Points before the fight.",
+    "creatures": [
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 10.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 10.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin2",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 10.0,
+                    "y_ft": 5.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "loft_fall",
+            "test": {
+                "kind": "save",
+                "ability": "dexterity"
+            },
+            "dc": 30,
+            "on_failure": [
+                {
+                    "kind": "damage",
+                    "dice": "1d4+19",
+                    "damage_type": "bludgeoning"
+                }
+            ]
+        }
+    ],
+    "encounters": [
+        {
+            "id": "brawl",
+            "participants": [
+                "maren",
+                "bren",
+                "goblin",
+                "goblin2"
+            ]
+        }
+    ]
+}

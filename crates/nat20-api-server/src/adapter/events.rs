@@ -4,14 +4,16 @@ use std::collections::HashMap;
 
 use hecs::Entity;
 use nat20_api_contract::{
-    AdvantageState, Against, AgainstKind, CombatOverReason, DcSource, DiceRolled, EventKind,
-    Handle, LifeState as WireLife, Modifier, OptionId, RestKind as WireRest, RollId, RollKind,
-    RollOutcome, RollView, Side, Visibility,
+    AdvantageState, Against, AgainstKind, CombatOverReason, ConcentrationEndReason, DcSource,
+    DiceRolled, EventKind, Handle, LifeState as WireLife, Modifier, OptionId, RestKind as WireRest,
+    RollId, RollKind, RollOutcome, RollView, Side, Visibility,
 };
 use nat20_core::{
     components::{
         actions::{
-            action::{ActionResultComponent, DamageResult, HealingResult},
+            action::{
+                ActionResultComponent, DamageResult, EffectResult, EffectResultKind, HealingResult,
+            },
             targeting::TargetInstance,
         },
         d20::{
@@ -20,15 +22,16 @@ use nat20_core::{
         damage::{DamageMitigationResult, DamageRollResult},
         health::life_state::LifeState,
         id::EntityIdentifier,
-        modifier::{FlatModifiable, ModifierKindResult, ModifierResult},
+        modifier::{FlatModifiable, ModifierKindResult, ModifierResult, ModifierSource},
         saving_throw::SavingThrowKind,
+        spells::spellbook::Spellbook,
         time::TurnBoundary,
     },
     engine::{
         engine_state::EngineState,
         event::{EncounterEvent, Event, EventKind as EngineKind},
     },
-    systems::time::RestKind,
+    systems::{self, time::RestKind},
 };
 
 use crate::adapter::names;
@@ -97,6 +100,25 @@ fn apply_hp((hp, hp_max, temp): (u32, u32, u32), delta: i32) -> (u32, u32, u32) 
     (hp, hp_max, temp)
 }
 
+/// Where a saving throw's DC came from. Concentration's DC is a rule. A DC core builds from an
+/// ability modifier is the caster's spell save DC: core builds one only in its spellbook (spells,
+/// and class features such as Divine Spark that use the spell save DC) and for weapon saves,
+/// which no demo creature makes.
+fn save_dc_source(kind: &SavingThrowKind, dc: &ModifierResult) -> DcSource {
+    if *kind == SavingThrowKind::Concentration {
+        return DcSource::Rule;
+    }
+    let mut dc = dc.clone();
+    if dc
+        .iter_mut()
+        .any(|(source, _)| matches!(source, ModifierSource::Ability(_)))
+    {
+        DcSource::SpellSaveDc
+    } else {
+        DcSource::StatBlock
+    }
+}
+
 fn keyed(mut roll: RollView, key: &str) -> RollView {
     if let RollView::Full { id, .. } = &mut roll {
         *id = RollId(key.to_owned());
@@ -115,6 +137,20 @@ pub struct LogWriter<'a> {
     pub keys: &'a mut RollKeys,
     /// Handles in initiative order, for `combat_started`.
     pub initiative: Vec<String>,
+    /// What this batch has seen that explains a start or end of concentration.
+    pub concentration: ConcentrationBatch,
+}
+
+/// Concentration clues within one batch of engine events: core logs that concentration was lost,
+/// but not why, and logs no start at all.
+#[derive(Default)]
+pub struct ConcentrationBatch {
+    /// Casters who cast a Concentration spell in this batch.
+    casting: Vec<Entity>,
+    /// Creatures that failed a Concentration save in this batch.
+    failed_save: Vec<Entity>,
+    /// `concentration_started` entries already made, one per caster and spell.
+    started: Vec<(Entity, String)>,
 }
 
 impl LogWriter<'_> {
@@ -123,6 +159,15 @@ impl LogWriter<'_> {
             .get(&id.id())
             .cloned()
             .unwrap_or_else(|| id.name().as_str().to_string())
+    }
+
+    /// The spell `entity` concentrates on once the whole batch has run.
+    fn concentrating_on(&self, entity: Entity) -> Option<String> {
+        let book = self.engine.world.get::<&Spellbook>(entity).ok()?;
+        book.concentration_tracker()
+            .instances()
+            .first()
+            .map(names::concentration_spell)
     }
 
     fn public(&self, kind: EventKind) -> Pending {
@@ -151,9 +196,15 @@ impl LogWriter<'_> {
                 })]
             }
             EngineKind::ActionRequested { action } => {
-                let weapon = names::weapon_of(self.engine, action.actor.id(), &action.context);
-                let (option_id, name) =
-                    names::option_id_and_name(&action.action_id, weapon.as_deref());
+                if names::option_spell(&action.context).is_some_and(|s| s.concentration) {
+                    self.concentration.casting.push(action.actor.id());
+                }
+                let (option_id, name) = names::option_for(
+                    self.engine,
+                    action.actor.id(),
+                    &action.action_id,
+                    &action.context,
+                );
                 let targets = action
                     .targets
                     .iter()
@@ -201,13 +252,22 @@ impl LogWriter<'_> {
                     ),
                     D20CheckDC::SavingThrow { saving_throw, dc } => (
                         RollKind::SavingThrow,
-                        format!("a {} saving throw", words(&format!("{saving_throw:?}"))),
+                        match saving_throw {
+                            SavingThrowKind::Ability(ability) => {
+                                format!("a {ability:?} saving throw")
+                            }
+                            // Concentration is a Constitution save (SRD 5.2.1, Concentration).
+                            SavingThrowKind::Concentration => {
+                                "a Constitution saving throw to keep Concentration".into()
+                            }
+                            other => format!("a {} saving throw", words(&format!("{other:?}"))),
+                        },
                         Against {
                             kind: AgainstKind::Dc,
                             value: dc.total(),
                         },
                         None,
-                        Some(DcSource::StatBlock),
+                        Some(save_dc_source(saving_throw, dc)),
                     ),
                     // The engine rolls a skill check itself only for an action's own rule,
                     // such as Help's DC 10 Medicine check to stabilize; the table's checks are
@@ -228,6 +288,17 @@ impl LogWriter<'_> {
                     ),
                 };
                 let success = result.is_success(dc);
+                if !success
+                    && matches!(
+                        dc,
+                        D20CheckDC::SavingThrow {
+                            saving_throw: SavingThrowKind::Concentration,
+                            ..
+                        }
+                    )
+                {
+                    self.concentration.failed_save.push(actor.id());
+                }
                 let outcome = match (kind, result.outcome, success) {
                     (RollKind::Attack, Some(D20CheckOutcome::CriticalSuccess), _) => {
                         RollOutcome::CriticalHit
@@ -268,6 +339,29 @@ impl LogWriter<'_> {
                     .as_ref()
                     .map_or_else(|| target.clone(), |a| self.who(a));
                 let mut entries = Vec::new();
+                if let Some(caster) = actor
+                    && self.concentration.casting.contains(&caster.id())
+                    && let Some(spell) = result.components.iter().find_map(|c| match c {
+                        ActionResultComponent::Effect(EffectResult {
+                            effects,
+                            result: EffectResultKind::Applied,
+                            ..
+                        }) => effects.first().map(names::effect_spell),
+                        _ => None,
+                    })
+                    && !self
+                        .concentration
+                        .started
+                        .contains(&(caster.id(), spell.clone()))
+                {
+                    self.concentration
+                        .started
+                        .push((caster.id(), spell.clone()));
+                    entries.push(self.public(EventKind::ConcentrationStarted {
+                        actor: Handle(self.who(caster)),
+                        spell,
+                    }));
+                }
                 for component in &result.components {
                     let new_life_state = match component {
                         ActionResultComponent::Damage(DamageResult {
@@ -344,6 +438,33 @@ impl LogWriter<'_> {
                 target: Handle(self.who(entity)),
                 state: wire_life_state(new_state),
             })],
+            EngineKind::LostConcentration { entity, instances } => {
+                let Some(instance) = instances.first() else {
+                    return Vec::new();
+                };
+                let id = entity.id();
+                let spell = names::concentration_spell(instance);
+                let reason = if self.concentration.failed_save.contains(&id) {
+                    ConcentrationEndReason::FailedSave
+                } else if !systems::health::is_alive(&self.engine.world, id)
+                    || self.hp.get(&id).is_some_and(|(hp, _, _)| *hp == 0)
+                {
+                    ConcentrationEndReason::Incapacitated
+                } else if self.concentration.casting.contains(&id)
+                    || self.concentrating_on(id).is_some_and(|now| now != spell)
+                {
+                    // Core drops the old spell before it logs the new cast, so a caster now
+                    // holding another spell replaced this one.
+                    ConcentrationEndReason::Replaced
+                } else {
+                    ConcentrationEndReason::Ended
+                };
+                vec![self.public(EventKind::ConcentrationEnded {
+                    actor: Handle(self.who(entity)),
+                    spell,
+                    reason,
+                })]
+            }
             EngineKind::RestFinished { kind, participants } => {
                 vec![self.public(EventKind::Rest {
                     participants: participants.iter().map(|p| Handle(self.who(p))).collect(),

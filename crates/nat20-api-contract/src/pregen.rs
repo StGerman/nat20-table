@@ -46,6 +46,10 @@ pub struct PregenFile {
     pub choices: Vec<PregenChoice>,
     /// The skills picked from the class's skill list, as many as the class grants.
     pub skills: Vec<Skill>,
+    /// Skill picks that a species or feat asks for (Human Skillful, the Skilled feat, ...),
+    /// each keyed by the registry id of what asks. The class's own picks stay in `skills`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skill_choices: Vec<PregenSkillChoice>,
     /// What the character carries, in the order it is put on or picked up. It replaces the
     /// class's and background's starting equipment, for which the engine takes the gold option.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -91,6 +95,20 @@ pub struct PregenChoice {
     /// The registry ids picked from the prompt's options, as many as it asks for, e.g.
     /// `["nat20_core::feat.fighting_style.defense"]`.
     pub picks: Vec<String>,
+}
+
+/// The skills picked for one skill prompt that is not the class's.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PregenSkillChoice {
+    /// Notes for humans reading the file. The engine ignores it.
+    #[serde(default, rename = "_comment", skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
+    /// Registry id of the species, subspecies, background or feat that asks, e.g.
+    /// `nat20_core::species.human` or `nat20_core::feat.skilled`.
+    pub source: String,
+    /// The skills picked, as many as the prompt asks for.
+    pub skills: Vec<Skill>,
 }
 
 /// One item the character carries.

@@ -1,0 +1,74 @@
+{
+  "_comment": "The Cleric for an AI seat (Milestone 4 spec §3, decisions D3 to D5): a Human Soldier and Protector in Chain Mail with a Shield, AC 18 and 17 Hit Points, spell save DC 12 and spell attack +4. The Potion of Healing comes with step 9 (ITM-4).",
+  "id": "cleric_l2",
+  "name": "Maren",
+  "species": "nat20_core::species.human",
+  "background": "nat20_core::background.soldier",
+  "class": "nat20_core::class.cleric",
+  "level": 2,
+  "ability_scores": {
+    "_comment": "The SRD 5.2.1 standard array as the Cleric assigns it; the Soldier adds 2 to Constitution and 1 to Strength, so Chain Mail's Strength 13 is met.",
+    "strength": 14,
+    "dexterity": 8,
+    "constitution": 13,
+    "intelligence": 10,
+    "wisdom": 15,
+    "charisma": 12,
+    "plus_2": "constitution",
+    "plus_1": "strength"
+  },
+  "choices": [
+    {
+      "_comment": "Versatile: the Soldier already grants Savage Attacker.",
+      "prompt_id": "choice.human.versatile",
+      "picks": ["nat20_core::feat.skilled"]
+    },
+    {
+      "_comment": "Protector: Martial weapons and Heavy armour (D3).",
+      "prompt_id": "choice.divine_order",
+      "picks": ["nat20_core::feat.divine_order.protector"]
+    },
+    {
+      "_comment": "Decision D4.",
+      "prompt_id": "choice.cantrips",
+      "picks": [
+        "nat20_core::spell.guidance",
+        "nat20_core::spell.sacred_flame",
+        "nat20_core::spell.spare_the_dying"
+      ]
+    },
+    {
+      "_comment": "Level 1 prepares four.",
+      "prompt_id": "choice.spells",
+      "picks": [
+        "nat20_core::spell.bless",
+        "nat20_core::spell.cure_wounds",
+        "nat20_core::spell.guiding_bolt",
+        "nat20_core::spell.healing_word"
+      ]
+    },
+    {
+      "_comment": "Level 2 prepares a fifth.",
+      "prompt_id": "choice.spells",
+      "picks": ["nat20_core::spell.shield_of_faith"]
+    }
+  ],
+  "skills": ["insight", "medicine"],
+  "skill_choices": [
+    {
+      "_comment": "Skillful.",
+      "source": "nat20_core::species.human",
+      "skills": ["persuasion"]
+    },
+    {
+      "source": "nat20_core::feat.skilled",
+      "skills": ["history", "perception", "religion"]
+    }
+  ],
+  "equipment": [
+    { "item": "nat20_core::item.chainmail", "quantity": 1, "equip": "armor" },
+    { "item": "nat20_core::item.mace", "quantity": 1, "equip": "melee_main_hand" },
+    { "item": "nat20_core::item.shield", "quantity": 1, "equip": "melee_off_hand" }
+  ],
+  "money": "7 GP"
+}

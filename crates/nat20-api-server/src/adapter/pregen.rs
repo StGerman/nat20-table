@@ -17,6 +17,7 @@ use nat20_core::{
         },
         items::{equipment::slots::EquipmentSlot, inventory::Inventory, money::MonetaryValue},
         level_up::{ChoiceItem, ChoiceSpec, LevelUpPrompt},
+        modifier::ModifierSource,
         resource::RechargeRule,
     },
     engine::engine_state::EngineState,
@@ -94,7 +95,10 @@ fn build(engine: &mut EngineState, entity: Entity, file: &PregenFile) -> Result<
         return Err(format!("level {} is outside 1 to 20", file.level));
     }
     let answers = Answers::new(file)?;
-    let mut used = vec![false; file.choices.len()];
+    let mut used = Used {
+        choices: vec![false; file.choices.len()],
+        skill_choices: vec![false; file.skill_choices.len()],
+    };
     for level in 1..=file.level {
         let mut session = LevelUpSession::new(&engine.world, entity);
         while let Some(prompt) = session.pending_prompts().first().cloned() {
@@ -104,10 +108,16 @@ fn build(engine: &mut EngineState, entity: Entity, file: &PregenFile) -> Result<
                 .map_err(|e| refusal(&prompt, level, e))?;
         }
     }
-    if let Some(i) = used.iter().position(|u| !u) {
+    if let Some(i) = used.choices.iter().position(|u| !u) {
         return Err(format!(
             "choice {} answers no prompt core asked",
             file.choices[i].prompt_id
+        ));
+    }
+    if let Some(i) = used.skill_choices.iter().position(|u| !u) {
+        return Err(format!(
+            "skill choice for {} answers no prompt core asked",
+            file.skill_choices[i].source
         ));
     }
 
@@ -116,6 +126,12 @@ fn build(engine: &mut EngineState, entity: Entity, file: &PregenFile) -> Result<
     let _ = systems::health::heal_full(&mut engine.world, entity);
     systems::resources::recharge(&mut engine.world, entity, &RechargeRule::Daily);
     Ok(())
+}
+
+/// Which of the file's `choices` and `skill_choices` have answered a prompt.
+struct Used {
+    choices: Vec<bool>,
+    skill_choices: Vec<bool>,
 }
 
 /// The file's answers, parsed into core's types.
@@ -161,7 +177,7 @@ impl<'a> Answers<'a> {
     fn decide(
         &self,
         prompt: &LevelUpPrompt,
-        used: &mut [bool],
+        used: &mut Used,
         level: u8,
     ) -> Result<LevelUpDecision, String> {
         match prompt {
@@ -182,14 +198,14 @@ impl<'a> Answers<'a> {
                             .choices
                             .iter()
                             .enumerate()
-                            .position(|(i, c)| !used[i] && c.prompt_id == id)
+                            .position(|(i, c)| !used.choices[i] && c.prompt_id == id)
                             .ok_or_else(|| {
                                 format!(
                                     "core asks {id} ({}) at level {level} and the file has no answer",
                                     spec.label
                                 )
                             })?;
-                        used[i] = true;
+                        used.choices[i] = true;
                         self.file.choices[i]
                             .picks
                             .iter()
@@ -214,13 +230,39 @@ impl<'a> Answers<'a> {
             LevelUpPrompt::AbilityScores(_, _) => {
                 Ok(LevelUpDecision::AbilityScores(self.abilities.clone()))
             }
-            LevelUpPrompt::SkillProficiency { .. } => Ok(LevelUpDecision::SkillProficiency(
-                self.file
-                    .skills
-                    .iter()
-                    .map(|s| core_skill(*s))
-                    .collect::<HashSet<_>>(),
-            )),
+            LevelUpPrompt::SkillProficiency { source, .. } => {
+                let skills = match source {
+                    ModifierSource::ClassLevel(_) | ModifierSource::ClassFeature(_) => {
+                        &self.file.skills
+                    }
+                    _ => {
+                        let asker = source_id(source);
+                        let i = self
+                            .file
+                            .skill_choices
+                            .iter()
+                            .enumerate()
+                            .position(|(i, c)| {
+                                !used.skill_choices[i] && Some(normalize(&c.source)) == asker
+                            })
+                            .ok_or_else(|| {
+                                format!(
+                                    "core asks for skills from {} at level {level} and \
+                                     `skill_choices` has no answer",
+                                    asker.unwrap_or_else(|| source.to_string())
+                                )
+                            })?;
+                        used.skill_choices[i] = true;
+                        &self.file.skill_choices[i].skills
+                    }
+                };
+                Ok(LevelUpDecision::SkillProficiency(
+                    skills
+                        .iter()
+                        .map(|s| core_skill(*s))
+                        .collect::<HashSet<_>>(),
+                ))
+            }
             LevelUpPrompt::AbilityScoreImprovement { .. } | LevelUpPrompt::ReplaceSpells { .. } => {
                 Err(format!(
                     "core asks for an {} at level {level}, which pregen files cannot answer yet",
@@ -263,6 +305,17 @@ fn option_id(item: &ChoiceItem) -> Option<String> {
         ChoiceItem::Species(id) => id.to_string(),
         ChoiceItem::Subspecies(id) => id.to_string(),
         ChoiceItem::Equipment { .. } => return None,
+    })
+}
+
+/// The registry id of what asks a prompt, for matching `skill_choices`.
+fn source_id(source: &ModifierSource) -> Option<String> {
+    Some(match source {
+        ModifierSource::Species(id) => id.to_string(),
+        ModifierSource::Subspecies(id) => id.to_string(),
+        ModifierSource::Background(id) => id.to_string(),
+        ModifierSource::Feat(id) | ModifierSource::FeatRepeatable(id, _) => id.to_string(),
+        _ => return None,
     })
 }
 
@@ -354,7 +407,12 @@ fn core_slot(slot: EquipSlot) -> EquipmentSlot {
 
 #[cfg(test)]
 mod tests {
-    use nat20_core::components::{health::hit_points::HitPoints, modifier::FlatModifiable};
+    use nat20_core::components::{
+        health::hit_points::HitPoints,
+        modifier::FlatModifiable,
+        proficiency::ProficiencyLevel,
+        skill::{Skill, SkillSet},
+    };
 
     use super::*;
     use crate::adapter::game::load_geometry;
@@ -384,15 +442,68 @@ mod tests {
         }
     }
 
+    /// Armor Class and Hit Points of a built pregen.
+    fn ac_and_hp(id: &str) -> (i32, u32) {
+        let mut engine = engine();
+        let entity = spawn(&mut engine, &read(id).unwrap()).unwrap();
+        let ac = systems::loadout::armor_class(&engine, entity).total();
+        let hp = systems::helpers::get_component::<HitPoints>(&engine.world, entity).current();
+        (ac, hp)
+    }
+
     #[test]
-    fn bren_has_ac_17_and_20_hit_points() {
+    fn the_pregens_have_the_specs_ac_and_hit_points() {
+        // Milestone 4 spec §3: Chain Mail 16, Shield 2, Defense 1; 10+2, 6+2
+        assert_eq!(ac_and_hp("fighter_l2"), (19, 20));
+        // Unarmored Defense 10, Dex 1, Con 2; 12+2, 7+2
+        assert_eq!(ac_and_hp("barbarian_l2"), (13, 23));
+        // Chain Mail 16, Shield 2 (Protector's Heavy armour training); 8+2, 5+2
+        assert_eq!(ac_and_hp("cleric_l2"), (18, 17));
+    }
+
+    #[test]
+    fn skill_choices_answer_the_species_and_feat_prompts() {
         let mut engine = engine();
         let bren = spawn(&mut engine, &bren()).unwrap();
-        let ac = systems::loadout::armor_class(&engine, bren).total();
-        let hp = systems::helpers::get_component::<HitPoints>(&engine.world, bren).current();
-        assert_eq!((ac, hp), (17, 20));
+        let skills = systems::helpers::get_component::<SkillSet>(&engine.world, bren);
+        for skill in [
+            Skill::Insight,
+            Skill::Medicine,
+            Skill::Persuasion,
+            Skill::Survival,
+            Skill::Acrobatics,
+            Skill::Athletics,
+            Skill::Perception,
+            Skill::Intimidation,
+        ] {
+            assert_eq!(
+                skills.get(&skill).proficiency().level(),
+                &ProficiencyLevel::Proficient,
+                "{skill:?}"
+            );
+        }
         let inventory = systems::helpers::get_component::<Inventory>(&engine.world, bren);
         assert_eq!(inventory.money().to_string(), "54 GP");
+    }
+
+    #[test]
+    fn skill_choices_are_checked() {
+        let mut file = bren();
+        file.skill_choices.remove(1);
+        refused(
+            file,
+            "core asks for skills from nat20_core::feat.skilled at level 1 and `skill_choices` has no answer",
+        );
+        let mut file = bren();
+        let mut extra = file.skill_choices[0].clone();
+        extra.source = "feat.alert".into();
+        file.skill_choices.push(extra);
+        refused(file, "skill choice for feat.alert answers no prompt");
+        let mut file = bren();
+        file.skill_choices[0]
+            .skills
+            .push(nat20_api_contract::Skill::Arcana);
+        refused(file, "core refuses the answer to skills at level 1");
     }
 
     #[test]
@@ -412,7 +523,7 @@ mod tests {
     #[test]
     fn comments_are_allowed_on_the_file_and_its_sections() {
         let mut value = serde_json::to_value(bren()).unwrap();
-        value["choices"][0]["_comment"] = "Defense: +1 AC in armour.".into();
+        value["choices"][1]["_comment"] = "Defense: +1 AC in armour.".into();
         value["equipment"][0]["_comment"] = "Heavy armour.".into();
         let file: PregenFile = serde_json::from_value(value).unwrap();
         spawn(&mut engine(), &file).unwrap();
@@ -421,7 +532,7 @@ mod tests {
     #[test]
     fn an_unanswered_prompt_is_refused() {
         let mut file = bren();
-        file.choices.clear();
+        file.choices.remove(1);
         refused(file, "core asks choice.fighting_style");
     }
 
@@ -437,17 +548,14 @@ mod tests {
     #[test]
     fn a_pick_that_is_not_an_option_is_refused() {
         let mut file = bren();
-        file.choices[0].picks = vec!["feat.fighting_style.dueling".into()];
+        file.choices[1].picks = vec!["feat.fighting_style.dueling".into()];
         refused(
             file,
             "nat20_core::feat.fighting_style.dueling is not one of the options",
         );
         let mut file = bren();
-        file.class = "nat20_core::class.cleric".into();
-        refused(
-            file,
-            "class.cleric is not one of the options of choice.class",
-        );
+        file.class = "nat20_core::class.monk".into();
+        refused(file, "class.monk is not one of the options of choice.class");
     }
 
     #[test]
@@ -463,7 +571,7 @@ mod tests {
     #[test]
     fn equipment_is_checked() {
         let mut file = bren();
-        file.equipment[3].quantity = 0;
+        file.equipment[2].quantity = 0;
         refused(file, "quantity 0");
         let mut file = bren();
         file.equipment[0].quantity = 2;
@@ -482,7 +590,12 @@ mod tests {
     #[test]
     fn a_displaced_item_stays_in_the_inventory() {
         let mut file = bren();
-        file.equipment[2].equip = Some(EquipSlot::MeleeMainHand);
+        file.equipment.push(nat20_api_contract::PregenItem {
+            comment: None,
+            item: "nat20_core::item.flail".into(),
+            quantity: 1,
+            equip: Some(EquipSlot::MeleeMainHand),
+        });
         let mut engine = engine();
         let bren = spawn(&mut engine, &file).unwrap();
         let inventory = systems::helpers::get_component::<Inventory>(&engine.world, bren);
@@ -496,7 +609,10 @@ mod tests {
     #[test]
     fn a_missing_pregen_names_the_known_ones() {
         let error = read("wizard_l9").unwrap_err();
-        assert!(error.contains("known pregens: fighter_l2"), "{error}");
+        assert!(
+            error.contains("known pregens: barbarian_l2, cleric_l2, fighter_l2"),
+            "{error}"
+        );
         assert!(read("../fighter_l2").is_err());
     }
 }
