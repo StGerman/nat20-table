@@ -24,6 +24,7 @@ use nat20_core::{
         id::EntityIdentifier,
         modifier::{FlatModifiable, ModifierKindResult, ModifierResult, ModifierSource},
         saving_throw::SavingThrowKind,
+        spells::spellbook::Spellbook,
         time::TurnBoundary,
     },
     engine::{
@@ -158,6 +159,15 @@ impl LogWriter<'_> {
             .get(&id.id())
             .cloned()
             .unwrap_or_else(|| id.name().as_str().to_string())
+    }
+
+    /// The spell `entity` concentrates on once the whole batch has run.
+    fn concentrating_on(&self, entity: Entity) -> Option<String> {
+        let book = self.engine.world.get::<&Spellbook>(entity).ok()?;
+        book.concentration_tracker()
+            .instances()
+            .first()
+            .map(names::concentration_spell)
     }
 
     fn public(&self, kind: EventKind) -> Pending {
@@ -433,20 +443,25 @@ impl LogWriter<'_> {
                     return Vec::new();
                 };
                 let id = entity.id();
+                let spell = names::concentration_spell(instance);
                 let reason = if self.concentration.failed_save.contains(&id) {
                     ConcentrationEndReason::FailedSave
                 } else if !systems::health::is_alive(&self.engine.world, id)
                     || self.hp.get(&id).is_some_and(|(hp, _, _)| *hp == 0)
                 {
                     ConcentrationEndReason::Incapacitated
-                } else if self.concentration.casting.contains(&id) {
+                } else if self.concentration.casting.contains(&id)
+                    || self.concentrating_on(id).is_some_and(|now| now != spell)
+                {
+                    // Core drops the old spell before it logs the new cast, so a caster now
+                    // holding another spell replaced this one.
                     ConcentrationEndReason::Replaced
                 } else {
                     ConcentrationEndReason::Ended
                 };
                 vec![self.public(EventKind::ConcentrationEnded {
                     actor: Handle(self.who(entity)),
-                    spell: names::concentration_spell(instance),
+                    spell,
                     reason,
                 })]
             }

@@ -258,7 +258,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `hazard_triggered` | `hazard_id`, `actor` (DM only) |
 | `rest` | `participants`, `rest: short\|long` |
 
-- `concentration_started` follows the cast that applied the spell's effect, once per cast however many targets it has. `concentration_ended` comes when the engine ends it: a failed Concentration save after damage (`failed_save`; the save is logged first, a Constitution save with `dc_source: "rule"` and DC 10 or half the damage), dropping to 0 Hit Points (`incapacitated`), or casting another Concentration spell (`replaced`, before the new spell's `concentration_started`). Known gap (ENG-13): the engine does not end Concentration when the spell's 1-minute duration runs out (Bless is still held after 12 rounds), so `expired` is not logged in this build.
+- `concentration_started` follows the cast that applied the spell's effect, once per cast however many targets it has. `concentration_ended` comes when the engine ends it: a failed Concentration save after damage (`failed_save`; the save is logged first, a Constitution save with `dc_source: "rule"` and DC 10 or half the damage), dropping to 0 Hit Points (`incapacitated`), or casting another Concentration spell (`replaced`, logged before the new cast's `action` and its `concentration_started`). Known gap (ENG-13): the engine does not end Concentration when the spell's 1-minute duration runs out (Bless is still held after 12 rounds), so `expired` is not logged in this build.
 | `spawned` | `spawn_id`, `handles[]` (DM only) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
