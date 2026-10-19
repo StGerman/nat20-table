@@ -1307,7 +1307,7 @@ dependencies = [
 [[package]]
 name = "nat20_core"
 version = "0.1.0"
-source = "git+https://github.com/StGerman/nat20?rev=644ff5ffc288c2814e2bf497817946647e3afc15#644ff5ffc288c2814e2bf497817946647e3afc15"
+source = "git+https://github.com/StGerman/nat20?rev=c17c4bd3f0c5573e8bbfb7cf2e38eef43b84db13#c17c4bd3f0c5573e8bbfb7cf2e38eef43b84db13"
 dependencies = [
  "enum-iterator",
  "enum_dispatch",
@@ -1318,7 +1318,6 @@ dependencies = [
  "mlua",
  "obj-rs",
  "parry3d",
- "paste",
  "polyanya",
  "rand 0.9.5",
  "rerecast",
