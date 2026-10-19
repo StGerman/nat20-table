@@ -1,0 +1,43 @@
+{
+    "id": "cleric_duel",
+    "description": "Concentration under attack (Milestone 4 spec \u00a77 step 7): Maren next to one goblin, so its attacks need no walk.",
+    "creatures": [
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "duel",
+            "participants": [
+                "maren",
+                "goblin"
+            ]
+        }
+    ]
+}

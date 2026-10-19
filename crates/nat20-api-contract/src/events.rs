@@ -168,6 +168,22 @@ pub enum EventKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         source: Option<String>,
     },
+    /// A caster started concentrating on a spell. Public: a caster visibly maintains a spell.
+    ConcentrationStarted {
+        /// The caster.
+        actor: Handle,
+        /// The spell's id, as in the caster's `spells` (`bless`).
+        spell: String,
+    },
+    /// A caster's concentration ended, and with it the spell's effects. Public.
+    ConcentrationEnded {
+        /// The caster.
+        actor: Handle,
+        /// The spell's id, as in the caster's `spells` (`bless`).
+        spell: String,
+        /// Why it ended.
+        reason: ConcentrationEndReason,
+    },
     /// A creature's life state changed.
     LifeState {
         /// Whose.
@@ -405,4 +421,20 @@ pub enum DcSource {
     /// The caster's spell save DC (8 + spellcasting ability modifier + Proficiency Bonus): a
     /// spell's save, or a class feature that uses it, such as Divine Spark.
     SpellSaveDc,
+}
+
+/// Why concentration ended (SRD 5.2.1, Concentration).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ConcentrationEndReason {
+    /// The caster started concentrating on another spell.
+    Replaced,
+    /// The caster failed the Constitution save after taking damage.
+    FailedSave,
+    /// The caster was incapacitated or died.
+    Incapacitated,
+    /// The spell's duration ran out.
+    Expired,
+    /// Anything else, such as the caster ending it.
+    Ended,
 }

@@ -6,12 +6,15 @@
 
 use std::collections::BTreeMap;
 
-use super::{events::wire_life_state, names::title};
+use super::{
+    events::wire_life_state,
+    names::{self, title},
+};
 use hecs::Entity;
 use nat20_api_contract::{
     Ability as WireAbility, AbilityLine, DeathSaves, FeatureLine, Handle, HitDicePool, ItemLine,
-    ProficiencyLevel as WireProficiency, Recharge, ResourcePool, Sheet, Side, Skill as WireSkill,
-    SkillLine, SpellLine, SpellSlots, SpellcastingLine,
+    ProficiencyLevel as WireProficiency, Recharge, ResourcePool, Sheet, SheetConcentration, Side,
+    Skill as WireSkill, SkillLine, SpellLine, SpellSlots, SpellcastingLine,
 };
 use nat20_core::{
     components::{
@@ -190,6 +193,7 @@ pub fn sheet(engine: &EngineState, entity: Entity, handle: &str, side: Side) -> 
         spell_slots,
         spellcasting,
         spells,
+        concentration: concentration(engine, entity),
         resources,
         // The core has no condition or exhaustion model yet.
         conditions: Vec::new(),
@@ -284,6 +288,15 @@ fn resources(
 
 /// Each class's Spellcasting line, then the spells it can cast or prepare: cantrips first,
 /// then by level and name. A class that prepares from its entire list lists what is prepared.
+/// The spell the creature concentrates on, from its spellbook's concentration tracker.
+fn concentration(engine: &EngineState, entity: Entity) -> Option<SheetConcentration> {
+    let book = engine.world.get::<&Spellbook>(entity).ok()?;
+    let instance = book.concentration_tracker().instances().first()?;
+    Some(SheetConcentration {
+        spell: names::concentration_spell(instance),
+    })
+}
+
 fn spellcasting(engine: &EngineState, entity: Entity) -> (Vec<SpellcastingLine>, Vec<SpellLine>) {
     let world = &engine.world;
     let (Ok(levels), Ok(book)) = (

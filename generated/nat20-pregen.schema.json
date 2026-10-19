@@ -97,7 +97,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.20"
+    "version": "1.0.0-dev.21"
   },
   "$defs": {
     "Ability": {

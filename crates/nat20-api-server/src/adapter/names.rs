@@ -6,9 +6,9 @@ use nat20_core::{
     components::{
         actions::action::ActionContext,
         damage::DamageType,
-        id::{ActionId, ActionVariantId},
+        id::{ActionId, ActionVariantId, EffectId},
         items::equipment::slots::EquipmentSlot,
-        spells::spell::SpellFlag,
+        spells::{concentration::ConcentrationInstance, spell::SpellFlag},
     },
     engine::engine_state::EngineState,
     registry::registry::SpellsRegistry,
@@ -105,6 +105,20 @@ pub fn option_spell(context: &ActionContext) -> Option<OptionSpell> {
         concentration: SpellsRegistry::get(&spell.id)
             .is_some_and(|s| s.has_flag(SpellFlag::Concentration)),
     })
+}
+
+/// The spell a concentration instance belongs to, by the id the sheet uses: core names a
+/// spell's effects `effect.spell.<spell>` (a variant adds `.<variant>`).
+pub fn concentration_spell(instance: &ConcentrationInstance) -> String {
+    let ConcentrationInstance::Effect { effect, .. } = instance;
+    effect_spell(effect)
+}
+
+/// The spell an effect belongs to (`effect.spell.bless` is `bless`), or the effect's own id.
+pub fn effect_spell(effect: &EffectId) -> String {
+    let id = effect.id();
+    let rest = id.strip_prefix("effect.spell.").unwrap_or(id);
+    rest.split('.').next().unwrap_or(rest).to_string()
 }
 
 /// `second wind` becomes `Second Wind`.

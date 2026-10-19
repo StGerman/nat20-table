@@ -786,6 +786,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative: Vec::new(),
+            concentration: Default::default(),
         };
         let mut entries = Vec::new();
         for event in self.engine.event_log.events.iter().skip(self.global_seen) {
@@ -1079,6 +1080,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative: Vec::new(),
+            concentration: Default::default(),
         }
     }
 
@@ -2618,6 +2620,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative,
+            concentration: Default::default(),
         };
 
         let mut entries = Vec::new();
@@ -2691,6 +2694,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative: Vec::new(),
+            concentration: Default::default(),
         };
         let entries: Vec<Pending> = encounter
             .initiative_order()
@@ -2724,6 +2728,7 @@ impl Game {
             hp: &mut self.hp,
             keys: &mut self.keys,
             initiative: Vec::new(),
+            concentration: Default::default(),
         };
         let entries: Vec<Pending> = encounter
             .initiative_order()

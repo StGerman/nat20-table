@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.20): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}` and options with a `point` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.21): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}` and options with a `point` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -138,6 +138,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 - It is read-only and works in either mode: it rolls nothing, logs no event and does not advance the seeded dice, so asking for a sheet never changes what a later roll comes up.
 - Check and save bonuses are what the engine adds to the d20 when it rolls: ability modifier, proficiency and lasting effects. Dice bonuses such as Bless are left out. `initiative_bonus` is the engine's initiative check; Passive Perception is 10 plus the Perception bonus.
 - `spellcasting` has a line per class with the Spellcasting feature: the ability, the spell save DC (8 + ability modifier + Proficiency Bonus) and the spell attack bonus (ability modifier + Proficiency Bonus, Bless left out as above). `spells` lists what the creature can cast or prepare, cantrips first, then by level and name: cantrips and prepared spells are `prepared: true`; a learned spell that isn't prepared (a Wizard's spellbook) is `false`. A class that prepares from its entire list, such as the Cleric, lists only what it has prepared. `concentration` says whether casting the spell starts Concentration.
+- The sheet's own `concentration{spell}` names the spell the creature is concentrating on now; it is absent when there is none.
 - A resource whose expended uses all come back on a Long Rest but some on a Short Rest (Second Wind, Rage, Channel Divinity: one use) says how many in `short_rest_regain`.
 - `hit_dice` lists the Hit Point Dice by die size, smallest first; a creature without them (a monster) has none.
 - Not filled yet: `conditions` and `exhaustion` (as in state).
@@ -248,12 +249,16 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `healed` | `target`, `amount`, `source_roll?` |
 | `hit_points` | `target`, `hp`, `hp_max`, `temp_hp` (DM or owner visibility only) |
 | `condition_added` / `condition_removed` | `target`, `condition`, `source` |
+| `concentration_started` | `actor`, `spell` (public: a caster visibly maintains a spell) |
+| `concentration_ended` | `actor`, `spell`, `reason: replaced\|failed_save\|incapacitated\|expired\|ended` (public) |
 | `life_state` | `target`, `state: conscious\|unconscious\|stable\|dead` |
 | `moved` | `actor`, `from`, `to` (ft), `anchor?` |
 | `check_resolved` | `check_id?`, `actor`, `roll_id`, `success` (DM only) |
 | `flag_set` | `flag` (DM only) |
 | `hazard_triggered` | `hazard_id`, `actor` (DM only) |
 | `rest` | `participants`, `rest: short\|long` |
+
+- `concentration_started` follows the cast that applied the spell's effect, once per cast however many targets it has. `concentration_ended` comes when the engine ends it: a failed Concentration save after damage (`failed_save`; the save is logged first, a Constitution save with `dc_source: "rule"` and DC 10 or half the damage), dropping to 0 Hit Points (`incapacitated`), or casting another Concentration spell (`replaced`, before the new spell's `concentration_started`). Known gap (ENG-13): the engine does not end Concentration when the spell's 1-minute duration runs out (Bless is still held after 12 rounds), so `expired` is not logged in this build.
 | `spawned` | `spawn_id`, `handles[]` (DM only) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):

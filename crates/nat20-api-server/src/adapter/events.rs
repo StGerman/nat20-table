@@ -4,14 +4,16 @@ use std::collections::HashMap;
 
 use hecs::Entity;
 use nat20_api_contract::{
-    AdvantageState, Against, AgainstKind, CombatOverReason, DcSource, DiceRolled, EventKind,
-    Handle, LifeState as WireLife, Modifier, OptionId, RestKind as WireRest, RollId, RollKind,
-    RollOutcome, RollView, Side, Visibility,
+    AdvantageState, Against, AgainstKind, CombatOverReason, ConcentrationEndReason, DcSource,
+    DiceRolled, EventKind, Handle, LifeState as WireLife, Modifier, OptionId, RestKind as WireRest,
+    RollId, RollKind, RollOutcome, RollView, Side, Visibility,
 };
 use nat20_core::{
     components::{
         actions::{
-            action::{ActionResultComponent, DamageResult, HealingResult},
+            action::{
+                ActionResultComponent, DamageResult, EffectResult, EffectResultKind, HealingResult,
+            },
             targeting::TargetInstance,
         },
         d20::{
@@ -28,7 +30,7 @@ use nat20_core::{
         engine_state::EngineState,
         event::{EncounterEvent, Event, EventKind as EngineKind},
     },
-    systems::time::RestKind,
+    systems::{self, time::RestKind},
 };
 
 use crate::adapter::names;
@@ -134,6 +136,20 @@ pub struct LogWriter<'a> {
     pub keys: &'a mut RollKeys,
     /// Handles in initiative order, for `combat_started`.
     pub initiative: Vec<String>,
+    /// What this batch has seen that explains a start or end of concentration.
+    pub concentration: ConcentrationBatch,
+}
+
+/// Concentration clues within one batch of engine events: core logs that concentration was lost,
+/// but not why, and logs no start at all.
+#[derive(Default)]
+pub struct ConcentrationBatch {
+    /// Casters who cast a Concentration spell in this batch.
+    casting: Vec<Entity>,
+    /// Creatures that failed a Concentration save in this batch.
+    failed_save: Vec<Entity>,
+    /// `concentration_started` entries already made, one per caster and spell.
+    started: Vec<(Entity, String)>,
 }
 
 impl LogWriter<'_> {
@@ -170,6 +186,9 @@ impl LogWriter<'_> {
                 })]
             }
             EngineKind::ActionRequested { action } => {
+                if names::option_spell(&action.context).is_some_and(|s| s.concentration) {
+                    self.concentration.casting.push(action.actor.id());
+                }
                 let (option_id, name) = names::option_for(
                     self.engine,
                     action.actor.id(),
@@ -227,6 +246,10 @@ impl LogWriter<'_> {
                             SavingThrowKind::Ability(ability) => {
                                 format!("a {ability:?} saving throw")
                             }
+                            // Concentration is a Constitution save (SRD 5.2.1, Concentration).
+                            SavingThrowKind::Concentration => {
+                                "a Constitution saving throw to keep Concentration".into()
+                            }
                             other => format!("a {} saving throw", words(&format!("{other:?}"))),
                         },
                         Against {
@@ -255,6 +278,17 @@ impl LogWriter<'_> {
                     ),
                 };
                 let success = result.is_success(dc);
+                if !success
+                    && matches!(
+                        dc,
+                        D20CheckDC::SavingThrow {
+                            saving_throw: SavingThrowKind::Concentration,
+                            ..
+                        }
+                    )
+                {
+                    self.concentration.failed_save.push(actor.id());
+                }
                 let outcome = match (kind, result.outcome, success) {
                     (RollKind::Attack, Some(D20CheckOutcome::CriticalSuccess), _) => {
                         RollOutcome::CriticalHit
@@ -295,6 +329,29 @@ impl LogWriter<'_> {
                     .as_ref()
                     .map_or_else(|| target.clone(), |a| self.who(a));
                 let mut entries = Vec::new();
+                if let Some(caster) = actor
+                    && self.concentration.casting.contains(&caster.id())
+                    && let Some(spell) = result.components.iter().find_map(|c| match c {
+                        ActionResultComponent::Effect(EffectResult {
+                            effects,
+                            result: EffectResultKind::Applied,
+                            ..
+                        }) => effects.first().map(names::effect_spell),
+                        _ => None,
+                    })
+                    && !self
+                        .concentration
+                        .started
+                        .contains(&(caster.id(), spell.clone()))
+                {
+                    self.concentration
+                        .started
+                        .push((caster.id(), spell.clone()));
+                    entries.push(self.public(EventKind::ConcentrationStarted {
+                        actor: Handle(self.who(caster)),
+                        spell,
+                    }));
+                }
                 for component in &result.components {
                     let new_life_state = match component {
                         ActionResultComponent::Damage(DamageResult {
@@ -371,6 +428,28 @@ impl LogWriter<'_> {
                 target: Handle(self.who(entity)),
                 state: wire_life_state(new_state),
             })],
+            EngineKind::LostConcentration { entity, instances } => {
+                let Some(instance) = instances.first() else {
+                    return Vec::new();
+                };
+                let id = entity.id();
+                let reason = if self.concentration.failed_save.contains(&id) {
+                    ConcentrationEndReason::FailedSave
+                } else if !systems::health::is_alive(&self.engine.world, id)
+                    || self.hp.get(&id).is_some_and(|(hp, _, _)| *hp == 0)
+                {
+                    ConcentrationEndReason::Incapacitated
+                } else if self.concentration.casting.contains(&id) {
+                    ConcentrationEndReason::Replaced
+                } else {
+                    ConcentrationEndReason::Ended
+                };
+                vec![self.public(EventKind::ConcentrationEnded {
+                    actor: Handle(self.who(entity)),
+                    spell: names::concentration_spell(instance),
+                    reason,
+                })]
+            }
             EngineKind::RestFinished { kind, participants } => {
                 vec![self.public(EventKind::Rest {
                     participants: participants.iter().map(|p| Handle(self.who(p))).collect(),

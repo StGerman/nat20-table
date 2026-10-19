@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.20"
+    "version": "1.0.0-dev.21"
   },
   "$defs": {
     "Ability": {
@@ -1026,6 +1026,36 @@
         }
       ]
     },
+    "ConcentrationEndReason": {
+      "description": "Why concentration ended (SRD 5.2.1, Concentration).",
+      "oneOf": [
+        {
+          "description": "The caster started concentrating on another spell.",
+          "type": "string",
+          "const": "replaced"
+        },
+        {
+          "description": "The caster failed the Constitution save after taking damage.",
+          "type": "string",
+          "const": "failed_save"
+        },
+        {
+          "description": "The caster was incapacitated or died.",
+          "type": "string",
+          "const": "incapacitated"
+        },
+        {
+          "description": "The spell's duration ran out.",
+          "type": "string",
+          "const": "expired"
+        },
+        {
+          "description": "Anything else, such as the caster ending it.",
+          "type": "string",
+          "const": "ended"
+        }
+      ]
+    },
     "Condition": {
       "description": "The SRD 5.2.1 conditions (Exhaustion is a level on the sheet, not listed here).",
       "oneOf": [
@@ -2008,6 +2038,57 @@
             "kind",
             "target",
             "condition"
+          ]
+        },
+        {
+          "description": "A caster started concentrating on a spell. Public: a caster visibly maintains a spell.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The caster.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "concentration_started"
+            },
+            "spell": {
+              "description": "The spell's id, as in the caster's `spells` (`bless`).",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "spell"
+          ]
+        },
+        {
+          "description": "A caster's concentration ended, and with it the spell's effects. Public.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The caster.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "concentration_ended"
+            },
+            "reason": {
+              "description": "Why it ended.",
+              "$ref": "#/$defs/ConcentrationEndReason"
+            },
+            "spell": {
+              "description": "The spell's id, as in the caster's `spells` (`bless`).",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "spell",
+            "reason"
           ]
         },
         {
@@ -3600,6 +3681,17 @@
             "null"
           ]
         },
+        "concentration": {
+          "description": "The spell it is concentrating on, if any.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SheetConcentration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "conditions": {
           "description": "Active conditions.",
           "type": "array",
@@ -3783,6 +3875,19 @@
         "death_saves",
         "equipment",
         "features"
+      ]
+    },
+    "SheetConcentration": {
+      "description": "The spell a creature is concentrating on.",
+      "type": "object",
+      "properties": {
+        "spell": {
+          "description": "The spell's id, as in `spells` (`bless`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spell"
       ]
     },
     "Side": {

@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.21 (2026-10-19)
+- New public events `concentration_started{actor, spell}` and `concentration_ended{actor, spell, reason}` with `ConcentrationEndReason` `replaced|failed_save|incapacitated|expired|ended` (API-27, Milestone 4 spec §4.3 and §7 step 7, last slice; protocol.md §6). Core logs only that concentration was lost; the server reads the reason from the same batch: a failed Concentration save, 0 Hit Points, or a new Concentration spell from the same caster. Additive: new event kinds, which clients ignore if unknown.
+- `Sheet` gains optional `concentration{spell}` (`SheetConcentration`): the spell the creature concentrates on now (protocol.md §4.2). Additive; absent when there is none, so no recorded sheet changes.
+- A Concentration save's label reads "a Constitution saving throw to keep Concentration" (it read "a concentration saving throw"). No recorded label changes before this version.
+- `cleric_combat.jsonl` logs `concentration_started` for Bless and adds a second session (new test scene `cleric_duel`, seed 1): Maren casts Bless on herself, her sheet shows `concentration`, a goblin hits her for 7, she fails the DC 10 Constitution save (1d20 4 + Bless 1d4 2 + 2 = 8), Bless ends with `failed_save`, her sheet no longer shows it, and her own view of Sacred Flame's save has no DC or `dc_source`.
+
 ## 1.0.0-dev.20 (2026-10-19)
 - **Breaking (allowed before v1; Rule 2):** spell options are `cast/<spell>/<level>`, or `cast/<spell>` for a cantrip, named after the spell (API-27, Milestone 4 spec §4.3 and §7 step 7, second slice; protocol.md §4.4). They used to be core's raw action ids. `ActionOption` gains optional `spell{id, level, concentration}` (`OptionSpell`), present only on spell options. Additive apart from the ids.
 - **Changed meaning:** `unavailable` entries carry the option id the option would have if offered (`melee_attack/longsword`, not `melee_attack`) and its display name ("Longsword attack"). `duel`, `m3_trail`, `carry` and `rest` are re-recorded for it, with no other change.

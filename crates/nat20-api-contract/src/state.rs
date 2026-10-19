@@ -225,6 +225,9 @@ pub struct Sheet {
     /// Spells it can cast or prepare: cantrips, then levelled spells by level, each by name.
     /// A class that prepares from its entire list (the Cleric) lists only what is prepared.
     pub spells: Vec<SpellLine>,
+    /// The spell it is concentrating on, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub concentration: Option<SheetConcentration>,
     /// Limited-use features, e.g. Second Wind, by id. Per-turn action economy (action, bonus
     /// action, reaction) is not listed; `legal_actions` reports it.
     pub resources: Vec<ResourcePool>,
@@ -424,6 +427,13 @@ pub struct ActionOption {
     /// or `cast/<spell>` for a cantrip.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spell: Option<OptionSpell>,
+}
+
+/// The spell a creature is concentrating on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct SheetConcentration {
+    /// The spell's id, as in `spells` (`bless`).
+    pub spell: String,
 }
 
 /// The spell an option casts.
