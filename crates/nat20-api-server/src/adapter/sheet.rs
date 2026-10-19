@@ -341,13 +341,14 @@ fn spellcasting(engine: &EngineState, entity: Entity) -> (Vec<SpellcastingLine>,
             .chain(&selections.always_prepared)
             .chain(selections.prepared_spells.iter())
             .collect();
-        let unprepared = selections.learned_spells.iter().filter(|id| {
-            rules.readiness_model == CastingReadinessModel::Prepared && !prepared.contains(id)
-        });
+        // A learned spell is castable for a class that casts what it knows (the Warlock), and
+        // waits to be prepared for one that prepares from what it learned (the Wizard). A spell
+        // listed twice keeps its first line, so a prepared one stays `true`.
+        let learned_castable = rules.readiness_model == CastingReadinessModel::Known;
         for (id, is_prepared) in prepared
             .iter()
             .map(|id| (*id, true))
-            .chain(unprepared.map(|id| (id, false)))
+            .chain(selections.learned_spells.iter().map(|id| (id, learned_castable)))
         {
             let Some(spell) = SpellsRegistry::get(id) else {
                 continue;
