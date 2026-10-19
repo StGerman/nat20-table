@@ -1,0 +1,22 @@
+# Non-blocking early warning on main: never a PR check (design §5.3, decisions 0022 and 0024).
+name: daily
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # A new RustSec advisory can land on any day. A red run gets a P0 row in TASKS.md the same day.
+  advisories:
+    name: advisories
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          command: check advisories

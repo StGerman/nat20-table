@@ -173,7 +173,7 @@ Pin exact versions of every generator. Generated files are committed, so a Rust-
 | `visibility` | `crates/nat20-api-server/tests/visibility.rs` (binary from `rust-test`): replays every fixture and, after each step, asks `get_state` and `events` as every party viewer; scans the responses | Another creature's `hp`, `hp_max`, `temp_hp` or `ac`; any `against`, `dc`, `dc_source` or roll modifiers; a DM-only or another owner's event; an AC or DC number in text |
 | `ts` | `tsc`, client tests spawning the server binary from `rust-test` (no Rust toolchain in the job) | Generated TS out of step with server behaviour |
 | `deny` | `cargo deny check bans licenses sources` (`deny.toml`) | A dependency under a licence outside the permissive allow-list (Rule 7: no copyleft), a wildcard version, or a crate from an unlisted registry or git source |
-| `advisories` (not gating) | `cargo deny check advisories`, also weekly on `main` | A RustSec advisory without a recorded ignore |
+| `advisories` (not gating) | `cargo deny check advisories`, also daily on `main` | A RustSec advisory without a recorded ignore |
 | `core-drift` (weekly, non-blocking) | Weekly: clippy and tests against the fork's `demo` HEAD instead of the pinned rev | Upstream moved in a way that breaks `adapter/`; opens a bump task early |
 | `ci-ok` (the required check) | Waits for every gating job | Any gating job failed or was cancelled. A skip passes: build jobs skip on a PR that touches only Markdown and `docs/` (job `changes`), `contract-compat` skips on push |
 
