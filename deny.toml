@@ -57,6 +57,4 @@ unknown-git = "deny"
 allow-git = [
     # Our fork of the rules engine, pinned by rev (Rule 5).
     "https://github.com/StGerman/nat20",
-    # The polyanya patch shared with fork demo (Rule 5); removed by UPS-11.
-    "https://github.com/MadsWedendahlKruse/polyanya",
 ]

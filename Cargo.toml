@@ -12,25 +12,16 @@ publish = false
 [workspace.dependencies]
 nat20-api-contract = { path = "crates/nat20-api-contract" }
 # Pinned by rev. Bump only in its own PR with the full suite green (CLAUDE.md Rule 5).
-# 031f7a2 = fork branch `demo`: upstream 9aaca2f plus Leather Armor, the Goblin Warrior's
-# shield stopgap effect (both needed until our content overlay exists), U2 seedable dice
-# (`components::rng`, plus initiative rolled in a fixed order), U1 `NAT20_REGISTRY_ROOT`,
-# U4 Hit Point Dice spent on a short rest (core #3), a natural 20 or 1 deciding only
-# attack rolls and death saves (core #4), U5 surprised creatures rolling Initiative
-# with Disadvantage (core #5), U7 creatures joining a running encounter (core #6),
-# U6 the Help action: assist a check, assist an attack, stabilize (core #7),
-# Tactical Mind turning a failed check into a success (core #8), damage to a Stable
-# creature counting as a failed death save (core #9) and effects tied to a turn ending on
-# creatures outside the fight (core #10).
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "3ec697f7799f5b9cffd1eba7fcac36541cbfa567" }
+# 0478492 = fork branch `demo` (upstream main plus our core changes; see the fork's history):
+# since 031f7a2 it adds the Human species, Savage Attacker, Skilled and the SRD background
+# lists (core #12), Shield and Mace (core #11), and crates.io polyanya 0.16 (core #13).
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "0478492157d135cfd9e8e6c2fe21f05534ebc5b0" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 
-# Copied verbatim from upstream nat20's workspace. Cargo ignores a dependency's [patch],
-# so without this nat20_core resolves crates.io polyanya instead of the patched branch.
-[patch.crates-io]
-polyanya = { git = "https://github.com/MadsWedendahlKruse/polyanya", branch = "fix-path-with-height-oob" }
-
+# Dependencies (nat20_core included) build at opt-level 1, not 3: a cold `cargo test --no-run`
+# drops from 243 s to 176 s on 4 cores while the test suite stays at about 8 s. opt-level 0 builds
+# in 80 s but the suite takes 58 s.
 [profile.dev.package."*"]
-opt-level = 3
+opt-level = 1
