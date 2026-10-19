@@ -1,6 +1,6 @@
 # 0024. Dependencies: stay current behind a cooldown and hard gates, in both repos
 
-- **Status:** Accepted (by Stas, merging table #44)
+- **Status:** Accepted (by Stas, merging table #44; §6 amended by [0027](0027-claude-merges-toolchain-bumps.md): Claude merges green toolchain bumps)
 - **Date:** 2026-10-18
 - **Decided by:** Stas asked for a policy that keeps dependencies "safe and on the edge" (project thread "Mads's reply", 2026-10-18). The specifics below are Claude's recommendation; Stas accepts them by merging table #44.
 
