@@ -12,10 +12,10 @@ publish = false
 [workspace.dependencies]
 nat20-api-contract = { path = "crates/nat20-api-contract" }
 # Pinned by rev. Bump only in its own PR with the full suite green (CLAUDE.md Rule 5).
-# 644ff5f = fork `demo` after core #14 to #19: Second Wind's and Rage's one use back on a
+# c17c4bd = fork `demo` after core #14 to #20: Second Wind's and Rage's one use back on a
 # short rest, the Cleric levels 1 and 2 with the Milestone 4 Cleric spells, and heavy armour
 # ignoring a negative Dexterity modifier.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "644ff5ffc288c2814e2bf497817946647e3afc15" }
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "c17c4bd3f0c5573e8bbfb7cf2e38eef43b84db13" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
