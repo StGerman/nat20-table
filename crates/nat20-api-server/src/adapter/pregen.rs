@@ -552,11 +552,8 @@ mod tests {
             "nat20_core::feat.fighting_style.dueling is not one of the options",
         );
         let mut file = bren();
-        file.class = "nat20_core::class.cleric".into();
-        refused(
-            file,
-            "class.cleric is not one of the options of choice.class",
-        );
+        file.class = "nat20_core::class.monk".into();
+        refused(file, "class.monk is not one of the options of choice.class");
     }
 
     #[test]
