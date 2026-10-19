@@ -1,15 +1,17 @@
 //! How engine ids read on the wire: option ids, display names, damage types.
 
 use hecs::Entity;
-use nat20_api_contract::DamageType as WireDamage;
+use nat20_api_contract::{DamageType as WireDamage, OptionSpell};
 use nat20_core::{
     components::{
         actions::action::ActionContext,
         damage::DamageType,
-        id::{ActionId, ActionVariantId},
+        id::{ActionId, ActionVariantId, EffectId},
         items::equipment::slots::EquipmentSlot,
+        spells::{concentration::ConcentrationInstance, spell::SpellFlag},
     },
     engine::engine_state::EngineState,
+    registry::registry::SpellsRegistry,
     systems,
 };
 
@@ -67,11 +69,68 @@ pub fn option_id_and_name(action_id: &ActionId, weapon: Option<&str>) -> (String
     }
 }
 
+/// The option id and display name of an action taken in `context`: a spell is
+/// `cast/<spell>/<slot level>` (a cantrip `cast/<spell>`) named after the spell; anything else
+/// is [`option_id_and_name`] with the weapon the context uses.
+pub fn option_for(
+    engine: &EngineState,
+    entity: Entity,
+    action_id: &ActionId,
+    context: &ActionContext,
+) -> (String, String) {
+    match &context.spell {
+        Some(spell) => {
+            let id = spell.id.id();
+            let word = id.strip_prefix("spell.").unwrap_or(id);
+            let name = title(&word.replace('_', " "));
+            match spell.level {
+                0 => (format!("cast/{word}"), name),
+                level => (format!("cast/{word}/{level}"), name),
+            }
+        }
+        None => {
+            let weapon = weapon_of(engine, entity, context);
+            option_id_and_name(action_id, weapon.as_deref())
+        }
+    }
+}
+
+/// The spell a context casts, for an option's `spell`.
+pub fn option_spell(context: &ActionContext) -> Option<OptionSpell> {
+    let spell = context.spell.as_ref()?;
+    let id = spell.id.id();
+    Some(OptionSpell {
+        id: id.strip_prefix("spell.").unwrap_or(id).to_string(),
+        level: spell.level,
+        concentration: SpellsRegistry::get(&spell.id)
+            .is_some_and(|s| s.has_flag(SpellFlag::Concentration)),
+    })
+}
+
+/// The spell a concentration instance belongs to, by the id the sheet uses: core names a
+/// spell's effects `effect.spell.<spell>` (a variant adds `.<variant>`).
+pub fn concentration_spell(instance: &ConcentrationInstance) -> String {
+    let ConcentrationInstance::Effect { effect, .. } = instance;
+    effect_spell(effect)
+}
+
+/// The spell an effect belongs to (`effect.spell.bless` is `bless`), or the effect's own id.
+pub fn effect_spell(effect: &EffectId) -> String {
+    let id = effect.id();
+    let rest = id.strip_prefix("effect.spell.").unwrap_or(id);
+    rest.split('.').next().unwrap_or(rest).to_string()
+}
+
 /// `second wind` becomes `Second Wind`.
 pub fn title(words: &str) -> String {
     words
         .split(' ')
-        .map(|w| {
+        .enumerate()
+        .map(|(i, w)| {
+            // Short joining words stay lowercase, as in "Shield of Faith".
+            if i > 0 && ["a", "an", "and", "of", "the", "to"].contains(&w) {
+                return w.to_string();
+            }
             let mut chars = w.chars();
             match chars.next() {
                 Some(first) => first.to_uppercase().chain(chars).collect(),

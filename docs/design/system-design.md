@@ -84,7 +84,7 @@ Two contracts exist and they are deliberately different:
 
 Costs of C, stated plainly:
 - A core fix needs push-to-fork, then a rev bump in our repo. Mitigation: local `[patch]` override to a sibling checkout for development (CLAUDE.md draft, "Working across both repos").
-- Cargo does not apply a dependency's `[patch]` table. Upstream patches `polyanya` to a git branch, so **our workspace must copy that `[patch.crates-io]` entry** or core builds against the wrong polyanya. Verified in §5.5.
+- Cargo does not apply a dependency's `[patch]` table. Upstream patches `polyanya` to a git branch, so **our workspace must copy that `[patch.crates-io]` entry** or core builds against the wrong polyanya. Verified in §5.5. *(Retired 2026-10-18: fork `demo` moved to crates.io polyanya 0.16.0, which carries the fix, and both workspaces dropped the patch; TASKS.md UPS-11.)*
 - Core reads registries from its own checkout path (C2). That works for a git dependency because Cargo checks out the whole repo, but it means our content can only be added by editing the fork until upstream change U1 lands.
 
 ## 4. Repo and crate layout (our repo)
@@ -92,7 +92,7 @@ Costs of C, stated plainly:
 ```
 nat20-table/                             # github.com/StGerman/nat20-table (named by Stas 2026-10-16)
 ├── CLAUDE.md                            # from /mnt/project-files/engine/design/CLAUDE.md
-├── Cargo.toml                           # workspace: crates/*; [patch.crates-io] polyanya copied from upstream
+├── Cargo.toml                           # workspace: crates/*
 ├── package.json                         # pinned generators; `npm run gen`
 ├── contract/                            # contract docs and tests (types live in crates/nat20-api-contract)
 │   ├── protocol.md                      # what a schema can't say: ordering, idempotency, lifecycle, visibility table
@@ -173,7 +173,7 @@ Pin exact versions of every generator. Generated files are committed, so a Rust-
 | `visibility` | `crates/nat20-api-server/tests/visibility.rs` (binary from `rust-test`): replays every fixture and, after each step, asks `get_state` and `events` as every party viewer; scans the responses | Another creature's `hp`, `hp_max`, `temp_hp` or `ac`; any `against`, `dc`, `dc_source` or roll modifiers; a DM-only or another owner's event; an AC or DC number in text |
 | `ts` | `tsc`, client tests spawning the server binary from `rust-test` (no Rust toolchain in the job) | Generated TS out of step with server behaviour |
 | `deny` | `cargo deny check bans licenses sources` (`deny.toml`) | A dependency under a licence outside the permissive allow-list (Rule 7: no copyleft), a wildcard version, or a crate from an unlisted registry or git source |
-| `advisories` (not gating) | `cargo deny check advisories`, also weekly on `main` | A RustSec advisory without a recorded ignore |
+| `advisories` (not gating) | `cargo deny check advisories`, also daily on `main` | A RustSec advisory without a recorded ignore |
 | `core-drift` (weekly, non-blocking) | Weekly: clippy and tests against the fork's `demo` HEAD instead of the pinned rev | Upstream moved in a way that breaks `adapter/`; opens a bump task early |
 | `ci-ok` (the required check) | Waits for every gating job | Any gating job failed or was cancelled. A skip passes: build jobs skip on a PR that touches only Markdown and `docs/` (job `changes`), `contract-compat` skips on push |
 

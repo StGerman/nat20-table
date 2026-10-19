@@ -2,8 +2,8 @@
 //! text can never carry a number the view type left out (CLAUDE.md Rule 3).
 
 use nat20_api_contract::{
-    AgainstKind, CombatOverReason, DamageType, DiceRolled, EventKind, Handle, LifeState, Mode,
-    RollKind, RollOutcome, RollView, Side,
+    AgainstKind, CombatOverReason, ConcentrationEndReason, DamageType, DiceRolled, EventKind,
+    Handle, LifeState, Mode, RollKind, RollOutcome, RollView, Side,
 };
 
 /// The sentence for one event.
@@ -98,6 +98,25 @@ pub fn text(kind: &EventKind) -> String {
         EventKind::ConditionRemoved {
             target, condition, ..
         } => format!("{} is no longer {}.", target.0, snake_words(condition)),
+        EventKind::ConcentrationStarted { actor, spell } => {
+            format!("{} concentrates on {}.", actor.0, spell_name(spell))
+        }
+        EventKind::ConcentrationEnded {
+            actor,
+            spell,
+            reason,
+        } => format!(
+            "{} stops concentrating on {}{}.",
+            actor.0,
+            spell_name(spell),
+            match reason {
+                ConcentrationEndReason::Replaced => " to cast another spell",
+                ConcentrationEndReason::FailedSave => " after a failed save",
+                ConcentrationEndReason::Incapacitated => ", incapacitated",
+                ConcentrationEndReason::Expired => " as it runs out",
+                ConcentrationEndReason::Ended => "",
+            }
+        ),
         EventKind::LifeState { target, state } => {
             format!("{} is {}.", target.0, life_state(*state))
         }
@@ -221,6 +240,11 @@ pub fn roll_kind_word(kind: RollKind) -> &'static str {
         RollKind::Healing => "healing",
         RollKind::DeathSave => "death saving throw",
     }
+}
+
+/// `shield_of_faith` reads "Shield of Faith".
+fn spell_name(spell: &str) -> String {
+    crate::adapter::names::title(&spell.replace('_', " "))
 }
 
 fn life_state(state: LifeState) -> &'static str {

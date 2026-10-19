@@ -1,0 +1,6 @@
+# The Rust release CI and local checks build with (decision 0024, CLAUDE.md Rule 9, TASKS.md UPS-14).
+# Dependabot proposes each new stable release 7 days after it ships, as its own PR.
+[toolchain]
+channel = "1.99.0"
+profile = "minimal"
+components = ["clippy", "rustfmt"]

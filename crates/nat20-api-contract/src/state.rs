@@ -220,6 +220,14 @@ pub struct Sheet {
     pub hit_dice: Vec<HitDicePool>,
     /// Spell slots by level; empty for non-casters.
     pub spell_slots: Vec<SpellSlots>,
+    /// One line per class with the Spellcasting feature; empty for non-casters.
+    pub spellcasting: Vec<SpellcastingLine>,
+    /// Spells it can cast or prepare: cantrips, then levelled spells by level, each by name.
+    /// A class that prepares from its entire list (the Cleric) lists only what is prepared.
+    pub spells: Vec<SpellLine>,
+    /// The spell it is concentrating on, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub concentration: Option<SheetConcentration>,
     /// Limited-use features, e.g. Second Wind, by id. Per-turn action economy (action, bonus
     /// action, reaction) is not listed; `legal_actions` reports it.
     pub resources: Vec<ResourcePool>,
@@ -299,6 +307,36 @@ pub struct SpellSlots {
     pub max: u32,
 }
 
+/// One class's Spellcasting feature.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct SpellcastingLine {
+    /// Class id, e.g. `cleric`.
+    pub class: String,
+    /// The spellcasting ability, e.g. Wisdom.
+    pub ability: Ability,
+    /// Spell save DC: 8 plus the ability modifier plus the Proficiency Bonus.
+    pub save_dc: u8,
+    /// Spell attack bonus: the ability modifier plus the Proficiency Bonus, without dice
+    /// bonuses such as Bless.
+    pub attack_bonus: i8,
+}
+
+/// A spell on a sheet.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct SpellLine {
+    /// Spell id from the registry, e.g. `cure_wounds`.
+    pub id: String,
+    /// Display name.
+    pub name: String,
+    /// Spell level; 0 for a cantrip.
+    pub level: u8,
+    /// Whether it can be cast now: a cantrip, or a prepared spell. A known spell that is not
+    /// prepared (a Wizard's spellbook) is `false`.
+    pub prepared: bool,
+    /// Whether casting it starts Concentration.
+    pub concentration: bool,
+}
+
 /// A limited-use feature.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ResourcePool {
@@ -310,8 +348,12 @@ pub struct ResourcePool {
     pub remaining: u32,
     /// Uses when recharged.
     pub max: u32,
-    /// When it recharges.
+    /// When every expended use comes back.
     pub recharge: Recharge,
+    /// Expended uses a Short Rest gives back when `recharge` is `long_rest`, e.g. 1 for Second
+    /// Wind. Absent when a Short Rest gives none back.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub short_rest_regain: Option<u32>,
 }
 
 /// When a resource recharges.
@@ -381,6 +423,28 @@ pub struct ActionOption {
     pub targets: Vec<TargetCandidate>,
     /// Variants `submit` must pick from, e.g. a spell's casting level. Empty when none.
     pub variants: Vec<OptionVariant>,
+    /// The spell this option casts, for a spell. Its option id is `cast/<spell>/<slot level>`,
+    /// or `cast/<spell>` for a cantrip.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spell: Option<OptionSpell>,
+}
+
+/// The spell a creature is concentrating on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct SheetConcentration {
+    /// The spell's id, as in `spells` (`bless`).
+    pub spell: String,
+}
+
+/// The spell an option casts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct OptionSpell {
+    /// Spell id from the registry, as on the sheet, e.g. `bless`.
+    pub id: String,
+    /// The level it is cast at: the slot it spends, or 0 for a cantrip.
+    pub level: u8,
+    /// Whether casting it starts Concentration, ending any Concentration the caster holds.
+    pub concentration: bool,
 }
 
 /// What an option costs.

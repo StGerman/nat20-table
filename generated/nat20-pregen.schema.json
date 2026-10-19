@@ -56,6 +56,13 @@
       "description": "The character's name, e.g. \"Bren\".",
       "type": "string"
     },
+    "skill_choices": {
+      "description": "Skill picks that a species or feat asks for (Human Skillful, the Skilled feat, ...),\neach keyed by the registry id of what asks. The class's own picks stay in `skills`.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PregenSkillChoice"
+      }
+    },
     "skills": {
       "description": "The skills picked from the class's skill list, as many as the class grants.",
       "type": "array",
@@ -90,7 +97,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.17"
+    "version": "1.0.0-dev.21"
   },
   "$defs": {
     "Ability": {
@@ -299,6 +306,35 @@
       "required": [
         "item",
         "quantity"
+      ]
+    },
+    "PregenSkillChoice": {
+      "description": "The skills picked for one skill prompt that is not the class's.",
+      "type": "object",
+      "properties": {
+        "_comment": {
+          "description": "Notes for humans reading the file. The engine ignores it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "skills": {
+          "description": "The skills picked, as many as the prompt asks for.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Skill"
+          }
+        },
+        "source": {
+          "description": "Registry id of the species, subspecies, background or feat that asks, e.g.\n`nat20_core::species.human` or `nat20_core::feat.skilled`.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "skills"
       ]
     },
     "Skill": {

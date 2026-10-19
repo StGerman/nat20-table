@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.17"
+    "version": "1.0.0-dev.21"
   },
   "$defs": {
     "Ability": {
@@ -180,6 +180,17 @@
             "null"
           ],
           "format": "float"
+        },
+        "spell": {
+          "description": "The spell this option casts, for a spell. Its option id is `cast/<spell>/<slot level>`,\nor `cast/<spell>` for a cantrip.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OptionSpell"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "targeting": {
           "description": "What `submit` must name as targets.",
@@ -1015,6 +1026,36 @@
         }
       ]
     },
+    "ConcentrationEndReason": {
+      "description": "Why concentration ended (SRD 5.2.1, Concentration).",
+      "oneOf": [
+        {
+          "description": "The caster started concentrating on another spell.",
+          "type": "string",
+          "const": "replaced"
+        },
+        {
+          "description": "The caster failed the Constitution save after taking damage.",
+          "type": "string",
+          "const": "failed_save"
+        },
+        {
+          "description": "The caster was incapacitated or died.",
+          "type": "string",
+          "const": "incapacitated"
+        },
+        {
+          "description": "The spell's duration ran out.",
+          "type": "string",
+          "const": "expired"
+        },
+        {
+          "description": "Anything else, such as the caster ending it.",
+          "type": "string",
+          "const": "ended"
+        }
+      ]
+    },
     "Condition": {
       "description": "The SRD 5.2.1 conditions (Exhaustion is a level on the sheet, not listed here).",
       "oneOf": [
@@ -1310,14 +1351,19 @@
           "const": "ladder"
         },
         {
-          "description": "A stat block or spell.",
+          "description": "A stat block.",
           "type": "string",
           "const": "stat_block"
         },
         {
-          "description": "A rule of the game: the DC 10 of a death save, or of the Medicine check of a Help that\nstabilizes.",
+          "description": "A rule of the game: the DC 10 of a death save, or of the Medicine check of a Help that\nstabilizes; a Concentration save's DC (10 or half the damage taken).",
           "type": "string",
           "const": "rule"
+        },
+        {
+          "description": "The caster's spell save DC (8 + spellcasting ability modifier + Proficiency Bonus): a\nspell's save, or a class feature that uses it, such as Divine Spark.",
+          "type": "string",
+          "const": "spell_save_dc"
         }
       ]
     },
@@ -1995,6 +2041,57 @@
           ]
         },
         {
+          "description": "A caster started concentrating on a spell. Public: a caster visibly maintains a spell.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The caster.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "concentration_started"
+            },
+            "spell": {
+              "description": "The spell's id, as in the caster's `spells` (`bless`).",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "spell"
+          ]
+        },
+        {
+          "description": "A caster's concentration ended, and with it the spell's effects. Public.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The caster.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "concentration_ended"
+            },
+            "reason": {
+              "description": "Why it ended.",
+              "$ref": "#/$defs/ConcentrationEndReason"
+            },
+            "spell": {
+              "description": "The spell's id, as in the caster's `spells` (`bless`).",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "spell",
+            "reason"
+          ]
+        },
+        {
           "description": "A creature's life state changed.",
           "type": "object",
           "properties": {
@@ -2496,6 +2593,32 @@
     "OptionId": {
       "description": "An action option's id, derived from the action and its context (weapon, spell and level),\nnever from a list index, e.g. `melee_attack/longsword`. Stable for the life of a prompt.",
       "type": "string"
+    },
+    "OptionSpell": {
+      "description": "The spell an option casts.",
+      "type": "object",
+      "properties": {
+        "concentration": {
+          "description": "Whether casting it starts Concentration, ending any Concentration the caster holds.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "Spell id from the registry, as on the sheet, e.g. `bless`.",
+          "type": "string"
+        },
+        "level": {
+          "description": "The level it is cast at: the slot it spends, or 0 for a cantrip.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "level",
+        "concentration"
+      ]
     },
     "OptionVariant": {
       "description": "A variant of an option.",
@@ -3163,12 +3286,21 @@
           "type": "string"
         },
         "recharge": {
-          "description": "When it recharges.",
+          "description": "When every expended use comes back.",
           "$ref": "#/$defs/Recharge"
         },
         "remaining": {
           "description": "Uses left.",
           "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "short_rest_regain": {
+          "description": "Expended uses a Short Rest gives back when `recharge` is `long_rest`, e.g. 1 for Second\nWind. Absent when a Short Rest gives none back.",
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint32",
           "minimum": 0
         }
@@ -3549,6 +3681,17 @@
             "null"
           ]
         },
+        "concentration": {
+          "description": "The spell it is concentrating on, if any.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SheetConcentration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "conditions": {
           "description": "Active conditions.",
           "type": "array",
@@ -3678,6 +3821,20 @@
             "$ref": "#/$defs/SpellSlots"
           }
         },
+        "spellcasting": {
+          "description": "One line per class with the Spellcasting feature; empty for non-casters.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SpellcastingLine"
+          }
+        },
+        "spells": {
+          "description": "Spells it can cast or prepare: cantrips, then levelled spells by level, each by name.\nA class that prepares from its entire list (the Cleric) lists only what is prepared.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SpellLine"
+          }
+        },
         "subclass": {
           "description": "Subclass id, once chosen.",
           "type": [
@@ -3709,6 +3866,8 @@
         "temp_hp",
         "hit_dice",
         "spell_slots",
+        "spellcasting",
+        "spells",
         "resources",
         "conditions",
         "exhaustion",
@@ -3716,6 +3875,19 @@
         "death_saves",
         "equipment",
         "features"
+      ]
+    },
+    "SheetConcentration": {
+      "description": "The spell a creature is concentrating on.",
+      "type": "object",
+      "properties": {
+        "spell": {
+          "description": "The spell's id, as in `spells` (`bless`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spell"
       ]
     },
     "Side": {
@@ -3962,6 +4134,42 @@
         }
       ]
     },
+    "SpellLine": {
+      "description": "A spell on a sheet.",
+      "type": "object",
+      "properties": {
+        "concentration": {
+          "description": "Whether casting it starts Concentration.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "Spell id from the registry, e.g. `cure_wounds`.",
+          "type": "string"
+        },
+        "level": {
+          "description": "Spell level; 0 for a cantrip.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "prepared": {
+          "description": "Whether it can be cast now: a cantrip, or a prepared spell. A known spell that is not\nprepared (a Wizard's spellbook) is `false`.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "level",
+        "prepared",
+        "concentration"
+      ]
+    },
     "SpellSlots": {
       "description": "Spell slots of one level.",
       "type": "object",
@@ -3990,6 +4198,40 @@
         "level",
         "remaining",
         "max"
+      ]
+    },
+    "SpellcastingLine": {
+      "description": "One class's Spellcasting feature.",
+      "type": "object",
+      "properties": {
+        "ability": {
+          "description": "The spellcasting ability, e.g. Wisdom.",
+          "$ref": "#/$defs/Ability"
+        },
+        "attack_bonus": {
+          "description": "Spell attack bonus: the ability modifier plus the Proficiency Bonus, without dice\nbonuses such as Bless.",
+          "type": "integer",
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128
+        },
+        "class": {
+          "description": "Class id, e.g. `cleric`.",
+          "type": "string"
+        },
+        "save_dc": {
+          "description": "Spell save DC: 8 plus the ability modifier plus the Proficiency Bonus.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "class",
+        "ability",
+        "save_dc",
+        "attack_bonus"
       ]
     },
     "State": {

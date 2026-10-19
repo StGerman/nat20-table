@@ -131,7 +131,7 @@ fn goblin_warrior_matches_the_srd_stat_block() {
     assert_eq!(goblin.ac, 15);
     assert_eq!(goblin.hp_max, 10);
     let bren = creatures.iter().find(|c| c.handle.0 == "bren").unwrap();
-    assert_eq!(bren.ac, 17, "Chain Mail 16 + Defense 1");
+    assert_eq!(bren.ac, 19, "Chain Mail 16 + Shield 2 + Defense 1");
     assert_eq!(bren.hp_max, 20, "level 2 Fighter, CON 14");
     assert_eq!(bren.speed_ft, 30);
 

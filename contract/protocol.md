@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.16): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}` and options with a `point` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.21): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}` and options with a `point` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -85,9 +85,9 @@ hello → new_session{seed} → load_scene{scene_id}            (mode: explore)
 
 A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the repository root, a `PregenFile` (contract module `pregen.rs`, schema `generated/nat20-pregen.schema.json`, TS `pregen` namespace of the engine client). The engine reads it when the scene loads and builds the character through core's own level-up path, so every number on the sheet is core's.
 
-- **Contents.** Name, species and subspecies, background, class and level (registry ids, `[namespace::]<kind>.<name>`, namespace `nat20_core` by default), ability scores before the background's increases and which two abilities it increases, answers to core's choice prompts by prompt id (`choices`), the class's skill picks, the items carried with the slot each equipped one goes in, and coins. An optional `_comment` string on the file and on each section holds notes for humans; the engine ignores it.
+- **Contents.** Name, species and subspecies, background, class and level (registry ids, `[namespace::]<kind>.<name>`, namespace `nat20_core` by default), ability scores before the background's increases and which two abilities it increases, answers to core's choice prompts by prompt id (`choices`), the class's skill picks (`skills`), the skill picks a species, background or feat asks for, keyed by its registry id (`skill_choices`, e.g. Human Skillful and the Skilled feat), the items carried with the slot each equipped one goes in, and coins. An optional `_comment` string on the file and on each section holds notes for humans; the engine ignores it.
 - **Starting equipment.** The engine answers the class's and the background's starting equipment prompts with their gold-only option, then gives the character exactly the file's `equipment` (equipped ones put on in file order) and `money`. An item an equip displaces stays in the inventory.
-- **Checked on load.** Besides the schema (unknown fields are refused), the scene is refused with `bad_scene`, naming the pregen and the problem, when: the id isn't a plain name or has no file; the file's `id` isn't its file name; a registry id doesn't parse or isn't registered; the level is outside 1 to 20; core asks a prompt the file does not answer, or refuses an answer (a pick that isn't one of its options, the wrong number of picks or skills, scores the point table doesn't allow); a `choices` entry answers no prompt core asked; an equipped item's quantity isn't 1, it can't go in its slot, or a quantity is 0; `money` isn't a coin amount such as `54 GP`. The engine checks every pregen a scene and its spawns name before it places any creature.
+- **Checked on load.** Besides the schema (unknown fields are refused), the scene is refused with `bad_scene`, naming the pregen and the problem, when: the id isn't a plain name or has no file; the file's `id` isn't its file name; a registry id doesn't parse or isn't registered; the level is outside 1 to 20; core asks a prompt the file does not answer, or refuses an answer (a pick that isn't one of its options, the wrong number of picks or skills, scores the point table doesn't allow); a `choices` or `skill_choices` entry answers no prompt core asked; an equipped item's quantity isn't 1, it can't go in its slot, or a quantity is 0; `money` isn't a coin amount such as `54 GP`. The engine checks every pregen a scene and its spawns name before it places any creature.
 
 ## 3. Prompts (`awaiting`)
 
@@ -137,6 +137,9 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 - `get_sheet` answers the owner (`viewer` = `actor`) and the DM with the full `Sheet`; any other creature viewer gets `not_visible`. An actor not in the scene answers `unknown_creature`.
 - It is read-only and works in either mode: it rolls nothing, logs no event and does not advance the seeded dice, so asking for a sheet never changes what a later roll comes up.
 - Check and save bonuses are what the engine adds to the d20 when it rolls: ability modifier, proficiency and lasting effects. Dice bonuses such as Bless are left out. `initiative_bonus` is the engine's initiative check; Passive Perception is 10 plus the Perception bonus.
+- `spellcasting` has a line per class with the Spellcasting feature: the ability, the spell save DC (8 + ability modifier + Proficiency Bonus) and the spell attack bonus (ability modifier + Proficiency Bonus, Bless left out as above). `spells` lists what the creature can cast or prepare, cantrips first, then by level and name: cantrips and prepared spells are `prepared: true`; a learned spell that isn't prepared (a Wizard's spellbook) is `false`. A class that prepares from its entire list, such as the Cleric, lists only what it has prepared. `concentration` says whether casting the spell starts Concentration.
+- The sheet's own `concentration{spell}` names the spell the creature is concentrating on now; it is absent when there is none.
+- A resource whose expended uses all come back on a Long Rest but some on a Short Rest (Second Wind, Rage, Channel Divinity: one use) says how many in `short_rest_regain`.
 - `hit_dice` lists the Hit Point Dice by die size, smallest first; a creature without them (a monster) has none.
 - Not filled yet: `conditions` and `exhaustion` (as in state).
 
@@ -170,6 +173,10 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
   "variants": [] }
 ```
 `option_id` stays stable for the life of the prompt and is derived from the action plus its context (weapon slot, spell and level), never from a list index.
+
+- A spell is `cast/<spell>/<level>` for the slot level it is cast at (`cast/bless/1`), or `cast/<spell>` for a cantrip (`cast/sacred_flame`), named after the spell ("Bless"). Its option carries `spell{id, level, concentration}`: the spell's registry id, the level it is cast at (0 for a cantrip) and whether casting it means Concentration. Options that are not spells have no `spell`.
+- `unavailable` entries use the same `option_id` as the option would have if it were offered (`melee_attack/longsword`, `cast/guiding_bolt/1`).
+- An option whose target is out of reach or out of sight (`in_range: false`) is still offered; `submit` walks the actor to a spot the engine picks, then acts. Known gap (API-31): if the action still can't be taken there, the walk happens, the submit is accepted, and no `action` is logged. A creature standing between caster and target blocks the line of sight.
 
 - An option is listed only when it has a target, if it needs one. `targets` are the creatures in the scene that the action may target, except the actor and dead creatures: a creature at 0 Hit Points is a target, for Help's stabilize and for an attack.
 - An option with `variants` (Help's skills, §4.7) needs one in `submit.variant`: without one it is `rejected` with `needs_variant`, and a variant the option does not list answers `unknown_option`. A `variant` on an option without variants answers `bad_request`.
@@ -210,12 +217,13 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | Data | `dm` | Owner (viewer = that creature) | Other player viewer |
 |---|---|---|---|
 | HP / max HP / temp HP | yes | yes | no; `health: "unhurt" \| "bloodied" \| "down"` instead |
-| AC, saves, stat block, resources, slots | yes | yes | no |
+| AC, saves, stat block, resources, slots; spellcasting (spell save DC, spell attack bonus), spells and the sheet's `concentration` | yes | yes | no |
 | Conditions | yes | yes | only visible ones (all SRD conditions except `invisible` while unseen) |
 | Position, distance (ft) | yes | yes | yes, for creatures the viewer perceives (all of them until vision exists) |
 | Roll: dice, total, outcome | yes (`full` view) | yes (`player` view) | yes (`player` view) |
 | Roll: modifiers, `against` (AC/DC), `dc_source`, `advantage_sources` | yes | no; own modifiers and AC are on the sheet | no |
 | Damage or healing amount | yes | yes | yes (it is said at the table) |
+| Which spell a creature concentrates on, and when it starts and ends (`concentration_started`, `concentration_ended`) | yes | yes | yes (a caster visibly maintains a spell) |
 | `hit_points` events (HP after a change) | yes | own creature only | no |
 | Scenario data: the scene file's check DCs, hazards, encounters, surrender conditions, flags, spawns; in state, `flags`, `checks`, `encounters` (with `surrender_available`) and `spawns`; the events `check_resolved`, `flag_set`, `hazard_triggered` and `spawned` | yes | no | no |
 | Anchors: id, name, position | yes | yes, with `distance_ft` from the viewer | yes, with `distance_ft` from the viewer |
@@ -242,12 +250,16 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `healed` | `target`, `amount`, `source_roll?` |
 | `hit_points` | `target`, `hp`, `hp_max`, `temp_hp` (DM or owner visibility only) |
 | `condition_added` / `condition_removed` | `target`, `condition`, `source` |
+| `concentration_started` | `actor`, `spell` (public: a caster visibly maintains a spell) |
+| `concentration_ended` | `actor`, `spell`, `reason: replaced\|failed_save\|incapacitated\|expired\|ended` (public) |
 | `life_state` | `target`, `state: conscious\|unconscious\|stable\|dead` |
 | `moved` | `actor`, `from`, `to` (ft), `anchor?` |
 | `check_resolved` | `check_id?`, `actor`, `roll_id`, `success` (DM only) |
 | `flag_set` | `flag` (DM only) |
 | `hazard_triggered` | `hazard_id`, `actor` (DM only) |
 | `rest` | `participants`, `rest: short\|long` |
+
+- `concentration_started` follows the cast that applied the spell's effect, once per cast however many targets it has. `concentration_ended` comes when the engine ends it: a failed Concentration save after damage (`failed_save`; the save is logged first, a Constitution save with `dc_source: "rule"` and DC 10 or half the damage), dropping to 0 Hit Points (`incapacitated`), or casting another Concentration spell (`replaced`, logged before the new cast's `action` and its `concentration_started`). Known gap (ENG-13): the engine does not end Concentration when the spell's 1-minute duration runs out (Bless is still held after 12 rounds), so `expired` is not logged in this build.
 | `spawned` | `spawn_id`, `handles[]` (DM only) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
@@ -257,10 +269,10 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
   "dice": [{"source":"d20","dice":"1d20","results":[14,6],"kept":14}],
   "modifiers": [{"source":"Strength","value":3},{"source":"Proficiency","value":2}],
   "total": 19, "against": {"kind":"AC","value":15}, "outcome": "hit",
-  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block|rule",
+  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block|rule|spell_save_dc",
   "advantage_sources": ["Effect: some_effect (advantage)"] }
 ```
-In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC: `rule` for the fixed DC 10 of a death save and of Help's stabilize. Only `initiative`, `damage` and `healing` rolls have no `against`.
+In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC: `rule` for the fixed DC 10 of a death save and of Help's stabilize, and for a Concentration save; `spell_save_dc` for a save against a caster's spell save DC (Sacred Flame, Divine Spark's damage); `stat_block` for a monster's own DC. Only `initiative`, `damage` and `healing` rolls have no `against`.
 
 Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with the same `total`, and with the same `against` when the transcript states it. Every roll in the session log is cited. The audit runs on the `dm` projection.
 
