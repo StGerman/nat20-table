@@ -1,5 +1,8 @@
 # Weekly grouped update PRs. CI is the gate: a bump that changes generated TS, fixture output or
 # licences fails contract-fresh, rust-lint, rust-test or deny like any other PR.
+#
+# Cooldown (decision 0024): 3 days after a patch release, 7 after a minor or major one. Security
+# updates skip it.
 version: 2
 updates:
   - package-ecosystem: cargo
@@ -8,6 +11,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+      semver-major-days: 7
+      semver-minor-days: 7
+      semver-patch-days: 3
     ignore:
       # Pinned by rev to fork branch demo; bumped only in its own PR (Rule 5). core-drift watches it.
       - dependency-name: nat20_core
@@ -30,6 +38,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+      semver-major-days: 7
+      semver-minor-days: 7
+      semver-patch-days: 3
     ignore:
       # Types follow the Node major in .nvmrc; newer majors describe APIs CI's Node does not have.
       - dependency-name: "@types/node"
@@ -43,6 +56,18 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # Actions have no semver levels for Dependabot, so one wait covers every bump.
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]
+
+  # rust-toolchain.toml: each new stable release becomes its own PR, with any lint fixes it needs.
+  - package-ecosystem: rust-toolchain
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
