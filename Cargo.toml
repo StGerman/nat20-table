@@ -20,5 +20,8 @@ schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 
+# Dependencies (nat20_core included) build at opt-level 1, not 3: a cold `cargo test --no-run`
+# drops from 243 s to 176 s on 4 cores while the test suite stays at about 8 s. opt-level 0 builds
+# in 80 s but the suite takes 58 s.
 [profile.dev.package."*"]
-opt-level = 3
+opt-level = 1
