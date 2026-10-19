@@ -345,11 +345,12 @@ fn spellcasting(engine: &EngineState, entity: Entity) -> (Vec<SpellcastingLine>,
         // waits to be prepared for one that prepares from what it learned (the Wizard). A spell
         // listed twice keeps its first line, so a prepared one stays `true`.
         let learned_castable = rules.readiness_model == CastingReadinessModel::Known;
-        for (id, is_prepared) in prepared
-            .iter()
-            .map(|id| (*id, true))
-            .chain(selections.learned_spells.iter().map(|id| (id, learned_castable)))
-        {
+        for (id, is_prepared) in prepared.iter().map(|id| (*id, true)).chain(
+            selections
+                .learned_spells
+                .iter()
+                .map(|id| (id, learned_castable)),
+        ) {
             let Some(spell) = SpellsRegistry::get(id) else {
                 continue;
             };
