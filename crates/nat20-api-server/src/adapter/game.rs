@@ -1851,6 +1851,33 @@ impl Game {
         let (option, variant, target_entities) = self.as_if_next_turn(entity, |game| {
             game.pick_option(entity, actor, option_id, targets, variant)
         })?;
+        // Acting on an enemy starts a fight, and a fight starts only with start_combat, so
+        // Initiative and surprise come from the scene.
+        let side = |e: Entity| {
+            self.scene
+                .creatures
+                .iter()
+                .find(|c| c.entity == e)
+                .map(|c| c.side)
+        };
+        let enemies = |a: Option<Side>, b: Option<Side>| {
+            matches!(
+                (a, b),
+                (Some(Side::Party), Some(Side::Hostile)) | (Some(Side::Hostile), Some(Side::Party))
+            )
+        };
+        if let Some(&enemy) = target_entities
+            .iter()
+            .find(|&&t| enemies(side(entity), side(t)))
+        {
+            return Err(error(
+                ErrorCode::WrongMode,
+                format!(
+                    "{option_id} on {} starts a fight; call start_combat first.",
+                    self.handle_of(enemy)
+                ),
+            ));
+        }
         self.next_explore_turn(entity);
         self.submit_entity(
             entity,
