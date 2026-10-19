@@ -20,7 +20,7 @@ use nat20_core::{
         damage::{DamageMitigationResult, DamageRollResult},
         health::life_state::LifeState,
         id::EntityIdentifier,
-        modifier::{FlatModifiable, ModifierKindResult, ModifierResult},
+        modifier::{FlatModifiable, ModifierKindResult, ModifierResult, ModifierSource},
         saving_throw::SavingThrowKind,
         time::TurnBoundary,
     },
@@ -97,6 +97,25 @@ fn apply_hp((hp, hp_max, temp): (u32, u32, u32), delta: i32) -> (u32, u32, u32) 
     (hp, hp_max, temp)
 }
 
+/// Where a saving throw's DC came from. Concentration's DC is a rule. A DC core builds from an
+/// ability modifier is the caster's spell save DC: core builds one only in its spellbook (spells,
+/// and class features such as Divine Spark that use the spell save DC) and for weapon saves,
+/// which no demo creature makes.
+fn save_dc_source(kind: &SavingThrowKind, dc: &ModifierResult) -> DcSource {
+    if *kind == SavingThrowKind::Concentration {
+        return DcSource::Rule;
+    }
+    let mut dc = dc.clone();
+    if dc
+        .iter_mut()
+        .any(|(source, _)| matches!(source, ModifierSource::Ability(_)))
+    {
+        DcSource::SpellSaveDc
+    } else {
+        DcSource::StatBlock
+    }
+}
+
 fn keyed(mut roll: RollView, key: &str) -> RollView {
     if let RollView::Full { id, .. } = &mut roll {
         *id = RollId(key.to_owned());
@@ -151,9 +170,12 @@ impl LogWriter<'_> {
                 })]
             }
             EngineKind::ActionRequested { action } => {
-                let weapon = names::weapon_of(self.engine, action.actor.id(), &action.context);
-                let (option_id, name) =
-                    names::option_id_and_name(&action.action_id, weapon.as_deref());
+                let (option_id, name) = names::option_for(
+                    self.engine,
+                    action.actor.id(),
+                    &action.action_id,
+                    &action.context,
+                );
                 let targets = action
                     .targets
                     .iter()
@@ -201,13 +223,18 @@ impl LogWriter<'_> {
                     ),
                     D20CheckDC::SavingThrow { saving_throw, dc } => (
                         RollKind::SavingThrow,
-                        format!("a {} saving throw", words(&format!("{saving_throw:?}"))),
+                        match saving_throw {
+                            SavingThrowKind::Ability(ability) => {
+                                format!("a {ability:?} saving throw")
+                            }
+                            other => format!("a {} saving throw", words(&format!("{other:?}"))),
+                        },
                         Against {
                             kind: AgainstKind::Dc,
                             value: dc.total(),
                         },
                         None,
-                        Some(DcSource::StatBlock),
+                        Some(save_dc_source(saving_throw, dc)),
                     ),
                     // The engine rolls a skill check itself only for an action's own rule,
                     // such as Help's DC 10 Medicine check to stabilize; the table's checks are

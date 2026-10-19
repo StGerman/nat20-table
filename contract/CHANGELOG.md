@@ -3,6 +3,14 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.20 (2026-10-19)
+- **Breaking (allowed before v1; Rule 2):** spell options are `cast/<spell>/<level>`, or `cast/<spell>` for a cantrip, named after the spell (API-27, Milestone 4 spec §4.3 and §7 step 7, second slice; protocol.md §4.4). They used to be core's raw action ids. `ActionOption` gains optional `spell{id, level, concentration}` (`OptionSpell`), present only on spell options. Additive apart from the ids.
+- **Changed meaning:** `unavailable` entries carry the option id the option would have if offered (`melee_attack/longsword`, not `melee_attack`) and its display name ("Longsword attack"). `duel`, `m3_trail`, `carry` and `rest` are re-recorded for it, with no other change.
+- `DcSource` gains `spell_save_dc`: a save against a caster's spell save DC, such as Sacred Flame's. **Changed meaning:** `stat_block` now means a monster's own DC only (it used to say "or spell"), and a Concentration save's DC is `rule`. Additive variant; clients that ignore unknown values keep working.
+- Save labels read "a Dexterity saving throw" (they read "a ability( dexterity) saving throw" for a spell's save). No recorded label changes.
+- New fixture `cleric_combat.jsonl` (new test scene `cleric_brawl`, seed 118): Bren falls before the fight; Maren's Healing Word lifts him, Sacred Flame's Dexterity save shows `dc_source: "spell_save_dc"` in the DM view, Guiding Bolt hits and Bren's next attack on that goblin has Advantage, Bless adds a d4 to Bren's attack, Divine Spark heals him, and Maren's sheet shows her spent slots and Channel Divinity. The goblins pass their turns.
+- Fixtures with a session start now read `$CONTRACT_VERSION` in its text too (dev.19's re-record wrote the literal version into `carry`, `encounter` and `rest`).
+
 ## 1.0.0-dev.19 (2026-10-19)
 - Sheets gain `spellcasting` and `spells` (API-27, Milestone 4 spec §4.2 and §7 step 7, first slice; protocol.md §4.2 and §5). `spellcasting` is one `SpellcastingLine{class, ability, save_dc, attack_bonus}` per class with the Spellcasting feature. `spells` is one `SpellLine{id, name, level, prepared, concentration}` per spell the creature can cast or prepare: cantrips first, then by level and name. Both are empty for non-casters. Additive: new response fields, owner and DM only, like the rest of the sheet.
 - `ResourcePool` gains optional `short_rest_regain` (API-30): how many expended uses a Short Rest gives back when `recharge` is `long_rest`. It is 1 for Second Wind, Rage and Channel Divinity (core #15 and core #16, pinned by table #51). Additive.

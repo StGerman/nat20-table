@@ -420,6 +420,21 @@ pub struct ActionOption {
     pub targets: Vec<TargetCandidate>,
     /// Variants `submit` must pick from, e.g. a spell's casting level. Empty when none.
     pub variants: Vec<OptionVariant>,
+    /// The spell this option casts, for a spell. Its option id is `cast/<spell>/<slot level>`,
+    /// or `cast/<spell>` for a cantrip.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spell: Option<OptionSpell>,
+}
+
+/// The spell an option casts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct OptionSpell {
+    /// Spell id from the registry, as on the sheet, e.g. `bless`.
+    pub id: String,
+    /// The level it is cast at: the slot it spends, or 0 for a cantrip.
+    pub level: u8,
+    /// Whether casting it starts Concentration, ending any Concentration the caster holds.
+    pub concentration: bool,
 }
 
 /// What an option costs.

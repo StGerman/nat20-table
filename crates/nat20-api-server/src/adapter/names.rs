@@ -1,15 +1,17 @@
 //! How engine ids read on the wire: option ids, display names, damage types.
 
 use hecs::Entity;
-use nat20_api_contract::DamageType as WireDamage;
+use nat20_api_contract::{DamageType as WireDamage, OptionSpell};
 use nat20_core::{
     components::{
         actions::action::ActionContext,
         damage::DamageType,
         id::{ActionId, ActionVariantId},
         items::equipment::slots::EquipmentSlot,
+        spells::spell::SpellFlag,
     },
     engine::engine_state::EngineState,
+    registry::registry::SpellsRegistry,
     systems,
 };
 
@@ -65,6 +67,44 @@ pub fn option_id_and_name(action_id: &ActionId, weapon: Option<&str>) -> (String
         ),
         None => (stem, title(&action_words(action_id))),
     }
+}
+
+/// The option id and display name of an action taken in `context`: a spell is
+/// `cast/<spell>/<slot level>` (a cantrip `cast/<spell>`) named after the spell; anything else
+/// is [`option_id_and_name`] with the weapon the context uses.
+pub fn option_for(
+    engine: &EngineState,
+    entity: Entity,
+    action_id: &ActionId,
+    context: &ActionContext,
+) -> (String, String) {
+    match &context.spell {
+        Some(spell) => {
+            let id = spell.id.id();
+            let word = id.strip_prefix("spell.").unwrap_or(id);
+            let name = title(&word.replace('_', " "));
+            match spell.level {
+                0 => (format!("cast/{word}"), name),
+                level => (format!("cast/{word}/{level}"), name),
+            }
+        }
+        None => {
+            let weapon = weapon_of(engine, entity, context);
+            option_id_and_name(action_id, weapon.as_deref())
+        }
+    }
+}
+
+/// The spell a context casts, for an option's `spell`.
+pub fn option_spell(context: &ActionContext) -> Option<OptionSpell> {
+    let spell = context.spell.as_ref()?;
+    let id = spell.id.id();
+    Some(OptionSpell {
+        id: id.strip_prefix("spell.").unwrap_or(id).to_string(),
+        level: spell.level,
+        concentration: SpellsRegistry::get(&spell.id)
+            .is_some_and(|s| s.has_flag(SpellFlag::Concentration)),
+    })
 }
 
 /// `second wind` becomes `Second Wind`.

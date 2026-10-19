@@ -397,9 +397,12 @@ pub enum DcSource {
     Scenario,
     /// The SRD DC ladder, picked by the DM.
     Ladder,
-    /// A stat block or spell.
+    /// A stat block.
     StatBlock,
     /// A rule of the game: the DC 10 of a death save, or of the Medicine check of a Help that
-    /// stabilizes.
+    /// stabilizes; a Concentration save's DC (10 or half the damage taken).
     Rule,
+    /// The caster's spell save DC (8 + spellcasting ability modifier + Proficiency Bonus): a
+    /// spell's save, or a class feature that uses it, such as Divine Spark.
+    SpellSaveDc,
 }

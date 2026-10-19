@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.19): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}` and options with a `point` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.20): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions`, `submit`, `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}` and options with a `point` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -173,6 +173,10 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 ```
 `option_id` stays stable for the life of the prompt and is derived from the action plus its context (weapon slot, spell and level), never from a list index.
 
+- A spell is `cast/<spell>/<level>` for the slot level it is cast at (`cast/bless/1`), or `cast/<spell>` for a cantrip (`cast/sacred_flame`), named after the spell ("Bless"). Its option carries `spell{id, level, concentration}`: the spell's registry id, the level it is cast at (0 for a cantrip) and whether casting it means Concentration. Options that are not spells have no `spell`.
+- `unavailable` entries use the same `option_id` as the option would have if it were offered (`melee_attack/longsword`, `cast/guiding_bolt/1`).
+- An option whose target is out of reach or out of sight (`in_range: false`) is still offered; `submit` walks the actor to a spot the engine picks, then acts. Known gap (API-31): if the action still can't be taken there, the walk happens, the submit is accepted, and no `action` is logged. A creature standing between caster and target blocks the line of sight.
+
 - An option is listed only when it has a target, if it needs one. `targets` are the creatures in the scene that the action may target, except the actor and dead creatures: a creature at 0 Hit Points is a target, for Help's stabilize and for an attack.
 - An option with `variants` (Help's skills, §4.7) needs one in `submit.variant`: without one it is `rejected` with `needs_variant`, and a variant the option does not list answers `unknown_option`. A `variant` on an option without variants answers `bad_request`.
 - A dying creature's turn is its death save: the engine rolls it at the start of the turn (`death_save`, DC 10, `dc_source: "rule"`) and ends the turn, so the creature gets no prompt.
@@ -259,10 +263,10 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
   "dice": [{"source":"d20","dice":"1d20","results":[14,6],"kept":14}],
   "modifiers": [{"source":"Strength","value":3},{"source":"Proficiency","value":2}],
   "total": 19, "against": {"kind":"AC","value":15}, "outcome": "hit",
-  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block|rule",
+  "advantage": "advantage", "dc_source": "scenario|ladder|stat_block|rule|spell_save_dc",
   "advantage_sources": ["Effect: some_effect (advantage)"] }
 ```
-In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC: `rule` for the fixed DC 10 of a death save and of Help's stabilize. Only `initiative`, `damage` and `healing` rolls have no `against`.
+In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC: `rule` for the fixed DC 10 of a death save and of Help's stabilize, and for a Concentration save; `spell_save_dc` for a save against a caster's spell save DC (Sacred Flame, Divine Spark's damage); `stat_block` for a monster's own DC. Only `initiative`, `damage` and `healing` rolls have no `against`.
 
 Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with the same `total`, and with the same `against` when the transcript states it. Every roll in the session log is cited. The audit runs on the `dm` projection.
 

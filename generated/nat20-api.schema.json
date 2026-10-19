@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.19"
+    "version": "1.0.0-dev.20"
   },
   "$defs": {
     "Ability": {
@@ -180,6 +180,17 @@
             "null"
           ],
           "format": "float"
+        },
+        "spell": {
+          "description": "The spell this option casts, for a spell. Its option id is `cast/<spell>/<slot level>`,\nor `cast/<spell>` for a cantrip.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OptionSpell"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "targeting": {
           "description": "What `submit` must name as targets.",
@@ -1310,14 +1321,19 @@
           "const": "ladder"
         },
         {
-          "description": "A stat block or spell.",
+          "description": "A stat block.",
           "type": "string",
           "const": "stat_block"
         },
         {
-          "description": "A rule of the game: the DC 10 of a death save, or of the Medicine check of a Help that\nstabilizes.",
+          "description": "A rule of the game: the DC 10 of a death save, or of the Medicine check of a Help that\nstabilizes; a Concentration save's DC (10 or half the damage taken).",
           "type": "string",
           "const": "rule"
+        },
+        {
+          "description": "The caster's spell save DC (8 + spellcasting ability modifier + Proficiency Bonus): a\nspell's save, or a class feature that uses it, such as Divine Spark.",
+          "type": "string",
+          "const": "spell_save_dc"
         }
       ]
     },
@@ -2496,6 +2512,32 @@
     "OptionId": {
       "description": "An action option's id, derived from the action and its context (weapon, spell and level),\nnever from a list index, e.g. `melee_attack/longsword`. Stable for the life of a prompt.",
       "type": "string"
+    },
+    "OptionSpell": {
+      "description": "The spell an option casts.",
+      "type": "object",
+      "properties": {
+        "concentration": {
+          "description": "Whether casting it starts Concentration, ending any Concentration the caster holds.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "Spell id from the registry, as on the sheet, e.g. `bless`.",
+          "type": "string"
+        },
+        "level": {
+          "description": "The level it is cast at: the slot it spends, or 0 for a cantrip.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "level",
+        "concentration"
+      ]
     },
     "OptionVariant": {
       "description": "A variant of an option.",
