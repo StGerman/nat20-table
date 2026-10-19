@@ -457,6 +457,8 @@ mod tests {
         assert_eq!(ac_and_hp("fighter_l2"), (19, 20));
         // Unarmored Defense 10, Dex 1, Con 2; 12+2, 7+2
         assert_eq!(ac_and_hp("barbarian_l2"), (13, 23));
+        // Chain Mail 16, Shield 2 (Protector's Heavy armour training); 8+2, 5+2
+        assert_eq!(ac_and_hp("cleric_l2"), (18, 17));
     }
 
     #[test]
@@ -608,7 +610,7 @@ mod tests {
     fn a_missing_pregen_names_the_known_ones() {
         let error = read("wizard_l9").unwrap_err();
         assert!(
-            error.contains("known pregens: barbarian_l2, fighter_l2"),
+            error.contains("known pregens: barbarian_l2, cleric_l2, fighter_l2"),
             "{error}"
         );
         assert!(read("../fighter_l2").is_err());

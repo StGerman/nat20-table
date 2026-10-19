@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.18"
+    "version": "1.0.0-dev.19"
   },
   "$defs": {
     "Ability": {
@@ -3163,12 +3163,21 @@
           "type": "string"
         },
         "recharge": {
-          "description": "When it recharges.",
+          "description": "When every expended use comes back.",
           "$ref": "#/$defs/Recharge"
         },
         "remaining": {
           "description": "Uses left.",
           "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "short_rest_regain": {
+          "description": "Expended uses a Short Rest gives back when `recharge` is `long_rest`, e.g. 1 for Second\nWind. Absent when a Short Rest gives none back.",
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint32",
           "minimum": 0
         }
@@ -3678,6 +3687,20 @@
             "$ref": "#/$defs/SpellSlots"
           }
         },
+        "spellcasting": {
+          "description": "One line per class with the Spellcasting feature; empty for non-casters.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SpellcastingLine"
+          }
+        },
+        "spells": {
+          "description": "Spells it can cast or prepare: cantrips, then levelled spells by level, each by name.\nA class that prepares from its entire list (the Cleric) lists only what is prepared.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SpellLine"
+          }
+        },
         "subclass": {
           "description": "Subclass id, once chosen.",
           "type": [
@@ -3709,6 +3732,8 @@
         "temp_hp",
         "hit_dice",
         "spell_slots",
+        "spellcasting",
+        "spells",
         "resources",
         "conditions",
         "exhaustion",
@@ -3962,6 +3987,42 @@
         }
       ]
     },
+    "SpellLine": {
+      "description": "A spell on a sheet.",
+      "type": "object",
+      "properties": {
+        "concentration": {
+          "description": "Whether casting it starts Concentration.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "Spell id from the registry, e.g. `cure_wounds`.",
+          "type": "string"
+        },
+        "level": {
+          "description": "Spell level; 0 for a cantrip.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "prepared": {
+          "description": "Whether it can be cast now: a cantrip, or a prepared spell. A known spell that is not\nprepared (a Wizard's spellbook) is `false`.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "level",
+        "prepared",
+        "concentration"
+      ]
+    },
     "SpellSlots": {
       "description": "Spell slots of one level.",
       "type": "object",
@@ -3990,6 +4051,40 @@
         "level",
         "remaining",
         "max"
+      ]
+    },
+    "SpellcastingLine": {
+      "description": "One class's Spellcasting feature.",
+      "type": "object",
+      "properties": {
+        "ability": {
+          "description": "The spellcasting ability, e.g. Wisdom.",
+          "$ref": "#/$defs/Ability"
+        },
+        "attack_bonus": {
+          "description": "Spell attack bonus: the ability modifier plus the Proficiency Bonus, without dice\nbonuses such as Bless.",
+          "type": "integer",
+          "format": "int8",
+          "maximum": 127,
+          "minimum": -128
+        },
+        "class": {
+          "description": "Class id, e.g. `cleric`.",
+          "type": "string"
+        },
+        "save_dc": {
+          "description": "Spell save DC: 8 plus the ability modifier plus the Proficiency Bonus.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "class",
+        "ability",
+        "save_dc",
+        "attack_bonus"
       ]
     },
     "State": {

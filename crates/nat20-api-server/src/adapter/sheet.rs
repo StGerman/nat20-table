@@ -11,12 +11,13 @@ use hecs::Entity;
 use nat20_api_contract::{
     Ability as WireAbility, AbilityLine, DeathSaves, FeatureLine, Handle, HitDicePool, ItemLine,
     ProficiencyLevel as WireProficiency, Recharge, ResourcePool, Sheet, Side, Skill as WireSkill,
-    SkillLine, SpellSlots,
+    SkillLine, SpellLine, SpellSlots, SpellcastingLine,
 };
 use nat20_core::{
     components::{
         ability::{Ability, AbilityScoreMap},
-        d20::D20Check,
+        class::{CastingReadinessModel, ClassAndSubclass},
+        d20::{D20Check, D20CheckDC},
         health::{hit_point_dice::HitPointDice, life_state::LifeState},
         id::{ActionId, ClassId, EntityIdentifier, FeatId, ItemId, SpeciesId, SubspeciesId},
         items::{
@@ -30,11 +31,12 @@ use nat20_core::{
         saving_throw::{SavingThrowKind, SavingThrowSet},
         skill::{Skill, SkillSet},
         species::CreatureType,
+        spells::{spell::SpellFlag, spellbook::Spellbook},
     },
     engine::engine_state::EngineState,
     registry::registry::{
-        ClassesRegistry, ItemsRegistry, ResourcesRegistry, SpeciesRegistry, SubclassesRegistry,
-        SubspeciesRegistry,
+        ClassesRegistry, ItemsRegistry, ResourcesRegistry, SpeciesRegistry, SpellsRegistry,
+        SubclassesRegistry, SubspeciesRegistry,
     },
     systems::{self, time::RestKind},
 };
@@ -150,6 +152,7 @@ pub fn sheet(engine: &EngineState, entity: Entity, handle: &str, side: Side) -> 
         .collect();
     let (spell_slots, resources) = resources(engine, entity, &owners);
     let features = features(engine, entity, &owners);
+    let (spellcasting, spells) = spellcasting(engine, entity);
 
     Sheet {
         handle: Handle(handle.to_owned()),
@@ -185,6 +188,8 @@ pub fn sheet(engine: &EngineState, entity: Entity, handle: &str, side: Side) -> 
             })
             .unwrap_or_default(),
         spell_slots,
+        spellcasting,
+        spells,
         resources,
         // The core has no condition or exhaustion model yet.
         conditions: Vec::new(),
@@ -230,7 +235,8 @@ fn resources(
     let mut slots = Vec::new();
     let mut pools = BTreeMap::new();
     for (id, budget) in map.iter() {
-        let recharge = ResourcesRegistry::get(id).map(|r| r.recharge);
+        let definition = ResourcesRegistry::get(id);
+        let recharge = definition.map(|r| r.recharge);
         if recharge == Some(RechargeRule::Turn) {
             continue;
         }
@@ -259,6 +265,12 @@ fn resources(
                             }
                             _ => Recharge::Never,
                         },
+                        short_rest_regain: definition
+                            .into_iter()
+                            .flat_map(|r| &r.partial_recharge)
+                            .filter(|p| p.on == RechargeRule::Rest(RestKind::Short))
+                            .map(|p| u32::from(p.uses))
+                            .max(),
                     },
                 );
             }
@@ -268,6 +280,93 @@ fn resources(
     }
     slots.sort_by_key(|s| s.level);
     (slots, pools.into_values().collect())
+}
+
+/// Each class's Spellcasting line, then the spells it can cast or prepare: cantrips first,
+/// then by level and name. A class that prepares from its entire list lists what is prepared.
+fn spellcasting(engine: &EngineState, entity: Entity) -> (Vec<SpellcastingLine>, Vec<SpellLine>) {
+    let world = &engine.world;
+    let (Ok(levels), Ok(book)) = (
+        world.get::<&CharacterLevels>(entity),
+        world.get::<&Spellbook>(entity),
+    ) else {
+        return (Vec::new(), Vec::new());
+    };
+    let scores = systems::helpers::get_component::<AbilityScoreMap>(world, entity);
+    let mut lines = Vec::new();
+    let mut spells = Vec::new();
+    for (class_id, progress) in levels.all_classes() {
+        let source = ClassAndSubclass {
+            class: class_id.clone(),
+            subclass: progress.subclass().cloned(),
+        };
+        let Some(rules) = ClassesRegistry::get(class_id)
+            .and_then(|class| class.spellcasting_rules(&source.subclass).cloned())
+        else {
+            continue;
+        };
+        let Some(state) = book.class_state(&source) else {
+            continue;
+        };
+        let ability = rules.spellcasting_ability;
+        let save_dc = match book.class_saving_throw(
+            world,
+            entity,
+            class_id,
+            SavingThrowKind::Ability(ability),
+        ) {
+            D20CheckDC::SavingThrow { dc, .. } => dc.total(),
+            _ => continue,
+        };
+        let mut attack = book.attack_roll_template().clone();
+        attack.add_modifier(
+            ModifierSource::Ability(ability),
+            scores.ability_modifier(&ability).total(),
+        );
+        lines.push(SpellcastingLine {
+            class: class_word(class_id),
+            ability: ABILITIES
+                .iter()
+                .find(|(core, _)| *core == ability)
+                .map(|(_, wire)| *wire)
+                .expect("six abilities"),
+            save_dc: save_dc.clamp(0, u8::MAX.into()) as u8,
+            attack_bonus: bonus(engine, entity, &attack),
+        });
+
+        let selections = &state.selections;
+        let prepared: Vec<_> = selections
+            .cantrips
+            .iter()
+            .chain(&selections.always_prepared)
+            .chain(selections.prepared_spells.iter())
+            .collect();
+        let unprepared = selections.learned_spells.iter().filter(|id| {
+            rules.readiness_model == CastingReadinessModel::Prepared && !prepared.contains(id)
+        });
+        for (id, is_prepared) in prepared
+            .iter()
+            .map(|id| (*id, true))
+            .chain(unprepared.map(|id| (id, false)))
+        {
+            let Some(spell) = SpellsRegistry::get(id) else {
+                continue;
+            };
+            let word = tail(id.id(), "spell.");
+            if spells.iter().any(|s: &SpellLine| s.id == word) {
+                continue;
+            }
+            spells.push(SpellLine {
+                name: title(&word.replace('_', " ")),
+                id: word,
+                level: spell.base_level(),
+                prepared: is_prepared,
+                concentration: spell.has_flag(SpellFlag::Concentration),
+            });
+        }
+    }
+    spells.sort_by(|a, b| (a.level, &a.name).cmp(&(b.level, &b.name)));
+    (lines, spells)
 }
 
 /// Equipped items in slot order, then carried items in the order they were picked up, with

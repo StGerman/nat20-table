@@ -71,7 +71,12 @@ pub fn option_id_and_name(action_id: &ActionId, weapon: Option<&str>) -> (String
 pub fn title(words: &str) -> String {
     words
         .split(' ')
-        .map(|w| {
+        .enumerate()
+        .map(|(i, w)| {
+            // Short joining words stay lowercase, as in "Shield of Faith".
+            if i > 0 && ["a", "an", "and", "of", "the", "to"].contains(&w) {
+                return w.to_string();
+            }
             let mut chars = w.chars();
             match chars.next() {
                 Some(first) => first.to_uppercase().chain(chars).collect(),
