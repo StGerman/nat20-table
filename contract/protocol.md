@@ -217,12 +217,13 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | Data | `dm` | Owner (viewer = that creature) | Other player viewer |
 |---|---|---|---|
 | HP / max HP / temp HP | yes | yes | no; `health: "unhurt" \| "bloodied" \| "down"` instead |
-| AC, saves, stat block, resources, slots; spellcasting (spell save DC, spell attack bonus) and spells | yes | yes | no |
+| AC, saves, stat block, resources, slots; spellcasting (spell save DC, spell attack bonus), spells and the sheet's `concentration` | yes | yes | no |
 | Conditions | yes | yes | only visible ones (all SRD conditions except `invisible` while unseen) |
 | Position, distance (ft) | yes | yes | yes, for creatures the viewer perceives (all of them until vision exists) |
 | Roll: dice, total, outcome | yes (`full` view) | yes (`player` view) | yes (`player` view) |
 | Roll: modifiers, `against` (AC/DC), `dc_source`, `advantage_sources` | yes | no; own modifiers and AC are on the sheet | no |
 | Damage or healing amount | yes | yes | yes (it is said at the table) |
+| Which spell a creature concentrates on, and when it starts and ends (`concentration_started`, `concentration_ended`) | yes | yes | yes (a caster visibly maintains a spell) |
 | `hit_points` events (HP after a change) | yes | own creature only | no |
 | Scenario data: the scene file's check DCs, hazards, encounters, surrender conditions, flags, spawns; in state, `flags`, `checks`, `encounters` (with `surrender_available`) and `spawns`; the events `check_resolved`, `flag_set`, `hazard_triggered` and `spawned` | yes | no | no |
 | Anchors: id, name, position | yes | yes, with `distance_ft` from the viewer | yes, with `distance_ft` from the viewer |
