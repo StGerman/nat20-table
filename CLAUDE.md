@@ -155,11 +155,6 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 ## Rule 5: the core boundary
 
 - `nat20_core` is a git dependency pinned by `rev` to `StGerman/nat20`. Bump the rev only in its own PR, with the full suite green.
-- Keep this entry in the workspace `Cargo.toml`, identical to the one in fork `demo`, until core moves to crates.io polyanya 0.16 or later (UPS-11) and both drop it. Cargo ignores a dependency's `[patch]`, so without it core builds against the wrong polyanya:
-  ```toml
-  [patch.crates-io]
-  polyanya = { git = "https://github.com/MadsWedendahlKruse/polyanya", branch = "fix-path-with-height-oob" }
-  ```
 - Only `crates/nat20-api-server/src/adapter/` may `use nat20_core`. Core churn stays inside that module.
 - Never work around a core rule in our code. If core is wrong or missing something, fix it in the fork (Rule 6) and pin to it.
 - To develop against a local fork checkout, add `[patch."https://github.com/StGerman/nat20"] nat20_core = { path = "../nat20/core" }` to `.cargo/config.toml`. Never commit it.
@@ -218,7 +213,7 @@ Stay current, behind a cooldown and hard gates, in both repos (`docs/decisions/0
 - Grouped patch PRs, npm and Actions minor and patch PRs, and cargo minor PRs of crates at 1.0 or later are merged by Claude once CI is green, within 7 days.
 - A breaking bump becomes its own `core/deps-<crate>` or `table/deps-<crate>` PR with the code it needs, reviewed by Stas, adopted within 30 days. A crate held back longer needs a TASKS.md row saying why.
 - Nothing merges on red. `cargo deny check bans licenses sources` gates PRs in both repos. `advisories` stays off the gate (decision 0022) and runs on a schedule, daily from UPS-14 (weekly until then); a red run gets a P0 row the same day. In the fork, deny covers `nat20_core`, not his GUI (UPS-13).
-- Lockfiles are committed and builds run `--locked`. Our workflows pin Actions by commit SHA; upstream's own workflow files in the fork are left as he wrote them, so syncs don't conflict. Committed manifests take git dependencies only from our own repos, pinned by `rev`, never `branch`. The one exception is the polyanya `[patch]` in Rule 5, until UPS-11 removes it.
+- Lockfiles are committed and builds run `--locked`. Our workflows pin Actions by commit SHA; upstream's own workflow files in the fork are left as he wrote them, so syncs don't conflict. Committed manifests take git dependencies only from our own repos, pinned by `rev`, never `branch`.
 - The Rust toolchain is pinned to an exact stable release in `rust-toolchain.toml` (UPS-14), bumped in its own PR at least 7 days after that release, with any new lints fixed in the same PR. Claude checks for a new stable with each weekly Dependabot round, since Dependabot doesn't update the toolchain file. Until UPS-14, CI runs latest stable, and a lint failure caused by a new release is fixed in its own PR the same day.
 - Once UPS-15 lands, the crates whose types cross the core boundary (hecs, parry3d, uom, rerecast) reach this repo only through `nat20_core`'s re-exports, so they move with the core pin and nowhere else. Until then they stay direct dependencies of the server, ignored by Dependabot, and move only with a pin bump.
 - In an upstream sync, Cargo.toml keeps the higher version of each crate and Cargo.lock is regenerated with cargo, never merged by hand.
