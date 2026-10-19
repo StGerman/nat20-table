@@ -303,7 +303,7 @@ fn fight(
                 let has = |id: &str| ids.contains(&id);
                 let submit = |option_id: &str, targets: Vec<Handle>| Command::Submit {
                     actor: Handle(BREN.into()),
-                    prompt_id: prompt_id.clone(),
+                    prompt_id: Some(prompt_id.clone()),
                     option_id: OptionId(option_id.into()),
                     targets,
                     point: None,
