@@ -928,15 +928,9 @@ impl Game {
         // Everything is checked before the helper's turn moves on, so a refused help changes
         // nothing. The check runs as if the new turn had begun: the action a fight or an earlier
         // help spent is back for it, and taken away again after.
-        let world = &mut self.engine.world;
-        let resources = systems::helpers::get_component_clone::<ResourceMap>(world, entity);
-        let cooldowns = systems::helpers::get_component_clone::<ActionCooldownMap>(world, entity);
-        systems::resources::recharge(world, entity, &RechargeRule::Turn);
-        let checked = self.check_help(entity, actor, &action, variant.as_ref(), goal);
-        let world = &mut self.engine.world;
-        *systems::helpers::get_component_mut::<ResourceMap>(world, entity) = resources;
-        *systems::helpers::get_component_mut::<ActionCooldownMap>(world, entity) = cooldowns;
-        checked?;
+        self.as_if_next_turn(entity, |game| {
+            game.check_help(entity, actor, &action, variant.as_ref(), goal)
+        })?;
         self.next_explore_turn(entity);
         let builder = self.help_builder(entity, actor, &action, variant.as_ref(), goal)?;
         let engine = &mut self.engine;
@@ -1727,6 +1721,35 @@ impl Game {
     ) -> Result<(Vec<ActionOption>, Vec<UnavailableOption>), ApiError> {
         let entity = self.entity(actor)?;
         self.require_action_prompt(entity)?;
+        Ok(self.listing(entity))
+    }
+
+    /// Out of combat: the options `actor` could take on a turn of its own, listed as if that turn
+    /// began now (its action and Bonus Action back). Nothing changes.
+    pub fn explore_legal_actions(
+        &mut self,
+        actor: &str,
+    ) -> Result<(Vec<ActionOption>, Vec<UnavailableOption>), ApiError> {
+        let entity = self.entity(actor)?;
+        Ok(self.as_if_next_turn(entity, |game| game.listing(entity)))
+    }
+
+    /// Runs `f` as if `entity`'s next turn had begun: the action, Bonus Action and per-turn uses
+    /// a fight or an earlier explore action spent are back for it, and taken away again after.
+    fn as_if_next_turn<T>(&mut self, entity: Entity, f: impl FnOnce(&mut Self) -> T) -> T {
+        let world = &mut self.engine.world;
+        let resources = systems::helpers::get_component_clone::<ResourceMap>(world, entity);
+        let cooldowns = systems::helpers::get_component_clone::<ActionCooldownMap>(world, entity);
+        systems::resources::recharge(world, entity, &RechargeRule::Turn);
+        let out = f(self);
+        let world = &mut self.engine.world;
+        *systems::helpers::get_component_mut::<ResourceMap>(world, entity) = resources;
+        *systems::helpers::get_component_mut::<ActionCooldownMap>(world, entity) = cooldowns;
+        out
+    }
+
+    /// The options `entity` can take now, and the ones it has but cannot take.
+    fn listing(&mut self, entity: Entity) -> (Vec<ActionOption>, Vec<UnavailableOption>) {
         let options = self.options(entity).into_iter().map(|o| o.option).collect();
 
         // Actions the creature has but cannot use right now, so a caller can explain why not.
@@ -1778,7 +1801,7 @@ impl Game {
             });
         }
         unavailable.sort_by(|a, b| a.option_id.0.cmp(&b.option_id.0));
-        Ok((options, unavailable))
+        (options, unavailable)
     }
 
     /// Takes one option at `actor`'s pending action prompt.
@@ -1791,6 +1814,69 @@ impl Game {
     ) -> Result<(), ApiError> {
         let entity = self.entity(actor)?;
         self.require_action_prompt(entity)?;
+        let (option, variant, target_entities) =
+            self.pick_option(entity, actor, option_id, targets, variant)?;
+        self.submit_entity(
+            entity,
+            &option.action_id,
+            variant.as_ref(),
+            option.context,
+            &target_entities,
+        )?;
+        self.settle();
+        self.drain();
+        self.advance();
+        Ok(())
+    }
+
+    /// Out of combat: `actor` takes one option as a turn of its own. Its next turn begins first,
+    /// as for Help: the action and Bonus Action come back, and whatever lasted until the start of
+    /// its turn ends. Everything is checked before that, so a refused submit changes nothing.
+    pub fn explore_submit(
+        &mut self,
+        actor: &str,
+        option_id: &str,
+        targets: &[String],
+        variant: Option<&str>,
+    ) -> Result<(), ApiError> {
+        let entity = self.entity(actor)?;
+        if !systems::health::is_alive(&self.engine.world, entity)
+            || life_state_name(&self.engine, entity) != "normal"
+        {
+            return Err(rejected(
+                RejectReason::ConditionPrevents,
+                format!("{actor} is down and cannot act."),
+            ));
+        }
+        let (option, variant, target_entities) = self.as_if_next_turn(entity, |game| {
+            game.pick_option(entity, actor, option_id, targets, variant)
+        })?;
+        self.next_explore_turn(entity);
+        self.submit_entity(
+            entity,
+            &option.action_id,
+            variant.as_ref(),
+            option.context,
+            &target_entities,
+        )?;
+        // An explore command that acts closes a finished fight's `combat_over`, as `move` does.
+        self.close_finished_fight();
+        self.settle();
+        self.decline_explore_reactions();
+        self.drain();
+        Ok(())
+    }
+
+    /// The option `option_id` among `entity`'s options now, the variant asked for, and the
+    /// targets' entities.
+    fn pick_option(
+        &mut self,
+        entity: Entity,
+        actor: &str,
+        option_id: &str,
+        targets: &[String],
+        variant: Option<&str>,
+    ) -> Result<(OptionEntry, Option<ActionVariantId>, Vec<Entity>), ApiError> {
         let target_entities = targets
             .iter()
             .map(|t| self.entity(t))
@@ -1838,17 +1924,7 @@ impl Game {
                     .clone(),
             ),
         };
-        self.submit_entity(
-            entity,
-            &option.action_id,
-            variant.as_ref(),
-            option.context,
-            &target_entities,
-        )?;
-        self.settle();
-        self.drain();
-        self.advance();
-        Ok(())
+        Ok((option, variant, target_entities))
     }
 
     /// Answers `actor`'s pending reaction prompt; `None` declines.

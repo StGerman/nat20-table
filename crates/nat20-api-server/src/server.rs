@@ -202,7 +202,7 @@ impl Server {
                 }
                 session.submit(
                     &actor.0,
-                    &prompt_id.0,
+                    prompt_id.as_ref().map(|p| p.0.as_str()),
                     option_id,
                     targets,
                     variant.as_deref(),

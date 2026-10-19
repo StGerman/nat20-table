@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.21"
+    "version": "1.0.0-dev.22"
   },
   "$defs": {
     "Ability": {
@@ -771,7 +771,7 @@
           "type": "object",
           "properties": {
             "can_end_turn": {
-              "description": "Whether `end_turn` is accepted now.",
+              "description": "Whether `end_turn` is accepted now; always false in explore mode.",
               "type": "boolean"
             },
             "cmd": {
@@ -786,7 +786,7 @@
               }
             },
             "prompt_id": {
-              "description": "The prompt these options belong to; echo it in `submit` and `end_turn`.",
+              "description": "The prompt these options belong to; echo it in `submit` and `end_turn`. Empty in\nexplore mode, where nothing is pending.",
               "$ref": "#/$defs/PromptId"
             },
             "unavailable": {
@@ -2957,7 +2957,7 @@
           "type": "object",
           "properties": {
             "actor": {
-              "description": "The creature whose options are listed.",
+              "description": "The creature whose options are listed. In explore mode any creature of the scene:\nthe options it could take on a turn of its own, as if that turn began now.",
               "$ref": "#/$defs/Handle"
             },
             "cmd": {
@@ -2971,11 +2971,11 @@
           ]
         },
         {
-          "description": "Takes one option at the pending action prompt.",
+          "description": "Takes one option at the pending action prompt, or, in explore mode, as a turn of the\nactor's own.",
           "type": "object",
           "properties": {
             "actor": {
-              "description": "The acting creature; must be `awaiting.actor`.",
+              "description": "The acting creature; in combat it must be `awaiting.actor`.",
               "$ref": "#/$defs/Handle"
             },
             "cmd": {
@@ -2998,8 +2998,15 @@
               ]
             },
             "prompt_id": {
-              "description": "The pending prompt's id. An old id is rejected with `stale_prompt` and changes nothing.",
-              "$ref": "#/$defs/PromptId"
+              "description": "In combat, the pending prompt's id: required, and an old id is rejected with\n`stale_prompt` and changes nothing. In explore mode leave it out; a submit that carries\none there is a late combat decision and answers `wrong_mode`.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/PromptId"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "targets": {
               "description": "Targets, for options whose `targeting` is `single` or `multiple`.",
@@ -3019,7 +3026,6 @@
           "required": [
             "cmd",
             "actor",
-            "prompt_id",
             "option_id"
           ]
         },
