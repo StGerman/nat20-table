@@ -89,6 +89,16 @@ struct SceneCreature {
     control: Control,
 }
 
+/// A target the monster policy weighs.
+struct Candidate {
+    entity: Entity,
+    handle: String,
+    distance_m: f32,
+    prone: bool,
+    /// A creature friendly to the attacker, conscious and not Incapacitated, is beside it.
+    engaged: bool,
+}
+
 struct Scene {
     id: String,
     creatures: Vec<SceneCreature>,
@@ -173,6 +183,14 @@ const ROUNDS_BETWEEN_SCENES: usize = 100;
 
 /// Core's Prone condition (SRD 5.2.1 Rules Glossary › Prone).
 const PRONE: &str = "effect.condition.prone";
+/// Core's Incapacitated condition.
+const INCAPACITATED: &str = "effect.condition.incapacitated";
+/// The Wolf's and Giant Rat's trait: Advantage when an ally is within 5 feet of the target.
+const PACK_TACTICS: &str = "effect.monster.pack_tactics";
+/// The goblins' Bonus Action Disengage.
+const NIMBLE_ESCAPE: &str = "nat20_core::action.monster.nimble_escape";
+/// 5 feet, and a little over for creatures standing on a slope.
+const REACH_M: f32 = 5.0 * METERS_PER_FOOT + 0.05;
 
 /// A loaded scene and its engine.
 pub struct Game {
@@ -2958,9 +2976,12 @@ impl Game {
         eprintln!("scripted creatures did not yield within {MAX_SCRIPTED_STEPS} steps");
     }
 
-    /// The monster policy: attack the nearest hostile creature, preferring a
-    /// melee weapon already in reach, then any weapon already in range, then
-    /// moving into melee. End the turn when no attack is possible.
+    /// The monster policy (MON-6, Milestone 5 spec D6). A Bloodied goblin in melee first takes
+    /// Nimble Escape and steps away, so it shoots instead. Then it attacks, preferring a melee
+    /// weapon already in reach, then any weapon already in range, then moving into melee. Melee
+    /// goes for a Prone target first, and a creature with Pack Tactics for one an ally is
+    /// beside; a ranged attack avoids Prone targets. Ties go to the nearer target, then by
+    /// handle, so a seed replays the same fight. End the turn when no attack is possible.
     fn scripted_action(&mut self, actor: Entity) {
         let round = self
             .encounter
@@ -2971,6 +2992,22 @@ impl Game {
             Some((r, e, n)) if r == round && e == actor => n,
             _ => 0,
         };
+
+        if taken < MAX_SCRIPTED_ACTIONS_PER_TURN
+            && let Some(hostile) = self.should_escape(actor)
+        {
+            let nimble: ActionId = NIMBLE_ESCAPE.parse().expect("a valid action id");
+            if self
+                .submit_entity(actor, &nimble, None, 0, &[], None)
+                .is_ok()
+            {
+                self.settle();
+                self.drain();
+                self.scripted_retreat(actor, hostile);
+                self.scripted_turn = Some((round, actor, taken + 1));
+                return;
+            }
+        }
 
         let choice = if taken < MAX_SCRIPTED_ACTIONS_PER_TURN {
             self.choose_attack(actor)
@@ -2988,9 +3025,98 @@ impl Game {
         self.engine.end_turn(actor);
     }
 
-    fn choose_attack(&mut self, actor: Entity) -> Option<(ActionId, usize, Entity)> {
+    /// The hostile creature a Bloodied `actor` should get away from with Nimble Escape: the
+    /// nearest one in reach, when the actor can take Nimble Escape and has a ranged attack.
+    fn should_escape(&mut self, actor: Entity) -> Option<Entity> {
+        let (hp, hp_max, _) = hit_points(&self.engine, actor);
+        if health_band(hp, hp_max) != HealthBand::Bloodied {
+            return None;
+        }
+        let nimble: ActionId = NIMBLE_ESCAPE.parse().ok()?;
+        let ranged: ActionId = "nat20_core::action.ranged_attack".parse().ok()?;
+        let available = match ActionBuilder::available(&mut self.engine, actor).state() {
+            Ok(ActionBuilderState::Action { actions }) => actions.clone(),
+            _ => return None,
+        };
+        if !available.contains_key(&nimble) || !available.contains_key(&ranged) {
+            return None;
+        }
+        self.hostiles_of(actor)
+            .into_iter()
+            .find(|t| t.distance_m <= REACH_M)
+            .map(|t| t.entity)
+    }
+
+    /// Steps `actor` straight away from `hostile` as far as its movement allows, or a shorter
+    /// way when the terrain bends the route.
+    fn scripted_retreat(&mut self, actor: Entity, hostile: Entity) {
+        let world = &self.engine.world;
+        let (Some(here), Some(there)) = (
+            systems::geometry::get_foot_position(world, actor),
+            systems::geometry::get_foot_position(world, hostile),
+        ) else {
+            return;
+        };
+        let away = here - there;
+        let step = remaining_movement_m(&self.engine, actor);
+        if away.norm() < 1e-3 || step <= 0.0 {
+            return;
+        }
+        let route = [1.0, 0.75, 0.5].into_iter().find_map(|share| {
+            let goal = here + away.normalize() * (step * share);
+            systems::movement::path(&self.engine, actor, &goal, false, true).ok()
+        });
+        let Some(route) = route else {
+            return;
+        };
+        let end = *route.full_path.points.last().unwrap_or(&here);
+        let round = self.round();
+        if self
+            .engine
+            .submit_activity(Activity::Move {
+                entity: actor,
+                goal: end,
+            })
+            .is_err()
+        {
+            return;
+        }
+        self.settle();
+        let landed = systems::geometry::get_foot_position(&self.engine.world, actor)
+            .expect("scene creatures have a position");
+        self.pending.push(Pending::public(
+            round,
+            EventKind::Moved {
+                actor: Handle(self.handle_of(actor)),
+                from: from_core_point(here),
+                to: from_core_point(landed),
+                anchor: None,
+            },
+        ));
+        self.drain();
+    }
+
+    /// The conscious creatures hostile to `actor`, nearest first, with what the policy weighs.
+    fn hostiles_of(&self, actor: Entity) -> Vec<Candidate> {
         let engine = &self.engine;
-        let mut hostiles: Vec<(f32, Entity)> = self
+        let prone = EffectId::new("nat20_core", PRONE);
+        let incapacitated = EffectId::new("nat20_core", INCAPACITATED);
+        let standing = |e: Entity| {
+            life_state_name(engine, e) == "normal"
+                && !systems::effects::has_effect(engine, e, &incapacitated)
+        };
+        let allies: Vec<Entity> = self
+            .scene
+            .creatures
+            .iter()
+            .filter(|c| c.entity != actor && standing(c.entity))
+            .filter(|c| {
+                systems::factions::mutual_attitude(&engine.world, actor, c.entity)
+                    == Attitude::Friendly
+            })
+            .map(|c| c.entity)
+            .collect();
+        let mut hostiles: Vec<Candidate> = self
             .scene
             .creatures
             .iter()
@@ -3000,14 +3126,38 @@ impl Game {
                 systems::factions::mutual_attitude(&engine.world, actor, c.entity)
                     == Attitude::Hostile
             })
-            .map(|c| {
-                (
-                    distance_m(engine, actor, c.entity).unwrap_or(f32::MAX),
-                    c.entity,
-                )
+            .map(|c| Candidate {
+                entity: c.entity,
+                handle: c.handle.clone(),
+                distance_m: distance_m(engine, actor, c.entity).unwrap_or(f32::MAX),
+                prone: systems::effects::has_effect(engine, c.entity, &prone),
+                engaged: allies
+                    .iter()
+                    .any(|a| distance_m(engine, *a, c.entity).is_some_and(|d| d <= REACH_M)),
             })
             .collect();
-        hostiles.sort_by(|a, b| a.0.total_cmp(&b.0));
+        hostiles.sort_by(|a, b| {
+            a.distance_m
+                .total_cmp(&b.distance_m)
+                .then_with(|| a.handle.cmp(&b.handle))
+        });
+        hostiles
+    }
+
+    fn choose_attack(&mut self, actor: Entity) -> Option<(ActionId, usize, Entity)> {
+        let hostiles = self.hostiles_of(actor);
+        let pack_tactics = systems::effects::has_effect(
+            &self.engine,
+            actor,
+            &EffectId::new("nat20_core", PACK_TACTICS),
+        );
+        // Melee: Prone first, then (with Pack Tactics) one an ally is beside. The sort is
+        // stable, so nearest and then handle order break ties.
+        let mut for_melee: Vec<&Candidate> = hostiles.iter().collect();
+        for_melee.sort_by_key(|t| (!t.prone, !(pack_tactics && t.engaged)));
+        // Ranged: a Prone target beyond 5 feet gives Disadvantage, so it goes last.
+        let mut for_ranged: Vec<&Candidate> = hostiles.iter().collect();
+        for_ranged.sort_by_key(|t| t.prone);
 
         let melee: ActionId = "nat20_core::action.melee_attack".parse().ok()?;
         let ranged: ActionId = "nat20_core::action.ranged_attack".parse().ok()?;
@@ -3022,8 +3172,13 @@ impl Game {
             let Some(contexts) = available.get(action_id) else {
                 continue;
             };
+            let order = if *action_id == ranged {
+                &for_ranged
+            } else {
+                &for_melee
+            };
             for context in 0..contexts.len() {
-                for (_, target) in &hostiles {
+                for target in order.iter().map(|t| &t.entity) {
                     let mut probe = ActionBuilder::available(engine, actor);
                     probe.action(engine, action_id);
                     if !pick_context(&mut probe, &engine.world, context) {
