@@ -1,0 +1,97 @@
+{
+    "id": "fled_yard",
+    "description": "Milestone 5 test scene for end_combat{fled} (fixture fled.jsonl): Bren faces two goblins across a mill yard, and a third goblin, a neutral captive, sits by the well and is in neither fight. yard_fight allows only a scenario end, so fled is refused there; yard_rout allows fled, so the two goblins run and leave the scene while the captive stays.",
+    "anchors": [
+        {
+            "id": "yard",
+            "name": "the mill yard",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_a",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 30.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_b",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 30.0,
+                    "y_ft": 10.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "captive",
+            "monster": "goblin_warrior",
+            "side": "neutral",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -20.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "yard_fight",
+            "participants": [
+                "bren",
+                "goblin_a",
+                "goblin_b"
+            ],
+            "end_reasons": [
+                "scenario"
+            ]
+        },
+        {
+            "id": "yard_rout",
+            "participants": [
+                "bren",
+                "goblin_a",
+                "goblin_b"
+            ],
+            "end_reasons": [
+                "fled"
+            ]
+        }
+    ]
+}

@@ -295,7 +295,8 @@ pub enum EndCombatReason {
     /// The encounter's surrender condition holds and the DM calls the surrender. Its surrendering
     /// creatures that are still conscious become `neutral` and stay in the scene.
     Surrender,
-    /// The other side fled. Not served yet (`not_implemented`).
+    /// The other side fled; the encounter must list `fled` in its `end_reasons`. Its conscious
+    /// creatures leave the scene and the party's side wins.
     Fled,
     /// The story ends the fight; the encounter must list `scenario` in its `end_reasons`.
     Scenario,

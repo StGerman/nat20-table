@@ -3,6 +3,11 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.27 (2026-10-20)
+- `end_combat{fled}` is served (API-9, Milestone 5 spec D7, D11 and §7 step 9; protocol.md §4.4 and §6). Accepted only when the running encounter lists `fled` in `end_reasons`, else `rejected` with `condition_not_met`. The conscious participants not on the party's side leave the scene; those at 0 Hit Points stay; the party wins. **Changed meaning:** it answered `not_implemented` before, so `encounter.jsonl`'s `end_combat{fled}` now answers `condition_not_met` (its encounter lists only `scenario`).
+- New public event `fled{handles}`, logged before `combat_over{reason: fled}`. Additive: a new event kind.
+- New fixture `fled.jsonl` (new test scene `fled_yard`, seed 5): refused where the encounter doesn't list `fled` (DM and player messages), accepted where it does; both goblins run and are gone from the DM and player states, while a neutral captive outside the fight stays.
+
 ## 1.0.0-dev.26 (2026-10-20)
 - Area targeting (API-10, Milestone 4 spec §4.2, §4.3 and §7 step 10; protocol.md status, §4 and §7). `Targeting` gains `area`. `ActionOption` gains optional `area{shape, size_ft, from_self, aims}` (`OptionArea`, `AreaShape`, `AreaAim`): each aim at another living creature or an anchor, with the creatures it would catch. **Breaking before v1:** a new enum value on `Targeting`, which is not on Rule 2's additive list (spec §4.2 allows it before v1).
 - `submit` gains optional `aim` (`Aim`: `creature`, `anchor` or `point`). The `point` field is served for area options and means `aim: {kind: point}`. **Changed meaning:** `point` answered `not_implemented` before; the `not_implemented.jsonl` case for it is removed.

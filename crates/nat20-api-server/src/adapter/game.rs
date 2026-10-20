@@ -1805,12 +1805,37 @@ impl Game {
             ));
         };
         let id = found.id.clone();
+        let mut fleeing: Vec<Entity> = Vec::new();
         let (surrendering, winner, reason) = match reason {
             EndCombatReason::Fled => {
-                return Err(error(
-                    ErrorCode::NotImplemented,
-                    "Ending a fight because a side fled is not implemented by this engine yet (MON-6).",
-                ));
+                if !found.end_reasons.contains(&EndCombatReason::Fled) {
+                    return Err(rejected(
+                        RejectReason::ConditionNotMet,
+                        format!("{id} does not list fled among the ways it can end."),
+                    ));
+                }
+                // Every participant not on the party's side runs, except those at 0 Hit Points,
+                // who stay where they fell. Scene order keeps the event deterministic.
+                let participants: Vec<Entity> = self
+                    .engine
+                    .encounter(&core_id)
+                    .map(|running| {
+                        running
+                            .initiative_order()
+                            .iter()
+                            .map(|(entity, _)| *entity)
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                fleeing = self
+                    .scene
+                    .creatures
+                    .iter()
+                    .filter(|c| participants.contains(&c.entity) && c.side != Side::Party)
+                    .filter(|c| life_state_name(&self.engine, c.entity) == "normal")
+                    .map(|c| c.entity)
+                    .collect();
+                (Vec::new(), Some(Side::Party), CombatOverReason::Fled)
             }
             EndCombatReason::Scenario => {
                 if !found.end_reasons.contains(&EndCombatReason::Scenario) {
@@ -1900,8 +1925,21 @@ impl Game {
             self.pending
                 .push(Pending::public(round, EventKind::Surrendered { handles }));
         }
+        if reason == CombatOverReason::Fled {
+            let handles = fleeing.iter().map(|e| Handle(self.handle_of(*e))).collect();
+            self.pending
+                .push(Pending::public(round, EventKind::Fled { handles }));
+        }
         self.engine.end_encounter(&core_id);
         self.drain();
+        // The creatures that ran have left the scene (Milestone 5 spec D11).
+        for entity in &fleeing {
+            let _ = self.engine.despawn(*entity);
+            self.hp.remove(entity);
+        }
+        self.scene
+            .creatures
+            .retain(|c| !fleeing.contains(&c.entity));
         self.pending.push(combat_over(round, winner, reason));
         self.encounter = None;
         self.scene_encounter = None;

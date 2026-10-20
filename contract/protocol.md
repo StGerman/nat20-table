@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.26): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions` and `submit` (in combat, and out of it, §4.8), `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}`. Area options are offered and aimed (§4.4); no option has `targeting: "point"` yet. The core has no exhaustion model yet, so `exhaustion` is 0. Conditions are filled from what core models: Unconscious for a creature at 0 Hit Points that isn't dead, and Incapacitated, Paralyzed and Poisoned when an effect applies them (§5).
+Status (contract 1.0.0-dev.27): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions` and `submit` (in combat, and out of it, §4.8), `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Area options are offered and aimed (§4.4); no option has `targeting: "point"` yet. The core has no exhaustion model yet, so `exhaustion` is 0. Conditions are filled from what core models: Unconscious for a creature at 0 Hit Points that isn't dead, and Incapacitated, Paralyzed and Poisoned when an effect applies them (§5).
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -162,7 +162,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 - `end_combat{reason}` ends the running fight early and answers the state in explore mode, with `awaiting: none`:
   - `surrender` is accepted only while `surrender_available` is true; otherwise it answers `surrender_not_available` (not retryable as it stands) and changes nothing. On success the condition's creatures that are still conscious become `neutral` and stay in the scene, and in the engine their attitude toward the winners' factions becomes neutral, and so does each winner's attitude toward them (only toward them; the rest of the winners' factions keep theirs), so a later scene can carry them in with their captors. The engine logs `surrendered{handles}` (public), then `combat_over{reason: "surrender"}` with the other side as `winner`.
   - `scenario` is accepted only when the encounter lists it in `end_reasons`; otherwise `rejected` with `condition_not_met`. It logs `combat_over{reason: "scenario"}` with no winner.
-  - `fled` answers `not_implemented` until MON-6.
+  - `fled` is accepted only when the encounter lists it in `end_reasons`; otherwise `rejected` with `condition_not_met`. "The other side" is every participant of the running fight that is not on the party's side. Those still conscious leave the scene: the engine logs `fled{handles}` (public, in scene order), removes them, and they are gone from every later state; those at 0 Hit Points stay where they fell. It then logs `combat_over{reason: "fled"}` with `winner: "party"`. Creatures that are not participants, a surrendered captive among them, stay. The engine never decides a retreat on its own; the DM calls it (Milestone 5 spec D7, D11).
   - Outside combat, including after a fight ended by itself, `end_combat` answers `wrong_mode`.
   - A player viewer's `surrender_not_available` and `condition_not_met` messages say only that the fight cannot end that way right now; the DM's name the encounter and why (scenario data, §5).
 
@@ -256,6 +256,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `scene_loaded` | `scene_id`, `mode` |
 | `combat_started` / `combat_over` | `participants` / `winner`, `reason: side_down\|surrender\|fled\|scenario` |
 | `surrendered` | `handles[]` (public) |
+| `fled` | `handles[]` (public): the creatures that ran and left the scene, logged before `combat_over{reason: fled}` |
 | `round` / `turn_start` / `turn_end` | `number` / `actor` |
 | `action` | `actor`, `option_id`, `name`, `targets[]` |
 | `roll` | `roll: RollView` (`view: "full"` or `"player"`) |

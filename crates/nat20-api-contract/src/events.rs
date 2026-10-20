@@ -76,6 +76,13 @@ pub enum EventKind {
         /// The creatures that surrendered, in the encounter's order.
         handles: Vec<Handle>,
     },
+    /// Creatures fled: the DM ended the fight with `end_combat{fled}` while their encounter
+    /// allowed it. They have left the scene; creatures of their side at 0 Hit Points stay where
+    /// they fell.
+    Fled {
+        /// The creatures that fled, in scene order.
+        handles: Vec<Handle>,
+    },
     /// Combat ended.
     CombatOver {
         /// The side left standing, if any.
