@@ -219,7 +219,7 @@ pub fn sheet(
 
 /// The flat bonus the engine adds to `check` when it rolls it for `entity`. Runs the same
 /// pre-roll hooks as a roll does, on a copy, and rolls nothing.
-fn bonus(engine: &EngineState, entity: Entity, check: &D20Check) -> i8 {
+pub(super) fn bonus(engine: &EngineState, entity: Entity, check: &D20Check) -> i8 {
     let mut check = check.clone();
     check.apply_pre_roll_hooks(engine, entity);
     check

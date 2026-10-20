@@ -1,0 +1,127 @@
+{
+    "_comment": "Numbers only, copied from the SRD 5.2.1 stat blocks (CC-BY-4.0, see ATTRIBUTION.md) via the project wiki's SRD export. The stat-block guard in src/adapter/monster.rs spawns each monster from core's registry and compares what the engine derives with these. Damage is the weapon's own damage; the goblins' extra 1d4 on an attack roll with Advantage is an effect, tested in core. Hit Points are the stat block's fixed average.",
+    "monsters": [
+        {
+            "id": "goblin_warrior",
+            "name": "Goblin Warrior",
+            "armor_class": 15,
+            "hit_points": 10,
+            "speed_ft": 30,
+            "challenge_rating": "1/4",
+            "experience": 50,
+            "proficiency_bonus": 2,
+            "abilities": {
+                "strength": 8,
+                "dexterity": 15,
+                "constitution": 10,
+                "intelligence": 10,
+                "wisdom": 8,
+                "charisma": 8
+            },
+            "attacks": [
+                {
+                    "name": "Scimitar",
+                    "hand": "melee",
+                    "to_hit": 4,
+                    "damage": "1d6 + 2",
+                    "damage_type": "slashing"
+                },
+                {
+                    "name": "Shortbow",
+                    "hand": "ranged",
+                    "to_hit": 4,
+                    "damage": "1d6 + 2",
+                    "damage_type": "piercing"
+                }
+            ]
+        },
+        {
+            "id": "goblin_boss",
+            "name": "Goblin Boss",
+            "armor_class": 17,
+            "hit_points": 21,
+            "speed_ft": 30,
+            "challenge_rating": "1",
+            "experience": 200,
+            "proficiency_bonus": 2,
+            "abilities": {
+                "strength": 10,
+                "dexterity": 15,
+                "constitution": 10,
+                "intelligence": 10,
+                "wisdom": 8,
+                "charisma": 10
+            },
+            "attacks": [
+                {
+                    "name": "Scimitar",
+                    "hand": "melee",
+                    "to_hit": 4,
+                    "damage": "1d6 + 2",
+                    "damage_type": "slashing"
+                },
+                {
+                    "name": "Shortbow",
+                    "hand": "ranged",
+                    "to_hit": 4,
+                    "damage": "1d6 + 2",
+                    "damage_type": "piercing"
+                }
+            ]
+        },
+        {
+            "id": "wolf",
+            "name": "Wolf",
+            "armor_class": 12,
+            "hit_points": 11,
+            "speed_ft": 40,
+            "challenge_rating": "1/4",
+            "experience": 50,
+            "proficiency_bonus": 2,
+            "abilities": {
+                "strength": 14,
+                "dexterity": 15,
+                "constitution": 12,
+                "intelligence": 3,
+                "wisdom": 12,
+                "charisma": 6
+            },
+            "attacks": [
+                {
+                    "name": "Bite",
+                    "hand": "melee",
+                    "to_hit": 4,
+                    "damage": "1d6 + 2",
+                    "damage_type": "piercing"
+                }
+            ]
+        },
+        {
+            "id": "giant_rat",
+            "name": "Giant Rat",
+            "armor_class": 13,
+            "hit_points": 7,
+            "speed_ft": 30,
+            "challenge_rating": "1/8",
+            "experience": 25,
+            "proficiency_bonus": 2,
+            "abilities": {
+                "strength": 7,
+                "dexterity": 16,
+                "constitution": 11,
+                "intelligence": 2,
+                "wisdom": 10,
+                "charisma": 4
+            },
+            "attacks": [
+                {
+                    "name": "Bite",
+                    "hand": "melee",
+                    "to_hit": 5,
+                    "damage": "1d4 + 3",
+                    "damage_type": "piercing"
+                }
+            ]
+        }
+    ]
+}

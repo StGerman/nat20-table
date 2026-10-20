@@ -141,7 +141,7 @@ impl Session {
                 format!("The viewer {handle} is not a creature in scene {scene_id}."),
             ));
         }
-        match Game::load(self.game.take(), &scene, party, &self.data_dir) {
+        match Game::load(self.game.take(), &scene, party) {
             Ok(game) => self.game = Some(game),
             Err((previous, e)) => {
                 self.game = previous;

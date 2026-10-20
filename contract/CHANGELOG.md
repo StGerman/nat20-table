@@ -3,6 +3,11 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.28 (2026-10-20)
+- **Changed meaning:** `SceneCreature.monster` names a stat block in the core registry's `monsters/` (MON-1, Milestone 5 spec D1, D10 and §7 step 4). A short id such as `goblin_warrior` means `nat20_core::monster.goblin_warrior`, so every scene file stays valid; a namespaced id (`nat20_demo::monster.<name>`) is new and passes through. The server's own `data/monsters/` is gone. Core checks every block when its registry loads, so a scene can now only fail with an unknown or malformed id (`bad_scene`, "Stat block <id>: there is no such stat block.").
+- The core pin moves to demo with core #45 (monster registry kind), #46 (the four SRD 5.2.1 stat blocks), #47 (Advantage and Disadvantage cancel), #48 (Prone) and #50 (monster traits). The Goblin Warrior now has CR 1/4 (XP 50), a real Shield, the extra 1d4 on an attack roll with Advantage and Nimble Escape. REPLACE-WITH-FIXTURE-LIST
+- New stat-block guard (spec §9): a server test spawns the Goblin Warrior, Goblin Boss, Wolf and Giant Rat from core's registry and compares AC, Hit Points, Speed, ability scores, CR, XP, Proficiency Bonus, to-hit and damage dice with a numbers-only SRD 5.2.1 excerpt in `crates/nat20-api-server/tests/data/` (CC-BY-4.0, `ATTRIBUTION.md` beside it). No wire change.
+
 ## 1.0.0-dev.27 (2026-10-20)
 - `end_combat{fled}` is served (API-9, Milestone 5 spec D7, D11 and §7 step 9; protocol.md §4.4 and §6). Accepted only when the running encounter lists `fled` in `end_reasons`, else `rejected` with `condition_not_met`. The conscious participants not on the party's side leave the scene; those at 0 Hit Points stay; the party wins. **Changed meaning:** it answered `not_implemented` before, so `encounter.jsonl`'s `end_combat{fled}` now answers `condition_not_met` (its encounter lists only `scenario`).
 - New public event `fled{handles}`, logged before `combat_over{reason: fled}`. Additive: a new event kind.
