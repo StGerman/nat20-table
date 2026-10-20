@@ -146,7 +146,8 @@ pub struct CreatureFull {
     pub ac: u32,
     /// Speed, in feet.
     pub speed_ft: u32,
-    /// Active conditions.
+    /// Active conditions, by name. A creature at 0 Hit Points that is not dead is
+    /// `unconscious`.
     pub conditions: Vec<Condition>,
     /// Exhaustion level, 0 to 6.
     pub exhaustion: u8,
@@ -154,6 +155,12 @@ pub struct CreatureFull {
     pub life_state: LifeState,
     /// The health band other players see.
     pub health: HealthBand,
+    /// Lasting effects on it that run out or end, such as Bless or a Help's Advantage, in the
+    /// order they began. Owner and DM only: other players learn of them from the table.
+    pub effects: Vec<EffectLine>,
+    /// The spell it is concentrating on, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub concentration: Option<SheetConcentration>,
 }
 
 /// A creature as another player perceives it. Has no Hit Points, Armor Class or stat block, by design.
@@ -231,8 +238,12 @@ pub struct Sheet {
     /// Limited-use features, e.g. Second Wind, by id. Per-turn action economy (action, bonus
     /// action, reaction) is not listed; `legal_actions` reports it.
     pub resources: Vec<ResourcePool>,
-    /// Active conditions.
+    /// Active conditions, by name. A creature at 0 Hit Points that is not dead is
+    /// `unconscious`.
     pub conditions: Vec<Condition>,
+    /// Lasting effects on it that run out or end, such as Bless or a Help's Advantage, in the
+    /// order they began. Features that last for good are in `features` instead.
+    pub effects: Vec<EffectLine>,
     /// Exhaustion level, 0 to 6.
     pub exhaustion: u8,
     /// Conscious, unconscious, stable or dead.
@@ -430,6 +441,17 @@ pub struct ActionOption {
     /// The carried item this option uses up, for a potion. Its option id is `use/<item>`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub item: Option<OptionItem>,
+}
+
+/// A lasting effect on a creature.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct EffectLine {
+    /// Effect id from the registry with `/` for dots, e.g. `spell/bless`, `help/attack_roll`.
+    pub id: String,
+    /// Display name, e.g. "Bless".
+    pub name: String,
+    /// The creature whose action put it there: the creature itself for its own Dash or Rage.
+    pub source: Handle,
 }
 
 /// The spell a creature is concentrating on.

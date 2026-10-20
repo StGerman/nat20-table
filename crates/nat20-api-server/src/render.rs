@@ -117,6 +117,21 @@ pub fn text(kind: &EventKind) -> String {
                 ConcentrationEndReason::Ended => "",
             }
         ),
+        EventKind::EffectStarted {
+            target,
+            name,
+            source,
+            ..
+        } => {
+            if target == source {
+                format!("{} is under {}.", target.0, name)
+            } else {
+                format!("{} is under {} from {}.", target.0, name, source.0)
+            }
+        }
+        EventKind::EffectEnded { target, name, .. } => {
+            format!("{} is no longer under {}.", target.0, name)
+        }
         EventKind::ItemUsed {
             actor,
             item,

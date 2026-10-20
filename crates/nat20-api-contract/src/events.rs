@@ -184,6 +184,28 @@ pub enum EventKind {
         /// Why it ended.
         reason: ConcentrationEndReason,
     },
+    /// A lasting effect began on a creature (Bless, a Help's Advantage, Rage). Owner and DM
+    /// only: the table hears the spell or action, not its numbers.
+    EffectStarted {
+        /// On whom.
+        target: Handle,
+        /// The effect's id, as in `effects` on the sheet (`spell/bless`).
+        effect: String,
+        /// Its display name.
+        name: String,
+        /// The creature whose action put it there.
+        source: Handle,
+    },
+    /// A lasting effect on a creature ended: it ran out, was used, or its Concentration ended.
+    /// Owner and DM only.
+    EffectEnded {
+        /// On whom.
+        target: Handle,
+        /// The effect's id, as in `effects` on the sheet (`spell/bless`).
+        effect: String,
+        /// Its display name.
+        name: String,
+    },
     /// A creature used up a carried item, e.g. drank a Potion of Healing or gave it to someone.
     /// Public: it is seen at the table. Logged right after the `action` that used it.
     ItemUsed {
