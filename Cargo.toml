@@ -19,8 +19,10 @@ nat20-api-contract = { path = "crates/nat20-api-contract" }
 # de1e670 = 6c1edb4 plus core #23 (Rust 1.99.1), core #24 (cargo patch updates, lockfile only),
 # core #30 (rand 0.10), core #32 (Dependabot config), core #22 (concentration ends when the
 # spell's effects run out), core #28 (uom 0.38), core #29 (rhai 1.26.1), core #34 (mlua 0.12.2)
-# and core #35 (rstest 0.27).
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "de1e670e28dc71a8ca26f7a0497be1880c8abb0f" }
+# and core #35 (rstest 0.27). 7e715dd = demo 4132e20 (de1e670 plus core #38 strum 0.28, core #39,
+# #40 and #41, config and lockfile only) plus core #43 (Potion of Healing, a consumable item),
+# the head of that open PR until it merges.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "7e715dd609c41de43c2dabc9dfdb0bd10d206724" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
