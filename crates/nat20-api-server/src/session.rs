@@ -148,6 +148,9 @@ impl Session {
                 return Err(e);
             }
         }
+        // What ran out on the way (ten minutes pass between scenes) is logged right before
+        // `scene_loaded`.
+        self.push_entries();
         // Roll keys are per scene; the old scene's rolls are never cited again.
         self.roll_keys.clear();
         self.decided = true;

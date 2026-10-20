@@ -126,6 +126,15 @@ fn keyed(mut roll: RollView, key: &str) -> RollView {
     roll
 }
 
+/// The spell `entity` concentrates on now, if any.
+pub fn concentrating_on(engine: &EngineState, entity: Entity) -> Option<String> {
+    let book = engine.world.get::<&Spellbook>(entity).ok()?;
+    book.concentration_tracker()
+        .instances()
+        .first()
+        .map(names::concentration_spell)
+}
+
 /// Turns engine events into log entries. Knows the scene's handles, so entries use the names the
 /// API takes as input, and tracks Hit Points so each `hit_points` entry carries the value right
 /// after that hit even when several land in one batch.
@@ -163,11 +172,7 @@ impl LogWriter<'_> {
 
     /// The spell `entity` concentrates on once the whole batch has run.
     fn concentrating_on(&self, entity: Entity) -> Option<String> {
-        let book = self.engine.world.get::<&Spellbook>(entity).ok()?;
-        book.concentration_tracker()
-            .instances()
-            .first()
-            .map(names::concentration_spell)
+        concentrating_on(self.engine, entity)
     }
 
     fn public(&self, kind: EventKind) -> Pending {

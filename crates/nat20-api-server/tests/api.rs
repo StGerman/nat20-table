@@ -2235,3 +2235,57 @@ fn a_hit_on_a_stabilized_creature_is_a_failed_death_save() {
         "{hit} {sheet}"
     );
 }
+
+#[test]
+fn bless_runs_out_in_a_fight_after_one_minute() {
+    let mut api = Api::new(Server::new());
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "cleric_camp" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let mut last = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "camp_fight" }),
+    );
+    let mut events: Vec<Value> = last["events"].as_array().unwrap().clone();
+    let mut cast_round = None;
+    for _ in 0..100 {
+        assert_eq!(last["ok"], true, "{last}");
+        let awaiting = &last["awaiting"];
+        if awaiting["kind"] != "action" || events.iter().any(|e| e["kind"] == "concentration_ended")
+        {
+            break;
+        }
+        let actor = awaiting["actor"].as_str().unwrap().to_owned();
+        let prompt = awaiting["prompt_id"].clone();
+        let request = if actor == "maren" && cast_round.is_none() {
+            cast_round = events.iter().rev().find_map(|e| e["round"].as_u64());
+            json!({ "cmd": "submit", "actor": "maren", "prompt_id": prompt, "option_id": "cast/bless/1", "targets": ["maren", "bren"] })
+        } else {
+            json!({ "cmd": "end_turn", "actor": actor, "prompt_id": prompt })
+        };
+        last = api.call("dm", request);
+        events.extend(last["events"].as_array().unwrap().iter().cloned());
+    }
+    let cast_round = cast_round.expect("Maren gets a turn");
+    let ended = events
+        .iter()
+        .position(|e| e["kind"] == "concentration_ended")
+        .expect("Bless runs out");
+    let entry = &events[ended];
+    assert_eq!(entry["actor"], "maren", "{entry}");
+    assert_eq!(entry["spell"], "bless", "{entry}");
+    assert_eq!(entry["reason"], "expired", "{entry}");
+    // One minute is ten rounds: it ends as Maren's turn starts, ten rounds after she cast it.
+    assert_eq!(entry["round"], cast_round + 10, "{entry}");
+    let before = &events[ended - 1];
+    assert_eq!(before["kind"], "turn_start", "{before}");
+    assert_eq!(before["actor"], "maren", "{before}");
+    // Her sheet no longer shows it.
+    let sheet = api.call("maren", json!({ "cmd": "get_sheet", "actor": "maren" }));
+    assert!(
+        sheet["result"]["sheet"].get("concentration").is_none(),
+        "{sheet}"
+    );
+}

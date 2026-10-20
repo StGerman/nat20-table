@@ -13,10 +13,10 @@ use std::{
 
 use nat20_api_contract::{
     ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, CombatOverReason,
-    Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
-    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec, HitDiceSpend,
-    HitPointsRegained, Mode, MoveTarget, OptionId, OptionVariant, Placement, PointFt, PregenFile,
-    ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn,
+    ConcentrationEndReason, Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView,
+    EndCombatReason, ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec,
+    HitDiceSpend, HitPointsRegained, Mode, MoveTarget, OptionId, OptionVariant, Placement, PointFt,
+    PregenFile, ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn,
     SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate,
     Targeting, UnavailableOption, Visibility,
 };
@@ -59,7 +59,9 @@ use nat20_core::{rerecast, uom};
 
 use crate::{
     adapter::{
-        events::{HpTracker, LogWriter, Pending, RollKeys, combat_over, wire_life_state},
+        events::{
+            HpTracker, LogWriter, Pending, RollKeys, combat_over, concentrating_on, wire_life_state,
+        },
         monster::MonsterDef,
         names, pregen, sheet,
     },
@@ -158,6 +160,9 @@ enum Awaiting {
     Nothing,
 }
 
+/// Rounds of 6 seconds that pass between two scenes: ten minutes (decision D9).
+const ROUNDS_BETWEEN_SCENES: usize = 100;
+
 /// A loaded scene and its engine.
 pub struct Game {
     engine: EngineState,
@@ -180,6 +185,9 @@ pub struct Game {
     scripted_turn: Option<(usize, Entity, usize)>,
     /// Scene flags set this session; they outlive the scene that set them.
     flags: BTreeSet<String>,
+    /// The spell each creature concentrated on when the log last caught up, so a Concentration
+    /// that ends without an engine event (its spell ran out) is still logged.
+    concentrating: HashMap<Entity, String>,
     /// The highest round of this scene's fights whose round spawns were looked at, so each
     /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
@@ -377,33 +385,35 @@ impl Game {
         {
             game.engine.end_encounter(&id);
         }
-        // More than a turn passes between scenes, so whatever lasts until the start of someone's
-        // next turn (a Help's Advantage) ends now. Every creature of the scene being left counts,
-        // including a helper the new scene leaves behind.
-        let carried: Vec<Entity> = creatures
-            .iter()
-            .take(party.len())
-            .map(|c| c.entity)
-            .collect();
+        // Ten minutes pass between scenes (decision D9): a round of turns for every 6 seconds,
+        // counted on the turns of the scene being left, helpers the new scene leaves behind
+        // included. Whatever lasts until someone's next turn (a Help's Advantage) ends, and so
+        // does every spell of ten minutes or less (Bless, Guidance, Shield of Faith) with the
+        // Concentration holding it. Time passes for the creatures left behind too, so a spell
+        // they shared with a carried creature ends on both sides.
         let turns: Vec<Entity> = game.scene.creatures.iter().map(|c| c.entity).collect();
-        for &entity in &carried {
+        for _ in 0..ROUNDS_BETWEEN_SCENES {
             for &turn in &turns {
-                systems::effects::effects_mut(&mut game.engine.world, entity).advance_time(
-                    TimeStep::TurnBoundary {
-                        entity: turn,
-                        boundary: TurnBoundary::Start,
-                    },
-                );
+                for boundary in [TurnBoundary::Start, TurnBoundary::End] {
+                    for &entity in &turns {
+                        systems::effects::effects_mut(&mut game.engine.world, entity).advance_time(
+                            TimeStep::TurnBoundary {
+                                entity: turn,
+                                boundary,
+                            },
+                        );
+                    }
+                }
             }
         }
+        // The update sweeps what expired, before anyone leaves.
+        game.engine.update(0.0);
         for old in &game.scene.creatures {
             if !creatures.iter().any(|c| c.entity == old.entity) {
                 let _ = game.engine.despawn(old.entity);
                 game.hp.remove(&old.entity);
             }
         }
-        // The update sweeps what expired.
-        game.engine.update(0.0);
         if game.map != scene.map {
             game.engine.geometry = load_geometry(scene.map.as_deref());
             game.map = scene.map.clone();
@@ -488,6 +498,7 @@ impl Game {
             winner: None,
             scripted_turn: None,
             flags: BTreeSet::new(),
+            concentrating: HashMap::new(),
             spawn_round: 0,
             stalls: 0,
         }
@@ -495,7 +506,52 @@ impl Game {
 
     /// Log entries produced since the last call, in order, without `seq`.
     pub fn take_entries(&mut self) -> Vec<Pending> {
+        self.log_expired_concentration();
         std::mem::take(&mut self.pending)
+    }
+
+    /// Logs `concentration_ended{expired}` for each creature that stopped concentrating with no
+    /// entry saying why. Core ends Concentration with the spell's last effect and logs nothing
+    /// (ENG-13), so the end is found here, against what the log last showed: right after the
+    /// caster's `turn_start` when it ran out at that turn boundary in a fight, else at the end of
+    /// the batch (between scenes, before `scene_loaded`).
+    fn log_expired_concentration(&mut self) {
+        let mut now = HashMap::new();
+        for c in &self.scene.creatures {
+            let Some(spell) = self.concentrating.get(&c.entity) else {
+                continue;
+            };
+            let current = concentrating_on(&self.engine, c.entity);
+            let logged = self.pending.iter().any(|e| {
+                matches!(&e.kind, EventKind::ConcentrationEnded { actor, spell: s, .. }
+                    if actor.0 == c.handle && s == spell)
+            });
+            if current.as_ref() == Some(spell) || logged {
+                continue;
+            }
+            let turn_start = self.pending.iter().rposition(
+                |e| matches!(&e.kind, EventKind::TurnStart { actor } if actor.0 == c.handle),
+            );
+            let round = turn_start.and_then(|i| self.pending[i].round);
+            let entry = Pending::public(
+                round,
+                EventKind::ConcentrationEnded {
+                    actor: Handle(c.handle.clone()),
+                    spell: spell.clone(),
+                    reason: ConcentrationEndReason::Expired,
+                },
+            );
+            match turn_start {
+                Some(i) => self.pending.insert(i + 1, entry),
+                None => self.pending.push(entry),
+            }
+        }
+        for c in &self.scene.creatures {
+            if let Some(spell) = concentrating_on(&self.engine, c.entity) {
+                now.insert(c.entity, spell);
+            }
+        }
+        self.concentrating = now;
     }
 
     /// Whether `handle` is a creature in the scene.
