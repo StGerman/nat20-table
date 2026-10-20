@@ -3,7 +3,7 @@
 Rules the schema cannot express: ordering, idempotency, lifecycle, visibility. The wire types themselves are defined only in `crates/nat20-api-contract` (CLAUDE.md Rule 1); where this text and the contract crate disagree on a type, the crate wins.
 Decision 1 below (definition format) is settled: Rust contract crate, see `docs/design/system-design.md` §5. Decision 5 is settled: the strict roll view, chosen by Stas on 2026-10-16. Decisions 2-4 are settled too: Stas confirmed their defaults on 2026-10-17.
 
-Status (contract 1.0.0-dev.23): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions` and `submit` (in combat, and out of it, §4.8), `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}` and options with a `point` (`legal_actions` does not offer them). The core has no condition or exhaustion model yet, so `conditions` is always empty and `exhaustion` 0.
+Status (contract 1.0.0-dev.25): every v1 type is in the contract crate, and so is the scene file format (§2.1). The engine (CON-3) serves `hello`, `new_session`, `load_scene`, `start_combat` and `end_combat` (§4.4), `get_state`, `get_sheet` (§4.2), `legal_actions` and `submit` (in combat, and out of it, §4.8), `react`, `end_turn`, `move` (§4.1), `request_check` in explore mode (§4.3), `short_rest` (§4.5), `spawn` (§4.6), `help` (§4.7) and `events`, with the §5 projection. Dice are seeded per session (§2). Limits of this build, each answered with `not_implemented` rather than ignored: `end_combat{fled}` and options with a `point` (`legal_actions` does not offer them). The core has no exhaustion model yet, so `exhaustion` is 0. Conditions are filled from what core models: Unconscious for a creature at 0 Hit Points that isn't dead, and Incapacitated, Paralyzed and Poisoned when an effect applies them (§5).
 
 Where the contract differs from the review draft, and why:
 - `viewer` is required on every request, not only on commands that return state, because every response carries `events` projected for it.
@@ -142,7 +142,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 - The sheet's own `concentration{spell}` names the spell the creature is concentrating on now; it is absent when there is none.
 - A resource whose expended uses all come back on a Long Rest but some on a Short Rest (Second Wind, Rage, Channel Divinity: one use) says how many in `short_rest_regain`.
 - `hit_dice` lists the Hit Point Dice by die size, smallest first; a creature without them (a monster) has none.
-- Not filled yet: `conditions` and `exhaustion` (as in state).
+- `conditions` are the creature's conditions as in state (§5). `effects` lists its lasting effects in the order they began: whatever runs out at a turn boundary or came from an action (Bless, Guidance, Shield of Faith, a Help's Advantage, Action Surge, Rage, Dash), with `id` (the registry id with `/`, e.g. `spell/bless`), `name` and `source`, the creature whose action put it there. Features that last for good are in `features`. Not filled yet: `exhaustion` (as in state).
 
 ### 4.3 Checks, hazards and flags
 
@@ -229,6 +229,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | HP / max HP / temp HP | yes | yes | no; `health: "unhurt" \| "bloodied" \| "down"` instead |
 | AC, saves, stat block, resources, slots; spellcasting (spell save DC, spell attack bonus), spells and the sheet's `concentration` | yes | yes | no |
 | Conditions | yes | yes | only visible ones (all SRD conditions except `invisible` while unseen) |
+| Lasting effects on a creature (state and sheet `effects`, the events `effect_started` and `effect_ended`) | yes | yes | no; the table hears the spell or action, not its effect |
 | Position, distance (ft) | yes | yes | yes, for creatures the viewer perceives (all of them until vision exists) |
 | Roll: dice, total, outcome | yes (`full` view) | yes (`player` view) | yes (`player` view) |
 | Roll: modifiers, `against` (AC/DC), `dc_source`, `advantage_sources` | yes | no; own modifiers and AC are on the sheet | no |
@@ -261,6 +262,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `healed` | `target`, `amount`, `source_roll?` |
 | `hit_points` | `target`, `hp`, `hp_max`, `temp_hp` (DM or owner visibility only) |
 | `condition_added` / `condition_removed` | `target`, `condition`, `source` |
+| `effect_started` / `effect_ended` | `target`, `effect`, `name`, and `source` on start (DM and the target's owner only) |
 | `concentration_started` | `actor`, `spell` (public: a caster visibly maintains a spell) |
 | `concentration_ended` | `actor`, `spell`, `reason: replaced\|failed_save\|incapacitated\|expired\|ended` (public) |
 | `item_used` | `actor`, `item`, `target` (public; `target` is the actor when it drinks the item) |
@@ -272,6 +274,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `rest` | `participants`, `rest: short\|long` |
 
 - `concentration_started` follows the cast that applied the spell's effect, once per cast however many targets it has. `concentration_ended` comes when the engine ends it: a failed Concentration save after damage (`failed_save`; the save is logged first, a Constitution save with `dc_source: "rule"` and DC 10 or half the damage), dropping to 0 Hit Points (`incapacitated`), or casting another Concentration spell (`replaced`, logged before the new cast's `action` and its `concentration_started`). When the spell's duration runs out (`expired`), its effects end and so does the Concentration: in a fight that is at the start of the caster's turn, and the entry comes right after that `turn_start`; between scenes it comes right before `scene_loaded` (§2).
+- `condition_added`, `condition_removed`, `effect_started` and `effect_ended` are found by comparing each creature with what the log last showed, since core logs none of them. Each comes right after the entry that explains it: Unconscious after the creature's `life_state`; an effect that runs out at a turn boundary after that `turn_start` or `turn_end`; a spell's effect after its caster's `concentration_ended` for that spell. Anything else, such as an effect a spell or Help applies, or a Help's Advantage used up by a roll, comes at the end of the command's entries. Ends come before starts, so a spell cast again shows its old effect ending first. `condition_*` is public with `source` absent for now; `effect_*` goes to the DM and the target's owner.
 | `spawned` | `spawn_id`, `handles[]` (DM only) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):

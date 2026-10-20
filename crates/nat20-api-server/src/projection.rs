@@ -6,8 +6,9 @@
 //! and gets every roll in the `player` view.
 
 use nat20_api_contract::{
-    Anchor, AnchorObserved, AnchorView, CheckView, CreatureFull, CreatureObserved, EncounterView,
-    Event, EventKind, Handle, Mode, PointFt, RollView, Sheet, SpawnView, State, Visibility,
+    Anchor, AnchorObserved, AnchorView, CheckView, Condition, CreatureFull, CreatureObserved,
+    EncounterView, Event, EventKind, Handle, Mode, PointFt, RollView, Sheet, SpawnView, State,
+    Visibility,
 };
 
 use crate::render;
@@ -99,8 +100,14 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
             position_ft: c.position_ft,
             distance_ft: distance_ft(me.position_ft, c.position_ft),
             health: c.health,
-            // Every SRD condition is visible until vision exists; none are modelled yet.
-            conditions: c.conditions.clone(),
+            // Every SRD condition is visible until vision exists, except Invisible: an
+            // invisible creature is unseen (protocol.md §5).
+            conditions: c
+                .conditions
+                .iter()
+                .copied()
+                .filter(|c| *c != Condition::Invisible)
+                .collect(),
         })
         .collect();
     Some(State::Player {
