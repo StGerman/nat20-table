@@ -21,8 +21,10 @@ nat20-api-contract = { path = "crates/nat20-api-contract" }
 # spell's effects run out), core #28 (uom 0.38), core #29 (rhai 1.26.1), core #34 (mlua 0.12.2)
 # and core #35 (rstest 0.27). 7e715dd = demo 4132e20 (de1e670 plus core #38 strum 0.28, core #39,
 # #40 and #41, config and lockfile only) plus core #43 (Potion of Healing, a consumable item),
-# the head of that open PR until it merges.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "7e715dd609c41de43c2dabc9dfdb0bd10d206724" }
+# the head of that open PR until it merges. 3145e32 = demo e9ade31 (core #43 merged, core #42
+# hecs 0.11.2, core #44 fractional challenge rating) plus core #49 (unarmoured Armor Class counts
+# the Dexterity modifier), the head of that open PR until it merges.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "3145e327e192c432e0fb2558b8bc416c789b8374" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
