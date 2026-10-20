@@ -406,8 +406,10 @@ impl Game {
                 }
             }
         }
-        // The update sweeps what expired, before anyone leaves.
+        // The update sweeps what expired, and what ran out is logged while the old scene's
+        // casters still have their handles, before anyone leaves.
         game.engine.update(0.0);
+        game.log_expired_concentration();
         for old in &game.scene.creatures {
             if !creatures.iter().any(|c| c.entity == old.entity) {
                 let _ = game.engine.despawn(old.entity);
@@ -514,7 +516,9 @@ impl Game {
     /// entry saying why. Core ends Concentration with the spell's last effect and logs nothing
     /// (ENG-13), so the end is found here, against what the log last showed: right after the
     /// caster's `turn_start` when it ran out at that turn boundary in a fight, else at the end of
-    /// the batch (between scenes, before `scene_loaded`).
+    /// the entries so far. Runs on every `take_entries`, and also where a spell can run out and
+    /// be cast again before the next one: between scenes (before the old scene's creatures
+    /// leave) and at an explore turn's boundary.
     fn log_expired_concentration(&mut self) {
         let mut now = HashMap::new();
         for c in &self.scene.creatures {
@@ -2416,6 +2420,9 @@ impl Game {
                     EventKind::TurnStart { .. } | EventKind::TurnEnd { .. }
                 )
         });
+        // A spell that ran out at the boundary is logged before the turn's action, which may
+        // cast the same spell again.
+        self.log_expired_concentration();
     }
 
     /// Out of combat nobody is asked to react: a reaction window that opens in explore mode
