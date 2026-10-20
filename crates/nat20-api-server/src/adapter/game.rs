@@ -3003,6 +3003,7 @@ impl Game {
             {
                 self.settle();
                 self.drain();
+                self.log_unseen_changes();
                 self.scripted_retreat(actor, hostile);
                 self.scripted_turn = Some((round, actor, taken + 1));
                 return;
