@@ -216,7 +216,18 @@ impl Session {
         Ok(CommandResult::GetSheet { sheet })
     }
 
+    /// The options at `actor`'s pending action prompt. In explore mode, the options it could
+    /// take on a turn of its own, with no prompt id.
     pub fn legal_actions(&mut self, actor: &str) -> Result<CommandResult, ApiError> {
+        if self.game_mut()?.mode() == Mode::Explore {
+            let (options, unavailable) = self.game_mut()?.explore_legal_actions(actor)?;
+            return Ok(CommandResult::LegalActions {
+                prompt_id: PromptId(String::new()),
+                options,
+                unavailable,
+                can_end_turn: false,
+            });
+        }
         let prompt_id = self.require_prompt(actor, None, false)?;
         let (options, unavailable) = self.game_mut()?.legal_actions(actor)?;
         Ok(CommandResult::LegalActions {
@@ -227,16 +238,39 @@ impl Session {
         })
     }
 
+    /// Takes an option at `actor`'s pending action prompt. In explore mode, without a prompt id,
+    /// it is a turn of `actor`'s own (protocol §4.8); with one, it is a late combat decision.
     pub fn submit(
         &mut self,
         actor: &str,
-        prompt_id: &str,
+        prompt_id: Option<&str>,
         option_id: &OptionId,
         targets: &[Handle],
         variant: Option<&str>,
     ) -> Result<CommandResult, ApiError> {
-        self.require_prompt(actor, Some(prompt_id), false)?;
         let targets: Vec<String> = targets.iter().map(|t| t.0.clone()).collect();
+        if self.game_mut()?.mode() == Mode::Explore && prompt_id.is_none() {
+            let result = self
+                .game_mut()?
+                .explore_submit(actor, &option_id.0, &targets, variant);
+            self.after_decision(result)?;
+            return Ok(CommandResult::Submit {});
+        }
+        if self.game_mut()?.mode() == Mode::Explore
+            && !matches!(self.game_mut()?.wait(), Wait::CombatOver { .. })
+        {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "There is no combat in this scene, so no prompt is pending; leave prompt_id out to act out of combat.",
+            ));
+        }
+        let Some(prompt_id) = prompt_id else {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "In combat, submit needs the pending prompt_id.",
+            ));
+        };
+        self.require_prompt(actor, Some(prompt_id), false)?;
         let result = self
             .game_mut()?
             .submit(actor, &option_id.0, &targets, variant);

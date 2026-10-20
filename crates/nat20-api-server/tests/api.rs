@@ -213,8 +213,10 @@ fn combat_commands_need_combat() {
     let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
     assert_eq!(loaded["result"]["state"]["mode"], "explore", "{loaded}");
     assert_eq!(loaded["awaiting"]["kind"], "none", "{loaded}");
+    // Out of combat the options are those of a turn of Bren's own, with nothing pending.
     let legal = api.call("dm", json!({ "cmd": "legal_actions", "actor": "bren" }));
-    assert_eq!(legal["error"]["code"], "wrong_mode", "{legal}");
+    assert_eq!(legal["result"]["prompt_id"], "", "{legal}");
+    assert_eq!(legal["result"]["can_end_turn"], false, "{legal}");
     let unknown = api.call(
         "dm",
         json!({ "cmd": "start_combat", "encounter_id": "brawl" }),
@@ -667,8 +669,9 @@ fn a_finished_fight_returns_the_scene_to_explore_mode() {
     assert_eq!(state["awaiting"]["kind"], "combat_over", "{state}");
     let end = api.call("dm", json!({ "cmd": "end_combat", "reason": "surrender" }));
     assert_eq!(end["error"]["code"], "wrong_mode", "{end}");
+    // Back in explore mode, legal_actions lists a turn of Bren's own; nothing is pending.
     let legal = api.call("dm", json!({ "cmd": "legal_actions", "actor": "bren" }));
-    assert_eq!(legal["error"]["code"], "wrong_mode", "{legal}");
+    assert_eq!(legal["result"]["prompt_id"], "", "{legal}");
     assert_eq!(legal["awaiting"]["kind"], "combat_over", "{legal}");
 
     let reload = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));

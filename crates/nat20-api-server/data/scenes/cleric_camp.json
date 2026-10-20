@@ -1,0 +1,89 @@
+{
+    "id": "cleric_camp",
+    "description": "The Cleric out of combat (Milestone 4 spec \u00a77 step 8): Maren heals and blesses at camp with explore actions, Guidance helps Bren read tracks, then a goblin attacks while Bless still holds. A low fall hurts Bren first.",
+    "creatures": [
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 10.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 10.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "low_fall",
+            "test": {
+                "kind": "save",
+                "ability": "dexterity"
+            },
+            "dc": 30,
+            "on_failure": [
+                {
+                    "kind": "damage",
+                    "dice": "1d4+9",
+                    "damage_type": "bludgeoning"
+                }
+            ]
+        },
+        {
+            "id": "read_tracks",
+            "test": {
+                "kind": "skill",
+                "skill": "survival"
+            },
+            "dc": 12,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "tracks_read"
+                }
+            ]
+        }
+    ],
+    "encounters": [
+        {
+            "id": "camp_fight",
+            "participants": [
+                "maren",
+                "bren",
+                "goblin"
+            ]
+        }
+    ]
+}

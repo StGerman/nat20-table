@@ -64,15 +64,20 @@ pub enum Command {
     /// The options the actor can take at the pending action prompt.
     /// Returns `not_your_turn` when the engine is waiting on someone else.
     LegalActions {
-        /// The creature whose options are listed.
+        /// The creature whose options are listed. In explore mode any creature of the scene:
+        /// the options it could take on a turn of its own, as if that turn began now.
         actor: Handle,
     },
-    /// Takes one option at the pending action prompt.
+    /// Takes one option at the pending action prompt, or, in explore mode, as a turn of the
+    /// actor's own.
     Submit {
-        /// The acting creature; must be `awaiting.actor`.
+        /// The acting creature; in combat it must be `awaiting.actor`.
         actor: Handle,
-        /// The pending prompt's id. An old id is rejected with `stale_prompt` and changes nothing.
-        prompt_id: PromptId,
+        /// In combat, the pending prompt's id: required, and an old id is rejected with
+        /// `stale_prompt` and changes nothing. In explore mode leave it out; a submit that carries
+        /// one there is a late combat decision and answers `wrong_mode`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        prompt_id: Option<PromptId>,
         /// One of the option ids `legal_actions` returned for this prompt.
         option_id: OptionId,
         /// Targets, for options whose `targeting` is `single` or `multiple`.
@@ -335,13 +340,14 @@ pub enum CommandResult {
     },
     /// The actor's options at the pending prompt.
     LegalActions {
-        /// The prompt these options belong to; echo it in `submit` and `end_turn`.
+        /// The prompt these options belong to; echo it in `submit` and `end_turn`. Empty in
+        /// explore mode, where nothing is pending.
         prompt_id: PromptId,
         /// Options the actor can take now.
         options: Vec<ActionOption>,
         /// Options the actor has but cannot take now, with the reason.
         unavailable: Vec<UnavailableOption>,
-        /// Whether `end_turn` is accepted now.
+        /// Whether `end_turn` is accepted now; always false in explore mode.
         can_end_turn: bool,
     },
     /// The option was taken; its rolls and effects are in `events`.

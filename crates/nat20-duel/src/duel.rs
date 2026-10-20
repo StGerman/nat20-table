@@ -106,7 +106,7 @@ fn play(client: &mut Client, seed: Option<u32>) -> (String, Vec<Event>) {
 
                 let submit = |option_id: &str, targets: Vec<Handle>| Command::Submit {
                     actor: Handle(FIGHTER.into()),
-                    prompt_id: prompt_id.clone(),
+                    prompt_id: Some(prompt_id.clone()),
                     option_id: OptionId(option_id.into()),
                     targets,
                     point: None,
