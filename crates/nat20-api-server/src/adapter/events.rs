@@ -217,13 +217,26 @@ impl LogWriter<'_> {
                         TargetInstance::Entity { entity, .. } => Some(Handle(self.who(entity))),
                         _ => None,
                     })
-                    .collect();
-                vec![self.public(EventKind::Action {
-                    actor: Handle(self.who(&action.actor)),
+                    .collect::<Vec<Handle>>();
+                let actor = Handle(self.who(&action.actor));
+                // An item option names one creature: whoever drinks it.
+                let item_used = action
+                    .context
+                    .item
+                    .as_ref()
+                    .map(|item| EventKind::ItemUsed {
+                        actor: actor.clone(),
+                        item: names::item_word(item),
+                        target: targets.first().cloned().unwrap_or_else(|| actor.clone()),
+                    });
+                let mut entries = vec![self.public(EventKind::Action {
+                    actor,
                     option_id: OptionId(option_id),
                     name,
                     targets,
-                })]
+                })];
+                entries.extend(item_used.map(|kind| self.public(kind)));
+                entries
             }
             EngineKind::D20CheckResolved { actor, result, dc } => {
                 let (kind, label, against, target, dc_source) = match dc {

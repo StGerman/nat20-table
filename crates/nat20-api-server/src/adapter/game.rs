@@ -35,7 +35,7 @@ use nat20_core::{
         dice::DiceSet,
         faction::{Attitude, AttitudeOverride, FactionSet},
         health::{hit_point_dice::HitPointDice, hit_points::HitPoints, life_state::LifeState},
-        id::{ActionId, ActionVariantId, EntityIdentifier, FactionId, ResourceId},
+        id::{ActionId, ActionVariantId, EntityIdentifier, FactionId, ItemId, ResourceId},
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
         resource::{RechargeRule, ResourceAmount, ResourceMap},
         saving_throw::SavingThrowKind,
@@ -49,6 +49,7 @@ use nat20_core::{
         geometry::WorldGeometry,
         prompt::PromptScopeId,
     },
+    registry::registry::ItemsRegistry,
     systems::{
         self,
         movement::{MovementError, TargetPathFindingResult},
@@ -1974,6 +1975,12 @@ impl Game {
             .into_iter()
             .find(|o| o.option.option_id.0 == option_id)
             .ok_or_else(|| {
+                if let Some(name) = self.item_left_none(entity, option_id) {
+                    return rejected(
+                        RejectReason::NoItemLeft,
+                        format!("{actor} has no {name} left; see legal_actions."),
+                    );
+                }
                 error(
                     ErrorCode::UnknownOption,
                     format!(
@@ -2013,6 +2020,16 @@ impl Game {
             ),
         };
         Ok((option, variant, target_entities))
+    }
+
+    /// The item's name when `option_id` is `use/<item>` for a known item `entity` no longer
+    /// carries; `None` otherwise.
+    fn item_left_none(&self, entity: Entity, option_id: &str) -> Option<String> {
+        let word = option_id.strip_prefix("use/")?;
+        let item = ItemId::new("nat20_core", format!("item.{word}"));
+        ItemsRegistry::get(&item)?;
+        (systems::inventory::item_count(&self.engine.world, entity, &item) == 0)
+            .then(|| names::item_name(&item))
     }
 
     /// Answers `actor`'s pending reaction prompt; `None` declines.
@@ -2159,7 +2176,10 @@ impl Game {
                     if targeting != Targeting::OnSelf {
                         for (handle, other, side) in &scene_entities {
                             // A creature at 0 Hit Points stays a target: Help can stabilize it.
-                            if *other == entity || life_state_name(engine, *other) == "dead" {
+                            // The actor itself is a target only for an item it can drink.
+                            if (*other == entity && context.item.is_none())
+                                || life_state_name(engine, *other) == "dead"
+                            {
                                 continue;
                             }
                             let Some(mut probe) = start(engine, variant.as_ref()) else {
@@ -2227,6 +2247,7 @@ impl Game {
                             })
                             .collect(),
                         spell: names::option_spell(context),
+                        item: names::option_item(engine, entity, context),
                     },
                     action_id: action_id.clone(),
                     context: index,

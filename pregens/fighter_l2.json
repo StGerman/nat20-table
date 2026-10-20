@@ -1,5 +1,5 @@
 {
-  "_comment": "Bren, the demo Fighter for the human seat (Milestone 4 spec §3, decision D2): a Human Soldier with Defense, Chain Mail and a Shield, AC 19 and 20 Hit Points. The Potion of Healing comes with step 9 (ITM-4).",
+  "_comment": "Bren, the demo Fighter for the human seat (Milestone 4 spec §3, decision D2): a Human Soldier with Defense, Chain Mail and a Shield, AC 19 and 20 Hit Points. One Potion of Healing, as each pregen carries (spec §3).",
   "id": "fighter_l2",
   "name": "Bren",
   "species": "nat20_core::species.human",
@@ -43,7 +43,8 @@
   "equipment": [
     { "item": "nat20_core::item.chainmail", "quantity": 1, "equip": "armor" },
     { "item": "nat20_core::item.longsword", "quantity": 1, "equip": "melee_main_hand" },
-    { "item": "nat20_core::item.shield", "quantity": 1, "equip": "melee_off_hand" }
+    { "item": "nat20_core::item.shield", "quantity": 1, "equip": "melee_off_hand" },
+    { "item": "nat20_core::item.potion_of_healing", "quantity": 1 }
   ],
   "money": "54 GP"
 }

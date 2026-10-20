@@ -123,4 +123,7 @@ pub enum RejectReason {
     AlreadySpawned,
     /// The actor lacks the skill proficiency the option needs (Help with a check).
     NotProficient,
+    /// The option uses up an item the actor no longer carries (a `use/<item>` option after the
+    /// last one is gone).
+    NoItemLeft,
 }

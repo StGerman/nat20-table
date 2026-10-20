@@ -1,17 +1,17 @@
 //! How engine ids read on the wire: option ids, display names, damage types.
 
-use nat20_api_contract::{DamageType as WireDamage, OptionSpell};
+use nat20_api_contract::{DamageType as WireDamage, OptionItem, OptionSpell};
 use nat20_core::hecs::Entity;
 use nat20_core::{
     components::{
         actions::action::ActionContext,
         damage::DamageType,
-        id::{ActionId, ActionVariantId, EffectId},
-        items::equipment::slots::EquipmentSlot,
+        id::{ActionId, ActionVariantId, EffectId, ItemId},
+        items::{equipment::slots::EquipmentSlot, inventory::ItemContainer},
         spells::{concentration::ConcentrationInstance, spell::SpellFlag},
     },
     engine::engine_state::EngineState,
-    registry::registry::SpellsRegistry,
+    registry::registry::{ItemsRegistry, SpellsRegistry},
     systems,
 };
 
@@ -70,14 +70,18 @@ pub fn option_id_and_name(action_id: &ActionId, weapon: Option<&str>) -> (String
 }
 
 /// The option id and display name of an action taken in `context`: a spell is
-/// `cast/<spell>/<slot level>` (a cantrip `cast/<spell>`) named after the spell; anything else
-/// is [`option_id_and_name`] with the weapon the context uses.
+/// `cast/<spell>/<slot level>` (a cantrip `cast/<spell>`) named after the spell; an item is
+/// `use/<item>` named after the item; anything else is [`option_id_and_name`] with the weapon
+/// the context uses.
 pub fn option_for(
     engine: &EngineState,
     entity: Entity,
     action_id: &ActionId,
     context: &ActionContext,
 ) -> (String, String) {
+    if let Some(item) = &context.item {
+        return (format!("use/{}", item_word(item)), item_name(item));
+    }
     match &context.spell {
         Some(spell) => {
             let id = spell.id.id();
@@ -93,6 +97,33 @@ pub fn option_for(
             option_id_and_name(action_id, weapon.as_deref())
         }
     }
+}
+
+/// An item's id word, as on the sheet: `nat20_core::item.potion_of_healing` becomes
+/// `potion_of_healing`.
+pub fn item_word(id: &ItemId) -> String {
+    let id = id.id();
+    id.strip_prefix("item.").unwrap_or(id).to_string()
+}
+
+/// An item's display name from the registry, e.g. "Potion of Healing".
+pub fn item_name(id: &ItemId) -> String {
+    ItemsRegistry::get(id)
+        .map(|item| item.item().name.clone())
+        .unwrap_or_else(|| title(&item_word(id).replace('_', " ")))
+}
+
+/// The item a context uses up and how many `entity` carries, for an option's `item`.
+pub fn option_item(
+    engine: &EngineState,
+    entity: Entity,
+    context: &ActionContext,
+) -> Option<OptionItem> {
+    let item = context.item.as_ref()?;
+    Some(OptionItem {
+        id: item_word(item),
+        remaining: systems::inventory::item_count(&engine.world, entity, item) as u32,
+    })
 }
 
 /// The spell a context casts, for an option's `spell`.

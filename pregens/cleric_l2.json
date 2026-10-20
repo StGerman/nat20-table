@@ -1,5 +1,5 @@
 {
-  "_comment": "The Cleric for an AI seat (Milestone 4 spec §3, decisions D3 to D5): a Human Soldier and Protector in Chain Mail with a Shield, AC 18 and 17 Hit Points, spell save DC 12 and spell attack +4. The Potion of Healing comes with step 9 (ITM-4).",
+  "_comment": "The Cleric for an AI seat (Milestone 4 spec §3, decisions D3 to D5): a Human Soldier and Protector in Chain Mail with a Shield, AC 18 and 17 Hit Points, spell save DC 12 and spell attack +4. One Potion of Healing, as each pregen carries (spec §3).",
   "id": "cleric_l2",
   "name": "Maren",
   "species": "nat20_core::species.human",
@@ -68,7 +68,8 @@
   "equipment": [
     { "item": "nat20_core::item.chainmail", "quantity": 1, "equip": "armor" },
     { "item": "nat20_core::item.mace", "quantity": 1, "equip": "melee_main_hand" },
-    { "item": "nat20_core::item.shield", "quantity": 1, "equip": "melee_off_hand" }
+    { "item": "nat20_core::item.shield", "quantity": 1, "equip": "melee_off_hand" },
+    { "item": "nat20_core::item.potion_of_healing", "quantity": 1 }
   ],
   "money": "7 GP"
 }
