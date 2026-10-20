@@ -4,9 +4,10 @@
 //! modifier, proficiency, effects), so the sheet shows what the engine will add when it rolls.
 //! Dice modifiers such as Bless are left out of a bonus: the sheet shows the flat part.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use super::{
+    conditions,
     events::wire_life_state,
     names::{self, title},
 };
@@ -48,7 +49,13 @@ use nat20_core::{
 const METERS_PER_FOOT: f32 = 0.3048;
 
 /// The sheet of `entity`, known on the wire as `handle`.
-pub fn sheet(engine: &EngineState, entity: Entity, handle: &str, side: Side) -> Sheet {
+pub fn sheet(
+    engine: &EngineState,
+    entity: Entity,
+    handle: &str,
+    side: Side,
+    handles: &HashMap<Entity, String>,
+) -> Sheet {
     let world = &engine.world;
     let levels = world.get::<&CharacterLevels>(entity).ok();
     let (level, class, subclass) = match levels.as_deref() {
@@ -196,8 +203,12 @@ pub fn sheet(engine: &EngineState, entity: Entity, handle: &str, side: Side) -> 
         spells,
         concentration: concentration(engine, entity),
         resources,
-        // The core has no condition or exhaustion model yet.
-        conditions: Vec::new(),
+        conditions: conditions::conditions_of(engine, entity),
+        effects: conditions::effects_of(engine, entity, handles)
+            .into_iter()
+            .map(|e| e.line)
+            .collect(),
+        // The core has no exhaustion model yet.
         exhaustion: 0,
         life_state,
         death_saves,
@@ -290,7 +301,7 @@ fn resources(
 /// Each class's Spellcasting line, then the spells it can cast or prepare: cantrips first,
 /// then by level and name. A class that prepares from its entire list lists what is prepared.
 /// The spell the creature concentrates on, from its spellbook's concentration tracker.
-fn concentration(engine: &EngineState, entity: Entity) -> Option<SheetConcentration> {
+pub fn concentration(engine: &EngineState, entity: Entity) -> Option<SheetConcentration> {
     let book = engine.world.get::<&Spellbook>(entity).ok()?;
     let instance = book.concentration_tracker().instances().first()?;
     Some(SheetConcentration {

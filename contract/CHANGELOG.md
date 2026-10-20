@@ -3,6 +3,13 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.25 (2026-10-20)
+- Conditions are filled (API-20, Milestone 4 spec §4.2, §4.3 and §7 step 12; protocol.md status, §4.2, §5 and §6). `conditions` in state and on the sheet carries what core models: `unconscious` for a creature at 0 Hit Points that isn't dead, and `incapacitated`, `paralyzed` and `poisoned` from their effects. Other players see every condition except `invisible`. **Changed meaning:** `conditions` was always empty before.
+- `condition_added` / `condition_removed` start being logged, public, right after the entry that explains them (Unconscious after `life_state`). Before, they were in the contract but never logged.
+- New `EffectLine{id, name, source}`. `CreatureFull` (owner and DM) gains `effects` and an optional `concentration`, and `Sheet` gains `effects`. These list a creature's lasting effects: Bless, Guidance, Shield of Faith, Guiding Bolt's Advantage, a Help's Advantage, Action Surge, Rage and Dash. Additive: new response fields.
+- New events `effect_started{target, effect, name, source}` and `effect_ended{target, effect, name}`, for the DM and the target's owner. Placement is in protocol.md §6. Additive: new event kinds. The spec had `effect_ended{target, effect}` without `name`; `name` lets the text read "Maren is no longer under Bless."
+- Every fixture is re-recorded. The changes are the new entries above, the new `effects` field (empty unless an effect is up), and the `seq`, roll id and `next` cursor shifts they cause. A per-line check strips the new kinds and fields, normalises seq and roll ids, and finds every other value equal.
+
 ## 1.0.0-dev.24 (2026-10-20)
 - Potions of Healing (ITM-4, Milestone 4 spec §4.2, §4.3 and §7 step 9; protocol.md §4.4, §5, §6 and §7). `legal_actions` offers `use/<item>` for a carried item that is used up, named after the item. `ActionOption` gains optional `item{id, remaining}` (`OptionItem`), present only on item options. A potion costs a Bonus Action and targets one creature within 5 feet, the actor included, in a fight and out of one. Additive: a new optional field.
 - New public event `item_used{actor, item, target}`, logged right after the `action` that used the item and before its healing roll. Additive: a new event kind.

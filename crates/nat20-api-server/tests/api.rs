@@ -2354,9 +2354,10 @@ fn a_spell_held_by_a_creature_left_behind_ends_between_scenes() {
     assert_eq!(next["ok"], true, "{next}");
     assert_eq!(
         kinds(&next),
-        ["concentration_ended", "scene_loaded"],
+        ["concentration_ended", "effect_ended", "scene_loaded"],
         "{next}"
     );
     assert_eq!(next["events"][0]["actor"], "maren", "{next}");
+    assert_eq!(next["events"][1]["target"], "bren", "{next}");
     assert_eq!(next["events"][0]["reason"], "expired", "{next}");
 }

@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.24"
+    "version": "1.0.0-dev.25"
   },
   "$defs": {
     "Ability": {
@@ -1152,11 +1152,29 @@
           "format": "uint32",
           "minimum": 0
         },
+        "concentration": {
+          "description": "The spell it is concentrating on, if any.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SheetConcentration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "conditions": {
-          "description": "Active conditions.",
+          "description": "Active conditions, by name. A creature at 0 Hit Points that is not dead is\n`unconscious`.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/Condition"
+          }
+        },
+        "effects": {
+          "description": "Lasting effects on it that run out or end, such as Bless or a Help's Advantage, in the\norder they began. Owner and DM only: other players learn of them from the table.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EffectLine"
           }
         },
         "exhaustion": {
@@ -1228,7 +1246,8 @@
         "conditions",
         "exhaustion",
         "life_state",
-        "health"
+        "health",
+        "effects"
       ]
     },
     "CreatureObserved": {
@@ -1434,6 +1453,29 @@
         "dice",
         "results",
         "kept"
+      ]
+    },
+    "EffectLine": {
+      "description": "A lasting effect on a creature.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Effect id from the registry with `/` for dots, e.g. `spell/bless`, `help/attack_roll`.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name, e.g. \"Bless\".",
+          "type": "string"
+        },
+        "source": {
+          "description": "The creature whose action put it there: the creature itself for its own Dash or Rage.",
+          "$ref": "#/$defs/Handle"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "source"
       ]
     },
     "EncounterView": {
@@ -2100,6 +2142,67 @@
             "actor",
             "spell",
             "reason"
+          ]
+        },
+        {
+          "description": "A lasting effect began on a creature (Bless, a Help's Advantage, Rage). Owner and DM\nonly: the table hears the spell or action, not its numbers.",
+          "type": "object",
+          "properties": {
+            "effect": {
+              "description": "The effect's id, as in `effects` on the sheet (`spell/bless`).",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "effect_started"
+            },
+            "name": {
+              "description": "Its display name.",
+              "type": "string"
+            },
+            "source": {
+              "description": "The creature whose action put it there.",
+              "$ref": "#/$defs/Handle"
+            },
+            "target": {
+              "description": "On whom.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "effect",
+            "name",
+            "source"
+          ]
+        },
+        {
+          "description": "A lasting effect on a creature ended: it ran out, was used, or its Concentration ended.\nOwner and DM only.",
+          "type": "object",
+          "properties": {
+            "effect": {
+              "description": "The effect's id, as in `effects` on the sheet (`spell/bless`).",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "effect_ended"
+            },
+            "name": {
+              "description": "Its display name.",
+              "type": "string"
+            },
+            "target": {
+              "description": "On whom.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "effect",
+            "name"
           ]
         },
         {
@@ -3763,7 +3866,7 @@
           ]
         },
         "conditions": {
-          "description": "Active conditions.",
+          "description": "Active conditions, by name. A creature at 0 Hit Points that is not dead is\n`unconscious`.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/Condition"
@@ -3772,6 +3875,13 @@
         "death_saves": {
           "description": "Death saving throws so far, while unconscious.",
           "$ref": "#/$defs/DeathSaves"
+        },
+        "effects": {
+          "description": "Lasting effects on it that run out or end, such as Bless or a Help's Advantage, in the\norder they began. Features that last for good are in `features` instead.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EffectLine"
+          }
         },
         "equipment": {
           "description": "Equipped items in slot order (armor, then weapons), then carried items in the order they\nwere picked up.",
@@ -3940,6 +4050,7 @@
         "spells",
         "resources",
         "conditions",
+        "effects",
         "exhaustion",
         "life_state",
         "death_saves",

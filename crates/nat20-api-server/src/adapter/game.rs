@@ -13,12 +13,12 @@ use std::{
 
 use nat20_api_contract::{
     ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, CombatOverReason,
-    ConcentrationEndReason, Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView,
-    EndCombatReason, ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec,
-    HitDiceSpend, HitPointsRegained, Mode, MoveTarget, OptionId, OptionVariant, Placement, PointFt,
-    PregenFile, ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn,
-    SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate,
-    Targeting, UnavailableOption, Visibility,
+    ConcentrationEndReason, Condition, Consequence, Control, CreatureFull, DcSource, Encounter,
+    EncounterView, EndCombatReason, ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand,
+    HelpSpec, HitDiceSpend, HitPointsRegained, Mode, MoveTarget, OptionId, OptionVariant,
+    Placement, PointFt, PregenFile, ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile,
+    Sheet, Side, Spawn, SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger,
+    TargetCandidate, Targeting, UnavailableOption, Visibility,
 };
 use nat20_core::hecs::{self, Entity};
 use nat20_core::parry3d::na::Point3;
@@ -60,6 +60,7 @@ use nat20_core::{rerecast, uom};
 
 use crate::{
     adapter::{
+        conditions,
         events::{
             HpTracker, LogWriter, Pending, RollKeys, combat_over, concentrating_on, wire_life_state,
         },
@@ -189,6 +190,9 @@ pub struct Game {
     /// The spell each creature concentrated on when the log last caught up, so a Concentration
     /// that ends without an engine event (its spell ran out) is still logged.
     concentrating: HashMap<Entity, String>,
+    /// Each creature's conditions and lasting effects when the log last caught up, so their
+    /// changes are logged though core logs none.
+    shown: HashMap<Entity, conditions::Snapshot>,
     /// The highest round of this scene's fights whose round spawns were looked at, so each
     /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
@@ -410,7 +414,7 @@ impl Game {
         // The update sweeps what expired, and what ran out is logged while the old scene's
         // casters still have their handles, before anyone leaves.
         game.engine.update(0.0);
-        game.log_expired_concentration();
+        game.log_unseen_changes();
         for old in &game.scene.creatures {
             if !creatures.iter().any(|c| c.entity == old.entity) {
                 let _ = game.engine.despawn(old.entity);
@@ -502,6 +506,7 @@ impl Game {
             scripted_turn: None,
             flags: BTreeSet::new(),
             concentrating: HashMap::new(),
+            shown: HashMap::new(),
             spawn_round: 0,
             stalls: 0,
         }
@@ -509,8 +514,175 @@ impl Game {
 
     /// Log entries produced since the last call, in order, without `seq`.
     pub fn take_entries(&mut self) -> Vec<Pending> {
-        self.log_expired_concentration();
+        self.log_unseen_changes();
         std::mem::take(&mut self.pending)
+    }
+
+    /// Logs what changed with no engine event of its own: Concentration that ran out, then
+    /// conditions and lasting effects.
+    fn log_unseen_changes(&mut self) {
+        self.log_expired_concentration();
+        self.log_condition_changes();
+    }
+
+    /// Logs `condition_added` / `condition_removed` (public) and `effect_started` /
+    /// `effect_ended` (owner and DM) for each change since the log last caught up, found against
+    /// a snapshot since core logs neither. Each goes right after the entry that explains it, when
+    /// there is one: Unconscious after the creature's `life_state`; an effect that ran out at a
+    /// turn boundary after that `turn_start` or `turn_end`; a spell's effect after its caster's
+    /// `concentration_ended` for that spell. Anything else goes at the end of the entries so far,
+    /// after the action that caused it.
+    fn log_condition_changes(&mut self) {
+        let mut now = HashMap::new();
+        let creatures: Vec<(Entity, String)> = self
+            .scene
+            .creatures
+            .iter()
+            .map(|c| (c.entity, c.handle.clone()))
+            .collect();
+        for (entity, handle) in creatures {
+            let snap = conditions::Snapshot {
+                conditions: conditions::conditions_of(&self.engine, entity),
+                effects: conditions::effects_of(&self.engine, entity, &self.scene.handles),
+            };
+            let before = self.shown.remove(&entity).unwrap_or_default();
+            let target = Handle(handle.clone());
+            let owner = Visibility::Owner {
+                handle: target.clone(),
+            };
+            for old in &before.effects {
+                if snap.effects.iter().any(|e| e.line == old.line) {
+                    continue;
+                }
+                let anchor = self.effect_end_anchor(old);
+                self.insert_after(
+                    anchor,
+                    owner.clone(),
+                    EventKind::EffectEnded {
+                        target: target.clone(),
+                        effect: old.line.id.clone(),
+                        name: old.line.name.clone(),
+                    },
+                );
+            }
+            for &condition in &before.conditions {
+                if snap.conditions.contains(&condition) {
+                    continue;
+                }
+                let anchor = self.condition_anchor(&handle, condition);
+                self.insert_after(
+                    anchor,
+                    Visibility::Public,
+                    EventKind::ConditionRemoved {
+                        target: target.clone(),
+                        condition,
+                        source: None,
+                    },
+                );
+            }
+            for new in &snap.effects {
+                if before.effects.iter().any(|e| e.line == new.line) {
+                    continue;
+                }
+                self.insert_after(
+                    None,
+                    owner.clone(),
+                    EventKind::EffectStarted {
+                        target: target.clone(),
+                        effect: new.line.id.clone(),
+                        name: new.line.name.clone(),
+                        source: new.line.source.clone(),
+                    },
+                );
+            }
+            for &condition in &snap.conditions {
+                if before.conditions.contains(&condition) {
+                    continue;
+                }
+                let anchor = self.condition_anchor(&handle, condition);
+                self.insert_after(
+                    anchor,
+                    Visibility::Public,
+                    EventKind::ConditionAdded {
+                        target: target.clone(),
+                        condition,
+                        source: None,
+                    },
+                );
+            }
+            now.insert(entity, snap);
+        }
+        self.shown = now;
+    }
+
+    /// Where an effect's end goes: after the turn entry that ran it out, or after its caster's
+    /// `concentration_ended` for its spell.
+    fn effect_end_anchor(&self, effect: &conditions::EffectSnap) -> Option<usize> {
+        if let Some(spell) = &effect.spell {
+            let ended = self.pending.iter().rposition(|e| {
+                matches!(&e.kind, EventKind::ConcentrationEnded { actor, spell: s, .. }
+                    if *actor == effect.line.source && s == spell)
+            });
+            if ended.is_some() {
+                return ended;
+            }
+        }
+        let (entity, boundary) = effect.ends_at?;
+        let handle = self.scene.handles.get(&entity)?;
+        self.pending
+            .iter()
+            .rposition(|e| match (&e.kind, boundary) {
+                (EventKind::TurnStart { actor }, TurnBoundary::Start)
+                | (EventKind::TurnEnd { actor }, TurnBoundary::End) => actor.0 == *handle,
+                _ => false,
+            })
+    }
+
+    /// Where a condition's change goes: Unconscious after the creature's last `life_state`.
+    fn condition_anchor(&self, handle: &str, condition: Condition) -> Option<usize> {
+        if condition != Condition::Unconscious {
+            return None;
+        }
+        self.pending.iter().rposition(
+            |e| matches!(&e.kind, EventKind::LifeState { target, .. } if target.0 == handle),
+        )
+    }
+
+    /// Inserts an entry right after `anchor`, or at the end of the entries so far, in the
+    /// anchor's round (else the round now).
+    fn insert_after(&mut self, anchor: Option<usize>, visibility: Visibility, kind: EventKind) {
+        let round = match anchor {
+            Some(i) => self.pending[i].round,
+            None => self.pending.last().map_or(self.round(), |e| e.round),
+        };
+        let entry = Pending {
+            round,
+            visibility,
+            kind,
+        };
+        match anchor {
+            // After whatever this function already put behind the anchor, so the order of a
+            // batch is the order of the code above.
+            Some(i) => {
+                let mut at = i + 1;
+                while at < self.pending.len() && self.inserted_here(at) {
+                    at += 1;
+                }
+                self.pending.insert(at, entry)
+            }
+            None => self.pending.push(entry),
+        }
+    }
+
+    /// Whether the entry at `at` is one `log_condition_changes` inserted.
+    fn inserted_here(&self, at: usize) -> bool {
+        matches!(
+            self.pending[at].kind,
+            EventKind::ConditionAdded { .. }
+                | EventKind::ConditionRemoved { .. }
+                | EventKind::EffectStarted { .. }
+                | EventKind::EffectEnded { .. }
+        )
     }
 
     /// Logs `concentration_ended{expired}` for each creature that stopped concentrating with no
@@ -630,11 +802,16 @@ impl Game {
                         .total()
                         .max(0) as u32,
                     speed_ft: (speed_m / METERS_PER_FOOT).round() as u32,
-                    // The core has no condition or exhaustion model yet.
-                    conditions: Vec::new(),
+                    conditions: conditions::conditions_of(engine, c.entity),
+                    // The core has no exhaustion model yet.
                     exhaustion: 0,
                     life_state: life_state_of(engine, c.entity),
                     health: health_band(hp, hp_max),
+                    effects: conditions::effects_of(engine, c.entity, &self.scene.handles)
+                        .into_iter()
+                        .map(|e| e.line)
+                        .collect(),
+                    concentration: sheet::concentration(engine, c.entity),
                 }
             })
             .collect()
@@ -649,7 +826,13 @@ impl Game {
             .iter()
             .find(|c| c.entity == entity)
             .map_or(Side::Neutral, |c| c.side);
-        Ok(sheet::sheet(&self.engine, entity, handle, side))
+        Ok(sheet::sheet(
+            &self.engine,
+            entity,
+            handle,
+            side,
+            &self.scene.handles,
+        ))
     }
 
     /// The scene's anchors, in scene file order.
@@ -2443,7 +2626,7 @@ impl Game {
         });
         // A spell that ran out at the boundary is logged before the turn's action, which may
         // cast the same spell again.
-        self.log_expired_concentration();
+        self.log_unseen_changes();
     }
 
     /// Out of combat nobody is asked to react: a reaction window that opens in explore mode

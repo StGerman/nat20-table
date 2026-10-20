@@ -1,5 +1,6 @@
 //! The only module that may `use nat20_core` (CLAUDE.md Rule 5). Upstream churn stays here.
 
+pub mod conditions;
 pub mod events;
 pub mod game;
 pub mod monster;
