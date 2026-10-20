@@ -3034,7 +3034,7 @@ impl Game {
         }
         let nimble: ActionId = NIMBLE_ESCAPE.parse().ok()?;
         let ranged: ActionId = "nat20_core::action.ranged_attack".parse().ok()?;
-        let available = match ActionBuilder::available(&mut self.engine, actor).state() {
+        let available = match ActionBuilder::available(&self.engine, actor).state() {
             Ok(ActionBuilderState::Action { actions }) => actions.clone(),
             _ => return None,
         };
