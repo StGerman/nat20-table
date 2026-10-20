@@ -1,0 +1,53 @@
+{
+  "_comment": "The Wizard for an AI seat (Milestone 4 spec §3, decisions D5 and D6): a red Dragonborn Soldier, AC 11 and 14 Hit Points, spell save DC 12 and spell attack +4. One Potion of Healing, as each pregen carries (spec §3).",
+  "id": "wizard_l2",
+  "name": "Ilsa",
+  "species": "nat20_core::species.dragonborn",
+  "subspecies": "nat20_core::subspecies.dragonborn.red",
+  "background": "nat20_core::background.soldier",
+  "class": "nat20_core::class.wizard",
+  "level": 2,
+  "ability_scores": {
+    "_comment": "The SRD 5.2.1 standard array as the Wizard assigns it; the Soldier adds 2 to Constitution and 1 to Dexterity.",
+    "strength": 8,
+    "dexterity": 12,
+    "constitution": 13,
+    "intelligence": 15,
+    "wisdom": 14,
+    "charisma": 10,
+    "plus_2": "constitution",
+    "plus_1": "dexterity"
+  },
+  "choices": [
+    {
+      "_comment": "Spec §3.",
+      "prompt_id": "choice.cantrips",
+      "picks": [
+        "nat20_core::spell.acid_splash",
+        "nat20_core::spell.fire_bolt",
+        "nat20_core::spell.ray_of_frost"
+      ]
+    },
+    {
+      "_comment": "Level 1 prepares four.",
+      "prompt_id": "choice.spells",
+      "picks": [
+        "nat20_core::spell.burning_hands",
+        "nat20_core::spell.magic_missile",
+        "nat20_core::spell.shield",
+        "nat20_core::spell.thunderwave"
+      ]
+    },
+    {
+      "_comment": "Level 2 prepares a fifth.",
+      "prompt_id": "choice.spells",
+      "picks": ["nat20_core::spell.ice_knife"]
+    }
+  ],
+  "skills": ["arcana", "investigation"],
+  "equipment": [
+    { "item": "nat20_core::item.quarterstaff", "quantity": 1, "equip": "melee_main_hand" },
+    { "item": "nat20_core::item.potion_of_healing", "quantity": 1 }
+  ],
+  "money": "5 GP"
+}

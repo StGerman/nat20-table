@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.25"
+    "version": "1.0.0-dev.26"
   },
   "$defs": {
     "Ability": {
@@ -155,6 +155,17 @@
           "description": "The engine action id behind the option.",
           "type": "string"
         },
+        "area": {
+          "description": "The area it fills, for an option whose `targeting` is `area`, with whom each aim would\ncatch.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OptionArea"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "cost": {
           "description": "What taking it spends.",
           "$ref": "#/$defs/ActionCost"
@@ -171,7 +182,7 @@
           ]
         },
         "max_targets": {
-          "description": "How many targets `submit` may name: 0 for `none`, `self` and `point`, 1 for `single`.",
+          "description": "How many targets `submit` may name: 0 for `none`, `self`, `point` and `area`, 1 for\n`single`.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0
@@ -287,6 +298,65 @@
         }
       ]
     },
+    "Aim": {
+      "description": "Where an area is aimed: its centre, or for an area that starts at the actor, the direction it\npoints.",
+      "oneOf": [
+        {
+          "description": "At a creature, where it stands.",
+          "type": "object",
+          "properties": {
+            "handle": {
+              "description": "The creature.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "creature"
+            }
+          },
+          "required": [
+            "kind",
+            "handle"
+          ]
+        },
+        {
+          "description": "At a named landmark the scene defines.",
+          "type": "object",
+          "properties": {
+            "anchor": {
+              "description": "Anchor id from the scene.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "anchor"
+            }
+          },
+          "required": [
+            "kind",
+            "anchor"
+          ]
+        },
+        {
+          "description": "At an exact point.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "point"
+            },
+            "point": {
+              "description": "The point, in feet.",
+              "$ref": "#/$defs/PointFt"
+            }
+          },
+          "required": [
+            "kind",
+            "point"
+          ]
+        }
+      ]
+    },
     "AnchorObserved": {
       "description": "A named landmark as one player sees it: the DM's view plus how far away it is.",
       "type": "object",
@@ -382,6 +452,57 @@
         "code",
         "message",
         "retryable"
+      ]
+    },
+    "AreaAim": {
+      "description": "One aim of an area option and the creatures it would catch.",
+      "type": "object",
+      "properties": {
+        "aim": {
+          "description": "Pass it as `submit.aim`.",
+          "$ref": "#/$defs/Aim"
+        },
+        "catches": {
+          "description": "The creatures the area would catch, the actor's allies included, by handle.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        }
+      },
+      "required": [
+        "aim",
+        "catches"
+      ]
+    },
+    "AreaShape": {
+      "description": "The shape of an area.",
+      "oneOf": [
+        {
+          "description": "A cone, e.g. Burning Hands.",
+          "type": "string",
+          "const": "cone"
+        },
+        {
+          "description": "A sphere.",
+          "type": "string",
+          "const": "sphere"
+        },
+        {
+          "description": "A cube.",
+          "type": "string",
+          "const": "cube"
+        },
+        {
+          "description": "A cylinder.",
+          "type": "string",
+          "const": "cylinder"
+        },
+        {
+          "description": "A line.",
+          "type": "string",
+          "const": "line"
+        }
       ]
     },
     "Awaiting": {
@@ -2732,6 +2853,38 @@
         }
       ]
     },
+    "OptionArea": {
+      "description": "The area an option fills, and a preview of each aim.",
+      "type": "object",
+      "properties": {
+        "aims": {
+          "description": "The creatures each aim would catch, allies included, for every creature and anchor of the\nscene that catches at least one. An aim not listed here may still be submitted.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AreaAim"
+          }
+        },
+        "from_self": {
+          "description": "Whether it starts at the actor (a cone, Thunderwave's cube): the aim then only points it.\nOtherwise the aim is its centre, and must be within `range_ft`.",
+          "type": "boolean"
+        },
+        "shape": {
+          "description": "Its shape.",
+          "$ref": "#/$defs/AreaShape"
+        },
+        "size_ft": {
+          "description": "Its size in feet: a cone's or a line's length, a cube's side, a sphere's or a cylinder's\nradius.",
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "required": [
+        "shape",
+        "size_ft",
+        "from_self",
+        "aims"
+      ]
+    },
     "OptionId": {
       "description": "An action option's id, derived from the action and its context (weapon, spell and level),\nnever from a list index, e.g. `melee_attack/longsword`. Stable for the life of a prompt.",
       "type": "string"
@@ -3007,6 +3160,11 @@
           "description": "The option uses up an item the actor no longer carries (a `use/<item>` option after the\nlast one is gone).",
           "type": "string",
           "const": "no_item_left"
+        },
+        {
+          "description": "The area option's aim catches no creature, so nothing is cast and nothing is spent.",
+          "type": "string",
+          "const": "area_empty"
         }
       ]
     },
@@ -3145,6 +3303,17 @@
               "description": "The acting creature; in combat it must be `awaiting.actor`.",
               "$ref": "#/$defs/Handle"
             },
+            "aim": {
+              "description": "Where an `area` option is aimed. Required for one; an aim that catches no creature is\nrejected with `area_empty` and spends nothing.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Aim"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "cmd": {
               "type": "string",
               "const": "submit"
@@ -3154,7 +3323,7 @@
               "$ref": "#/$defs/OptionId"
             },
             "point": {
-              "description": "Target point, for options whose `targeting` is `point`.",
+              "description": "Target point, for options whose `targeting` is `point`. For an `area` option it means\nthe same as `aim: {kind: point}`.",
               "anyOf": [
                 {
                   "$ref": "#/$defs/PointFt"
@@ -4634,6 +4803,11 @@
           "description": "A point.",
           "type": "string",
           "const": "point"
+        },
+        {
+          "description": "An area, aimed with `submit.aim`; `area` says its shape and whom each aim catches.",
+          "type": "string",
+          "const": "area"
         }
       ]
     },

@@ -6,7 +6,7 @@ use std::{
 };
 
 use nat20_api_contract::{
-    ApiError, Awaiting, CONTRACT_VERSION, Command, CommandResult, ErrorCode, PROTOCOL_MAJOR,
+    Aim, ApiError, Awaiting, CONTRACT_VERSION, Command, CommandResult, ErrorCode, PROTOCOL_MAJOR,
     PROTOCOL_NAME, RejectReason, Request, Response, V1,
 };
 
@@ -192,19 +192,27 @@ impl Server {
                 option_id,
                 targets,
                 point,
+                aim,
                 variant,
             } => {
-                if point.is_some() {
-                    return Err(errors::not_implemented(
-                        "Targeting a point",
-                        "legal_actions does not offer them yet",
-                    ));
-                }
+                // `point` is the older spelling of `aim: {kind: point}`.
+                let aim = match (aim, point) {
+                    (Some(_), Some(_)) => {
+                        return Err(errors::error(
+                            ErrorCode::BadRequest,
+                            "Send aim or point, not both.",
+                        ));
+                    }
+                    (Some(aim), None) => Some(aim.clone()),
+                    (None, Some(point)) => Some(Aim::Point { point: *point }),
+                    (None, None) => None,
+                };
                 session.submit(
                     &actor.0,
                     prompt_id.as_ref().map(|p| p.0.as_str()),
                     option_id,
                     targets,
+                    aim.as_ref(),
                     variant.as_deref(),
                 )
             }

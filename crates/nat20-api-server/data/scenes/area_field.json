@@ -1,0 +1,93 @@
+{
+    "id": "area_field",
+    "description": "Area spells (Milestone 4 spec §7 step 10): Ilsa the Wizard with Bren 10 feet east of her, one goblin beyond him and one 10 feet west of her, so Burning Hands aimed east catches an ally and Thunderwave aimed west catches only the goblin.",
+    "anchors": [
+        {
+            "id": "mill_door",
+            "name": "the mill door",
+            "position_ft": {
+                "x_ft": 30.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "north_field",
+            "name": "the empty field to the north",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 40.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "ilsa",
+            "pregen": "wizard_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 10.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 15.0,
+                    "y_ft": 5.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "lookout",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -10.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "field_fight",
+            "participants": [
+                "ilsa",
+                "bren",
+                "goblin",
+                "lookout"
+            ]
+        }
+    ]
+}

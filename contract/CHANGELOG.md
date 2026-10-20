@@ -3,6 +3,13 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.26 (2026-10-20)
+- Area targeting (API-10, Milestone 4 spec §4.2, §4.3 and §7 step 10; protocol.md status, §4 and §7). `Targeting` gains `area`. `ActionOption` gains optional `area{shape, size_ft, from_self, aims}` (`OptionArea`, `AreaShape`, `AreaAim`): each aim at another living creature or an anchor, with the creatures it would catch. **Breaking before v1:** a new enum value on `Targeting`, which is not on Rule 2's additive list (spec §4.2 allows it before v1).
+- `submit` gains optional `aim` (`Aim`: `creature`, `anchor` or `point`). The `point` field is served for area options and means `aim: {kind: point}`. **Changed meaning:** `point` answered `not_implemented` before; the `not_implemented.jsonl` case for it is removed.
+- New `RejectReason::area_empty`: an aim that catches no creature, refused so nothing is spent. Additive.
+- An area option's `action` entry lists the creatures the area caught in `targets`.
+- The Wizard pregen `wizard_l2` (Ilsa, a red Dragonborn Soldier, AC 11, 14 HP) joins the `party` scene, and `pregens.jsonl` gains her sheet. New fixture `area.jsonl` (scene `area_field`): the area previews; `area_empty` out of combat and in it; `out_of_range` for Acid Splash aimed 200 feet away; `wrong_mode` for a cone that would catch a goblin out of combat; `bad_request` for an aim on Fire Bolt; Burning Hands aimed at an ally catching him and the goblin behind him; Thunderwave aimed with `point`.
+
 ## 1.0.0-dev.25 (2026-10-20)
 - Conditions are filled (API-20, Milestone 4 spec §4.2, §4.3 and §7 step 12; protocol.md status, §4.2, §5 and §6). `conditions` in state and on the sheet carries what core models: `unconscious` for a creature at 0 Hit Points that isn't dead, and `incapacitated`, `paralyzed` and `poisoned` from their effects. Other players see every condition except `invisible`. **Changed meaning:** `conditions` was always empty before.
 - `condition_added` / `condition_removed` start being logged, public, right after the entry that explains them (Unconscious after `life_state`). Before, they were in the contract but never logged.

@@ -1,6 +1,6 @@
 {
     "id": "party",
-    "description": "Pregen test scene (Milestone 4 spec §7 step 4): the demo Fighter, the Barbarian and the Cleric side by side, to read their sheets.",
+    "description": "Pregen test scene (Milestone 4 spec §7 step 4): the demo Fighter, the Barbarian, the Cleric and the Wizard side by side, to read their sheets.",
     "creatures": [
         {
             "handle": "bren",
@@ -39,6 +39,20 @@
                 "kind": "point",
                 "point": {
                     "x_ft": 10.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "ilsa",
+            "pregen": "wizard_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 15.0,
                     "y_ft": 0.0,
                     "z_ft": 0.0
                 }

@@ -83,9 +83,14 @@ pub enum Command {
         /// Targets, for options whose `targeting` is `single` or `multiple`.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         targets: Vec<Handle>,
-        /// Target point, for options whose `targeting` is `point`.
+        /// Target point, for options whose `targeting` is `point`. For an `area` option it means
+        /// the same as `aim: {kind: point}`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         point: Option<PointFt>,
+        /// Where an `area` option is aimed. Required for one; an aim that catches no creature is
+        /// rejected with `area_empty` and spends nothing.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        aim: Option<Aim>,
         /// One of the option's `variants`, when it has any (e.g. a spell's casting level).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         variant: Option<String>,
@@ -199,6 +204,28 @@ pub enum MoveTarget {
         handle: Handle,
     },
     /// An exact point.
+    Point {
+        /// The point, in feet.
+        point: PointFt,
+    },
+}
+
+/// Where an area is aimed: its centre, or for an area that starts at the actor, the direction it
+/// points.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Aim {
+    /// At a creature, where it stands.
+    Creature {
+        /// The creature.
+        handle: Handle,
+    },
+    /// At a named landmark the scene defines.
+    Anchor {
+        /// Anchor id from the scene.
+        anchor: String,
+    },
+    /// At an exact point.
     Point {
         /// The point, in feet.
         point: PointFt,

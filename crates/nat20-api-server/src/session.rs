@@ -7,9 +7,9 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use nat20_api_contract::{
-    ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, EndCombatReason, ErrorCode,
-    Event, EventKind, Handle, HelpSpec, HitDiceSpend, Mode, MoveTarget, OptionId, PromptId,
-    ReactionTrigger, RollId, RollView, State, Visibility,
+    Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, EndCombatReason,
+    ErrorCode, Event, EventKind, Handle, HelpSpec, HitDiceSpend, Mode, MoveTarget, OptionId,
+    PromptId, ReactionTrigger, RollId, RollView, State, Visibility,
 };
 
 use crate::{
@@ -249,13 +249,14 @@ impl Session {
         prompt_id: Option<&str>,
         option_id: &OptionId,
         targets: &[Handle],
+        aim: Option<&Aim>,
         variant: Option<&str>,
     ) -> Result<CommandResult, ApiError> {
         let targets: Vec<String> = targets.iter().map(|t| t.0.clone()).collect();
         if self.game_mut()?.mode() == Mode::Explore && prompt_id.is_none() {
-            let result = self
-                .game_mut()?
-                .explore_submit(actor, &option_id.0, &targets, variant);
+            let result =
+                self.game_mut()?
+                    .explore_submit(actor, &option_id.0, &targets, aim, variant);
             self.after_decision(result)?;
             return Ok(CommandResult::Submit {});
         }
@@ -276,7 +277,7 @@ impl Session {
         self.require_prompt(actor, Some(prompt_id), false)?;
         let result = self
             .game_mut()?
-            .submit(actor, &option_id.0, &targets, variant);
+            .submit(actor, &option_id.0, &targets, aim, variant);
         self.after_decision(result)?;
         Ok(CommandResult::Submit {})
     }
