@@ -1,0 +1,182 @@
+{
+    "id": "m5_s5_cellar",
+    "description": "Milestone 5 exit fixture m5_fights, Scene 5 of The Silent Mill (Fight 2, between Low and Moderate): the Goblin Boss, three Goblin Warriors and two Wolves in the mill cellar, the party coming down the stairs. Two Giant Rats come out of the grain chute on round 3 unless a party member is Bloodied or down. The fight ends when a side is down; nobody flees in the adventure.",
+    "anchors": [
+        {
+            "id": "cellar_stairs",
+            "name": "the cellar stairs",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "millstone",
+            "name": "the millstone",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 35.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "grain_chute",
+            "name": "the grain chute",
+            "position_ft": {
+                "x_ft": 30.0,
+                "y_ft": 30.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "back_door",
+            "name": "the back door",
+            "position_ft": {
+                "x_ft": -30.0,
+                "y_ft": 35.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "cellar_stairs"
+    ],
+    "creatures": [
+        {
+            "handle": "boss",
+            "monster": "goblin_boss",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 35.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_5",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -10.0,
+                    "y_ft": 30.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_6",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 10.0,
+                    "y_ft": 30.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_7",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -25.0,
+                    "y_ft": 35.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_4",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -5.0,
+                    "y_ft": 20.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_5",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 20.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "spawns": [
+        {
+            "id": "rats",
+            "when": {
+                "kind": "round",
+                "round": 3,
+                "unless": "any_party_bloodied"
+            },
+            "creatures": [
+                {
+                    "handle": "rat_1",
+                    "monster": "giant_rat",
+                    "side": "hostile",
+                    "control": "scripted",
+                    "at": {
+                        "kind": "anchor",
+                        "anchor": "grain_chute"
+                    }
+                },
+                {
+                    "handle": "rat_2",
+                    "monster": "giant_rat",
+                    "side": "hostile",
+                    "control": "scripted",
+                    "at": {
+                        "kind": "anchor",
+                        "anchor": "grain_chute"
+                    }
+                }
+            ]
+        }
+    ],
+    "encounters": [
+        {
+            "id": "cellar_fight",
+            "participants": [
+                "bren",
+                "torva",
+                "maren",
+                "ilsa",
+                "boss",
+                "goblin_5",
+                "goblin_6",
+                "goblin_7",
+                "wolf_4",
+                "wolf_5",
+                "rat_1",
+                "rat_2"
+            ]
+        }
+    ]
+}
