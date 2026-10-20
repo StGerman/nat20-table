@@ -14,8 +14,13 @@ nat20-api-contract = { path = "crates/nat20-api-contract" }
 # Pinned by rev. Bump only in its own PR with the full suite green (CLAUDE.md Rule 5).
 # c17c4bd = fork `demo` after core #14 to #20: Second Wind's and Rage's one use back on a
 # short rest, the Cleric levels 1 and 2 with the Milestone 4 Cleric spells, and heavy armour
-# ignoring a negative Dexterity modifier.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "c17c4bd3f0c5573e8bbfb7cf2e38eef43b84db13" }
+# ignoring a negative Dexterity modifier. 6c1edb4 = c17c4bd plus core #21, which re-exports
+# hecs, parry3d, rerecast and uom; the adapter names them through `nat20_core::<crate>`.
+# de1e670 = 6c1edb4 plus core #23 (Rust 1.99.1), core #24 (cargo patch updates, lockfile only),
+# core #30 (rand 0.10), core #32 (Dependabot config), core #22 (concentration ends when the
+# spell's effects run out), core #28 (uom 0.38), core #29 (rhai 1.26.1), core #34 (mlua 0.12.2)
+# and core #35 (rstest 0.27).
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "de1e670e28dc71a8ca26f7a0497be1880c8abb0f" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"

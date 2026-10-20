@@ -10,12 +10,13 @@ use super::{
     events::wire_life_state,
     names::{self, title},
 };
-use hecs::Entity;
 use nat20_api_contract::{
     Ability as WireAbility, AbilityLine, DeathSaves, FeatureLine, Handle, HitDicePool, ItemLine,
     ProficiencyLevel as WireProficiency, Recharge, ResourcePool, Sheet, SheetConcentration, Side,
     Skill as WireSkill, SkillLine, SpellLine, SpellSlots, SpellcastingLine,
 };
+use nat20_core::hecs::Entity;
+use nat20_core::uom;
 use nat20_core::{
     components::{
         ability::{Ability, AbilityScoreMap},

@@ -6,7 +6,8 @@
 
 use std::{collections::BTreeMap, fs, path::Path};
 
-use hecs::Entity;
+use nat20_core::hecs::Entity;
+use nat20_core::uom::si::{f32::Length, length::foot};
 use nat20_core::{
     components::{
         ability::{Ability, AbilityScoreMap},
@@ -30,7 +31,6 @@ use nat20_core::{
     systems,
 };
 use serde::Deserialize;
-use uom::si::{f32::Length, length::foot};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct MonsterDef {

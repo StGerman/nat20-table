@@ -1,7 +1,7 @@
 //! How engine ids read on the wire: option ids, display names, damage types.
 
-use hecs::Entity;
 use nat20_api_contract::{DamageType as WireDamage, OptionSpell};
+use nat20_core::hecs::Entity;
 use nat20_core::{
     components::{
         actions::action::ActionContext,

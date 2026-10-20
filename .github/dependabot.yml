@@ -19,13 +19,6 @@ updates:
     ignore:
       # Pinned by rev to fork branch demo; bumped only in its own PR (Rule 5). core-drift watches it.
       - dependency-name: nat20_core
-      # The adapter names nat20_core's types from these crates, so their versions must match what
-      # the pinned core uses; a lone bump builds two copies and fails with mismatched types. They
-      # move with the core pin (Rule 5).
-      - dependency-name: hecs
-      - dependency-name: parry3d
-      - dependency-name: rerecast
-      - dependency-name: uom
     groups:
       # Patch only: Dependabot reads a 0.x minor (a breaking bump under Cargo semver) as minor, so
       # every cargo minor gets its own PR (CLAUDE.md Rule 9).
