@@ -9,7 +9,7 @@ use nat20_core::hecs::Entity;
 use nat20_core::{
     components::{
         effects::{
-            effect::{EffectInstance, EffectLifetime},
+            effect::{EffectInstance, EffectInstanceId, EffectLifetime},
             effect_manager::EffectManager,
         },
         health::life_state::LifeState,
@@ -33,6 +33,8 @@ pub struct Snapshot {
 #[derive(Debug, Clone)]
 pub struct EffectSnap {
     pub line: EffectLine,
+    /// Core's instance id: a recast replaces the instance with one that shows the same line.
+    pub instance: EffectInstanceId,
     /// Whose turn boundary ends it, when it runs out at one.
     pub ends_at: Option<(Entity, TurnBoundary)>,
     /// The spell it belongs to, when it is a spell's effect (`bless`).
@@ -88,6 +90,7 @@ pub fn effects_of(
             let id = effect_id(i);
             let applier = i.applier.unwrap_or(entity);
             EffectSnap {
+                instance: i.instance_id,
                 line: EffectLine {
                     name: effect_name(&id),
                     id,

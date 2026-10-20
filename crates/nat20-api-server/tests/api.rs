@@ -2333,6 +2333,53 @@ fn bless_cast_again_as_it_runs_out_logs_the_end_first() {
     assert_eq!(entry["reason"], "expired", "{entry}");
 }
 
+/// `(kind, target)` of the effect events in `response`, in order.
+fn effect_events(response: &Value) -> Vec<(String, String)> {
+    response["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "effect_ended" || e["kind"] == "effect_started")
+        .map(|e| {
+            (
+                e["kind"].as_str().unwrap().to_owned(),
+                e["target"].as_str().unwrap().to_owned(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn bless_cast_again_early_ends_its_effects_before_the_new_ones_start() {
+    let mut api = Api::new(Server::new());
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "cleric_camp" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let bless = json!({ "cmd": "submit", "actor": "maren", "option_id": "cast/bless/1", "targets": ["maren", "bren"] });
+    let cast = api.call("dm", bless.clone());
+    assert_eq!(cast["ok"], true, "{cast}");
+    // The same spell on the same targets, well before it runs out: each effect line looks the
+    // same as the old one, but the old effects end and new ones start.
+    let again = api.call("dm", bless);
+    assert_eq!(again["ok"], true, "{again}");
+    let effects = effect_events(&again);
+    let pair = |kind: &str, target: &str| (kind.to_owned(), target.to_owned());
+    for target in ["maren", "bren"] {
+        let ended = effects
+            .iter()
+            .position(|e| *e == pair("effect_ended", target));
+        let started = effects
+            .iter()
+            .position(|e| *e == pair("effect_started", target));
+        assert!(
+            ended.is_some() && started.is_some() && ended < started,
+            "{target}: {again}"
+        );
+    }
+}
+
 #[test]
 fn a_spell_held_by_a_creature_left_behind_ends_between_scenes() {
     let mut api = Api::new(Server::new());
