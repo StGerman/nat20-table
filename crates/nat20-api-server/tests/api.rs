@@ -2289,3 +2289,74 @@ fn bless_runs_out_in_a_fight_after_one_minute() {
         "{sheet}"
     );
 }
+
+/// Kinds of the events in `response`, in order.
+fn kinds(response: &Value) -> Vec<String> {
+    response["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["kind"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+#[test]
+fn bless_cast_again_as_it_runs_out_logs_the_end_first() {
+    let mut api = Api::new(Server::new());
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "cleric_camp" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let bless = json!({ "cmd": "submit", "actor": "maren", "option_id": "cast/bless/1", "targets": ["maren", "bren"] });
+    let cast = api.call("dm", bless.clone());
+    assert_eq!(cast["ok"], true, "{cast}");
+    // Out of combat each action is a turn of Maren's; one minute is ten of them.
+    for _ in 0..9 {
+        let dash = api.call(
+            "dm",
+            json!({ "cmd": "submit", "actor": "maren", "option_id": "dash" }),
+        );
+        assert_eq!(dash["ok"], true, "{dash}");
+        assert!(
+            !kinds(&dash).contains(&"concentration_ended".into()),
+            "{dash}"
+        );
+    }
+    let again = api.call("dm", bless);
+    assert_eq!(again["ok"], true, "{again}");
+    let kinds = kinds(&again);
+    let ended = kinds.iter().position(|k| k == "concentration_ended");
+    let started = kinds.iter().position(|k| k == "concentration_started");
+    assert!(ended.is_some() && ended < started, "{again}");
+    let entry = &again["events"][ended.unwrap()];
+    assert_eq!(entry["reason"], "expired", "{entry}");
+}
+
+#[test]
+fn a_spell_held_by_a_creature_left_behind_ends_between_scenes() {
+    let mut api = Api::new(Server::new());
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "cleric_camp" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let cast = api.call(
+        "dm",
+        json!({ "cmd": "submit", "actor": "maren", "option_id": "cast/bless/1", "targets": ["bren"] }),
+    );
+    assert_eq!(cast["ok"], true, "{cast}");
+    // Only Bren goes on; Maren stays behind, and her Bless on him runs out on the way.
+    let next = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s2_road", "party": ["bren"] }),
+    );
+    assert_eq!(next["ok"], true, "{next}");
+    assert_eq!(
+        kinds(&next),
+        ["concentration_ended", "scene_loaded"],
+        "{next}"
+    );
+    assert_eq!(next["events"][0]["actor"], "maren", "{next}");
+    assert_eq!(next["events"][0]["reason"], "expired", "{next}");
+}
