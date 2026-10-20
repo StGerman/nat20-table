@@ -76,7 +76,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.26"
+    "version": "1.0.0-dev.27"
   },
   "$defs": {
     "Ability": {
@@ -393,7 +393,7 @@
           "const": "surrender"
         },
         {
-          "description": "The other side fled. Not served yet (`not_implemented`).",
+          "description": "The other side fled; the encounter must list `fled` in its `end_reasons`. Its conscious\ncreatures leave the scene and the party's side wins.",
           "type": "string",
           "const": "fled"
         },

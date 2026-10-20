@@ -1078,7 +1078,7 @@ fn a_refused_end_combat_changes_nothing() {
     for (reason, code) in [
         ("surrender", "surrender_not_available"),
         ("scenario", "rejected"),
-        ("fled", "not_implemented"),
+        ("fled", "rejected"),
     ] {
         let refused = api.call("dm", json!({ "cmd": "end_combat", "reason": reason }));
         assert_eq!(refused["error"]["code"], code, "{refused}");
