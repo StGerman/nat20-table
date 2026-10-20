@@ -176,6 +176,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 `option_id` stays stable for the life of the prompt and is derived from the action plus its context (weapon slot, spell and level), never from a list index.
 
 - A spell is `cast/<spell>/<level>` for the slot level it is cast at (`cast/bless/1`), or `cast/<spell>` for a cantrip (`cast/sacred_flame`), named after the spell ("Bless"). Its option carries `spell{id, level, concentration}`: the spell's registry id, the level it is cast at (0 for a cantrip) and whether casting it means Concentration. Options that are not spells have no `spell`.
+- A carried item that is used up, a Potion of Healing, is `use/<item>` (`use/potion_of_healing`), named after the item ("Potion of Healing"), one option however many the actor carries. Its option carries `item{id, remaining}`: the item's id as on the sheet and how many the actor carries now. It costs a Bonus Action and names one creature within 5 feet, the actor included: the actor drinks it, or gives it to someone else (SRD 5.2.1 "Using a Potion"). Taking it logs `action`, then `item_used` (§6), then the healing roll and `healed`, and removes one from the actor's equipment. When the last one is gone the option is gone, and a `submit` of it answers `rejected` with `no_item_left`. Options that use no item have no `item`.
 - `unavailable` entries use the same `option_id` as the option would have if it were offered (`melee_attack/longsword`, `cast/guiding_bolt/1`).
 - An option whose target is out of reach or out of sight (`in_range: false`) is still offered; `submit` walks the actor to a spot the engine picks, then acts. Known gap (API-31): if the action still can't be taken there, the walk happens, the submit is accepted, and no `action` is logged. A creature standing between caster and target blocks the line of sight.
 
@@ -233,6 +234,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | Roll: modifiers, `against` (AC/DC), `dc_source`, `advantage_sources` | yes | no; own modifiers and AC are on the sheet | no |
 | Damage or healing amount | yes | yes | yes (it is said at the table) |
 | Which spell a creature concentrates on, and when it starts and ends (`concentration_started`, `concentration_ended`) | yes | yes | yes (a caster visibly maintains a spell) |
+| An item used up, and on whom (`item_used`) | yes | yes | yes (drinking or handing over a potion is seen) |
 | `hit_points` events (HP after a change) | yes | own creature only | no |
 | Scenario data: the scene file's check DCs, hazards, encounters, surrender conditions, flags, spawns; in state, `flags`, `checks`, `encounters` (with `surrender_available`) and `spawns`; the events `check_resolved`, `flag_set`, `hazard_triggered` and `spawned` | yes | no | no |
 | Anchors: id, name, position | yes | yes, with `distance_ft` from the viewer | yes, with `distance_ft` from the viewer |
@@ -261,6 +263,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `condition_added` / `condition_removed` | `target`, `condition`, `source` |
 | `concentration_started` | `actor`, `spell` (public: a caster visibly maintains a spell) |
 | `concentration_ended` | `actor`, `spell`, `reason: replaced\|failed_save\|incapacitated\|expired\|ended` (public) |
+| `item_used` | `actor`, `item`, `target` (public; `target` is the actor when it drinks the item) |
 | `life_state` | `target`, `state: conscious\|unconscious\|stable\|dead` |
 | `moved` | `actor`, `from`, `to` (ft), `anchor?` |
 | `check_resolved` | `check_id?`, `actor`, `roll_id`, `success` (DM only) |
@@ -303,7 +306,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left` | true |
 | `surrender_not_available` | `end_combat{surrender}` while the running encounter's surrender condition does not hold, or it declares none; nothing changed | false |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |

@@ -427,6 +427,9 @@ pub struct ActionOption {
     /// or `cast/<spell>` for a cantrip.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spell: Option<OptionSpell>,
+    /// The carried item this option uses up, for a potion. Its option id is `use/<item>`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub item: Option<OptionItem>,
 }
 
 /// The spell a creature is concentrating on.
@@ -445,6 +448,15 @@ pub struct OptionSpell {
     pub level: u8,
     /// Whether casting it starts Concentration, ending any Concentration the caster holds.
     pub concentration: bool,
+}
+
+/// The item an option uses up.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct OptionItem {
+    /// Item id from the registry, as on the sheet, e.g. `potion_of_healing`.
+    pub id: String,
+    /// How many the actor carries now, this one included.
+    pub remaining: u32,
 }
 
 /// What an option costs.

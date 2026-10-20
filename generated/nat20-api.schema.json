@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.23"
+    "version": "1.0.0-dev.24"
   },
   "$defs": {
     "Ability": {
@@ -158,6 +158,17 @@
         "cost": {
           "description": "What taking it spends.",
           "$ref": "#/$defs/ActionCost"
+        },
+        "item": {
+          "description": "The carried item this option uses up, for a potion. Its option id is `use/<item>`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OptionItem"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "max_targets": {
           "description": "How many targets `submit` may name: 0 for `none`, `self` and `point`, 1 for `single`.",
@@ -2092,6 +2103,34 @@
           ]
         },
         {
+          "description": "A creature used up a carried item, e.g. drank a Potion of Healing or gave it to someone.\nPublic: it is seen at the table. Logged right after the `action` that used it.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who used it.",
+              "$ref": "#/$defs/Handle"
+            },
+            "item": {
+              "description": "The item's id, as on the sheet (`potion_of_healing`).",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "item_used"
+            },
+            "target": {
+              "description": "Who it was used on: the actor itself when drunk.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "item",
+            "target"
+          ]
+        },
+        {
           "description": "A creature's life state changed.",
           "type": "object",
           "properties": {
@@ -2594,6 +2633,26 @@
       "description": "An action option's id, derived from the action and its context (weapon, spell and level),\nnever from a list index, e.g. `melee_attack/longsword`. Stable for the life of a prompt.",
       "type": "string"
     },
+    "OptionItem": {
+      "description": "The item an option uses up.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Item id from the registry, as on the sheet, e.g. `potion_of_healing`.",
+          "type": "string"
+        },
+        "remaining": {
+          "description": "How many the actor carries now, this one included.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "remaining"
+      ]
+    },
     "OptionSpell": {
       "description": "The spell an option casts.",
       "type": "object",
@@ -2840,6 +2899,11 @@
           "description": "The actor lacks the skill proficiency the option needs (Help with a check).",
           "type": "string",
           "const": "not_proficient"
+        },
+        {
+          "description": "The option uses up an item the actor no longer carries (a `use/<item>` option after the\nlast one is gone).",
+          "type": "string",
+          "const": "no_item_left"
         }
       ]
     },

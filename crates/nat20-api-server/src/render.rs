@@ -117,6 +117,17 @@ pub fn text(kind: &EventKind) -> String {
                 ConcentrationEndReason::Ended => "",
             }
         ),
+        EventKind::ItemUsed {
+            actor,
+            item,
+            target,
+        } => {
+            if actor == target {
+                format!("{} drinks a {}.", actor.0, item_name(item))
+            } else {
+                format!("{} gives {} a {}.", actor.0, target.0, item_name(item))
+            }
+        }
         EventKind::LifeState { target, state } => {
             format!("{} is {}.", target.0, life_state(*state))
         }
@@ -245,6 +256,11 @@ pub fn roll_kind_word(kind: RollKind) -> &'static str {
 /// `shield_of_faith` reads "Shield of Faith".
 fn spell_name(spell: &str) -> String {
     crate::adapter::names::title(&spell.replace('_', " "))
+}
+
+/// `potion_of_healing` becomes `Potion of Healing`.
+fn item_name(item: &str) -> String {
+    crate::adapter::names::title(&item.replace('_', " "))
 }
 
 fn life_state(state: LifeState) -> &'static str {

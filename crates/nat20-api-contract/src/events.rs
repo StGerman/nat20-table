@@ -184,6 +184,16 @@ pub enum EventKind {
         /// Why it ended.
         reason: ConcentrationEndReason,
     },
+    /// A creature used up a carried item, e.g. drank a Potion of Healing or gave it to someone.
+    /// Public: it is seen at the table. Logged right after the `action` that used it.
+    ItemUsed {
+        /// Who used it.
+        actor: Handle,
+        /// The item's id, as on the sheet (`potion_of_healing`).
+        item: String,
+        /// Who it was used on: the actor itself when drunk.
+        target: Handle,
+    },
     /// A creature's life state changed.
     LifeState {
         /// Whose.
