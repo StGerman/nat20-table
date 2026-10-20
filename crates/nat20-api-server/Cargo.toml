@@ -12,11 +12,6 @@ nat20-api-contract = { workspace = true }
 nat20_core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-# Versions match what nat20_core uses, so the adapter can name its types.
-hecs = { version = "0.10.5", features = ["std", "macros", "serde"] }
-parry3d = { version = "0.24", features = ["serde-serialize"] }
-rerecast = { version = "0.2.0", features = ["serialize"] }
-uom = { version = "0.37.0", features = ["f32", "serde"] }
 
 [lib]
 name = "nat20_api_server"

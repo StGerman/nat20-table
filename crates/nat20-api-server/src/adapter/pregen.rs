@@ -6,8 +6,8 @@ use std::{
     path::PathBuf,
 };
 
-use hecs::Entity;
 use nat20_api_contract::{EquipSlot, PregenFile};
+use nat20_core::hecs::Entity;
 use nat20_core::{
     components::{
         ability::{Ability, AbilityScoreDistribution},

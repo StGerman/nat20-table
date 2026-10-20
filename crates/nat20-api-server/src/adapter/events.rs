@@ -2,12 +2,12 @@
 
 use std::collections::HashMap;
 
-use hecs::Entity;
 use nat20_api_contract::{
     AdvantageState, Against, AgainstKind, CombatOverReason, ConcentrationEndReason, DcSource,
     DiceRolled, EventKind, Handle, LifeState as WireLife, Modifier, OptionId, RestKind as WireRest,
     RollId, RollKind, RollOutcome, RollView, Side, Visibility,
 };
+use nat20_core::hecs::Entity;
 use nat20_core::{
     components::{
         actions::{
