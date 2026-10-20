@@ -551,7 +551,7 @@ impl Game {
                 handle: target.clone(),
             };
             for old in &before.effects {
-                if snap.effects.iter().any(|e| e.line == old.line) {
+                if snap.effects.iter().any(|e| e.instance == old.instance) {
                     continue;
                 }
                 let anchor = self.effect_end_anchor(old);
@@ -581,7 +581,7 @@ impl Game {
                 );
             }
             for new in &snap.effects {
-                if before.effects.iter().any(|e| e.line == new.line) {
+                if before.effects.iter().any(|e| e.instance == new.instance) {
                     continue;
                 }
                 self.insert_after(
@@ -2712,6 +2712,9 @@ impl Game {
         for _ in 0..MAX_SCRIPTED_STEPS {
             self.settle();
             self.drain();
+            // Catch conditions up at each step: a creature downed by one turn and back up by the
+            // next would otherwise show no change by the end of the command.
+            self.log_unseen_changes();
             if self.check_combat_over() {
                 return;
             }
