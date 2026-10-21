@@ -27,8 +27,10 @@ nat20-api-contract = { path = "crates/nat20-api-contract" }
 # plus core #45 to #50 (Milestone 5: monster registry, Goblin Boss, Wolf, Giant Rat, Advantage
 # cancelling, Prone, monster traits) and #49, core #50's head until the stack merges. a206929 =
 # 9823766 plus core #51 (Dragonborn Breath Weapon) and #52 (event sequence across both logs),
-# core #52's head until the stack merges.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "a2069291e0966b225d289b154d4374c3da3c19cc" }
+# core #52's head until the stack merges. 935d516 = a206929 plus core #53 (a natural 20 on a
+# Death Saving Throw restores 1 Hit Point and the creature takes its turn), core #53's head until
+# the stack merges.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "935d5169f31d9404a5aede6839c4bf6261b6e28c" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
