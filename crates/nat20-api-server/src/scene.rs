@@ -13,7 +13,10 @@ use nat20_api_contract::{
     SceneFile, SurrenderTrigger,
 };
 
-use crate::{adapter::pregen, errors::error};
+use crate::{
+    adapter::{monster, pregen},
+    errors::error,
+};
 
 /// The terrain a scene uses when it names none.
 pub const DEFAULT_MAP: &str = "flat_arena";
@@ -45,12 +48,12 @@ pub fn read(data_dir: &Path, scene_id: &str) -> Result<SceneFile, ApiError> {
             format!("Scene file {scene_id} declares the id {}.", scene.id),
         ));
     }
-    check(&scene, data_dir)?;
+    check(&scene)?;
     Ok(scene)
 }
 
 /// Checks the cross-references and values a scene's schema can't express.
-pub fn check(scene: &SceneFile, data_dir: &Path) -> Result<(), ApiError> {
+pub fn check(scene: &SceneFile) -> Result<(), ApiError> {
     let bad = |message: String| Err(error(ErrorCode::BadScene, message));
     let ids = |what: &str, ids: Vec<&str>| -> Result<HashSet<String>, ApiError> {
         let mut seen = HashSet::new();
@@ -118,7 +121,7 @@ pub fn check(scene: &SceneFile, data_dir: &Path) -> Result<(), ApiError> {
         .chain(scene.spawns.iter().flat_map(|s| s.creatures.iter()));
     let mut handles = HashSet::new();
     for creature in all_creatures {
-        check_creature(creature, &anchors, data_dir)?;
+        check_creature(creature, &anchors)?;
         if !handles.insert(creature.handle.0.clone()) {
             return bad(format!("The handle {} is used twice.", creature.handle.0));
         }
@@ -247,25 +250,7 @@ pub fn map_path(map: Option<&str>) -> PathBuf {
         .join(format!("{}.obj", map.unwrap_or(DEFAULT_MAP)))
 }
 
-/// The stat block file for a monster id.
-pub fn monster_path(data_dir: &Path, monster: &str) -> Result<PathBuf, ApiError> {
-    if !monster
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '_')
-    {
-        return Err(error(
-            ErrorCode::BadScene,
-            format!("{monster} is not a valid stat block id."),
-        ));
-    }
-    Ok(data_dir.join("monsters").join(format!("{monster}.json")))
-}
-
-fn check_creature(
-    creature: &SceneCreature,
-    anchors: &HashSet<String>,
-    data_dir: &Path,
-) -> Result<(), ApiError> {
+fn check_creature(creature: &SceneCreature, anchors: &HashSet<String>) -> Result<(), ApiError> {
     let handle = &creature.handle.0;
     check_handle(handle)?;
     match (&creature.pregen, &creature.monster) {
@@ -273,12 +258,7 @@ fn check_creature(
             pregen::read(pregen).map_err(|m| error(ErrorCode::BadScene, m))?;
         }
         (None, Some(monster)) => {
-            if !monster_path(data_dir, monster)?.is_file() {
-                return Err(error(
-                    ErrorCode::BadScene,
-                    format!("Stat block {monster}: there is no such stat block."),
-                ));
-            }
+            monster::check(monster).map_err(|m| error(ErrorCode::BadScene, m))?;
         }
         _ => {
             return Err(error(
@@ -454,7 +434,7 @@ mod tests {
 
     fn check_value(value: serde_json::Value) -> Result<(), String> {
         let scene: SceneFile = serde_json::from_value(value).map_err(|e| e.to_string())?;
-        check(&scene, &data_dir()).map_err(|e| {
+        check(&scene).map_err(|e| {
             assert_eq!(e.code, ErrorCode::BadScene);
             e.message
         })

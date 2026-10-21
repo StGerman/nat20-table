@@ -70,8 +70,10 @@ pub struct SceneCreature {
     /// A pregenerated character id, e.g. `fighter_l2`. Set this or `monster`, not both.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pregen: Option<String>,
-    /// A stat block id under the engine's `monsters/`, e.g. `goblin_warrior`. Set this or
-    /// `pregen`, not both.
+    /// A stat block id in the core registry's `monsters/`. A short id such as `goblin_warrior`
+    /// means `nat20_core::monster.goblin_warrior`; a namespaced id such as
+    /// `nat20_demo::monster.mill_rat` names a block in another registry namespace as it
+    /// stands. Set this or `pregen`, not both.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub monster: Option<String>,
     /// Which side of a fight it is on.

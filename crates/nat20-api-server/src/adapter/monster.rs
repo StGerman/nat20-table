@@ -1,229 +1,260 @@
-//! Monster stat blocks loaded from JSON (see `data/monsters`).
+//! Monsters spawned from the stat blocks in core's `monsters/` registry.
 //!
-//! This is a deliberately small format covering what the demo needs. The
-//! long-term format belongs upstream in `assets/registries` and is a design
-//! call for the Nat20 maintainer, so it is kept here until that is agreed.
-
-use std::{collections::BTreeMap, fs, path::Path};
+//! Scene files name a stat block by a short id (`goblin_warrior`), which means
+//! `nat20_core::monster.goblin_warrior`; a namespaced id such as
+//! `nat20_demo::monster.mill_rat` names a block in our overlay and passes through
+//! (milestone 5 spec D10). Core checks the blocks when its registry loads.
 
 use nat20_core::hecs::Entity;
-use nat20_core::uom::si::{f32::Length, length::foot};
 use nat20_core::{
-    components::{
-        ability::{Ability, AbilityScoreMap},
-        ai::PlayerControlledTag,
-        faction::FactionSet,
-        health::hit_points::HitPoints,
-        id::{EffectId, FactionId, ItemId, Name},
-        items::{
-            equipment::{armor::ArmorTrainingSet, weapon::WeaponProficiencyMap},
-            inventory::ItemInstance,
-        },
-        level::{ChallengeRating, Level},
-        modifier::{FlatModifiable, ModifierSource},
-        proficiency::{Proficiency, ProficiencyLevel},
-        species::{CreatureSize, CreatureType},
-        speed::Speed,
-    },
+    components::{ai::PlayerControlledTag, id::MonsterId},
     engine::engine_state::EngineState,
-    entities::creature::Monster,
-    registry::{self, registry::ItemsRegistry},
+    registry::registry::MonstersRegistry,
     systems,
 };
-use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct MonsterDef {
-    pub id: String,
-    pub name: String,
-    pub source: String,
-    pub size: String,
-    pub creature_type: String,
-    pub challenge_rating: String,
-    pub proficiency_bonus: u8,
-    pub armor_class: i32,
-    pub hit_points: HitPointsDef,
-    pub speed_ft: f32,
-    pub abilities: BTreeMap<String, i32>,
-    pub factions: Vec<String>,
-    pub gear: Vec<String>,
-    #[serde(default)]
-    pub effects: Vec<String>,
-    #[serde(default)]
-    pub not_yet_supported: Vec<String>,
+/// The core id a scene file's monster id names, or why it names none.
+pub fn monster_id(monster: &str) -> Result<MonsterId, String> {
+    if monster.contains("::") {
+        return monster
+            .parse()
+            .map_err(|_| format!("{monster} is not a valid stat block id."));
+    }
+    if monster.is_empty()
+        || !monster
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+    {
+        return Err(format!("{monster} is not a valid stat block id."));
+    }
+    Ok(MonsterId::new(
+        "nat20_core",
+        format!("{}.{monster}", MonsterId::PREFIX),
+    ))
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct HitPointsDef {
-    pub average: u32,
-    pub dice: String,
+/// Checks that a scene file's monster id names a stat block in the registry.
+pub fn check(monster: &str) -> Result<(), String> {
+    let id = monster_id(monster)?;
+    if MonstersRegistry::get(&id).is_none() {
+        return Err(format!(
+            "Stat block {monster}: there is no such stat block."
+        ));
+    }
+    Ok(())
 }
 
-#[derive(Debug)]
-pub enum MonsterError {
-    Io(String),
-    Parse(String),
-    Invalid(String),
+/// Spawns the monster, unplaced. Nothing is left in the world if spawning fails.
+pub fn spawn(engine_state: &mut EngineState, monster: &str) -> Result<Entity, String> {
+    let id = monster_id(monster)?;
+    let entity = systems::monsters::spawn(engine_state, &id)
+        .map_err(|e| format!("Stat block {monster}: {e}."))?;
+    // The server runs monster turns with its own scripted policy, so the
+    // engine's built-in random AI must not act for this creature.
+    if let Err(e) = engine_state.world.insert_one(entity, PlayerControlledTag) {
+        let _ = engine_state.despawn(entity);
+        return Err(format!("Stat block {monster}: {e}."));
+    }
+    Ok(entity)
 }
 
-impl std::fmt::Display for MonsterError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MonsterError::Io(e) => write!(f, "could not read monster file: {e}"),
-            MonsterError::Parse(e) => write!(f, "could not parse monster file: {e}"),
-            MonsterError::Invalid(e) => write!(f, "invalid monster: {e}"),
-        }
-    }
-}
+#[cfg(test)]
+mod tests {
+    //! The stat-block guard (milestone 5 spec §9): each monster the demo fights is spawned
+    //! from core's registry and what the engine derives is compared with a numbers-only
+    //! excerpt of its SRD 5.2.1 stat block, so a typo or a wrong item fails here.
 
-impl MonsterDef {
-    pub fn load(path: &Path) -> Result<Self, MonsterError> {
-        let text = fs::read_to_string(path).map_err(|e| MonsterError::Io(e.to_string()))?;
-        serde_json::from_str(&text).map_err(|e| MonsterError::Parse(e.to_string()))
-    }
+    use std::{collections::BTreeMap, path::Path};
 
-    /// Nat20 only supports whole-number challenge ratings. Fractional CRs are
-    /// rounded up to 1, which keeps the proficiency bonus right (+2 for every
-    /// CR up to 4) but makes the engine's XP value wrong.
-    fn engine_challenge_rating(&self) -> Result<ChallengeRating, MonsterError> {
-        let cr = match self.challenge_rating.as_str() {
-            "0" | "1/8" | "1/4" | "1/2" => 1,
-            other => other
-                .parse::<u8>()
-                .map_err(|_| MonsterError::Invalid(format!("bad challenge_rating {other}")))?,
-        };
-        let cr = ChallengeRating::new(cr);
-        if cr.proficiency_bonus() != self.proficiency_bonus {
-            return Err(MonsterError::Invalid(format!(
-                "proficiency_bonus {} but challenge rating {} gives {}",
-                self.proficiency_bonus,
-                self.challenge_rating,
-                cr.proficiency_bonus()
-            )));
-        }
-        Ok(cr)
+    use nat20_core::uom::si::length::foot;
+    use nat20_core::{
+        components::{
+            ability::{Ability, AbilityScoreMap},
+            health::hit_points::HitPoints,
+            items::equipment::{slots::EquipmentSlot, weapon::WeaponProficiencyMap},
+            level::{ChallengeRating, Level},
+            modifier::FlatModifiable,
+        },
+        engine::engine_state::EngineState,
+        systems,
+    };
+    use serde::Deserialize;
+
+    use super::*;
+    use crate::adapter::{game::load_geometry, sheet};
+
+    #[derive(Deserialize)]
+    struct Excerpt {
+        monsters: Vec<Block>,
     }
 
-    fn ability_scores(&self) -> Result<AbilityScoreMap, MonsterError> {
-        let get = |name: &str| {
-            self.abilities
-                .get(name)
-                .copied()
-                .ok_or_else(|| MonsterError::Invalid(format!("missing ability {name}")))
-        };
-        Ok(AbilityScoreMap::from([
-            (Ability::Strength, get("strength")?),
-            (Ability::Dexterity, get("dexterity")?),
-            (Ability::Constitution, get("constitution")?),
-            (Ability::Intelligence, get("intelligence")?),
-            (Ability::Wisdom, get("wisdom")?),
-            (Ability::Charisma, get("charisma")?),
-        ]))
+    #[derive(Deserialize)]
+    struct Block {
+        id: String,
+        armor_class: i32,
+        hit_points: u32,
+        speed_ft: f32,
+        challenge_rating: String,
+        experience: u32,
+        proficiency_bonus: u8,
+        abilities: BTreeMap<String, i32>,
+        attacks: Vec<Attack>,
     }
 
-    fn size(&self) -> Result<CreatureSize, MonsterError> {
-        serde_json::from_value(serde_json::Value::String(self.size.clone()))
-            .map_err(|_| MonsterError::Invalid(format!("unknown size {}", self.size)))
+    #[derive(Deserialize)]
+    struct Attack {
+        name: String,
+        /// `melee` or `ranged`: the hand the weapon is held in.
+        hand: String,
+        to_hit: i8,
+        /// `NdM + K`, the damage dice and the flat bonus.
+        damage: String,
+        damage_type: String,
     }
 
-    fn creature_type(&self) -> Result<CreatureType, MonsterError> {
-        serde_json::from_value(serde_json::Value::String(self.creature_type.clone()))
-            .map_err(|_| MonsterError::Invalid(format!("unknown type {}", self.creature_type)))
+    const ABILITIES: [(&str, Ability); 6] = [
+        ("strength", Ability::Strength),
+        ("dexterity", Ability::Dexterity),
+        ("constitution", Ability::Constitution),
+        ("intelligence", Ability::Intelligence),
+        ("wisdom", Ability::Wisdom),
+        ("charisma", Ability::Charisma),
+    ];
+
+    /// The lowest and highest totals of `NdM + K`.
+    fn damage_range(damage: &str) -> (i32, i32) {
+        let (dice, flat) = damage.split_once('+').unwrap_or((damage, "0"));
+        let (count, size) = dice.trim().split_once('d').expect("NdM");
+        let (count, size): (i32, i32) = (count.parse().unwrap(), size.parse().unwrap());
+        let flat: i32 = flat.trim().parse().unwrap();
+        (count + flat, count * size + flat)
     }
 
-    /// Spawns the monster and checks the engine agrees with the stat block on
-    /// AC and proficiency bonus, so a silent data drift fails loudly.
-    pub fn spawn(&self, engine_state: &mut EngineState) -> Result<Entity, MonsterError> {
-        let factions: FactionSet = self
-            .factions
-            .iter()
-            .map(|f| {
-                f.parse::<FactionId>()
-                    .map_err(|e| MonsterError::Invalid(format!("faction {f}: {e:?}")))
-            })
-            .collect::<Result<_, _>>()?;
-
-        let monster = Monster::new(
-            Name::new(self.name.clone()),
-            registry::ai::RANDOM_CONTROLLER_ID.clone(),
-            self.engine_challenge_rating()?,
-            HitPoints::new(self.hit_points.average),
-            self.size()?,
-            self.creature_type()?,
-            Speed::new(Length::new::<foot>(self.speed_ft)),
-            self.ability_scores()?,
-            factions,
-        );
-        let entity = engine_state.world.spawn(monster);
-        // The engine outlives a refused scene load, so a monster that fails a check leaves it.
-        self.equip(engine_state, entity).inspect_err(|_| {
-            let _ = engine_state.despawn(entity);
-        })?;
-        Ok(entity)
+    fn excerpt() -> Excerpt {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/srd-5.2.1-monsters.json");
+        serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
     }
 
-    /// Gear, effects and the stat-block checks for a freshly spawned monster.
-    fn equip(&self, engine_state: &mut EngineState, entity: Entity) -> Result<(), MonsterError> {
-        // The server runs monster turns with its own scripted policy, so the
-        // engine's built-in random AI must not act for this creature.
-        engine_state
-            .world
-            .insert_one(entity, PlayerControlledTag)
-            .map_err(|e| MonsterError::Invalid(e.to_string()))?;
+    #[test]
+    fn every_demo_monster_matches_its_srd_stat_block() {
+        let blocks = excerpt().monsters;
+        assert_eq!(blocks.len(), 4);
+        let mut engine = EngineState::new(load_geometry(None));
+        for block in blocks {
+            let name = &block.id;
+            let entity = spawn(&mut engine, name).unwrap_or_else(|e| panic!("{e}"));
+            let world = &engine.world;
 
-        for item in &self.gear {
-            let item_id: ItemId = item
-                .parse()
-                .map_err(|e| MonsterError::Invalid(format!("item {item}: {e:?}")))?;
-            // Monsters are proficient with all their gear.
-            match ItemsRegistry::get(&item_id) {
-                Some(ItemInstance::Armor(armor)) => {
-                    systems::helpers::get_component_mut::<ArmorTrainingSet>(
-                        &mut engine_state.world,
-                        entity,
-                    )
-                    .insert(armor.armor_type.clone());
-                }
-                Some(ItemInstance::Weapon(weapon)) => {
-                    systems::helpers::get_component_mut::<WeaponProficiencyMap>(
-                        &mut engine_state.world,
-                        entity,
-                    )
-                    .set_proficiency(
-                        weapon.category().clone(),
-                        Proficiency::new(ProficiencyLevel::Proficient, ModifierSource::None),
-                    );
-                }
-                Some(_) => {}
-                None => return Err(MonsterError::Invalid(format!("unknown item {item}"))),
-            }
-            systems::loadout::equip(engine_state, entity, &item_id)
-                .map_err(|e| MonsterError::Invalid(format!("equip {item}: {e:?}")))?;
-        }
-
-        for effect in &self.effects {
-            let effect_id: EffectId = effect
-                .parse()
-                .map_err(|e| MonsterError::Invalid(format!("effect {effect}: {e:?}")))?;
-            systems::effects::add_permanent_effect(
-                engine_state,
-                entity,
-                effect_id,
-                &ModifierSource::Custom(format!("{} stat block", self.name)),
-                None,
+            assert_eq!(
+                systems::loadout::armor_class(&engine, entity).total(),
+                block.armor_class,
+                "{name} AC"
             );
+            let hit_points = systems::helpers::get_component::<HitPoints>(world, entity);
+            assert_eq!(
+                (hit_points.current(), hit_points.max()),
+                (block.hit_points, block.hit_points),
+                "{name} HP"
+            );
+            drop(hit_points);
+            let speed = systems::movement::speed(&engine, entity)
+                .total_speed()
+                .get::<foot>()
+                .round();
+            assert_eq!(speed, block.speed_ft, "{name} speed");
+
+            let scores = systems::helpers::get_component::<AbilityScoreMap>(world, entity);
+            for (word, ability) in ABILITIES {
+                assert_eq!(
+                    scores.get(&ability).total(),
+                    block.abilities[word],
+                    "{name} {word}"
+                );
+            }
+            drop(scores);
+
+            let challenge_rating =
+                systems::helpers::get_component::<ChallengeRating>(world, entity);
+            assert_eq!(
+                challenge_rating.to_string(),
+                block.challenge_rating,
+                "{name} CR"
+            );
+            assert_eq!(challenge_rating.experience(), block.experience, "{name} XP");
+            assert_eq!(
+                challenge_rating.proficiency_bonus(),
+                block.proficiency_bonus,
+                "{name} PB"
+            );
+            drop(challenge_rating);
+
+            for attack in &block.attacks {
+                let slot = match attack.hand.as_str() {
+                    "melee" => EquipmentSlot::MeleeMainHand,
+                    "ranged" => EquipmentSlot::RangedMainHand,
+                    other => panic!("{name} {}: unknown hand {other}", attack.name),
+                };
+                let loadout = systems::loadout::loadout(world, entity);
+                let weapon = loadout
+                    .weapon_in_hand(&slot)
+                    .unwrap_or_else(|| panic!("{name} holds no {}", attack.name));
+                assert_eq!(weapon.item().name, attack.name, "{name} {:?}", slot);
+                let mut check = weapon.attack_roll(
+                    &systems::helpers::get_component::<AbilityScoreMap>(world, entity),
+                    &systems::helpers::get_component::<WeaponProficiencyMap>(world, entity)
+                        .proficiency(weapon.category()),
+                );
+                check.merge_from(loadout.attack_roll_template(weapon.kind()));
+                let damage = loadout
+                    .weapon_damage_roll(world, entity, &slot)
+                    .min_max_rolls();
+                drop(loadout);
+
+                assert_eq!(
+                    sheet::bonus(&engine, entity, &check),
+                    attack.to_hit,
+                    "{name} {} to hit",
+                    attack.name
+                );
+                let [(min, max, damage_type)] = damage[..] else {
+                    panic!("{name} {}: {damage:?}", attack.name);
+                };
+                assert_eq!(
+                    (min, max),
+                    damage_range(&attack.damage),
+                    "{name} {} damage",
+                    attack.name
+                );
+                assert_eq!(
+                    format!("{damage_type:?}").to_lowercase(),
+                    attack.damage_type,
+                    "{name} {} damage type",
+                    attack.name
+                );
+            }
         }
+    }
 
-        let _ = systems::health::heal_full(&mut engine_state.world, entity);
+    #[test]
+    fn short_ids_name_core_blocks_and_namespaced_ids_pass_through() {
+        assert_eq!(
+            monster_id("wolf").unwrap(),
+            MonsterId::new("nat20_core", "monster.wolf")
+        );
+        assert_eq!(
+            monster_id("nat20_demo::monster.mill_rat").unwrap(),
+            MonsterId::new("nat20_demo", "monster.mill_rat")
+        );
+        assert!(monster_id("../wolf").is_err());
+        assert!(monster_id("nat20_demo::item.wolf_bite").is_err());
+    }
 
-        let engine_ac = systems::loadout::armor_class(engine_state, entity).total();
-        if engine_ac != self.armor_class {
-            return Err(MonsterError::Invalid(format!(
-                "{}: engine AC {engine_ac} does not match stat block AC {}",
-                self.name, self.armor_class
-            )));
-        }
-
-        Ok(())
+    #[test]
+    fn an_unknown_monster_leaves_no_entity() {
+        let mut engine = EngineState::new(load_geometry(None));
+        let before = engine.world.len();
+        assert!(check("goblin_king").is_err());
+        assert!(spawn(&mut engine, "goblin_king").is_err());
+        assert_eq!(engine.world.len(), before);
     }
 }

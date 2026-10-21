@@ -59,13 +59,10 @@ fn duel() -> Api {
     Api::new(Server::new())
 }
 
-/// A data folder with the Goblin Warrior stat block and the given scene files.
+/// A data folder with the given scene files. Stat blocks come from core's registry.
 fn data_dir(name: &str, scenes: &[(&str, Value)]) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("nat20_table_{name}_{}", std::process::id()));
-    std::fs::create_dir_all(dir.join("monsters")).unwrap();
     std::fs::create_dir_all(dir.join("scenes")).unwrap();
-    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("data/monsters/goblin_warrior.json");
-    std::fs::copy(source, dir.join("monsters/goblin_warrior.json")).unwrap();
     for (id, scene) in scenes {
         std::fs::write(dir.join(format!("scenes/{id}.json")), scene.to_string()).unwrap();
     }
@@ -369,23 +366,17 @@ fn bad_scenes_are_rejected_and_change_nothing() {
 }
 
 #[test]
-fn monster_with_the_wrong_proficiency_bonus_is_rejected() {
+fn a_monster_with_no_stat_block_is_rejected() {
     let dir = data_dir(
         "pb",
         &[(
             "pb",
             json!({ "id": "pb", "creatures": [
                 creature("bren", ("pregen", "fighter_l2"), "party", 0.0),
-                creature("goblin", ("monster", "bad_goblin"), "hostile", 5.0)
+                creature("goblin", ("monster", "goblin_king"), "hostile", 5.0)
             ] }),
         )],
     );
-    let mut goblin: Value = serde_json::from_str(
-        &std::fs::read_to_string(dir.join("monsters/goblin_warrior.json")).unwrap(),
-    )
-    .unwrap();
-    goblin["proficiency_bonus"] = json!(3);
-    std::fs::write(dir.join("monsters/bad_goblin.json"), goblin.to_string()).unwrap();
 
     let mut api = Api::new(Server::with_data_dir(dir.clone()));
     let response = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "pb" }));
@@ -395,7 +386,7 @@ fn monster_with_the_wrong_proficiency_bonus_is_rejected() {
     assert_eq!(player["error"]["code"], "bad_scene", "{player}");
     let message = player["error"]["message"].as_str().unwrap();
     assert!(
-        !message.contains("proficiency") && !message.chars().any(|c| c.is_ascii_digit()),
+        !message.contains("goblin_king") && !message.chars().any(|c| c.is_ascii_digit()),
         "{player}"
     );
     assert_eq!(response["error"]["code"], "bad_scene", "{response}");
@@ -403,7 +394,7 @@ fn monster_with_the_wrong_proficiency_bonus_is_rejected() {
         response["error"]["message"]
             .as_str()
             .unwrap()
-            .contains("proficiency_bonus"),
+            .contains("Stat block goblin_king: there is no such stat block."),
         "{response}"
     );
 }
@@ -1398,7 +1389,7 @@ fn spawn_creatures_are_checked_when_their_scene_loads() {
             (
                 "bad_block",
                 json!({ "id": "bad_block", "creatures": [bren.clone()],
-                    "spawns": spawn(creature("goblin", ("monster", "bad_goblin"), "hostile", 5.0)) }),
+                    "spawns": spawn(creature("goblin", ("monster", "goblin_king"), "hostile", 5.0)) }),
             ),
             // Bren is hostile to the goblin, so it cannot arrive on the party side.
             (
@@ -1407,23 +1398,12 @@ fn spawn_creatures_are_checked_when_their_scene_loads() {
             ),
         ],
     );
-    let mut goblin_block: Value = serde_json::from_str(
-        &std::fs::read_to_string(dir.join("monsters/goblin_warrior.json")).unwrap(),
-    )
-    .unwrap();
-    goblin_block["proficiency_bonus"] = json!(3);
-    std::fs::write(
-        dir.join("monsters/bad_goblin.json"),
-        goblin_block.to_string(),
-    )
-    .unwrap();
-
     let mut api = Api::new(Server::with_data_dir(dir.clone()));
     let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "start" }));
     assert_eq!(loaded["ok"], true, "{loaded}");
     let refused = [
         ("clash", json!(["bren"]), "carried in"),
-        ("bad_block", json!([]), "proficiency_bonus"),
+        ("bad_block", json!([]), "no such stat block"),
         ("turncoat", json!([]), "goblin"),
     ]
     .map(|(id, party, why)| {

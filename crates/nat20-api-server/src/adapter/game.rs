@@ -6,10 +6,7 @@
 //! copies new engine events into the log, and runs scripted creatures until a client decision
 //! is needed.
 
-use std::{
-    collections::{BTreeSet, HashMap, HashSet},
-    path::Path,
-};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use nat20_api_contract::{
     ActionCost, ActionOption, Aim, Anchor, ApiError, AreaAim, AreaShape as WireAreaShape,
@@ -65,8 +62,7 @@ use crate::{
         events::{
             HpTracker, LogWriter, Pending, RollKeys, combat_over, concentrating_on, wire_life_state,
         },
-        monster::MonsterDef,
-        names, pregen, sheet,
+        monster, names, pregen, sheet,
     },
     errors::{error, rejected},
     scene,
@@ -104,8 +100,6 @@ struct Scene {
     spawns: Vec<Spawn>,
     /// Spawns already placed in this scene; each is placed at most once.
     placed: BTreeSet<String>,
-    /// Stat blocks of the spawns' monsters, read with the scene.
-    monsters: HashMap<String, MonsterDef>,
     /// Pregen files of the spawns' characters, read with the scene.
     pregens: HashMap<String, PregenFile>,
 }
@@ -227,7 +221,6 @@ impl Game {
         previous: Option<Game>,
         scene: &SceneFile,
         party: &[Handle],
-        data_dir: &Path,
     ) -> Result<Self, (Option<Game>, ApiError)> {
         let fail = |previous, e| Err((previous, e));
         if scene.creatures.is_empty() && party.is_empty() {
@@ -274,9 +267,8 @@ impl Game {
                 ),
             );
         }
-        // Stat blocks and pregen files are read before anything is spawned, the spawns' with
-        // the scene's own.
-        let mut monsters = HashMap::new();
+        // Pregen files are read and stat block ids checked before anything is spawned, the
+        // spawns' with the scene's own.
         let mut pregens = HashMap::new();
         for def in scene_defs() {
             if let Some(id) = &def.pregen
@@ -288,17 +280,9 @@ impl Game {
                 };
             }
             if let Some(monster) = &def.monster
-                && !monsters.contains_key(monster)
+                && let Err(m) = monster::check(monster)
             {
-                let loaded = scene::monster_path(data_dir, monster).and_then(|path| {
-                    MonsterDef::load(&path).map_err(|e| {
-                        error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))
-                    })
-                });
-                match loaded {
-                    Ok(loaded) => monsters.insert(monster.clone(), loaded),
-                    Err(e) => return fail(previous, e),
-                };
+                return fail(previous, error(ErrorCode::BadScene, m));
             }
         }
 
@@ -340,7 +324,7 @@ impl Game {
             game.global_seen = game.engine.event_log.events.len();
         };
         for def in &scene.creatures {
-            match spawn_creature(&mut game.engine, def, &monsters, &pregens) {
+            match spawn_creature(&mut game.engine, def, &pregens) {
                 Ok(entity) => spawned.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -359,7 +343,7 @@ impl Game {
         let mut trial: Vec<SceneCreature> = Vec::new();
         let mut failed = None;
         for def in scene.spawns.iter().flat_map(|s| &s.creatures) {
-            match spawn_creature(&mut game.engine, def, &monsters, &pregens) {
+            match spawn_creature(&mut game.engine, def, &pregens) {
                 Ok(entity) => trial.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -476,7 +460,6 @@ impl Game {
             attempted: HashSet::new(),
             spawns: scene.spawns.clone(),
             placed: BTreeSet::new(),
-            monsters,
             pregens,
         };
         game.scene_encounter = None;
@@ -505,7 +488,6 @@ impl Game {
                 attempted: HashSet::new(),
                 spawns: Vec::new(),
                 placed: BTreeSet::new(),
-                monsters: HashMap::new(),
                 pregens: HashMap::new(),
             },
             encounter: None,
@@ -1642,12 +1624,7 @@ impl Game {
         let mut new: Vec<SceneCreature> = Vec::new();
         let mut failed = None;
         for def in spawns.iter().flat_map(|s| &s.creatures) {
-            match spawn_creature(
-                &mut self.engine,
-                def,
-                &self.scene.monsters,
-                &self.scene.pregens,
-            ) {
+            match spawn_creature(&mut self.engine, def, &self.scene.pregens) {
                 Ok(entity) => new.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -3398,16 +3375,15 @@ pub(super) fn load_geometry(map: Option<&str>) -> WorldGeometry {
 fn spawn_creature(
     engine: &mut EngineState,
     def: &nat20_api_contract::SceneCreature,
-    monsters: &HashMap<String, MonsterDef>,
     pregens: &HashMap<String, PregenFile>,
 ) -> Result<Entity, ApiError> {
     match (&def.pregen, &def.monster) {
         (Some(pregen), None) => {
             pregen::spawn(engine, &pregens[pregen]).map_err(|m| error(ErrorCode::BadScene, m))
         }
-        (None, Some(monster)) => monsters[monster]
-            .spawn(engine)
-            .map_err(|e| error(ErrorCode::BadScene, format!("Stat block {monster}: {e}."))),
+        (None, Some(monster)) => {
+            monster::spawn(engine, monster).map_err(|m| error(ErrorCode::BadScene, m))
+        }
         _ => Err(error(
             ErrorCode::BadScene,
             format!("{} needs exactly one of pregen or monster.", def.handle.0),
@@ -3696,18 +3672,9 @@ fn life_state_of(engine: &EngineState, entity: Entity) -> nat20_api_contract::Li
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::path::Path;
 
-    #[test]
-    fn a_monster_that_fails_its_checks_leaves_no_entity() {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("data/monsters/goblin_warrior.json");
-        let mut goblin = MonsterDef::load(&path).unwrap();
-        goblin.armor_class += 1;
-        let mut engine = EngineState::new(load_geometry(None));
-        let before = engine.world.len();
-        assert!(goblin.spawn(&mut engine).is_err());
-        assert_eq!(engine.world.len(), before);
-    }
+    use super::*;
 
     /// A fighter's failed stabilize out of combat opens Tactical Mind while the Help is still
     /// acting; the engine waits on that window, which is declined, instead of ticking on.
@@ -3717,7 +3684,7 @@ mod tests {
         let scene = scene::read(&data, "help_yard").unwrap();
         // With seed 5 Ana's first DC 10 Medicine check fails.
         crate::adapter::seed_dice(5);
-        let Ok(mut game) = Game::load(None, &scene, &[], &data) else {
+        let Ok(mut game) = Game::load(None, &scene, &[]) else {
             panic!("help_yard loads");
         };
         let fall = CheckSpec::Scenario {

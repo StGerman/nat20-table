@@ -76,7 +76,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.27"
+    "version": "1.0.0-dev.28"
   },
   "$defs": {
     "Ability": {
@@ -590,7 +590,7 @@
           "$ref": "#/$defs/Handle"
         },
         "monster": {
-          "description": "A stat block id under the engine's `monsters/`, e.g. `goblin_warrior`. Set this or\n`pregen`, not both.",
+          "description": "A stat block id in the core registry's `monsters/`. A short id such as `goblin_warrior`\nmeans `nat20_core::monster.goblin_warrior`; a namespaced id such as\n`nat20_demo::monster.mill_rat` names a block in another registry namespace as it\nstands. Set this or `pregen`, not both.",
           "type": [
             "string",
             "null"

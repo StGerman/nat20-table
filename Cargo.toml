@@ -23,8 +23,10 @@ nat20-api-contract = { path = "crates/nat20-api-contract" }
 # #40 and #41, config and lockfile only) plus core #43 (Potion of Healing, a consumable item),
 # the head of that open PR until it merges. 3145e32 = demo e9ade31 (core #43 merged, core #42
 # hecs 0.11.2, core #44 fractional challenge rating) plus core #49 (unarmoured Armor Class counts
-# the Dexterity modifier), the head of that open PR until it merges.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "3145e327e192c432e0fb2558b8bc416c789b8374" }
+# the Dexterity modifier), the head of that open PR until it merges. 9823766 = demo e9ade31
+# plus core #45 to #50 (Milestone 5: monster registry, Goblin Boss, Wolf, Giant Rat, Advantage
+# cancelling, Prone, monster traits) and #49, core #50's head until the stack merges.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "98237661a6c57af7cc2d186297143d28b4fe36ef" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
