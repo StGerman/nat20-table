@@ -12,13 +12,14 @@ use std::{
 };
 
 use nat20_api_contract::{
-    ActionCost, ActionOption, Anchor, ApiError, CheckSpec, CheckTest, CheckView, CombatOverReason,
-    ConcentrationEndReason, Condition, Consequence, Control, CreatureFull, DcSource, Encounter,
-    EncounterView, EndCombatReason, ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand,
-    HelpSpec, HitDiceSpend, HitPointsRegained, Mode, MoveTarget, OptionId, OptionVariant,
-    Placement, PointFt, PregenFile, ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile,
-    Sheet, Side, Spawn, SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger,
-    TargetCandidate, Targeting, UnavailableOption, Visibility,
+    ActionCost, ActionOption, Aim, Anchor, ApiError, AreaAim, AreaShape as WireAreaShape,
+    CheckSpec, CheckTest, CheckView, CombatOverReason, ConcentrationEndReason, Condition,
+    Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
+    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec, HitDiceSpend,
+    HitPointsRegained, Mode, MoveTarget, OptionArea, OptionId, OptionVariant, Placement, PointFt,
+    PregenFile, ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn,
+    SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate,
+    Targeting, UnavailableOption, Visibility,
 };
 use nat20_core::hecs::{self, Entity};
 use nat20_core::parry3d::na::Point3;
@@ -27,7 +28,7 @@ use nat20_core::{
         actions::{
             action::ActionCooldownMap,
             action_builder::{ActionBuilder, ActionBuilderState, ReactionBuilder},
-            targeting::{LineOfSight, TargetInstance, TargetingKind},
+            targeting::{AreaShape, LineOfSight, TargetInstance, TargetingKind},
         },
         activity::{Activity, ActivityState},
         d20::D20CheckDC,
@@ -137,6 +138,15 @@ pub enum Wait {
 }
 
 /// One option at an action prompt and the engine action behind it.
+/// What `pick_option` finds: the option, its variant, the targets' entities (for an area, the
+/// creatures it catches) and an area option's aim.
+type Picked = (
+    OptionEntry,
+    Option<ActionVariantId>,
+    Vec<Entity>,
+    Option<TargetInstance>,
+);
+
 struct OptionEntry {
     option: ActionOption,
     action_id: ActionId,
@@ -193,6 +203,9 @@ pub struct Game {
     /// Each creature's conditions and lasting effects when the log last caught up, so their
     /// changes are logged though core logs none.
     shown: HashMap<Entity, conditions::Snapshot>,
+    /// The creatures the area option being submitted catches, so its `action` entry names them
+    /// even when the area kills some before the log is written.
+    area_caught: Vec<Entity>,
     /// The highest round of this scene's fights whose round spawns were looked at, so each
     /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
@@ -507,6 +520,7 @@ impl Game {
             flags: BTreeSet::new(),
             concentrating: HashMap::new(),
             shown: HashMap::new(),
+            area_caught: Vec::new(),
             spawn_round: 0,
             stalls: 0,
         }
@@ -1032,6 +1046,7 @@ impl Game {
             keys: &mut self.keys,
             initiative: Vec::new(),
             concentration: Default::default(),
+            area_targets: &self.area_caught,
         };
         let mut entries = Vec::new();
         for event in self.engine.event_log.events.iter().skip(self.global_seen) {
@@ -1320,6 +1335,7 @@ impl Game {
             keys: &mut self.keys,
             initiative: Vec::new(),
             concentration: Default::default(),
+            area_targets: &[],
         }
     }
 
@@ -2055,21 +2071,31 @@ impl Game {
         actor: &str,
         option_id: &str,
         targets: &[String],
+        aim: Option<&Aim>,
         variant: Option<&str>,
     ) -> Result<(), ApiError> {
         let entity = self.entity(actor)?;
         self.require_action_prompt(entity)?;
-        let (option, variant, target_entities) =
-            self.pick_option(entity, actor, option_id, targets, variant)?;
-        self.submit_entity(
+        let (option, variant, target_entities, area) =
+            self.pick_option(entity, actor, option_id, targets, aim, variant)?;
+        if area.is_some() {
+            self.area_caught.clone_from(&target_entities);
+        }
+        let submitted = self.submit_entity(
             entity,
             &option.action_id,
             variant.as_ref(),
             option.context,
             &target_entities,
-        )?;
+            area,
+        );
+        if submitted.is_err() {
+            self.area_caught.clear();
+        }
+        submitted?;
         self.settle();
         self.drain();
+        self.area_caught.clear();
         self.advance();
         Ok(())
     }
@@ -2082,6 +2108,7 @@ impl Game {
         actor: &str,
         option_id: &str,
         targets: &[String],
+        aim: Option<&Aim>,
         variant: Option<&str>,
     ) -> Result<(), ApiError> {
         let entity = self.entity(actor)?;
@@ -2093,8 +2120,8 @@ impl Game {
                 format!("{actor} is down and cannot act."),
             ));
         }
-        let (option, variant, target_entities) = self.as_if_next_turn(entity, |game| {
-            game.pick_option(entity, actor, option_id, targets, variant)
+        let (option, variant, target_entities, area) = self.as_if_next_turn(entity, |game| {
+            game.pick_option(entity, actor, option_id, targets, aim, variant)
         })?;
         // Acting on an enemy starts a fight, and a fight starts only with start_combat, so
         // Initiative and surprise come from the scene.
@@ -2124,31 +2151,41 @@ impl Game {
             ));
         }
         self.next_explore_turn(entity);
-        self.submit_entity(
+        if area.is_some() {
+            self.area_caught.clone_from(&target_entities);
+        }
+        let submitted = self.submit_entity(
             entity,
             &option.action_id,
             variant.as_ref(),
             option.context,
             &target_entities,
-        )?;
+            area,
+        );
+        if submitted.is_err() {
+            self.area_caught.clear();
+        }
+        submitted?;
         // An explore command that acts closes a finished fight's `combat_over`, as `move` does.
         self.close_finished_fight();
         self.settle();
         self.decline_explore_reactions();
         self.drain();
+        self.area_caught.clear();
         Ok(())
     }
 
     /// The option `option_id` among `entity`'s options now, the variant asked for, and the
-    /// targets' entities.
+    /// targets' entities. For an area option, the creatures its aim catches and the aim itself.
     fn pick_option(
         &mut self,
         entity: Entity,
         actor: &str,
         option_id: &str,
         targets: &[String],
+        aim: Option<&Aim>,
         variant: Option<&str>,
-    ) -> Result<(OptionEntry, Option<ActionVariantId>, Vec<Entity>), ApiError> {
+    ) -> Result<Picked, ApiError> {
         let target_entities = targets
             .iter()
             .map(|t| self.entity(t))
@@ -2202,7 +2239,87 @@ impl Game {
                     .clone(),
             ),
         };
-        Ok((option, variant, target_entities))
+        if option.option.targeting != Targeting::Area {
+            if aim.is_some() {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{option_id} is not an area option; send targets, not an aim."),
+                ));
+            }
+            return Ok((option, variant, target_entities, None));
+        }
+        if !targets.is_empty() {
+            return Err(rejected(
+                RejectReason::InvalidTarget,
+                format!("{option_id} is aimed with aim, not targets."),
+            ));
+        }
+        let Some(aim) = aim else {
+            return Err(rejected(
+                RejectReason::NeedsPoint,
+                format!(
+                    "{option_id} needs an aim: a creature, an anchor or a point; see area.aims in legal_actions."
+                ),
+            ));
+        };
+        let target = self.aim_target(aim)?;
+        let catches = {
+            let engine = &mut self.engine;
+            let mut builder = ActionBuilder::available(engine, entity);
+            builder.action(engine, &option.action_id);
+            if let Some(variant) = &variant {
+                builder.variant(&engine.world, variant);
+            }
+            if pick_context(&mut builder, &engine.world, option.context) {
+                area_catches(engine, &mut builder, target.clone())
+            } else {
+                Some(Vec::new())
+            }
+        };
+        let Some(catches) = catches else {
+            return Err(rejected(
+                RejectReason::OutOfRange,
+                format!(
+                    "That aim is beyond {option_id}'s range of {} feet; aim closer.",
+                    option.option.range_ft.unwrap_or(0.0)
+                ),
+            ));
+        };
+        if catches.is_empty() {
+            return Err(rejected(
+                RejectReason::AreaEmpty,
+                format!(
+                    "That aim of {option_id} catches no creature, so nothing was spent; see area.aims in legal_actions."
+                ),
+            ));
+        }
+        Ok((option, variant, catches, Some(target)))
+    }
+
+    /// The engine target an aim names: a creature, or a point for an anchor or a point.
+    fn aim_target(&self, aim: &Aim) -> Result<TargetInstance, ApiError> {
+        Ok(match aim {
+            Aim::Creature { handle } => TargetInstance::entity(EntityIdentifier::from_world(
+                &self.engine.world,
+                self.entity(&handle.0)?,
+            )),
+            Aim::Point { point } => TargetInstance::Point(to_core_point(*point)),
+            Aim::Anchor { anchor } => {
+                let Some(found) = self.scene.anchors.iter().find(|a| a.id == *anchor) else {
+                    let mut e = error(
+                        ErrorCode::UnknownAnchor,
+                        format!("Scene {} has no anchor {anchor}.", self.scene.id),
+                    );
+                    e.hint = Some(ErrorHint {
+                        legal_option_ids: Vec::new(),
+                        awaiting: None,
+                        known_ids: self.scene.anchors.iter().map(|a| a.id.clone()).collect(),
+                    });
+                    return Err(e);
+                };
+                TargetInstance::Point(to_core_point(found.position_ft))
+            }
+        })
     }
 
     /// The item's name when `option_id` is `use/<item>` for a known item `entity` no longer
@@ -2296,13 +2413,38 @@ impl Game {
     }
 
     /// Every option `entity` can take now, with the engine action and context behind each id.
-    /// Options with variants or an area target are not offered yet.
     fn options(&mut self, entity: Entity) -> Vec<OptionEntry> {
         let scene_entities: Vec<(String, Entity, Side)> = self
             .scene
             .creatures
             .iter()
             .map(|c| (c.handle.clone(), c.entity, c.side))
+            .collect();
+        // What an area can be aimed at: each other living creature, then each anchor.
+        let aims: Vec<(Aim, TargetInstance)> = scene_entities
+            .iter()
+            .filter(|(_, other, _)| {
+                *other != entity && life_state_name(&self.engine, *other) != "dead"
+            })
+            .map(|(handle, other, _)| {
+                (
+                    Aim::Creature {
+                        handle: Handle(handle.clone()),
+                    },
+                    TargetInstance::entity(EntityIdentifier::from_world(
+                        &self.engine.world,
+                        *other,
+                    )),
+                )
+            })
+            .chain(self.scene.anchors.iter().map(|a| {
+                (
+                    Aim::Anchor {
+                        anchor: a.id.clone(),
+                    },
+                    TargetInstance::Point(to_core_point(a.position_ft)),
+                )
+            }))
             .collect();
         let engine = &mut self.engine;
         let actions = match ActionBuilder::available(engine, entity).state() {
@@ -2334,6 +2476,7 @@ impl Game {
                 let mut usable: Vec<ActionVariantId> = Vec::new();
                 let mut targets: Vec<TargetCandidate> = Vec::new();
                 let mut shape = None;
+                let mut area = None;
                 for variant in &variant_ids {
                     let Some(builder) = start(engine, variant.as_ref()) else {
                         continue;
@@ -2353,10 +2496,46 @@ impl Game {
                         TargetingKind::Multiple { max_targets, .. } => {
                             (Targeting::Multiple, max_targets as u32)
                         }
-                        TargetingKind::Area { .. } => continue,
+                        TargetingKind::Area {
+                            shape: area_shape,
+                            fixed_on_actor,
+                            ..
+                        } => {
+                            let Some((wire_shape, size_m)) = wire_area_shape(&area_shape) else {
+                                continue;
+                            };
+                            if area.is_none() {
+                                let mut previews = Vec::new();
+                                for (aim, target) in &aims {
+                                    let Some(mut probe) = start(engine, variant.as_ref()) else {
+                                        continue;
+                                    };
+                                    let caught = area_catches(engine, &mut probe, target.clone())
+                                        .unwrap_or_default();
+                                    let catches: Vec<Handle> = scene_entities
+                                        .iter()
+                                        .filter(|(_, e, _)| caught.contains(e))
+                                        .map(|(h, _, _)| Handle(h.clone()))
+                                        .collect();
+                                    if !catches.is_empty() {
+                                        previews.push(AreaAim {
+                                            aim: aim.clone(),
+                                            catches,
+                                        });
+                                    }
+                                }
+                                area = Some(OptionArea {
+                                    shape: wire_shape,
+                                    size_ft: round_ft(size_m),
+                                    from_self: fixed_on_actor,
+                                    aims: previews,
+                                });
+                            }
+                            (Targeting::Area, 0)
+                        }
                     };
                     let mut found = Vec::new();
-                    if targeting != Targeting::OnSelf {
+                    if !matches!(targeting, Targeting::OnSelf | Targeting::Area) {
                         for (handle, other, side) in &scene_entities {
                             // A creature at 0 Hit Points stays a target: Help can stabilize it.
                             // The actor itself is a target only for an item it can drink.
@@ -2420,7 +2599,10 @@ impl Game {
                         cost: action_cost(&cost.map),
                         targeting,
                         max_targets,
-                        range_ft: (targeting != Targeting::OnSelf).then(|| round_ft(range_m)),
+                        range_ft: match &area {
+                            Some(area) => (!area.from_self).then(|| round_ft(range_m)),
+                            None => (targeting != Targeting::OnSelf).then(|| round_ft(range_m)),
+                        },
                         targets,
                         variants: usable
                             .iter()
@@ -2431,6 +2613,7 @@ impl Game {
                             .collect(),
                         spell: names::option_spell(context),
                         item: names::option_item(engine, entity, context),
+                        area,
                     },
                     action_id: action_id.clone(),
                     context: index,
@@ -2451,6 +2634,7 @@ impl Game {
         variant: Option<&ActionVariantId>,
         context: usize,
         targets: &[Entity],
+        area: Option<TargetInstance>,
     ) -> Result<(), ApiError> {
         let engine = &mut self.engine;
         let mut builder = ActionBuilder::available(engine, entity);
@@ -2486,6 +2670,8 @@ impl Game {
                 if action.targets.is_empty() {
                     builder.target_entity(engine, entity);
                 }
+            } else if let Some(area) = area {
+                builder.target(engine, area);
             } else {
                 if targets.is_empty() {
                     return Err(rejected(
@@ -2771,7 +2957,7 @@ impl Game {
         };
         if let Some((action_id, context, target)) = choice
             && self
-                .submit_entity(actor, &action_id, None, context, &[target])
+                .submit_entity(actor, &action_id, None, context, &[target], None)
                 .is_ok()
         {
             self.scripted_turn = Some((round, actor, taken + 1));
@@ -2995,6 +3181,7 @@ impl Game {
             keys: &mut self.keys,
             initiative,
             concentration: Default::default(),
+            area_targets: &self.area_caught,
         };
 
         let mut entries = Vec::new();
@@ -3069,6 +3256,7 @@ impl Game {
             keys: &mut self.keys,
             initiative: Vec::new(),
             concentration: Default::default(),
+            area_targets: &[],
         };
         let entries: Vec<Pending> = encounter
             .initiative_order()
@@ -3103,6 +3291,7 @@ impl Game {
             keys: &mut self.keys,
             initiative: Vec::new(),
             concentration: Default::default(),
+            area_targets: &[],
         };
         let entries: Vec<Pending> = encounter
             .initiative_order()
@@ -3220,6 +3409,44 @@ fn check_sides(engine: &EngineState, creatures: &[SceneCreature]) -> Result<(), 
 }
 
 /// Contract points are feet with `z_ft` up; core works in metres with `y` up.
+/// The creatures an area option would catch aimed at `target`, allies included; `None` when the
+/// aim is beyond the option's range from where the actor stands. `builder` stands at the
+/// option's targets.
+fn area_catches(
+    engine: &mut EngineState,
+    builder: &mut ActionBuilder,
+    target: TargetInstance,
+) -> Option<Vec<Entity>> {
+    builder.target(engine, target);
+    match builder.state() {
+        Ok(ActionBuilderState::Targets {
+            action,
+            path_to_target: None | Some(TargetPathFindingResult::AlreadyInRange(_)),
+        }) => Some(systems::actions::get_targeted_entities(
+            engine, action, None,
+        )),
+        _ => None,
+    }
+}
+
+/// An area's wire shape and its size in metres (see `OptionArea::size_ft`); `None` for a shape
+/// the wire does not name (the capsule core uses for a free space, as Misty Step's).
+fn wire_area_shape(shape: &AreaShape) -> Option<(WireAreaShape, f32)> {
+    use uom::si::length::meter;
+    Some(match shape {
+        AreaShape::Cone { length, .. } => (WireAreaShape::Cone, length.get::<meter>()),
+        AreaShape::Sphere { radius } => (WireAreaShape::Sphere, radius.get::<meter>()),
+        AreaShape::Cube { side_length } => (WireAreaShape::Cube, side_length.get::<meter>()),
+        AreaShape::Cylinder { radius, .. } => (WireAreaShape::Cylinder, radius.get::<meter>()),
+        // A line as wide as it is long is a cube from the actor (Thunderwave).
+        AreaShape::Line { length, width } if length == width => {
+            (WireAreaShape::Cube, length.get::<meter>())
+        }
+        AreaShape::Line { length, .. } => (WireAreaShape::Line, length.get::<meter>()),
+        AreaShape::Capsule { .. } => return None,
+    })
+}
+
 fn to_core_point(point: PointFt) -> Point3<f32> {
     Point3::new(
         point.x_ft * METERS_PER_FOOT,

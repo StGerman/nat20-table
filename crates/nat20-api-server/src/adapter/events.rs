@@ -14,7 +14,7 @@ use nat20_core::{
             action::{
                 ActionResultComponent, DamageResult, EffectResult, EffectResultKind, HealingResult,
             },
-            targeting::TargetInstance,
+            targeting::{TargetInstance, TargetingKind},
         },
         d20::{
             AdvantageAware, AdvantageType, D20CheckDC, D20CheckOutcome, D20CheckResult, RollMode,
@@ -148,6 +148,9 @@ pub struct LogWriter<'a> {
     pub initiative: Vec<String>,
     /// What this batch has seen that explains a start or end of concentration.
     pub concentration: ConcentrationBatch,
+    /// The creatures an area option submitted in this batch catches, found before it resolved,
+    /// so its `action` entry names those it killed too. Empty when none was submitted.
+    pub area_targets: &'a [Entity],
 }
 
 /// Concentration clues within one batch of engine events: core logs that concentration was lost,
@@ -210,14 +213,33 @@ impl LogWriter<'_> {
                     &action.action_id,
                     &action.context,
                 );
-                let targets = action
-                    .targets
-                    .iter()
-                    .filter_map(|t| match t {
-                        TargetInstance::Entity { entity, .. } => Some(Handle(self.who(entity))),
-                        _ => None,
-                    })
-                    .collect::<Vec<Handle>>();
+                // An area names the creatures it catches, not where it was aimed.
+                let area = matches!(
+                    systems::actions::targeting_context_data(&self.engine.world, action).kind,
+                    TargetingKind::Area { .. }
+                );
+                let targets = if area {
+                    let caught = if self.area_targets.is_empty() {
+                        systems::actions::get_targeted_entities(self.engine, action, None)
+                    } else {
+                        self.area_targets.to_vec()
+                    };
+                    caught
+                        .into_iter()
+                        .map(|e| {
+                            Handle(self.who(&EntityIdentifier::from_world(&self.engine.world, e)))
+                        })
+                        .collect::<Vec<Handle>>()
+                } else {
+                    action
+                        .targets
+                        .iter()
+                        .filter_map(|t| match t {
+                            TargetInstance::Entity { entity, .. } => Some(Handle(self.who(entity))),
+                            _ => None,
+                        })
+                        .collect::<Vec<Handle>>()
+                };
                 let actor = Handle(self.who(&action.actor));
                 // An item option names one creature: whoever drinks it.
                 let item_used = action

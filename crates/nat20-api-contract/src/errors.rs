@@ -126,4 +126,6 @@ pub enum RejectReason {
     /// The option uses up an item the actor no longer carries (a `use/<item>` option after the
     /// last one is gone).
     NoItemLeft,
+    /// The area option's aim catches no creature, so nothing is cast and nothing is spent.
+    AreaEmpty,
 }

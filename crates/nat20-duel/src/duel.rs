@@ -110,6 +110,7 @@ fn play(client: &mut Client, seed: Option<u32>) -> (String, Vec<Event>) {
                     option_id: OptionId(option_id.into()),
                     targets,
                     point: None,
+                    aim: None,
                     variant: None,
                 };
                 let command = if me.hp * 2 <= me.hp_max && has("fighter/second_wind") {

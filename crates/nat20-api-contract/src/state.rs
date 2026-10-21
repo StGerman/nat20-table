@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Ability, CheckTest, Condition, Handle, HealthBand, LifeState, Mode, OptionId, PointFt,
+    Ability, Aim, CheckTest, Condition, Handle, HealthBand, LifeState, Mode, OptionId, PointFt,
     PromptId, RejectReason, Side, Skill, SpawnWhen,
 };
 
@@ -425,7 +425,8 @@ pub struct ActionOption {
     pub cost: ActionCost,
     /// What `submit` must name as targets.
     pub targeting: Targeting,
-    /// How many targets `submit` may name: 0 for `none`, `self` and `point`, 1 for `single`.
+    /// How many targets `submit` may name: 0 for `none`, `self`, `point` and `area`, 1 for
+    /// `single`.
     pub max_targets: u32,
     /// Range in feet, when the option has one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -441,6 +442,51 @@ pub struct ActionOption {
     /// The carried item this option uses up, for a potion. Its option id is `use/<item>`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub item: Option<OptionItem>,
+    /// The area it fills, for an option whose `targeting` is `area`, with whom each aim would
+    /// catch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub area: Option<OptionArea>,
+}
+
+/// The area an option fills, and a preview of each aim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct OptionArea {
+    /// Its shape.
+    pub shape: AreaShape,
+    /// Its size in feet: a cone's or a line's length, a cube's side, a sphere's or a cylinder's
+    /// radius.
+    pub size_ft: f32,
+    /// Whether it starts at the actor (a cone, Thunderwave's cube): the aim then only points it.
+    /// Otherwise the aim is its centre, and must be within `range_ft`.
+    pub from_self: bool,
+    /// The creatures each aim would catch, allies included, for every creature and anchor of the
+    /// scene that catches at least one. An aim not listed here may still be submitted.
+    pub aims: Vec<AreaAim>,
+}
+
+/// The shape of an area.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AreaShape {
+    /// A cone, e.g. Burning Hands.
+    Cone,
+    /// A sphere.
+    Sphere,
+    /// A cube.
+    Cube,
+    /// A cylinder.
+    Cylinder,
+    /// A line.
+    Line,
+}
+
+/// One aim of an area option and the creatures it would catch.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AreaAim {
+    /// Pass it as `submit.aim`.
+    pub aim: Aim,
+    /// The creatures the area would catch, the actor's allies included, by handle.
+    pub catches: Vec<Handle>,
 }
 
 /// A lasting effect on a creature.
@@ -512,6 +558,8 @@ pub enum Targeting {
     Multiple,
     /// A point.
     Point,
+    /// An area, aimed with `submit.aim`; `area` says its shape and whom each aim catches.
+    Area,
 }
 
 /// A creature an option can target.

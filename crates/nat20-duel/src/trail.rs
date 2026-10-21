@@ -307,6 +307,7 @@ fn fight(
                     option_id: OptionId(option_id.into()),
                     targets,
                     point: None,
+                    aim: None,
                     variant: None,
                 };
                 let standing = |side: Side| {
