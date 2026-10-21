@@ -12,6 +12,33 @@
             }
         },
         {
+            "id": "stairs_foot",
+            "name": "the foot of the stairs",
+            "position_ft": {
+                "x_ft": 5.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "stairs_landing",
+            "name": "the stair landing",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": -10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "stairs_top",
+            "name": "the top of the stairs",
+            "position_ft": {
+                "x_ft": 5.0,
+                "y_ft": -10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
             "id": "millstone",
             "name": "the millstone",
             "position_ft": {
@@ -40,7 +67,10 @@
         }
     ],
     "party_start": [
-        "cellar_stairs"
+        "cellar_stairs",
+        "stairs_foot",
+        "stairs_landing",
+        "stairs_top"
     ],
     "creatures": [
         {
