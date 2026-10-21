@@ -25,8 +25,10 @@ nat20-api-contract = { path = "crates/nat20-api-contract" }
 # hecs 0.11.2, core #44 fractional challenge rating) plus core #49 (unarmoured Armor Class counts
 # the Dexterity modifier), the head of that open PR until it merges. 9823766 = demo e9ade31
 # plus core #45 to #50 (Milestone 5: monster registry, Goblin Boss, Wolf, Giant Rat, Advantage
-# cancelling, Prone, monster traits) and #49, core #50's head until the stack merges.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "98237661a6c57af7cc2d186297143d28b4fe36ef" }
+# cancelling, Prone, monster traits) and #49, core #50's head until the stack merges. a206929 =
+# 9823766 plus core #51 (Dragonborn Breath Weapon) and #52 (event sequence across both logs),
+# core #52's head until the stack merges.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "a2069291e0966b225d289b154d4374c3da3c19cc" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"

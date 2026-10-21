@@ -100,10 +100,15 @@ fn apply_hp((hp, hp_max, temp): (u32, u32, u32), delta: i32) -> (u32, u32, u32) 
     (hp, hp_max, temp)
 }
 
+/// The part of every Breath Weapon action id in core
+/// (`action.dragonborn.breath_weapon.<ancestry>.<shape>`).
+const BREATH_WEAPON: &str = "action.dragonborn.breath_weapon.";
+
 /// Where a saving throw's DC came from. Concentration's DC is a rule. A DC core builds from an
 /// ability modifier is the caster's spell save DC: core builds one only in its spellbook (spells,
 /// and class features such as Divine Spark that use the spell save DC) and for weapon saves,
-/// which no demo creature makes.
+/// which no demo creature makes. A Breath Weapon's DC is built the same way but is a rule; the
+/// caller checks for it.
 fn save_dc_source(kind: &SavingThrowKind, dc: &ModifierResult) -> DcSource {
     if *kind == SavingThrowKind::Concentration {
         return DcSource::Rule;
@@ -151,6 +156,10 @@ pub struct LogWriter<'a> {
     /// The creatures an area option submitted in this batch catches, found before it resolved,
     /// so its `action` entry names those it killed too. Empty when none was submitted.
     pub area_targets: &'a [Entity],
+    /// Whether the action requested last in this batch sets its saves' DC by a rule rather than
+    /// a spell save DC: a Dragonborn's Breath Weapon (8 + Constitution modifier + Proficiency
+    /// Bonus), which core builds the same way as a spell save DC.
+    pub rule_dc: bool,
 }
 
 /// Concentration clues within one batch of engine events: core logs that concentration was lost,
@@ -204,6 +213,7 @@ impl LogWriter<'_> {
                 })]
             }
             EngineKind::ActionRequested { action } => {
+                self.rule_dc = action.action_id.to_string().contains(BREATH_WEAPON);
                 if names::option_spell(&action.context).is_some_and(|s| s.concentration) {
                     self.concentration.casting.push(action.actor.id());
                 }
@@ -307,7 +317,11 @@ impl LogWriter<'_> {
                             value: dc.total(),
                         },
                         None,
-                        Some(save_dc_source(saving_throw, dc)),
+                        Some(if self.rule_dc {
+                            DcSource::Rule
+                        } else {
+                            save_dc_source(saving_throw, dc)
+                        }),
                     ),
                     // The engine rolls a skill check itself only for an action's own rule,
                     // such as Help's DC 10 Medicine check to stabilize; the table's checks are

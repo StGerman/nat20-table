@@ -45,7 +45,7 @@ use nat20_core::{
         action_prompt::{ActionData, ActionPromptKind},
         encounter::EncounterId,
         engine_state::EngineState,
-        event::EventKind as EngineKind,
+        event::{Event as EngineEvent, EventKind as EngineKind},
         geometry::WorldGeometry,
         prompt::PromptScopeId,
     },
@@ -1069,6 +1069,7 @@ impl Game {
             initiative: Vec::new(),
             concentration: Default::default(),
             area_targets: &self.area_caught,
+            rule_dc: false,
         };
         let mut entries = Vec::new();
         for event in self.engine.event_log.events.iter().skip(self.global_seen) {
@@ -1358,6 +1359,7 @@ impl Game {
             initiative: Vec::new(),
             concentration: Default::default(),
             area_targets: &[],
+            rule_dc: false,
         }
     }
 
@@ -3400,25 +3402,29 @@ impl Game {
             initiative,
             concentration: Default::default(),
             area_targets: &self.area_caught,
+            rule_dc: false,
         };
 
-        let mut entries = Vec::new();
+        // The engine splits events between the encounter log and the global log; core's `seq`
+        // puts the two back in the order they were logged.
+        let mut new_events: Vec<&EngineEvent> = Vec::new();
         if let Some(encounter) = encounter {
             let events = &encounter.event_log().events;
-            for event in events.iter().skip(self.encounter_seen) {
-                entries.extend(writer.entries(event));
-            }
+            new_events.extend(events.iter().skip(self.encounter_seen));
             self.encounter_seen = events.len();
         }
         let events = &engine.event_log.events;
-        for event in events.iter().skip(self.global_seen) {
+        new_events.extend(events.iter().skip(self.global_seen));
+        self.global_seen = events.len();
+        new_events.sort_by_key(|event| event.seq);
+        let mut entries = Vec::new();
+        for event in new_events {
             entries.extend(writer.entries(event));
         }
-        self.global_seen = events.len();
 
-        // The engine splits events between the encounter log and the global log, so within one
-        // batch put "combat begins" first and each round header right before the first turn
-        // that starts after it; what comes before the header belongs to the round before.
+        // Within one batch put "combat begins" first, and each round header right before the
+        // first turn that starts after it: the writer stamps the whole batch with the round the
+        // engine is in now, so what comes before the header belongs to the round before.
         use nat20_api_contract::EventKind as Kind;
         entries.sort_by_key(|e| !matches!(e.kind, Kind::CombatStarted { .. }));
         let headers: Vec<Pending> = entries
@@ -3475,6 +3481,7 @@ impl Game {
             initiative: Vec::new(),
             concentration: Default::default(),
             area_targets: &[],
+            rule_dc: false,
         };
         let entries: Vec<Pending> = encounter
             .initiative_order()
@@ -3510,6 +3517,7 @@ impl Game {
             initiative: Vec::new(),
             concentration: Default::default(),
             area_targets: &[],
+            rule_dc: false,
         };
         let entries: Vec<Pending> = encounter
             .initiative_order()
