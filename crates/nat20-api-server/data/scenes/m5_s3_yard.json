@@ -1,0 +1,216 @@
+{
+    "id": "m5_s3_yard",
+    "description": "Milestone 5 exit fixture m5_fights, Scene 3 of The Silent Mill (Fight 1, Low): four Goblin Warriors by the woodpile and the mill door and three Wolves loose in the yard, against the four level 2 pregens at the gate. The fight ends when a side is down.",
+    "anchors": [
+        {
+            "id": "yard_gate",
+            "name": "the yard gate",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "woodpile",
+            "name": "the woodpile",
+            "position_ft": {
+                "x_ft": -25.0,
+                "y_ft": 35.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "mill_door",
+            "name": "the mill door",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 45.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "kennel",
+            "name": "the kennel",
+            "position_ft": {
+                "x_ft": 35.0,
+                "y_ft": 30.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "torva",
+            "pregen": "barbarian_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": -10.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "ilsa",
+            "pregen": "wizard_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": -10.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_1",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -25.0,
+                    "y_ft": 35.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_2",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -20.0,
+                    "y_ft": 40.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_3",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 45.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_4",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 45.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_1",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 35.0,
+                    "y_ft": 30.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_2",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 40.0,
+                    "y_ft": 25.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_3",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 30.0,
+                    "y_ft": 35.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "yard_fight",
+            "participants": [
+                "bren",
+                "torva",
+                "maren",
+                "ilsa",
+                "goblin_1",
+                "goblin_2",
+                "goblin_3",
+                "goblin_4",
+                "wolf_1",
+                "wolf_2",
+                "wolf_3"
+            ]
+        }
+    ]
+}
