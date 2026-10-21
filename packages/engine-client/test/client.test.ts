@@ -38,14 +38,16 @@ test("a command the engine does not implement yet fails with not_implemented", a
     assert.equal(started.ok, true);
     const loaded = await client.request("dm", { cmd: "load_scene", scene_id: "duel" });
     assert.equal(loaded.ok, true);
-    const fight = await client.request("dm", { cmd: "start_combat", encounter_id: "duel" });
-    assert.equal(fight.ok, true);
-    // Ending a fight because a side fled waits for MON-6.
-    const response = await client.request("dm", { cmd: "end_combat", reason: "fled" });
+    // A ladder check without a skill (a plain ability check) is not served yet.
+    const response = await client.request("dm", {
+      cmd: "request_check",
+      actor: "bren",
+      check: { kind: "ladder", ability: "strength", dc: 10 },
+    });
     assert.equal(response.ok, false);
     assert.equal(response.error?.code, "not_implemented");
     assert.equal(response.error?.retryable, false);
-    assert.deepEqual(response.awaiting, fight.awaiting);
+    assert.deepEqual(response.awaiting, { kind: "none" });
   } finally {
     client.close();
   }

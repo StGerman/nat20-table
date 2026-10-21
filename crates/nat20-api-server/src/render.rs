@@ -41,6 +41,11 @@ pub fn text(kind: &EventKind) -> String {
                 "surrender"
             }
         ),
+        EventKind::Fled { handles } => format!(
+            "{} {}.",
+            list(handles),
+            if handles.len() == 1 { "flees" } else { "flee" }
+        ),
         EventKind::Round { number } => format!("Round {number} begins."),
         EventKind::TurnStart { actor } => format!("{actor}'s turn.", actor = actor.0),
         EventKind::TurnEnd { actor } => format!("{}'s turn ends.", actor.0),
