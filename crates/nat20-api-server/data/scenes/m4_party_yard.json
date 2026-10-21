@@ -1,0 +1,150 @@
+{
+    "id": "m4_party_yard",
+    "description": "Milestone 4 exit fixture m4_party: the four level 2 pregens against three Goblin Warriors and a Wolf. The fight has healing, Shield and an area spell in it; after a short rest come a Potion of Healing, Cure Wounds, and a rotten stair that hurts whoever climbs it, so a concentrating Cleric makes a Concentration save out of combat.",
+    "checks": [
+        {
+            "id": "rotten_stair",
+            "test": {
+                "kind": "save",
+                "ability": "dexterity"
+            },
+            "dc": 30,
+            "on_failure": [
+                {
+                    "kind": "damage",
+                    "dice": "1d4",
+                    "damage_type": "bludgeoning"
+                }
+            ]
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "torva",
+            "pregen": "barbarian_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 10.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "ilsa",
+            "pregen": "wizard_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 15.0,
+                    "y_ft": 5.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_1",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 20.0,
+                    "y_ft": 15.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_2",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 25.0,
+                    "y_ft": 15.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_3",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 20.0,
+                    "y_ft": 20.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_1",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 30.0,
+                    "y_ft": 10.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "party_fight",
+            "participants": [
+                "bren",
+                "torva",
+                "maren",
+                "ilsa",
+                "goblin_1",
+                "goblin_2",
+                "goblin_3",
+                "wolf_1"
+            ]
+        }
+    ]
+}
