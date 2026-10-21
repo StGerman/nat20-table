@@ -138,9 +138,23 @@ pub enum Wait {
         actor: String,
         options: Vec<ReactionOption>,
         trigger: String,
+        /// The logged event the reaction answers, found by the session in its log.
+        cause: Option<TriggerCause>,
     },
     /// Combat ended with this side standing.
     CombatOver { winner: Option<Side> },
+}
+
+/// The logged event a reaction answers: the mover's `moved` (an Opportunity Attack), or else
+/// the trigger creature's latest `action` (an attack that Shield answers). Core triggers Shield
+/// on the attack roll itself, but the roll is logged only once it is resolved, after the
+/// reaction, so the log never shows a hit that Shield then turned into a miss.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TriggerCause {
+    /// The creature moving out of reach.
+    Moved(String),
+    /// The creature whose action triggered the reaction.
+    Acted(String),
 }
 
 /// One option at an action prompt and the engine action behind it.
@@ -173,6 +187,8 @@ enum Awaiting {
     Reaction {
         reactor: Entity,
         trigger: Option<Entity>,
+        /// Whether the trigger is the `trigger` creature moving out of reach.
+        moving: bool,
         options: Vec<ActionData>,
     },
     Nothing,
@@ -2425,10 +2441,19 @@ impl Game {
             Awaiting::Reaction {
                 reactor,
                 trigger,
+                moving,
                 options,
             } => {
                 let actor = self.handle_of(reactor);
                 Wait::Reaction {
+                    cause: trigger.map(|by| {
+                        let by = self.handle_of(by);
+                        if moving {
+                            TriggerCause::Moved(by)
+                        } else {
+                            TriggerCause::Acted(by)
+                        }
+                    }),
                     trigger: match trigger {
                         Some(by) => format!("{actor} may react to {}.", self.handle_of(by)),
                         None => format!("{actor} may react."),
@@ -3303,6 +3328,7 @@ impl Game {
                         return Awaiting::Reaction {
                             reactor: c.entity,
                             trigger: event.actor(),
+                            moving: matches!(event.kind, EngineKind::MovingOutOfReach { .. }),
                             options: opts.clone(),
                         };
                     }

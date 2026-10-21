@@ -1,0 +1,44 @@
+{
+    "id": "reaction_yard",
+    "description": "Milestone 4 test scene for reactions (fixture reactions.jsonl): Bren and Torva stand beside a Goblin Warrior, and a second one stands beside Ilsa a little way off. The DM drives both goblins, so one can walk out of Torva's reach and then Bren's and the other can attack Ilsa.",
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": { "kind": "point", "point": { "x_ft": 0.0, "y_ft": 0.0, "z_ft": 0.0 } }
+        },
+        {
+            "handle": "ilsa",
+            "pregen": "wizard_l2",
+            "side": "party",
+            "control": "client",
+            "at": { "kind": "point", "point": { "x_ft": 25.0, "y_ft": 0.0, "z_ft": 0.0 } }
+        },
+        {
+            "handle": "torva",
+            "pregen": "barbarian_l2",
+            "side": "party",
+            "control": "client",
+            "at": { "kind": "point", "point": { "x_ft": 5.0, "y_ft": -5.0, "z_ft": 0.0 } }
+        },
+        {
+            "handle": "goblin_a",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": { "kind": "point", "point": { "x_ft": 5.0, "y_ft": 0.0, "z_ft": 0.0 } }
+        },
+        {
+            "handle": "goblin_b",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": { "kind": "point", "point": { "x_ft": 30.0, "y_ft": 0.0, "z_ft": 0.0 } }
+        }
+    ],
+    "encounters": [
+        { "id": "brawl", "participants": ["bren", "torva", "ilsa", "goblin_a", "goblin_b"] }
+    ]
+}

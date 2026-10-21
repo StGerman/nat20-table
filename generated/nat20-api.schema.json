@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.29"
+    "version": "1.0.0-dev.30"
   },
   "$defs": {
     "Ability": {
@@ -3054,7 +3054,7 @@
       "type": "object",
       "properties": {
         "event_seq": {
-          "description": "The triggering event's `seq`.",
+          "description": "The triggering event's `seq`: the mover's `moved` for an Opportunity Attack, and the\nattacker's `action` for a reaction to an attack such as Shield. The attack roll itself is\nlogged only once the reaction is resolved, against the final AC.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0
