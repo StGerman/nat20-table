@@ -19,12 +19,12 @@ The repo holds MIT code, our own CC-BY-4.0 adventure content, SRD 5.2.1-derived 
 - Con: anyone can fork and open PRs, so workflow runs from outside collaborators need an approval setting.
 
 ### B. x86-64 self-hosted runner (home box or a small VPS)
-- Pro: the repo stays private; same architecture as the target; a persistent `target/` makes warm builds fast.
+- Pro: the repo stays private; a persistent `target/` makes warm builds fast.
 - Con: a machine to keep patched and online, runner updates, disk cleanup; a VPS costs about EUR 10 a month; GitHub announced a $0.002/min platform fee for self-hosted runners on private repos (postponed, may return); Dependabot PRs run new crates' build scripts on it.
 
 ### C. Raspberry Pi runner
 - Pro: hardware already owned.
-- Con: arm64 against an x86-64 target: f32 navmesh and glam SIMD paths can change the byte-exact seeded fixtures; slower cold builds; needs 8 GB and NVMe; runs untrusted dependency code inside the home network.
+- Con: slower cold builds than hosted runners; needs 8 GB and NVMe; runs untrusted dependency code inside the home network; one more machine to keep online.
 
 ### D. Stay on hosted runners after CON-9 and CON-10
 - Pro: no change.
@@ -39,6 +39,7 @@ A. The repo carries nothing that must stay private, and public runners remove th
 - Before the switch: `NOTICE.md` carries the SRD 5.2.1 attribution statement, the trademark notice and the licence split (this PR). A history scan on 2026-10-21 found no secrets; the history does contain commit author emails, which go public with it.
 - Stas's settings after the switch: Settings > Actions > General > "Approval for running fork pull request workflows from contributors": "Require approval for all external contributors". Workflows already use `pull_request` (not `pull_request_target`), `permissions: contents: read` and no secrets, so a fork PR cannot reach a token.
 - CON-11 (auto Copilot review) and CON-12 close with the switch. CON-9 drops to P2: minutes are free, but 11 jobs per run against the account's concurrent-job limit (20 on Free, 40 on Pro) still queues a whole-stack re-run. CON-10 stays for the same reason.
+- Architecture: there is no x86-64 target. Stas develops on Apple Silicon and production will likely run on arm64 (AWS Graviton); CI and the Claude cloud sessions that recorded the seeded fixtures are x86-64. Public repos also get free arm64 hosted runners (`ubuntu-24.04-arm`), so CON-13 adds an arm64 CI leg to prove the fixtures replay identically on both.
 - Private notes stay in the project files (`/mnt/project-files/`), never in the repo.
 
 ## Revisit when
