@@ -61,8 +61,9 @@ GitHub sends jobs only to an online runner. While the Mac sleeps or is off, jobs
 5. Start the VM with the Mac: `limactl start nat20-ci` after a reboot (or a login item running it). The runner service starts with the VM.
 6. Disk cleanup, as `runner` (`crontab -e`):
    ```
-   # Sundays 04:00: wipe the build cache once the disk is 70% full; the next run rebuilds it.
-   0 4 * * 0 [ "$(df --output=pcent /srv/nat20-ci | tail -1 | tr -dc 0-9)" -ge 70 ] && rm -rf /srv/nat20-ci/target
+   # Sundays 04:00: wipe the build cache once the disk is 70% full, but only while no job is running
+   # (Runner.Worker exists only during a job); the next run rebuilds it.
+   0 4 * * 0 pgrep -f Runner.Worker >/dev/null || { [ "$(df --output=pcent /srv/nat20-ci | tail -1 | tr -dc 0-9)" -ge 70 ] && rm -rf /srv/nat20-ci/target; }
    ```
 7. Updates: leave runner auto-update on (a runner more than 30 days behind stops getting jobs); `sudo apt upgrade` in the VM now and then.
 
