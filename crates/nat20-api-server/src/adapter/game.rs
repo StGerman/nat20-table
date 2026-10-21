@@ -33,7 +33,9 @@ use nat20_core::{
         dice::DiceSet,
         faction::{Attitude, AttitudeOverride, FactionSet},
         health::{hit_point_dice::HitPointDice, hit_points::HitPoints, life_state::LifeState},
-        id::{ActionId, ActionVariantId, EntityIdentifier, FactionId, ItemId, ResourceId},
+        id::{
+            ActionId, ActionVariantId, EffectId, EntityIdentifier, FactionId, ItemId, ResourceId,
+        },
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
         resource::{RechargeRule, ResourceAmount, ResourceMap},
         saving_throw::SavingThrowKind,
@@ -168,6 +170,9 @@ enum Awaiting {
 
 /// Rounds of 6 seconds that pass between two scenes: ten minutes (decision D9).
 const ROUNDS_BETWEEN_SCENES: usize = 100;
+
+/// Core's Prone condition (SRD 5.2.1 Rules Glossary › Prone).
+const PRONE: &str = "effect.condition.prone";
 
 /// A loaded scene and its engine.
 pub struct Game {
@@ -387,6 +392,7 @@ impl Game {
         {
             game.engine.end_encounter(&id);
         }
+        game.stand_up();
         // Ten minutes pass between scenes (decision D9): a round of turns for every 6 seconds,
         // counted on the turns of the scene being left, helpers the new scene leaves behind
         // included. Whatever lasts until someone's next turn (a Help's Advantage) ends, and so
@@ -1917,6 +1923,7 @@ impl Game {
         self.scene
             .creatures
             .retain(|c| !fleeing.contains(&c.entity));
+        self.stand_up();
         self.pending.push(combat_over(round, winner, reason));
         self.encounter = None;
         self.scene_encounter = None;
@@ -3079,10 +3086,24 @@ impl Game {
         self.drain();
         self.engine.end_encounter(&encounter);
         self.drain();
+        self.stand_up();
         self.pending
             .push(combat_over(round, winner, CombatOverReason::SideDown));
         self.winner = Some(winner);
         true
+    }
+
+    /// Core stands a Prone creature up at the start of its turn (MON-8), and out of combat
+    /// nobody takes turns, so when a fight ends every conscious creature still Prone stands.
+    /// Movement out of combat costs nothing. `condition_removed{prone}` is logged with the
+    /// next batch, after `combat_over`.
+    fn stand_up(&mut self) {
+        let prone = EffectId::new("nat20_core", PRONE);
+        for c in &self.scene.creatures {
+            if life_state_name(&self.engine, c.entity) == "normal" {
+                systems::effects::remove_effects_by_id(&mut self.engine, c.entity, &prone);
+            }
+        }
     }
 
     /// Closes the `combat_over` notice of a fight that ended by itself. The ended encounter goes

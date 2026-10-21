@@ -1,0 +1,117 @@
+{
+    "id": "prone_yard",
+    "description": "Milestone 5 test scene for Prone and the monster traits (fixture monsters.jsonl, spec \u00a79). Bren has wolf_a beside him to the east and goblin_a beside him to the west, so wolf_a's Bite has Pack Tactics and goblin_a's Scimitar has Advantage once Bren is Prone. goblin_b stands 30 feet south of Bren with its Shortbow. Maren is 20 feet north with wolf_b beside her and no other monster near her, so wolf_b rolls straight. Every creature is driven by the client, the monsters by the DM, so the fixture picks each attack.",
+    "anchors": [
+        {
+            "id": "yard",
+            "name": "the mill yard",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 20.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_a",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_a",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_b",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": -30.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_b",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 20.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "prone_fight",
+            "participants": [
+                "bren",
+                "maren",
+                "wolf_a",
+                "goblin_a",
+                "goblin_b",
+                "wolf_b"
+            ],
+            "end_reasons": [
+                "scenario"
+            ]
+        }
+    ]
+}
