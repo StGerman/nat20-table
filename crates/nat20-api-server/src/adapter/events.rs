@@ -488,10 +488,27 @@ impl LogWriter<'_> {
             }
             EngineKind::LifeStateChanged {
                 entity, new_state, ..
-            } => vec![self.public(EventKind::LifeState {
-                target: Handle(self.who(entity)),
-                state: wire_life_state(new_state),
-            })],
+            } => {
+                let handle = self.who(entity);
+                let mut entries = Vec::new();
+                // Back up from 0 HP with no healing logged before it: a natural 20 on a Death
+                // Saving Throw, which restores 1 Hit Point without a roll of its own.
+                if *new_state == LifeState::Normal
+                    && self.hp.get(&entity.id()).is_some_and(|(hp, _, _)| *hp == 0)
+                {
+                    entries.push(self.public(EventKind::Healed {
+                        target: Handle(handle.clone()),
+                        amount: 1,
+                        source_roll: None,
+                    }));
+                    entries.push(self.hit_points(entity.id(), &handle, 1));
+                }
+                entries.push(self.public(EventKind::LifeState {
+                    target: Handle(handle),
+                    state: wire_life_state(new_state),
+                }));
+                entries
+            }
             EngineKind::LostConcentration { entity, instances } => {
                 let Some(instance) = instances.first() else {
                     return Vec::new();
