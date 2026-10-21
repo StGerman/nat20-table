@@ -43,7 +43,7 @@ pub const PROTOCOL_NAME: &str = "nat20-api";
 /// Protocol major version; every request carries it as `v`.
 pub const PROTOCOL_MAJOR: u8 = 1;
 /// Full contract version (semver). Bump with every change and log it in `contract/CHANGELOG.md`.
-pub const CONTRACT_VERSION: &str = "1.0.0-dev.29";
+pub const CONTRACT_VERSION: &str = "1.0.0-dev.30";
 
 /// The protocol major version. Only `1` exists; any other value is rejected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

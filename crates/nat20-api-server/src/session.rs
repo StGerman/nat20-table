@@ -15,7 +15,7 @@ use nat20_api_contract::{
 use crate::{
     adapter::{
         events::Pending,
-        game::{Game, Wait},
+        game::{Game, TriggerCause, Wait},
     },
     errors::{error, with_awaiting},
     projection::{self, FullState, Viewer},
@@ -26,7 +26,7 @@ use crate::{
 struct Prompt {
     wait: Wait,
     id: String,
-    /// The log head when the prompt opened: the event a reaction answers.
+    /// The event a reaction answers (the log head for an action prompt).
     event_seq: u64,
 }
 
@@ -387,10 +387,17 @@ impl Session {
             };
             if fresh {
                 self.prompts_issued += 1;
+                let event_seq = match &wait {
+                    Wait::Reaction {
+                        cause: Some(cause), ..
+                    } => self.trigger_seq(cause),
+                    _ => None,
+                }
+                .unwrap_or_else(|| self.log_head());
                 self.prompt = Some(Prompt {
                     wait: wait.clone(),
                     id: format!("p{}", self.prompts_issued),
-                    event_seq: self.log_head(),
+                    event_seq,
                 });
             }
         } else {
@@ -416,6 +423,7 @@ impl Session {
                 actor,
                 options,
                 trigger,
+                ..
             } => Awaiting::Reaction {
                 prompt_id,
                 actor: Handle(actor),
@@ -429,6 +437,20 @@ impl Session {
     }
 
     // ---- helpers --------------------------------------------------------
+
+    /// The `seq` of the logged event a reaction answers: the latest `moved` of the creature
+    /// moving out of reach, or the latest `action` of the creature that triggered it.
+    fn trigger_seq(&self, cause: &TriggerCause) -> Option<u64> {
+        self.log
+            .iter()
+            .rev()
+            .find(|e| match (cause, &e.kind) {
+                (TriggerCause::Moved(by), EventKind::Moved { actor, .. })
+                | (TriggerCause::Acted(by), EventKind::Action { actor, .. }) => actor.0 == *by,
+                _ => false,
+            })
+            .map(|e| e.seq)
+    }
 
     fn game_mut(&mut self) -> Result<&mut Game, ApiError> {
         self.game

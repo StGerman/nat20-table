@@ -641,7 +641,9 @@ pub enum Awaiting {
 /// The event that opened a reaction prompt.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ReactionTrigger {
-    /// The triggering event's `seq`.
+    /// The triggering event's `seq`: the mover's `moved` for an Opportunity Attack, and the
+    /// attacker's `action` for a reaction to an attack such as Shield. The attack roll itself is
+    /// logged only once the reaction is resolved, against the final AC.
     pub event_seq: u64,
     /// One plain sentence, e.g. "goblin_1 moves out of Bren's reach".
     pub summary: String,

@@ -102,6 +102,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 { "kind": "no_session" }
 ```
 - Every pending decision has a `prompt_id`. `submit`, `react` and `end_turn` must echo it. In combat, an old id is rejected with `stale_prompt` and changes nothing (a missing one is `bad_request`); in explore mode a command that carries one answers `wrong_mode` first. This makes late or duplicated agent decisions harmless. An explore `submit` carries no `prompt_id` (§4.8).
+- `trigger.event_seq` is the `seq` of the event the reaction answers, not the log head: the mover's `moved` for an Opportunity Attack, the attacker's `action` for a reaction to an attack (Shield, a Barbarian's Reckless Attack). A reaction to an attack roll is offered before the roll is logged; the roll is logged once the reaction resolves, against the final AC (Shield's +5 included), so the log never shows a hit that became a miss. A move that provokes stops where the reaction was offered; a later `move` can provoke the next creature.
 - Several reactors to one trigger are asked one at a time in initiative order (today it's scene order; switch to initiative).
 
 ## 4. Commands
