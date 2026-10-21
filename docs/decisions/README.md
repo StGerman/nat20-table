@@ -36,6 +36,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0025](0025-pregen-files-json.md) | Pregen files are JSON with a `_comment` key, typed in the contract crate | Accepted | 2026-10-18 | Stas (Milestone 4 spec D1) |
 | [0026](0026-monster-registry-kind.md) | Monster stat blocks are a thin core registry kind, typed by hand from SRD 5.2.1 | Accepted | 2026-10-20 | Stas (Milestone 5 spec D1, D2) |
 | [0027](0027-claude-merges-toolchain-bumps.md) | Claude merges green Rust toolchain bumps | Accepted | 2026-10-19 | Stas (decision card) |
+| [0028](0028-public-repo-for-ci.md) | nat20-table goes public so CI runs on free runners | Accepted | 2026-10-21 | Stas (decision card) |
 
 ## Open questions to watch
 

@@ -13,4 +13,4 @@ cargo test --locked            # unit tests and contract fixture replay
 cargo run -p nat20-api-server  # the engine on stdio
 ```
 
-Licences: code MIT ([LICENSE](LICENSE)). Adventure content in `scenarios/`, `pregens/`, `maps/` will be CC-BY-4.0. Rules data derives from the SRD 5.2.1 (CC-BY-4.0, Wizards of the Coast).
+Licences: code MIT ([LICENSE](LICENSE)); our adventure content CC-BY-4.0. Rules data derives from the SRD 5.2.1 (CC-BY-4.0, Wizards of the Coast). Attribution and trademark notices: [NOTICE.md](NOTICE.md).
