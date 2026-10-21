@@ -105,7 +105,7 @@ PregenFile { _comment?, id, name, species, subspecies?, background, class, level
   - `effect_started{target, effect, source}` and `effect_ended{target, effect}`, owner and DM. Bless and Guiding Bolt are said at the table, but their numbers are not, so players learn them from the `action` event and the narration;
   - `item_used{actor, item, target}`, public.
 - `condition_added` and `condition_removed` start being logged (they exist in v1, unused until now).
-- **Changed meaning:** a reaction prompt's `trigger.event_seq` names the event that triggered it (the `moved` event for an Opportunity Attack, the attack `roll` for Shield), not the log head (ENG-1).
+- **Changed meaning:** a reaction prompt's `trigger.event_seq` names the event that triggered it (the `moved` event for an Opportunity Attack, the attacker's `action` for Shield: core offers Shield before the attack roll is logged, and the roll is logged once the reaction resolves, against the final AC), not the log head (ENG-1).
 - `DcSource` gains `spell_save_dc`: the caster's spell save DC (Sacred Flame, Divine Spark, Burning Hands). The Breath Weapon's DC is `rule` (8 + Constitution + Proficiency Bonus). Additive.
 - New `RejectReason`s, additive: `no_item_left` (a potion option after the last one is gone), `area_empty` (an aim that catches no creature, refused so no slot is spent on nothing).
 
