@@ -1,0 +1,102 @@
+{
+    "id": "pack_yard",
+    "description": "Milestone 5 test scene for the scripted monster policy (fixture pack.jsonl, MON-6). wolf_a starts beside Bren; wolf_b is nearer to Maren than to Bren, so a nearest-first policy would send it to her, while the policy sends it to Bren, whom wolf_a engages (Pack Tactics). The goblin starts beside Bren; once Bloodied it takes Nimble Escape, steps away and shoots. The monsters are scripted; Bren and Maren are the client's.",
+    "anchors": [
+        {
+            "id": "yard",
+            "name": "the mill yard",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 30.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_a",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "wolf_b",
+            "monster": "wolf",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 15.0,
+                    "y_ft": 25.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "pack_fight",
+            "participants": [
+                "bren",
+                "maren",
+                "goblin",
+                "wolf_a",
+                "wolf_b"
+            ],
+            "end_reasons": [
+                "scenario"
+            ]
+        }
+    ]
+}
