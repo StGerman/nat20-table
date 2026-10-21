@@ -11,8 +11,9 @@
 # every job but deny and advisories reads its runner from `changes`.
 # `changes` skips the build jobs on a PR that touches only Markdown and docs/, and picks that runner
 # (decision 0028): the self-hosted arm64 runner named by the repo variable CI_RUNNER, except for
-# Dependabot PRs and PRs that change Cargo.lock or rust-toolchain.toml (cold builds), which stay on
-# GitHub-hosted runners. CI_RUNNER unset means everything runs GitHub-hosted.
+# Dependabot PRs, which stay on GitHub-hosted runners. With CI_COLD_HOSTED set to true (a slow box
+# such as a Raspberry Pi), PRs that change Cargo.lock or rust-toolchain.toml (cold builds) stay
+# hosted too. CI_RUNNER unset means everything runs GitHub-hosted.
 name: ci
 
 on:
@@ -67,6 +68,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.base_ref }}
           CI_RUNNER: ${{ vars.CI_RUNNER }}
+          COLD_HOSTED: ${{ vars.CI_COLD_HOSTED }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           # A JSON value for fromJSON: a label list such as ["self-hosted","nat20"], or "ubuntu-latest".
@@ -75,7 +77,7 @@ jobs:
             echo "CI_RUNNER is not set: GitHub-hosted."
           elif [ "$AUTHOR" = "dependabot[bot]" ]; then
             echo "Dependabot PR: GitHub-hosted, so new dependency build scripts never run on the self-hosted box."
-          elif [ "$EVENT" = "pull_request" ] && git diff --name-only "origin/$BASE...HEAD" | grep -qxE 'Cargo\.lock|rust-toolchain\.toml'; then
+          elif [ "$COLD_HOSTED" = "true" ] && [ "$EVENT" = "pull_request" ] && git diff --name-only "origin/$BASE...HEAD" | grep -qxE 'Cargo\.lock|rust-toolchain\.toml'; then
             echo "Cargo.lock or rust-toolchain.toml changed: cold build, GitHub-hosted."
           else
             runner="$CI_RUNNER"; echo "Self-hosted: $runner"
