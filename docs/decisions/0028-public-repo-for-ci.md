@@ -38,7 +38,7 @@ A. The repo carries nothing that must stay private, and public runners remove th
 
 - Before the switch: `NOTICE.md` carries the SRD 5.2.1 attribution statement, the trademark notice and the licence split (this PR). A history scan on 2026-10-21 found no secrets; the history does contain commit author emails, which go public with it.
 - Stas's settings after the switch: Settings > Actions > General > "Approval for running fork pull request workflows from contributors": "Require approval for all external contributors". Workflows already use `pull_request` (not `pull_request_target`), `permissions: contents: read` and no secrets, so a fork PR cannot reach a token.
-- CON-11 (auto Copilot review) and CON-12 close with the switch. CON-9 drops to P2: minutes are free, but 11 jobs per run against the 20-job concurrency limit still queues a whole-stack re-run. CON-10 stays for the same reason.
+- CON-11 (auto Copilot review) and CON-12 close with the switch. CON-9 drops to P2: minutes are free, but 11 jobs per run against the account's concurrent-job limit (20 on Free, 40 on Pro) still queues a whole-stack re-run. CON-10 stays for the same reason.
 - Private notes stay in the project files (`/mnt/project-files/`), never in the repo.
 
 ## Revisit when
@@ -49,4 +49,4 @@ The repo needs to hold something that cannot be public (a partner's content, cre
 
 - Measurement: `/mnt/project-files/engine/ci/ci-cost-2026-10-21.md` (REST `actions/runs` and `actions/runs/{id}/jobs`, 349 runs).
 - GitHub Actions billing for public repositories: https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions
-- Copilot code review and Actions minutes on private repos: https://docs.github.com/en/copilot/how-tos/copilot-on-github/set-up-copilot/configure-code-review
+- Copilot code review and Actions minutes on private repos: https://docs.github.com/en/copilot/how-tos/administer-copilot/manage-for-enterprise/manage-agents/enable-copilot-code-review
