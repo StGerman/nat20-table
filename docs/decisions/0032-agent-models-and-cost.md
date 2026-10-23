@@ -1,8 +1,8 @@
-# 0032. Agent models: Sonnet 5.5 for the DM, Haiku 5.5 for AI players; cost recorded per call
+# 0032. Agent models: Opus 5.5 DM and Sonnet 5.5 players while testing, Sonnet and Haiku for a beta; cost recorded per call
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-23
-- **Decided by:** Stas, Milestone 6 spec decision card D2 (pending)
+- **Decided by:** Stas, in the Milestone 6 spec thread (answer to decision card D2, 2026-10-23)
 
 ## Context
 
@@ -10,30 +10,35 @@ Acceptance 4 sets p95 latency at 10 s per AI player turn and 6 s per DM narratio
 
 ## Options
 
-### A. DM on Sonnet 5.5, players on Haiku 5.5, low effort
-- Pro: players pick from engine-listed options, which a small model handles fast and cheaply; the DM, whose work is harder, gets the stronger model.
-- Con: Haiku players may play less cleverly.
+### A. DM on Sonnet 5.5, players on Haiku 5.5
+- Pro: fast and cheap; players pick from engine-listed options, which a small model handles.
+- Con: weaker play, less of a picture of what the stronger models can do.
 
 ### B. Everyone on Sonnet 5.5
 - Pro: smarter players.
-- Con: roughly twenty times the player cost and slower player turns.
+- Con: player cost about twenty times A's.
 
 ### C. DM on Opus 5.5, players on Haiku 5.5
 - Pro: the best DM judgement.
-- Con: the 6 s narration target is at risk; DM cost about doubles.
+- Con: the 6 s narration target is at risk.
+
+### D. DM on Opus 5.5, players on Sonnet 5.5
+- Pro: the strongest table, so testing shows what the design can do at its best.
+- Con: the most expensive option; the DM's 6 s target is at risk.
 
 ## Decision
 
-A, as configuration: model and effort are per-agent settings, so the choice is cheap to change after the step 1 spike measures it. Budget: a full Scene 1 to 6 run under $5 at list price.
+D for Stas's personal testing now, A later for a beta (Stas: "for now I prefer to use more expensive models for personal testing"). Model and effort are per-agent configuration, so the switch is a settings change. No cost budget is enforced on the testing models; the beta models carry a target of under $5 per full Scene 1 to 6 run.
 
 ## Consequences
 
-- Every call writes agent, model, effort, input, cache and output tokens, list-price cost and wall time to `usage.jsonl`; the run summary gives totals and p50/p95 latency.
+- Every call writes agent, model, effort, input, cache and output tokens, list-price cost and wall time to `usage.jsonl`; the run summary gives totals and p50/p95 latency per model, so both settings can be compared.
+- If step 1 of the spec shows Opus misses the DM's 6 s p95, the timed runs of Milestone 7 use the beta DM model.
 - OpenTelemetry replaces the ad-hoc records after Milestone 7 (AGT-16).
 
 ## Revisit when
 
-Measured p95 or cost misses the targets, or playtests find the AI players' choices poor enough to hurt the table.
+A beta is planned, or measured latency or cost misses the targets.
 
 ## Sources
 

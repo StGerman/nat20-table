@@ -40,7 +40,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0029](0029-no-self-hosted-runner-public-repo.md) | No self-hosted runner: CI runs on GitHub-hosted runners in the public repo | Accepted | 2026-10-23 | Stas (CI cost thread) |
 | [0030](0030-agent-harness-and-tool-binding.md) | Agents run as Agent SDK sessions with only our tools, bound by the game loop | Proposed | 2026-10-23 | Claude (Milestone 6 spec D6) |
 | [0031](0031-adventure-file-game-typed.md) | The DM's adventure file is typed in game/, not in the contract crate | Proposed | 2026-10-23 | Stas (Milestone 6 spec card D3) |
-| [0032](0032-agent-models-and-cost.md) | Agent models: Sonnet 5.5 for the DM, Haiku 5.5 for AI players; cost recorded per call | Proposed | 2026-10-23 | Stas (Milestone 6 spec card D2) |
+| [0032](0032-agent-models-and-cost.md) | Agent models: Opus 5.5 DM and Sonnet 5.5 players while testing, Sonnet and Haiku for a beta | Accepted | 2026-10-23 | Stas (Milestone 6 spec D2) |
 | [0033](0033-audit-stays-in-rust.md) | The transcript audit stays in Rust and runs as a CLI over game transcripts | Proposed | 2026-10-23 | Stas (Milestone 6 spec card D4) |
 
 ## Open questions to watch

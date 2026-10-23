@@ -185,12 +185,13 @@ Every model call records, in `usage.jsonl` next to the transcript: agent, model,
 
 | | DM | Each AI player |
 |---|---|---|
-| Model (D2) | Sonnet 5.5, low effort | Haiku 5.5, low effort |
-| List price per million tokens (2026-10-23) | $2 in, $10 out, $0.20 cached read | $0.10 in, $0.50 out |
+| Model now, for Stas's own testing (D2) | Opus 5.5, low effort | Sonnet 5.5, low effort |
+| List price per million tokens (2026-10-23) | $4 in, $20 out, $0.20 cached read | $2 in, $10 out, $0.20 cached read |
+| Model later, for a beta (D2) | Sonnet 5.5 ($2 / $10) | Haiku 5.5 ($0.10 / $0.50) |
 | Latency target (scope §6.4) | narration p95 ≤ 6 s | turn p95 ≤ 10 s |
 | What drives cost | the adventure and scene files in its prefix, every narration and intent mapping | a short prefix, one call chain per own turn |
 
-Rough expectation, to be replaced by step 1's measurement: a full run costs a few dollars, most of it the DM, and caching the DM's prefix is the largest lever. **Budget:** a full Scene 1 to 6 run at list price stays under $5. Milestone 6 records against it; Milestone 7 treats a run over it as a finding.
+Rough expectation, to be replaced by step 1's measurement: on the testing models a full run costs in the low tens of dollars, and on the beta models a few dollars, most of it the DM in both cases; caching the DM's prefix is the largest lever. **Budget:** none is enforced while Stas tests on the expensive models. Every run records its cost, and the beta models carry a target of under $5 per full Scene 1 to 6 run. Opus may miss the DM's 6 s p95; step 1 measures it, and if it does, the timed runs of Milestone 7 use the beta DM model.
 
 Latency levers, in order: the small own system prompt (no SDK default prompt), low effort, prompt caching, narration pipelined with the next actor's decision (§3.3), option numbers that skip the DM for the human's combat turns (D5), and API-17 on the engine side.
 
@@ -261,12 +262,12 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 
 ## 12. Decisions
 
-D1 was decided by Stas on 2026-10-23. D2 to D4 are open on decision cards in this spec's thread, each with a recommendation; D5 to D8 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0033`, proposed in this PR.
+D1 and D2 were decided by Stas on 2026-10-23. D3 and D4 are open on decision cards in this spec's thread, each with a recommendation; D5 to D8 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0033`, proposed in this PR.
 
 | # | Question | Recommendation | Options | Why |
 |---|---|---|---|---|
 | D1 | Which scenes the exit run plays | **Scene 1 and Scene 3** (decided by Stas, 2026-10-23) | Scene 3 only · **Scenes 1 and 3** · Scenes 1 to 3 | Combat and explore/social are different loops; each gets one real run with a human before Milestone 7 adds timing |
-| D2 | Models (0032) | **DM Sonnet 5.5, players Haiku 5.5, low effort** (card) | **Sonnet DM, Haiku players** · all Sonnet · Opus DM, Haiku players | Players choose from engine-listed options, which a small model handles; the DM's work is harder and sits on the 6 s path. A config value, so cheap to change after step 1 measures it |
+| D2 | Models (0032) | **DM Opus 5.5, players Sonnet 5.5 for Stas's testing; DM Sonnet 5.5, players Haiku 5.5 later for a beta** (decided by Stas, 2026-10-23) | Sonnet DM, Haiku players · all Sonnet · Opus DM, Haiku players · **Opus DM, Sonnet players** | Stas prefers the stronger models while he tests; the model is per-agent config, so the beta switch is a settings change. Risk: Opus on the DM's 6 s path, measured in step 1 |
 | D3 | Where the adventure file is typed (0031) | **Game-side type and JSON Schema in `game/`** (card) | **Game-side** · contract crate · untyped Markdown | The engine never reads it, so it isn't wire (Rule 1); typed, so a CI test resolves every id it names |
 | D4 | Audit language (0033) | **Keep the Rust audit, run as a CLI** (card) | **Rust CLI** · TypeScript port in `game/` (as AGT-15 said) | The audit compares citations with the server's own roll renderer; a port duplicates it and needs a parity test. AGT-15 is reworded |
 | D5 | How the human acts in a fight | **Numbered complete decisions go straight to `submit`; free text goes through the DM** | **Both** · free text only (scope §4.4) · numbers only | A number costs no model call and can't be misread (acceptance 5 and 6); free text keeps the table feel. Scope §4.4 is met: the DM still translates free text |
