@@ -80,7 +80,7 @@ Only the orchestrator holds an `EngineClient`, and the engine has one client per
 
 All agents run on the **Claude Agent SDK** (decision 0019), configured so the harness adds nothing we didn't put there:
 - **No built-in tools.** No Read, Bash, Grep or web tools: the repository holds the scenario files, so a player agent that can read files can read the DCs. Each session gets only its own MCP tools.
-- **No setting sources** and an empty working directory: no CLAUDE.md, no project settings, no skills leak into an agent's context. The only skills an agent can have are our own, loaded from a path the game passes (D10).
+- **No setting sources** and an empty working directory: no CLAUDE.md, no project settings, no skills leak into an agent's context. The only skills an agent can have are our own, loaded from a path the game passes (D10): the DM's guidance goes to the DM session only, never to a player session, and each skill is a single file because no agent can read files.
 - **Our own system prompt**, replacing the SDK's default, so the per-call prefix is small and identical call to call (cacheable).
 - **One long-lived session per agent per scene** (streaming input). At a scene change the orchestrator asks each agent for a short summary, closes the session and opens a fresh one seeded with the card, the sheet, the agent's notes and the summary (AGT-6). Context stays bounded by one scene, and the cached prefix is stable within it.
 - Model and effort per agent are config, not code (D2).
