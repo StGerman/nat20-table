@@ -7,6 +7,7 @@ How to set up, trial, run and switch off the self-hosted arm64 Linux runner that
 | Run | Runner |
 |---|---|
 | PRs, pushes to `main`, manual runs: every job but `deny` and `advisories` | self-hosted |
+| PRs from forks (the repo is public) | GitHub-hosted, so outside code never runs on Stas's machine |
 | Dependabot PRs | GitHub-hosted, so a new crate's `build.rs` or proc macro never runs on Stas's machine before review |
 | PRs that change `Cargo.lock` or `rust-toolchain.toml` | self-hosted; GitHub-hosted only when `CI_COLD_HOSTED` is `true` (set it for a slow box like a Pi) |
 | `deny`, `advisories` (Docker-based action) | always GitHub-hosted |
@@ -80,6 +81,7 @@ Delete the `CI_RUNNER` variable. New runs go to GitHub-hosted runners. Runs alre
 
 ## What this exposes
 
+- The repo is public, so anyone can fork it and open a PR. Fork PRs always build on GitHub-hosted runners (the `changes` job checks the PR's head repository), and Settings > Actions > General > "Approval for running fork pull request workflows from contributors" should be "Require approval for all external contributors" so none run without Stas's click.
 - Every job runs code from any branch pushed to this repo: Stas's and the Claude sessions'. Inside the VM the runner user has no sudo, no Docker, no shared folders and no secrets; the workflows use no repository secrets.
 - The VM reaches the network through the Mac, so a hostile build script could reach the home LAN. Dependabot PRs build on hosted runners, but once one merges, the push to `main` builds the new dependencies on the VM. That is the same code that then runs on the Mac itself via `cargo build`, so the VM adds no new exposure beyond what local development already has.
 - The registration token is single-use. If the VM is deleted, remove the runner under Settings > Actions > Runners.

@@ -11,7 +11,7 @@
 # every job but deny and advisories reads its runner from `changes`.
 # `changes` skips the build jobs on a PR that touches only Markdown and docs/, and picks that runner
 # (decision 0028): the self-hosted arm64 runner named by the repo variable CI_RUNNER, except for
-# Dependabot PRs, which stay on GitHub-hosted runners. With CI_COLD_HOSTED set to true (a slow box
+# PRs from forks and Dependabot PRs, which stay on GitHub-hosted runners. With CI_COLD_HOSTED set to true (a slow box
 # such as a Raspberry Pi), PRs that change Cargo.lock or rust-toolchain.toml (cold builds) stay
 # hosted too. CI_RUNNER unset means everything runs GitHub-hosted.
 name: ci
@@ -40,7 +40,7 @@ env:
 jobs:
   changes:
     name: changes
-    runs-on: ${{ vars.CI_RUNNER != '' && github.event.pull_request.user.login != 'dependabot[bot]' && fromJSON(vars.CI_RUNNER) || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_RUNNER != '' && github.event.pull_request.user.login != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON(vars.CI_RUNNER) || 'ubuntu-latest' }}
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
@@ -70,11 +70,15 @@ jobs:
           CI_RUNNER: ${{ vars.CI_RUNNER }}
           COLD_HOSTED: ${{ vars.CI_COLD_HOSTED }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
         run: |
           # A JSON value for fromJSON: a label list such as ["self-hosted","nat20"], or "ubuntu-latest".
           runner='"ubuntu-latest"'
           if [ -z "$CI_RUNNER" ]; then
             echo "CI_RUNNER is not set: GitHub-hosted."
+          elif [ "$EVENT" = "pull_request" ] && [ "$HEAD_REPO" != "$REPO" ]; then
+            echo "PR from a fork: GitHub-hosted. The repo is public, so outside code never runs on the self-hosted box."
           elif [ "$AUTHOR" = "dependabot[bot]" ]; then
             echo "Dependabot PR: GitHub-hosted, so new dependency build scripts never run on the self-hosted box."
           elif [ "$COLD_HOSTED" = "true" ] && [ "$EVENT" = "pull_request" ] && git diff --name-only "origin/$BASE...HEAD" | grep -qxE 'Cargo\.lock|rust-toolchain\.toml'; then

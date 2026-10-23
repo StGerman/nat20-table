@@ -10,6 +10,8 @@ nat20-table is private, so every Actions minute is metered. Measured over its fi
 
 There is no x86-64 target: Stas develops on Apple Silicon and production will likely run on arm64 (AWS Graviton). Only GitHub's `ubuntu-latest` runners and the Claude cloud sessions, which recorded the seeded fixtures, are x86-64.
 
+Update 2026-10-23, before this record merged: Stas made the repo public, so GitHub-hosted minutes are now free, and kept the self-hosted runner for arm64 builds and speed. Fork PRs never reach the self-hosted runner.
+
 ## Options
 
 ### A. Make the repo public (free hosted runners, arm64 included)
@@ -42,7 +44,7 @@ There is no x86-64 target: Stas develops on Apple Silicon and production will li
 
 ## Decision
 
-C. Every job except `deny` and `advisories` goes to the runner named by the repository variable `CI_RUNNER`; Dependabot PRs stay on GitHub-hosted runners, so a new dependency's build scripts run on Stas's machine only after review. A slow host can also keep cold builds (PRs that change `Cargo.lock` or `rust-toolchain.toml`) hosted with `CI_COLD_HOSTED=true`; the Mac does not need it. `deny` and `advisories` use a Docker-based action and stay hosted, so the runner needs no Docker. With `CI_RUNNER` unset everything runs hosted, so one setting falls back, which is also what Stas does when the Mac sleeps.
+C. Every job except `deny` and `advisories` goes to the runner named by the repository variable `CI_RUNNER`; PRs from forks always stay on GitHub-hosted runners, because a public repo lets anyone open one; Dependabot PRs stay on GitHub-hosted runners, so a new dependency's build scripts run on Stas's machine only after review. A slow host can also keep cold builds (PRs that change `Cargo.lock` or `rust-toolchain.toml`) hosted with `CI_COLD_HOSTED=true`; the Mac does not need it. `deny` and `advisories` use a Docker-based action and stay hosted, so the runner needs no Docker. With `CI_RUNNER` unset everything runs hosted, so one setting falls back, which is also what Stas does when the Mac sleeps.
 
 C beat B on cost and speed, and C2 on isolation and platform. GitHub's announced $0.002/min fee for self-hosted runners on private repos (postponed in December 2025) would, if it returns, still cost less than hosted minutes.
 
