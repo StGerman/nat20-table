@@ -3,8 +3,9 @@
 #
 #   changes ─┬─ contract-fresh                      contract-compat (PR only)
 #            ├─ rust-lint                           contract-pure
-#            └─ rust-test ─┬─ visibility            deny
-#                          └─ ts                    advisories (not gating)
+#            ├─ rust-test ─┬─ visibility            deny
+#            │             └─ ts                    advisories (not gating)
+#            └─ rust-test-arm64
 #   every gating job ── ci-ok   (the one required check)
 #
 # Only real data dependencies are edges: visibility and ts run the binaries rust-test built.
@@ -179,6 +180,31 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
+  # Production and Stas's dev machines are arm64 (decision 0029, TASKS.md CON-13): the same tests on a
+  # hosted arm64 runner prove every seeded fixture replays byte-identically there too.
+  rust-test-arm64:
+    name: rust-test-arm64
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: rustup, if the arm64 image lacks it
+        run: |
+          if ! command -v rustup >/dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Rust release pinned in rust-toolchain.toml
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: test-arm64
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Tests and conformance fixture replay on arm64
+        run: cargo test --locked --workspace --all-features
+
   visibility:
     name: visibility
     needs: rust-test
@@ -246,7 +272,7 @@ jobs:
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [changes, contract-fresh, contract-compat, contract-pure, rust-lint, rust-test, visibility, ts, deny]
+    needs: [changes, contract-fresh, contract-compat, contract-pure, rust-lint, rust-test, rust-test-arm64, visibility, ts, deny]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
