@@ -4,7 +4,7 @@
 - **Date:** 2026-10-23
 - **Owner:** Stas
 - **Depends on:** Milestones 3, 4 and 5 done (main 3f74dfe, contract `1.0.0-dev.30`, core pinned at fork `demo` d9c6b37). Open engine gaps that steps below wait on are listed in §9 with the step each must land before.
-- **Exit criterion** (`TASKS.md` § Milestones): one full scene of *The Silent Mill* played by the DM agent, the player agents and a human in the text UI, with visibility enforced. This spec proposes Scene 1 and Scene 3 (D1).
+- **Exit criterion** (`TASKS.md` § Milestones): one full scene of *The Silent Mill* played by the DM agent, the player agents and a human in the text UI, with visibility enforced. The exit run plays Scene 1 and Scene 3 (D1, Stas 2026-10-23).
 
 Milestones 1 to 5 built the engine side: every rule the adventure needs resolves in `nat20_core`, behind contract v1, with seeded fixtures and an audit. Nothing on the game side exists yet: no `game/` directory, no agents, no text UI, and the adventure itself is only test scenes. This milestone builds the table: the game loop that drives the engine, the DM agent, one agent per AI player, the human's text UI, the transcript and its audit, and *The Silent Mill* as real content. It ends with Stas playing Bren through two scenes with an AI DM and an AI party.
 
@@ -261,11 +261,11 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 
 ## 12. Decisions
 
-D1 to D4 are open on decision cards in this spec's thread, each with a recommendation; D5 to D8 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0033`, proposed in this PR.
+D1 was decided by Stas on 2026-10-23. D2 to D4 are open on decision cards in this spec's thread, each with a recommendation; D5 to D8 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0033`, proposed in this PR.
 
 | # | Question | Recommendation | Options | Why |
 |---|---|---|---|---|
-| D1 | Which scenes the exit run plays | **Scene 1 and Scene 3** (card) | Scene 3 only · **Scenes 1 and 3** · Scenes 1 to 3 | Combat and explore/social are different loops; each gets one real run with a human before Milestone 7 adds timing |
+| D1 | Which scenes the exit run plays | **Scene 1 and Scene 3** (decided by Stas, 2026-10-23) | Scene 3 only · **Scenes 1 and 3** · Scenes 1 to 3 | Combat and explore/social are different loops; each gets one real run with a human before Milestone 7 adds timing |
 | D2 | Models (0032) | **DM Sonnet 5.5, players Haiku 5.5, low effort** (card) | **Sonnet DM, Haiku players** · all Sonnet · Opus DM, Haiku players | Players choose from engine-listed options, which a small model handles; the DM's work is harder and sits on the 6 s path. A config value, so cheap to change after step 1 measures it |
 | D3 | Where the adventure file is typed (0031) | **Game-side type and JSON Schema in `game/`** (card) | **Game-side** · contract crate · untyped Markdown | The engine never reads it, so it isn't wire (Rule 1); typed, so a CI test resolves every id it names |
 | D4 | Audit language (0033) | **Keep the Rust audit, run as a CLI** (card) | **Rust CLI** · TypeScript port in `game/` (as AGT-15 said) | The audit compares citations with the server's own roll renderer; a port duplicates it and needs a parity test. AGT-15 is reworded |
