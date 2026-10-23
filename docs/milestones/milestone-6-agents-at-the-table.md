@@ -24,7 +24,7 @@ Milestones 1 to 5 built the engine side: every rule the adventure needs resolves
 - A stand-in for the human seat in unattended runs: Milestone 7 (AGT-14). The seat is an interface here (§3.4) so a stand-in can take it later.
 - OpenTelemetry (AGT-16, P2, after Milestone 7).
 - The North Star: an MCP server, Telegram, a web or mobile client, more than one human, saving a campaign (decided 2026-10-21: after Milestone 7). The UI boundary is shaped so a later client can replace it (decision 0016), nothing more.
-- Monster turns by an LLM: monsters stay on the scripted policy (decision 0015).
+- Monster turns by an LLM: monsters stay on the scripted policy (decision 0015). Handing monster turns to the DM agent is a later option, not part of this scope (AGT-23, after Milestone 7, Stas 2026-10-23).
 - Graphics, widgets, voice (scope §5; widgets only where they simplify development, which on Ink they don't).
 - New rules. If an agent finds a rule the engine gets wrong, it is a fork or table row, not agent logic (Rules 4 and 5).
 
@@ -307,7 +307,7 @@ D1 to D4 and D9 were decided by Stas on 2026-10-23; D5 to D8 are recommended and
 - Milestone 6 row: rows AGT-2..8, AGT-10, AGT-11, AGT-15, AGT-17..21, API-17, API-18, CHR-5, MAP-2..4; spec link; exit criterion names Scene 1 and Scene 3 (D1).
 - AGT-10 joins Milestone 6 (recording); its latency gate stays in Milestone 7.
 - AGT-15 reworded: the Rust audit runs as a CLI over the game transcript (D4).
-- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **AGT-21** agent memory for one run: typed player notes and DM memory of invented facts (P1, Ours, S); **AGT-22** agent memory across runs and campaigns, after Milestone 7 (P2, Ours, M, Stas); **CON-14** environment for game work: API key secret and npm access (P0, Ours, S, Stas).
+- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **AGT-21** agent memory for one run: typed player notes and DM memory of invented facts (P1, Ours, S); **AGT-22** agent memory across runs and campaigns, after Milestone 7 (P2, Ours, M, Stas); **AGT-23** the DM agent runs monster turns, after Milestone 7 (P2, Ours, M, Stas); **CON-14** environment for game work: API key secret and npm access (P0, Ours, S, Stas).
 - API-31 and API-32 note the Milestone 6 step they must land before.
 
 ## Sources
