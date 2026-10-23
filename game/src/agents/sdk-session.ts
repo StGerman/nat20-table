@@ -2,6 +2,7 @@
 // setting sources, an empty working directory, our own system prompt, and only the in-process MCP
 // tools the orchestrator binds for this seat. The session is long-lived (streaming input): each
 // `turn()` sends one user message and resolves when the SDK reports that turn's result.
+import { randomUUID } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -140,6 +141,8 @@ export interface TurnResult {
 }
 
 interface PendingTurn {
+  /** The uuid sent with the user message; the SDK echoes it on the turn's result. */
+  uuid: string;
   purpose: string;
   sentAt: number;
   texts: string[];
@@ -212,6 +215,7 @@ export class AgentSession {
     this.turns += 1;
     return new Promise<TurnResult>((resolve, reject) => {
       const pending: PendingTurn = {
+        uuid: randomUUID(),
         purpose,
         sentAt: performance.now(),
         texts: [],
@@ -234,6 +238,7 @@ export class AgentSession {
         type: "user",
         message: { role: "user", content: message },
         parent_tool_use_id: null,
+        uuid: pending.uuid as `${string}-${string}-${string}-${string}-${string}`,
       });
     });
   }
@@ -283,11 +288,16 @@ export class AgentSession {
         return;
       }
       case "result": {
-        if (this.stale > 0) {
-          this.stale -= 1;
+        // A result for a turn that timed out belongs to no turn. The SDK names the message a
+        // result answers when it can; otherwise the count of timed-out turns decides.
+        const echoed = message.user_message_uuid;
+        if (echoed ? echoed !== turn?.uuid : this.stale > 0) {
+          if (this.stale > 0) this.stale -= 1;
           return;
         }
         if (!turn) return;
+        // Results come in order, so any timed-out turn before this one has finished by now.
+        this.stale = 0;
         if (message.subtype !== "success" || message.is_error) {
           this.settle(new Error(`${this.config.agent}: turn failed (${message.subtype})`));
           return;
