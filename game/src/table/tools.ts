@@ -108,6 +108,14 @@ export class PlayerTools {
     return result;
   }
 
+  /**
+   * Records a model input this seat got that no tool call made, such as its system prompt or a new
+   * session's seed, for the leak scan (spec §3.5).
+   */
+  record(text: string): void {
+    this.table.recordInput(this.me, text);
+  }
+
   mySheet(): Promise<ToolOutcome> {
     return this.answer(send(this.table, this.me, { cmd: "get_sheet", actor: this.me }, (r) =>
       r.result?.cmd === "get_sheet" ? JSON.stringify(r.result.sheet) : "",

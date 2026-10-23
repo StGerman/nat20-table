@@ -124,8 +124,10 @@ export function sessionOptions(config: SessionConfig, cwd: string): Options {
 
 /** What a turn produced. */
 export interface TurnResult {
-  /** The agent's final text, if it wrote any (tool calls carry its decisions). */
+  /** Everything the agent wrote in the turn, between tool calls included. */
   text: string;
+  /** Its last message alone: the answer a declaration or a summary asks for. */
+  final: string;
   usage: UsageRecord;
 }
 
@@ -318,7 +320,7 @@ export class AgentSession {
           at: new Date().toISOString(),
         };
         this.config.usage?.add(usage);
-        this.settle({ text: turn.texts.join("\n").trim(), usage });
+        this.settle({ text: turn.texts.join("\n").trim(), final: message.result.trim(), usage });
         return;
       }
       default:
