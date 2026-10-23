@@ -119,12 +119,21 @@ test("the human, scripted, plays the Milestone 3 trail across five scenes, and t
 test("each part of a turn shows its engine lines, then its narration, before the next part", async () => {
   const { seat } = await play({ seed: 23, dm: yardDm() });
   const shown = seat.shown.filter((e): e is Extract<TableEvent, { kind: "engine" | "narration" }> => e.kind === "engine" || e.kind === "narration");
-  // After a PC's turn ends, its narration comes before any line of the next creature's turn.
+  // After a PC's turn ends, its narration comes before any line of the next creature's turn. A
+  // turn the PC played, that is: a downed PC's turn is the engine's (a death save), and is
+  // narrated with the monsters' turns around it.
+  let played = 0;
   for (const [i, e] of shown.entries()) {
-    if (e.kind !== "engine" || !/^(bren|torva|maren|ilsa)'s turn ends\.$/.test(e.text)) continue;
+    const pc = e.kind === "engine" ? /^(bren|torva|maren|ilsa)'s turn ends\.$/.exec(e.text)?.[1] : undefined;
+    if (!pc) continue;
+    let start = i;
+    while (start > 0 && shown[start].text !== `${pc}'s turn.`) start -= 1;
+    if (!shown.slice(start, i).some((x) => x.text.startsWith(`${pc} uses `) || x.text === `${pc} moves.`)) continue;
+    played += 1;
     const next = shown.slice(i + 1).find((x) => x.kind === "narration" || /'s turn\.$/.test(x.text));
     assert.equal(next?.kind, "narration", `narration before the next turn after: ${e.text}`);
   }
+  assert.ok(played > 4, `only ${played} PC turns played`);
 });
 
 // --- Spec §6, row by row -------------------------------------------------------------------------
@@ -278,15 +287,16 @@ test("the engine dying stops the run, with the transcript written", async () => 
 });
 
 test("a reaction the agent doesn't take is declined", async () => {
-  const { t, players } = await play({
-    seed: 23,
-    players: { torva: { reaction: async () => {} }, maren: {}, ilsa: {} },
-    dm: yardDm(),
-  });
-  const asked = players.get("torva")!.briefings.filter((b) => b.wake === "reaction").length;
+  const ignore = { reaction: async () => {} };
+  const { t, players } = await play({ seed: 23, players: { torva: ignore, maren: ignore, ilsa: ignore }, dm: yardDm() });
+  let asked = 0;
+  for (const [handle, player] of players) {
+    const times = player.briefings.filter((b) => b.wake === "reaction").length;
+    asked += times;
+    assert.equal(runLines(t, "fallback").filter((l) => l === `${handle} lets the reaction pass`).length, times);
+    assert.equal(t.requests().filter((r) => r.cmd === "react" && r.actor === handle && r.choice === null).length, times);
+  }
   assert.ok(asked > 0);
-  assert.equal(runLines(t, "fallback").filter((l) => l === "torva lets the reaction pass").length, asked);
-  assert.equal(t.requests().filter((r) => r.cmd === "react" && r.actor === "torva" && r.choice === null).length, asked);
 });
 
 test("the human's refused number gets the engine's sentence and the list again, and is counted", async () => {
