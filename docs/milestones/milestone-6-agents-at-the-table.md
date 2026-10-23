@@ -80,7 +80,7 @@ Only the orchestrator holds an `EngineClient`, and the engine has one client per
 
 All agents run on the **Claude Agent SDK** (decision 0019), configured so the harness adds nothing we didn't put there:
 - **No built-in tools.** No Read, Bash, Grep or web tools: the repository holds the scenario files, so a player agent that can read files can read the DCs. Each session gets only its own MCP tools.
-- **No setting sources** and an empty working directory: no CLAUDE.md, no project settings, no skills leak into an agent's context.
+- **No setting sources** and an empty working directory: no CLAUDE.md, no project settings, no skills leak into an agent's context. The only skills an agent can have are our own, loaded from a path the game passes (D10).
 - **Our own system prompt**, replacing the SDK's default, so the per-call prefix is small and identical call to call (cacheable).
 - **One long-lived session per agent per scene** (streaming input). At a scene change the orchestrator asks each agent for a short summary, closes the session and opens a fresh one seeded with the card, the sheet, the agent's notes and the summary (AGT-6). Context stays bounded by one scene, and the cached prefix is stable within it.
 - Model and effort per agent are config, not code (D2).
@@ -226,7 +226,7 @@ Each step is one PR (Rule 8, one concern), stacked on the one before, green on e
 
 | # | PR | Rows | Needs | Size |
 |---|---|---|---|---|
-| 1 | **Spike.** `game/` workspace scaffold; one player-agent turn and one DM narration on the Agent SDK against a recorded engine state, cold and warm, with the configuration of §3.2; records latency, tokens and cost per call; licence check of the new npm dependencies. If p95 can't meet §7 on this stack, stop and bring decision 0019 back to Stas before step 9 | AGT-17 (new), AGT-10 | | S |
+| 1 | **Spike.** `game/` workspace scaffold; one player-agent turn and one DM narration on the Agent SDK against a recorded engine state, cold and warm, with the configuration of §3.2; records latency, tokens and cost per call; licence check of the new npm dependencies; checks whether the SDK loads skills from our own path while setting sources stay empty (D10). If p95 can't meet §7 on this stack, stop and bring decision 0019 back to Stas before step 9 | AGT-17 (new), AGT-10 | | S |
 | 2 | Runtime paths for the engine (C1) | API-18 | | S |
 | 3 | Engine client for the loop: start arguments, event cursor (`events{since}`), request and response log to the run directory, timeouts, crash detection | AGT-2 | 2 | S |
 | 4 | Seats and tool bindings: the `Seat` and agent interfaces, the orchestrator's binding of viewer, actor and prompt, the DM's and players' tool sets as functions, scripted agents; unit tests that no player tool can reach another viewer or act out of turn | AGT-5 (bindings), AGT-18 (new) | 3 | M |
@@ -235,7 +235,7 @@ Each step is one PR (Rule 8, one concern), stacked on the one before, green on e
 | 7 | Maps: the yard and cellar as anchors on flat terrain (D7), with distances the fights need | MAP-2, MAP-3 | 2 | S |
 | 8 | *The Silent Mill* as the first scenario pack (§4): the six scene files, the `adventure.json` skeleton and its schema, the prose, the cards, shared `lore/`, CC-BY-4.0 notice; the pack check (§4) as a CI test and a command | MAP-4 | 1, 7 | M |
 | 9 | AI player agents on the Agent SDK: system prompt, the personality cards from step 8, typed notes (§3.6), per-scene sessions and summaries, usage records. Manual run: an all-AI party (Bren on a scripted seat) through `m5_s3_yard` | AGT-5, AGT-6, AGT-10, AGT-21 (new), CHR-5 | 6; API-31 (C2) | M |
-| 10 | DM agent on the Agent SDK: prompt, narration, the narration guard, intent mapping for the human, check selection from the adventure file or the DC ladder, scene exits, DM memory (§3.6). Manual run: Scene 3 with the all-AI party | AGT-4, AGT-20 (new), AGT-21 | 8, 9; API-32 (C3) | L |
+| 10 | DM agent on the Agent SDK: prompt, narration, the narration guard, intent mapping for the human, check selection from the adventure file or the DC ladder, scene exits, DM memory (§3.6), DM craft guidance in our own words (D10). Manual run: Scene 3 with the all-AI party | AGT-4, AGT-20 (new), AGT-21 | 8, 9; API-32 (C3) | L |
 | 11 | Text UI: Ink app on the `Seat` interface, `/sheet`, `/where`, `/options`, `/log`, `/pause`, inline engine lines, option numbers; `TableEvent`/`PlayerIntent` shaped per decision 0016 | AGT-7, AGT-13 (groundwork) | 10 | M |
 | 12 | Option-list cache in the server (C4) | API-17 | | S |
 | 13 | **Exit run.** Stas plays Bren through Scene 1 and Scene 3 (D1) with the DM and the AI party; the transcript, engine log and usage records go to the PR (and the project folder); the audit and the leak scan pass on them; the run report lists retries, fallbacks, p50/p95 latency and cost | AGT-14 (groundwork) | 1-12 | S |
@@ -288,7 +288,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 
 ## 12. Decisions
 
-D1 to D4 and D9 were decided by Stas on 2026-10-23; D5 to D8 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0034`, in this PR.
+D1 to D4 and D9 were decided by Stas on 2026-10-23; D5 to D8 and D10 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0034`, in this PR.
 
 | # | Question | Recommendation | Options | Why |
 |---|---|---|---|---|
@@ -301,6 +301,7 @@ D1 to D4 and D9 were decided by Stas on 2026-10-23; D5 to D8 are recommended and
 | D7 | Maps | **Flat terrain with named anchors** | **Flat plus anchors** · authored meshes with walls and cover | Scope §1.4 hides geometry behind anchors, and graphics are out of scope. A mesh only if a fight needs cover to be fair (MON-10 will say) |
 | D8 | AI player fallback after two failed retries | **`end_turn` in combat, decline a reaction, pass out of combat** | **End turn** · Dodge · the orchestrator picks the first legal option | The only choices that are always legal and never put an agent's action in the orchestrator's hands |
 | D9 | Agent memory (§3.6) | **Per run, for players and the DM; across runs after Milestone 7** (decided by Stas, 2026-10-23) | **Per run, players and DM** · also across runs in M6 · player notes only | DM memory of invented facts stops narration contradicting earlier narration at the source; memory across runs is campaign saving, which Stas placed after the demo |
+| D10 | DM craft guidance (how to narrate, run a social scene, pick a check, end a scene) | **Our own text, written in step 10; shipped as skills loaded from our path if step 1 shows the SDK loads them with no setting sources, otherwise in the DM's system prompt** | **Own text** · install a community DM skill · no guidance beyond the rules | Community DM skills let the model roll and rule (Rule 4), several use 2014 rules, and their licences are unchecked (Rule 7); we read them, with the SRD Gameplay Toolbox, as input. Skills keep only the guidance a situation needs in context. Survey: `/mnt/project-files/research/dm-skills-survey-2026-10-23.md` |
 
 ## 13. TASKS.md changes made with this spec
 
