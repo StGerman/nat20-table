@@ -1,3 +1,4 @@
 /target
 node_modules/
 .cargo/config.toml
+/runs/

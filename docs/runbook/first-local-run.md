@@ -18,7 +18,7 @@ Part 1 can be done today. Part 2 grows with each Milestone 6 step: a command is 
 | 8 | The engine, built once (the first build fetches `nat20_core` from the fork and takes a few minutes) | `cargo build -p nat20-api-server` | `target/debug/nat20-api-server` exists |
 | 9 | Remote Control, only if a project thread should run commands here for you (below) | see "Remote Control" | the thread sees your Mac |
 
-Nothing else is configured by hand. The game reads no secrets and no config file: the model per agent, the scenario pack and the seed are command-line flags with defaults (decision 0032), and every run writes its files to `runs/<timestamp>/` in the repo (git-ignored from step 1 on).
+Nothing else is configured by hand. The game reads no secrets and no config file: the model per agent, the scenario pack and the seed are command-line flags with defaults (decision 0032), and every run writes its files to `runs/<timestamp>/` in the repo (git-ignored).
 
 ### Remote Control (optional)
 
@@ -34,7 +34,7 @@ Each line names the Milestone 6 step that ships it. Before each run: `git pull`,
 
 | Step | Run | Command | You play? | What to send back |
 |---|---|---|---|---|
-| 1 | Agent SDK spike: one player turn and one DM narration, cold and warm, with latency and tokens per call | ships with step 1 | No | the printed report (also `runs/<timestamp>/report.md`) |
+| 1 | Agent SDK spike: three player turns for Maren and three DM narrations, each agent in one session (first turn cold, then warm), against a recorded engine state; latency, tokens and API-equivalent cost per turn; checks the credential is your subscription and that the DM loads a skill from our folder | `npm run spike` (a few minutes; `npm run spike -- --dry-run` prints the session settings without calling a model). It needs no engine build | No | `runs/spike-<time>/report.md` |
 | 9 | All-AI party, Bren on a scripted seat, through the Milestone 5 yard fight | ships with step 9 | No | report, and the audit and leak scan results it prints |
 | 10 | Scene 3 with the DM agent and the all-AI party | ships with step 10 | No | same |
 | 13 | **Exit run:** you play Bren through Scene 1 and Scene 3 in the text UI | ships with step 13 | **Yes**, in a terminal (not through Remote Control: the UI needs your keyboard) | the run folder; the thread commits the transcript, engine log and usage records to the PR |
