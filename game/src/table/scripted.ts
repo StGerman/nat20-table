@@ -50,9 +50,23 @@ function choose(options: ActionOption[], inReachOnly = false): { option_id: stri
   return undefined;
 }
 
+/**
+ * The default reaction: take the first one offered, unless it answers another party member (an
+ * Opportunity Attack on an ally walking away, which the rules allow and no player takes).
+ */
+async function reactUnlessAlly(me: Handle, briefing: string, tools: PlayerTools): Promise<void> {
+  const about = /may react to ([\w-]+)\.$/m.exec(briefing)?.[1];
+  if (about && about !== me) {
+    const state = (await tools.look()).data as State | undefined;
+    const others = state?.view === "player" ? state.others : [];
+    if (others.some((c) => c.handle === about && c.side === "party")) return void (await tools.react(null));
+  }
+  await tools.react(0);
+}
+
 export interface ScriptedPlayerPolicy {
   combat?: CombatPolicy;
-  /** The reaction choice to take, or null to decline. Default: take the first one offered. */
+  /** The reaction choice to take, or null to decline. Default: the first one offered, unless it answers an ally. */
   reaction?: (tools: PlayerTools) => Promise<void>;
   /** Speaks with `say` and returns what it sets out to do, or nothing to pass. */
   declare?: (tools: PlayerTools, briefing: string) => Promise<string | void>;
@@ -78,7 +92,7 @@ export class ScriptedPlayer implements PlayerAgent {
       case "combat_turn":
         return (this.policy.combat ?? attackNearest)(tools);
       case "reaction":
-        return this.policy.reaction ? this.policy.reaction(tools) : void (await tools.react(0));
+        return this.policy.reaction ? this.policy.reaction(tools) : reactUnlessAlly(this.handle, briefing, tools);
       case "declare":
         return this.policy.declare?.(tools, briefing);
       case "granted":
