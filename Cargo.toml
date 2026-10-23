@@ -30,7 +30,8 @@ nat20-api-contract = { path = "crates/nat20-api-contract" }
 # core #52's head until the stack merges. 935d516 = a206929 plus core #53 (a natural 20 on a
 # Death Saving Throw restores 1 Hit Point and the creature takes its turn), core #53's head until
 # the stack merges. d33118b = fork `demo` after core #45 to #53 merged; its tree is 935d516's.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "d33118b93476836f5ab9b589054ae2ae74bc3b1f" }
+# d9c6b37 = d33118b plus core #54 (a walk into range ends on a free spot, ENG-12).
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "d9c6b375829186f3887f160f18c43a415c335f82" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
