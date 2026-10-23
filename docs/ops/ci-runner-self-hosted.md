@@ -33,7 +33,7 @@ GitHub sends jobs only to an online runner. While the Mac sleeps or is off, jobs
 1. `brew install lima`
 2. Create the VM without any shared folders (Lima mounts your home directory by default; `--mount-none` turns that off):
    ```bash
-   limactl start --name=nat20-ci --vm-type=vz --cpus=6 --memory=12 --disk=80 --mount-none template://ubuntu-24.04
+   limactl start --name=nat20-ci --vm-type=vz --cpus=6 --memory=12 --disk=80 --mount-none template:ubuntu-24.04
    limactl shell nat20-ci
    ```
    6 of the Mac's cores and 12 GB leave the desktop usable during a build; lower them on a 16 GB machine (4 CPUs, 8 GB).
