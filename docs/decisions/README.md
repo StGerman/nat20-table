@@ -43,6 +43,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0032](0032-agent-models-and-cost.md) | Agent models: Opus 5.5 DM and Sonnet 5.5 players while testing, Sonnet and Haiku for a beta | Accepted | 2026-10-23 | Stas (Milestone 6 spec D2) |
 | [0033](0033-audit-stays-in-rust.md) | The transcript audit stays in Rust and runs as a CLI over game transcripts | Accepted | 2026-10-23 | Stas (Milestone 6 spec D4) |
 | [0034](0034-agent-memory-per-run.md) | Agent memory lasts one run: typed player notes and a DM memory of invented facts | Accepted | 2026-10-23 | Stas (Milestone 6 spec D9) |
+| [0035](0035-unplanned-fights-dm-starts-engine-validates.md) | Unplanned fights: the DM starts them, the engine validates them (own milestone after Milestone 7) | Accepted | 2026-10-23 | Stas (Milestone 6 spec review, D11) |
 
 ## Open questions to watch
 
