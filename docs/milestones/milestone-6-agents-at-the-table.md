@@ -33,7 +33,7 @@ Milestones 1 to 5 built the engine side: every rule the adventure needs resolves
 | Need | Today | Consequence |
 |---|---|---|
 | A typed client for the engine | `packages/engine-client/src/index.ts`: spawns the server, checks `schema_sha256` on `hello`, sends one command and resolves its response, binds `viewer` in `envelope()` so tool input can't override it | **Keep it.** Step 3 adds the event cursor, a request log, crash detection and start arguments (AGT-2) |
-| The engine runs outside its checkout | Scene data and the terrain mesh come from `env!("CARGO_MANIFEST_DIR")` | **API-18 first** (step 2): the game spawns the binary from elsewhere |
+| The engine runs outside its checkout | Scene data, pregens and the terrain mesh come from `env!("CARGO_MANIFEST_DIR")` (`server.rs`, `scene.rs`, `adapter/pregen.rs`) | **API-18 first** (step 2): the game spawns the binary from elsewhere |
 | Monster turns | Scene creatures with `control: scripted` act inside the engine; their events come back in the response to the request that ended the PC's turn | The game loop never decides for a monster |
 | Who decides for a PC | `control: client`; `legal_actions`, `submit`, `move`, `react`, `end_turn` with prompt ids (protocol §3, §4) | Enough for every agent decision. **No new engine command is planned** (§5) |
 | Visibility | `projection.rs` per `viewer`; the `visibility` CI job scans projected lines; player roll view is strict (decision 0006) | Player agents only ever see projected responses. The new risk is free text the DM writes (§3.5) |
@@ -80,7 +80,7 @@ All agents run on the **Claude Agent SDK** (decision 0019), configured so the ha
 
 | Agent | Sees | Tools | Never has |
 |---|---|---|---|
-| **DM** (`viewer: dm`) | The adventure file (D3), the current scene file, the DM projection of state and events, the human's text, the players' spoken lines and declarations | `get_state`, `get_sheet` (any creature), `load_scene`, `start_combat`, `end_combat`, `spawn`, `request_check`, `help`, `short_rest`, `move` (explore mode), `legal_actions` and `submit` **for the human's character only**, `narrate{text, to}`, `ask_human{question}` | A tool that sets HP, a roll, a check result or damage (none exists in the contract); `submit` for an AI player's character; a monster's decisions |
+| **DM** (`viewer: dm`) | The adventure file (D3), the current scene file, the DM projection of state and events, the human's text, the players' spoken lines and declarations | `get_state`, `get_sheet` (any creature), `load_scene`, `start_combat`, `end_combat`, `spawn`, `request_check`, `help`, `short_rest`, `move` (explore mode), `legal_actions` and `submit` **for the human's character only**, `grant_action{actor}` (out of combat, lets an AI player take one of its own options, §3.3), `narrate{text, to}`, `ask_human{question}` | A tool that sets HP, a roll, a check result or damage (none exists in the contract); `submit` for an AI player's character; a monster's decisions |
 | **AI player** (`viewer: <own handle>`) | Its own sheet, its personality card, its own notes, the player projection of state and events, narration addressed to the table or to it, other characters' spoken lines | `my_sheet`, `look` (state projected for it: anchors, visible creatures, distances), `legal_actions`, `submit_decision`, `move`, `end_turn`, `react`, `say{text}`, `note{text}` | The scenario, DCs, monster HP or stat blocks, the DM's reasoning, other players' sheets or notes (scope §4.3) |
 
 `look` is new against scope §4.3's tool list; it is the read-only `get_state` projection, which is what "what its character perceives" means in engine terms. Only `submit_decision`, `move`, `end_turn` and `react` change state, and the engine validates all four.
@@ -93,7 +93,7 @@ The orchestrator is plain, deterministic TypeScript, not an agent. It reads `awa
 1. The DM narrates the scene, its anchors and its obvious options.
 2. The human types an action or a line.
 3. Every AI player is asked **in parallel** for at most one declaration (`say` and/or a stated intent) or a pass; the orchestrator orders them after the human's.
-4. The DM maps the declarations to engine calls (`request_check` with the declaring character as `actor`, `move`, `help`, `short_rest`, `start_combat`, `load_scene`), or answers in fiction when no engine call fits, or asks the human a clarifying question.
+4. The DM maps the declarations to engine calls (`request_check` with the declaring character as `actor`, `move`, `help`, `short_rest`, `start_combat`, `load_scene`), or answers in fiction when no engine call fits, or asks the human a clarifying question. When an AI player declares one of its own options (Cure Wounds at camp, Second Wind; protocol §4.8), the DM doesn't submit it: it calls `grant_action{actor}`, and the orchestrator wakes that player with its explore `legal_actions`; the player's `submit_decision` (no prompt id) is accepted by the orchestrator once per grant. The human's own explore actions go through the DM's `submit` for Bren.
 5. The engine resolves; the DM narrates the outcome. Repeat until the adventure file's exit for the scene fires, then `load_scene{next, party}`.
 
 **Combat mode**:
@@ -151,7 +151,7 @@ Engine-side changes this milestone depends on, each its own PR under Rule 1 if i
 
 | # | Change | Row | Wire impact | Must land before |
 |---|---|---|---|---|
-| C1 | Runtime paths: the scene data and maps directories come from a server argument or environment variable, not the build checkout | API-18 | None (start-up only); `protocol.md` §2.1 says where scenes are read from | Step 3 |
+| C1 | Runtime paths: the scene data, pregens and maps directories come from a server argument or environment variable, not the build checkout | API-18 | None (start-up only); `protocol.md` §2.1 says where scenes are read from | Step 3 |
 | C2 | A `submit` whose action can't be taken after the walk is refused or reported, never accepted silently | API-31 | Likely additive: a reject reason or an event, decided in API-31's PR with a fixture and CHANGELOG line | Step 9 (AI players in a fight) |
 | C3 | A scripted monster's move into melee logs `moved` | API-32 | None (the event exists) | Step 10 (the DM narrates monster moves) |
 | C4 | `submit` stops rebuilding the full option list | API-17 | None | Step 12 (latency is measured on the exit run) |
