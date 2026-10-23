@@ -144,6 +144,14 @@ Memory lasts one run. Memory that carries over between runs and campaigns is cam
 - **Visibility.** DM memory is DM-only by construction: a player agent's input is built only from its own projection, guarded narration, spoken lines and its own notes, so a remembered fact reaches a player only if the DM narrates it. The leak scan (§3.5) can't tell a secret written in plain prose, so step 10 adds its own test: a scripted DM remembers a sentinel fact it never narrates, and the sentinel must appear in no player agent's recorded input. A player's notes reach only that player.
 - **Audit and cost.** Every `note` and `remember` is written to the transcript on its owner's channel, so Milestone 7's narration check (AGT-9) can compare narration with what the DM established. Memory is only appended, never rewritten, so the cached prefix stays valid.
 
+### 3.7 Actions the adventure didn't plan for
+
+Players will try what the pack didn't plan: rob the reeve, threaten a villager, set the mill on fire. The engine has no idea of crime, guards or jail, so nothing happens by itself:
+- **The DM turns the intent into what the engine can do.** Usually a check from the scene or the SRD DC ladder (Sleight of Hand to lift a purse, Intimidation to threaten), which the engine rolls and resolves (Rule 4). Items and money don't change hands, because loot is out of scope; the DM narrates what the character learns or gains in fiction and adds nothing to the sheet.
+- **A fight starts only from the scene file.** `start_combat` takes an encounter the scene defines, and its participants come from the file, never from the DM (protocol §4.4). An NPC who isn't a creature in the scene can't be attacked, so robbing the reeve never turns into a fight on its own. The DM narrates a response the engine doesn't need to resolve (a shout, flight, a refusal to help), and never narrates a blow, a wound or a death the engine didn't resolve.
+- **Consequences the engine doesn't track are fiction.** A grudge, a bounty or a night in the lockup goes into the DM's memory (§3.6) so later narration stays consistent, and the DM keeps the adventure moving along the skeleton's exits.
+- **A pack can make a crime matter mechanically** with what scene files already have: a check whose failure sets a flag, an encounter with the village guards (the SRD Guard), a flag spawn that brings them in, and a lockup scene that the skeleton's exits lead to and from. *The Silent Mill* as scoped has none of these, because its monsters are only goblins, wolves and rats (scope §1); D11 asks whether to add them.
+
 ## 4. The scenario: format and where it lives
 
 *The Silent Mill* is our own content (CC-BY-4.0, decision 0018). Adventure content never goes into core (Rule 6) and stays out of the contract crate unless the engine reads it (Rule 1).
@@ -238,7 +246,7 @@ Each step is one PR (Rule 8, one concern), stacked on the one before, green on e
 | 7 | Maps: the yard and cellar as anchors on flat terrain (D7), with distances the fights need | MAP-2, MAP-3 | 2 | S |
 | 8 | *The Silent Mill* as the first scenario pack (§4): the six scene files, the `adventure.json` skeleton and its schema, the prose, the cards, shared `lore/`, CC-BY-4.0 notice; the pack check (§4) as a CI test and a command | MAP-4 | 1, 7 | M |
 | 9 | AI player agents on the Agent SDK: system prompt, the personality cards from step 8, typed notes (§3.6), per-scene sessions and summaries, usage records. Manual run: an all-AI party (Bren on a scripted seat) through `m5_s3_yard` | AGT-5, AGT-6, AGT-10, AGT-21 (new), CHR-5 | 6; API-31 (C2) | M |
-| 10 | DM agent on the Agent SDK: prompt, narration, the narration guard, intent mapping for the human, check selection from the adventure file or the DC ladder, scene exits, DM memory (§3.6), DM craft guidance in our own words (D10). Manual run: Scene 3 with the all-AI party | AGT-4, AGT-20 (new), AGT-21 | 8, 9; API-32 (C3) | L |
+| 10 | DM agent on the Agent SDK: prompt, narration, the narration guard, intent mapping for the human, check selection from the adventure file or the DC ladder, scene exits, DM memory (§3.6), actions the adventure didn't plan for (§3.7), DM craft guidance in our own words (D10). Manual run: Scene 3 with the all-AI party | AGT-4, AGT-20 (new), AGT-21 | 8, 9; API-32 (C3) | L |
 | 11 | Text UI: Ink app on the `Seat` interface, `/sheet`, `/where`, `/options`, `/log`, `/pause`, inline engine lines, option numbers; `TableEvent`/`PlayerIntent` shaped per decision 0016 | AGT-7, AGT-13 (groundwork) | 10 | M |
 | 12 | Option-list cache in the server (C4) | API-17 | | S |
 | 13 | **Exit run.** Stas plays Bren through Scene 1 and Scene 3 (D1) with the DM and the AI party; the transcript, engine log and usage records go to the PR (and the project folder); the audit and the leak scan pass on them; the run report lists retries, fallbacks, p50/p95 latency and cost | AGT-14 (groundwork) | 1-12 | S |
@@ -291,7 +299,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 
 ## 12. Decisions
 
-D1 to D4 and D9 were decided by Stas on 2026-10-23; D5 to D8 and D10 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0034`, in this PR.
+D1 to D4 and D9 were decided by Stas on 2026-10-23; D5 to D8 and D10 are recommended and stand unless Stas changes them in review; D11 is on a decision card in this spec's thread. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0034`, in this PR.
 
 | # | Question | Recommendation | Options | Why |
 |---|---|---|---|---|
@@ -305,13 +313,14 @@ D1 to D4 and D9 were decided by Stas on 2026-10-23; D5 to D8 and D10 are recomme
 | D8 | AI player fallback after two failed retries | **`end_turn` in combat, decline a reaction, pass out of combat** | **End turn** · Dodge · the orchestrator picks the first legal option | The only choices that are always legal and never put an agent's action in the orchestrator's hands |
 | D9 | Agent memory (§3.6) | **Per run, for players and the DM; across runs after Milestone 7** (decided by Stas, 2026-10-23) | **Per run, players and DM** · also across runs in M6 · player notes only | DM memory of invented facts stops narration contradicting earlier narration at the source; memory across runs is campaign saving, which Stas placed after the demo |
 | D10 | DM craft guidance (how to narrate, run a social scene, pick a check, end a scene) | **Our own text, written in step 10; shipped as skills loaded from our path if step 1 shows the SDK loads them with no setting sources, otherwise in the DM's system prompt** | **Own text** · install a community DM skill · no guidance beyond the rules | Community DM skills let the model roll and rule (Rule 4), several use 2014 rules, and their licences are unchecked (Rule 7); we read them, with the SRD Gameplay Toolbox, as input. Skills keep only the guidance a situation needs in context. Survey: `/mnt/project-files/research/dm-skills-survey-2026-10-23.md` |
+| D11 | Crimes against villagers in *The Silent Mill* (§3.7) | **Narrative consequences only in the demo; village guards and a lockup scene later (MAP-5)** (card) | **Narrative only** · add the SRD Guard, a contingency encounter and a lockup scene to the pack now | The rules for unplanned actions hold either way; guards add a monster outside the scope's list, an encounter and a scene to step 8. Playtests in Milestone 7 show whether players try it |
 
 ## 13. TASKS.md changes made with this spec
 
 - Milestone 6 row: rows AGT-2..8, AGT-10, AGT-11, AGT-15, AGT-17..21, API-17, API-18, CHR-5, MAP-2..4; spec link; exit criterion names Scene 1 and Scene 3 (D1).
 - AGT-10 joins Milestone 6 (recording); its latency gate stays in Milestone 7.
 - AGT-15 reworded: the Rust audit runs as a CLI over the game transcript (D4).
-- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **AGT-21** agent memory for one run: typed player notes and DM memory of invented facts (P1, Ours, S); **AGT-22** agent memory across runs and campaigns, after Milestone 7 (P2, Ours, M, Stas); **AGT-23** the DM agent runs monster turns, after Milestone 7 (P2, Ours, M, Stas); **CON-14** environment for game work: API key secret and npm access (P0, Ours, S, Stas).
+- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **AGT-21** agent memory for one run: typed player notes and DM memory of invented facts (P1, Ours, S); **AGT-22** agent memory across runs and campaigns, after Milestone 7 (P2, Ours, M, Stas); **AGT-23** the DM agent runs monster turns, after Milestone 7 (P2, Ours, M, Stas); **MAP-5** village guards and a lockup scene for crimes against villagers (P2, Ours, M; D11); **CON-14** environment for game work: API key secret and npm access (P0, Ours, S, Stas).
 - API-31 and API-32 note the Milestone 6 step they must land before.
 
 ## Sources
