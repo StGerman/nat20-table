@@ -31,9 +31,10 @@ use nat20_core::{
 
 use super::sheet::{core_ability, core_skill};
 
-/// Pregens live in `pregens/` at the repository root, with the rest of our adventure content.
+/// Pregens live in `pregens/` at the repository root, with the rest of our adventure content,
+/// unless `NAT20_PREGENS_DIR` names another directory ([`crate::paths`]).
 fn pregens_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../pregens")
+    crate::paths::pregens_dir()
 }
 
 /// The ids of every pregen file, sorted.

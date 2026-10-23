@@ -2,13 +2,19 @@
 
 use std::io::{self, BufRead, Write};
 
-use nat20_api_server::{Server, adapter};
+use nat20_api_server::{Server, adapter, paths};
 
 fn main() -> io::Result<()> {
     eprintln!(
         "nat20-api-server: nat20_core {} loaded {} classes",
         adapter::engine_rev(),
         adapter::loaded_class_count()
+    );
+    eprintln!(
+        "nat20-api-server: scenes from {}, pregens from {}, maps from {}",
+        paths::data_dir().join("scenes").display(),
+        paths::pregens_dir().display(),
+        paths::maps_dir().display()
     );
     let mut server = Server::new();
     let stdin = io::stdin();
