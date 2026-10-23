@@ -167,6 +167,28 @@ type Picked = (
     Option<TargetInstance>,
 );
 
+/// An option a client's `submit` takes at the end of a walk, because its target was out of reach
+/// or sight (API-31).
+struct WalkThenAct {
+    entity: Entity,
+    actor: Handle,
+    option_id: OptionId,
+    name: String,
+    targets: Vec<Handle>,
+}
+
+impl WalkThenAct {
+    fn of(entity: Entity, actor: &str, option: &ActionOption, targets: &[String]) -> Self {
+        Self {
+            entity,
+            actor: Handle(actor.to_owned()),
+            option_id: option.option_id.clone(),
+            name: option.name.clone(),
+            targets: targets.iter().map(|t| Handle(t.clone())).collect(),
+        }
+    }
+}
+
 struct OptionEntry {
     option: ActionOption,
     action_id: ActionId,
@@ -239,6 +261,9 @@ pub struct Game {
     /// The creatures the area option being submitted catches, so its `action` entry names them
     /// even when the area kills some before the log is written.
     area_caught: Vec<Entity>,
+    /// The option a client's walk is on its way to take, until the log shows it taken or the
+    /// walker stops without it; then the log says so with `action_dropped` (API-31).
+    walk_then_act: Option<WalkThenAct>,
     /// The highest round of this scene's fights whose round spawns were looked at, so each
     /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
@@ -543,6 +568,7 @@ impl Game {
             concentrating: HashMap::new(),
             shown: HashMap::new(),
             area_caught: Vec::new(),
+            walk_then_act: None,
             spawn_round: 0,
             stalls: 0,
         }
@@ -2150,7 +2176,9 @@ impl Game {
         if submitted.is_err() {
             self.area_caught.clear();
         }
-        submitted?;
+        if submitted? {
+            self.walk_then_act = Some(WalkThenAct::of(entity, actor, &option.option, targets));
+        }
         self.settle();
         self.drain();
         self.area_caught.clear();
@@ -2223,7 +2251,9 @@ impl Game {
         if submitted.is_err() {
             self.area_caught.clear();
         }
-        submitted?;
+        if submitted? {
+            self.walk_then_act = Some(WalkThenAct::of(entity, actor, &option.option, targets));
+        }
         // An explore command that acts closes a finished fight's `combat_over`, as `move` does.
         self.close_finished_fight();
         self.settle();
@@ -2694,6 +2724,8 @@ impl Game {
 
     // ---- engine driving -------------------------------------------------
 
+    /// Submits one option to the engine. `Ok(true)` when the actor first walks to reach its target
+    /// and takes the option where the walk ends.
     fn submit_entity(
         &mut self,
         entity: Entity,
@@ -2702,7 +2734,7 @@ impl Game {
         context: usize,
         targets: &[Entity],
         area: Option<TargetInstance>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<bool, ApiError> {
         let engine = &mut self.engine;
         let mut builder = ActionBuilder::available(engine, entity);
         builder.action(engine, action_id);
@@ -2752,7 +2784,9 @@ impl Game {
             }
         }
         let activity = builder.build(engine).map_err(|e| refusal(&e))?;
-        engine.submit_activity(activity).map_err(|e| refusal(&e))
+        let walks = matches!(activity, Activity::MoveAndAct { .. });
+        engine.submit_activity(activity).map_err(|e| refusal(&e))?;
+        Ok(walks)
     }
 
     fn react_entity(&mut self, entity: Entity, choice: Option<usize>) -> Result<(), ApiError> {
@@ -3438,6 +3472,32 @@ impl Game {
         let mut entries = Vec::new();
         for event in new_events {
             entries.extend(writer.entries(event));
+        }
+
+        // A walk that stopped without the option it walked for: a move that provokes stops where
+        // it provoked (protocol §4.1), and core drops the option it carried (API-31).
+        if let Some(walk) = self.walk_then_act.take() {
+            use nat20_api_contract::EventKind as Kind;
+            let acted = entries
+                .iter()
+                .any(|e| matches!(&e.kind, Kind::Action { actor, .. } if *actor == walk.actor));
+            let walking = engine
+                .world
+                .get::<&ActivityState>(walk.entity)
+                .is_ok_and(|s| !s.is_idle());
+            if !acted && walking {
+                self.walk_then_act = Some(walk);
+            } else if !acted {
+                entries.push(Pending::public(
+                    encounter.map(|e| e.round() as u32),
+                    Kind::ActionDropped {
+                        actor: walk.actor,
+                        option_id: walk.option_id,
+                        name: walk.name,
+                        targets: walk.targets,
+                    },
+                ));
+            }
         }
 
         // Within one batch put "combat begins" first, and each round header right before the
