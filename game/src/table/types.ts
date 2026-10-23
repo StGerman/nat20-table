@@ -129,7 +129,7 @@ export interface DmAgent {
  */
 export type Channel = "table" | "dm" | "run" | "memory:dm" | `to:${string}` | `notes:${string}`;
 
-/** One line of the run's transcript (step 6 writes and audits them). */
+/** One line of the run's transcript. `nat20-audit` reads it (crates/nat20-duel/src/game_audit.rs). */
 export interface TranscriptRecord {
   at: string;
   /** `dm`, a character handle, `engine` or `table` (the orchestrator). */

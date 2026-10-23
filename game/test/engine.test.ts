@@ -1,10 +1,10 @@
 // The game's engine handle against the built engine (`cargo build -p nat20-api-server` first).
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { GameEngine, REPO } from "../src/engine.ts";
+import { GameEngine, REPO, SESSION_LOG } from "../src/engine.ts";
 
 const pack = path.join(REPO, "crates/nat20-api-server/data");
 
@@ -25,12 +25,13 @@ test("each viewer is shown each event once, projected for it", async () => {
     }
     assert.deepEqual(await engine.newEvents("bren"), [], "nothing is shown twice");
     assert.equal(dm.at(-1)?.seq, engine.logHead);
-    await engine.writeLog("dm", path.join(runDir, "dm-events.json"));
+    await engine.writeLog();
   } finally {
     engine.close();
   }
   const log = readFileSync(path.join(runDir, "engine-log.jsonl"), "utf8").trim().split("\n");
   assert.equal(JSON.parse(log[0]).request.cmd, "hello");
-  assert.ok(existsSync(path.join(runDir, "dm-events.json")));
+  const events = readFileSync(path.join(runDir, SESSION_LOG), "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  assert.equal(events[0].kind, "session_started", "the session log is the DM's view, one event per line");
   rmSync(runDir, { recursive: true });
 });
