@@ -17,7 +17,7 @@ Milestones 1 to 5 built the engine side: every rule the adventure needs resolves
 - the **text UI** (Ink) gives the human free text plus `/sheet`, `/where`, `/options`, `/log` and `/pause`, with every roll shown inline from the engine's own text;
 - every session writes a **transcript** and the engine log, and the **audit** passes on them: every cited `[rN]` matches the log, every roll is cited, nothing uncited looks like a roll;
 - every model call records its **tokens, cost and latency**, from the first scene on (AGT-10, Stas 2026-10-21);
-- *The Silent Mill* exists as content: six engine scene files, the DM's adventure file, the personality cards and the lore it draws on.
+- *The Silent Mill* exists as the first **scenario pack**, a folder the game can load from any path: six engine scene files, the DM's skeleton and Markdown prose, the personality cards and the lore it draws on.
 
 **Non-goals** (each has its own milestone or row):
 - The three timed unattended playthroughs, the latency gate, pacing and the narration-vs-state check: Milestone 7 (AGT-9, AGT-12 to AGT-14). This milestone records latency and cost and builds the harness; it does not gate on them.
@@ -82,7 +82,7 @@ All agents run on the **Claude Agent SDK** (decision 0019), configured so the ha
 
 | Agent | Sees | Tools | Never has |
 |---|---|---|---|
-| **DM** (`viewer: dm`) | The adventure file (D3), the current scene file, the DM projection of state and events, the human's text, the players' spoken lines and declarations | `get_state`, `get_sheet` (any creature), `load_scene`, `start_combat`, `end_combat`, `spawn`, `request_check`, `help`, `short_rest`, `move` (explore mode, any creature), `legal_actions`, `submit`, `move` and `end_turn` in combat **for the human's character only**, `grant_action{actor}` (out of combat, lets an AI player take one of its own options, §3.3), `narrate{text, to}`, `ask_human{question}` | A tool that sets HP, a roll, a check result or damage (none exists in the contract); `submit` for an AI player's character; a monster's decisions |
+| **DM** (`viewer: dm`) | The scenario pack's skeleton and prose (D3), the current scene file, the DM projection of state and events, the human's text, the players' spoken lines and declarations | `get_state`, `get_sheet` (any creature), `load_scene`, `start_combat`, `end_combat`, `spawn`, `request_check`, `help`, `short_rest`, `move` (explore mode, any creature), `legal_actions`, `submit`, `move` and `end_turn` in combat **for the human's character only**, `grant_action{actor}` (out of combat, lets an AI player take one of its own options, §3.3), `narrate{text, to}`, `ask_human{question}` | A tool that sets HP, a roll, a check result or damage (none exists in the contract); `submit` for an AI player's character; a monster's decisions |
 | **AI player** (`viewer: <own handle>`) | Its own sheet, its personality card, its own notes, the player projection of state and events, narration addressed to the table or to it, other characters' spoken lines | `my_sheet`, `look` (state projected for it: anchors, visible creatures, distances), `legal_actions`, `submit_decision`, `move`, `end_turn`, `react`, `say{text}`, `note{text}` | The scenario, DCs, monster HP or stat blocks, the DM's reasoning, other players' sheets or notes (scope §4.3) |
 
 `look` is new against scope §4.3's tool list; it is the read-only `get_state` projection, which is what "what its character perceives" means in engine terms. Only `submit_decision`, `move`, `end_turn` and `react` change state, and the engine validates all four.
@@ -132,19 +132,28 @@ Every model input a player agent receives is also written to the run directory, 
 
 *The Silent Mill* is our own content (CC-BY-4.0, decision 0018). Adventure content never goes into core (Rule 6) and stays out of the contract crate unless the engine reads it (Rule 1).
 
+An adventure is a **scenario pack**: a self-contained folder the game loads from any path it is given, so a new adventure can live in this repo, in its own repo, or in a private folder (D3, Stas 2026-10-23). *The Silent Mill* is the first pack and lives in this repo.
+
 ```
-scenarios/the_silent_mill/
+scenarios/the_silent_mill/        a scenario pack; any folder with this shape works
+  adventure.json     the skeleton: format_version, scenes in order, exits, NPC list,
+                     which check fits which intent, target times, links to prose files
+  prose/             Markdown the skeleton points to: read-aloud openings, what the
+                     characters can notice, NPC notes and voice, adventure lore
   scenes/            engine scene files, one per scene (SceneFile, contract-typed)
-  adventure.json     the DM's adventure file (game-typed, D3)
-  cards/             personality cards for Maren, Ilsa, Torva (CHR-5)
+  cards/             personality cards for the AI party members, Markdown (CHR-5)
   README.md          credits, licence, scene list for humans
-lore/                setting text the adventure draws on (CLAUDE.md layout), our own
+lore/                shared setting text several packs can draw on (CLAUDE.md layout), our own
 ```
 
-- **Engine scene files** move here from the test data directory for the real adventure (the test scenes stay where they are for fixtures). The engine finds them through API-18's data directory argument. Each holds anchors, creatures, `party_start`, checks with DCs, hazards, encounters with surprise and surrender conditions, and spawns, exactly as the contract types them. The two fights reuse what `m5_s3_yard` and `m5_s5_cellar` prove (Milestone 5), with the adventure's anchor names.
-- **The adventure file** holds what only the DM reads: per scene, the read-aloud opening, what the characters can notice, NPCs (name, want, what they know, how they talk), which engine check fits which kind of player intent (by check id), the exits and which one loads which scene, and a target time (scope §3 table). It references scene, anchor, check, encounter and spawn ids; a CI test loads the adventure file with every scene file and fails on any id that doesn't resolve. JSON with `_comment` keys for human notes, like pregens (decision 0025).
+- **Engine scene files** move into the pack for the real adventure (the test scenes stay where they are for fixtures). The game passes the pack's `scenes/` to the engine through API-18's data directory argument. Each holds anchors, creatures, `party_start`, checks with DCs, hazards, encounters with surprise and surrender conditions, and spawns, exactly as the contract types them. The two fights reuse what `m5_s3_yard` and `m5_s5_cellar` prove (Milestone 5), with the adventure's anchor names. The Silent Mill uses the repo's `pregens/`; the same argument lets a later pack bring its own.
+- **The skeleton, `adventure.json`,** holds only what can break the game and so must be checked: `format_version`; per scene its scene file id, exits (which one loads which scene, and the party carried), the NPCs (id, name, which prose file describes them), which engine check fits which kind of player intent (by check id), and a target time (scope §3 table); and the path of every prose file it uses. JSON with `_comment` keys for human notes, like pregens (decision 0025), typed with a published JSON Schema in `game/` (decision 0031).
+- **The prose** is plain Markdown, so porting an adventure is mostly pasting text and wiring a few ids. Nothing in it is parsed for game logic; the DM agent reads it as written.
+- **Checked in CI** (step 8), for every pack in the repo and by a command anyone can run on a pack outside it: the skeleton validates against its schema and its `format_version` is one the game reads; every scene, anchor, check, encounter and spawn id it names resolves in the pack's scene files; every prose and card file it names exists; every scene loads in order with the party carried.
+- **Two-way door.** The JSON shape and `format_version`, not where the type is defined, are what packs depend on. Moving the type from `game/` into the contract crate later (if the engine ever reads part of it) keeps every pack valid; a format change bumps `format_version` and the game reads both until old packs are migrated.
+- **Licence.** A pack committed to this repo, shown or shared carries only our own text or CC-BY text (Rule 7). A private pack of a published adventure stays outside the repo and is never committed (scope §2).
 - **Personality cards** (CHR-5): goal, temperament, one quirk, how the character treats the party (scope §4.3). A card is the only character text in a player agent's prompt besides its sheet.
-- **Visibility.** The adventure file and scene files are DM-only. Only the DM agent's prompt ever includes them. Player agents learn the scene from narration.
+- **Visibility.** The skeleton, the prose and the scene files are DM-only. Only the DM agent's prompt ever includes them. Player agents learn the scene from narration.
 
 ## 5. Contract changes (Rule 1)
 
@@ -208,7 +217,7 @@ Each step is one PR (Rule 8, one concern), stacked on the one before, green on e
 | 5 | Turn loop, combat and explore (§3.3), driven by scripted agents and a scripted human seat; game fixtures: `m5_s3_yard` to `combat_over`, the `m3_*` trail across scene changes; the retry and fallback model (§6) with tests for each row | AGT-3, AGT-11 | 4 | L |
 | 6 | Transcript and audit: `transcript.jsonl` (speaker, channel, text, cited roll ids, log head), the Rust audit as a CLI over a game transcript and the engine log **projected for that transcript's viewer** (D4: the human's table transcript is checked against the player roll view, so `1d20 (14) = 19, hit` passes and no hidden number is added to what the human saw; the DM transcript against the full view), with a regression test for a player-view line, the player-input leak scan (§3.5); CI runs both on step 5's fixtures | AGT-8, AGT-15, AGT-19 (new) | 5 | M |
 | 7 | Maps: the yard and cellar as anchors on flat terrain (D7), with distances the fights need | MAP-2, MAP-3 | 2 | S |
-| 8 | *The Silent Mill* content: the six scene files, `adventure.json` and its schema, the cards' text, `lore/`, CC-BY-4.0 notice; a test loads every scene in order with the party carried, and checks every id the adventure file names | MAP-4 | 1, 7 | M |
+| 8 | *The Silent Mill* as the first scenario pack (§4): the six scene files, the `adventure.json` skeleton and its schema, the prose, the cards, shared `lore/`, CC-BY-4.0 notice; the pack check (§4) as a CI test and a command | MAP-4 | 1, 7 | M |
 | 9 | AI player agents on the Agent SDK: system prompt, the personality cards from step 8, notes, per-scene sessions and summaries, usage records. Manual run: an all-AI party (Bren on a scripted seat) through `m5_s3_yard` | AGT-5, AGT-6, AGT-10, CHR-5 | 6; API-31 (C2) | M |
 | 10 | DM agent on the Agent SDK: prompt, narration, the narration guard, intent mapping for the human, check selection from the adventure file or the DC ladder, scene exits. Manual run: Scene 3 with the all-AI party | AGT-4, AGT-20 (new) | 8, 9; API-32 (C3) | L |
 | 11 | Text UI: Ink app on the `Seat` interface, `/sheet`, `/where`, `/options`, `/log`, `/pause`, inline engine lines, option numbers; `TableEvent`/`PlayerIntent` shaped per decision 0016 | AGT-7, AGT-13 (groundwork) | 10 | M |
@@ -244,7 +253,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 | Audit | step 6, CI | Every roll in the step 5 fixtures cited once, totals and outcomes match, nothing uncited looks like a roll |
 | Leak scan | step 6, CI | No DM-only value in any player-agent input of the step 5 fixtures; a planted leak in a test transcript fails it |
 | Narration guard | step 10 | Digits outside a citation, a scene check id, a stat-block id and an unknown roll id are each refused |
-| Adventure file check | step 8, CI | Every scene loads in order with the party carried; every id in `adventure.json` resolves |
+| Pack check | step 8, CI | The skeleton validates and has a known `format_version`; every id it names resolves; every prose and card file exists; every scene loads in order with the party carried |
 | Live runs | steps 1, 9, 10, 13 (manual) | Reports in the PR description: latency, tokens, cost, retries, fallbacks, audit result |
 
 ## 11. Acceptance, tied to the demo criteria
@@ -262,13 +271,13 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 
 ## 12. Decisions
 
-D1 and D2 were decided by Stas on 2026-10-23. D3 and D4 are open on decision cards in this spec's thread, each with a recommendation; D5 to D8 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0033`, proposed in this PR.
+D1 to D3 were decided by Stas on 2026-10-23. D4 is open on decision cards in this spec's thread, each with a recommendation; D5 to D8 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0033`, proposed in this PR.
 
 | # | Question | Recommendation | Options | Why |
 |---|---|---|---|---|
 | D1 | Which scenes the exit run plays | **Scene 1 and Scene 3** (decided by Stas, 2026-10-23) | Scene 3 only · **Scenes 1 and 3** · Scenes 1 to 3 | Combat and explore/social are different loops; each gets one real run with a human before Milestone 7 adds timing |
 | D2 | Models (0032) | **DM Opus 5.5, players Sonnet 5.5 for Stas's testing; DM Sonnet 5.5, players Haiku 5.5 later for a beta** (decided by Stas, 2026-10-23) | Sonnet DM, Haiku players · all Sonnet · Opus DM, Haiku players · **Opus DM, Sonnet players** | Stas prefers the stronger models while he tests; the model is per-agent config, so the beta switch is a settings change. Risk: Opus on the DM's 6 s path, measured in step 1 |
-| D3 | Where the adventure file is typed (0031) | **Game-side type and JSON Schema in `game/`** (card) | **Game-side** · contract crate · untyped Markdown | The engine never reads it, so it isn't wire (Rule 1); typed, so a CI test resolves every id it names |
+| D3 | Adventure format (0031) | **Scenario pack: JSON skeleton plus Markdown prose, loadable from any path, typed in `game/` with `format_version`** (decided by Stas, 2026-10-23) | **Skeleton + prose** · everything in one JSON file · Markdown only, no schema | Porting is pasting prose; what can break the game is still checked; packs can live outside the repo; the format is a two-way door because packs depend on the JSON shape and version, not on where the type lives |
 | D4 | Audit language (0033) | **Keep the Rust audit, run as a CLI** (card) | **Rust CLI** · TypeScript port in `game/` (as AGT-15 said) | The audit compares citations with the server's own roll renderer; a port duplicates it and needs a parity test. AGT-15 is reworded |
 | D5 | How the human acts in a fight | **Numbered complete decisions go straight to `submit`; free text goes through the DM** | **Both** · free text only (scope §4.4) · numbers only | A number costs no model call and can't be misread (acceptance 5 and 6); free text keeps the table feel. Scope §4.4 is met: the DM still translates free text |
 | D6 | Agent sessions (0030) | **One Agent SDK session per agent per scene, no built-in tools, no setting sources, own system prompt** | **Per scene** · one session for the whole run · a fresh call per turn | Per scene bounds context and keeps the cache prefix stable; a fresh call per turn re-sends everything; one long session grows past 90 minutes. No built-in tools is a visibility requirement (§3.2) |
