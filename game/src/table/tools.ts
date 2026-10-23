@@ -36,12 +36,20 @@ function refusal(response: Response): string {
   return `${error.code}${reason}: ${error.message}${known}`;
 }
 
+/** Commands that change the session. The rest only read it. */
+const CHANGES = new Set<Command["cmd"]>([
+  "submit", "move", "end_turn", "react", "request_check", "help", "short_rest", "start_combat", "end_combat", "spawn", "load_scene",
+]);
+
 /**
  * Sends one bound command and turns the response into a tool outcome. A `stale_prompt` is the
  * orchestrator's problem (spec §6): it refreshes the prompt and resends once, which is not a retry.
- * A retryable refusal counts as one of the decision's retries.
+ * A retryable refusal counts as one of the decision's retries; once they are spent, no further
+ * change reaches the engine and the loop falls back.
  */
-async function send(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
+export async function send(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
+  const changes = CHANGES.has(command.cmd);
+  if (changes && table.exhausted(viewer)) return table.spent();
   let response = table.observe(await table.engine.request(viewer, command));
   if (!response.ok && response.error?.code === "stale_prompt" && "prompt_id" in command && command.prompt_id) {
     const fresh = table.observe(await table.engine.request(viewer, { cmd: "get_state" }));
@@ -50,13 +58,20 @@ async function send(table: TableState, viewer: Viewer, command: Command, okText:
       response = table.observe(await table.engine.request(viewer, { ...command, prompt_id: awaiting.prompt_id }));
     }
   }
-  if (response.ok) return { ok: true, text: okText(response), data: response.result };
+  if (response.ok) {
+    if (changes) table.acted += 1;
+    return { ok: true, text: okText(response), data: response.result };
+  }
   const code = response.error?.code;
   if (code === "not_your_turn" || code === "stale_prompt") {
     return { ok: false, retryable: false, text: refusal(response) };
   }
-  if (response.error?.retryable) table.retries += 1;
-  else table.log("error", `${viewer}: ${command.cmd} answered ${refusal(response)}`);
+  if (response.error?.retryable) table.retry(viewer);
+  else {
+    // Not retryable: logged as a loop bug and counted against the decision (spec §6).
+    table.retry(viewer);
+    table.log("error", `${viewer}: ${command.cmd} answered ${refusal(response)}`);
+  }
   return { ok: false, retryable: response.error?.retryable ?? false, text: refusal(response), data: response.error };
 }
 
@@ -102,7 +117,7 @@ export class PlayerTools {
   look(): Promise<ToolOutcome> {
     return this.answer(send(this.table, this.me, { cmd: "get_state" }, (r) =>
       r.result?.cmd === "get_state" ? formatState(r.result.state) : "",
-    ));
+    ).then((outcome) => ({ ...outcome, data: (outcome.data as { state?: unknown } | undefined)?.state })));
   }
 
   /** In a fight on its own turn, or out of combat once the DM granted it an action. */
@@ -189,9 +204,10 @@ export class DmTools {
   }
 
   private async inScene(actor: string): Promise<ToolOutcome | undefined> {
+    if (this.table.exhausted("dm")) return this.table.spent();
     const handles = await this.sceneHandles();
     if (handles.includes(actor)) return undefined;
-    this.table.retries += 1;
+    this.table.retry("dm");
     return { ok: false, retryable: true, text: `unknown_creature: ${actor} is not in the scene. Creatures: ${handles.join(", ")}.` };
   }
 
@@ -288,22 +304,30 @@ export class DmTools {
   grantAction(actor: string): ToolOutcome {
     if (this.table.inCombat) return notNow("in a fight each player acts on its own turn");
     if (!this.table.players.includes(actor)) {
-      this.table.retries += 1;
+      this.table.retry("dm");
       return { ok: false, retryable: true, text: `${actor} is not an AI player; AI players: ${this.table.players.join(", ")}` };
     }
     this.table.grants.add(actor);
     return { ok: true, text: `${actor} may take one action now` };
   }
 
-  narrate(text: string, to?: string): ToolOutcome {
+  narrate(text: string, to?: string): Promise<ToolOutcome> {
     return this.table.narrate(text, to);
   }
 
-  askHuman(question: string): ToolOutcome {
+  askHuman(question: string): Promise<ToolOutcome> {
     return this.table.askHuman(question);
   }
 
   remember(fact: string): ToolOutcome {
     return this.table.remember(fact);
+  }
+
+  /** The adventure's last exit has fired: the closing narration, then the run ends. */
+  async endAdventure(text: string): Promise<ToolOutcome> {
+    if (this.table.inCombat) return notNow("finish the fight first");
+    const said = await this.table.narrate(text);
+    if (said.ok) this.table.end("the adventure is over");
+    return said.ok ? { ok: true, text: "the adventure is over" } : said;
   }
 }
