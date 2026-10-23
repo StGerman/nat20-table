@@ -1,0 +1,130 @@
+{
+    "id": "s1_village_green",
+    "description": "The Silent Mill, Scene 1 (social, 10 min): the village green. The reeve asks the party to find the miller's apprentice; the mill wheel stopped two days ago. Insight sees the reeve is hiding the miller's debt to him; Persuasion gets him to admit a shepherd saw goblin tracks on the mill road. The party comes from this scene; every later scene carries it in.",
+    "anchors": [
+        {
+            "id": "green_well",
+            "name": "the well on the green",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "reeve_porch",
+            "name": "the reeve's porch",
+            "position_ft": {
+                "x_ft": 20.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "old_oak",
+            "name": "the old oak",
+            "position_ft": {
+                "x_ft": -15.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "mill_lane",
+            "name": "the lane to the mill",
+            "position_ft": {
+                "x_ft": 40.0,
+                "y_ft": -5.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "torva",
+            "pregen": "barbarian_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": -5.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "ilsa",
+            "pregen": "wizard_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": -5.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "reeve_insight",
+            "test": {
+                "kind": "skill",
+                "skill": "insight"
+            },
+            "dc": 12,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "knows_miller_debt"
+                }
+            ]
+        },
+        {
+            "id": "reeve_persuasion",
+            "test": {
+                "kind": "skill",
+                "skill": "persuasion"
+            },
+            "dc": 12,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "knows_goblin_tracks"
+                }
+            ]
+        }
+    ]
+}

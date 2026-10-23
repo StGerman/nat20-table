@@ -1,0 +1,109 @@
+{
+    "id": "s4_captured_goblin",
+    "description": "The Silent Mill, Scene 4 (social, 10 min): inside the mill's storeroom the party questions the goblin that surrendered in the yard, tied to a post. Intimidation or Persuasion gets the cellar layout and the boss's name; a failed attempt warns the boss, who then has an extra Goblin Warrior in Scene 5. The DM offers a short rest. With no prisoner, the party searches the storeroom and goes on.",
+    "anchors": [
+        {
+            "id": "storeroom_door",
+            "name": "the storeroom door",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "grain_sacks",
+            "name": "the grain sacks",
+            "position_ft": {
+                "x_ft": 5.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "flour_barrels",
+            "name": "the flour barrels",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": -5.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "cold_hearth",
+            "name": "the cold hearth",
+            "position_ft": {
+                "x_ft": 5.0,
+                "y_ft": -5.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "prisoner_post",
+            "name": "the post the prisoner is tied to",
+            "position_ft": {
+                "x_ft": 15.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "cellar_hatch",
+            "name": "the cellar hatch",
+            "position_ft": {
+                "x_ft": 15.0,
+                "y_ft": -10.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "storeroom_door",
+        "grain_sacks",
+        "flour_barrels",
+        "cold_hearth",
+        "prisoner_post"
+    ],
+    "checks": [
+        {
+            "id": "interrogate_intimidation",
+            "test": {
+                "kind": "skill",
+                "skill": "intimidation"
+            },
+            "dc": 13,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "knows_cellar_layout"
+                }
+            ],
+            "on_failure": [
+                {
+                    "kind": "flag",
+                    "flag": "boss_warned"
+                }
+            ]
+        },
+        {
+            "id": "interrogate_persuasion",
+            "test": {
+                "kind": "skill",
+                "skill": "persuasion"
+            },
+            "dc": 13,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "knows_cellar_layout"
+                }
+            ],
+            "on_failure": [
+                {
+                    "kind": "flag",
+                    "flag": "boss_warned"
+                }
+            ]
+        }
+    ]
+}
