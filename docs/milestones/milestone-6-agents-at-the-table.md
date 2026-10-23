@@ -16,7 +16,7 @@ Milestones 1 to 5 built the engine side: every rule the adventure needs resolves
 - each **AI player** (Maren, Ilsa, Torva) is its own agent with its own context, tools bound to its own viewer handle, a personality card and private notes;
 - the **text UI** (Ink) gives the human free text plus `/sheet`, `/where`, `/options`, `/log` and `/pause`, with every roll shown inline from the engine's own text;
 - every session writes a **transcript** and the engine log, and the **audit** passes on them: every cited `[rN]` matches the log, every roll is cited, nothing uncited looks like a roll;
-- every model call records its **tokens, cost and latency**, from the first scene on (AGT-10, Stas 2026-10-21);
+- every model call records its **tokens and latency**, from the first scene on (AGT-10, Stas 2026-10-21); live runs use Stas's Claude subscription on Stas's own Mac (D12);
 - *The Silent Mill* exists as the first **scenario pack**, a folder the game can load from any path: six engine scene files, the DM's skeleton and Markdown prose, the personality cards and the lore it draws on.
 
 **Non-goals** (each has its own milestone or row):
@@ -213,22 +213,23 @@ Acceptance item 5: every rejected decision recovers within two retries. The orch
 | Two retries spent | The orchestrator | **Fallback**: an AI player's combat turn ends with `end_turn`; a reaction is declined (`choice: null`); an explore declaration is a pass; DM narration is replaced by the engine lines alone; a DM intent mapping for the human goes back to the human as "I didn't get that; pick from /options" | Recorded as a fallback |
 | The human's decision is rejected | The human | The engine's sentence plus `/options`; no limit, but the count is recorded for acceptance 5 | Recorded |
 | The engine process dies | Everyone | The run stops with its transcript and log written; no resume (saving is out of scope) | n/a |
+| The Claude plan's usage limit is reached (D12) | Everyone | The run stops cleanly with its transcript, log and usage written, and says so; no resume | No, and not a fallback |
 
 A fallback never invents an action: `end_turn` and a declined reaction are always legal, and nothing else is chosen for an agent.
 
 ## 7. Cost and latency budget (AGT-10)
 
-Every model call records, in `usage.jsonl` next to the transcript: agent, model, effort, input tokens, cache-read and cache-write tokens, output tokens, list-price cost, wall time, and the turn it belongs to. The run summary sums them per agent, per turn and per scene, and reports p50 and p95 latency for player turns and DM narration.
+Every model call records, in `usage.jsonl` next to the transcript: agent, model, effort, input tokens, cache-read and cache-write tokens, output tokens, the API-equivalent cost as a reference, wall time, and the turn it belongs to. The run summary sums them per agent, per turn and per scene, and reports p50 and p95 latency for player turns and DM narration.
 
 | | DM | Each AI player |
 |---|---|---|
 | Model now, for Stas's own testing (D2) | Opus 5.5, low effort | Sonnet 5.5, low effort |
-| List price per million tokens (2026-10-23) | $4 in, $20 out, $0.20 cached read | $2 in, $10 out, $0.20 cached read |
+| API list price per million tokens (2026-10-23), the reference for a beta on an API key | $4 in, $20 out, $0.20 cached read | $2 in, $10 out, $0.20 cached read |
 | Model later, for a beta (D2) | Sonnet 5.5 ($2 / $10) | Haiku 5.5 ($0.10 / $0.50) |
 | Latency target (scope §6.4) | narration p95 ≤ 6 s | turn p95 ≤ 10 s |
 | What drives cost | the adventure and scene files in its prefix, every narration and intent mapping | a short prefix, one call chain per own turn |
 
-Rough expectation, to be replaced by step 1's measurement: on the testing models a full run costs in the low tens of dollars, and on the beta models a few dollars, most of it the DM in both cases; caching the DM's prefix is the largest lever. **Budget:** none is enforced while Stas tests on the expensive models. Every run records its cost, and the beta models carry a target of under $5 per full Scene 1 to 6 run. Opus may miss the DM's 6 s p95; step 1 measures it, and if it does, the timed runs of Milestone 7 use the beta DM model.
+**Who pays (D12, decision 0036):** the demo is for Stas alone, so every live run uses Stas's Claude subscription on Stas's own Mac. There is no per-token bill and no dollar budget; the limit is the plan's usage window, shared with Stas's other Claude work, this project's sessions included. Rough expectation, to be replaced by step 1's measurement: at API prices a full run on the testing models would cost in the low tens of dollars, most of it the DM, so caching the DM's prefix is also the largest lever on plan usage. Step 13 shows whether two scenes fit comfortably in a usage window; Milestone 7's three long runs are where the limit could bite. A beta for other players moves to an API key, with the beta models and a target of under $5 per full Scene 1 to 6 run. Opus may miss the DM's 6 s p95; step 1 measures it, and if it does, the timed runs of Milestone 7 use the beta DM model.
 
 Latency levers, in order: the small own system prompt (no SDK default prompt), low effort, prompt caching, narration pipelined with the next actor's decision (§3.3), option numbers that skip the DM for the human's combat turns (D5), and API-17 on the engine side.
 
@@ -238,7 +239,7 @@ Each step is one PR (Rule 8, one concern), stacked on the one before, green on e
 
 | # | PR | Rows | Needs | Size |
 |---|---|---|---|---|
-| 1 | **Spike.** `game/` workspace scaffold; one player-agent turn and one DM narration on the Agent SDK against a recorded engine state, cold and warm, with the configuration of §3.2; records latency, tokens and cost per call; licence check of the new npm dependencies; checks whether the SDK loads skills from our own path while setting sources stay empty (D10). If p95 can't meet §7 on this stack, stop and bring decision 0019 back to Stas before step 9 | AGT-17 (new), AGT-10 | | S |
+| 1 | **Spike.** `game/` workspace scaffold; one player-agent turn and one DM narration on the Agent SDK against a recorded engine state, cold and warm, with the configuration of §3.2, run on Stas's Mac under Stas's Claude login (D12); records latency and tokens per call; licence check of the new npm dependencies; checks whether the SDK loads skills from our own path while setting sources stay empty (D10). If p95 can't meet §7 on this stack, stop and bring decision 0019 back to Stas before step 9 | AGT-17 (new), AGT-10 | | S |
 | 2 | Runtime paths for the engine (C1) | API-18 | | S |
 | 3 | Engine client for the loop: start arguments, event cursor (`events{since}`), request and response log to the run directory, timeouts, crash detection | AGT-2 | 2 | S |
 | 4 | Seats and tool bindings: the `Seat` and agent interfaces, the orchestrator's binding of viewer, actor and prompt, the DM's and players' tool sets as functions, scripted agents; unit tests that no player tool can reach another viewer or act out of turn | AGT-5 (bindings), AGT-18 (new) | 3 | M |
@@ -254,7 +255,7 @@ Each step is one PR (Rule 8, one concern), stacked on the one before, green on e
 
 Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where shown but can be reviewed and merged in any order once their own needs are in. The risk sits in step 5 (the loop's ordering rules under reactions and pipelined narration) and step 10 (a DM that maps intents well inside 6 s).
 
-**Before step 1 can run anywhere:** the implementation environment needs an Anthropic API key as an environment secret and network access to `api.anthropic.com` and `registry.npmjs.org`. Today the default cloud environment reaches the API but not npm or crates.io, which blocks building `game/` there (TASKS.md row CON-14, new).
+**Where things run (D12):** live model calls run on Stas's Mac under Stas's Claude login. Steps 1, 9, 10 and 13 each ship a command Stas runs there (or a thread runs through a Remote Control session Stas approves), and the run report goes into the PR. Cloud threads build and test with scripted agents only, so the implementation environment needs network access to `registry.npmjs.org` and crates.io and no API key. Today the default cloud environment reaches neither, which blocks building `game/` there (TASKS.md row CON-14, new).
 
 ## 9. Open demo gaps and when they must land
 
@@ -283,7 +284,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 | Narration guard | step 10 | Digits outside a citation, a scene check id, a stat-block id and an unknown roll id are each refused |
 | Agent memory | steps 9 and 10 | A note reaches only its owner; a `remember` holding a number is refused by the guard; a sentinel fact the scripted DM remembers and never narrates appears in no player agent's input |
 | Pack check | step 8, CI | The skeleton validates and has a known `format_version`; every id it names resolves; every prose and card file exists; every scene loads in order with the party carried |
-| Live runs | steps 1, 9, 10, 13 (manual) | Reports in the PR description: latency, tokens, cost, retries, fallbacks, audit result |
+| Live runs | steps 1, 9, 10, 13 (manual, on Stas's Mac) | Reports in the PR description: latency, tokens, retries, fallbacks, audit result, any stop at a plan limit |
 
 ## 11. Acceptance, tied to the demo criteria
 
@@ -300,7 +301,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 
 ## 12. Decisions
 
-D1 to D4, D9 and D11 were decided by Stas on 2026-10-23; D5 to D8 and D10 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0035`, in this PR.
+D1 to D4, D9, D11 and D12 were decided by Stas on 2026-10-23; D5 to D8 and D10 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0036`, in this PR.
 
 | # | Question | Recommendation | Options | Why |
 |---|---|---|---|---|
@@ -315,13 +316,14 @@ D1 to D4, D9 and D11 were decided by Stas on 2026-10-23; D5 to D8 and D10 are re
 | D9 | Agent memory (§3.6) | **Per run, for players and the DM; across runs after Milestone 7** (decided by Stas, 2026-10-23) | **Per run, players and DM** · also across runs in M6 · player notes only | DM memory of invented facts stops narration contradicting earlier narration at the source; memory across runs is campaign saving, which Stas placed after the demo |
 | D10 | DM craft guidance (how to narrate, run a social scene, pick a check, end a scene) | **Our own text, written in step 10; shipped as skills loaded from our path if step 1 shows the SDK loads them with no setting sources, otherwise in the DM's system prompt** | **Own text** · install a community DM skill · no guidance beyond the rules | Community DM skills let the model roll and rule (Rule 4), several use 2014 rules, and their licences are unchecked (Rule 7); we read them, with the SRD Gameplay Toolbox, as input. Skills keep only the guidance a situation needs in context. Survey: `/mnt/project-files/research/dm-skills-survey-2026-10-23.md` |
 | D11 | Crimes against villagers in *The Silent Mill* (§3.7) | **Narrative consequences only in the demo; village guards and a lockup scene later (MAP-5); unplanned fights get their own milestone after Milestone 7 (0035)** (decided by Stas, 2026-10-23) | **Narrative only** · add the SRD Guard, a contingency encounter and a lockup scene to the pack now | The rules for unplanned actions hold either way; guards add a monster outside the scope's list, an encounter and a scene to step 8. Playtests in Milestone 7 show whether players try it |
+| D12 | Who pays for model calls (0036) | **Stas's Claude subscription: the demo is for Stas alone, live runs on Stas's Mac; an API key only when others play** (decided by Stas, 2026-10-23) | **Subscription on his Mac** · an API key for every live run · a subscription token as a cloud secret | No per-token bill for a demo nobody else plays; the individual use Anthropic's terms allow. Cost: runs share the plan's limits, and cloud threads can't run a live game |
 
 ## 13. TASKS.md changes made with this spec
 
 - Milestone 6 row: rows AGT-2..8, AGT-10, AGT-11, AGT-15, AGT-17..21, API-17, API-18, CHR-5, MAP-2..4; spec link; exit criterion names Scene 1 and Scene 3 (D1).
 - AGT-10 joins Milestone 6 (recording); its latency gate stays in Milestone 7.
 - AGT-15 reworded: the Rust audit runs as a CLI over the game transcript (D4).
-- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **AGT-21** agent memory for one run: typed player notes and DM memory of invented facts (P1, Ours, S); **AGT-22** agent memory across runs and campaigns, after Milestone 7 (P2, Ours, M, Stas); **AGT-23** the DM agent runs monster turns, after Milestone 7 (P2, Ours, M, Stas); **MAP-5** village guards and a lockup scene for crimes against villagers (P2, Ours, M; D11); the **Improvised play** milestone (Milestone 9, after Milestone 7; decision 0035) with **API-33** placing SRD creatures a scene didn't list, **API-34** fights no authored encounter defines, **MON-11** townsfolk stat blocks, **ITM-6** loot, **AGT-24** the DM's tools for it; **CON-14** environment for game work: API key secret and npm access (P0, Ours, S, Stas).
+- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **AGT-21** agent memory for one run: typed player notes and DM memory of invented facts (P1, Ours, S); **AGT-22** agent memory across runs and campaigns, after Milestone 7 (P2, Ours, M, Stas); **AGT-23** the DM agent runs monster turns, after Milestone 7 (P2, Ours, M, Stas); **MAP-5** village guards and a lockup scene for crimes against villagers (P2, Ours, M; D11); the **Improvised play** milestone (Milestone 9, after Milestone 7; decision 0035) with **API-33** placing SRD creatures a scene didn't list, **API-34** fights no authored encounter defines, **MON-11** townsfolk stat blocks, **ITM-6** loot, **AGT-24** the DM's tools for it; **CON-14** environment for game work: npm and crates.io access, no API key (D12) (P0, Ours, S, Stas).
 - API-31 and API-32 note the Milestone 6 step they must land before.
 
 ## Sources

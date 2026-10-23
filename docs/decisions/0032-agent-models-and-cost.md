@@ -1,6 +1,6 @@
 # 0032. Agent models: Opus 5.5 DM and Sonnet 5.5 players while testing, Sonnet and Haiku for a beta; cost recorded per call
 
-- **Status:** Accepted
+- **Status:** Accepted, amended by [0036](0036-demo-runs-on-stas-subscription.md) (who pays: Stas's subscription for the demo)
 - **Date:** 2026-10-23
 - **Decided by:** Stas, in the Milestone 6 spec thread (answer to decision card D2, 2026-10-23)
 
