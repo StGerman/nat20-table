@@ -46,19 +46,24 @@ Milestones 1 to 5 built the engine side: every rule the adventure needs resolves
 
 ## 3. Architecture
 
-```
- human ⇄ text UI (Ink) ─┐   UI boundary: TableEvent out, PlayerIntent in (decision 0016)
-                        ▼
-               game loop / orchestrator  ──── transcript.jsonl, engine-log.jsonl, usage.jsonl
-              │   owns the EngineClient: the only caller of the engine
-              │   binds every tool call to (viewer, actor) and to the current prompt
-   ┌──────────┼───────────────┬──────────────┐
-   ▼          ▼               ▼              ▼
- DM agent   Maren agent     Ilsa agent    Torva agent        (Claude Agent SDK sessions)
- viewer=dm  viewer=maren    viewer=ilsa   viewer=torva
-              │
-              ▼  JSON-lines over stdio, types from packages/engine-client/src/generated
-        nat20-api-server (one process per session) ──► nat20_core
+```mermaid
+flowchart TB
+    orch["Game loop / orchestrator<br/>owns the EngineClient: the only caller of the engine<br/>binds every tool call to (viewer, actor) and to the current prompt"]
+    human(["Human player"]) <--> ui["Text UI (Ink)"]
+    ui <-->|"UI boundary: TableEvent out, PlayerIntent in (decision 0016)"| orch
+    orch --> logs[("transcript.jsonl<br/>engine-log.jsonl<br/>usage.jsonl")]
+    subgraph sessions["Claude Agent SDK sessions: in-process MCP tools only"]
+        dm["DM agent<br/>viewer = dm"]
+        maren["Maren agent<br/>viewer = maren"]
+        ilsa["Ilsa agent<br/>viewer = ilsa"]
+        torva["Torva agent<br/>viewer = torva"]
+    end
+    orch <-->|"bound tool calls"| dm
+    orch <-->|"bound tool calls"| maren
+    orch <-->|"bound tool calls"| ilsa
+    orch <-->|"bound tool calls"| torva
+    orch -->|"JSON-lines over stdio<br/>types from packages/engine-client/src/generated"| server["nat20-api-server<br/>one process per session"]
+    server --> core["nat20_core"]
 ```
 
 ### 3.1 Who talks to the engine
