@@ -42,6 +42,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0031](0031-adventure-file-game-typed.md) | Adventures are scenario packs: a JSON skeleton plus Markdown prose, loadable from any path | Accepted | 2026-10-23 | Stas (Milestone 6 spec D3) |
 | [0032](0032-agent-models-and-cost.md) | Agent models: Opus 5.5 DM and Sonnet 5.5 players while testing, Sonnet and Haiku for a beta | Accepted | 2026-10-23 | Stas (Milestone 6 spec D2) |
 | [0033](0033-audit-stays-in-rust.md) | The transcript audit stays in Rust and runs as a CLI over game transcripts | Accepted | 2026-10-23 | Stas (Milestone 6 spec D4) |
+| [0034](0034-agent-memory-per-run.md) | Agent memory lasts one run: typed player notes and a DM memory of invented facts | Proposed | 2026-10-23 | Stas (Milestone 6 spec card D9) |
 
 ## Open questions to watch
 

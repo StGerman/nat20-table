@@ -82,8 +82,8 @@ All agents run on the **Claude Agent SDK** (decision 0019), configured so the ha
 
 | Agent | Sees | Tools | Never has |
 |---|---|---|---|
-| **DM** (`viewer: dm`) | The scenario pack's skeleton and prose (D3), the current scene file, the DM projection of state and events, the human's text, the players' spoken lines and declarations | `get_state`, `get_sheet` (any creature), `load_scene`, `start_combat`, `end_combat`, `spawn`, `request_check`, `help`, `short_rest`, `move` (explore mode, any creature), `legal_actions`, `submit`, `move` and `end_turn` in combat **for the human's character only**, `grant_action{actor}` (out of combat, lets an AI player take one of its own options, §3.3), `narrate{text, to}`, `ask_human{question}` | A tool that sets HP, a roll, a check result or damage (none exists in the contract); `submit` for an AI player's character; a monster's decisions |
-| **AI player** (`viewer: <own handle>`) | Its own sheet, its personality card, its own notes, the player projection of state and events, narration addressed to the table or to it, other characters' spoken lines | `my_sheet`, `look` (state projected for it: anchors, visible creatures, distances), `legal_actions`, `submit_decision`, `move`, `end_turn`, `react`, `say{text}`, `note{text}` | The scenario, DCs, monster HP or stat blocks, the DM's reasoning, other players' sheets or notes (scope §4.3) |
+| **DM** (`viewer: dm`) | The scenario pack's skeleton and prose (D3), the current scene file, the DM projection of state and events, the human's text, the players' spoken lines and declarations, its own memory (§3.6) | `get_state`, `get_sheet` (any creature), `load_scene`, `start_combat`, `end_combat`, `spawn`, `request_check`, `help`, `short_rest`, `move` (explore mode, any creature), `legal_actions`, `submit`, `move` and `end_turn` in combat **for the human's character only**, `grant_action{actor}` (out of combat, lets an AI player take one of its own options, §3.3), `narrate{text, to}`, `ask_human{question}`, `remember{fact}` (§3.6) | A tool that sets HP, a roll, a check result or damage (none exists in the contract); `submit` for an AI player's character; a monster's decisions |
+| **AI player** (`viewer: <own handle>`) | Its own sheet, its personality card, its own notes, the player projection of state and events, narration addressed to the table or to it, other characters' spoken lines | `my_sheet`, `look` (state projected for it: anchors, visible creatures, distances), `legal_actions`, `submit_decision`, `move`, `end_turn`, `react`, `say{text}`, `note{kind, text}` (§3.6) | The scenario, DCs, monster HP or stat blocks, the DM's reasoning or memory, other players' sheets or notes (scope §4.3) |
 
 `look` is new against scope §4.3's tool list; it is the read-only `get_state` projection, which is what "what its character perceives" means in engine terms. Only `submit_decision`, `move`, `end_turn` and `react` change state, and the engine validates all four.
 
@@ -127,6 +127,17 @@ Projection makes every engine response safe for its viewer. Two kinds of text ar
 - **Narration that states a result** the engine didn't produce: the same guard refuses narration that cites a roll id the log doesn't have. Whether the prose contradicts state (a goblin "falls" that is still up) is AGT-9, Milestone 7.
 
 Every model input a player agent receives is also written to the run directory, and a **leak scan** (step 6) runs over it after every test run: no DC, AC, HP number of a creature the player doesn't own, `against`, `dc_source`, scenario id or DM-only event kind may appear. This is the agent-side twin of the `visibility` job.
+
+### 3.6 Agent memory (D9)
+
+Memory lasts one run. Memory that carries over between runs is campaign saving, which comes after Milestone 7 (North Star question 6, Stas 2026-10-21).
+
+- **AI players** keep private notes with `note{kind, text}`, where `kind` is `fact`, `promise`, `suspicion`, `plan` or `bond`. The personality card shapes what a character chooses to remember. Notes are always in the agent's context, appended in order, capped in size; at a scene change the summary folds the oldest ones (AGT-6). No other agent, the DM included, reads them: a DM that reads the players' plans metagames in reverse.
+- **The DM** keeps a memory of what it established in fiction that the engine doesn't track, with `remember{fact}`: an NPC's improvised name, what the captured goblin promised, a door it called locked. It is seeded into every new DM session with the pack and stays in context. This is what keeps narration from contradicting earlier narration.
+- **Fiction only.** Hit Points, positions, conditions, DCs and roll results are always read fresh from the engine, never from memory. A `remember` call goes through the narration guard (§3.5), so it can't hold a number outside a roll citation or a DM-only id.
+- **Memory never decides an outcome.** "The goblin owes the party a favour" can change which check the DM asks for or the DC rung it picks from the ladder; the engine still rolls and resolves (Rule 4).
+- **Visibility.** DM memory is DM-only and never reaches a player prompt; the leak scan (§3.5) covers it. A player's notes reach only that player.
+- **Audit and cost.** Every `note` and `remember` is written to the transcript on its owner's channel, so Milestone 7's narration check (AGT-9) can compare narration with what the DM established. Memory is only appended, never rewritten, so the cached prefix stays valid.
 
 ## 4. The scenario: format and where it lives
 
@@ -218,8 +229,8 @@ Each step is one PR (Rule 8, one concern), stacked on the one before, green on e
 | 6 | Transcript and audit: `transcript.jsonl` (speaker, channel, text, cited roll ids, log head), the Rust audit as a CLI over a game transcript and the engine log **projected for that transcript's viewer** (D4: the human's table transcript is checked against the player roll view, so `1d20 (14) = 19, hit` passes and no hidden number is added to what the human saw; the DM transcript against the full view), with a regression test for a player-view line, the player-input leak scan (§3.5); CI runs both on step 5's fixtures | AGT-8, AGT-15, AGT-19 (new) | 5 | M |
 | 7 | Maps: the yard and cellar as anchors on flat terrain (D7), with distances the fights need | MAP-2, MAP-3 | 2 | S |
 | 8 | *The Silent Mill* as the first scenario pack (§4): the six scene files, the `adventure.json` skeleton and its schema, the prose, the cards, shared `lore/`, CC-BY-4.0 notice; the pack check (§4) as a CI test and a command | MAP-4 | 1, 7 | M |
-| 9 | AI player agents on the Agent SDK: system prompt, the personality cards from step 8, notes, per-scene sessions and summaries, usage records. Manual run: an all-AI party (Bren on a scripted seat) through `m5_s3_yard` | AGT-5, AGT-6, AGT-10, CHR-5 | 6; API-31 (C2) | M |
-| 10 | DM agent on the Agent SDK: prompt, narration, the narration guard, intent mapping for the human, check selection from the adventure file or the DC ladder, scene exits. Manual run: Scene 3 with the all-AI party | AGT-4, AGT-20 (new) | 8, 9; API-32 (C3) | L |
+| 9 | AI player agents on the Agent SDK: system prompt, the personality cards from step 8, typed notes (§3.6), per-scene sessions and summaries, usage records. Manual run: an all-AI party (Bren on a scripted seat) through `m5_s3_yard` | AGT-5, AGT-6, AGT-10, AGT-21 (new), CHR-5 | 6; API-31 (C2) | M |
+| 10 | DM agent on the Agent SDK: prompt, narration, the narration guard, intent mapping for the human, check selection from the adventure file or the DC ladder, scene exits, DM memory (§3.6). Manual run: Scene 3 with the all-AI party | AGT-4, AGT-20 (new), AGT-21 | 8, 9; API-32 (C3) | L |
 | 11 | Text UI: Ink app on the `Seat` interface, `/sheet`, `/where`, `/options`, `/log`, `/pause`, inline engine lines, option numbers; `TableEvent`/`PlayerIntent` shaped per decision 0016 | AGT-7, AGT-13 (groundwork) | 10 | M |
 | 12 | Option-list cache in the server (C4) | API-17 | | S |
 | 13 | **Exit run.** Stas plays Bren through Scene 1 and Scene 3 (D1) with the DM and the AI party; the transcript, engine log and usage records go to the PR (and the project folder); the audit and the leak scan pass on them; the run report lists retries, fallbacks, p50/p95 latency and cost | AGT-14 (groundwork) | 1-12 | S |
@@ -271,7 +282,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 
 ## 12. Decisions
 
-D1 to D4 were decided by Stas on 2026-10-23; D5 to D8 are recommended and stand unless Stas changes them in review. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0033`, proposed in this PR.
+D1 to D4 were decided by Stas on 2026-10-23; D5 to D8 are recommended and stand unless Stas changes them in review; D9 is on a decision card in this spec's thread. Settled before this spec and not reopened: Claude Agent SDK, TypeScript and Ink, the engine as a stdio process (0019); one agent per AI player (0013); scripted monsters (0015); no client talks to the engine, client contract deferred (0016); strict player roll view (0006); North Star after Milestone 7. Records: `docs/decisions/0030` to `0034`, in this PR.
 
 | # | Question | Recommendation | Options | Why |
 |---|---|---|---|---|
@@ -283,13 +294,14 @@ D1 to D4 were decided by Stas on 2026-10-23; D5 to D8 are recommended and stand 
 | D6 | Agent sessions (0030) | **One Agent SDK session per agent per scene, no built-in tools, no setting sources, own system prompt** | **Per scene** · one session for the whole run · a fresh call per turn | Per scene bounds context and keeps the cache prefix stable; a fresh call per turn re-sends everything; one long session grows past 90 minutes. No built-in tools is a visibility requirement (§3.2) |
 | D7 | Maps | **Flat terrain with named anchors** | **Flat plus anchors** · authored meshes with walls and cover | Scope §1.4 hides geometry behind anchors, and graphics are out of scope. A mesh only if a fight needs cover to be fair (MON-10 will say) |
 | D8 | AI player fallback after two failed retries | **`end_turn` in combat, decline a reaction, pass out of combat** | **End turn** · Dodge · the orchestrator picks the first legal option | The only choices that are always legal and never put an agent's action in the orchestrator's hands |
+| D9 | Agent memory (§3.6) | **Per run, for players and the DM; across runs after Milestone 7** (card) | **Per run, players and DM** · also across runs in M6 · player notes only | DM memory of invented facts stops narration contradicting earlier narration at the source; memory across runs is campaign saving, which Stas placed after the demo |
 
 ## 13. TASKS.md changes made with this spec
 
-- Milestone 6 row: rows AGT-2..8, AGT-10, AGT-11, AGT-15, AGT-17..20, API-17, API-18, CHR-5, MAP-2..4; spec link; exit criterion names Scene 1 and Scene 3 (D1).
+- Milestone 6 row: rows AGT-2..8, AGT-10, AGT-11, AGT-15, AGT-17..21, API-17, API-18, CHR-5, MAP-2..4; spec link; exit criterion names Scene 1 and Scene 3 (D1).
 - AGT-10 joins Milestone 6 (recording); its latency gate stays in Milestone 7.
 - AGT-15 reworded: the Rust audit runs as a CLI over the game transcript (D4).
-- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **CON-14** environment for game work: API key secret and npm access (P0, Ours, S, Stas).
+- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **AGT-21** agent memory for one run: typed player notes and DM memory of invented facts (P1, Ours, S); **CON-14** environment for game work: API key secret and npm access (P0, Ours, S, Stas).
 - API-31 and API-32 note the Milestone 6 step they must land before.
 
 ## Sources
