@@ -1,6 +1,6 @@
 {
     "id": "reaction_yard",
-    "description": "Milestone 4 test scene for reactions (fixture reactions.jsonl): Bren and Torva stand beside a Goblin Warrior, and a second one stands beside Ilsa a little way off. The DM drives both goblins, so one can walk out of Torva's reach and then Bren's and the other can attack Ilsa.",
+    "description": "Milestone 4 test scene for reactions (fixtures reactions.jsonl and dropped_action.jsonl): Bren and Torva stand beside a Goblin Warrior, and a second one stands beside Ilsa a little way off. The DM drives both goblins, so one can walk out of Torva's reach and then Bren's and the other can attack Ilsa.",
     "creatures": [
         {
             "handle": "bren",
