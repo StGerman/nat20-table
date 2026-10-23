@@ -203,7 +203,7 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 - Name PRs and branches after their repo. A PR title is a lowercase repo prefix, a colon and plain English: `table:` for this repo, `core:` for the fork `StGerman/nat20` (`table: Character sheets (get_sheet)`). Branches use the same stem as `<repo>/<topic>` in kebab-case (`table/short-rest`, `core/hit-point-dice`). Refer to PRs as `table #N` or `core #N`, never by a bare number; `upstream #N` names the closed upstream PRs and issue. Dependabot PRs and branches keep their own names.
 - A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.
 - Never skip, disable or quarantine a test to get green. Never push an empty commit to retrigger CI.
-- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `rust-lint`, `rust-test`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
+- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `rust-lint`, `rust-test`, `rust-test-arm64`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
 
 ## Rule 9: dependencies
 
