@@ -19,7 +19,7 @@
     },
     "id": {
       "type": "string",
-      "pattern": "^[a-z0-9_]+$"
+      "pattern": "^[A-Za-z0-9_-]+$"
     },
     "title": {
       "type": "string",
@@ -66,7 +66,7 @@
           },
           "handle": {
             "type": "string",
-            "pattern": "^[a-z0-9_]+$",
+            "pattern": "^[A-Za-z0-9_-]+$",
             "description": "The character's creature handle in the first scene's file."
           },
           "seat": {
@@ -104,7 +104,7 @@
           },
           "id": {
             "type": "string",
-            "pattern": "^[a-z0-9_]+$"
+            "pattern": "^[A-Za-z0-9_-]+$"
           },
           "name": {
             "type": "string",
@@ -124,12 +124,12 @@
               "properties": {
                 "scene": {
                   "type": "string",
-                  "pattern": "^[a-z0-9_]+$",
+                  "pattern": "^[A-Za-z0-9_-]+$",
                   "description": "A scene id of this skeleton."
                 },
                 "handle": {
                   "type": "string",
-                  "pattern": "^[a-z0-9_]+$",
+                  "pattern": "^[A-Za-z0-9_-]+$",
                   "description": "A creature in that scene's file, its spawns included."
                 }
               },
@@ -162,7 +162,7 @@
           },
           "id": {
             "type": "string",
-            "pattern": "^[a-z0-9_]+$",
+            "pattern": "^[A-Za-z0-9_-]+$",
             "description": "The engine scene id: `scenes/<id>.json` in the pack."
           },
           "title": {
@@ -195,7 +195,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[a-z0-9_]+$"
+              "pattern": "^[A-Za-z0-9_-]+$"
             }
           },
           "checks": {
@@ -210,7 +210,7 @@
                 },
                 "check": {
                   "type": "string",
-                  "pattern": "^[a-z0-9_]+$",
+                  "pattern": "^[A-Za-z0-9_-]+$",
                   "description": "A check id in the scene's file."
                 },
                 "intent": {
@@ -239,7 +239,7 @@
                 },
                 "encounter": {
                   "type": "string",
-                  "pattern": "^[a-z0-9_]+$",
+                  "pattern": "^[A-Za-z0-9_-]+$",
                   "description": "An encounter id in the scene's file."
                 },
                 "when": {
@@ -267,7 +267,7 @@
                 },
                 "to": {
                   "type": "string",
-                  "pattern": "^[a-z0-9_]+$",
+                  "pattern": "^[A-Za-z0-9_-]+$",
                   "description": "The scene it loads: a scene id of this skeleton."
                 },
                 "when": {

@@ -16,8 +16,8 @@ const comment = z.string().optional().describe("A note for people editing the fi
 /** A file in the pack, relative to the pack folder, e.g. `prose/s1_village_green.md`. */
 const packPath = z.string().min(1).describe("A file path relative to the pack folder.");
 
-/** A snake_case id. */
-const id = z.string().regex(/^[a-z0-9_]+$/, "a snake_case id");
+/** A plain name, as the engine's ids are: letters, digits, `_` and `-` (protocol §2.1). */
+const id = z.string().regex(/^[A-Za-z0-9_-]+$/, "a plain name: letters, digits, _ and -");
 
 const PartyMember = z
   .strictObject({
