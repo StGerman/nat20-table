@@ -93,7 +93,7 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   ];
   for (const file of own) {
     const relative = path.relative(path.resolve(dir), path.resolve(dir, file));
-    if (path.isAbsolute(file) || relative.startsWith("..")) problem(`${file} is outside the pack; only lore may be`);
+    if (path.isAbsolute(file) || relative === ".." || relative.startsWith(`..${path.sep}`)) problem(`${file} is outside the pack; only lore may be`);
   }
   for (const file of [...own, ...adventure.lore]) {
     if (!existsSync(path.resolve(dir, file))) problem(`${file} is named but missing`);
