@@ -1,8 +1,8 @@
 # 0034. Agent memory lasts one run: typed player notes and a DM memory of invented facts
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-23
-- **Decided by:** Stas, Milestone 6 spec decision card D9 (pending; Stas raised the question on 2026-10-23)
+- **Decided by:** Stas, Milestone 6 spec decision card D9, 2026-10-23 (he raised the question the same day)
 
 ## Context
 
@@ -24,7 +24,7 @@ Stas asked whether agents should have memory in Milestone 6: to keep the game co
 
 ## Decision
 
-A (recommended, pending Stas's answer). Players keep `note{kind, text}` notes; the DM keeps `remember{fact}` entries. Both are appended, always in their owner's context, fiction only (the engine stays the source of every number), never deciding an outcome, and written to the transcript.
+A. Players keep `note{kind, text}` notes; the DM keeps `remember{fact}` entries. Both are appended, always in their owner's context, fiction only (the engine stays the source of every number), never deciding an outcome, and written to the transcript.
 
 ## Consequences
 
