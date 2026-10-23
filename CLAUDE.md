@@ -36,8 +36,8 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 1. Fighter vs Goblin Warrior through the headless API (done 2026-10-16)
 2. Repo split and contract v1
 3. Exploration and checks (done 2026-10-18)
-4. The party: Cleric and healing, Human, items, pregens
-5. Monsters
+4. The party: Cleric and healing, Human, items, pregens (done 2026-10-21)
+5. Monsters (done 2026-10-23)
 6. Agents at the table: one full scene with the DM agent, player agents and a human
 7. Demo acceptance: three timed playthroughs
 
