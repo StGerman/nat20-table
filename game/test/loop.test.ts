@@ -1,12 +1,13 @@
 // The turn loop (M6 step 5, TASKS.md AGT-3) and its retry and fallback model (AGT-11), with
 // scripted agents, a scripted human seat and a real seeded engine (spec §8: CI never calls a model).
-// The two game fixtures replay byte for byte; set RECORD_FIXTURES=1 to write them again after a
-// deliberate change, and read the diff.
+// The two game fixtures (transcript, session log, seat inputs) replay byte for byte; set
+// RECORD_FIXTURES=1 to write them again after a deliberate change, and read the diff.
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { SESSION_LOG } from "../src/engine.ts";
 import { TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
@@ -17,12 +18,20 @@ import { trailDm, yardDm } from "./scripts.ts";
 
 const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
 
-/** Compares a run's transcript with its fixture, or writes the fixture when recording. */
+/**
+ * A run's files a game fixture keeps: what the audit and the leak scan read (step 6,
+ * `crates/nat20-duel/tests/game_fixtures.rs`).
+ */
+const RUN_FILES = ["transcript.jsonl", SESSION_LOG, "inputs.jsonl"];
+
+/** Compares a run's files with its fixture (`<name>.<file>`), or writes the fixture when recording. */
 function matchesFixture(name: string, runDir: string): void {
-  const actual = readFileSync(path.join(runDir, "transcript.jsonl"), "utf8");
-  const file = path.join(FIXTURES, name);
-  if (process.env.RECORD_FIXTURES || !existsSync(file)) writeFileSync(file, actual);
-  assert.equal(actual, readFileSync(file, "utf8"), `${name} changed; RECORD_FIXTURES=1 rewrites it`);
+  for (const run of RUN_FILES) {
+    const actual = readFileSync(path.join(runDir, run), "utf8");
+    const file = path.join(FIXTURES, `${name}.${run}`);
+    if (process.env.RECORD_FIXTURES || !existsSync(file)) writeFileSync(file, actual);
+    assert.equal(actual, readFileSync(file, "utf8"), `${name}.${run} changed; RECORD_FIXTURES=1 rewrites it`);
+  }
 }
 
 interface Setup {
@@ -101,7 +110,7 @@ test("the party, scripted, plays the yard fight to its end, and the transcript r
   assert.ok(lines.includes("Combat is over. The party side wins."));
   assert.ok([...players.values()].some((p) => p.briefings.some((b) => b.wake === "reaction")), "an AI player was asked to react");
   assert.ok(seat.shown.some((e) => e.kind === "options"), "the human picked from numbered options");
-  matchesFixture("m5_yard.transcript.jsonl", t.runDir);
+  matchesFixture("m5_yard", t.runDir);
 });
 
 test("the human, scripted, plays the Milestone 3 trail across five scenes, and the transcript replays exactly", async () => {
@@ -111,7 +120,7 @@ test("the human, scripted, plays the Milestone 3 trail across five scenes, and t
   const lines = t.table.transcript.records.map((r) => r.text);
   assert.ok(lines.includes("Combat is over: the other side surrendered."));
   assert.ok(t.table.transcript.records.some((r) => r.kind === "question"), "the DM asked the human a question");
-  matchesFixture("m3_trail.transcript.jsonl", t.runDir);
+  matchesFixture("m3_trail", t.runDir);
 });
 
 // --- Combat order --------------------------------------------------------------------------------

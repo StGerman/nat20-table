@@ -1292,6 +1292,7 @@ version = "0.1.0"
 dependencies = [
  "nat20-api-contract",
  "nat20-api-server",
+ "serde",
  "serde_json",
 ]
 

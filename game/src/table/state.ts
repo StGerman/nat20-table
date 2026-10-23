@@ -166,7 +166,7 @@ export class TableState {
     return response;
   }
 
-  /** Records a model input a seat received, for the leak scan (spec §3.5). */
+  /** Records a model input a seat received, for the leak scan (spec §3.5, crates/nat20-duel/src/leak_scan.rs). */
   recordInput(seat: Handle, text: string, human = false): void {
     if (this.inputsFile) appendFileSync(this.inputsFile, JSON.stringify({ seat, text, ...(human ? { human: true } : {}) }) + "\n");
   }

@@ -7,6 +7,7 @@
 
 pub mod adapter;
 pub mod errors;
+pub mod leaks;
 pub mod paths;
 pub mod projection;
 pub mod render;

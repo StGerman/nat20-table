@@ -106,6 +106,12 @@ export class TableLoop {
     }
     this.table.log("system", `run ended: ${ended}`);
     this.table.show({ kind: "end", text: ended });
+    try {
+      await this.table.engine.writeLog();
+    } catch {
+      // The engine is gone: the run has its transcript and the engine's request log, not the
+      // session log, so the audit can't run on it (spec §6: no resume).
+    }
     await Promise.allSettled([this.dm.close?.(), ...[...this.agents.values()].map((a) => a.close?.())]);
     if (failure) throw failure;
     return { ended, steps, scenes: [...this.scenes], fallbacks: this.table.fallbacks, humanRejections: this.table.humanRejections };
