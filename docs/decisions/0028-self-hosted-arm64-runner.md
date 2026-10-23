@@ -1,6 +1,6 @@
 # 0028. CI runs on a self-hosted arm64 Linux runner: a VM on Stas's Mac
 
-- **Status:** Accepted
+- **Status:** Superseded by [0029](0029-no-self-hosted-runner-public-repo.md)
 - **Date:** 2026-10-21
 - **Decided by:** Stas in the CI cost thread, 2026-10-21: the repo stays private; he first picked his Raspberry Pi 4, which turned out unavailable, then his Apple Silicon Mac
 
