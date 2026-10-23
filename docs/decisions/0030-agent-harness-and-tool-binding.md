@@ -1,6 +1,6 @@
 # 0030. Agents run as Agent SDK sessions with only our tools, bound by the game loop
 
-- **Status:** Proposed
+- **Status:** Accepted with the merge of the Milestone 6 spec (table #96)
 - **Date:** 2026-10-23
 - **Decided by:** Claude proposed in the Milestone 6 spec (D6); stands unless Stas changes it in review of the spec PR
 

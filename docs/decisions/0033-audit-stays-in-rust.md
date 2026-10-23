@@ -1,8 +1,8 @@
 # 0033. The transcript audit stays in Rust and runs as a CLI over game transcripts
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-23
-- **Decided by:** Stas, Milestone 6 spec decision card D4 (pending)
+- **Decided by:** Stas, Milestone 6 spec thread ("audit in Rust CLI", 2026-10-23)
 
 ## Context
 
