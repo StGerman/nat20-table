@@ -3075,8 +3075,11 @@ impl Game {
             .map(|t| t.entity)
     }
 
-    /// Steps `actor` straight away from `hostile` as far as its movement allows, or a shorter
-    /// way when the terrain bends the route.
+    /// Steps `actor` away from the hostile creatures around it as far as its movement allows,
+    /// straight away from where they stand together (from `hostile` when that is no direction),
+    /// or a shorter or turned way when the terrain bends the route. A route that ends within
+    /// reach of a hostile creature is no escape, so the actor stays where it is if every one
+    /// does.
     fn scripted_retreat(&mut self, actor: Entity, hostile: Entity) {
         let world = &self.engine.world;
         let (Some(here), Some(there)) = (
@@ -3085,15 +3088,26 @@ impl Game {
         ) else {
             return;
         };
-        let away = here - there;
+        let hostiles: Vec<Point3<f32>> = self
+            .hostiles_of(actor)
+            .iter()
+            .filter_map(|t| systems::geometry::get_foot_position(world, t.entity))
+            .collect();
         let step = remaining_movement_m(&self.engine, actor);
-        if away.norm() < 1e-3 || step <= 0.0 {
+        let Some(away) = retreat_direction(here, there, &hostiles) else {
+            return;
+        };
+        if step <= 0.0 {
             return;
         }
-        let route = [1.0, 0.75, 0.5].into_iter().find_map(|share| {
-            let goal = here + away.normalize() * (step * share);
-            systems::movement::path(&self.engine, actor, &goal, false, true).ok()
-        });
+        let route = retreat_goals(here, away, step)
+            .into_iter()
+            .find_map(|goal| {
+                let route =
+                    systems::movement::path(&self.engine, actor, &goal, false, true).ok()?;
+                let end = *route.full_path.points.last().unwrap_or(&here);
+                out_of_reach(end, &hostiles).then_some(route)
+            });
         let Some(route) = route else {
             return;
         };
@@ -3278,12 +3292,16 @@ impl Game {
 
     /// Core stands a Prone creature up at the start of its turn (MON-8), and out of combat
     /// nobody takes turns, so when a fight ends every conscious creature still Prone stands.
-    /// Movement out of combat costs nothing. `condition_removed{prone}` is logged with the
-    /// next batch, after `combat_over`.
+    /// Movement out of combat costs nothing. A creature whose Speed is 0 stays Prone.
+    /// `condition_removed{prone}` is logged with the next batch, after `combat_over`.
     fn stand_up(&mut self) {
         let prone = EffectId::new("nat20_core", PRONE);
         for c in &self.scene.creatures {
-            if life_state_name(&self.engine, c.entity) == "normal" {
+            // A creature can't stand up while its Speed is 0 (SRD 5.2.1, Prone)
+            let speed_m = systems::movement::speed(&self.engine, c.entity)
+                .total_speed()
+                .get::<uom::si::length::meter>();
+            if life_state_name(&self.engine, c.entity) == "normal" && speed_m > 0.0 {
                 systems::effects::remove_effects_by_id(&mut self.engine, c.entity, &prone);
             }
         }
@@ -3723,6 +3741,59 @@ fn distance_m(engine: &EngineState, a: Entity, b: Entity) -> Option<f32> {
     Some((pa - pb).norm())
 }
 
+/// The level direction a retreat from `here` takes: away from the middle of `hostiles`, or away
+/// from `there` when the actor stands at that middle. `None` when neither gives a direction.
+fn retreat_direction(
+    here: Point3<f32>,
+    there: Point3<f32>,
+    hostiles: &[Point3<f32>],
+) -> Option<nat20_core::parry3d::na::Vector3<f32>> {
+    let level = |mut v: nat20_core::parry3d::na::Vector3<f32>| {
+        v.y = 0.0;
+        (v.norm() >= 1e-3).then(|| v.normalize())
+    };
+    let middle = (!hostiles.is_empty()).then(|| {
+        let sum = hostiles
+            .iter()
+            .fold(nat20_core::parry3d::na::Vector3::zeros(), |acc, p| {
+                acc + p.coords
+            });
+        Point3::from(sum / hostiles.len() as f32)
+    });
+    middle
+        .and_then(|m| level(here - m))
+        .or_else(|| level(here - there))
+}
+
+/// Where a retreat of up to `step` metres along `away` may end, best first: the whole step,
+/// then three quarters and half of it, each straight on and then turned 45 degrees either way.
+fn retreat_goals(
+    here: Point3<f32>,
+    away: nat20_core::parry3d::na::Vector3<f32>,
+    step: f32,
+) -> Vec<Point3<f32>> {
+    let turned = |degrees: f32| {
+        let (sin, cos) = degrees.to_radians().sin_cos();
+        nat20_core::parry3d::na::Vector3::new(
+            away.x * cos + away.z * sin,
+            0.0,
+            -away.x * sin + away.z * cos,
+        )
+    };
+    let mut goals = Vec::new();
+    for share in [1.0, 0.75, 0.5] {
+        for degrees in [0.0, 45.0, -45.0] {
+            goals.push(here + turned(degrees) * (step * share));
+        }
+    }
+    goals
+}
+
+/// Whether `point` is beyond the policy's reach of every one of `hostiles`.
+fn out_of_reach(point: Point3<f32>, hostiles: &[Point3<f32>]) -> bool {
+    hostiles.iter().all(|h| (point - h).norm() > REACH_M + 1e-3)
+}
+
 /// Selects option `index` of the chosen action. The builder skips the choice
 /// itself when an action has a single option, so index 0 is then a no-op.
 fn pick_context(builder: &mut ActionBuilder, world: &hecs::World, index: usize) -> bool {
@@ -3912,5 +3983,68 @@ mod tests {
         assert_eq!(life_state_name(&game.engine, bren), "unconscious");
         assert_eq!(game.stalls, 0);
         assert!(game.engine.next_prompt(PromptScopeId::Global).is_none());
+    }
+
+    /// A creature whose Speed is 0 can't stand up (SRD 5.2.1, Prone), so it stays Prone when the
+    /// fight ends, while a Prone creature that can move stands.
+    #[test]
+    fn a_prone_creature_at_speed_0_stays_prone_when_the_fight_ends() {
+        let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+        let scene = scene::read(&data, "prone_yard").unwrap();
+        crate::adapter::seed_dice(1);
+        let Ok(mut game) = Game::load(None, &scene, &[]) else {
+            panic!("prone_yard loads");
+        };
+        let prone = EffectId::new("nat20_core", PRONE);
+        let paralyzed = EffectId::new("nat20_core", "effect.condition.paralyzed");
+        let source = ModifierSource::Custom("Test".into());
+        let held = game.entity("goblin_a").unwrap();
+        let free = game.entity("goblin_b").unwrap();
+        for entity in [held, free] {
+            systems::effects::add_permanent_effect(
+                &mut game.engine,
+                entity,
+                prone.clone(),
+                &source,
+                None,
+            );
+        }
+        systems::effects::add_permanent_effect(&mut game.engine, held, paralyzed, &source, None);
+
+        game.stand_up();
+
+        assert!(systems::effects::has_effect(&game.engine, held, &prone));
+        assert!(!systems::effects::has_effect(&game.engine, free, &prone));
+    }
+
+    fn at_ft(x_ft: f32, y_ft: f32) -> Point3<f32> {
+        to_core_point(PointFt {
+            x_ft,
+            y_ft,
+            z_ft: 0.0,
+        })
+    }
+
+    /// A Bloodied goblin next to Bren with Maren 30 feet behind it: running straight away from
+    /// Bren ends beside Maren (Copilot on table #78), so the retreat runs from both of them and
+    /// takes the first way that ends out of everyone's reach.
+    #[test]
+    fn a_retreat_ends_out_of_every_hostile_creatures_reach() {
+        let bren = at_ft(0.0, 0.0);
+        let goblin = at_ft(-5.0, 0.0);
+        let maren = at_ft(-35.0, 5.0);
+        let step = 30.0 * METERS_PER_FOOT;
+
+        let only_from_bren = retreat_direction(goblin, bren, &[bren]).unwrap();
+        let old_end = retreat_goals(goblin, only_from_bren, step)[0];
+        assert!(!out_of_reach(old_end, &[bren, maren]));
+
+        let hostiles = [bren, maren];
+        let away = retreat_direction(goblin, bren, &hostiles).unwrap();
+        let end = retreat_goals(goblin, away, step)
+            .into_iter()
+            .find(|goal| out_of_reach(*goal, &hostiles))
+            .expect("some retreat clears both");
+        assert!(out_of_reach(end, &hostiles));
     }
 }
