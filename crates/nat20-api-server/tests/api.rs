@@ -771,6 +771,71 @@ fn stdio_binary_speaks_json_lines() {
     assert!(events.iter().any(|e| e["roll"]["kind"] == "initiative"));
 }
 
+/// The binary reads scenes, pregens and maps from the directories its environment names, so the
+/// game can spawn it outside the checkout with a scenario pack as its data directory (API-18).
+#[test]
+fn the_binary_reads_content_from_the_directories_its_environment_names() {
+    let checkout = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let root = std::env::temp_dir().join(format!("nat20-paths-{}", std::process::id()));
+    let (data, pregens, maps) = (root.join("pack"), root.join("pregens"), root.join("maps"));
+    for dir in [data.join("scenes"), pregens.clone(), maps.clone()] {
+        std::fs::create_dir_all(dir).unwrap();
+    }
+    // The pack's own scene, under an id the checkout doesn't have.
+    let mut scene: Value = serde_json::from_str(
+        &std::fs::read_to_string(checkout.join("crates/nat20-api-server/data/scenes/duel.json"))
+            .unwrap(),
+    )
+    .unwrap();
+    scene["id"] = json!("pack_duel");
+    std::fs::write(data.join("scenes/pack_duel.json"), scene.to_string()).unwrap();
+    std::fs::copy(
+        checkout.join("pregens/fighter_l2.json"),
+        pregens.join("fighter_l2.json"),
+    )
+    .unwrap();
+    std::fs::copy(
+        checkout.join("maps/flat_arena.obj"),
+        maps.join("flat_arena.obj"),
+    )
+    .unwrap();
+
+    let run = |lines: &[&str]| -> Vec<Value> {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_nat20-api-server"))
+            .env("NAT20_DATA_DIR", &data)
+            .env("NAT20_PREGENS_DIR", &pregens)
+            .env("NAT20_MAPS_DIR", &maps)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        {
+            let stdin = child.stdin.as_mut().unwrap();
+            for line in lines {
+                writeln!(stdin, "{line}").unwrap();
+            }
+        }
+        let output = child.wait_with_output().unwrap();
+        String::from_utf8(output.stdout)
+            .unwrap()
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect()
+    };
+    let lines = run(&[
+        r#"{"v":1,"id":"a","viewer":"dm","cmd":"new_session"}"#,
+        r#"{"v":1,"id":"b","viewer":"dm","cmd":"load_scene","scene_id":"pack_duel"}"#,
+        r#"{"v":1,"id":"c","viewer":"dm","cmd":"load_scene","scene_id":"duel"}"#,
+    ]);
+    std::fs::remove_dir_all(&root).unwrap();
+    assert_eq!(lines.len(), 3);
+    assert_eq!(lines[1]["ok"], true, "the pack's scene loads: {}", lines[1]);
+    // The checkout's own scenes are not visible once a data directory is named.
+    assert_eq!(lines[2]["ok"], false, "{}", lines[2]);
+    assert_eq!(lines[2]["error"]["code"], "bad_scene", "{}", lines[2]);
+}
+
 #[test]
 fn an_explore_move_walks_the_route_for_free() {
     let mut api = duel();

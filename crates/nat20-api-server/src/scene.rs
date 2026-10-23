@@ -243,11 +243,10 @@ pub fn position(scene: &SceneFile, at: &Placement) -> PointFt {
 }
 
 /// The terrain file for a scene's `map`.
-/// Maps live in `maps/` at the repository root, shared with the rest of our content.
+/// Maps live in `maps/` at the repository root, shared with the rest of our content, unless
+/// `NAT20_MAPS_DIR` names another directory ([`crate::paths`]).
 pub fn map_path(map: Option<&str>) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../maps")
-        .join(format!("{}.obj", map.unwrap_or(DEFAULT_MAP)))
+    crate::paths::maps_dir().join(format!("{}.obj", map.unwrap_or(DEFAULT_MAP)))
 }
 
 fn check_creature(creature: &SceneCreature, anchors: &HashSet<String>) -> Result<(), ApiError> {

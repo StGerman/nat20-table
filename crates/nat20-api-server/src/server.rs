@@ -10,7 +10,7 @@ use nat20_api_contract::{
     PROTOCOL_NAME, RejectReason, Request, Response, V1,
 };
 
-use crate::{adapter, errors, projection::Viewer, session::Session};
+use crate::{adapter, errors, paths, projection::Viewer, session::Session};
 
 /// SHA-256 over the wire, scene and pregen schemas (`generated/nat20-api.schema.json`, then
 /// `generated/nat20-scene.schema.json`, then `generated/nat20-pregen.schema.json`), written by
@@ -31,7 +31,7 @@ pub struct Server {
 
 impl Default for Server {
     fn default() -> Self {
-        Self::with_data_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data"))
+        Self::with_data_dir(paths::data_dir())
     }
 }
 
