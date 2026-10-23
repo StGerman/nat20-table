@@ -20,7 +20,7 @@ Milestones 1 to 5 built the engine side: every rule the adventure needs resolves
 - *The Silent Mill* exists as the first **scenario pack**, a folder the game can load from any path: six engine scene files, the DM's skeleton and Markdown prose, the personality cards and the lore it draws on.
 
 **Non-goals** (each has its own milestone or row):
-- The three timed unattended playthroughs, the latency gate, pacing and the narration-vs-state check: Milestone 7 (AGT-9, AGT-12 to AGT-14). This milestone records latency and cost and builds the harness; it does not gate on them.
+- The three timed unattended playthroughs, the latency gate, pacing and the narration-vs-state check: Milestone 7 (AGT-9, AGT-12 to AGT-14). This milestone records latency and tokens and builds the harness; it does not gate on them.
 - A stand-in for the human seat in unattended runs: Milestone 7 (AGT-14). The seat is an interface here (§3.4) so a stand-in can take it later.
 - OpenTelemetry (AGT-16, P2, after Milestone 7).
 - The North Star: an MCP server, Telegram, a web or mobile client, more than one human, saving a campaign (decided 2026-10-21: after Milestone 7). The UI boundary is shaped so a later client can replace it (decision 0016), nothing more.
@@ -217,7 +217,7 @@ Acceptance item 5: every rejected decision recovers within two retries. The orch
 
 A fallback never invents an action: `end_turn` and a declined reaction are always legal, and nothing else is chosen for an agent.
 
-## 7. Cost and latency budget (AGT-10)
+## 7. Usage, cost and latency (AGT-10)
 
 Every model call records, in `usage.jsonl` next to the transcript: agent, model, effort, input tokens, cache-read and cache-write tokens, output tokens, the API-equivalent cost as a reference, wall time, and the turn it belongs to. The run summary sums them per agent, per turn and per scene, and reports p50 and p95 latency for player turns and DM narration.
 
@@ -251,7 +251,7 @@ Each step is one PR (Rule 8, one concern), stacked on the one before, green on e
 | 10 | DM agent on the Agent SDK: prompt, narration, the narration guard, intent mapping for the human, check selection from the adventure file or the DC ladder, scene exits, DM memory (§3.6), actions the adventure didn't plan for (§3.7), DM craft guidance in our own words (D10). Manual run: Scene 3 with the all-AI party | AGT-4, AGT-20 (new), AGT-21 | 8, 9; API-32 (C3) | L |
 | 11 | Text UI: Ink app on the `Seat` interface, `/sheet`, `/where`, `/options`, `/log`, `/pause`, inline engine lines, option numbers; `TableEvent`/`PlayerIntent` shaped per decision 0016 | AGT-7, AGT-13 (groundwork) | 10 | M |
 | 12 | Option-list cache in the server (C4) | API-17 | | S |
-| 13 | **Exit run.** Stas plays Bren through Scene 1 and Scene 3 (D1) with the DM and the AI party; the transcript, engine log and usage records go to the PR (and the project folder); the audit and the leak scan pass on them; the run report lists retries, fallbacks, p50/p95 latency and cost | AGT-14 (groundwork) | 1-12 | S |
+| 13 | **Exit run.** Stas plays Bren through Scene 1 and Scene 3 (D1) with the DM and the AI party; the transcript, engine log and usage records go to the PR (and the project folder); the audit and the leak scan pass on them; the run report lists retries, fallbacks, p50/p95 latency, tokens and any stop at a plan limit | AGT-14 (groundwork) | 1-12 | S |
 
 Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where shown but can be reviewed and merged in any order once their own needs are in. The risk sits in step 5 (the loop's ordering rules under reactions and pipelined narration) and step 10 (a DM that maps intents well inside 6 s).
 
@@ -297,7 +297,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 | 5. Recovery within 2 retries | Every retry and fallback in the transcript; the exit run reports them |
 | 6. First-time player | Stas plays with `/options` and `/sheet`; option numbers work in a fight |
 
-**Done when:** Stas has played Scene 1 and Scene 3 through the text UI with the DM agent and the AI party on nat20-table `main` with CI green, the audit and the leak scan pass on that run's transcript, the run report with latency and cost is committed, every Milestone 6 row is `done` or explicitly moved, and the TASKS.md milestone row shows the date.
+**Done when:** Stas has played Scene 1 and Scene 3 through the text UI with the DM agent and the AI party on nat20-table `main` with CI green, the audit and the leak scan pass on that run's transcript, the run report with latency and token usage is committed, every Milestone 6 row is `done` or explicitly moved, and the TASKS.md milestone row shows the date.
 
 ## 12. Decisions
 
@@ -316,7 +316,7 @@ D1 to D4, D9, D11 and D12 were decided by Stas on 2026-10-23; D5 to D8 and D10 a
 | D9 | Agent memory (§3.6) | **Per run, for players and the DM; across runs after Milestone 7** (decided by Stas, 2026-10-23) | **Per run, players and DM** · also across runs in M6 · player notes only | DM memory of invented facts stops narration contradicting earlier narration at the source; memory across runs is campaign saving, which Stas placed after the demo |
 | D10 | DM craft guidance (how to narrate, run a social scene, pick a check, end a scene) | **Our own text, written in step 10; shipped as skills loaded from our path if step 1 shows the SDK loads them with no setting sources, otherwise in the DM's system prompt** | **Own text** · install a community DM skill · no guidance beyond the rules | Community DM skills let the model roll and rule (Rule 4), several use 2014 rules, and their licences are unchecked (Rule 7); we read them, with the SRD Gameplay Toolbox, as input. Skills keep only the guidance a situation needs in context. Survey: `/mnt/project-files/research/dm-skills-survey-2026-10-23.md` |
 | D11 | Crimes against villagers in *The Silent Mill* (§3.7) | **Narrative consequences only in the demo; village guards and a lockup scene later (MAP-5); unplanned fights get their own milestone after Milestone 7 (0035)** (decided by Stas, 2026-10-23) | **Narrative only** · add the SRD Guard, a contingency encounter and a lockup scene to the pack now | The rules for unplanned actions hold either way; guards add a monster outside the scope's list, an encounter and a scene to step 8. Playtests in Milestone 7 show whether players try it |
-| D12 | Who pays for model calls (0036) | **Stas's Claude subscription: the demo is for Stas alone, live runs on Stas's Mac; an API key only when others play** (decided by Stas, 2026-10-23) | **Subscription on his Mac** · an API key for every live run · a subscription token as a cloud secret | No per-token bill for a demo nobody else plays; the individual use Anthropic's terms allow. Cost: runs share the plan's limits, and cloud threads can't run a live game |
+| D12 | Who pays for model calls (0036) | **Stas's Claude subscription: the demo is for Stas alone, live runs on Stas's Mac; an API key only when others play** (decided by Stas, 2026-10-23) | **Subscription on Stas's Mac** · an API key for every live run · a subscription token as a cloud secret | No per-token bill for a demo nobody else plays; the individual use Anthropic's terms allow. Cost: runs share the plan's limits, and cloud threads can't run a live game |
 
 ## 13. TASKS.md changes made with this spec
 
