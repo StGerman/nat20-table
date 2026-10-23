@@ -64,3 +64,30 @@ export function formatState(state: State): string {
 export function formatSheet(sheet: Sheet): string {
   return JSON.stringify(sheet);
 }
+
+/** The DM's view: every creature with its numbers, the scene's checks, encounters, spawns, flags. */
+export function formatDmState(state: State): string {
+  if (state.view !== "dm") return formatState(state);
+  const lines: string[] = [];
+  lines.push(`Scene ${state.scene_id ?? "none"}, ${state.mode}${state.round ? `, round ${state.round}` : ""}.`);
+  if (state.initiative.length > 0) lines.push(`Initiative: ${state.initiative.join(", ")}.`);
+  for (const c of state.creatures) {
+    const conditions = c.conditions.length > 0 ? `, ${c.conditions.join(", ")}` : "";
+    const at = `(${Math.round(c.position_ft.x_ft)}, ${Math.round(c.position_ft.y_ft)})`;
+    lines.push(`- ${c.name} (${c.handle}, ${c.side}): ${c.hp}/${c.hp_max} HP, AC ${c.ac}, ${c.life_state}${conditions}, at ${at}`);
+  }
+  if (state.anchors.length > 0) {
+    lines.push(`Anchors: ${state.anchors.map((a) => `${a.id} "${a.name}" (${Math.round(a.position_ft.x_ft)}, ${Math.round(a.position_ft.y_ft)})`).join("; ")}.`);
+  }
+  if (state.checks.length > 0) {
+    lines.push(`Checks: ${state.checks.map((c) => `${c.id} (${"skill" in c.test ? c.test.skill : c.test.ability} DC ${c.dc}${c.rolled ? ", rolled" : ""})`).join("; ")}.`);
+  }
+  if (state.encounters.length > 0) {
+    lines.push(`Encounters: ${state.encounters.map((e) => `${e.id}${e.running ? " (running)" : ""}${e.surrender_available ? " (surrender available)" : ""}`).join("; ")}.`);
+  }
+  if (state.spawns.length > 0) {
+    lines.push(`Spawns: ${state.spawns.map((s) => `${s.id} (${s.when.kind}${s.placed ? ", placed" : ""})`).join("; ")}.`);
+  }
+  if (state.flags.length > 0) lines.push(`Flags: ${state.flags.join(", ")}.`);
+  return lines.join("\n");
+}
