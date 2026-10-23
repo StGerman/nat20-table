@@ -234,6 +234,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | Conditions | yes | yes | only visible ones (all SRD conditions except `invisible` while unseen) |
 | Lasting effects on a creature (state and sheet `effects`, the events `effect_started` and `effect_ended`) | yes | yes | no; the table hears the spell or action, not its effect |
 | Position, distance (ft) | yes | yes | yes, for creatures the viewer perceives (all of them until vision exists) |
+| The option a creature takes (`action`), or walks to take and doesn't get to (`action_dropped`) | yes | yes | yes (the table sees the swing, the cast or the walk) |
 | Roll: dice, total, outcome | yes (`full` view) | yes (`player` view) | yes (`player` view) |
 | Roll: modifiers, `against` (AC/DC), `dc_source`, `advantage_sources` | yes | no; own modifiers and AC are on the sheet | no |
 | Damage or healing amount | yes | yes | yes (it is said at the table) |
