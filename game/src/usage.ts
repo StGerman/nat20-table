@@ -66,8 +66,10 @@ export class UsageLog {
   readonly records: UsageRecord[] = [];
   private readonly file: string | undefined;
 
+  /** Creates `file` at once, so a run folder always has one, even for a run with no model call. */
   constructor(file?: string) {
     this.file = file;
+    if (file) appendFileSync(file, "");
   }
 
   add(record: UsageRecord): void {

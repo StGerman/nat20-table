@@ -495,7 +495,7 @@ export class TableLoop {
     const briefings: string[] = [];
     for (const agent of players) {
       this.table.resetRetries(agent.handle);
-      briefings.push(await this.playerBriefing(agent.handle, "Declare at most one thing your character does now: speak with say, and answer with what you set out to do in one sentence. Answer with nothing to pass."));
+      briefings.push(await this.playerBriefing(agent.handle, "Declare at most one thing your character does now: speak with say if you like, and answer with what you set out to do in one sentence, or PASS."));
     }
     this.table.collect();
     const declared = await Promise.all(players.map((agent, i) => this.wakePlayer(agent, "declare", briefings[i])));

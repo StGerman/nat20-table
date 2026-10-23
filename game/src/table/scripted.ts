@@ -138,6 +138,22 @@ export class ScriptedDm implements DmAgent {
 }
 
 /**
+ * A DM for the Milestone 5 yard fight on its own (the step 9 all-AI run and the yard fixture): it
+ * opens the scene, starts the fight, narrates every part with one plain line, and ends the
+ * adventure when the fight ends.
+ */
+export function yardDm(encounter = "yard_fight"): ScriptedDm {
+  return new ScriptedDm({
+    scene_open: async (tools) => {
+      await tools.narrate("Goblins and wolves wait in the mill yard.");
+      await tools.startCombat(encounter);
+    },
+    narrate: async (tools) => void (await tools.narrate("Steel and teeth flash in the yard.")),
+    combat_over: async (tools) => void (await tools.endAdventure("The yard falls quiet.")),
+  });
+}
+
+/**
  * A human seat that answers from a list of intents in order, then from a fallback policy (by
  * default `ScriptedSeat.pass`). It keeps what the loop showed it, so a policy can pick by rule.
  */
