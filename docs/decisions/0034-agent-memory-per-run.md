@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-23
-- **Decided by:** Stas, Milestone 6 spec decision card D9, 2026-10-23 (he raised the question the same day)
+- **Decided by:** Stas, Milestone 6 spec decision card D9, 2026-10-23 (Stas raised the question the same day)
 
 ## Context
 
@@ -28,9 +28,9 @@ A. Players keep `note{kind, text}` notes; the DM keeps `remember{fact}` entries.
 
 ## Consequences
 
-- DM memory is DM-only and passes the narration guard; the leak scan covers it (Rule 3).
+- DM memory is DM-only by construction and passes the narration guard. The leak scan can't recognise a secret in plain prose, so a sentinel test checks that a remembered fact the DM never narrates reaches no player's input (Rule 3).
 - Memory can change which check the DM asks for, never whether it succeeds (Rule 4).
-- New TASKS.md row AGT-21, built in spec steps 9 and 10.
+- New TASKS.md row AGT-21, built in spec steps 9 and 10. Memory across runs and campaigns is AGT-22, after Milestone 7.
 
 ## Revisit when
 

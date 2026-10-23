@@ -130,13 +130,13 @@ Every model input a player agent receives is also written to the run directory, 
 
 ### 3.6 Agent memory (D9)
 
-Memory lasts one run. Memory that carries over between runs is campaign saving, which comes after Milestone 7 (North Star question 6, Stas 2026-10-21).
+Memory lasts one run. Memory that carries over between runs and campaigns is campaign saving, which comes after Milestone 7 (North Star question 6, Stas 2026-10-21; TASKS.md AGT-22).
 
 - **AI players** keep private notes with `note{kind, text}`, where `kind` is `fact`, `promise`, `suspicion`, `plan` or `bond`. The personality card shapes what a character chooses to remember. Notes are always in the agent's context, appended in order, capped in size; at a scene change the summary folds the oldest ones (AGT-6). No other agent, the DM included, reads them: a DM that reads the players' plans metagames in reverse.
 - **The DM** keeps a memory of what it established in fiction that the engine doesn't track, with `remember{fact}`: an NPC's improvised name, what the captured goblin promised, a door it called locked. It is seeded into every new DM session with the pack and stays in context. This is what keeps narration from contradicting earlier narration.
 - **Fiction only.** Hit Points, positions, conditions, DCs and roll results are always read fresh from the engine, never from memory. A `remember` call goes through the narration guard (§3.5), so it can't hold a number outside a roll citation or a DM-only id.
 - **Memory never decides an outcome.** "The goblin owes the party a favour" can change which check the DM asks for or the DC rung it picks from the ladder; the engine still rolls and resolves (Rule 4).
-- **Visibility.** DM memory is DM-only and never reaches a player prompt; the leak scan (§3.5) covers it. A player's notes reach only that player.
+- **Visibility.** DM memory is DM-only by construction: a player agent's input is built only from its own projection, guarded narration, spoken lines and its own notes, so a remembered fact reaches a player only if the DM narrates it. The leak scan (§3.5) can't tell a secret written in plain prose, so step 10 adds its own test: a scripted DM remembers a sentinel fact it never narrates, and the sentinel must appear in no player agent's recorded input. A player's notes reach only that player.
 - **Audit and cost.** Every `note` and `remember` is written to the transcript on its owner's channel, so Milestone 7's narration check (AGT-9) can compare narration with what the DM established. Memory is only appended, never rewritten, so the cached prefix stays valid.
 
 ## 4. The scenario: format and where it lives
@@ -264,6 +264,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 | Audit | step 6, CI | Every roll in the step 5 fixtures cited once, totals and outcomes match, nothing uncited looks like a roll |
 | Leak scan | step 6, CI | No DM-only value in any player-agent input of the step 5 fixtures; a planted leak in a test transcript fails it |
 | Narration guard | step 10 | Digits outside a citation, a scene check id, a stat-block id and an unknown roll id are each refused |
+| Agent memory | steps 9 and 10 | A note reaches only its owner; a `remember` holding a number is refused by the guard; a sentinel fact the scripted DM remembers and never narrates appears in no player agent's input |
 | Pack check | step 8, CI | The skeleton validates and has a known `format_version`; every id it names resolves; every prose and card file exists; every scene loads in order with the party carried |
 | Live runs | steps 1, 9, 10, 13 (manual) | Reports in the PR description: latency, tokens, cost, retries, fallbacks, audit result |
 
@@ -301,7 +302,7 @@ D1 to D4 and D9 were decided by Stas on 2026-10-23; D5 to D8 are recommended and
 - Milestone 6 row: rows AGT-2..8, AGT-10, AGT-11, AGT-15, AGT-17..21, API-17, API-18, CHR-5, MAP-2..4; spec link; exit criterion names Scene 1 and Scene 3 (D1).
 - AGT-10 joins Milestone 6 (recording); its latency gate stays in Milestone 7.
 - AGT-15 reworded: the Rust audit runs as a CLI over the game transcript (D4).
-- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **AGT-21** agent memory for one run: typed player notes and DM memory of invented facts (P1, Ours, S); **CON-14** environment for game work: API key secret and npm access (P0, Ours, S, Stas).
+- New rows: **AGT-17** Agent SDK spike (P0, Ours, S); **AGT-18** seat and tool binding tests (P0, Ours, S); **AGT-19** player-input leak scan (P0, Ours, S); **AGT-20** narration guard (P1, Ours, S); **AGT-21** agent memory for one run: typed player notes and DM memory of invented facts (P1, Ours, S); **AGT-22** agent memory across runs and campaigns, after Milestone 7 (P2, Ours, M, Stas); **CON-14** environment for game work: API key secret and npm access (P0, Ours, S, Stas).
 - API-31 and API-32 note the Milestone 6 step they must land before.
 
 ## Sources
