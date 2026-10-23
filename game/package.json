@@ -1,0 +1,12 @@
+{
+  "name": "@nat20-table/game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The table: game loop, DM and player agents on the Claude Agent SDK, text UI, transcripts. Talks to the engine only through @nat20-table/engine-client.",
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.301",
+    "@nat20-table/engine-client": "0.1.0",
+    "zod": "4.6.7"
+  }
+}
