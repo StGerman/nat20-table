@@ -7,13 +7,8 @@
 #                          └─ ts                    advisories (not gating)
 #   every gating job ── ci-ok   (the one required check)
 #
-# Only real data dependencies are edges: visibility and ts run the binaries rust-test built, and
-# every job but deny and advisories reads its runner from `changes`.
-# `changes` skips the build jobs on a PR that touches only Markdown and docs/, and picks that runner
-# (decision 0028): the self-hosted arm64 runner named by the repo variable CI_RUNNER, except for
-# PRs from forks and Dependabot PRs, which stay on GitHub-hosted runners. With CI_COLD_HOSTED set to true (a slow box
-# such as a Raspberry Pi), PRs that change Cargo.lock or rust-toolchain.toml (cold builds) stay
-# hosted too. CI_RUNNER unset means everything runs GitHub-hosted.
+# Only real data dependencies are edges: visibility and ts run the binaries rust-test built.
+# `changes` skips the build jobs on a PR that touches only Markdown and docs/.
 name: ci
 
 on:
@@ -40,11 +35,10 @@ env:
 jobs:
   changes:
     name: changes
-    runs-on: ${{ vars.CI_RUNNER != '' && github.event.pull_request.user.login != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON(vars.CI_RUNNER) || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
-      runner: ${{ steps.runner.outputs.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -62,44 +56,18 @@ jobs:
           code=$(git diff --name-only --no-renames "origin/$BASE...HEAD" | grep -vE '^docs/|\.md$' || true)
           if [ -n "$code" ]; then echo "code=true"; else echo "code=false"; fi >> "$GITHUB_OUTPUT"
           echo "Files outside Markdown and docs/:"; echo "${code:-(none)}"
-      - id: runner
-        name: Which runner do the other jobs use?
-        env:
-          EVENT: ${{ github.event_name }}
-          BASE: ${{ github.base_ref }}
-          CI_RUNNER: ${{ vars.CI_RUNNER }}
-          COLD_HOSTED: ${{ vars.CI_COLD_HOSTED }}
-          AUTHOR: ${{ github.event.pull_request.user.login }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          REPO: ${{ github.repository }}
-        run: |
-          # A JSON value for fromJSON: a label list such as ["self-hosted","nat20"], or "ubuntu-latest".
-          runner='"ubuntu-latest"'
-          if [ -z "$CI_RUNNER" ]; then
-            echo "CI_RUNNER is not set: GitHub-hosted."
-          elif [ "$EVENT" = "pull_request" ] && [ "$HEAD_REPO" != "$REPO" ]; then
-            echo "PR from a fork: GitHub-hosted. The repo is public, so outside code never runs on the self-hosted box."
-          elif [ "$AUTHOR" = "dependabot[bot]" ]; then
-            echo "Dependabot PR: GitHub-hosted, so new dependency build scripts never run on the self-hosted box."
-          elif [ "$COLD_HOSTED" = "true" ] && [ "$EVENT" = "pull_request" ] && git diff --name-only "origin/$BASE...HEAD" | grep -qxE 'Cargo\.lock|rust-toolchain\.toml'; then
-            echo "Cargo.lock or rust-toolchain.toml changed: cold build, GitHub-hosted."
-          else
-            runner="$CI_RUNNER"; echo "Self-hosted: $runner"
-          fi
-          echo "runner=$runner" >> "$GITHUB_OUTPUT"
 
   contract-fresh:
     name: contract-fresh
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ${{ needs.changes.outputs.runner && fromJSON(needs.changes.outputs.runner) || 'ubuntu-latest' }}
-    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Rust release pinned in rust-toolchain.toml
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: runner.environment == 'github-hosted'
         with:
           shared-key: contract
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -121,9 +89,8 @@ jobs:
 
   contract-compat:
     name: contract-compat
-    needs: changes
     if: github.event_name == 'pull_request'
-    runs-on: ${{ needs.changes.outputs.runner && fromJSON(needs.changes.outputs.runner) || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -137,8 +104,7 @@ jobs:
 
   contract-pure:
     name: contract-pure
-    needs: changes
-    runs-on: ${{ needs.changes.outputs.runner && fromJSON(needs.changes.outputs.runner) || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -158,15 +124,14 @@ jobs:
     name: rust-lint
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ${{ needs.changes.outputs.runner && fromJSON(needs.changes.outputs.runner) || 'ubuntu-latest' }}
-    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Rust release pinned in rust-toolchain.toml
         run: rustup toolchain install
       - run: cargo fmt --all --check
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: runner.environment == 'github-hosted'
         with:
           shared-key: lint
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -181,14 +146,13 @@ jobs:
     name: rust-test
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ${{ needs.changes.outputs.runner && fromJSON(needs.changes.outputs.runner) || 'ubuntu-latest' }}
-    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Rust release pinned in rust-toolchain.toml
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: runner.environment == 'github-hosted'
         with:
           shared-key: test
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -199,7 +163,7 @@ jobs:
       - name: Collect the engine, the visibility scan and core's registries
         run: |
           mkdir -p dist
-          cp "${CARGO_TARGET_DIR:-target}/debug/nat20-api-server" dist/
+          cp target/debug/nat20-api-server dist/
           scan=$(cargo test --locked -p nat20-api-server --test visibility --all-features --no-run --message-format=json \
             | jq -r 'select(.reason == "compiler-artifact" and .target.name == "visibility") | .executable')
           cp "$scan" dist/visibility
@@ -217,8 +181,8 @@ jobs:
 
   visibility:
     name: visibility
-    needs: [changes, rust-test]
-    runs-on: ${{ needs.changes.outputs.runner && fromJSON(needs.changes.outputs.runner) || 'ubuntu-latest' }}
+    needs: rust-test
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       # The scan reads contract/fixtures and the server's scene data from the checkout.
@@ -234,8 +198,8 @@ jobs:
 
   ts:
     name: ts
-    needs: [changes, rust-test]
-    runs-on: ${{ needs.changes.outputs.runner && fromJSON(needs.changes.outputs.runner) || 'ubuntu-latest' }}
+    needs: rust-test
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -283,7 +247,7 @@ jobs:
     name: ci-ok
     if: always()
     needs: [changes, contract-fresh, contract-compat, contract-pure, rust-lint, rust-test, visibility, ts, deny]
-    runs-on: ${{ needs.changes.outputs.runner && fromJSON(needs.changes.outputs.runner) || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Every gating job passed or was skipped
