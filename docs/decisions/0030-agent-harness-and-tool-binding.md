@@ -25,7 +25,7 @@ Milestone 6 puts a DM agent and one agent per AI player at the table on the Clau
 
 ## Decision
 
-A. The game loop owns the only engine client. Every agent tool is an in-process MCP tool whose handler fills `viewer`, `actor` and `prompt_id` itself; tool inputs have no such fields. Built-in tools are off, setting sources are empty, the working directory is empty, and the system prompt is ours.
+A. The game loop owns the only engine client. Every agent tool is an in-process MCP tool whose handler fills `viewer` and `prompt_id` itself; no tool input has a `viewer` field. A player agent's tools are also bound to its own character as `actor`. The DM picks a validated subject (`actor`) for its check, sheet and explore tools, since it asks a particular character for a check, but its decision tools (`legal_actions`, `submit`, `move`, `end_turn` in combat) are bound to the human's character, so it can never act for an AI player or a monster. Built-in tools are off, setting sources are empty, the working directory is empty, and the system prompt is ours.
 
 ## Consequences
 

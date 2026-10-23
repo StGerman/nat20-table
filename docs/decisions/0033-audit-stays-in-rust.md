@@ -20,11 +20,11 @@ Acceptance 2 needs every roll in a transcript to appear in the engine log. `crat
 
 ## Decision
 
-A. The game writes `transcript.jsonl` and the DM-projected engine log; the Rust audit binary checks them. AGT-15 is reworded.
+A. The game writes `transcript.jsonl` and the engine log; the Rust audit binary checks them. The audit is **view-aware**: each transcript channel is checked against the log projected for its viewer, so the human's table transcript is compared with the player roll view (`1d20 (14) = 19, hit`, no AC) and the DM transcript with the full view. Nothing hidden is added to the visible transcript to satisfy the audit. `render::roll_summary` already renders either view. Every roll in the full log must still be cited in at least one channel. AGT-15 is reworded.
 
 ## Consequences
 
-- CI runs the audit on every game fixture; Milestone 7 runs it on every timed playthrough.
+- CI runs the audit on every game fixture, with a regression test for a player-view line; Milestone 7 runs it on every timed playthrough.
 
 ## Revisit when
 
