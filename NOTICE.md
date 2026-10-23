@@ -3,7 +3,7 @@
 ## Licences
 
 - Code: MIT ([LICENSE](LICENSE)).
-- Our adventure content in `pregens/`, `maps/`, `scenarios/` and, when it lands, `lore/`: CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/), credit "nat20-table contributors".
+- Our adventure content in `pregens/`, `maps/`, `scenarios/` and `lore/`: CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/), credit "nat20-table contributors".
 
 ## SRD 5.2.1
 
