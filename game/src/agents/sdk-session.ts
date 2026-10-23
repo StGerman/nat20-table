@@ -19,7 +19,10 @@ import {
   type SdkMcpToolDefinition,
 } from "@anthropic-ai/claude-agent-sdk";
 import type { z, ZodRawShape } from "zod";
+import { TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { apiEquivalentUsd, type UsageLog, type UsageRecord } from "../usage.ts";
+
+export { TurnTimeout, UsageLimitReached };
 
 /** The MCP server name every seat's tools live under; the model sees `mcp__table__<tool>`. */
 export const TOOL_SERVER = "table";
@@ -120,20 +123,6 @@ export function sessionOptions(config: SessionConfig, cwd: string): Options {
     env: agentEnv(process.env),
   };
 }
-
-/** The plan's usage limit was reached (decision 0036): the run stops cleanly, no retry. */
-export class UsageLimitReached extends Error {
-  readonly resetsAt: number | undefined;
-  constructor(resetsAt: number | undefined) {
-    super(
-      `The Claude plan's usage limit was reached${resetsAt ? `; it resets at ${new Date(resetsAt * 1000).toISOString()}` : ""}.`,
-    );
-    this.resetsAt = resetsAt;
-  }
-}
-
-/** A turn ran past its timeout and was interrupted. */
-export class TurnTimeout extends Error {}
 
 /** What a turn produced. */
 export interface TurnResult {

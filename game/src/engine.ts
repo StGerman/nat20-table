@@ -32,7 +32,8 @@ export interface EngineStart {
 
 export class GameEngine {
   private readonly client: EngineClient;
-  private readonly cursors = new Map<Viewer, number>();
+  /** Where each reader got to in the log. A reader is a viewer, or a viewer and a purpose. */
+  private readonly cursors = new Map<string, number>();
   /** The session log's length after the last response. */
   logHead = 0;
   /** The seed the session runs on, as the engine logged it. */
@@ -69,20 +70,23 @@ export class GameEngine {
     return response;
   }
 
-  /** Events `viewer` may see that it hasn't been shown yet, projected for it. */
-  async newEvents(viewer: Viewer): Promise<Event[]> {
-    const since = this.cursors.get(viewer) ?? 0;
+  /**
+   * Events `viewer` may see that `reader` hasn't been given yet, projected for `viewer`. One viewer
+   * can have several readers: the DM's briefings and the DM's transcript lines advance separately.
+   */
+  async newEvents(viewer: Viewer, reader: string = viewer): Promise<Event[]> {
+    const since = this.cursors.get(reader) ?? 0;
     const response = await this.request(viewer, { cmd: "events", since });
     if (!response.ok || response.result?.cmd !== "events") {
       throw new Error(`events for ${viewer} failed: ${response.error?.message}`);
     }
-    this.cursors.set(viewer, response.result.next);
+    this.cursors.set(reader, response.result.next);
     return response.result.events;
   }
 
-  /** Marks everything logged so far as shown to `viewer` (a seat that joins late). */
-  skipTo(viewer: Viewer, seq: number): void {
-    this.cursors.set(viewer, seq);
+  /** Marks everything logged so far as given to `reader` (a seat that joins late). */
+  skipTo(reader: string, seq: number): void {
+    this.cursors.set(reader, seq);
   }
 
   /** Writes the whole session log as `viewer` sees it, for the audit (spec step 6). */

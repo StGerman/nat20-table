@@ -3,6 +3,7 @@
 // types, not wire (Rule 1). TableEvent and PlayerIntent map one-to-one onto AG-UI's text, state
 // and tool-call events, so a later web client can replace the terminal UI behind this boundary.
 import type { Handle } from "@nat20-table/engine-client";
+import type { Choice } from "./choices.ts";
 import type { DmTools, PlayerTools } from "./tools.ts";
 
 /** What a tool call gave back. `text` is what the model reads; `data` is for scripted agents. */
@@ -21,10 +22,15 @@ export type TableEvent =
   /** A line of DM narration (guarded, spec §3.5) or a character's spoken line. */
   | { kind: "narration"; speaker: string; text: string; to?: Handle }
   | { kind: "speech"; speaker: Handle; text: string }
+  /** What a character sets out to do out of combat, as its player declared it. */
+  | { kind: "intent"; speaker: Handle; text: string }
   /** An engine event's own text, rendered for the human's viewer, with its roll id if any. */
   | { kind: "engine"; text: string; roll?: string; seq: number }
-  /** Numbered complete decisions the human can pick by number (combat) or what the DM offered. */
-  | { kind: "options"; lines: string[] }
+  /**
+   * Numbered decisions the human can pick by number (`/options`), or a follow-up pick inside one
+   * (`title` names it). `choices` carries the same list as data for a seat that picks by rule.
+   */
+  | { kind: "options"; title?: string; lines: string[]; choices: Choice[] }
   /** A reaction the human may take: yes or no. */
   | { kind: "reaction"; summary: string; options: string[] }
   /** A question the DM asks the human (guarded). */
@@ -52,7 +58,11 @@ export type HumanPrompt =
   /** Out of combat: what Bren does or says. */
   | { kind: "explore" }
   /** A question from the DM. */
-  | { kind: "answer" };
+  | { kind: "answer" }
+  /** A follow-up pick inside a numbered option: its targets, variants or aims. */
+  | { kind: "pick" }
+  /** `/pause` is on and an AI player is next: only commands until `/pause` again. */
+  | { kind: "paused" };
 
 /**
  * The human's seat (spec §3.4). The Ink UI implements it (step 11); scripted seats implement it
