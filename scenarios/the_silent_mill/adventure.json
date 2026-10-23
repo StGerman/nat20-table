@@ -1,0 +1,117 @@
+{
+    "$schema": "../../game/schema/adventure.schema.json",
+    "_comment": "The Silent Mill's skeleton (M6 spec §4, decision 0031): scene order, exits, NPCs, which check fits which intent, target times and the prose each part points to. The engine never reads this file; the DM agent reads it with the prose, and `npm run pack:check` checks it against the scene files.",
+    "format_version": 1,
+    "id": "the_silent_mill",
+    "title": "The Silent Mill",
+    "licence": "CC-BY-4.0",
+    "credit": "nat20-table contributors",
+    "prose": ["prose/adventure.md"],
+    "lore": ["../../lore/the_wend_valley.md"],
+    "party": [
+        { "handle": "bren", "seat": "human", "card": "cards/bren.md", "_comment": "The human's seat by default; the card is for runs where an AI plays Bren." },
+        { "handle": "torva", "seat": "ai", "card": "cards/torva.md", "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped." },
+        { "handle": "maren", "seat": "ai", "card": "cards/maren.md" },
+        { "handle": "ilsa", "seat": "ai", "card": "cards/ilsa.md" }
+    ],
+    "npcs": [
+        { "id": "osric_hale", "name": "Osric Hale, the reeve", "prose": "prose/npcs/osric_hale.md" },
+        { "id": "bertil_pell", "name": "Bertil Pell, the miller", "prose": "prose/npcs/bertil_pell.md" },
+        { "id": "wenna_thorne", "name": "Wenna Thorne, the apprentice", "prose": "prose/npcs/wenna_thorne.md" },
+        {
+            "id": "snitt",
+            "name": "Snitt",
+            "prose": "prose/npcs/snitt.md",
+            "_comment": "Whichever yard goblin surrenders becomes Snitt and is carried into Scene 4.",
+            "creatures": [
+                { "scene": "s3_mill_yard", "handle": "goblin_1" },
+                { "scene": "s3_mill_yard", "handle": "goblin_2" },
+                { "scene": "s3_mill_yard", "handle": "goblin_3" },
+                { "scene": "s3_mill_yard", "handle": "goblin_4" }
+            ]
+        },
+        {
+            "id": "gritch",
+            "name": "Gritch, boss of the Nettle Tooth",
+            "prose": "prose/npcs/gritch.md",
+            "creatures": [{ "scene": "s5_mill_cellar", "handle": "boss" }]
+        }
+    ],
+    "scenes": [
+        {
+            "id": "s1_village_green",
+            "title": "The village green",
+            "beat": "social",
+            "target_minutes": 10,
+            "prose": "prose/s1_village_green.md",
+            "npcs": ["osric_hale", "bertil_pell"],
+            "checks": [
+                { "check": "reeve_insight", "intent": "Reading the reeve: whether he is telling everything, what he really wants." },
+                { "check": "reeve_persuasion", "intent": "Pressing the reeve for anything more he knows, kindly or with good reasons." }
+            ],
+            "exits": [{ "to": "s2_mill_road", "when": "The party sets off up the mill lane.", "carry": "party" }]
+        },
+        {
+            "id": "s2_mill_road",
+            "title": "The mill road",
+            "beat": "exploration",
+            "target_minutes": 10,
+            "prose": "prose/s2_mill_road.md",
+            "checks": [
+                { "check": "find_tracks", "intent": "Following the tracks, reading the ground, watching the path for traps." },
+                { "check": "spot_lookouts", "intent": "Scouting ahead, watching the mill, approaching so as to see before being seen." }
+            ],
+            "exits": [{ "to": "s3_mill_yard", "when": "The party reaches the mill gate.", "carry": "party" }]
+        },
+        {
+            "id": "s3_mill_yard",
+            "title": "The mill yard",
+            "beat": "fight",
+            "target_minutes": 25,
+            "prose": "prose/s3_mill_yard.md",
+            "npcs": ["snitt"],
+            "encounters": [
+                { "encounter": "yard_fight", "when": "Anyone attacks, or the goblins see the party; with an ambush, when the party acts." }
+            ],
+            "exits": [
+                {
+                    "to": "s4_captured_goblin",
+                    "when": "The fight is over with the party standing and the party goes in through the mill door.",
+                    "carry": "party_and_captives"
+                }
+            ]
+        },
+        {
+            "id": "s4_captured_goblin",
+            "title": "The captured goblin",
+            "beat": "social",
+            "target_minutes": 10,
+            "prose": "prose/s4_captured_goblin.md",
+            "npcs": ["snitt"],
+            "checks": [
+                { "check": "interrogate_intimidation", "intent": "Threatening the prisoner into talking." },
+                { "check": "interrogate_persuasion", "intent": "Bargaining with the prisoner, promising mercy, talking him round." }
+            ],
+            "exits": [{ "to": "s5_mill_cellar", "when": "The party goes down the stair to the cellar.", "carry": "party" }]
+        },
+        {
+            "id": "s5_mill_cellar",
+            "title": "The mill cellar",
+            "beat": "fight",
+            "target_minutes": 30,
+            "prose": "prose/s5_mill_cellar.md",
+            "npcs": ["gritch", "wenna_thorne"],
+            "encounters": [{ "encounter": "cellar_fight", "when": "The party reaches the foot of the stairs, or anyone attacks." }],
+            "exits": [{ "to": "s6_wrap_up", "when": "The fight is over with the party standing and Wenna untied.", "carry": "party" }]
+        },
+        {
+            "id": "s6_wrap_up",
+            "title": "Back on the green",
+            "beat": "narrative",
+            "target_minutes": 5,
+            "prose": "prose/s6_wrap_up.md",
+            "npcs": ["osric_hale", "bertil_pell", "wenna_thorne"],
+            "exits": []
+        }
+    ]
+}

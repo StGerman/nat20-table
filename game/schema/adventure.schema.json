@@ -1,0 +1,324 @@
+{
+  "$comment": "Generated from game/src/pack/adventure.ts by `npm run pack:schema`. Do not edit by hand.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "For editors: the path or URL of this schema.",
+      "type": "string"
+    },
+    "_comment": {
+      "description": "A note for people editing the file; the game ignores it.",
+      "type": "string"
+    },
+    "format_version": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991,
+      "description": "The skeleton format, one of 1."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "licence": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The pack's licence, e.g. CC-BY-4.0. A committed pack carries only our own or CC-BY text."
+    },
+    "credit": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Who to credit."
+    },
+    "prose": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "description": "A file path relative to the pack folder."
+      },
+      "description": "Adventure-wide prose: premise, the truth behind it, tone."
+    },
+    "lore": {
+      "default": [],
+      "description": "Setting text the DM reads, possibly shared with other packs (paths may leave the pack).",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "description": "A file path relative to the pack folder."
+      }
+    },
+    "party": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "_comment": {
+            "description": "A note for people editing the file; the game ignores it.",
+            "type": "string"
+          },
+          "handle": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "description": "The character's creature handle in the first scene's file."
+          },
+          "seat": {
+            "type": "string",
+            "enum": [
+              "human",
+              "ai"
+            ],
+            "description": "Who plays it by default: the human, or an AI player agent."
+          },
+          "card": {
+            "description": "Its personality card (CHR-5): the only character text in an AI player's prompt besides its sheet.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "handle",
+          "seat"
+        ],
+        "additionalProperties": false,
+        "description": "One party member."
+      },
+      "description": "The party, in seat order. The first scene's file places them."
+    },
+    "npcs": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "_comment": {
+            "description": "A note for people editing the file; the game ignores it.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What the characters call them."
+          },
+          "prose": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Who they are, voice, wants, what they know and tell, what they hide."
+          },
+          "creatures": {
+            "description": "When the NPC is also an engine creature (it can be fought, talked down or captured): the scene and handle it has. Several entries when any one of them may become the NPC, such as whichever goblin surrenders.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "scene": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]+$",
+                  "description": "A scene id of this skeleton."
+                },
+                "handle": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]+$",
+                  "description": "A creature in that scene's file, its spawns included."
+                }
+              },
+              "required": [
+                "scene",
+                "handle"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prose"
+        ],
+        "additionalProperties": false,
+        "description": "A named NPC."
+      }
+    },
+    "scenes": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "_comment": {
+            "description": "A note for people editing the file; the game ignores it.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "description": "The engine scene id: `scenes/<id>.json` in the pack."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "beat": {
+            "type": "string",
+            "enum": [
+              "social",
+              "exploration",
+              "fight",
+              "narrative"
+            ]
+          },
+          "target_minutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "The scene's share of the run (scope §3)."
+          },
+          "prose": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Read-aloud opening, what the characters can notice, how to run it."
+          },
+          "npcs": {
+            "default": [],
+            "description": "NPCs present, by id.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]+$"
+            }
+          },
+          "checks": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "_comment": {
+                  "description": "A note for people editing the file; the game ignores it.",
+                  "type": "string"
+                },
+                "check": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]+$",
+                  "description": "A check id in the scene's file."
+                },
+                "intent": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The kind of thing a character says or does that this check answers."
+                }
+              },
+              "required": [
+                "check",
+                "intent"
+              ],
+              "additionalProperties": false,
+              "description": "Which engine check fits which player intent. Anything else the DM checks from the SRD DC ladder."
+            }
+          },
+          "encounters": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "_comment": {
+                  "description": "A note for people editing the file; the game ignores it.",
+                  "type": "string"
+                },
+                "encounter": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]+$",
+                  "description": "An encounter id in the scene's file."
+                },
+                "when": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "What starts it."
+                }
+              },
+              "required": [
+                "encounter",
+                "when"
+              ],
+              "additionalProperties": false,
+              "description": "A fight the scene holds."
+            }
+          },
+          "exits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "_comment": {
+                  "description": "A note for people editing the file; the game ignores it.",
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]+$",
+                  "description": "The scene it loads: a scene id of this skeleton."
+                },
+                "when": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "What ends the scene this way."
+                },
+                "carry": {
+                  "type": "string",
+                  "enum": [
+                    "party",
+                    "party_and_captives"
+                  ],
+                  "description": "Who goes along: the party, or the party and any creature that surrendered to it."
+                }
+              },
+              "required": [
+                "to",
+                "when",
+                "carry"
+              ],
+              "additionalProperties": false,
+              "description": "A way out of a scene."
+            },
+            "description": "Empty for the last scene."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "beat",
+          "target_minutes",
+          "prose",
+          "exits"
+        ],
+        "additionalProperties": false,
+        "description": "One scene, in play order."
+      },
+      "description": "In play order; the first places the party, every later one carries it in."
+    }
+  },
+  "required": [
+    "format_version",
+    "id",
+    "title",
+    "licence",
+    "credit",
+    "prose",
+    "party",
+    "scenes"
+  ],
+  "additionalProperties": false,
+  "description": "A scenario pack's skeleton (M6 spec §4). DM-only, like the prose and scene files."
+}
