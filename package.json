@@ -17,7 +17,8 @@
     "spike:record": "node --experimental-strip-types --no-warnings game/spike/record.ts",
     "pack:check": "node --experimental-strip-types --no-warnings game/src/pack/cli.ts check",
     "pack:schema": "node --experimental-strip-types --no-warnings game/src/pack/cli.ts schema",
-    "play:ai-party": "node --experimental-strip-types --no-warnings game/src/play/ai-party.ts"
+    "play:ai-party": "node --experimental-strip-types --no-warnings game/src/play/ai-party.ts",
+    "play:scene": "node --experimental-strip-types --no-warnings game/src/play/scene.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

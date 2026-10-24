@@ -23,7 +23,7 @@ import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { PlayerAgent } from "../table/types.ts";
 import { UsageLog } from "../usage.ts";
-import { audit, endState, packParty, refuseApiKey, reportSections, runFolder } from "./run.ts";
+import { audit, endState, guards, packParty, refuseApiKey, reportSections, runFolder } from "./run.ts";
 
 const { values: flags } = parseArgs({
   options: {
@@ -74,6 +74,7 @@ const table = new TableState({
   seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight),
   transcript,
   inputsFile: path.join(runDir, "inputs.jsonl"),
+  ...guards(flags.scenes!, engine),
 });
 const players: PlayerAgent[] = party.ai.map((handle) =>
   scripted ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice, usage }),

@@ -7,8 +7,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { declaration, ModelPlayer, playerPrompt, type TurnSession } from "../src/agents/player.ts";
-import { sessionOptions, type SessionConfig, type TurnResult } from "../src/agents/sdk-session.ts";
+import { declaration, ModelPlayer, playerPrompt } from "../src/agents/player.ts";
+import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnTimeout } from "../src/errors.ts";
 import { packParty } from "../src/play/run.ts";
@@ -16,58 +16,24 @@ import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedSeat } from "../src/table/scripted.ts";
 import { PlayerTools } from "../src/table/tools.ts";
 import type { PlayerWake } from "../src/table/types.ts";
-import type { UsageRecord } from "../src/usage.ts";
 import { testTable } from "./helpers.ts";
+import { StandIn, type Script as PlayerScript } from "./stand-in.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 const CHOICE = { model: "claude-sonnet-5-5", effort: "low" } as const;
 
-/** Calls one of the session's tools as the model would, and gives back its answer. */
-type Call = (tool: string, input?: Record<string, unknown>) => Promise<{ text: string; isError: boolean }>;
-
-/** What the stand-in "model" does on a turn; it returns its final answer. */
-type Script = (wake: PlayerWake, call: Call, message: string) => Promise<string>;
-
-/** A session that plays a script instead of calling a model. */
-class StandIn implements TurnSession {
-  readonly turns: Array<{ message: string; purpose: string }> = [];
-  closed = false;
-  readonly config: SessionConfig;
-  private readonly script: Script;
-
-  constructor(config: SessionConfig, script: Script) {
-    this.config = config;
-    this.script = script;
-  }
-
-  readonly call: Call = async (name, input = {}) => {
-    const tool = this.config.tools.find((t) => t.name === name);
-    assert.ok(tool, `no tool ${name}`);
-    const result = await tool.handler(input, {});
-    return { text: result.content.map((c) => (c.type === "text" ? c.text : "")).join(""), isError: result.isError === true };
-  };
-
-  async turn(message: string, purpose: string): Promise<TurnResult> {
-    this.turns.push({ message, purpose });
-    const final = await this.script(purpose as PlayerWake, this.call, message);
-    return { text: final, final, usage: {} as UsageRecord };
-  }
-
-  async close(): Promise<void> {
-    this.closed = true;
-  }
-}
+type Script = PlayerScript<PlayerWake>;
 
 /** A model player whose sessions are stand-ins playing `script`; `sessions` lists them as they open. */
-function standInPlayer(handle: string, script: Script): { player: ModelPlayer; sessions: StandIn[] } {
-  const sessions: StandIn[] = [];
+function standInPlayer(handle: string, script: Script): { player: ModelPlayer; sessions: StandIn<PlayerWake>[] } {
+  const sessions: StandIn<PlayerWake>[] = [];
   const card = packParty(MILL).cards.get(handle)!;
   const player = new ModelPlayer({
     handle,
     card,
     choice: CHOICE,
     open: (config) => {
-      const session = new StandIn(config, script);
+      const session = new StandIn<PlayerWake>(config, script);
       sessions.push(session);
       return session;
     },
