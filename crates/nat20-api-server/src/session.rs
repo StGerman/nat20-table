@@ -452,6 +452,13 @@ impl Session {
             .map(|e| e.seq)
     }
 
+    /// Drops the option list the last `legal_actions` kept for a following `submit` (API-17).
+    pub fn forget_options(&mut self) {
+        if let Some(game) = self.game.as_mut() {
+            game.forget_options();
+        }
+    }
+
     fn game_mut(&mut self) -> Result<&mut Game, ApiError> {
         self.game
             .as_mut()
