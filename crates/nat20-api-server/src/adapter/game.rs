@@ -1508,6 +1508,20 @@ impl Game {
         };
         let landed = systems::geometry::get_foot_position(&self.engine.world, entity)
             .expect("scene creatures have a position");
+        // A creature that provoked inside another creature's space is still walking: once the
+        // reaction is settled it walks on to the first free spot (ENG-18), and that walk is
+        // logged as `moved` when it stops (API-32).
+        let walking_on = self
+            .engine
+            .world
+            .get::<&ActivityState>(entity)
+            .is_ok_and(|s| !s.is_idle());
+        if walking_on {
+            self.walks.push(Walk {
+                entity,
+                from: landed,
+            });
+        }
         let arrived = (landed - end).norm() < 0.05;
         self.pending.push(Pending::public(
             round,
@@ -3050,7 +3064,10 @@ impl Game {
             .next_prompt(PromptScopeId::Encounter(encounter))
             .is_some_and(|p| matches!(p.kind, ActionPromptKind::Reactions { .. }));
         let no_pending = scope.is_none_or(|s| s.pending_events().is_empty());
-        all_idle && (no_pending || waiting_on_reaction)
+        // A reaction prompt holds everyone it doesn't wait on, even a creature still mid-move or
+        // mid-attack: one that provoked inside another creature's space (ENG-18), or an attacker
+        // whose roll waits on Shield. Ticking on would change nothing.
+        waiting_on_reaction || (all_idle && no_pending)
     }
 
     /// Runs scripted creatures until the engine waits on a client, or combat
