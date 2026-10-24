@@ -10,21 +10,13 @@ import type { PlayerTools } from "../table/tools.ts";
 import type { PlayerAgent, PlayerWake, ToolOutcome } from "../table/types.ts";
 import type { UsageLog } from "../usage.ts";
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
-import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, type SeatTool, type SessionConfig, type TurnResult } from "./sdk-session.ts";
+import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, type SeatTool, type SessionConfig, type TurnSession } from "./sdk-session.ts";
 
 /** A player turn that runs longer falls back (spec §6). */
 export const PLAYER_TURN_TIMEOUT_MS = 20_000;
 
 /** How much of its notes a new session is seeded with; older notes live on in the summaries. */
 const NOTES_BUDGET = 2_000;
-
-/** What the player needs from a session: `AgentSession`, or a stand-in in tests. */
-export interface TurnSession {
-  turn(message: string, purpose: string): Promise<TurnResult>;
-  close(): Promise<void>;
-  /** A timed-out turn's result is still to come, so a tool call now is that turn's (`AgentSession`). */
-  readonly settling?: boolean;
-}
 
 export interface ModelPlayerConfig {
   handle: Handle;

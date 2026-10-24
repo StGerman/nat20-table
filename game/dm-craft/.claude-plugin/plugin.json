@@ -1,0 +1,5 @@
+{
+  "name": "nat20-dm-craft",
+  "version": "0.1.0",
+  "description": "The DM agent's craft guidance (M6 spec D10): our own text, for the DM session only. Each skill is one file, because no agent can read files."
+}

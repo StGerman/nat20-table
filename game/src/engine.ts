@@ -43,6 +43,10 @@ export class GameEngine {
   logHead = 0;
   /** The seed the session runs on, as the engine logged it. */
   seed = 0;
+  /** Every roll id the engine has reported, so a citation of one it hasn't can be refused. */
+  readonly rolls = new Set<string>();
+  /** Where a reader that hasn't read yet starts: 0, or the log head when `skipAll` was called. */
+  private origin = 0;
 
   private constructor(client: EngineClient, runDir: string) {
     this.client = client;
@@ -73,6 +77,8 @@ export class GameEngine {
   async request(viewer: Viewer, command: Command): Promise<Response> {
     const response = await this.client.request(viewer, command);
     this.logHead = response.log_head;
+    const listed = response.result?.cmd === "events" ? response.result.events : [];
+    for (const event of [...response.events, ...listed]) if (event.kind === "roll") this.rolls.add(event.roll.id);
     return response;
   }
 
@@ -81,7 +87,7 @@ export class GameEngine {
    * can have several readers: the DM's briefings and the DM's transcript lines advance separately.
    */
   async newEvents(viewer: Viewer, reader: string = viewer): Promise<Event[]> {
-    const since = this.cursors.get(reader) ?? 0;
+    const since = this.cursors.get(reader) ?? this.origin;
     const response = await this.request(viewer, { cmd: "events", since });
     if (!response.ok || response.result?.cmd !== "events") {
       throw new Error(`events for ${viewer} failed: ${response.error?.message}`);
@@ -93,6 +99,15 @@ export class GameEngine {
   /** Marks everything logged so far as given to `reader` (a seat that joins late). */
   skipTo(reader: string, seq: number): void {
     this.cursors.set(reader, seq);
+  }
+
+  /**
+   * Marks everything logged so far as given to every reader: what a run set up before play (the
+   * scenes before the one it starts at) is nobody's news.
+   */
+  skipAll(): void {
+    this.origin = this.logHead;
+    this.cursors.clear();
   }
 
   /**
