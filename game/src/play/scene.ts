@@ -89,8 +89,8 @@ if (flags["dry-run"]) {
   process.exit(0);
 }
 if (flags.dm === "model" || flags.players === "model") refuseApiKey();
-if (flags.seat === "ink" && !process.stdin.isTTY) {
-  console.error("--seat ink needs your keyboard: run it in a terminal, not through a pipe or Remote Control.");
+if (flags.seat === "ink" && !(process.stdin.isTTY && process.stdout.isTTY)) {
+  console.error("--seat ink needs your keyboard and screen: run it in a terminal, not through a pipe or Remote Control.");
   process.exit(2);
 }
 
@@ -127,7 +127,8 @@ const who = (kind: string | undefined, choice: { model: string; effort: string }
 console.log(
   `Playing ${flags.scene} of ${pack.adventure.title} (seed ${engine.seed}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human} ${ink ? "played by you" : "scripted"}.`,
 );
-ink?.start();
+// Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame.
+ink?.start({ interactive: true });
 let run: RunReport | undefined;
 let failure: unknown;
 try {
