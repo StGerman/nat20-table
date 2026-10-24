@@ -189,6 +189,14 @@ impl WalkThenAct {
     }
 }
 
+/// A walk core makes on its own: to reach an option's target (`MoveAndAct`), or toward a target it
+/// can't reach this turn (`Move`, a scripted monster's approach). Logged as `moved` once the walker
+/// stops (API-32).
+struct Walk {
+    entity: Entity,
+    from: Point3<f32>,
+}
+
 struct OptionEntry {
     option: ActionOption,
     action_id: ActionId,
@@ -264,6 +272,8 @@ pub struct Game {
     /// The option a client's walk is on its way to take, until the log shows it taken or the
     /// walker stops without it; then the log says so with `action_dropped` (API-31).
     walk_then_act: Option<WalkThenAct>,
+    /// Walks core is making for an option, not yet logged (API-32).
+    walks: Vec<Walk>,
     /// The highest round of this scene's fights whose round spawns were looked at, so each
     /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
@@ -569,6 +579,7 @@ impl Game {
             shown: HashMap::new(),
             area_caught: Vec::new(),
             walk_then_act: None,
+            walks: Vec::new(),
             spawn_round: 0,
             stalls: 0,
         }
@@ -2725,7 +2736,7 @@ impl Game {
     // ---- engine driving -------------------------------------------------
 
     /// Submits one option to the engine. `Ok(true)` when the actor first walks to reach its target
-    /// and takes the option where the walk ends.
+    /// and takes the option where the walk ends. Any walk it starts is logged by `drain` (API-32).
     fn submit_entity(
         &mut self,
         entity: Entity,
@@ -2785,7 +2796,12 @@ impl Game {
         }
         let activity = builder.build(engine).map_err(|e| refusal(&e))?;
         let walks = matches!(activity, Activity::MoveAndAct { .. });
+        let moves = walks || matches!(activity, Activity::Move { .. });
+        let from = systems::geometry::get_foot_position(&engine.world, entity);
         engine.submit_activity(activity).map_err(|e| refusal(&e))?;
+        if let Some(from) = from.filter(|_| moves) {
+            self.walks.push(Walk { entity, from });
+        }
         Ok(walks)
     }
 
@@ -3474,10 +3490,54 @@ impl Game {
             entries.extend(writer.entries(event));
         }
 
+        // A walk core made for an option is logged as a `move` is, once the walker has stopped:
+        // right before its `action` when it got to act, else first (API-32). A walk still under
+        // way waits for the next batch.
+        use nat20_api_contract::EventKind as Kind;
+        for walk in std::mem::take(&mut self.walks) {
+            let walking = engine
+                .world
+                .get::<&ActivityState>(walk.entity)
+                .is_ok_and(|s| !s.is_idle());
+            if walking {
+                self.walks.push(walk);
+                continue;
+            }
+            let Some(landed) = systems::geometry::get_foot_position(&engine.world, walk.entity)
+            else {
+                continue;
+            };
+            if (landed - walk.from).norm() < 0.05 {
+                continue;
+            }
+            let actor = Handle(
+                self.scene
+                    .handles
+                    .get(&walk.entity)
+                    .cloned()
+                    .unwrap_or_else(|| format!("{:?}", walk.entity)),
+            );
+            let at = entries
+                .iter()
+                .position(|e| matches!(&e.kind, Kind::Action { actor: a, .. } if *a == actor))
+                .unwrap_or(0);
+            entries.insert(
+                at,
+                Pending::public(
+                    encounter.map(|e| e.round() as u32),
+                    Kind::Moved {
+                        actor,
+                        from: from_core_point(walk.from),
+                        to: from_core_point(landed),
+                        anchor: None,
+                    },
+                ),
+            );
+        }
+
         // A walk that stopped without the option it walked for: a move that provokes stops where
         // it provoked (protocol §4.1), and core drops the option it carried (API-31).
         if let Some(walk) = self.walk_then_act.take() {
-            use nat20_api_contract::EventKind as Kind;
             let acted = entries
                 .iter()
                 .any(|e| matches!(&e.kind, Kind::Action { actor, .. } if *actor == walk.actor));
@@ -3503,7 +3563,6 @@ impl Game {
         // Within one batch put "combat begins" first, and each round header right before the
         // first turn that starts after it: the writer stamps the whole batch with the round the
         // engine is in now, so what comes before the header belongs to the round before.
-        use nat20_api_contract::EventKind as Kind;
         entries.sort_by_key(|e| !matches!(e.kind, Kind::CombatStarted { .. }));
         let headers: Vec<Pending> = entries
             .iter()
