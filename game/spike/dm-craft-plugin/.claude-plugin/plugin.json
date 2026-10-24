@@ -1,0 +1,5 @@
+{
+  "name": "nat20-dm-craft-spike",
+  "version": "0.1.0",
+  "description": "Spike only (M6 step 1, D10): checks that a DM session loads a skill from our own folder with no setting sources."
+}

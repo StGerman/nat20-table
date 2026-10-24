@@ -2,12 +2,19 @@
   "name": "nat20-table",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*"],
-  "engines": { "node": ">=22.6" },
+  "workspaces": [
+    "packages/*",
+    "game"
+  ],
+  "engines": {
+    "node": ">=22.6"
+  },
   "scripts": {
     "gen": "node tools/codegen/gen.mjs",
     "check:contract": "node tools/codegen/gen.mjs && git diff --exit-code -- generated packages/engine-client/src/generated && node tools/codegen/check-breaking.mjs --base origin/main",
-    "check:ts": "tsc -p packages/engine-client && node --experimental-strip-types --no-warnings --test packages/engine-client/test/*.test.ts"
+    "check:ts": "tsc -p packages/engine-client && tsc -p game && node --experimental-strip-types --no-warnings --test packages/engine-client/test/*.test.ts game/test/*.test.ts",
+    "spike": "node --experimental-strip-types --no-warnings game/spike/spike.ts",
+    "spike:record": "node --experimental-strip-types --no-warnings game/spike/record.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

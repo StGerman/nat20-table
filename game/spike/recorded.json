@@ -1,0 +1,3439 @@
+{
+  "_comment": "Recorded by game/spike/record.ts from m5_s3_yard, seed 27. Engine output only; regenerate rather than edit.",
+  "player": "maren",
+  "awaiting": {
+    "kind": "action",
+    "prompt_id": "p4",
+    "actor": "maren"
+  },
+  "player_state": {
+    "cmd": "get_state",
+    "state": {
+      "view": "player",
+      "viewer": "maren",
+      "mode": "combat",
+      "scene_id": "m5_s3_yard",
+      "round": 1,
+      "initiative": [
+        "bren",
+        "goblin_2",
+        "wolf_1",
+        "wolf_2",
+        "ilsa",
+        "goblin_3",
+        "goblin_1",
+        "goblin_4",
+        "torva",
+        "maren",
+        "wolf_3"
+      ],
+      "me": {
+        "handle": "maren",
+        "name": "Maren",
+        "side": "party",
+        "position_ft": {
+          "x_ft": 0,
+          "y_ft": -10,
+          "z_ft": 0
+        },
+        "hp": 17,
+        "hp_max": 17,
+        "temp_hp": 0,
+        "ac": 18,
+        "speed_ft": 30,
+        "conditions": [],
+        "exhaustion": 0,
+        "life_state": "conscious",
+        "health": "unhurt",
+        "effects": []
+      },
+      "others": [
+        {
+          "handle": "bren",
+          "name": "Bren",
+          "side": "party",
+          "position_ft": {
+            "x_ft": 0,
+            "y_ft": 0,
+            "z_ft": 0
+          },
+          "distance_ft": 10,
+          "health": "unhurt",
+          "conditions": []
+        },
+        {
+          "handle": "torva",
+          "name": "Torva",
+          "side": "party",
+          "position_ft": {
+            "x_ft": 5,
+            "y_ft": 0,
+            "z_ft": 0
+          },
+          "distance_ft": 11.2,
+          "health": "unhurt",
+          "conditions": []
+        },
+        {
+          "handle": "ilsa",
+          "name": "Ilsa",
+          "side": "party",
+          "position_ft": {
+            "x_ft": 5,
+            "y_ft": -10,
+            "z_ft": 0
+          },
+          "distance_ft": 5,
+          "health": "unhurt",
+          "conditions": []
+        },
+        {
+          "handle": "goblin_1",
+          "name": "Goblin Warrior",
+          "side": "hostile",
+          "position_ft": {
+            "x_ft": -25,
+            "y_ft": 35,
+            "z_ft": 0
+          },
+          "distance_ft": 51.5,
+          "health": "unhurt",
+          "conditions": []
+        },
+        {
+          "handle": "goblin_2",
+          "name": "Goblin Warrior",
+          "side": "hostile",
+          "position_ft": {
+            "x_ft": -20,
+            "y_ft": 40,
+            "z_ft": 0
+          },
+          "distance_ft": 53.9,
+          "health": "unhurt",
+          "conditions": []
+        },
+        {
+          "handle": "goblin_3",
+          "name": "Goblin Warrior",
+          "side": "hostile",
+          "position_ft": {
+            "x_ft": 0,
+            "y_ft": 45,
+            "z_ft": 0
+          },
+          "distance_ft": 55,
+          "health": "unhurt",
+          "conditions": []
+        },
+        {
+          "handle": "goblin_4",
+          "name": "Goblin Warrior",
+          "side": "hostile",
+          "position_ft": {
+            "x_ft": 5,
+            "y_ft": 45,
+            "z_ft": 0
+          },
+          "distance_ft": 55.2,
+          "health": "unhurt",
+          "conditions": []
+        },
+        {
+          "handle": "wolf_1",
+          "name": "Wolf",
+          "side": "hostile",
+          "position_ft": {
+            "x_ft": 7.9,
+            "y_ft": 2.9,
+            "z_ft": 0
+          },
+          "distance_ft": 15.1,
+          "health": "unhurt",
+          "conditions": []
+        },
+        {
+          "handle": "wolf_2",
+          "name": "Wolf",
+          "side": "hostile",
+          "position_ft": {
+            "x_ft": 40,
+            "y_ft": 25,
+            "z_ft": 0
+          },
+          "distance_ft": 53.2,
+          "health": "unhurt",
+          "conditions": []
+        },
+        {
+          "handle": "wolf_3",
+          "name": "Wolf",
+          "side": "hostile",
+          "position_ft": {
+            "x_ft": 30,
+            "y_ft": 35,
+            "z_ft": 0
+          },
+          "distance_ft": 54.1,
+          "health": "unhurt",
+          "conditions": []
+        }
+      ],
+      "anchors": [
+        {
+          "id": "yard_gate",
+          "name": "the yard gate",
+          "position_ft": {
+            "x_ft": 0,
+            "y_ft": 0,
+            "z_ft": 0
+          },
+          "distance_ft": 10
+        },
+        {
+          "id": "woodpile",
+          "name": "the woodpile",
+          "position_ft": {
+            "x_ft": -25,
+            "y_ft": 35,
+            "z_ft": 0
+          },
+          "distance_ft": 51.5
+        },
+        {
+          "id": "mill_door",
+          "name": "the mill door",
+          "position_ft": {
+            "x_ft": 0,
+            "y_ft": 45,
+            "z_ft": 0
+          },
+          "distance_ft": 55
+        },
+        {
+          "id": "kennel",
+          "name": "the kennel",
+          "position_ft": {
+            "x_ft": 35,
+            "y_ft": 30,
+            "z_ft": 0
+          },
+          "distance_ft": 53.2
+        }
+      ]
+    }
+  },
+  "player_sheet": {
+    "cmd": "get_sheet",
+    "sheet": {
+      "handle": "maren",
+      "name": "Maren",
+      "side": "party",
+      "level": 2,
+      "class": "cleric",
+      "species": "human",
+      "proficiency_bonus": 2,
+      "abilities": [
+        {
+          "ability": "strength",
+          "score": 15,
+          "modifier": 2,
+          "save_bonus": 2,
+          "save_proficient": false
+        },
+        {
+          "ability": "dexterity",
+          "score": 8,
+          "modifier": -1,
+          "save_bonus": -1,
+          "save_proficient": false
+        },
+        {
+          "ability": "constitution",
+          "score": 15,
+          "modifier": 2,
+          "save_bonus": 2,
+          "save_proficient": false
+        },
+        {
+          "ability": "intelligence",
+          "score": 10,
+          "modifier": 0,
+          "save_bonus": 0,
+          "save_proficient": false
+        },
+        {
+          "ability": "wisdom",
+          "score": 15,
+          "modifier": 2,
+          "save_bonus": 4,
+          "save_proficient": true
+        },
+        {
+          "ability": "charisma",
+          "score": 12,
+          "modifier": 1,
+          "save_bonus": 3,
+          "save_proficient": true
+        }
+      ],
+      "skills": [
+        {
+          "skill": "acrobatics",
+          "bonus": -1,
+          "proficiency": "none"
+        },
+        {
+          "skill": "animal_handling",
+          "bonus": 2,
+          "proficiency": "none"
+        },
+        {
+          "skill": "arcana",
+          "bonus": 0,
+          "proficiency": "none"
+        },
+        {
+          "skill": "athletics",
+          "bonus": 4,
+          "proficiency": "proficient"
+        },
+        {
+          "skill": "deception",
+          "bonus": 1,
+          "proficiency": "none"
+        },
+        {
+          "skill": "history",
+          "bonus": 2,
+          "proficiency": "proficient"
+        },
+        {
+          "skill": "insight",
+          "bonus": 4,
+          "proficiency": "proficient"
+        },
+        {
+          "skill": "intimidation",
+          "bonus": 3,
+          "proficiency": "proficient"
+        },
+        {
+          "skill": "investigation",
+          "bonus": 0,
+          "proficiency": "none"
+        },
+        {
+          "skill": "medicine",
+          "bonus": 4,
+          "proficiency": "proficient"
+        },
+        {
+          "skill": "nature",
+          "bonus": 0,
+          "proficiency": "none"
+        },
+        {
+          "skill": "perception",
+          "bonus": 4,
+          "proficiency": "proficient"
+        },
+        {
+          "skill": "performance",
+          "bonus": 1,
+          "proficiency": "none"
+        },
+        {
+          "skill": "persuasion",
+          "bonus": 3,
+          "proficiency": "proficient"
+        },
+        {
+          "skill": "religion",
+          "bonus": 2,
+          "proficiency": "proficient"
+        },
+        {
+          "skill": "sleight_of_hand",
+          "bonus": -1,
+          "proficiency": "none"
+        },
+        {
+          "skill": "stealth",
+          "bonus": -1,
+          "proficiency": "none"
+        },
+        {
+          "skill": "survival",
+          "bonus": 2,
+          "proficiency": "none"
+        }
+      ],
+      "ac": 18,
+      "speed_ft": 30,
+      "initiative_bonus": -1,
+      "passive_perception": 14,
+      "hp": 17,
+      "hp_max": 17,
+      "temp_hp": 0,
+      "hit_dice": [
+        {
+          "die": 8,
+          "remaining": 2,
+          "max": 2
+        }
+      ],
+      "spell_slots": [
+        {
+          "level": 1,
+          "remaining": 3,
+          "max": 3
+        }
+      ],
+      "spellcasting": [
+        {
+          "class": "cleric",
+          "ability": "wisdom",
+          "save_dc": 12,
+          "attack_bonus": 4
+        }
+      ],
+      "spells": [
+        {
+          "id": "guidance",
+          "name": "Guidance",
+          "level": 0,
+          "prepared": true,
+          "concentration": true
+        },
+        {
+          "id": "sacred_flame",
+          "name": "Sacred Flame",
+          "level": 0,
+          "prepared": true,
+          "concentration": false
+        },
+        {
+          "id": "spare_the_dying",
+          "name": "Spare the Dying",
+          "level": 0,
+          "prepared": true,
+          "concentration": false
+        },
+        {
+          "id": "bless",
+          "name": "Bless",
+          "level": 1,
+          "prepared": true,
+          "concentration": true
+        },
+        {
+          "id": "cure_wounds",
+          "name": "Cure Wounds",
+          "level": 1,
+          "prepared": true,
+          "concentration": false
+        },
+        {
+          "id": "guiding_bolt",
+          "name": "Guiding Bolt",
+          "level": 1,
+          "prepared": true,
+          "concentration": false
+        },
+        {
+          "id": "healing_word",
+          "name": "Healing Word",
+          "level": 1,
+          "prepared": true,
+          "concentration": false
+        },
+        {
+          "id": "shield_of_faith",
+          "name": "Shield of Faith",
+          "level": 1,
+          "prepared": true,
+          "concentration": true
+        }
+      ],
+      "resources": [
+        {
+          "id": "cleric.channel_divinity",
+          "name": "Channel Divinity",
+          "remaining": 2,
+          "max": 2,
+          "recharge": "long_rest",
+          "short_rest_regain": 1
+        }
+      ],
+      "conditions": [],
+      "effects": [],
+      "exhaustion": 0,
+      "life_state": "conscious",
+      "death_saves": {
+        "successes": 0,
+        "failures": 0
+      },
+      "equipment": [
+        {
+          "id": "chainmail",
+          "name": "Chainmail",
+          "quantity": 1,
+          "equipped": true
+        },
+        {
+          "id": "mace",
+          "name": "Mace",
+          "quantity": 1,
+          "equipped": true
+        },
+        {
+          "id": "shield",
+          "name": "Shield",
+          "quantity": 1,
+          "equipped": true
+        },
+        {
+          "id": "potion_of_healing",
+          "name": "Potion of Healing",
+          "quantity": 1,
+          "equipped": false
+        }
+      ],
+      "features": [
+        {
+          "id": "savage_attacker",
+          "name": "Savage Attacker"
+        },
+        {
+          "id": "skilled",
+          "name": "Skilled"
+        },
+        {
+          "id": "divine_order.protector",
+          "name": "Divine Order: Protector"
+        },
+        {
+          "id": "cleric.divine_spark",
+          "name": "Divine Spark"
+        }
+      ]
+    }
+  },
+  "player_options": {
+    "cmd": "legal_actions",
+    "prompt_id": "p4",
+    "options": [
+      {
+        "option_id": "cast/bless/1",
+        "action": "nat20_core::action.bless",
+        "name": "Bless",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0,
+          "spell_slot": 1
+        },
+        "targeting": "multiple",
+        "max_targets": 3,
+        "range_ft": 30,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": true
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": true
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          }
+        ],
+        "variants": [],
+        "spell": {
+          "id": "bless",
+          "level": 1,
+          "concentration": true
+        }
+      },
+      {
+        "option_id": "cast/cure_wounds/1",
+        "action": "nat20_core::action.cure_wounds",
+        "name": "Cure Wounds",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0,
+          "spell_slot": 1
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 5,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": false
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": false
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          }
+        ],
+        "variants": [],
+        "spell": {
+          "id": "cure_wounds",
+          "level": 1,
+          "concentration": false
+        }
+      },
+      {
+        "option_id": "cast/guidance",
+        "action": "nat20_core::action.guidance",
+        "name": "Guidance",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 5,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": false
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": false
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          }
+        ],
+        "variants": [
+          {
+            "variant": "guidance/acrobatics",
+            "name": "Acrobatics"
+          },
+          {
+            "variant": "guidance/animal_handling",
+            "name": "Animal Handling"
+          },
+          {
+            "variant": "guidance/arcana",
+            "name": "Arcana"
+          },
+          {
+            "variant": "guidance/athletics",
+            "name": "Athletics"
+          },
+          {
+            "variant": "guidance/deception",
+            "name": "Deception"
+          },
+          {
+            "variant": "guidance/history",
+            "name": "History"
+          },
+          {
+            "variant": "guidance/insight",
+            "name": "Insight"
+          },
+          {
+            "variant": "guidance/intimidation",
+            "name": "Intimidation"
+          },
+          {
+            "variant": "guidance/investigation",
+            "name": "Investigation"
+          },
+          {
+            "variant": "guidance/medicine",
+            "name": "Medicine"
+          },
+          {
+            "variant": "guidance/nature",
+            "name": "Nature"
+          },
+          {
+            "variant": "guidance/perception",
+            "name": "Perception"
+          },
+          {
+            "variant": "guidance/performance",
+            "name": "Performance"
+          },
+          {
+            "variant": "guidance/persuasion",
+            "name": "Persuasion"
+          },
+          {
+            "variant": "guidance/religion",
+            "name": "Religion"
+          },
+          {
+            "variant": "guidance/sleight_of_hand",
+            "name": "Sleight of Hand"
+          },
+          {
+            "variant": "guidance/stealth",
+            "name": "Stealth"
+          },
+          {
+            "variant": "guidance/survival",
+            "name": "Survival"
+          }
+        ],
+        "spell": {
+          "id": "guidance",
+          "level": 0,
+          "concentration": true
+        }
+      },
+      {
+        "option_id": "cast/guiding_bolt/1",
+        "action": "nat20_core::action.guiding_bolt",
+        "name": "Guiding Bolt",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0,
+          "spell_slot": 1
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 120,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": true
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": true
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "goblin_1",
+            "side": "hostile",
+            "distance_ft": 51.5,
+            "in_range": true
+          },
+          {
+            "handle": "goblin_2",
+            "side": "hostile",
+            "distance_ft": 53.9,
+            "in_range": true
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          },
+          {
+            "handle": "wolf_2",
+            "side": "hostile",
+            "distance_ft": 53.2,
+            "in_range": true
+          }
+        ],
+        "variants": [],
+        "spell": {
+          "id": "guiding_bolt",
+          "level": 1,
+          "concentration": false
+        }
+      },
+      {
+        "option_id": "cast/healing_word/1",
+        "action": "nat20_core::action.healing_word",
+        "name": "Healing Word",
+        "cost": {
+          "action": 0,
+          "bonus_action": 1,
+          "reaction": 0,
+          "movement_ft": 0,
+          "spell_slot": 1
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 60,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": true
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": true
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "goblin_1",
+            "side": "hostile",
+            "distance_ft": 51.5,
+            "in_range": true
+          },
+          {
+            "handle": "goblin_2",
+            "side": "hostile",
+            "distance_ft": 53.9,
+            "in_range": true
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          },
+          {
+            "handle": "wolf_2",
+            "side": "hostile",
+            "distance_ft": 53.2,
+            "in_range": true
+          }
+        ],
+        "variants": [],
+        "spell": {
+          "id": "healing_word",
+          "level": 1,
+          "concentration": false
+        }
+      },
+      {
+        "option_id": "cast/sacred_flame",
+        "action": "nat20_core::action.sacred_flame",
+        "name": "Sacred Flame",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 60,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": true
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": true
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "goblin_1",
+            "side": "hostile",
+            "distance_ft": 51.5,
+            "in_range": true
+          },
+          {
+            "handle": "goblin_2",
+            "side": "hostile",
+            "distance_ft": 53.9,
+            "in_range": true
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          },
+          {
+            "handle": "wolf_2",
+            "side": "hostile",
+            "distance_ft": 53.2,
+            "in_range": true
+          }
+        ],
+        "variants": [],
+        "spell": {
+          "id": "sacred_flame",
+          "level": 0,
+          "concentration": false
+        }
+      },
+      {
+        "option_id": "cast/shield_of_faith/1",
+        "action": "nat20_core::action.shield_of_faith",
+        "name": "Shield of Faith",
+        "cost": {
+          "action": 0,
+          "bonus_action": 1,
+          "reaction": 0,
+          "movement_ft": 0,
+          "spell_slot": 1
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 60,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": true
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": true
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "goblin_1",
+            "side": "hostile",
+            "distance_ft": 51.5,
+            "in_range": true
+          },
+          {
+            "handle": "goblin_2",
+            "side": "hostile",
+            "distance_ft": 53.9,
+            "in_range": true
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          },
+          {
+            "handle": "wolf_2",
+            "side": "hostile",
+            "distance_ft": 53.2,
+            "in_range": true
+          }
+        ],
+        "variants": [],
+        "spell": {
+          "id": "shield_of_faith",
+          "level": 1,
+          "concentration": true
+        }
+      },
+      {
+        "option_id": "cleric/divine_spark",
+        "action": "nat20_core::action.cleric.divine_spark",
+        "name": "Cleric Divine Spark",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 30,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": true
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": true
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "goblin_1",
+            "side": "hostile",
+            "distance_ft": 51.5,
+            "in_range": false
+          },
+          {
+            "handle": "goblin_2",
+            "side": "hostile",
+            "distance_ft": 53.9,
+            "in_range": false
+          },
+          {
+            "handle": "goblin_3",
+            "side": "hostile",
+            "distance_ft": 55,
+            "in_range": false
+          },
+          {
+            "handle": "goblin_4",
+            "side": "hostile",
+            "distance_ft": 55.2,
+            "in_range": false
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          },
+          {
+            "handle": "wolf_2",
+            "side": "hostile",
+            "distance_ft": 53.2,
+            "in_range": false
+          },
+          {
+            "handle": "wolf_3",
+            "side": "hostile",
+            "distance_ft": 54.1,
+            "in_range": false
+          }
+        ],
+        "variants": [
+          {
+            "variant": "divine_spark/heal",
+            "name": "Heal"
+          },
+          {
+            "variant": "divine_spark/necrotic",
+            "name": "Necrotic"
+          },
+          {
+            "variant": "divine_spark/radiant",
+            "name": "Radiant"
+          }
+        ]
+      },
+      {
+        "option_id": "dash",
+        "action": "nat20_core::action.dash",
+        "name": "Dash",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "self",
+        "max_targets": 0,
+        "targets": [],
+        "variants": []
+      },
+      {
+        "option_id": "disengage",
+        "action": "nat20_core::action.disengage",
+        "name": "Disengage",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "self",
+        "max_targets": 0,
+        "targets": [],
+        "variants": []
+      },
+      {
+        "option_id": "help/assist_ability_check",
+        "action": "nat20_core::action.help.assist_ability_check",
+        "name": "Help Assist Ability Check",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 5,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": false
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": false
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          }
+        ],
+        "variants": [
+          {
+            "variant": "help/athletics",
+            "name": "Athletics"
+          },
+          {
+            "variant": "help/history",
+            "name": "History"
+          },
+          {
+            "variant": "help/insight",
+            "name": "Insight"
+          },
+          {
+            "variant": "help/intimidation",
+            "name": "Intimidation"
+          },
+          {
+            "variant": "help/medicine",
+            "name": "Medicine"
+          },
+          {
+            "variant": "help/perception",
+            "name": "Perception"
+          },
+          {
+            "variant": "help/persuasion",
+            "name": "Persuasion"
+          },
+          {
+            "variant": "help/religion",
+            "name": "Religion"
+          }
+        ]
+      },
+      {
+        "option_id": "help/assist_attack_roll",
+        "action": "nat20_core::action.help.assist_attack_roll",
+        "name": "Help Assist Attack Roll",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 5,
+        "targets": [
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          }
+        ],
+        "variants": []
+      },
+      {
+        "option_id": "melee_attack/mace",
+        "action": "nat20_core::action.melee_attack",
+        "name": "Mace attack",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 5,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": false
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": false
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          }
+        ],
+        "variants": []
+      },
+      {
+        "option_id": "unarmed_attack",
+        "action": "nat20_core::action.unarmed_attack",
+        "name": "Unarmed Attack",
+        "cost": {
+          "action": 1,
+          "bonus_action": 0,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 5,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": false
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": false
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          }
+        ],
+        "variants": []
+      },
+      {
+        "option_id": "use/potion_of_healing",
+        "action": "nat20_core::action.potion_of_healing",
+        "name": "Potion of Healing",
+        "cost": {
+          "action": 0,
+          "bonus_action": 1,
+          "reaction": 0,
+          "movement_ft": 0
+        },
+        "targeting": "single",
+        "max_targets": 1,
+        "range_ft": 5,
+        "targets": [
+          {
+            "handle": "bren",
+            "side": "party",
+            "distance_ft": 10,
+            "in_range": false
+          },
+          {
+            "handle": "torva",
+            "side": "party",
+            "distance_ft": 11.2,
+            "in_range": false
+          },
+          {
+            "handle": "maren",
+            "side": "party",
+            "distance_ft": 0,
+            "in_range": true
+          },
+          {
+            "handle": "ilsa",
+            "side": "party",
+            "distance_ft": 5,
+            "in_range": true
+          },
+          {
+            "handle": "wolf_1",
+            "side": "hostile",
+            "distance_ft": 15.1,
+            "in_range": false
+          }
+        ],
+        "variants": [],
+        "item": {
+          "id": "potion_of_healing",
+          "remaining": 1
+        }
+      }
+    ],
+    "unavailable": [],
+    "can_end_turn": true
+  },
+  "player_events": {
+    "cmd": "events",
+    "events": [
+      {
+        "seq": 2,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "Scene m5_s3_yard loaded in explore mode.",
+        "kind": "scene_loaded",
+        "scene_id": "m5_s3_yard",
+        "mode": "explore"
+      },
+      {
+        "seq": 3,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "Combat begins: bren, goblin_2, wolf_1, wolf_2, ilsa, goblin_3, goblin_1, goblin_4, torva, maren, wolf_3.",
+        "kind": "combat_started",
+        "participants": [
+          "bren",
+          "goblin_2",
+          "wolf_1",
+          "wolf_2",
+          "ilsa",
+          "goblin_3",
+          "goblin_1",
+          "goblin_4",
+          "torva",
+          "maren",
+          "wolf_3"
+        ]
+      },
+      {
+        "seq": 4,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "bren rolls initiative: 1d20 (20) = 22.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r4",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "bren",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                20
+              ],
+              "kept": 20
+            }
+          ],
+          "total": 22,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 5,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_2 rolls initiative: 1d20 (17) = 19.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r5",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "goblin_2",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                17
+              ],
+              "kept": 17
+            }
+          ],
+          "total": 19,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 6,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "wolf_1 rolls initiative: 1d20 (15) = 17.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r6",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "wolf_1",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                15
+              ],
+              "kept": 15
+            }
+          ],
+          "total": 17,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 7,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "wolf_2 rolls initiative: 1d20 (15) = 17.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r7",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "wolf_2",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                15
+              ],
+              "kept": 15
+            }
+          ],
+          "total": 17,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 8,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "ilsa rolls initiative: 1d20 (15) = 16.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r8",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "ilsa",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                15
+              ],
+              "kept": 15
+            }
+          ],
+          "total": 16,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 9,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_3 rolls initiative: 1d20 (14) = 16.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r9",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "goblin_3",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                14
+              ],
+              "kept": 14
+            }
+          ],
+          "total": 16,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 10,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_1 rolls initiative: 1d20 (6) = 8.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r10",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "goblin_1",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                6
+              ],
+              "kept": 6
+            }
+          ],
+          "total": 8,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 11,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_4 rolls initiative: 1d20 (5) = 7.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r11",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "goblin_4",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                5
+              ],
+              "kept": 5
+            }
+          ],
+          "total": 7,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 12,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "torva rolls initiative: 1d20 (5) = 6.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r12",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "torva",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                5
+              ],
+              "kept": 5
+            }
+          ],
+          "total": 6,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 13,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "maren rolls initiative: 1d20 (5) = 4.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r13",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "maren",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                5
+              ],
+              "kept": 5
+            }
+          ],
+          "total": 4,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 14,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "wolf_3 rolls initiative: 1d20 (1) = 3.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r14",
+          "kind": "initiative",
+          "label": "initiative",
+          "roller": "wolf_3",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                1
+              ],
+              "kept": 1
+            }
+          ],
+          "total": 3,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 15,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "Round 1 begins.",
+        "kind": "round",
+        "number": 1
+      },
+      {
+        "seq": 16,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "bren's turn.",
+        "kind": "turn_start",
+        "actor": "bren"
+      },
+      {
+        "seq": 17,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "bren's turn ends.",
+        "kind": "turn_end",
+        "actor": "bren"
+      },
+      {
+        "seq": 18,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_2's turn.",
+        "kind": "turn_start",
+        "actor": "goblin_2"
+      },
+      {
+        "seq": 19,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_2 uses Shortbow attack on bren.",
+        "kind": "action",
+        "actor": "goblin_2",
+        "option_id": "ranged_attack/shortbow",
+        "name": "Shortbow attack",
+        "targets": [
+          "bren"
+        ]
+      },
+      {
+        "seq": 20,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_2 rolls an attack roll vs bren: 1d20 (19) = 23, hit.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r20",
+          "kind": "attack",
+          "label": "an attack roll vs bren",
+          "roller": "goblin_2",
+          "target": "bren",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                19
+              ],
+              "kept": 19
+            }
+          ],
+          "total": 23,
+          "outcome": "hit",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 21,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_2 rolls piercing damage: 1d6 (2) = 4.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r21",
+          "kind": "damage",
+          "label": "piercing damage",
+          "roller": "goblin_2",
+          "dice": [
+            {
+              "source": "Base",
+              "dice": "1d6",
+              "results": [
+                2
+              ],
+              "kept": 2
+            }
+          ],
+          "total": 4,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 22,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "bren takes 4 piercing damage.",
+        "kind": "damage_taken",
+        "target": "bren",
+        "amount": 4,
+        "damage_type": "piercing",
+        "source_roll": "r21"
+      },
+      {
+        "seq": 24,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_2's turn ends.",
+        "kind": "turn_end",
+        "actor": "goblin_2"
+      },
+      {
+        "seq": 25,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "wolf_1's turn.",
+        "kind": "turn_start",
+        "actor": "wolf_1"
+      },
+      {
+        "seq": 26,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "wolf_1 uses Wolf Bite attack on torva.",
+        "kind": "action",
+        "actor": "wolf_1",
+        "option_id": "melee_attack/wolf_bite",
+        "name": "Wolf Bite attack",
+        "targets": [
+          "torva"
+        ]
+      },
+      {
+        "seq": 27,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "wolf_1 rolls an attack roll vs torva: 1d20 (2) = 6, miss.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r27",
+          "kind": "attack",
+          "label": "an attack roll vs torva",
+          "roller": "wolf_1",
+          "target": "torva",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                2
+              ],
+              "kept": 2
+            }
+          ],
+          "total": 6,
+          "outcome": "miss",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 28,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "wolf_1's turn ends.",
+        "kind": "turn_end",
+        "actor": "wolf_1"
+      },
+      {
+        "seq": 29,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "wolf_2's turn.",
+        "kind": "turn_start",
+        "actor": "wolf_2"
+      },
+      {
+        "seq": 30,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "wolf_2's turn ends.",
+        "kind": "turn_end",
+        "actor": "wolf_2"
+      },
+      {
+        "seq": 31,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "ilsa's turn.",
+        "kind": "turn_start",
+        "actor": "ilsa"
+      },
+      {
+        "seq": 32,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "ilsa's turn ends.",
+        "kind": "turn_end",
+        "actor": "ilsa"
+      },
+      {
+        "seq": 33,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_3's turn.",
+        "kind": "turn_start",
+        "actor": "goblin_3"
+      },
+      {
+        "seq": 34,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_3 uses Shortbow attack on bren.",
+        "kind": "action",
+        "actor": "goblin_3",
+        "option_id": "ranged_attack/shortbow",
+        "name": "Shortbow attack",
+        "targets": [
+          "bren"
+        ]
+      },
+      {
+        "seq": 35,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_3 rolls an attack roll vs bren: 1d20 (11) = 15, miss.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r35",
+          "kind": "attack",
+          "label": "an attack roll vs bren",
+          "roller": "goblin_3",
+          "target": "bren",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                11
+              ],
+              "kept": 11
+            }
+          ],
+          "total": 15,
+          "outcome": "miss",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 36,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_3's turn ends.",
+        "kind": "turn_end",
+        "actor": "goblin_3"
+      },
+      {
+        "seq": 37,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_1's turn.",
+        "kind": "turn_start",
+        "actor": "goblin_1"
+      },
+      {
+        "seq": 38,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_1 uses Shortbow attack on bren.",
+        "kind": "action",
+        "actor": "goblin_1",
+        "option_id": "ranged_attack/shortbow",
+        "name": "Shortbow attack",
+        "targets": [
+          "bren"
+        ]
+      },
+      {
+        "seq": 39,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_1 rolls an attack roll vs bren: 1d20 (16) = 20, hit.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r39",
+          "kind": "attack",
+          "label": "an attack roll vs bren",
+          "roller": "goblin_1",
+          "target": "bren",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                16
+              ],
+              "kept": 16
+            }
+          ],
+          "total": 20,
+          "outcome": "hit",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 40,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_1 rolls piercing damage: 1d6 (3) = 5.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r40",
+          "kind": "damage",
+          "label": "piercing damage",
+          "roller": "goblin_1",
+          "dice": [
+            {
+              "source": "Base",
+              "dice": "1d6",
+              "results": [
+                3
+              ],
+              "kept": 3
+            }
+          ],
+          "total": 5,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 41,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "bren takes 5 piercing damage.",
+        "kind": "damage_taken",
+        "target": "bren",
+        "amount": 5,
+        "damage_type": "piercing",
+        "source_roll": "r40"
+      },
+      {
+        "seq": 43,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_1's turn ends.",
+        "kind": "turn_end",
+        "actor": "goblin_1"
+      },
+      {
+        "seq": 44,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_4's turn.",
+        "kind": "turn_start",
+        "actor": "goblin_4"
+      },
+      {
+        "seq": 45,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_4 uses Shortbow attack on torva.",
+        "kind": "action",
+        "actor": "goblin_4",
+        "option_id": "ranged_attack/shortbow",
+        "name": "Shortbow attack",
+        "targets": [
+          "torva"
+        ]
+      },
+      {
+        "seq": 46,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_4 rolls an attack roll vs torva: 1d20 (11) = 15, hit.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r46",
+          "kind": "attack",
+          "label": "an attack roll vs torva",
+          "roller": "goblin_4",
+          "target": "torva",
+          "dice": [
+            {
+              "source": "d20",
+              "dice": "1d20",
+              "results": [
+                11
+              ],
+              "kept": 11
+            }
+          ],
+          "total": 15,
+          "outcome": "hit",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 47,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_4 rolls piercing damage: 1d6 (3) = 5.",
+        "kind": "roll",
+        "roll": {
+          "view": "player",
+          "id": "r47",
+          "kind": "damage",
+          "label": "piercing damage",
+          "roller": "goblin_4",
+          "dice": [
+            {
+              "source": "Base",
+              "dice": "1d6",
+              "results": [
+                3
+              ],
+              "kept": 3
+            }
+          ],
+          "total": 5,
+          "outcome": "value",
+          "advantage": "normal"
+        }
+      },
+      {
+        "seq": 48,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "torva takes 5 piercing damage.",
+        "kind": "damage_taken",
+        "target": "torva",
+        "amount": 5,
+        "damage_type": "piercing",
+        "source_roll": "r47"
+      },
+      {
+        "seq": 50,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "goblin_4's turn ends.",
+        "kind": "turn_end",
+        "actor": "goblin_4"
+      },
+      {
+        "seq": 51,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "torva's turn.",
+        "kind": "turn_start",
+        "actor": "torva"
+      },
+      {
+        "seq": 52,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "torva's turn ends.",
+        "kind": "turn_end",
+        "actor": "torva"
+      },
+      {
+        "seq": 53,
+        "round": 1,
+        "scene": "m5_s3_yard",
+        "visibility": {
+          "scope": "public"
+        },
+        "text": "maren's turn.",
+        "kind": "turn_start",
+        "actor": "maren"
+      }
+    ],
+    "next": 53
+  },
+  "dm_events": [
+    {
+      "seq": 3,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "Combat begins: bren, goblin_2, wolf_1, wolf_2, ilsa, goblin_3, goblin_1, goblin_4, torva, maren, wolf_3.",
+      "kind": "combat_started",
+      "participants": [
+        "bren",
+        "goblin_2",
+        "wolf_1",
+        "wolf_2",
+        "ilsa",
+        "goblin_3",
+        "goblin_1",
+        "goblin_4",
+        "torva",
+        "maren",
+        "wolf_3"
+      ]
+    },
+    {
+      "seq": 4,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "bren rolls initiative: 1d20 (20) +2 = 22.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r4",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "bren",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              20
+            ],
+            "kept": 20
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 22,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 5,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_2 rolls initiative: 1d20 (17) +2 = 19.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r5",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "goblin_2",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              17
+            ],
+            "kept": 17
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 19,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 6,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "wolf_1 rolls initiative: 1d20 (15) +2 = 17.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r6",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "wolf_1",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              15
+            ],
+            "kept": 15
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 17,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 7,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "wolf_2 rolls initiative: 1d20 (15) +2 = 17.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r7",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "wolf_2",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              15
+            ],
+            "kept": 15
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 17,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 8,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "ilsa rolls initiative: 1d20 (15) +1 = 16.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r8",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "ilsa",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              15
+            ],
+            "kept": 15
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 1
+          }
+        ],
+        "total": 16,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 9,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_3 rolls initiative: 1d20 (14) +2 = 16.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r9",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "goblin_3",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              14
+            ],
+            "kept": 14
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 16,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 10,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_1 rolls initiative: 1d20 (6) +2 = 8.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r10",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "goblin_1",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              6
+            ],
+            "kept": 6
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 8,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 11,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_4 rolls initiative: 1d20 (5) +2 = 7.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r11",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "goblin_4",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              5
+            ],
+            "kept": 5
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 7,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 12,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "torva rolls initiative: 1d20 (5) +1 = 6.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r12",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "torva",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              5
+            ],
+            "kept": 5
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 1
+          }
+        ],
+        "total": 6,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 13,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "maren rolls initiative: 1d20 (5) -1 = 4.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r13",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "maren",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              5
+            ],
+            "kept": 5
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": -1
+          }
+        ],
+        "total": 4,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 14,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "wolf_3 rolls initiative: 1d20 (1) +2 = 3.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r14",
+        "kind": "initiative",
+        "label": "initiative",
+        "roller": "wolf_3",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              1
+            ],
+            "kept": 1
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 3,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 15,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "Round 1 begins.",
+      "kind": "round",
+      "number": 1
+    },
+    {
+      "seq": 16,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "bren's turn.",
+      "kind": "turn_start",
+      "actor": "bren"
+    },
+    {
+      "seq": 17,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "bren's turn ends.",
+      "kind": "turn_end",
+      "actor": "bren"
+    },
+    {
+      "seq": 18,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_2's turn.",
+      "kind": "turn_start",
+      "actor": "goblin_2"
+    },
+    {
+      "seq": 19,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_2 uses Shortbow attack on bren.",
+      "kind": "action",
+      "actor": "goblin_2",
+      "option_id": "ranged_attack/shortbow",
+      "name": "Shortbow attack",
+      "targets": [
+        "bren"
+      ]
+    },
+    {
+      "seq": 20,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_2 rolls an attack roll vs bren: 1d20 (19) +4 = 23 vs AC 19, hit.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r20",
+        "kind": "attack",
+        "label": "an attack roll vs bren",
+        "roller": "goblin_2",
+        "target": "bren",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              19
+            ],
+            "kept": 19
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          },
+          {
+            "source": "Proficiency: Proficient",
+            "value": 2
+          }
+        ],
+        "total": 23,
+        "against": {
+          "kind": "AC",
+          "value": 19
+        },
+        "outcome": "hit",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 21,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_2 rolls piercing damage: 1d6 (2) +2 = 4.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r21",
+        "kind": "damage",
+        "label": "piercing damage",
+        "roller": "goblin_2",
+        "dice": [
+          {
+            "source": "Base",
+            "dice": "1d6",
+            "results": [
+              2
+            ],
+            "kept": 2
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 4,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 22,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "bren takes 4 piercing damage.",
+      "kind": "damage_taken",
+      "target": "bren",
+      "amount": 4,
+      "damage_type": "piercing",
+      "source_roll": "r21"
+    },
+    {
+      "seq": 23,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "owner",
+        "handle": "bren"
+      },
+      "text": "bren has 16/20 Hit Points.",
+      "kind": "hit_points",
+      "target": "bren",
+      "hp": 16,
+      "hp_max": 20,
+      "temp_hp": 0
+    },
+    {
+      "seq": 24,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_2's turn ends.",
+      "kind": "turn_end",
+      "actor": "goblin_2"
+    },
+    {
+      "seq": 25,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "wolf_1's turn.",
+      "kind": "turn_start",
+      "actor": "wolf_1"
+    },
+    {
+      "seq": 26,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "wolf_1 uses Wolf Bite attack on torva.",
+      "kind": "action",
+      "actor": "wolf_1",
+      "option_id": "melee_attack/wolf_bite",
+      "name": "Wolf Bite attack",
+      "targets": [
+        "torva"
+      ]
+    },
+    {
+      "seq": 27,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "wolf_1 rolls an attack roll vs torva: 1d20 (2) +4 = 6 vs AC 13, miss.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r27",
+        "kind": "attack",
+        "label": "an attack roll vs torva",
+        "roller": "wolf_1",
+        "target": "torva",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              2
+            ],
+            "kept": 2
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Strength Modifier",
+            "value": 2
+          },
+          {
+            "source": "Proficiency: Proficient",
+            "value": 2
+          }
+        ],
+        "total": 6,
+        "against": {
+          "kind": "AC",
+          "value": 13
+        },
+        "outcome": "miss",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 28,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "wolf_1's turn ends.",
+      "kind": "turn_end",
+      "actor": "wolf_1"
+    },
+    {
+      "seq": 29,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "wolf_2's turn.",
+      "kind": "turn_start",
+      "actor": "wolf_2"
+    },
+    {
+      "seq": 30,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "wolf_2's turn ends.",
+      "kind": "turn_end",
+      "actor": "wolf_2"
+    },
+    {
+      "seq": 31,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "ilsa's turn.",
+      "kind": "turn_start",
+      "actor": "ilsa"
+    },
+    {
+      "seq": 32,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "ilsa's turn ends.",
+      "kind": "turn_end",
+      "actor": "ilsa"
+    },
+    {
+      "seq": 33,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_3's turn.",
+      "kind": "turn_start",
+      "actor": "goblin_3"
+    },
+    {
+      "seq": 34,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_3 uses Shortbow attack on bren.",
+      "kind": "action",
+      "actor": "goblin_3",
+      "option_id": "ranged_attack/shortbow",
+      "name": "Shortbow attack",
+      "targets": [
+        "bren"
+      ]
+    },
+    {
+      "seq": 35,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_3 rolls an attack roll vs bren: 1d20 (11) +4 = 15 vs AC 19, miss.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r35",
+        "kind": "attack",
+        "label": "an attack roll vs bren",
+        "roller": "goblin_3",
+        "target": "bren",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              11
+            ],
+            "kept": 11
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          },
+          {
+            "source": "Proficiency: Proficient",
+            "value": 2
+          }
+        ],
+        "total": 15,
+        "against": {
+          "kind": "AC",
+          "value": 19
+        },
+        "outcome": "miss",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 36,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_3's turn ends.",
+      "kind": "turn_end",
+      "actor": "goblin_3"
+    },
+    {
+      "seq": 37,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_1's turn.",
+      "kind": "turn_start",
+      "actor": "goblin_1"
+    },
+    {
+      "seq": 38,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_1 uses Shortbow attack on bren.",
+      "kind": "action",
+      "actor": "goblin_1",
+      "option_id": "ranged_attack/shortbow",
+      "name": "Shortbow attack",
+      "targets": [
+        "bren"
+      ]
+    },
+    {
+      "seq": 39,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_1 rolls an attack roll vs bren: 1d20 (16) +4 = 20 vs AC 19, hit.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r39",
+        "kind": "attack",
+        "label": "an attack roll vs bren",
+        "roller": "goblin_1",
+        "target": "bren",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              16
+            ],
+            "kept": 16
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          },
+          {
+            "source": "Proficiency: Proficient",
+            "value": 2
+          }
+        ],
+        "total": 20,
+        "against": {
+          "kind": "AC",
+          "value": 19
+        },
+        "outcome": "hit",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 40,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_1 rolls piercing damage: 1d6 (3) +2 = 5.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r40",
+        "kind": "damage",
+        "label": "piercing damage",
+        "roller": "goblin_1",
+        "dice": [
+          {
+            "source": "Base",
+            "dice": "1d6",
+            "results": [
+              3
+            ],
+            "kept": 3
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 5,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 41,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "bren takes 5 piercing damage.",
+      "kind": "damage_taken",
+      "target": "bren",
+      "amount": 5,
+      "damage_type": "piercing",
+      "source_roll": "r40"
+    },
+    {
+      "seq": 42,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "owner",
+        "handle": "bren"
+      },
+      "text": "bren has 11/20 Hit Points.",
+      "kind": "hit_points",
+      "target": "bren",
+      "hp": 11,
+      "hp_max": 20,
+      "temp_hp": 0
+    },
+    {
+      "seq": 43,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_1's turn ends.",
+      "kind": "turn_end",
+      "actor": "goblin_1"
+    },
+    {
+      "seq": 44,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_4's turn.",
+      "kind": "turn_start",
+      "actor": "goblin_4"
+    },
+    {
+      "seq": 45,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_4 uses Shortbow attack on torva.",
+      "kind": "action",
+      "actor": "goblin_4",
+      "option_id": "ranged_attack/shortbow",
+      "name": "Shortbow attack",
+      "targets": [
+        "torva"
+      ]
+    },
+    {
+      "seq": 46,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_4 rolls an attack roll vs torva: 1d20 (11) +4 = 15 vs AC 13, hit.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r46",
+        "kind": "attack",
+        "label": "an attack roll vs torva",
+        "roller": "goblin_4",
+        "target": "torva",
+        "dice": [
+          {
+            "source": "d20",
+            "dice": "1d20",
+            "results": [
+              11
+            ],
+            "kept": 11
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          },
+          {
+            "source": "Proficiency: Proficient",
+            "value": 2
+          }
+        ],
+        "total": 15,
+        "against": {
+          "kind": "AC",
+          "value": 13
+        },
+        "outcome": "hit",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 47,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_4 rolls piercing damage: 1d6 (3) +2 = 5.",
+      "kind": "roll",
+      "roll": {
+        "view": "full",
+        "id": "r47",
+        "kind": "damage",
+        "label": "piercing damage",
+        "roller": "goblin_4",
+        "dice": [
+          {
+            "source": "Base",
+            "dice": "1d6",
+            "results": [
+              3
+            ],
+            "kept": 3
+          }
+        ],
+        "modifiers": [
+          {
+            "source": "Dexterity Modifier",
+            "value": 2
+          }
+        ],
+        "total": 5,
+        "outcome": "value",
+        "advantage": "normal"
+      }
+    },
+    {
+      "seq": 48,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "torva takes 5 piercing damage.",
+      "kind": "damage_taken",
+      "target": "torva",
+      "amount": 5,
+      "damage_type": "piercing",
+      "source_roll": "r47"
+    },
+    {
+      "seq": 49,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "owner",
+        "handle": "torva"
+      },
+      "text": "torva has 18/23 Hit Points.",
+      "kind": "hit_points",
+      "target": "torva",
+      "hp": 18,
+      "hp_max": 23,
+      "temp_hp": 0
+    },
+    {
+      "seq": 50,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "goblin_4's turn ends.",
+      "kind": "turn_end",
+      "actor": "goblin_4"
+    },
+    {
+      "seq": 51,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "torva's turn.",
+      "kind": "turn_start",
+      "actor": "torva"
+    },
+    {
+      "seq": 52,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "torva's turn ends.",
+      "kind": "turn_end",
+      "actor": "torva"
+    },
+    {
+      "seq": 53,
+      "round": 1,
+      "scene": "m5_s3_yard",
+      "visibility": {
+        "scope": "public"
+      },
+      "text": "maren's turn.",
+      "kind": "turn_start",
+      "actor": "maren"
+    }
+  ]
+}
