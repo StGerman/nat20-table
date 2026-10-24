@@ -20,7 +20,7 @@ export function engineBinary(): string {
 export interface EngineStart {
   /** The scenario pack: its `scenes/` are the engine's scenes. */
   pack: string;
-  /** Where the run's files go: `engine-log.jsonl`, `engine-stderr.log`. */
+  /** Where the run's files go: `engine-log.jsonl`, `engine-stderr.log`, `session-log.jsonl`. */
   runDir: string;
   /** The dice seed; the engine picks one when omitted and logs it. */
   seed?: number;
@@ -30,8 +30,13 @@ export interface EngineStart {
   timeoutMs?: number;
 }
 
+/** The whole session log as the DM sees it, one event per line: what the audit checks (step 6). */
+export const SESSION_LOG = "session-log.jsonl";
+
 export class GameEngine {
   private readonly client: EngineClient;
+  /** Where the run's files go. */
+  readonly runDir: string;
   /** Where each reader got to in the log. A reader is a viewer, or a viewer and a purpose. */
   private readonly cursors = new Map<string, number>();
   /** The session log's length after the last response. */
@@ -39,8 +44,9 @@ export class GameEngine {
   /** The seed the session runs on, as the engine logged it. */
   seed = 0;
 
-  private constructor(client: EngineClient) {
+  private constructor(client: EngineClient, runDir: string) {
     this.client = client;
+    this.runDir = runDir;
   }
 
   /** Starts the engine on a pack and opens a session. */
@@ -53,7 +59,7 @@ export class GameEngine {
       stderrFile: path.join(start.runDir, "engine-stderr.log"),
       timeoutMs: start.timeoutMs,
     });
-    const engine = new GameEngine(client);
+    const engine = new GameEngine(client, start.runDir);
     const session = await engine.request("dm", { cmd: "new_session", seed: start.seed });
     if (!session.ok || session.result?.cmd !== "new_session") {
       client.close();
@@ -89,11 +95,14 @@ export class GameEngine {
     this.cursors.set(reader, seq);
   }
 
-  /** Writes the whole session log as `viewer` sees it, for the audit (spec step 6). */
-  async writeLog(viewer: Viewer, file: string): Promise<void> {
+  /**
+   * Writes the whole session log as `viewer` sees it, one event per line: the DM's view to
+   * `session-log.jsonl` by default, which the transcript audit checks the run against (spec step 6).
+   */
+  async writeLog(viewer: Viewer = "dm", file: string = path.join(this.runDir, SESSION_LOG)): Promise<void> {
     const response = await this.request(viewer, { cmd: "events", since: 0 });
     if (!response.ok || response.result?.cmd !== "events") throw new Error(`events for ${viewer} failed`);
-    writeFileSync(file, JSON.stringify(response.result.events, null, 2) + "\n");
+    writeFileSync(file, response.result.events.map((event) => JSON.stringify(event) + "\n").join(""));
   }
 
   close(): void {

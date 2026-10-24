@@ -293,7 +293,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 ```
 In the `full` view, `against` is always present for `attack` (AC), `saving_throw`, `death_save`, `ability_check` and `skill_check` (DC), and `dc_source` is present for every DC: `rule` for the fixed DC 10 of a death save and of Help's stabilize, and for a Concentration save; `spell_save_dc` for a save against a caster's spell save DC (Sacred Flame, Divine Spark's damage); `stat_block` for a monster's own DC. Only `initiative`, `damage` and `healing` rolls have no `against`.
 
-Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with the same `total`, and with the same `against` when the transcript states it. Every roll in the session log is cited. The audit runs on the `dm` projection.
+Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with the same `total`, and with the same `against` when the transcript states it. Every roll in the session log is cited. A plain transcript (the Milestone 1 to 5 drivers) is audited against the `dm` projection. A game transcript is audited per channel against the projection for whoever hears it, so a line a player saw matches the `player` roll view and gains nothing hidden (decision 0033, `nat20-audit`).
 
 ## 7. Errors
 

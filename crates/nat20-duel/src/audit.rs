@@ -70,28 +70,8 @@ pub fn audit_transcript(transcript: &str, log: &[Event], require_all: bool) -> A
             continue;
         };
         cited.insert(id.clone());
-        // The line must show the engine's own arithmetic verbatim: dice,
-        // kept die, modifiers, total, AC/DC and outcome. Anything else
-        // (a changed die with the same total, a flipped outcome) fails.
-        let summary = roll_summary(roll);
-        let Some(at) = line.find(&summary) else {
-            report.problems.push(format!(
-                "line {line_no}: {id} does not show the engine's roll \"{summary}\""
-            ));
-            continue;
-        };
-        // Nothing else on the line may look like more arithmetic, before or after the summary.
-        // The engine's own label for the roll may name a die ("a d10 Hit Point Die"), so it is
-        // left out where the transcript puts it, right before the summary ("rolls <label>: ").
-        let before = &line[..at];
-        let before = before
-            .strip_suffix(&format!("rolls {}: ", roll_label(roll)))
-            .unwrap_or(before);
-        let rest = format!("{} {}", before, &line[at + summary.len()..]);
-        if looks_like_roll(&rest) || rest.contains(" vs AC ") || rest.contains(" vs DC ") {
-            report.problems.push(format!(
-                "line {line_no}: {id} comes with extra roll arithmetic: {rest}"
-            ));
+        if let Some(problem) = shows_roll(line, &id, roll) {
+            report.problems.push(format!("line {line_no}: {problem}"));
         }
     }
 
@@ -110,6 +90,32 @@ pub fn audit_transcript(transcript: &str, log: &[Event], require_all: bool) -> A
         }
     }
     report
+}
+
+/// Checks that `line`, which cites `roll` as `id`, shows the engine's own arithmetic for it
+/// verbatim (dice, kept die, modifiers, total, AC/DC and outcome, as `roll`'s view renders them)
+/// and nothing that looks like more. Returns the problem, if any.
+pub(crate) fn shows_roll(line: &str, id: &str, roll: &RollView) -> Option<String> {
+    // Anything other than the summary (a changed die with the same total, a flipped outcome)
+    // fails.
+    let summary = roll_summary(roll);
+    let Some(at) = line.find(&summary) else {
+        return Some(format!(
+            "{id} does not show the engine's roll \"{summary}\""
+        ));
+    };
+    // Nothing else on the line may look like more arithmetic, before or after the summary.
+    // The engine's own label for the roll may name a die ("a d10 Hit Point Die"), so it is
+    // left out where the transcript puts it, right before the summary ("rolls <label>: ").
+    let before = &line[..at];
+    let before = before
+        .strip_suffix(&format!("rolls {}: ", roll_label(roll)))
+        .unwrap_or(before);
+    let rest = format!("{} {}", before, &line[at + summary.len()..]);
+    if looks_like_roll(&rest) || rest.contains(" vs AC ") || rest.contains(" vs DC ") {
+        return Some(format!("{id} comes with extra roll arithmetic: {rest}"));
+    }
+    None
 }
 
 /// Checks a logged roll is internally consistent: every die is within its size, and the total
@@ -192,7 +198,7 @@ pub fn check_roll_arithmetic(roll: &RollView) -> Result<(), String> {
     Ok(())
 }
 
-fn roll_id(roll: &RollView) -> &str {
+pub(crate) fn roll_id(roll: &RollView) -> &str {
     match roll {
         RollView::Full { id, .. } | RollView::Player { id, .. } => &id.0,
     }
@@ -205,7 +211,7 @@ fn roll_label(roll: &RollView) -> &str {
 }
 
 /// Every `[r<digits>]` on the line, in order.
-fn citations(line: &str) -> Vec<String> {
+pub(crate) fn citations(line: &str) -> Vec<String> {
     let mut ids = Vec::new();
     let mut rest = line;
     while let Some(start) = rest.find("[r") {
@@ -231,7 +237,8 @@ fn number_after(line: &str, marker: &str) -> Option<i32> {
     rest[..end].parse().ok()
 }
 
-fn looks_like_roll(line: &str) -> bool {
+/// Whether the line shows roll arithmetic: dice notation, or `= <n>`.
+pub(crate) fn looks_like_roll(line: &str) -> bool {
     // API request echo lines carry JSON, not results.
     if line.trim_start().starts_with("api>") {
         return false;

@@ -1,5 +1,6 @@
 // The run's transcript: every line any seat received or wrote, with its channel and the roll ids it
-// cites (M6 spec §3.5, §3.6; step 6 adds the audit and the leak scan over it).
+// cites (M6 spec §3.5, §3.6). `nat20-audit` (crates/nat20-duel/src/game_audit.rs) checks it against
+// the session log.
 import { appendFileSync } from "node:fs";
 import type { Channel, TranscriptRecord } from "./types.ts";
 

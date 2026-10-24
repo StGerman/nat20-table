@@ -1,19 +1,15 @@
 //! The `visibility` CI job (design §5.3, `contract/protocol.md` §5): replays every
 //! `contract/fixtures/*.jsonl` and, after each step, asks for `get_state` and `events since 0` as
 //! every party creature's player viewer. Nothing a player may not know may appear in what that
-//! player receives: another creature's HP, max HP, temp HP or AC; any roll target (`against`,
-//! `dc`, `dc_source`) or roll modifiers; scenario data (`flags`, `checks`, `encounters`,
-//! `surrender_available`, `spawns`, `known_ids`) or the
-//! reasons behind Advantage (`advantage_sources`); a DM-only or another owner's event, or a
-//! scenario event kind (`check_resolved`, `flag_set`, `hazard_triggered`, `spawned`) whatever its
-//! visibility; another creature's `hit_points` event; an AC or DC number in free text.
+//! player receives. What counts as a leak is listed in `nat20_api_server::leaks`, which the game's
+//! leak scan (M6 step 6) shares.
 //!
 //! The probes are read-only, so the replay follows the fixture's own path. Run alone:
 //! `cargo test --locked -p nat20-api-server --test visibility`.
 
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
-use nat20_api_server::Server;
+use nat20_api_server::{Server, leaks::json_leaks};
 use serde_json::{Value, json};
 
 fn fixtures() -> Vec<PathBuf> {
@@ -63,90 +59,9 @@ fn party_handles(response: &Value, out: &mut BTreeSet<String>) {
     }
 }
 
-/// True when `text` carries a number right after "AC" or "DC", as in "vs AC 15" or "DC 12".
-fn names_a_target_number(text: &str) -> bool {
-    ["AC ", "DC "].iter().any(|word| {
-        text.match_indices(word).any(|(at, _)| {
-            let before = text[..at].chars().next_back();
-            let after = text[at + word.len()..].chars().next();
-            !before.is_some_and(char::is_alphanumeric) && after.is_some_and(|c| c.is_ascii_digit())
-        })
-    })
-}
-
 /// Every leak of hidden data in `response` as seen by player `viewer`; empty when clean.
 fn leaks(viewer: &str, response: &Value) -> Vec<String> {
-    let mut found = Vec::new();
-    scan(viewer, response, "$", &mut found);
-    found
-}
-
-fn scan(viewer: &str, node: &Value, path: &str, found: &mut Vec<String>) {
-    match node {
-        Value::Object(map) => {
-            let handle = map.get("handle").and_then(Value::as_str);
-            if handle.is_some_and(|handle| handle != viewer) {
-                for hidden in ["hp", "hp_max", "temp_hp", "ac"] {
-                    if map.contains_key(hidden) {
-                        found.push(format!("{path}.{hidden} of {}", handle.unwrap()));
-                    }
-                }
-            }
-            for hidden in [
-                "against",
-                "dc",
-                "dc_source",
-                "flags",
-                "checks",
-                "encounters",
-                "surrender_available",
-                "spawns",
-                "known_ids",
-                "advantage_sources",
-            ] {
-                if map.contains_key(hidden) {
-                    found.push(format!("{path}.{hidden}"));
-                }
-            }
-            if let Some(view) = map.get("view").and_then(Value::as_str) {
-                if view != "player" {
-                    found.push(format!("{path}.view is {view:?}"));
-                }
-                if map.contains_key("modifiers") {
-                    found.push(format!("{path}.modifiers"));
-                }
-            }
-            if let Some(visibility) = map.get("visibility") {
-                let scope = visibility.get("scope").and_then(Value::as_str);
-                let owner = visibility.get("handle").and_then(Value::as_str);
-                if scope == Some("dm") || (scope == Some("owner") && owner != Some(viewer)) {
-                    found.push(format!("{path} has visibility {visibility}"));
-                }
-            }
-            if let Some(kind) = map.get("kind").and_then(Value::as_str)
-                && ["check_resolved", "flag_set", "hazard_triggered", "spawned"].contains(&kind)
-            {
-                found.push(format!("{path} is a {kind} event"));
-            }
-            if map.get("kind").and_then(Value::as_str) == Some("hit_points")
-                && map.get("target").and_then(Value::as_str) != Some(viewer)
-            {
-                found.push(format!("{path} is another creature's hit_points event"));
-            }
-            for (key, value) in map {
-                scan(viewer, value, &format!("{path}.{key}"), found);
-            }
-        }
-        Value::Array(items) => {
-            for (index, value) in items.iter().enumerate() {
-                scan(viewer, value, &format!("{path}[{index}]"), found);
-            }
-        }
-        Value::String(text) if names_a_target_number(text) => {
-            found.push(format!("{path} names a target number: {text:?}"));
-        }
-        _ => {}
-    }
+    json_leaks(viewer, response)
 }
 
 fn call(server: &mut Server, request: Value) -> Value {
@@ -241,12 +156,4 @@ fn the_scan_catches_the_dm_view() {
             .any(|leak| leak.contains("names a target number")),
         "{event_leaks:#?}"
     );
-}
-
-#[test]
-fn target_numbers_in_text_are_recognised() {
-    assert!(names_a_target_number("Bren hits: 18 vs AC 15."));
-    assert!(names_a_target_number("DC 12 Wisdom (Perception)"));
-    assert!(!names_a_target_number("Bren hits the goblin for 7 damage."));
-    assert!(!names_a_target_number("ABC 12"));
 }
