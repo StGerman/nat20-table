@@ -96,9 +96,10 @@ function optionItems(option: ActionOption): Item[] {
         return [{ label: `${name}…`, next: numbered(variants) }];
       }
       // Hostile targets in reach get their own lines; with none in reach, the nearest hostile does.
-      const hostile = targets.filter((t) => t.side === "hostile");
-      const inReach = hostile.filter((t) => t.in_range);
-      const quick = inReach.length > 0 ? inReach : hostile.slice(0, 1);
+      // A potion is for a friend, so it lists the creatures on no hostile side instead (you first).
+      const wanted = targets.filter((t) => (option.item ? t.side !== "hostile" : t.side === "hostile"));
+      const inReach = wanted.filter((t) => t.in_range);
+      const quick = inReach.length > 0 ? inReach : wanted.slice(0, 1);
       const rest = targets.filter((t) => !quick.includes(t));
       const lines = targetItems(option, quick);
       if (rest.length > 0) lines.push({ label: `${name}${quick.length > 0 ? ", another target" : ""}…`, next: numbered(targetItems(option, rest)) });
