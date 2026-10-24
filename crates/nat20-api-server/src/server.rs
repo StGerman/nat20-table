@@ -179,6 +179,18 @@ impl Server {
                 "The viewer must be dm or a creature in this scene.",
             ));
         }
+        // A submit reuses the option list the last legal_actions kept (API-17), so any command
+        // that can change the game drops it first. Reads leave it.
+        if !matches!(
+            command,
+            Command::LegalActions { .. }
+                | Command::Submit { .. }
+                | Command::GetState
+                | Command::GetSheet { .. }
+                | Command::Events { .. }
+        ) {
+            session.forget_options();
+        }
         match command {
             Command::Hello | Command::NewSession { .. } => unreachable!("handled above"),
             Command::LoadScene { scene_id, party } => session.load_scene(scene_id, party, viewer),
