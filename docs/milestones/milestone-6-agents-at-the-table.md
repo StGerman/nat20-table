@@ -43,7 +43,7 @@ Milestones 1 to 5 built the engine side: every rule the adventure needs resolves
 | Pregens | `pregens/{fighter,cleric,wizard,barbarian}_l2.json` | Used as they are |
 | Maps | `maps/flat_arena.obj` only | Scenes use flat terrain plus named anchors (D7) |
 | `game/`, `scenarios/`, `lore/` | Do not exist (CLAUDE.md lists them in the layout) | Created here |
-| Node toolchain | npm workspace `packages/*`, Node ≥ 22.6, TypeScript 7, `node --experimental-strip-types` for tests | `game/` joins the workspace. Ink needs JSX, so `game/` builds with `tsc` (step 11) |
+| Node toolchain | npm workspace `packages/*`, Node ≥ 22.6, TypeScript 7, `node --experimental-strip-types` for tests | `game/` joins the workspace. The Ink UI is written with `createElement` instead of JSX, so `game/` still runs as plain `.ts` with no build step (step 11) |
 
 ## 3. Architecture
 

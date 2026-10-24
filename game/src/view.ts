@@ -60,9 +60,72 @@ export function formatState(state: State): string {
   return lines.join("\n");
 }
 
-/** The parts of a sheet a player decides with. The full sheet stays available as JSON. */
+/** A signed bonus: `+3`, `-1`, `+0`. */
+const signed = (n: number) => (n < 0 ? `${n}` : `+${n}`);
+
+/** An id as the human reads it: `animal_handling` is "Animal Handling", `fighter` is "Fighter". */
+const titled = (id: string) =>
+  id
+    .split(/[_.]/)
+    .map((w, i) => (i > 0 && w === "of" ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+
+const RECHARGE: Record<string, string> = { turn: "each turn", short_rest: "short rest", long_rest: "long rest", never: "doesn't recharge" };
+
+/**
+ * The human's own sheet for `/sheet` (owner view), as lines a first-time player can read (scope
+ * §6.6). It says "Armor Class" and "save difficulty" in words: the leak scan reads "AC 15" and
+ * "DC 12" in the human's stream as a leaked target number, whoever's it is. AI players read the
+ * sheet as JSON through `my_sheet`.
+ */
 export function formatSheet(sheet: Sheet): string {
-  return JSON.stringify(sheet);
+  const who = sheet.level ? `level ${sheet.level} ${sheet.species} ${sheet.class ?? ""}`.trim() : sheet.species;
+  const lines = [
+    `${sheet.name}, ${who}${sheet.subclass ? ` (${titled(sheet.subclass)})` : ""}`,
+    `Hit Points ${sheet.hp} of ${sheet.hp_max}${sheet.temp_hp > 0 ? `, plus ${sheet.temp_hp} temporary` : ""} · Armor Class ${sheet.ac} · Speed ${sheet.speed_ft} ft · Initiative ${signed(sheet.initiative_bonus)} · Proficiency Bonus ${signed(sheet.proficiency_bonus)} · Passive Perception ${sheet.passive_perception}`,
+  ];
+  if (sheet.life_state !== "conscious") {
+    lines.push(`You are ${sheet.life_state}. Death saving throws: ${sheet.death_saves.successes} successes, ${sheet.death_saves.failures} failures.`);
+  }
+  const status = [
+    ...(sheet.conditions.length > 0 ? [`Conditions: ${sheet.conditions.join(", ")}`] : []),
+    ...(sheet.exhaustion > 0 ? [`Exhaustion level ${sheet.exhaustion}`] : []),
+    ...(sheet.concentration ? [`Concentrating on ${sheet.concentration.spell}`] : []),
+    ...(sheet.effects.length > 0 ? [`Effects: ${sheet.effects.map((e) => `${e.name} (from ${e.source})`).join(", ")}`] : []),
+  ];
+  if (status.length > 0) lines.push(status.join(" · "));
+  lines.push(
+    `Abilities: ${sheet.abilities
+      .map((a) => `${a.ability.slice(0, 3).toUpperCase()} ${a.score} (${signed(a.modifier)}; save ${signed(a.save_bonus)}${a.save_proficient ? ", proficient" : ""})`)
+      .join(" · ")}`,
+  );
+  const skill = (s: Sheet["skills"][number]) => `${titled(s.skill)} ${signed(s.bonus)}${s.proficiency === "expertise" ? " (expertise)" : ""}`;
+  const trained = sheet.skills.filter((s) => s.proficiency !== "none");
+  if (trained.length > 0) lines.push(`Skills you are trained in: ${trained.map(skill).join(", ")}`);
+  lines.push(`Other skills: ${sheet.skills.filter((s) => s.proficiency === "none").map(skill).join(", ")}`);
+  for (const line of sheet.spellcasting) {
+    lines.push(`Spellcasting (${titled(line.class)}, ${titled(line.ability)}): spell attack ${signed(line.attack_bonus)}, spell save difficulty ${line.save_dc}`);
+  }
+  if (sheet.spell_slots.length > 0) lines.push(`Spell slots: ${sheet.spell_slots.map((s) => `level ${s.level}: ${s.remaining} of ${s.max}`).join(", ")}`);
+  const cantrips = sheet.spells.filter((s) => s.level === 0);
+  const levelled = sheet.spells.filter((s) => s.level > 0);
+  if (cantrips.length > 0) lines.push(`Cantrips: ${cantrips.map((s) => s.name).join(", ")}`);
+  if (levelled.length > 0) {
+    lines.push(`Spells: ${levelled.map((s) => `${s.name} (level ${s.level}${s.concentration ? ", concentration" : ""})`).join(", ")}`);
+  }
+  if (sheet.resources.length > 0) {
+    lines.push(
+      `Limited uses: ${sheet.resources
+        .map((r) => `${r.name} ${r.remaining} of ${r.max} (${RECHARGE[r.recharge] ?? r.recharge}${r.short_rest_regain ? `; a short rest gives back ${r.short_rest_regain}` : ""})`)
+        .join(", ")}`,
+    );
+  }
+  if (sheet.hit_dice.length > 0) lines.push(`Hit Point Dice: ${sheet.hit_dice.map((d) => `d${d.die} ${d.remaining} of ${d.max}`).join(", ")}`);
+  if (sheet.equipment.length > 0) {
+    lines.push(`Equipment: ${sheet.equipment.map((i) => `${i.name}${i.quantity > 1 ? ` x${i.quantity}` : ""}${i.equipped ? " (equipped)" : ""}`).join(", ")}`);
+  }
+  if (sheet.features.length > 0) lines.push(`Features: ${sheet.features.map((f) => f.name).join(", ")}`);
+  return lines.join("\n");
 }
 
 /** The DM's view: every creature with its numbers, the scene's checks, encounters, spawns, flags. */
