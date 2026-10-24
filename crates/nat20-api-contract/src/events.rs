@@ -245,7 +245,9 @@ pub enum EventKind {
         /// The new state.
         state: LifeState,
     },
-    /// A creature moved.
+    /// A creature moved: by a `move`, or on its own on the way to an option's target (a
+    /// `submit` on a target out of reach, a scripted monster's approach), logged once it stopped
+    /// and before the `action` it walked for (protocol §4.1).
     Moved {
         /// Who.
         actor: Handle,
