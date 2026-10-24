@@ -1,7 +1,8 @@
 // The step 10 live run (M6 spec §8, runbook Part 2): one scene of a scenario pack with the DM agent
-// and the AI players on the Agent SDK, and Bren on a scripted seat. By default Scene 3 of The
-// Silent Mill, the yard fight. Run on Stas's Mac under his Claude login (decision 0036), never in
-// CI or a cloud session: `npm run play:scene`.
+// and the AI players on the Agent SDK, and Bren on a scripted seat, or played by you in the
+// terminal UI with --seat ink (step 11). By default Scene 3 of The Silent Mill, the yard fight. Run
+// on Stas's Mac under his Claude login (decision 0036), never in CI or a cloud session:
+// `npm run play:scene`.
 //
 // The scenes before the one played are loaded first, the party carried along, and nobody is told
 // about them. The run stops when the DM loads the next scene or ends the adventure. It writes
@@ -10,8 +11,9 @@
 //
 // Flags: --scene ID, --seed N, --dm-model, --player-model, --effort, --craft prompt|skills (D10),
 // --dm-timeout-ms, --pack DIR, --dm scripted and --players scripted (no model: checks the command
-// itself; the scripted DM starts --encounter and narrates plainly), --dry-run (prints the DM's
-// prompt and session settings, starts nothing), --no-audit, --out DIR, --max-steps N.
+// itself; the scripted DM starts --encounter and narrates plainly), --seat scripted|ink (ink: you
+// play the human's character in this terminal), --dry-run (prints the DM's prompt and session
+// settings, starts nothing), --no-audit, --out DIR, --max-steps N.
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -25,7 +27,8 @@ import { TableLoop, type RunReport } from "../table/loop.ts";
 import { ScriptedPlayer, ScriptedSeat, yardDm } from "../table/scripted.ts";
 import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
-import type { DmAgent, PlayerAgent } from "../table/types.ts";
+import type { DmAgent, PlayerAgent, Seat } from "../table/types.ts";
+import { InkSeat } from "../ui/ink-seat.ts";
 import { UsageLog } from "../usage.ts";
 import { audit, endState, guards, packParty, refuseApiKey, reportSections, runFolder, startAt } from "./run.ts";
 
@@ -41,6 +44,7 @@ const { values: flags } = parseArgs({
     pack: { type: "string", default: path.join(REPO, "scenarios/the_silent_mill") },
     dm: { type: "string", default: "model" },
     players: { type: "string", default: "model" },
+    seat: { type: "string", default: "scripted" },
     encounter: { type: "string", default: "yard_fight" },
     "dry-run": { type: "boolean", default: false },
     "no-audit": { type: "boolean", default: false },
@@ -52,6 +56,7 @@ for (const [flag, value, allowed] of [
   ["--dm", flags.dm, ["model", "scripted"]],
   ["--players", flags.players, ["model", "scripted"]],
   ["--craft", flags.craft, ["prompt", "skills"]],
+  ["--seat", flags.seat, ["scripted", "ink"]],
 ] as const) {
   if (!(allowed as readonly string[]).includes(value!)) {
     console.error(`${flag} is one of ${allowed.join(", ")}`);
@@ -84,17 +89,24 @@ if (flags["dry-run"]) {
   process.exit(0);
 }
 if (flags.dm === "model" || flags.players === "model") refuseApiKey();
+if (flags.seat === "ink" && !(process.stdin.isTTY && process.stdout.isTTY)) {
+  console.error("--seat ink needs your keyboard and screen: run it in a terminal, not through a pipe or Remote Control.");
+  process.exit(2);
+}
 
 const runDir = runFolder(flags.out!, "scene");
 const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
 const engine = await GameEngine.start({ pack: flags.pack!, runDir, seed: flags.seed === undefined ? undefined : Number(flags.seed) });
 const carried = await startAt(engine, flags.pack!, flags.scene!, [party.human, ...party.ai]);
 const transcript = new Transcript(path.join(runDir, "transcript.jsonl"), () => engine.logHead);
+// You at the keyboard, or a seat that fights by rule. Ctrl+C ends the table between decisions.
+const ink = flags.seat === "ink" ? new InkSeat(party.human, { onQuit: () => table.end("the human quit") }) : undefined;
+const seat: Seat = ink ?? new ScriptedSeat(party.human, [], ScriptedSeat.fight);
 const table = new TableState({
   engine,
   human: party.human,
   players: party.ai,
-  seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight),
+  seat,
   transcript,
   inputsFile: path.join(runDir, "inputs.jsonl"),
   ...guards(flags.pack!, engine),
@@ -113,8 +125,10 @@ const loop = new TableLoop({
 
 const who = (kind: string | undefined, choice: { model: string; effort: string }) => (kind === "scripted" ? "scripted" : `${choice.model} (${choice.effort})`);
 console.log(
-  `Playing ${flags.scene} of ${pack.adventure.title} (seed ${engine.seed}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human} scripted.`,
+  `Playing ${flags.scene} of ${pack.adventure.title} (seed ${engine.seed}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human} ${ink ? "played by you" : "scripted"}.`,
 );
+// Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame.
+ink?.start({ interactive: true });
 let run: RunReport | undefined;
 let failure: unknown;
 try {
@@ -122,6 +136,7 @@ try {
 } catch (error) {
   failure = error;
 }
+ink?.stop();
 const end = await endState(engine).catch(() => []);
 engine.close();
 const checked = flags["no-audit"] ? undefined : audit(flags.pack!, runDir);
@@ -131,7 +146,8 @@ const report = [
   "",
   `- Scene: ${flags.scene} of ${pack.adventure.title} (${path.relative(REPO, path.resolve(flags.pack!))}), seed ${engine.seed}`,
   `- DM: ${who(flags.dm, dmChoice)}${flags.dm === "model" ? `, craft guidance in the ${craft === "prompt" ? "system prompt" : "skills"}` : ""}`,
-  `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human} on a scripted seat`,
+  `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human} ${ink ? "played in the terminal UI" : "on a scripted seat"}`,
+  ...(ink ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
   ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
   "",
   "Narration:",
