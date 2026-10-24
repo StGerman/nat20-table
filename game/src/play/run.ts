@@ -67,22 +67,18 @@ export async function startAt(engine: GameEngine, pack: string, scene: string, p
  * between two listed ones is passed over: the next listed scene not played yet loads in its place.
  * The run stops before any other scene. Returns the scene to start at and the loop's `onScene`.
  */
-export function scenePlan(pack: string, played: string[]): { first: string; onScene: (sceneId: string) => SceneChoice } {
+export function scenePlan(pack: string, listed: string[]): { first: string; onScene: (sceneId: string, played: readonly string[]) => SceneChoice } {
   const order = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8"))).scenes.map((s) => s.id);
-  const at = played.map((id) => order.indexOf(id));
-  const unknown = played.filter((_, i) => at[i] < 0);
-  if (played.length === 0) throw new Error("no scene to play");
+  const at = listed.map((id) => order.indexOf(id));
+  const unknown = listed.filter((_, i) => at[i] < 0);
+  if (listed.length === 0) throw new Error("no scene to play");
   if (unknown.length > 0) throw new Error(`${pack} has no scene ${unknown.join(", ")}; its scenes: ${order.join(", ")}`);
   if (at.some((n, i) => i > 0 && n <= at[i - 1])) throw new Error(`list the scenes once each, in the pack's order: ${order.join(", ")}`);
-  const seen = new Set<string>();
   return {
-    first: played[0],
-    onScene: (sceneId) => {
-      if (played.includes(sceneId)) {
-        seen.add(sceneId);
-        return "continue";
-      }
-      const next = played.find((id) => order.indexOf(id) > order.indexOf(sceneId) && !seen.has(id));
+    first: listed[0],
+    onScene: (sceneId, played) => {
+      if (listed.includes(sceneId)) return "continue";
+      const next = listed.find((id) => order.indexOf(id) > order.indexOf(sceneId) && !played.includes(id));
       return next ? { skipTo: next } : "stop";
     },
   };
