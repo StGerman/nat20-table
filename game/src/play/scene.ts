@@ -73,7 +73,7 @@ let plan: ReturnType<typeof scenePlan>;
 try {
   plan = scenePlan(flags.pack!, played);
 } catch (error) {
-  console.error(`--scenes: ${error instanceof Error ? error.message : String(error)}`);
+  console.error(`${flags.scenes ? "--scenes" : "--scene"}: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(2);
 }
 const effort = flags.effort as EffortLevel;
@@ -168,7 +168,8 @@ const report = [
 ].join("\n");
 writeFileSync(path.join(runDir, "report.md"), report + "\n");
 const folder = path.relative(process.cwd(), runDir);
-const written = `Written to ${folder}/. Send report.md back to the thread, or the whole folder zipped: (cd ${path.dirname(folder) || "."} && zip -qr ${path.basename(folder)}.zip ${path.basename(folder)})`;
+const name = path.basename(runDir);
+const written = `Written to ${folder}/. Send report.md back to the thread, or the whole folder zipped: (cd ${JSON.stringify(path.dirname(folder))} && zip -qr ${name}.zip ${name})`;
 // The report is the DM's view (monster Hit Points, lines said to AI players only), so the terminal
 // you just played in shows only how the run ended; the rest stays in the run folder.
 console.log(ink ? `\nThe run is over: ${run?.ended ?? "it failed"}. ${written}` : `\n${report}\n\n${written}`);
