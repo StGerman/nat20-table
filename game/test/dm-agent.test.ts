@@ -244,9 +244,32 @@ test("the scene run command plays Scene 3 with a scripted DM and players, and wr
       assert.ok(existsSync(path.join(out, folder, file)), `${file} is written`);
     }
     const report = readFileSync(path.join(out, folder, "report.md"), "utf8");
-    assert.match(report, /- Scene: s3_mill_yard of The Silent Mill/);
+    assert.match(report, /- Scenes: s3_mill_yard of The Silent Mill/);
+    assert.match(report, /- Played: s3_mill_yard\n/);
     assert.match(report, /- Ended: the adventure is over/);
-    assert.match(report, /Narration:\n> Goblins and wolves wait in the mill yard\./);
+    assert.match(report, /Narration:\n> Foes wait ahead\./);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("the exit run's scene list plays Scene 1, passes over Scene 2 and plays Scene 3", () => {
+  const out = mkdtempSync(path.join(tmpdir(), "scene-"));
+  try {
+    const cli = path.join(REPO, "game/src/play/scene.ts");
+    const scenes = ["--scenes", "s1_village_green,s3_mill_yard"];
+    const run = spawnSync(
+      process.execPath,
+      ["--experimental-strip-types", "--no-warnings", cli, ...scenes, "--dm", "scripted", "--players", "scripted", "--seed", "5", "--no-audit", "--out", out],
+      { encoding: "utf8" },
+    );
+    assert.equal(run.status, 0, run.stderr || run.stdout);
+    const [folder] = readdirSync(out);
+    const report = readFileSync(path.join(out, folder, "report.md"), "utf8");
+    assert.match(report, /- Played: s1_village_green, s3_mill_yard; passed over: s2_mill_road\n/);
+    assert.match(report, /- Ended: the adventure is over/);
+    assert.match(report, /- Fights: Combat is over\./);
+    assert.match(run.stdout, new RegExp(`zip -qr ${folder}\\.zip ${folder}\\)`));
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
