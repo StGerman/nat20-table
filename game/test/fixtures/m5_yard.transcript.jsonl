@@ -119,14 +119,14 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":60}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva is no longer prone.","rolls":[],"log_head":60}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":60}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack on wolf_3.","rolls":[],"log_head":68}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on wolf_3.","rolls":[],"log_head":68}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r62] torva rolls an attack roll vs wolf_3: 2d20 (12, 3, kept 12) +5 = 17 vs AC 12, hit.","rolls":["r62"],"log_head":68}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r63] torva rolls bludgeoning damage:  +4 = 4.","rolls":["r63"],"log_head":68}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 takes 4 bludgeoning damage.","rolls":[],"log_head":68}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 has 7/11 Hit Points.","rolls":[],"log_head":68}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":68}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":68}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Barbarian Reckless Attack on wolf_3.","rolls":[],"log_head":68}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on wolf_3.","rolls":[],"log_head":68}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r62] torva rolls an attack roll vs wolf_3: 2d20 (12, 3, kept 12) = 17, hit.","rolls":["r62"],"log_head":68}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r63] torva rolls bludgeoning damage:  = 4.","rolls":["r63"],"log_head":68}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3 takes 4 bludgeoning damage.","rolls":[],"log_head":68}
@@ -228,7 +228,7 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":113}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":113}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":122}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack on wolf_1.","rolls":[],"log_head":122}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on wolf_1.","rolls":[],"log_head":122}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r116] torva rolls an attack roll vs wolf_1: 2d20 (12, 14, kept 14) +5 = 19 vs AC 12, hit.","rolls":["r116"],"log_head":122}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r117] torva rolls bludgeoning damage:  +4 = 4.","rolls":["r117"],"log_head":122}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 takes 4 bludgeoning damage.","rolls":[],"log_head":122}
@@ -236,7 +236,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":122}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":122}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva moves.","rolls":[],"log_head":122}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Barbarian Reckless Attack on wolf_1.","rolls":[],"log_head":122}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on wolf_1.","rolls":[],"log_head":122}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r116] torva rolls an attack roll vs wolf_1: 2d20 (12, 14, kept 14) = 19, hit.","rolls":["r116"],"log_head":122}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r117] torva rolls bludgeoning damage:  = 4.","rolls":["r117"],"log_head":122}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1 takes 4 bludgeoning damage.","rolls":[],"log_head":122}
