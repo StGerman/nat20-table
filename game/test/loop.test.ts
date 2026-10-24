@@ -740,11 +740,11 @@ test("the scene plan plays the listed scenes in order, passes over the ones betw
   const pack = path.join(REPO, "scenarios/the_silent_mill");
   const plan = scenePlan(pack, ["s1_village_green", "s3_mill_yard"]);
   assert.equal(plan.first, "s1_village_green");
-  assert.equal(plan.onScene("s1_village_green"), "continue");
-  assert.deepEqual(plan.onScene("s2_mill_road"), { skipTo: "s3_mill_yard" });
-  assert.equal(plan.onScene("s3_mill_yard"), "continue");
-  assert.equal(plan.onScene("s2_mill_road"), "stop", "nothing listed is left to play");
-  assert.equal(plan.onScene("s4_captured_goblin"), "stop");
+  assert.equal(plan.onScene("s1_village_green", []), "continue");
+  assert.deepEqual(plan.onScene("s2_mill_road", ["s1_village_green"]), { skipTo: "s3_mill_yard" });
+  assert.equal(plan.onScene("s3_mill_yard", ["s1_village_green"]), "continue");
+  assert.equal(plan.onScene("s2_mill_road", ["s1_village_green", "s3_mill_yard"]), "stop", "nothing listed is left to play");
+  assert.equal(plan.onScene("s4_captured_goblin", ["s1_village_green"]), "stop");
   assert.throws(() => scenePlan(pack, ["s3_mill_yard", "s1_village_green"]), /in the pack's order/);
   assert.throws(() => scenePlan(pack, ["s9_nowhere"]), /has no scene s9_nowhere/);
   assert.throws(() => scenePlan(pack, []), /no scene to play/);
