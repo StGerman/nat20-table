@@ -18,7 +18,8 @@
     "pack:check": "node --experimental-strip-types --no-warnings game/src/pack/cli.ts check",
     "pack:schema": "node --experimental-strip-types --no-warnings game/src/pack/cli.ts schema",
     "play:ai-party": "node --experimental-strip-types --no-warnings game/src/play/ai-party.ts",
-    "play:scene": "node --experimental-strip-types --no-warnings game/src/play/scene.ts"
+    "play:scene": "node --experimental-strip-types --no-warnings game/src/play/scene.ts",
+    "play:exit": "node --experimental-strip-types --no-warnings game/src/play/scene.ts --scenes s1_village_green,s3_mill_yard --seat ink"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

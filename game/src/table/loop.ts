@@ -10,15 +10,22 @@ import type { TableState } from "./state.ts";
 import { DmTools, PlayerTools, send } from "./tools.ts";
 import type { DmAgent, DmWake, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, ToolOutcome } from "./types.ts";
 
+/**
+ * What the run does with a scene the DM loads: play it, end the run before it, or pass over it, so
+ * `skipTo` loads in its place with the party the DM named (the exit run plays Scene 1 and Scene 3,
+ * not Scene 2).
+ */
+export type SceneChoice = "continue" | "stop" | { skipTo: string };
+
 export interface LoopOptions {
   table: TableState;
   dm: DmAgent;
   players: PlayerAgent[];
   /**
-   * Called with every scene that loads, the first one included: go on, or end the run before it
-   * (the exit run plays one scene and stops when the DM loads the next).
+   * Called with every scene the DM loads and every scene that loads, the first one included, and the
+   * scenes played so far. Default: play every scene.
    */
-  onScene?: (sceneId: string) => "continue" | "stop";
+  onScene?: (sceneId: string, played: readonly string[]) => SceneChoice;
   /** Loop steps before the run is stopped: a safety net for scripted runs. Default 5000. */
   maxSteps?: number;
 }
@@ -27,7 +34,10 @@ export interface LoopOptions {
 export interface RunReport {
   ended: string;
   steps: number;
+  /** The scenes played, in order. */
   scenes: string[];
+  /** The scenes that loaded and were passed over, in order. */
+  passedOver: string[];
   fallbacks: number;
   humanRejections: number;
 }
@@ -52,11 +62,14 @@ export class TableLoop {
   private readonly agents = new Map<Handle, PlayerAgent>();
   private readonly tools = new Map<Handle, PlayerTools>();
   private readonly dmTools: DmTools;
-  private readonly onScene: (sceneId: string) => "continue" | "stop";
+  private readonly onScene: (sceneId: string, played: readonly string[]) => SceneChoice;
   private readonly maxSteps: number;
   /** `/pause`: AI players aren't woken until `/pause` again (spec §3.4). */
   private paused = false;
   private readonly scenes: string[] = [];
+  private readonly passed: string[] = [];
+  /** Scenes passed over since the last one played: the DM hears of them when the next one opens. */
+  private passedSince: string[] = [];
   /** The human's numbered list (`/options`), and the follow-up pick on screen inside it, if any. */
   private top: Choice[] = [];
   private shown: Choice[] = [];
@@ -72,7 +85,13 @@ export class TableLoop {
       this.agents.set(agent.handle, agent);
       this.tools.set(agent.handle, new PlayerTools(agent.handle, this.table));
     }
-    this.dmTools = new DmTools(this.table);
+    this.dmTools = new DmTools(this.table, {
+      insteadOf: (sceneId) => {
+        const choice = this.onScene(sceneId, this.scenes);
+        return typeof choice === "object" ? choice.skipTo : undefined;
+      },
+      passedOver: (sceneId, next) => this.passedOver(sceneId, next),
+    });
     this.onScene = options.onScene ?? (() => "continue");
     this.maxSteps = options.maxSteps ?? 5000;
   }
@@ -114,7 +133,7 @@ export class TableLoop {
     }
     await Promise.allSettled([this.dm.close?.(), ...[...this.agents.values()].map((a) => a.close?.())]);
     if (failure) throw failure;
-    return { ended, steps, scenes: [...this.scenes], fallbacks: this.table.fallbacks, humanRejections: this.table.humanRejections };
+    return { ended, steps, scenes: [...this.scenes], passedOver: [...this.passed], fallbacks: this.table.fallbacks, humanRejections: this.table.humanRejections };
   }
 
   /** One decision: whatever the engine waits on next. */
@@ -154,7 +173,8 @@ export class TableLoop {
   // --- Scenes -------------------------------------------------------------------------------------
 
   private async sceneLoaded(sceneId: string): Promise<void> {
-    if (this.onScene(sceneId) === "stop") {
+    // A scene the run passes over never loads (`DmTools.loadScene` loads the next one instead).
+    if (this.onScene(sceneId, this.scenes) !== "continue") {
       this.table.end(`the run stops before ${sceneId}`);
       return;
     }
@@ -162,8 +182,30 @@ export class TableLoop {
     this.scenes.push(sceneId);
     this.table.log("system", `scene ${sceneId}`);
     if (!first) await this.closeScene();
-    await this.wakeDm("scene_open", undefined, `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`);
+    const passed = this.passedSince;
+    this.passedSince = [];
+    await this.wakeDm(
+      "scene_open",
+      undefined,
+      ...(passed.length > 0
+        ? [
+            `This run passes over ${passed.join(", ")}: the party went through on the way here, and nothing in it happened at the table. Bridge it in a sentence at most, without its checks or what they would find.`,
+          ]
+        : []),
+      `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`,
+    );
     await this.settle();
+  }
+
+  /**
+   * The DM loaded a scene the run doesn't play, and `next` loaded in its place: the human hears so
+   * now, the DM when `next` opens. The scene before is summed up then too.
+   */
+  private passedOver(sceneId: string, next: string): void {
+    this.passed.push(sceneId);
+    this.passedSince.push(sceneId);
+    this.table.log("system", `scene ${sceneId} passed over; on to ${next}`);
+    this.table.show({ kind: "info", title: "Passed over", text: `This run doesn't play ${sceneId}: the party goes on to ${next}.` });
   }
 
   /**
