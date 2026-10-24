@@ -158,3 +158,26 @@ test("the DM names subjects that are in the scene; others are refused before the
     t.close();
   }
 });
+
+test("the DM's load of a scene the run passes over loads the next played scene, and says so", async () => {
+  const t = await testTable({ seed: 27, players: [] });
+  try {
+    const passed: Array<[string, string]> = [];
+    const dm = new DmTools(t.table, {
+      insteadOf: (id) => (id === "m3_s2_road" ? "m3_s3_yard" : undefined),
+      passedOver: (id, next) => passed.push([id, next]),
+    });
+    assert.equal((await dm.loadScene("m3_s1_green")).ok, true);
+    const loaded = await dm.loadScene("m3_s2_road", ["bren"]);
+    assert.equal(loaded.ok, true, loaded.text);
+    assert.match(loaded.text, /^This run passes over m3_s2_road, so m3_s3_yard is loaded instead, with the same party\./);
+    assert.deepEqual(passed, [["m3_s2_road", "m3_s3_yard"]]);
+    const loads = t.requests().filter((r) => r.cmd === "load_scene").map((r) => r.scene_id);
+    assert.deepEqual(loads, ["m3_s1_green", "m3_s3_yard"], "the scene passed over never loads");
+    // A refused load passes over nothing.
+    assert.equal((await dm.loadScene("m3_s2_road", ["nobody"])).ok, false);
+    assert.equal(passed.length, 1);
+  } finally {
+    t.close();
+  }
+});

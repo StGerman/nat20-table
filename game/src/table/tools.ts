@@ -194,6 +194,14 @@ function moveTarget(to: MoveTarget): MoveTarget {
   }
 }
 
+/** Scenes the run passes over (the exit run plays Scene 1 and Scene 3, not Scene 2). */
+export interface ScenePasses {
+  /** The scene to load instead of `sceneId`, if the run passes over it. */
+  insteadOf(sceneId: string): string | undefined;
+  /** Called once the scene loaded instead of `sceneId` is in. */
+  passedOver(sceneId: string, next: string): void;
+}
+
 /**
  * The DM's tools (spec §3.2). Viewer `dm` for everything. Subjects it names (`actor` for a check,
  * a sheet, an explore move or Help) must be creatures in the scene. Its decision tools act only for
@@ -201,9 +209,11 @@ function moveTarget(to: MoveTarget): MoveTarget {
  */
 export class DmTools {
   private readonly table: TableState;
+  private readonly passes: ScenePasses | undefined;
 
-  constructor(table: TableState) {
+  constructor(table: TableState, passes?: ScenePasses) {
     this.table = table;
+    this.passes = passes;
   }
 
   private async sceneHandles(): Promise<Handle[]> {
@@ -228,10 +238,21 @@ export class DmTools {
       send(this.table, "dm", { cmd: "get_sheet", actor }, (r) => (r.result?.cmd === "get_sheet" ? JSON.stringify(r.result.sheet) : ""));
   }
 
-  loadScene(scene_id: string, party?: string[]): Promise<ToolOutcome> {
-    return send(this.table, "dm", { cmd: "load_scene", scene_id, ...(party ? { party: [...party] } : {}) }, (r) =>
+  /**
+   * Loads a scene, the party carried along. A scene the run passes over never loads: the next one the
+   * run plays loads in its place with the same party, and the DM is told so.
+   */
+  async loadScene(scene_id: string, party?: string[]): Promise<ToolOutcome> {
+    const instead = this.passes?.insteadOf(scene_id);
+    const loaded = await send(this.table, "dm", { cmd: "load_scene", scene_id: instead ?? scene_id, ...(party ? { party: [...party] } : {}) }, (r) =>
       r.result?.cmd === "load_scene" ? formatDmState(r.result.state) : "loaded",
     );
+    if (!instead || !loaded.ok) return loaded;
+    this.passes!.passedOver(scene_id, instead);
+    return {
+      ...loaded,
+      text: `This run passes over ${scene_id}, so ${instead} is loaded instead, with the same party. Nothing in ${scene_id} happens at the table.\n${loaded.text}`,
+    };
   }
 
   startCombat(encounter_id: string): Promise<ToolOutcome> {

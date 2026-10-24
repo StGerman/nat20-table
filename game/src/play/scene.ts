@@ -73,7 +73,7 @@ let plan: ReturnType<typeof scenePlan>;
 try {
   plan = scenePlan(flags.pack!, played);
 } catch (error) {
-  console.error(`--scenes: ${error instanceof Error ? error.message : String(error)}`);
+  console.error(`${flags.scenes ? "--scenes" : "--scene"}: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(2);
 }
 const effort = flags.effort as EffortLevel;
@@ -168,7 +168,8 @@ const report = [
 ].join("\n");
 writeFileSync(path.join(runDir, "report.md"), report + "\n");
 const folder = path.relative(process.cwd(), runDir);
+const name = path.basename(runDir);
 console.log(
-  `\n${report}\n\nWritten to ${folder}/. Send report.md back to the thread, or the whole folder zipped: (cd ${path.dirname(folder) || "."} && zip -qr ${path.basename(folder)}.zip ${path.basename(folder)})`,
+  `\n${report}\n\nWritten to ${folder}/. Send report.md back to the thread, or the whole folder zipped: (cd ${JSON.stringify(path.dirname(folder))} && zip -qr ${name}.zip ${name})`,
 );
 process.exitCode = failure || (checked && !checked.passed) ? 1 : 0;

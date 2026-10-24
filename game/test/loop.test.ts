@@ -551,8 +551,9 @@ test("a scene between two played ones is passed over: the party goes on to the n
   assert.equal(dm.briefings.filter((b) => b.wake === "summary").length, 1);
   assert.ok(seat.shown.some((e) => e.kind === "info" && e.title === "Passed over"));
   // The whole party is carried into the yard and fights there.
+  // Scene 2 never loads: Scene 3 loads in its place, with the party the DM named.
   const loads = t.requests().filter((r) => r.cmd === "load_scene").map((r) => [r.scene_id, r.party]);
-  assert.deepEqual(loads.slice(-2), [["s2_mill_road", party], ["s3_mill_yard", party]]);
+  assert.deepEqual(loads, [["s1_village_green", undefined], ["s3_mill_yard", party]]);
   assert.ok(t.table.transcript.records.some((r) => r.text.startsWith("Combat is over")));
   for (const handle of party) assert.ok(t.requests().some((r) => r.cmd === "submit" && r.actor === handle), `${handle} acted in the fight`);
 });

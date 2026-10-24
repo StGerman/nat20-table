@@ -63,10 +63,9 @@ export async function startAt(engine: GameEngine, pack: string, scene: string, p
 }
 
 /**
- * Which scenes a run plays (`--scenes`): the listed ones, in the pack's order. A scene that loads
- * between two listed ones is passed over, the party going on to the next listed scene not played
- * yet; the run stops before any other scene. Returns the scene to start at and the loop's
- * `onScene`.
+ * Which scenes a run plays (`--scenes`): the listed ones, in the pack's order. A scene the DM loads
+ * between two listed ones is passed over: the next listed scene not played yet loads in its place.
+ * The run stops before any other scene. Returns the scene to start at and the loop's `onScene`.
  */
 export function scenePlan(pack: string, played: string[]): { first: string; onScene: (sceneId: string) => SceneChoice } {
   const order = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8"))).scenes.map((s) => s.id);
