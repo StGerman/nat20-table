@@ -334,7 +334,8 @@ fn fight(
                     if in_reach(&target.handle) {
                         submit("melee_attack/longsword", vec![target.handle.clone()])
                     } else if attack.is_some() {
-                        // Walk up first, so the log shows the move (API-25)
+                        // Walk up with a `move` of its own, as the trail was recorded before
+                        // a submit's walk was logged (API-25)
                         Command::Move {
                             actor: Handle(BREN.into()),
                             to: MoveTarget::Creature {
