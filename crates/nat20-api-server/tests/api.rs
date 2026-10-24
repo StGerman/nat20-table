@@ -411,8 +411,13 @@ fn a_second_scene_continues_the_same_log() {
     let head = over["log_head"].as_u64().unwrap();
     let reload = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
     let events = reload["events"].as_array().unwrap();
-    assert_eq!(events[0]["kind"], "scene_loaded", "{reload}");
+    // The reload goes on from the fight's last event. An effect the fight left running can end
+    // first: when the goblin wins on its own turn, its Disengage outlasts the fight.
     assert_eq!(events[0]["seq"].as_u64().unwrap(), head + 1, "{reload}");
+    assert!(
+        events.iter().any(|e| e["kind"] == "scene_loaded"),
+        "{reload}"
+    );
     let second = api.call(
         "dm",
         json!({ "cmd": "start_combat", "encounter_id": "duel" }),
