@@ -1,0 +1,75 @@
+{
+    "id": "s6_wrap_up",
+    "description": "The Silent Mill, Scene 6 (narrative, 5 min): back on the village green with the apprentice. The reeve pays, the wheel turns again, and the epilogue leaves a hook for a next session. The same green as Scene 1.",
+    "anchors": [
+        {
+            "id": "green_well",
+            "name": "the well on the green",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "well_bucket",
+            "name": "the well bucket",
+            "position_ft": {
+                "x_ft": 5.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "well_bench",
+            "name": "the bench by the well",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": -5.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "well_trough",
+            "name": "the trough by the well",
+            "position_ft": {
+                "x_ft": 5.0,
+                "y_ft": -5.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "reeve_porch",
+            "name": "the reeve's porch",
+            "position_ft": {
+                "x_ft": 20.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "old_oak",
+            "name": "the old oak",
+            "position_ft": {
+                "x_ft": -15.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "mill_lane",
+            "name": "the lane to the mill",
+            "position_ft": {
+                "x_ft": 40.0,
+                "y_ft": -5.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "green_well",
+        "well_bucket",
+        "well_bench",
+        "well_trough"
+    ]
+}
