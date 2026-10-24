@@ -28,7 +28,12 @@ export function packParty(pack: string): PackParty {
   const human = adventure.party.find((p) => p.seat === "human")?.handle;
   if (!human) throw new Error(`${pack}: the party has no human seat`);
   const ai = adventure.party.filter((p) => p.seat === "ai");
-  const cards = new Map(ai.map((p) => [p.handle, readFileSync(path.resolve(pack, p.card!), "utf8")]));
+  const cards = new Map(
+    ai.map((p) => {
+      if (!p.card) throw new Error(`${pack}: party ${p.handle} has an AI seat and no card (npm run pack:check)`);
+      return [p.handle, readFileSync(path.resolve(pack, p.card), "utf8")] as const;
+    }),
+  );
   return { human, ai: ai.map((p) => p.handle), cards };
 }
 

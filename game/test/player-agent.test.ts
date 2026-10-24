@@ -10,6 +10,7 @@ import { test } from "node:test";
 import { declaration, ModelPlayer, playerPrompt, type TurnSession } from "../src/agents/player.ts";
 import { sessionOptions, type SessionConfig, type TurnResult } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
+import { TurnTimeout } from "../src/errors.ts";
 import { packParty } from "../src/play/run.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedSeat } from "../src/table/scripted.ts";
@@ -192,6 +193,33 @@ test("a new scene starts a new session from the sheet, the summaries and the new
     const records = t.table.transcript.records;
     assert.ok(records.some((r) => r.channel === "table" && r.speaker === "maren" && r.text === "Easy, my dears. Let me look first."));
     assert.ok(records.filter((r) => r.kind === "note").every((r) => r.channel === "notes:maren"));
+  } finally {
+    t.close();
+  }
+});
+
+test("after a timeout the session goes on; after any other failure the next wake starts a fresh one", async () => {
+  let fail: Error | undefined;
+  const { player, sessions } = standInPlayer("ilsa", async () => {
+    if (fail) throw fail;
+    return "";
+  });
+  const t = await testTable({ seed: 1, players: ["ilsa"] });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    const tools = new PlayerTools("ilsa", t.table);
+    fail = new TurnTimeout("ilsa: turn timed out");
+    await assert.rejects(player.wake("declare", "Declare.", tools), TurnTimeout);
+    fail = undefined;
+    await player.wake("declare", "Declare.", tools);
+    assert.equal(sessions.length, 1, "the session survives a timeout");
+    fail = new Error("ilsa: the agent session ended");
+    await assert.rejects(player.wake("declare", "Declare.", tools), /session ended/);
+    assert.equal(sessions[0].closed, true);
+    fail = undefined;
+    await player.wake("declare", "Declare.", tools);
+    assert.equal(sessions.length, 2);
+    assert.match(sessions[1].turns[0].message, /^Your character sheet \(only you see it\):/);
   } finally {
     t.close();
   }
