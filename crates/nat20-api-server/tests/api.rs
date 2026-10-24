@@ -411,8 +411,13 @@ fn a_second_scene_continues_the_same_log() {
     let head = over["log_head"].as_u64().unwrap();
     let reload = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "duel" }));
     let events = reload["events"].as_array().unwrap();
-    assert_eq!(events[0]["kind"], "scene_loaded", "{reload}");
+    // The reload goes on from the fight's last event. An effect the fight left running can end
+    // first: when the goblin wins on its own turn, its Disengage outlasts the fight.
     assert_eq!(events[0]["seq"].as_u64().unwrap(), head + 1, "{reload}");
+    assert!(
+        events.iter().any(|e| e["kind"] == "scene_loaded"),
+        "{reload}"
+    );
     let second = api.call(
         "dm",
         json!({ "cmd": "start_combat", "encounter_id": "duel" }),
@@ -1174,6 +1179,79 @@ fn held_goblin() -> Value {
     let mut goblin = creature("goblin", ("monster", "goblin_warrior"), "hostile", 5.0);
     goblin["control"] = json!("client");
     goblin
+}
+
+/// Bren leaves the goblin's reach inside Torva's space. A creature can move through another's
+/// space but can't end its move there (ENG-18), so Bren waits there while the goblin decides,
+/// then walks on to the first free spot, short of where he was going; that walk is logged as
+/// its own `moved`.
+#[test]
+fn a_move_that_provokes_inside_an_allys_space_walks_on_after_the_reaction() {
+    let mut goblin = held_goblin();
+    goblin["at"]["point"]["x_ft"] = json!(0.0);
+    let dir = data_dir(
+        "walk_on",
+        &[(
+            "crowd",
+            json!({ "id": "crowd",
+                "creatures": [
+                    goblin,
+                    creature("bren", ("pregen", "fighter_l2"), "party", 4.0),
+                    creature("torva", ("pregen", "barbarian_l2"), "party", 7.0)
+                ],
+                "encounters": [{ "id": "crowd", "participants": ["goblin", "bren", "torva"] }] }),
+        )],
+    );
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "crowd" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let mut last = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "crowd" }),
+    );
+    while last["awaiting"]["actor"] != "bren" {
+        let actor = last["awaiting"]["actor"].clone();
+        let prompt = last["awaiting"]["prompt_id"].clone();
+        last = api.call(
+            "dm",
+            json!({ "cmd": "end_turn", "actor": actor, "prompt_id": prompt }),
+        );
+        assert_eq!(last["ok"], true, "{last}");
+    }
+    let x_of = |response: &Value| -> Vec<f64> {
+        response["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|e| e["kind"] == "moved" && e["actor"] == "bren")
+            .map(|e| e["to"]["x_ft"].as_f64().unwrap())
+            .collect()
+    };
+
+    let moved = api.call(
+        "bren",
+        json!({ "cmd": "move", "actor": "bren", "prompt_id": last["awaiting"]["prompt_id"],
+            "to": { "kind": "point", "point": { "x_ft": 20.0, "y_ft": 0.0, "z_ft": 0.0 } } }),
+    );
+    assert_eq!(moved["result"]["provoked"], json!(["goblin"]), "{moved}");
+    let provoked_at = x_of(&moved);
+    assert_eq!(provoked_at.len(), 1, "{moved}");
+    assert!((provoked_at[0] - 7.0).abs() < 2.0, "{moved}");
+
+    let declined = api.call(
+        "goblin",
+        json!({ "cmd": "react", "actor": "goblin", "prompt_id": moved["awaiting"]["prompt_id"],
+            "choice": null }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(declined["ok"], true, "{declined}");
+    let walked_on = x_of(&declined);
+    assert_eq!(walked_on.len(), 1, "{declined}");
+    assert!(
+        walked_on[0] > 9.0 && walked_on[0] < 20.0,
+        "Bren should stop past Torva's space, short of the goal: {declined}"
+    );
+    assert_eq!(declined["awaiting"]["actor"], "bren", "{declined}");
 }
 
 #[test]
