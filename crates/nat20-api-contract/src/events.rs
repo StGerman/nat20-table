@@ -117,6 +117,21 @@ pub enum EventKind {
         /// Its targets.
         targets: Vec<Handle>,
     },
+    /// A creature walked to reach the target of the option it submitted (one whose target was out
+    /// of reach or sight, protocol §4.4) and did not get to take it: the walk stopped short where
+    /// it provoked an Opportunity Attack (§4.1), or the option could not be taken where it ended.
+    /// Nothing the option costs is spent; the movement is. In a fight the creature's action prompt
+    /// stays open. Logged in place of the `action` it did not take.
+    ActionDropped {
+        /// Who walked.
+        actor: Handle,
+        /// The option it did not take.
+        option_id: OptionId,
+        /// Its display name.
+        name: String,
+        /// The targets it named.
+        targets: Vec<Handle>,
+    },
     /// The engine rolled dice.
     Roll {
         /// The roll, in the view the viewer may see.

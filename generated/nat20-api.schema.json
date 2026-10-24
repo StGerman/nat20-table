@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.30"
+    "version": "1.0.0-dev.31"
   },
   "$defs": {
     "Ability": {
@@ -2027,6 +2027,42 @@
             },
             "targets": {
               "description": "Its targets.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "option_id",
+            "name",
+            "targets"
+          ]
+        },
+        {
+          "description": "A creature walked to reach the target of the option it submitted (one whose target was out\nof reach or sight, protocol §4.4) and did not get to take it: the walk stopped short where\nit provoked an Opportunity Attack (§4.1), or the option could not be taken where it ended.\nNothing the option costs is spent; the movement is. In a fight the creature's action prompt\nstays open. Logged in place of the `action` it did not take.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who walked.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "action_dropped"
+            },
+            "name": {
+              "description": "Its display name.",
+              "type": "string"
+            },
+            "option_id": {
+              "description": "The option it did not take.",
+              "$ref": "#/$defs/OptionId"
+            },
+            "targets": {
+              "description": "The targets it named.",
               "type": "array",
               "items": {
                 "$ref": "#/$defs/Handle"
