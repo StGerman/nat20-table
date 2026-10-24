@@ -9,6 +9,7 @@ import { NOTE_KINDS, type NoteKind } from "../table/state.ts";
 import type { PlayerTools } from "../table/tools.ts";
 import type { PlayerAgent, PlayerWake, ToolOutcome } from "../table/types.ts";
 import type { UsageLog } from "../usage.ts";
+import { TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, type SeatTool, type SessionConfig, type TurnResult } from "./sdk-session.ts";
 
 /** A player turn that runs longer falls back (spec §6). */
@@ -107,6 +108,11 @@ export class ModelPlayer implements PlayerAgent {
       const result = await this.session.turn(seed ? `${seed}\n\n${briefing}` : briefing, wake);
       if (wake === "declare") return declaration(result.final);
       if (wake === "summary") return result.final;
+    } catch (error) {
+      // A timed-out session goes on, and a plan limit stops the run. After any other failure the
+      // session may be dead, so the next wake starts a fresh one from the seed.
+      if (!(error instanceof TurnTimeout) && !(error instanceof UsageLimitReached)) await this.close();
+      throw error;
     } finally {
       this.current = undefined;
     }
