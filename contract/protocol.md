@@ -97,7 +97,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 { "kind": "action",   "prompt_id": "p57", "actor": "lia" }
 { "kind": "reaction", "prompt_id": "p58", "actor": "bren",
   "trigger": { "event_seq": 410, "summary": "goblin moves out of reach" },
-  "options": [ { "choice": 0, "option_id": "opportunity_attack/longsword", "name": "Opportunity Attack" } ] }
+  "options": [ { "choice": 0, "option_id": "opportunity_attack/longsword", "name": "Opportunity Attack (Longsword)" } ] }
 { "kind": "none" }                       // explore mode, nothing pending
 { "kind": "combat_over", "winner": "party", "reason": "side_down" }
 { "kind": "no_session" }
@@ -176,6 +176,8 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
   "variants": [] }
 ```
 `option_id` stays stable for the life of the prompt and is derived from the action plus its context (weapon slot, spell and level), never from a list index.
+
+- A weapon attack is `melee_attack/<weapon>` or `ranged_attack/<weapon>`, named after the weapon ("Longsword attack"); an Unarmed Strike is `unarmed_attack` ("Unarmed Attack"). Any other action made with an attack keeps its own name and says what it attacks with: `barbarian/reckless_attack/greataxe` is "Barbarian Reckless Attack (Greataxe)", its Unarmed Strike context `barbarian/reckless_attack` is "Barbarian Reckless Attack (Unarmed)", and an Opportunity Attack is "Opportunity Attack (Longsword)". The `action` event of the option carries the same name.
 
 - A spell is `cast/<spell>/<level>` for the slot level it is cast at (`cast/bless/1`), or `cast/<spell>` for a cantrip (`cast/sacred_flame`), named after the spell ("Bless"). Its option carries `spell{id, level, concentration}`: the spell's registry id, the level it is cast at (0 for a cantrip) and whether casting it means Concentration. Options that are not spells have no `spell`.
 - A carried item that is used up, a Potion of Healing, is `use/<item>` (`use/potion_of_healing`), named after the item ("Potion of Healing"), one option however many the actor carries. Its option carries `item{id, remaining}`: the item's id as on the sheet and how many the actor carries now. It costs a Bonus Action and names one creature within 5 feet, the actor included: the actor drinks it, or gives it to someone else (SRD 5.2.1 "Using a Potion"). Taking it logs `action`, then `item_used` (§6), then the healing roll and `healed`, and removes one from the actor's equipment. When the last one is gone the option is gone, and a `submit` of it answers `rejected` with `no_item_left`. Options that use no item have no `item`.
