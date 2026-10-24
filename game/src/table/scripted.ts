@@ -154,6 +154,33 @@ export function yardDm(encounter = "yard_fight"): ScriptedDm {
 }
 
 /**
+ * A DM for a run across scenes without a model (`play:scene -- --dm scripted`): it opens each
+ * scene with one plain line and starts the fight `fights` names for it, if any; out of a fight, its
+ * first table turn takes the party on to the next scene in `order`; it narrates every part with one
+ * plain line, and ends the adventure when a fight ends or the scenes run out.
+ */
+export function walkOnDm(order: string[], fights: Record<string, string>, party: Handle[]): ScriptedDm {
+  let scene = "";
+  return new ScriptedDm({
+    scene_open: async (tools) => {
+      const state = ((await tools.getState()).data as { state?: State } | undefined)?.state;
+      scene = state?.view === "dm" ? (state.scene_id ?? "") : "";
+      const fight = fights[scene];
+      await tools.narrate(fight ? "Foes wait ahead." : "A new place opens before you.");
+      if (fight) await tools.startCombat(fight);
+    },
+    table_turn: async (tools) => {
+      const next = order[order.indexOf(scene) + 1];
+      if (!next) return void (await tools.endAdventure("The road ends here."));
+      await tools.narrate("You move on.");
+      await tools.loadScene(next, party);
+    },
+    narrate: async (tools) => void (await tools.narrate("Steel and teeth flash.")),
+    combat_over: async (tools) => void (await tools.endAdventure("The fight is done.")),
+  });
+}
+
+/**
  * A human seat that answers from a list of intents in order, then from a fallback policy (by
  * default `ScriptedSeat.pass`). It keeps what the loop showed it, so a policy can pick by rule.
  */

@@ -10,15 +10,18 @@ import type { TableState } from "./state.ts";
 import { DmTools, PlayerTools, send } from "./tools.ts";
 import type { DmAgent, DmWake, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, ToolOutcome } from "./types.ts";
 
+/**
+ * What the run does with a scene that loaded: play it, end the run before it, or pass over it and
+ * load `skipTo` with the party instead (the exit run plays Scene 1 and Scene 3, not Scene 2).
+ */
+export type SceneChoice = "continue" | "stop" | { skipTo: string };
+
 export interface LoopOptions {
   table: TableState;
   dm: DmAgent;
   players: PlayerAgent[];
-  /**
-   * Called with every scene that loads, the first one included: go on, or end the run before it
-   * (the exit run plays one scene and stops when the DM loads the next).
-   */
-  onScene?: (sceneId: string) => "continue" | "stop";
+  /** Called with every scene that loads, the first one included. Default: play every scene. */
+  onScene?: (sceneId: string) => SceneChoice;
   /** Loop steps before the run is stopped: a safety net for scripted runs. Default 5000. */
   maxSteps?: number;
 }
@@ -27,7 +30,10 @@ export interface LoopOptions {
 export interface RunReport {
   ended: string;
   steps: number;
+  /** The scenes played, in order. */
   scenes: string[];
+  /** The scenes that loaded and were passed over, in order. */
+  passedOver: string[];
   fallbacks: number;
   humanRejections: number;
   /**
@@ -57,11 +63,14 @@ export class TableLoop {
   private readonly agents = new Map<Handle, PlayerAgent>();
   private readonly tools = new Map<Handle, PlayerTools>();
   private readonly dmTools: DmTools;
-  private readonly onScene: (sceneId: string) => "continue" | "stop";
+  private readonly onScene: (sceneId: string) => SceneChoice;
   private readonly maxSteps: number;
   /** `/pause`: AI players aren't woken until `/pause` again (spec §3.4). */
   private paused = false;
   private readonly scenes: string[] = [];
+  private readonly passedOver: string[] = [];
+  /** Scenes passed over since the last one played: the DM hears of them when the next one opens. */
+  private passedSince: string[] = [];
   /** The human's numbered list (`/options`), and the follow-up pick on screen inside it, if any. */
   private top: Choice[] = [];
   private shown: Choice[] = [];
@@ -131,6 +140,7 @@ export class TableLoop {
       ended,
       steps,
       scenes: [...this.scenes],
+      passedOver: [...this.passedOver],
       fallbacks: this.table.fallbacks,
       humanRejections: this.table.humanRejections,
       playerTurns: [...this.playerTurns],
@@ -174,17 +184,44 @@ export class TableLoop {
   // --- Scenes -------------------------------------------------------------------------------------
 
   private async sceneLoaded(sceneId: string): Promise<void> {
-    if (this.onScene(sceneId) === "stop") {
+    const choice = this.onScene(sceneId);
+    if (choice === "stop") {
       this.table.end(`the run stops before ${sceneId}`);
       return;
     }
+    if (choice !== "continue") return this.passOver(sceneId, choice.skipTo);
     const first = this.scenes.length === 0;
     this.scenes.push(sceneId);
     this.table.log("system", `scene ${sceneId}`);
     if (!first) await this.closeScene();
     if (this.table.ended) return;
-    await this.wakeDm("scene_open", undefined, `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`);
+    const passed = this.passedSince;
+    this.passedSince = [];
+    await this.wakeDm(
+      "scene_open",
+      undefined,
+      ...(passed.length > 0
+        ? [
+            `This run passes over ${passed.join(", ")}: the party went through on the way here, and nothing in it happened at the table. Bridge it in a sentence at most, without its checks or what they would find.`,
+          ]
+        : []),
+      `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`,
+    );
     await this.settle();
+  }
+
+  /**
+   * A scene the run doesn't play: the party goes straight on to `next`, which loads with every seat
+   * at the table carried along. The scene before is summed up when `next` opens.
+   */
+  private async passOver(sceneId: string, next: string): Promise<void> {
+    this.passedOver.push(sceneId);
+    this.passedSince.push(sceneId);
+    this.table.log("system", `scene ${sceneId} passed over; on to ${next}`);
+    this.table.show({ kind: "info", title: "Passed over", text: `This run doesn't play ${sceneId}: the party goes on to ${next}.` });
+    const party = [this.table.human, ...this.table.players];
+    const loaded = this.table.observe(await this.table.engine.request("dm", { cmd: "load_scene", scene_id: next, party }));
+    if (!loaded.ok) throw new Error(`scene ${next} didn't load after passing over ${sceneId}: ${loaded.error?.message}`);
   }
 
   /**

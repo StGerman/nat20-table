@@ -7,7 +7,7 @@ import type { Handle, State } from "@nat20-table/engine-client";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure } from "../pack/adventure.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
-import type { RunReport } from "../table/loop.ts";
+import type { RunReport, SceneChoice } from "../table/loop.ts";
 import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, summarize, type UsageRecord } from "../usage.ts";
@@ -60,6 +60,33 @@ export async function startAt(engine: GameEngine, pack: string, scene: string, p
   }
   engine.skipAll();
   return at === 0 ? undefined : party;
+}
+
+/**
+ * Which scenes a run plays (`--scenes`): the listed ones, in the pack's order. A scene that loads
+ * between two listed ones is passed over, the party going on to the next listed scene not played
+ * yet; the run stops before any other scene. Returns the scene to start at and the loop's
+ * `onScene`.
+ */
+export function scenePlan(pack: string, played: string[]): { first: string; onScene: (sceneId: string) => SceneChoice } {
+  const order = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8"))).scenes.map((s) => s.id);
+  const at = played.map((id) => order.indexOf(id));
+  const unknown = played.filter((_, i) => at[i] < 0);
+  if (played.length === 0) throw new Error("no scene to play");
+  if (unknown.length > 0) throw new Error(`${pack} has no scene ${unknown.join(", ")}; its scenes: ${order.join(", ")}`);
+  if (at.some((n, i) => i > 0 && n <= at[i - 1])) throw new Error(`list the scenes once each, in the pack's order: ${order.join(", ")}`);
+  const seen = new Set<string>();
+  return {
+    first: played[0],
+    onScene: (sceneId) => {
+      if (played.includes(sceneId)) {
+        seen.add(sceneId);
+        return "continue";
+      }
+      const next = played.find((id) => order.indexOf(id) > order.indexOf(sceneId) && !seen.has(id));
+      return next ? { skipTo: next } : "stop";
+    },
+  };
 }
 
 /** A new run folder, `<out>/<name>-<time>/`. */

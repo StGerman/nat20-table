@@ -7,10 +7,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { SESSION_LOG } from "../src/engine.ts";
+import { REPO, SESSION_LOG, type GameEngine } from "../src/engine.ts";
+import { readPack } from "../src/pack/read.ts";
+import { guards, scenePlan } from "../src/play/run.ts";
 import { TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
-import { ScriptedDm, ScriptedPlayer, ScriptedSeat, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
+import { ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
 import type { PlayerIntent, TableEvent } from "../src/table/types.ts";
 import { testTable, type TestTable } from "./helpers.ts";
@@ -36,6 +38,8 @@ function matchesFixture(name: string, runDir: string): void {
 
 interface Setup {
   seed: number;
+  /** A scenario pack; the engine's test scenes by default. */
+  pack?: string;
   scene?: string;
   party?: string[];
   players?: Record<string, ScriptedPlayerPolicy>;
@@ -43,6 +47,7 @@ interface Setup {
   dm: ScriptedDm | DmScript;
   narrationGuard?: TextGuard;
   speechGuard?: TextGuard;
+  guards?: (engine: GameEngine) => { narrationGuard: TextGuard; speechGuard: TextGuard };
   onScene?: LoopOptions["onScene"];
   maxSteps?: number;
   /** Sees the table before the run starts. */
@@ -55,6 +60,8 @@ async function play(setup: Setup) {
   const handles = Object.keys(policies);
   const t = await testTable({
     seed: setup.seed,
+    pack: setup.pack,
+    guards: setup.guards,
     players: handles,
     seat: setup.seat ?? new ScriptedSeat("bren", [], ScriptedSeat.fight),
     narrationGuard: setup.narrationGuard,
@@ -695,4 +702,49 @@ test("the run can stop before a scene: the exit run plays one scene at a time", 
   assert.equal(report.ended, "the run stops before m5_s5_cellar");
   assert.deepEqual(report.scenes, ["m5_s3_yard"]);
   assert.deepEqual(players.get("maren")!.scenes, [], "no summaries for a scene that isn't played");
+});
+
+test("a scene between two played ones is passed over: the party goes on to the next, and the DM hears so", async () => {
+  const pack = path.join(REPO, "scenarios/the_silent_mill");
+  const scenes = readPack(pack).adventure.scenes;
+  const plan = scenePlan(pack, ["s1_village_green", "s3_mill_yard"]);
+  const party = ["bren", "torva", "maren", "ilsa"];
+  const { t, report, dm, players, seat } = await play({
+    seed: 5,
+    pack,
+    guards: (engine) => guards(pack, engine),
+    scene: plan.first,
+    onScene: plan.onScene,
+    dm: walkOnDm(scenes.map((s) => s.id), { s3_mill_yard: "yard_fight" }, party),
+  });
+  assert.equal(report.ended, "the adventure is over");
+  assert.deepEqual(report.scenes, ["s1_village_green", "s3_mill_yard"]);
+  assert.deepEqual(report.passedOver, ["s2_mill_road"]);
+  const opened = dm.briefings.filter((b) => b.wake === "scene_open").map((b) => b.briefing);
+  assert.equal(opened.length, 2);
+  assert.doesNotMatch(opened[0], /passes over/);
+  assert.match(opened[1], /This run passes over s2_mill_road/);
+  // Scene 1 is summed up once, when Scene 3 opens; Scene 2 is never summed up.
+  for (const handle of ["torva", "maren", "ilsa"]) assert.equal(players.get(handle)!.scenes.length, 1, handle);
+  assert.equal(dm.briefings.filter((b) => b.wake === "summary").length, 1);
+  assert.ok(seat.shown.some((e) => e.kind === "info" && e.title === "Passed over"));
+  // The whole party is carried into the yard and fights there.
+  const loads = t.requests().filter((r) => r.cmd === "load_scene").map((r) => [r.scene_id, r.party]);
+  assert.deepEqual(loads.slice(-2), [["s2_mill_road", party], ["s3_mill_yard", party]]);
+  assert.ok(t.table.transcript.records.some((r) => r.text.startsWith("Combat is over")));
+  for (const handle of party) assert.ok(t.requests().some((r) => r.cmd === "submit" && r.actor === handle), `${handle} acted in the fight`);
+});
+
+test("the scene plan plays the listed scenes in order, passes over the ones between, and stops after", () => {
+  const pack = path.join(REPO, "scenarios/the_silent_mill");
+  const plan = scenePlan(pack, ["s1_village_green", "s3_mill_yard"]);
+  assert.equal(plan.first, "s1_village_green");
+  assert.equal(plan.onScene("s1_village_green"), "continue");
+  assert.deepEqual(plan.onScene("s2_mill_road"), { skipTo: "s3_mill_yard" });
+  assert.equal(plan.onScene("s3_mill_yard"), "continue");
+  assert.equal(plan.onScene("s2_mill_road"), "stop", "nothing listed is left to play");
+  assert.equal(plan.onScene("s4_captured_goblin"), "stop");
+  assert.throws(() => scenePlan(pack, ["s3_mill_yard", "s1_village_green"]), /in the pack's order/);
+  assert.throws(() => scenePlan(pack, ["s9_nowhere"]), /has no scene s9_nowhere/);
+  assert.throws(() => scenePlan(pack, []), /no scene to play/);
 });
