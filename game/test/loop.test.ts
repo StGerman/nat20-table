@@ -536,6 +536,24 @@ test("a declaration refused again and again is dropped once its retries are spen
   assert.ok(!t.table.transcript.records.some((r) => r.speaker === "maren" && r.kind === "intent"));
 });
 
+test("a reaction number the human wasn't shown asks again, and never takes a reaction", async () => {
+  // Seed 1: Bren is offered a reaction with two options in the yard fight. He types 3, then declines.
+  const answers: PlayerIntent[] = [{ kind: "option", number: 3 }, { kind: "reaction", take: false }];
+  let asked = 0;
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind !== "reaction") return ScriptedSeat.fight(prompt, s);
+    asked += 1;
+    return answers.shift() ?? { kind: "reaction", take: false };
+  });
+  const { t } = await play({ seed: 1, seat, dm: yardDm() });
+  assert.equal(asked, 2);
+  const told = seat.shown.findIndex((e) => e.kind === "info" && e.title === "No such reaction");
+  assert.ok(told > 0, "the human is told the number isn't one");
+  assert.equal(seat.shown[told].kind === "info" && seat.shown[told].text, "There is no reaction 3. Answer y or n, or 1 or 2.");
+  const reacted = t.table.transcript.records.filter((r) => r.channel === "dm" && /^bren .*reaction|Opportunity Attack/.test(r.text) && r.text.startsWith("bren"));
+  assert.deepEqual(reacted, [], "Bren took no reaction");
+});
+
 test("the human's words reach the AI players marked as the human's, so the leak scan skips them", async () => {
   const { t } = await play({
     seed: 27,

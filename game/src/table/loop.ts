@@ -379,10 +379,16 @@ export class TableLoop {
     const a = this.table.awaiting;
     if (a.kind !== "reaction" || a.actor !== human) return;
     this.table.show({ kind: "reaction", summary: a.trigger.summary, options: a.options.map((o) => o.name) });
-    const intent = await this.ask({ kind: "reaction" });
+    let intent = await this.ask({ kind: "reaction" });
+    // A number that isn't one of the reactions shown asks again: it never takes another one.
+    while (intent?.kind === "option" && !a.options[intent.number - 1]) {
+      const numbers = a.options.length <= 2 ? a.options.map((_, i) => i + 1).join(" or ") : `1 to ${a.options.length}`;
+      this.table.show({ kind: "info", title: "No such reaction", text: `There is no reaction ${intent.number}. Answer y or n, or ${numbers}.` });
+      intent = await this.ask({ kind: "reaction" });
+    }
     if (!intent) return;
     const take = intent.kind === "reaction" ? intent.take : intent.kind === "option" || (intent.kind === "text" && /^\s*y/i.test(intent.text));
-    const option = intent.kind === "option" ? a.options[intent.number - 1] ?? a.options[0] : a.options[0];
+    const option = intent.kind === "option" ? a.options[intent.number - 1] : a.options[0];
     this.table.resetRetries(human);
     const outcome = await send(this.table, human, { cmd: "react", actor: human, prompt_id: a.prompt_id, choice: take && option ? option.choice : null }, () => "done");
     if (!outcome.ok) await this.humanRejected(outcome);
