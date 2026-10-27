@@ -387,17 +387,24 @@ test("the engine dying stops the run, with the transcript written", async () => 
   assert.match(readFileSync(path.join(t.runDir, "transcript.jsonl"), "utf8"), /The yard is quiet\./);
 });
 
-test("a reaction the agent doesn't take is declined", async () => {
+test("a reaction the agent doesn't take is declined; one against an ally is declined without a wake", async () => {
   const ignore = { reaction: async () => {} };
   const { t, players } = await play({ seed: 23, players: { torva: ignore, maren: ignore, ilsa: ignore }, dm: yardDm() });
+  const party = new Set(["bren", ...players.keys()]);
   let asked = 0;
+  let declinedUnasked = 0;
   for (const [handle, player] of players) {
-    const times = player.briefings.filter((b) => b.wake === "reaction").length;
-    asked += times;
-    assert.equal(runLines(t, "fallback").filter((l) => l === `${handle} lets the reaction pass`).length, times);
-    assert.equal(t.requests().filter((r) => r.cmd === "react" && r.actor === handle && r.choice === null).length, times);
+    const wakes = player.briefings.filter((b) => b.wake === "reaction");
+    asked += wakes.length;
+    // The engine asks every creature in reach; an AI player is woken only for a foe (TASKS.md AGT-27).
+    for (const w of wakes) assert.ok(!party.has(/may react to ([\w-]+)\./.exec(w.briefing)?.[1] ?? ""), `${handle} was woken to react to an ally`);
+    assert.equal(runLines(t, "fallback").filter((l) => l === `${handle} lets the reaction pass`).length, wakes.length);
+    const declined = t.requests().filter((r) => r.cmd === "react" && r.actor === handle && r.choice === null).length;
+    assert.ok(declined >= wakes.length);
+    declinedUnasked += declined - wakes.length;
   }
-  assert.ok(asked > 0);
+  assert.ok(asked > 0, "an AI player was woken to react to a foe");
+  assert.ok(declinedUnasked > 0, "a reaction to an ally was declined with no wake");
 });
 
 test("the scripted human lets a reaction to an ally pass, and takes one to a foe", () => {

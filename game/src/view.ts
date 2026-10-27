@@ -1,7 +1,7 @@
 // Compact text an agent reads, made from engine responses that were already projected for that
 // agent's viewer (Rule 3: projection happens in the engine; this file only formats). Text instead
 // of raw JSON keeps every turn's input small, which is most of the latency and cost (M6 spec §7).
-import type { ActionOption, CommandResult, Event, Sheet, State } from "@nat20-table/engine-client";
+import type { ActionOption, CommandResult, Event, Handle, Sheet, State } from "@nat20-table/engine-client";
 
 /** The result of `legal_actions`. */
 export type LegalActionsResult = Extract<CommandResult, { cmd: "legal_actions" }>;
@@ -156,6 +156,11 @@ export function formatDmState(state: State): string {
 }
 
 /** An event as one line: its own text, after its roll id when it is a roll (`[r12] bren rolls …`). */
+/** The creature a reaction answers, from the engine's trigger sentence ("bren may react to torva."). */
+export function reactingTo(summary: string): Handle | undefined {
+  return /may react to ([\w-]+)\.$/m.exec(summary)?.[1];
+}
+
 export function eventLine(event: Event): string {
   return event.kind === "roll" ? `[${event.roll.id}] ${event.text}` : event.text;
 }

@@ -4,7 +4,7 @@
 // the seat; every number the human picks becomes a complete command with no model call (D5).
 import { EngineStopped, type Event, type Handle, type State } from "@nat20-table/engine-client";
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
-import { eventLine, formatOptions, formatSheet, formatState, tellable, type LegalActionsResult } from "../view.ts";
+import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
 import type { TableState } from "./state.ts";
 import { DmTools, PlayerTools, send } from "./tools.ts";
@@ -438,11 +438,22 @@ export class TableLoop {
     // What follows (the rest of the monsters' turns) is shown with its narration, before the next turn.
   }
 
-  /** An AI player's reaction: one wake, then the fallback declines it (spec §6). */
+  /**
+   * An AI player's reaction: one wake, then the fallback declines it (spec §6). A reaction to a
+   * party member (an Opportunity Attack on an ally) is declined with no wake: the engine asks every
+   * creature in reach, and no AI player attacks its friends (TASKS.md AGT-27).
+   */
   private async playerReaction(handle: Handle): Promise<void> {
     if (this.paused) return this.waitWhilePaused();
     const a = this.table.awaiting;
     if (a.kind !== "reaction") return;
+    const about = reactingTo(a.trigger.summary);
+    if (about && (about === this.table.human || this.table.players.includes(about))) {
+      const response = await this.table.engine.request(handle, { cmd: "react", actor: handle, prompt_id: a.prompt_id, choice: null });
+      this.table.observe(response);
+      if (!response.ok) throw new Error(`declining ${handle}'s reaction to ${about} was refused: ${response.error?.message}`);
+      return;
+    }
     this.table.resetRetries(handle);
     const briefing = await this.playerBriefing(
       handle,
