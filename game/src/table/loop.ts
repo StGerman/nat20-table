@@ -7,9 +7,10 @@ import { TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
 import { FLOOR_BOUND, handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
+import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { DmTools, HandTools, PlayerTools, send } from "./tools.ts";
+import { BarkTools, DmTools, HandTools, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import type { DmAgent, DmWake, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, ToolOutcome } from "./types.ts";
 
 /**
@@ -42,6 +43,26 @@ export interface LoopOptions {
   names?: ReadonlyMap<Handle, readonly string[]>;
   /** Floor wakes a talk round may hold, named players and speakers together. Default `FLOOR_BOUND`. */
   floorBound?: number;
+  /** How long another wake of a player waits for its reaction in flight before cancelling it. Default `REACTION_GRACE_MS`. */
+  reactionGraceMs?: number;
+  /** How long a reaction may take before it is cancelled. Default `BARK_TIMEOUT_MS`. */
+  barkTimeoutMs?: number;
+}
+
+/** One trigger in a fight and the reactions it woke, for the report (party talk §5 R1, AGT-34). */
+export interface FightReaction {
+  trigger: TriggerKind;
+  /** The combat round it happened in. */
+  round: number;
+  /** The AI players woken to react, all at once. */
+  woke: Handle[];
+  /** The one whose line was heard, and how long after the wakes began. */
+  spoke?: Handle;
+  line_ms?: number;
+  /** Who passed or said nothing; who spoke too late, or was cancelled once a line was heard; who was cancelled by its own next wake or a timeout. */
+  passed: Handle[];
+  beaten: Handle[];
+  cut: Handle[];
 }
 
 /** One talk round out of combat, for the report (party talk §2, §7). */
@@ -85,7 +106,19 @@ export interface RunReport {
   playerTurns: Array<{ handle: Handle; wall_ms: number; wakes: number }>;
   /** Each talk round out of combat (party talk §7). */
   talkRounds: TalkRound[];
+  /** Each fight trigger the AI players were woken to react to (party talk §5 R1). */
+  reactions: FightReaction[];
+  /** Combat rounds played, and the AI players' lines in them: on their turns and between them (party talk goal 4). */
+  fight: { rounds: number; lines: number };
 }
+
+/** How long another wake of a player waits for its reaction in flight (R1 spec §6). */
+export const REACTION_GRACE_MS = 5_000;
+/** A reaction slower than this has missed its moment (R1 spec §5). */
+export const BARK_TIMEOUT_MS = 8_000;
+
+/** The ask of a `bark` wake, after what just happened in the player's own view (R1 spec §5). */
+const BARK_ASK = "Something just happened in the fight, and it isn't your turn. If you react aloud, say one short line with say; otherwise answer PASS. Call no other tool.";
 
 /** What the nudge says when an AI player's turn is still open after its wake (spec §6). */
 const NUDGE = "It is still your turn. Act with submit_decision or move, and call end_turn when you are done.";
@@ -135,6 +168,22 @@ export class TableLoop {
   private readonly talkRounds: TalkRound[] = [];
   /** AI players spoken to who didn't get the floor in the last talk round: they go first in the next one. */
   private carried: Handle[] = [];
+  /** The AI players with a wake in flight that the loop waits on: never woken to react meanwhile. */
+  private readonly busy = new Set<Handle>();
+  /** Each AI player's reaction in flight (R1): `done` settles once it is over, `cut` cancels it. */
+  private readonly barks = new Map<Handle, { done: Promise<void>; cut: () => void }>();
+  private readonly reactionGraceMs: number;
+  private readonly barkTimeoutMs: number;
+  /** Fight triggers reacted to so far, for the report. */
+  private readonly reactions: FightReaction[] = [];
+  /** The fight, scene and round of the last trigger reacted to: at most one a round. */
+  private reactedIn: string | undefined;
+  /** Every fight, scene and combat round seen, for the report's count of fight rounds. */
+  private readonly fightRounds = new Set<string>();
+  /** Fights over so far: rounds count again from 1 in the next one. */
+  private fightsOver = 0;
+  /** Who last acted, as of the last look at the fight's events: a trigger's `by` (`doerAfter`). */
+  private doer: Handle | undefined;
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -146,6 +195,8 @@ export class TableLoop {
     }
     this.names = options.names ?? new Map();
     this.floorBound = options.floorBound ?? FLOOR_BOUND;
+    this.reactionGraceMs = options.reactionGraceMs ?? REACTION_GRACE_MS;
+    this.barkTimeoutMs = options.barkTimeoutMs ?? BARK_TIMEOUT_MS;
     this.dmTools = new DmTools(this.table, {
       insteadOf: (sceneId) => {
         const choice = this.onScene(sceneId, this.scenes);
@@ -179,6 +230,8 @@ export class TableLoop {
         this.table.end(`the loop failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
+    // A reaction still in flight has nothing left to react to.
+    await Promise.all([...this.barks.values()].map((bark) => (bark.cut(), bark.done)));
     const ended = this.table.ended ?? "ended";
     // A stopped engine leaves the run's record short, and the run says why it stopped. Any other
     // failure to write the record (a full disk, a folder it can't write) fails the run, once the
@@ -210,6 +263,8 @@ export class TableLoop {
       humanRejections: this.table.humanRejections,
       playerTurns: [...this.playerTurns],
       talkRounds: [...this.talkRounds],
+      reactions: [...this.reactions],
+      fight: { rounds: this.fightRounds.size, lines: this.table.fightLines },
     };
   }
 
@@ -616,6 +671,8 @@ export class TableLoop {
 
   /** The fight is over: the DM wraps it up, and the loop is back in explore mode (spec §3.3 step 7). */
   private async combatOver(event: Event): Promise<void> {
+    // Its last blow or a surrender gets its reactions too (party talk R1).
+    await this.startReactions();
     await this.wakeDm("combat_over", undefined, `The fight is over: ${event.text}`, "Narrate how it ends, then go on with the scene.");
     await this.table.flush();
   }
@@ -627,6 +684,7 @@ export class TableLoop {
    * `combat_over` wake.
    */
   private async narrateNew(pc?: Handle): Promise<void> {
+    await this.startReactions();
     let events = [...this.dmBacklog, ...tellable(await this.table.engine.newEvents("dm", "brief"), this.table.deaths)];
     this.dmBacklog = [];
     const over = events.findIndex((e) => e.kind === "combat_over");
@@ -997,6 +1055,8 @@ export class TableLoop {
    * makes the decision fall back; a plan limit stops the run.
    */
   private async wakePlayer(agent: PlayerAgent, wake: PlayerWake, briefing: string, tools?: PlayerTools): Promise<string | void | typeof FAILED> {
+    this.busy.add(agent.handle);
+    await this.quiet(agent.handle);
     this.table.recordInput(agent.handle, briefing);
     const done = this.waitFor(`${agent.handle} is thinking`);
     try {
@@ -1008,7 +1068,136 @@ export class TableLoop {
       return FAILED;
     } finally {
       done();
+      this.busy.delete(agent.handle);
     }
+  }
+
+  // --- Reactions in a fight (party talk §5 R1, TASKS.md AGT-34) -----------------------------------
+
+  /**
+   * On the most salient event since the last look (`triggerIn`), every AI player who may react gets
+   * a `bark` wake at once, at most once a round (R1 spec D1 B). Nothing waits for them: the first line
+   * is heard the moment it is ready, even before the DM narrates what it reacts to (D2 B), and the
+   * other wakes are cancelled then.
+   */
+  private async startReactions(): Promise<void> {
+    const events = await this.table.engine.newEvents("dm", "reactions");
+    const doer = this.doer;
+    this.doer = doerAfter(events, doer);
+    for (const e of events) {
+      if (e.kind === "combat_over") this.fightsOver += 1;
+      else if (e.round !== null && e.round !== undefined) this.fightRounds.add(`${this.fightsOver}:${e.scene ?? ""}:${e.round}`);
+    }
+    // The fight running, or else the one this batch ended: a surrender, or the last foe down, ends
+    // a fight in the same batch. What came before a fight ended belongs to that fight.
+    const overs = events.flatMap((e, i) => (e.kind === "combat_over" ? [i] : []));
+    const inRound = (e: Event) => e.round !== null && e.round !== undefined;
+    let start = (overs.at(-1) ?? -1) + 1;
+    let fight = events.slice(start);
+    let fightIndex = this.fightsOver;
+    if (!fight.some(inRound) && overs.length > 0) {
+      start = (overs.at(-2) ?? -1) + 1;
+      fight = events.slice(start, overs.at(-1));
+      fightIndex -= 1;
+    }
+    if (this.table.ended || this.paused || !fight.some(inRound)) return;
+    const reacting = [...this.agents.values()].filter((a) => a.reacts).map((a) => a.handle);
+    if (reacting.length === 0) return;
+    const r = this.table.observe(await this.table.engine.request("dm", { cmd: "get_state" }));
+    const state = r.result?.cmd === "get_state" ? r.result.state : undefined;
+    if (state?.view !== "dm") return;
+    const party = state.creatures.filter((c) => c.side === "party").map((c) => c.handle);
+    const trigger = triggerIn(fight, party, reacting, doerAfter(events.slice(0, start), doer));
+    if (!trigger) return;
+    const key = `${fightIndex}:${this.scenes.at(-1) ?? ""}:${trigger.round}`;
+    if (this.reactedIn === key) return;
+    const conscious = new Set(state.creatures.filter((c) => c.life_state === "conscious").map((c) => c.handle));
+    const a = this.table.awaiting;
+    const next = a.kind === "action" || a.kind === "reaction" ? a.actor : undefined;
+    const who = mayReact(trigger, reacting, conscious, next).filter((h) => !this.barks.has(h) && !this.busy.has(h));
+    if (who.length === 0) return;
+    this.reactedIn = key;
+    // Every brief first: once the first wake starts, a line can be heard at any await, and a wake
+    // started after it would never be cut.
+    const from = fight[0].seq;
+    const briefs = new Map<Handle, string>();
+    for (const handle of who) {
+      const seen = tellable(await this.table.engine.newEvents(handle, `bark:${handle}`), this.table.deaths).filter((e) => e.seq >= from);
+      briefs.set(handle, [...(seen.length > 0 ? ["What just happened:", ...seen.map(eventLine)] : []), BARK_ASK].join("\n"));
+    }
+    const record: FightReaction = { trigger: trigger.kind, round: trigger.round, woke: who, passed: [], beaten: [], cut: [] };
+    this.reactions.push(record);
+    this.table.log("system", `reactions to ${trigger.kind.replace("_", " ")}: ${who.join(", ")}`);
+    const started = performance.now();
+    const cuts = new Map<Handle, (why: "beaten" | "cut") => void>();
+    const floor = new ReactionFloor((speaker) => {
+      record.spoke = speaker;
+      record.line_ms = Math.round(performance.now() - started);
+      for (const [handle, cut] of cuts) if (handle !== speaker) cut("beaten");
+    });
+    const dones = who.map((handle) =>
+      this.bark(handle, briefs.get(handle)!, new BarkTools(handle, this.table, floor), (cut) => cuts.set(handle, cut)).then((why) => {
+        if (floor.speaker === handle) return;
+        if (why === "beaten" || floor.late.has(handle)) record.beaten.push(handle);
+        else if (why === "cut") record.cut.push(handle);
+        else record.passed.push(handle);
+      }),
+    );
+    void Promise.all(dones).then(() => {
+      floor.closed = true;
+    });
+  }
+
+  /**
+   * One AI player's `bark` wake, in the background. It ends when the player answers, when another's
+   * line is heard (`beaten`), or when its own next wake or the timeout cuts it (`cut`); then any line
+   * of its own is refused.
+   */
+  private bark(handle: Handle, briefing: string, tools: BarkTools, onCut: (cut: (why: "beaten" | "cut") => void) => void): Promise<"beaten" | "cut" | undefined> {
+    const agent = this.agents.get(handle)!;
+    let why: "beaten" | "cut" | undefined;
+    /** Once the wake is over, a cut does nothing: `agent.cancel` would end the player's next wake. */
+    let over = false;
+    let stop!: () => void;
+    const stopped = new Promise<void>((resolve) => (stop = resolve));
+    const cut = (reason: "beaten" | "cut") => {
+      if (why || over) return;
+      why = reason;
+      tools.end();
+      agent.cancel?.();
+      stop();
+    };
+    onCut(cut);
+    const timer = setTimeout(() => cut("cut"), this.barkTimeoutMs);
+    this.table.recordInput(handle, briefing);
+    const woke = agent.wake("bark", briefing, tools).catch((error) => {
+      if (stopsTheRun(error)) this.table.end(error.message);
+      else if (!(error instanceof TurnTimeout)) this.table.log("error", `${handle} (bark) failed: ${error instanceof Error ? error.message : String(error)}`, handle);
+    });
+    const done = Promise.race([woke, stopped]).then(() => {
+      over = true;
+      clearTimeout(timer);
+      tools.end();
+      this.barks.delete(handle);
+      return why;
+    });
+    this.barks.set(handle, { done: done.then(() => undefined), cut: () => cut("cut") });
+    return done;
+  }
+
+  /**
+   * Before any other wake of `handle`: its reaction in flight gets `reactionGraceMs` to finish, then
+   * is cancelled (R1 spec §6), since a session runs one turn at a time.
+   */
+  private async quiet(handle: Handle): Promise<void> {
+    const bark = this.barks.get(handle);
+    if (!bark) return;
+    let timer: NodeJS.Timeout | undefined;
+    const grace = new Promise<void>((resolve) => (timer = setTimeout(resolve, this.reactionGraceMs)));
+    await Promise.race([bark.done, grace]);
+    clearTimeout(timer);
+    bark.cut();
+    await bark.done;
   }
 
   /**

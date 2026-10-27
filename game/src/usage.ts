@@ -21,7 +21,7 @@ export interface UsageRecord {
    * Tokens are what the turn's API calls reported until then; calls that answer after a timeout
    * are not counted.
    */
-  outcome: "ok" | "timeout" | "failed" | "limit";
+  outcome: "ok" | "timeout" | "cancelled" | "failed" | "limit";
   input_tokens: number;
   cache_read_tokens: number;
   cache_write_tokens: number;

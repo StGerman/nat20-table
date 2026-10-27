@@ -119,6 +119,12 @@ export type PlayerWake =
   | "declare"
   /** The DM granted it one of its own options out of combat (spec §3.3 step 4). */
   | "granted"
+  /**
+   * In a fight, not on its turn: something just happened, and it may react in one line with `say`,
+   * or pass (party talk §5 R1, AGT-34). The fight doesn't wait for it, and only the first AI
+   * player's line is heard.
+   */
+  | "bark"
   /** A scene is ending: summarise it in a few sentences of fiction (AGT-6). */
   | "summary";
 
@@ -129,7 +135,11 @@ export type PlayerWake =
  */
 export interface PlayerAgent {
   readonly handle: Handle;
+  /** Whether it takes `bark` wakes in a fight (AGT-34): a model player does; a scripted one only with a `bark` policy. */
+  readonly reacts?: boolean;
   wake(wake: PlayerWake, briefing: string, tools: PlayerTools): Promise<string | void>;
+  /** Ends the wake in flight, if any: its answer is no longer wanted (a `bark` whose moment passed). */
+  cancel?(): void;
   /** A scene changed: drop the session and start again from the summary (AGT-6). */
   newScene?(summary: string): Promise<void>;
   close?(): Promise<void>;

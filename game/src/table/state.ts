@@ -85,6 +85,8 @@ export class TableState {
   humanRejections = 0;
   /** Fallbacks the loop took (spec §6). */
   fallbacks = 0;
+  /** Lines the AI players spoke in fights, on their turns and between them (party talk goal 4). */
+  fightLines = 0;
   /** While set, `flush` shows only events up to this seq: the DM is narrating one part of a batch. */
   flushLimit: number | undefined;
   /**
@@ -282,6 +284,12 @@ export class TableState {
     this.dmInbox.push(line);
   }
 
+  /** A line said once that was refused: dropped with no retry, and logged for the report (AGT-34). */
+  private dropped(from: Handle, reason: string): ToolOutcome {
+    this.log("system", `reaction dropped: ${reason}`, from);
+    return { ok: false, retryable: false, text: `Refused, nobody heard it: ${reason}. The moment has passed.` };
+  }
+
   /** A refusal of free text: counts as a retry, or once retries are spent, drops the text. */
   private refuse(speaker: string, what: string, reason: string, fix: string): ToolOutcome {
     this.retry(speaker, `${what} refused: ${reason}`);
@@ -338,15 +346,17 @@ export class TableState {
    * A character's spoken line, heard by every other seat. AI players' lines go through the speech
    * guard (spec §3.5); the human's go as typed and are marked as the human's. `to` is the companion
    * an AI player speaks to (party talk §4.4): the addressee's brief says "<speaker> says to you",
-   * and out of combat the loop may hand it the floor.
+   * and out of combat the loop may hand it the floor. A line said `once` (a reaction between turns
+   * in a fight, AGT-34) is dropped when it is refused, with no retry: its moment has passed.
    */
-  async speak(from: Handle, text: string, to?: Handle): Promise<ToolOutcome> {
+  async speak(from: Handle, text: string, to?: Handle, once = false): Promise<ToolOutcome> {
     if (to !== undefined && (to === from || (to !== this.human && !this.players.includes(to)))) {
+      if (once) return this.dropped(from, `${to} is not a companion at the table`);
       if (this.exhausted(from)) return this.spent();
       const companions = [this.human, ...this.players].filter((seat) => seat !== from);
       return this.refuse(from, "speech", `${to} is not a companion at the table`, `Give one of ${companions.join(", ")} as to, or leave it out.`);
     }
-    return this.say(from, text, "speech", to);
+    return this.say(from, text, "speech", to, once);
   }
 
   /**
@@ -357,11 +367,12 @@ export class TableState {
     return this.say(from, text, "intent");
   }
 
-  private async say(from: Handle, text: string, kind: "speech" | "intent", to?: Handle): Promise<ToolOutcome> {
+  private async say(from: Handle, text: string, kind: "speech" | "intent", to?: Handle, once = false): Promise<ToolOutcome> {
     const human = from === this.human;
     if (!human) {
-      if (this.exhausted(from)) return this.spent();
+      if (!once && this.exhausted(from)) return this.spent();
       const refused = this.speechGuard(text);
+      if (refused && once) return this.dropped(from, refused);
       if (refused) return this.refuse(from, kind === "speech" ? "speech" : "declaration", refused, "Say it without that.");
     }
     const deliver = async () => {
@@ -375,8 +386,11 @@ export class TableState {
       this.dmInbox.push(line);
       if (human) return;
       if (kind === "speech") {
+        // A reaction to a fight's end is a fight line too.
+        if (this.inCombat || once) this.fightLines += 1;
         this.spokeThisRound.add(from);
-        if (to && !this.inCombat) this.addresses.push({ from, to });
+        // A reaction, even to a fight's end, never hands the floor on (party talk §4.4).
+        if (to && !this.inCombat && !once) this.addresses.push({ from, to });
       } else {
         this.declaredThisRound.add(from);
         if (this.spokeThisRound.has(from)) return;
@@ -384,7 +398,8 @@ export class TableState {
       this.firstShown ??= performance.now();
       this.show(kind === "speech" && to ? { kind, speaker: from, text, to } : { kind, speaker: from, text });
     };
-    const queue = this.collecting?.get(from);
+    // A reaction shows the moment it is said (decision 0042), even while the table collects.
+    const queue = once ? undefined : this.collecting?.get(from);
     if (queue) {
       queue.push(deliver);
       return { ok: true, text: "said; the table hears it in turn" };

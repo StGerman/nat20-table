@@ -102,7 +102,7 @@ function decision(input: DecisionInput): { option_id: string; targets?: string[]
 /** An AI player's tools, bound to its own character. */
 export class PlayerTools {
   readonly me: Handle;
-  private readonly table: TableState;
+  protected readonly table: TableState;
 
   constructor(me: Handle, table: TableState) {
     this.me = me;
@@ -115,7 +115,7 @@ export class PlayerTools {
     return a.kind === "action" && a.actor === this.me ? a.prompt_id : undefined;
   }
 
-  private async answer(outcome: Promise<ToolOutcome> | ToolOutcome): Promise<ToolOutcome> {
+  protected async answer(outcome: Promise<ToolOutcome> | ToolOutcome): Promise<ToolOutcome> {
     const result = await outcome;
     this.table.recordInput(this.me, result.text);
     return result;
@@ -129,7 +129,13 @@ export class PlayerTools {
     this.table.recordInput(this.me, text);
   }
 
+  /** The `my_sheet` tool. */
   mySheet(): Promise<ToolOutcome> {
+    return this.sheet();
+  }
+
+  /** Its own sheet, whatever the wake allows the model: a new session is seeded from it. */
+  sheet(): Promise<ToolOutcome> {
     return this.answer(send(this.table, this.me, { cmd: "get_sheet", actor: this.me }, (r) =>
       r.result?.cmd === "get_sheet" ? JSON.stringify(r.result.sheet) : "",
     ));
@@ -231,6 +237,137 @@ export class HandTools extends PlayerTools {
 
   override say(): Promise<ToolOutcome> {
     return this.wait();
+  }
+}
+
+/**
+ * One trigger's reactions in a fight (party talk R1, AGT-34): every AI player who may react is woken
+ * at once, the first line is heard, and nobody's after it.
+ */
+export class ReactionFloor {
+  /** Who was heard, once someone was. */
+  speaker: Handle | undefined;
+  /** Who spoke after the floor was taken or closed: their line reached nobody. */
+  readonly late = new Set<Handle>();
+  /** No line is heard any more: one was, or the wakes are over. */
+  closed = false;
+  /** Called once, when the first line is heard. */
+  private readonly onHeard: (speaker: Handle) => void;
+  /** The lines being tried, one at a time, so a refused line never beats one said just after it. */
+  private trying: Promise<unknown> = Promise.resolve();
+
+  constructor(onHeard: (speaker: Handle) => void) {
+    this.onHeard = onHeard;
+  }
+
+  /** Takes the floor for `speaker`, unless it is taken or closed. */
+  take(speaker: Handle): boolean {
+    if (this.speaker || this.closed) {
+      this.late.add(speaker);
+      return false;
+    }
+    this.speaker = speaker;
+    return true;
+  }
+
+  /** The line of the one who took the floor was refused: the floor is free again. */
+  release(): void {
+    this.speaker = undefined;
+  }
+
+  heard(): void {
+    this.closed = true;
+    if (this.speaker) this.onHeard(this.speaker);
+  }
+
+  /** Runs `attempt` once every line tried before it has been heard or refused. */
+  next<T>(attempt: () => Promise<T>): Promise<T> {
+    const run = this.trying.then(attempt);
+    this.trying = run.catch(() => undefined);
+    return run;
+  }
+}
+
+/**
+ * An AI player's tools in a `bark` wake (party talk R1, AGT-34): it may keep notes and say one line,
+ * which is heard only if it is the first since the trigger. Every other tool answers "not now": its
+ * brief already says what happened, and its turn, if it comes next, is a wake of its own.
+ */
+export class BarkTools extends PlayerTools {
+  private readonly floor: ReactionFloor;
+  /** The wake is over (answered, cancelled or timed out): a line now reaches nobody. */
+  private over = false;
+
+  constructor(me: Handle, table: TableState, floor: ReactionFloor) {
+    super(me, table);
+    this.floor = floor;
+  }
+
+  end(): void {
+    this.over = true;
+  }
+
+  private notYours(): Promise<ToolOutcome> {
+    return this.answer(notNow("it isn't your turn: react in one line with say, or answer PASS"));
+  }
+
+  override mySheet(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override look(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override legalActions(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override submitDecision(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override move(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override endTurn(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override react(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  /**
+   * The line is heard only if nobody spoke first and its speaker can still speak; a refused line is
+   * dropped, not retried. Lines are tried one at a time, so a refused one frees the floor for the next.
+   */
+  override say(text: string, to?: Handle): Promise<ToolOutcome> {
+    return this.floor.next(async () => {
+      if (this.over) return this.answer(notNow("the moment has passed"));
+      // The fight went on while it thought. Unconscious includes Incapacitated, and an Incapacitated
+      // creature can't speak (SRD 5.2.1, Rules Glossary).
+      if (!(await this.conscious())) {
+        this.end();
+        return this.answer(notNow("you can't speak: you are not conscious"));
+      }
+      // Cancelled while its sheet came: a line not yet said reaches nobody.
+      if (this.over) return this.answer(notNow("the moment has passed"));
+      if (!this.floor.take(this.me)) {
+        return this.answer(notNow(this.floor.speaker ? `${this.floor.speaker} spoke first; the fight has moved on` : "the moment has passed"));
+      }
+      const outcome = await this.table.speak(this.me, text, to, true);
+      if (outcome.ok) this.floor.heard();
+      else this.floor.release();
+      return this.answer(outcome);
+    });
+  }
+
+  /** Whether its own character is conscious now, from its own sheet. */
+  private async conscious(): Promise<boolean> {
+    const r = this.table.observe(await this.table.engine.request(this.me, { cmd: "get_sheet", actor: this.me }));
+    return r.result?.cmd === "get_sheet" && r.result.sheet.life_state === "conscious";
   }
 }
 

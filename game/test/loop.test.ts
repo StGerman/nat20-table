@@ -12,9 +12,9 @@ import { readPack } from "../src/pack/read.ts";
 import { guards, scenePlan } from "../src/play/run.ts";
 import { TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
-import { ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
+import { attackNearest, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
-import type { DmTools, PlayerTools } from "../src/table/tools.ts";
+import { BarkTools, ReactionFloor, type DmTools, type PlayerTools } from "../src/table/tools.ts";
 import type { PlayerIntent, TableEvent, ToolOutcome } from "../src/table/types.ts";
 import { testTable, type TestTable } from "./helpers.ts";
 import { trailDm, yardDm } from "./scripts.ts";
@@ -55,6 +55,8 @@ interface Setup {
   situation?: boolean;
   /** Sees the table before the run starts. */
   onTable?: (t: TestTable) => void;
+  /** More of the loop's options (the reaction timings). */
+  loop?: Partial<LoopOptions>;
 }
 
 /** A table on the engine's test scenes, played by the loop until it ends. */
@@ -73,7 +75,7 @@ async function play(setup: Setup) {
   setup.onTable?.(t);
   const players = handles.map((h) => new ScriptedPlayer(h, policies[h]));
   const dm = setup.dm instanceof ScriptedDm ? setup.dm : new ScriptedDm(setup.dm);
-  const loop = new TableLoop({ table: t.table, dm, players, onScene: setup.onScene, maxSteps: setup.maxSteps ?? 400, situation: setup.situation });
+  const loop = new TableLoop({ table: t.table, dm, players, onScene: setup.onScene, maxSteps: setup.maxSteps ?? 400, situation: setup.situation, ...setup.loop });
   try {
     const report = await loop.run(setup.scene ?? "m5_s3_yard", setup.party);
     return { t, report, dm, players: new Map(players.map((p) => [p.handle, p])), seat: t.table.seat as ScriptedSeat };
@@ -188,6 +190,191 @@ test("two narrations made at once show each engine line once", async () => {
   });
   assert.equal(seat.shown.filter((e) => e.kind === "engine" && e.text === loaded).length, 1);
   assert.equal(t.table.transcript.records.filter((r) => r.channel === "dm" && r.text === loaded).length, 1);
+});
+
+// --- Reactions in a fight (party talk §5 R1, AGT-34) ------------------------------------------------
+
+test("in a fight, a salient event wakes every AI player who may react at once, and only the first line is heard", async () => {
+  const bark = (line: string) => async (tools: PlayerTools) => void (await tools.say(line));
+  const { t, report, players } = await play({
+    seed: 23,
+    dm: yardDm(),
+    players: { torva: { bark: bark("Hold the line!") }, maren: { bark: bark("Stay with me!") }, ilsa: { bark: async () => "PASS" } },
+  });
+  assert.equal(report.ended, "the adventure is over");
+  assert.ok(report.reactions.length > 0, "a trigger woke the players");
+  const heard = t.table.transcript.records.filter((r) => r.kind === "speech" && ["Hold the line!", "Stay with me!"].includes(r.text));
+  assert.equal(heard.length, report.reactions.filter((r) => r.spoke).length, "one line a trigger at most");
+  for (const r of report.reactions) {
+    // Everyone woken spoke, passed, was beaten to it, or was cut, and only one of those.
+    const ends = [...(r.spoke ? [r.spoke] : []), ...r.passed, ...r.beaten, ...r.cut];
+    assert.deepEqual([...ends].sort(), [...r.woke].sort());
+    // Whoever speaks first is heard; the one who speaks after it isn't.
+    if (r.woke.includes("torva") || r.woke.includes("maren")) assert.ok(r.spoke, `a line for ${r.trigger}`);
+    if (r.woke.includes("ilsa")) assert.ok(r.passed.includes("ilsa"));
+  }
+  // At most one trigger a combat round.
+  const rounds = report.reactions.map((r) => r.round);
+  assert.equal(new Set(rounds).size, rounds.length);
+  // A reaction's brief is the player's own view of what just happened, then the ask.
+  const briefs = [...players.values()].flatMap((p) => p.briefings.filter((b) => b.wake === "bark").map((b) => b.briefing));
+  assert.ok(briefs.length > 0);
+  for (const brief of briefs) assert.match(brief, /^What just happened:\n[\s\S]*Something just happened in the fight, and it isn't your turn\./);
+  assert.ok(report.fight.rounds > 0);
+  assert.ok(report.fight.lines >= heard.length);
+  // The blow that ends the fight gets its reactions too, though the fight is over by then.
+  assert.deepEqual([report.reactions.at(-1)?.trigger, report.reactions.at(-1)?.round], ["foe_down", report.fight.rounds]);
+});
+
+test("a reaction still running when its player is woken again gets a grace, then is cut, and its late line reaches nobody", async () => {
+  const waiting: Array<() => void> = [];
+  const late: ToolOutcome[] = [];
+  const { t, report } = await play({
+    seed: 23,
+    dm: yardDm(),
+    loop: { reactionGraceMs: 20 },
+    players: {
+      torva: {
+        combat: async (tools) => {
+          for (const go of waiting.splice(0)) go();
+          await attackNearest(tools);
+        },
+        bark: async (tools) => {
+          await new Promise<void>((go) => waiting.push(go));
+          late.push(await tools.say("Wait for me!"));
+        },
+      },
+      maren: {},
+      ilsa: {},
+    },
+  });
+  assert.ok(report.reactions.some((r) => r.cut.includes("torva")), "torva's reaction was cut by its own turn");
+  assert.ok(late.length > 0);
+  for (const outcome of late) assert.deepEqual(outcome, { ok: false, retryable: false, text: "not now: the moment has passed" });
+  assert.ok(!t.table.transcript.records.some((r) => r.text === "Wait for me!"));
+  assert.equal(report.ended, "the adventure is over");
+});
+
+test("a line heard after a player already passed never cancels that player's next wake", async () => {
+  const waiting: Array<() => void> = [];
+  const release = (tools: PlayerTools) => {
+    for (const go of waiting.splice(0)) go();
+    return attackNearest(tools);
+  };
+  const later = (line: string) => async (tools: PlayerTools) => {
+    await new Promise<void>((go) => waiting.push(go));
+    await tools.say(line);
+  };
+  const { report, players } = await play({
+    seed: 23,
+    dm: yardDm(),
+    loop: { reactionGraceMs: 50 },
+    players: {
+      // Maren passes at once and goes on to her turn; the others' lines come only once it has begun.
+      torva: { bark: later("Behind you!") },
+      maren: { bark: async () => "PASS", combat: release },
+      ilsa: { bark: later("Watch out!") },
+    },
+  });
+  assert.ok(
+    report.reactions.some((r) => r.spoke && r.passed.includes("maren")),
+    "a line was heard after maren passed",
+  );
+  for (const p of players.values()) assert.deepEqual(p.cancelled.filter((w) => w !== "bark"), [], `${p.handle}: only a reaction is ever cancelled`);
+  assert.equal(report.ended, "the adventure is over");
+});
+
+test("a reaction line the speech guard refuses is dropped with no retry, and a line said at the same moment is heard", async () => {
+  const { t, report } = await play({
+    seed: 23,
+    dm: yardDm(),
+    speechGuard: (text) => (text.includes("3 HP") ? "a number" : undefined),
+    players: {
+      torva: { bark: async (tools) => void (await tools.say("I have 3 HP left!")) },
+      // Maren says hers at the same moment, while Torva's is still being checked.
+      maren: { bark: async (tools) => void (await tools.say("Stay with me!")) },
+      ilsa: {},
+    },
+  });
+  const both = report.reactions.filter((r) => r.woke.includes("torva") && r.woke.includes("maren"));
+  assert.ok(both.length > 0, "a trigger woke both");
+  for (const r of both) assert.equal(r.spoke, "maren");
+  assert.ok(runLines(t, "system").includes("reaction dropped: a number"));
+  assert.ok(!runLines(t, "retry").some((line) => line.includes("a number")), "a dropped reaction is no retry");
+});
+
+test("a reaction said after its speaker fell unconscious is refused, and nobody hears it", async () => {
+  const refused: ToolOutcome[] = [];
+  const life = async (tools: PlayerTools) => (JSON.parse((await tools.sheet()).text) as { life_state: string }).life_state;
+  // Each reaction waits until its speaker is down, or for a while, then speaks.
+  const fallen = (handle: string) => async (tools: PlayerTools) => {
+    for (let i = 0; i < 200 && (await life(tools)) === "conscious"; i++) await new Promise((go) => setTimeout(go, 5));
+    const outcome = await tools.say(`${handle} cries out!`);
+    if (/not conscious/.test(outcome.text)) refused.push(outcome);
+  };
+  const { t, report } = await play({
+    seed: 23,
+    dm: yardDm(),
+    loop: { reactionGraceMs: 20, barkTimeoutMs: 60_000 },
+    players: { torva: { bark: fallen("torva") }, maren: { bark: fallen("maren") }, ilsa: { bark: fallen("ilsa") } },
+  });
+  assert.ok(refused.length > 0, "a speaker fell while its reaction ran");
+  for (const outcome of refused) assert.deepEqual(outcome, { ok: false, retryable: false, text: "not now: you can't speak: you are not conscious" });
+  const heard = new Set(t.table.transcript.records.filter((r) => r.kind === "speech").map((r) => r.text));
+  assert.equal([...heard].filter((line) => / cries out!$/.test(line)).length, report.reactions.filter((r) => r.spoke).length);
+});
+
+test("a reaction may only say and note, and one cancelled while its speaker's sheet comes says nothing", async () => {
+  const t = await testTable({ seed: 1, players: ["torva", "maren"] });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    const heard: string[] = [];
+    const floor = new ReactionFloor((speaker) => heard.push(speaker));
+    const tools = new BarkTools("torva", t.table, floor);
+    const notYours = { ok: false, retryable: false, text: "not now: it isn't your turn: react in one line with say, or answer PASS" };
+    for (const outcome of [await tools.look(), await tools.mySheet(), await tools.legalActions(), await tools.endTurn()]) assert.deepEqual(outcome, notYours);
+    assert.match((await tools.sheet()).text, /"life_state":"conscious"/, "the session's seed still reads the sheet");
+    assert.equal((await tools.note("plan", "Watch the wolves")).ok, true);
+    // Cut while the check that its speaker is conscious runs: the line was not said yet.
+    const said = tools.say("Hold the line!");
+    tools.end();
+    assert.deepEqual(await said, { ok: false, retryable: false, text: "not now: the moment has passed" });
+    assert.deepEqual(heard, []);
+    assert.equal(floor.speaker, undefined, "the floor is still free for another");
+    assert.ok(!t.table.transcript.records.some((r) => r.text === "Hold the line!"));
+  } finally {
+    t.close();
+  }
+});
+
+test("a reaction shows at once while the table collects lines, and its to never hands the floor on", async () => {
+  const t = await testTable({ seed: 1, players: ["torva", "maren"] });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    t.table.collect();
+    assert.equal((await t.table.speak("torva", "They yield!", "maren", true)).text, "said");
+    assert.ok(t.table.transcript.records.some((r) => r.kind === "speech" && r.text === "They yield!"), "shown before commit");
+    assert.deepEqual(t.table.takeAddresses(), [], "out of combat, as after a fight's end, a reaction's to queues no hand-off");
+    await t.table.speak("maren", "Torva, look.", "torva");
+    assert.ok(!t.table.transcript.records.some((r) => r.text === "Torva, look."), "an ordinary line still waits for commit");
+    await t.table.commit();
+    assert.deepEqual(t.table.takeAddresses(), [{ from: "maren", to: "torva" }]);
+  } finally {
+    t.close();
+  }
+});
+
+test("no AI player is woken to react out of combat, or when none takes reactions", async () => {
+  const { report } = await play({ seed: 23, dm: yardDm() });
+  assert.deepEqual(report.reactions, [], "scripted players without a bark policy never react");
+  const { report: talk, players } = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "We wait." }]),
+    dm: {},
+    players: { torva: { bark: async (tools) => void (await tools.say("Now!")) }, maren: {}, ilsa: {} },
+  });
+  assert.deepEqual(talk.reactions, []);
+  assert.ok(!players.get("torva")!.briefings.some((b) => b.wake === "bark"));
 });
 
 // --- Spec §6, row by row -------------------------------------------------------------------------
@@ -1182,6 +1369,28 @@ test("a scene between two played ones is passed over: the party goes on to the n
   assert.deepEqual(loads, [["s1_village_green", undefined], ["s3_mill_yard", party]]);
   assert.ok(t.table.transcript.records.some((r) => r.text.startsWith("Combat is over")));
   for (const handle of party) assert.ok(t.requests().some((r) => r.cmd === "submit" && r.actor === handle), `${handle} acted in the fight`);
+});
+
+test("a surrender ends the fight and still gets its reactions, as the fight's last blow does", async () => {
+  // Seed 14: the goblins yield in a round nobody has reacted in yet (one trigger a round).
+  const pack = path.join(REPO, "scenarios/the_silent_mill");
+  const scenes = readPack(pack).adventure.scenes;
+  const plan = scenePlan(pack, ["s1_village_green", "s3_mill_yard"]);
+  const party = ["bren", "torva", "maren", "ilsa"];
+  const bark = (line: string) => async (tools: PlayerTools) => void (await tools.say(line));
+  const { t, report } = await play({
+    seed: 14,
+    pack,
+    guards: (engine) => guards(pack, engine),
+    scene: plan.first,
+    onScene: plan.onScene,
+    dm: walkOnDm(scenes.map((s) => s.id), { s3_mill_yard: "yard_fight" }, party),
+    players: { torva: { bark: bark("They yield!") }, maren: { bark: bark("Mercy, then.") }, ilsa: { bark: bark("Bind them.") } },
+  });
+  assert.ok(t.table.transcript.records.some((r) => r.text === "Combat is over: the other side surrendered."));
+  const last = report.reactions.at(-1);
+  assert.equal(last?.trigger, "surrender");
+  assert.ok(last?.spoke, "a line was heard");
 });
 
 test("the scene plan plays the listed scenes in order, passes over the ones between, and stops after", () => {

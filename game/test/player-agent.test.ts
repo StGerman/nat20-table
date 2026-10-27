@@ -10,7 +10,7 @@ import { test } from "node:test";
 import { declaration, ModelPlayer, playerPrompt } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
-import { TurnTimeout } from "../src/errors.ts";
+import { TurnCancelled, TurnTimeout } from "../src/errors.ts";
 import { addressLines, packParty, talkLines } from "../src/play/run.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedSeat } from "../src/table/scripted.ts";
@@ -79,6 +79,9 @@ test("a model player passes as a normal answer, plays from its card's Talk and s
   assert.match(prompt, /Out of combat the one you speak to has the floor next/);
   assert.doesNotMatch(prompt, /Set asks|request or a proposal that wants/);
   assert.match(prompt, /The human's character answers when its player likes; nobody waits for it\./);
+  // A reaction between turns in a fight (party talk §5 R1): one line or PASS, say only, first line heard.
+  assert.match(prompt, /"Something just happened in the fight": it isn't your turn, and the fight goes on without waiting\./);
+  assert.match(prompt, /Only the first companion to speak is heard, so a line that comes too late reaches nobody\./);
 });
 
 test("every party member has its names, whichever seat plays it: handle, card name and the pack's forms", () => {
@@ -204,7 +207,8 @@ test("in a fight, model players act through their bound tools, and what they wer
       played += 1;
       const me = player.handle;
       assert.equal(sessions.length, 1, "one session for the scene");
-      assert.match(turns[0].message, /^Your character sheet \(only you see it\):\n\{/);
+      // The session's first turn carries the seed, whether it is a turn or a reaction between turns.
+      assert.match(sessions[0].turns[0].message, /^Your character sheet \(only you see it\):\n\{/);
       assert.match(turns[0].message, /Act with your tools, then call end_turn\.$/);
       // Every command it caused was sent as itself, for itself.
       const mine = requests.filter((r) => r.viewer === me);
@@ -309,6 +313,32 @@ test("a tool call that comes while a timed-out turn settles is refused, not acte
     sessions[0].settling = false;
     await player.wake("declare", "Declare.", tools);
     assert.doesNotMatch(answers[2], /^not now/);
+  } finally {
+    t.close();
+  }
+});
+
+test("a wake cancelled while its new session's sheet comes ends without a turn, and the next wake runs as usual", async () => {
+  const { player, sessions } = standInPlayer("ilsa", async () => "PASS");
+  const t = await testTable({ seed: 1, players: ["ilsa"] });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    let sheetCame!: () => void;
+    const slow = new Promise<void>((go) => (sheetCame = go));
+    class SlowSheet extends PlayerTools {
+      override async sheet() {
+        await slow;
+        return super.sheet();
+      }
+    }
+    const bark = player.wake("bark", "Something just happened in the fight.", new SlowSheet("ilsa", t.table));
+    player.cancel();
+    sheetCame();
+    await assert.rejects(bark, TurnCancelled);
+    assert.equal(sessions.length, 0, "no session opened, no turn sent");
+    assert.equal(await player.wake("declare", "Declare.", new PlayerTools("ilsa", t.table)), undefined);
+    assert.equal(sessions.length, 1);
+    assert.deepEqual(sessions[0].turns.map((turn) => turn.purpose), ["declare"]);
   } finally {
     t.close();
   }

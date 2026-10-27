@@ -1,7 +1,7 @@
 # Party talk: the AI players hear each other, stay silent, and address each other
 
-- **Status:** proposed for review, 2026-10-27. Decided by Stas: the hand-raise floor (§4.3) and its place as the first block of Milestone 7 (§8). Open: background reactions in combat (§5, R1).
-- **Decision record:** [0039](../decisions/0039-party-talk-hand-raise-floor.md).
+- **Status:** proposed for review, 2026-10-27. Decided by Stas: the hand-raise floor (§4.3), its place as the first block of Milestone 7 (§8), and background reactions in combat (§5, R1).
+- **Decision records:** [0039](../decisions/0039-party-talk-hand-raise-floor.md), [0040](../decisions/0040-every-address-hands-off.md), [0042](../decisions/0042-fight-reactions-first-line-wins.md).
 - **Tasks:** AGT-31 to AGT-34 in `TASKS.md`.
 
 ## 1. Problem
@@ -130,14 +130,14 @@ The prompt asks the player to choose whom to address, and how, from these, never
 
 1. An address is a `say` line. The AI player's `say` seat tool gains an optional `to` (a companion's handle, the human's character included). It's a game tool, not the engine contract. With `to`, the addressee is exact, so names are matched in text only in the human's and the DM's lines. A `to` that isn't a companion is refused and costs a retry. The addressee's brief marks the line "ilsa says to you: …", the others' briefs and the DM's say "ilsa says to torva: …", and the transcript's speech record carries `to`.
 2. **Out of combat:** an AI addressee gets the floor next in the same round, whatever the address's form (decision 0040): with its hand down it gets a floor wake of its own, and with its hand up it moves to the front. That is the round's one hand-off, inside the bound of §4.2. An address the round can't answer is carried: one made after the hand-off (in the hand-off itself, say), one made outside a floor wake (in a granted action), and one whose addressee is still waiting for the floor when the bound is reached, whether it was carried, queued with its hand up, or the hand-off. Its addressee has the floor first in the next round, after the players the human's and the DM's lines named, and its brief says a companion spoke to it. A fight drops what was carried.
-3. **In a fight:** the address is spoken on the speaker's own turn (§5, R0). The addressee reads it on its next turn in the brief, marked as in 1. With R1 a named address is also a trigger for a one-line answer, but the addressee acts only on its own turn.
+3. **In a fight:** the address is spoken on the speaker's own turn (§5, R0). The addressee reads it on its next turn in the brief, marked as in 1, and acts only on its own turn. An address is not an R1 trigger (§5), and a `to` in a fight never hands off.
 4. **The addressee decides** from its card and values: help, answer, argue, refuse in character ("Heal later, hit first"), or stay silent. An address never forces an action.
 5. **Mechanics only through the engine (Rule 4).** "Help me with the lock" becomes a declaration the DM resolves with `help` or `grant_action`; Help gives Advantage, as in SRD 5.2.1. "Heal me" in a fight becomes Maren's Healing Word on her turn, if she chooses it. No line sets a result.
 6. **An address to the human's character** (Bren in the demo, or whichever character the human plays) shows as an ordinary line, marked "Maren says to you: …"; one to an AI player shows as "Maren says to Ilsa: …". The human answers or not; the loop doesn't wait for it, and never hands the floor for it.
 
 The run report counts the hand-offs and the addresses carried to the next round per run, and the lines spoken to a companion by who spoke to whom.
 
-Cost: no new wakes beyond the hand-off, at most one floor wake (about 5.7 s, $0.03) in a round that has an address. Nothing in a fight unless R1 is on.
+Cost: no new wakes beyond the hand-off, at most one floor wake (about 5.7 s, $0.03) in a round that has an address. Nothing in a fight.
 
 ### 4.5 Role and values in the cards
 
@@ -161,10 +161,18 @@ Each AI player's card gets a section "Talk and silence" (a `##` heading, like ev
 | Option | How | Model calls | Added wait on a turn | Risk |
 |---|---|---|---|---|
 | **R0. A line on your own turn (decided)** | the turn brief says the player may react in one line to what happened since its last turn; `say` and the brief's "what you heard" and "what happened" already exist | 0 | none (about 30 output tokens) | none |
-| R1. Background reactions (proposed, open) | on a salient event the player sees in its own view (an ally down or back up, a critical hit, a kill, a surrender, a hit on the player itself), the loop wakes one AI player not on its turn with only `say` and "react in one line or pass". The fight doesn't wait. The line shows when it is ready if it beats the next DM narration, and is dropped otherwise | +1 short wake per trigger, ≤ 1 a round | none on the turn path | one session per agent: the player whose turn comes next never reacts; if a reacting player's turn starts, the turn waits at most 5 s, then the reaction is cancelled |
+| **R1. Background reactions (decided, decision 0042)** | on a salient event the player sees in its own view (an ally down or back up, a surrender, a foe down, a critical hit by or against the party, a hit on the player itself), the loop wakes every AI player who may react, at once, with only `say` and "react in one line or pass". The first line is heard and shows the moment it is ready, even before the DM narrates its trigger; the other wakes are cancelled. The fight doesn't wait | one short wake per eligible player per trigger, ≤ 1 trigger a round | none on the turn path | one session per agent: the player whose turn comes next and the one whose deed it was never react; if a reacting player is woken again, that wake waits at most 5 s, then the reaction is cancelled |
 | R2. Reactions to the DM's outcome out of combat | after a narration with a big outcome, one reaction before the human's next line | +1 wake when triggered | +~6 s on that round | not tracked: in H the players hear the outcome at the start of the next round anyway |
 
-R1 costs about $0.02–0.03 a trigger, so at most about $0.2 for a seven-round fight. Triggers come from events in the player's own view, and the speech guard checks the line, so no HP, AC or DC can reach it (Rule 3).
+R1 costs about $0.02–0.03 a wake, so about $0.06–0.09 a trigger with three AI players, and at most about $0.6 for a seven-round fight. Triggers come from events every player view carries, the reaction's brief is the player's own view of them, and the speech guard checks the line, so no HP, AC or DC can reach it (Rule 3).
+
+How R1 runs (spec `party-talk-r1-spec.md` in the project folder, `game/src/table/reactions.ts`, `TableLoop.startReactions`):
+
+- **Triggers**, in the order a batch's are taken: a party member down or dead, a party member back up, a surrender, a foe down or dead, a critical hit by or against the party, damage to an AI player. "Party" is every character at the table, so the human's character counts as an ally like any other. The rest of a batch reaches the players in their next briefs, as before. A surrender, or the last foe down, ends the fight in the same batch, and still gets its reactions, alongside the DM's wrap-up of the fight.
+- **Who may react:** a conscious AI player that isn't the next actor and isn't the one whose deed it was, the creature that last acted (its own critical hit or kill is for its own turn, R0). It is keyed on the seat map alone, so it holds when the human plays any character and when every character is an AI player.
+- **The wake:** a `bark` wake with `BarkTools`: `say` and `note` work, every other tool answers "not now". The first `say` takes the floor; a later one is refused ("X spoke first"). A line the speech guard refuses, or a `to` that isn't a companion, is dropped with no retry, and the floor is free again: lines are tried one at a time, so a refused line never shuts out one said at the same moment. A line from a player who fell unconscious while it thought is refused (SRD 5.2.1: an Incapacitated creature can't speak). A reaction shows at once even while the table collects lines, and its `to` never hands the floor on, even after the fight's end.
+- **Timing:** a reaction is cancelled after 8 s, or when its player is woken again and 5 s have passed. A cancelled wake interrupts its session the way a turn timeout does, so its late `say` is refused ("the moment has passed").
+- **Report:** fight talk (AI lines per combat round, on and between turns, against goal 4's about 0.5) and fight reactions (triggers, wakes, lines shown, passed, beaten by another's line, cancelled or timed out, bark wake p50 and p95).
 
 ## 6. The echo line
 
@@ -194,7 +202,7 @@ One step per PR, stacked, each with scripted tests in CI (CI never calls a model
 1. AGT-31: the prompt of §4.6, R0, the cards' "Talk and silence" section, and §6. Shows on the next run.
 2. AGT-32: the hand-raise round of §4.2 and §4.3, and the report's round measures.
 3. AGT-33: addressing a companion, §4.4.
-4. AGT-34: R1, if Stas picks it.
+4. AGT-34: R1, decided by Stas (decision 0042).
 
 After steps 1 and 2 Stas plays `npm run play:exit` on his Mac and attaches the run folder; the goals of §2 are read from its report and transcript.
 
@@ -203,5 +211,6 @@ After steps 1 and 2 Stas plays `npm run play:exit` on his Mac and attaches the r
 - A round with two speakers waits longer than today's (about 12 s against 6–10 s). The first line comes sooner, and the human reads two lines instead of six.
 - Sonnet at low effort may talk anyway. The bound of §4.2 holds that in the loop, not in the prompt.
 - Matching Russian names in the human's and the DM's text is brittle (cases, nicknames). An implicit address ("who here can heal?") isn't matched, but the hand-raise catches it: Maren decides the question is hers.
-- R1 adds concurrency to an agent's session, which is strictly sequential today. That's why it is the last step and its own PR.
+- R1 adds concurrency to an agent's session, which was strictly sequential. That's why it is the last step and its own PR. The loop never wakes a player with a reaction in flight for another reaction, makes any other wake of that player wait for it (at most 5 s), and cancels it only while it runs, so a cancel never ends the player's next wake.
+- In R1 the fastest player, not the most moved one, can win the floor. A run report with one character speaking nearly every reaction shows it.
 - Costly to undo: only the turn-taking model in decision 0039, if the North Star front end is built on it. The code is reversible.
