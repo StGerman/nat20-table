@@ -95,6 +95,10 @@ function optionItems(option: ActionOption): Item[] {
         }));
         return [{ label: `${name}…`, next: numbered(variants) }];
       }
+      // An attack (or Help with one) whose only targets this turn are the party is left out:
+      // picking it opened a list of friends when no foe was in reach (TASKS.md AGT-28). Words to
+      // the DM still reach it. Options meant for friends, such as Help Stabilize, stay.
+      if (/attack/.test(option.option_id) && targets.every((t) => t.side === "party")) return [];
       // Hostile targets in reach get their own lines; with none in reach, the nearest hostile does.
       // A potion is for a friend, so it lists the creatures on no hostile side instead (you first).
       const wanted = targets.filter((t) => (option.item ? t.side !== "hostile" : t.side === "hostile"));
