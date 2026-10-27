@@ -119,7 +119,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | `submit` | `actor`, `prompt_id?` (required in combat, absent in explore mode, §4.8), `option_id`, `targets?: handle[]`, `aim?: {creature} \| {anchor} \| {point}` (area options), `point?: {x_ft,y_ft,z_ft}` (the same as `aim: {kind: point}`), `variant?: string` | `{accepted:true}` | as above |
 | `react` | `actor`, `prompt_id`, `choice: int \| null` | `{accepted:true}` | the reactor's agent |
 | `end_turn` | `actor`, `prompt_id` | `{accepted:true}` | as above |
-| `move` | `actor`, `to: {anchor} \| {handle} \| {point}`, `prompt_id?` (required in combat) | `{moved_ft, provoked: handle[]}` | DM (explore), actor (combat) |
+| `move` | `actor`, `to: {anchor} \| {handle} \| {point}`, `prompt_id?` (required in combat), `partial?` | `{moved_ft, provoked: handle[], reached}` | DM (explore), actor (combat) |
 | `request_check` | `actor`, `check: {kind:"scenario", check_id} \| {kind:"ladder", ability, skill?, dc}` | `{roll_id, total, success}` | DM |
 | `short_rest` | `participants[]`, `hit_dice?: [{handle, count}]` | `{healed: [{handle, amount}]}` | DM |
 | `start_combat` | `encounter_id` | `State` | DM (or a scenario trigger) |
