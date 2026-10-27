@@ -103,7 +103,7 @@ export class TableState {
   private narrations: string[] = [];
   /**
    * Lines the AI players spoke to a companion out of combat, since the loop last took them (party
-   * talk §4.4): a request or a proposal hands its addressee the floor. A fight drops them.
+   * talk §4.4): a request or a proposal hands its addressee the floor. The loop drops them in a fight.
    */
   private addresses: Address[] = [];
   /**
@@ -291,10 +291,8 @@ export class TableState {
     await this.flush();
     this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text });
     this.narratedTo = this.dmShownTo;
-    if (this.inCombat) {
-      this.narrations = [];
-      this.addresses = [];
-    } else if (!to) this.narrations.push(text);
+    if (this.inCombat) this.narrations = [];
+    else if (!to) this.narrations.push(text);
     for (const player of this.players) {
       if (!to || to === player) this.inboxes.get(player)?.push(`DM${to ? " (to you)" : ""}: ${text}`);
     }

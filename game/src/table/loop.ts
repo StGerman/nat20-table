@@ -227,8 +227,11 @@ export class TableLoop {
     if (this.table.ended) return;
     await this.showSituation();
     const awaiting = this.table.awaiting;
-    // A fight drops the requests the talk before it carried (party talk §4.4).
-    if (this.table.inCombat) this.carried = [];
+    // A fight drops the requests the talk before it carried or left pending (party talk §4.4).
+    if (this.table.inCombat) {
+      this.carried = [];
+      this.table.takeAddresses();
+    }
     switch (awaiting.kind) {
       case "action":
         if (awaiting.actor === this.table.human) return this.humanTurn();
@@ -655,6 +658,8 @@ export class TableLoop {
     const byName = namedIn([{ text: humanLine }, ...narrations], handles, this.names);
     const mentioned = [...new Set([...byName, ...this.carried, ...handOff(this.table.takeAddresses(), [], handles, true).carried])];
     this.carried = [];
+    // Who still waits on an answer to a request: carried again if the round's floor fills first.
+    const requested = new Set(mentioned.filter((h) => !byName.includes(h)));
     const named = mentioned.slice(0, this.floorBound);
     const raising = handles.filter((h) => !mentioned.includes(h));
     let floorWakes = 0;
@@ -671,6 +676,7 @@ export class TableLoop {
         if (this.table.ended) return;
         floorWakes += 1;
         const why = byName.includes(handle) ? "you were named" : "a companion asked you something that still wants your answer";
+        requested.delete(handle);
         await this.takeFloor(handle, `You have the floor first: ${why}. Answer: say your line with say if you have one, and answer with what you set out to do in one sentence, or PASS.`);
         namedAddresses.push(...this.table.takeAddresses().filter((a) => named.indexOf(a.to) <= i));
       }
@@ -690,14 +696,24 @@ export class TableLoop {
     for (const [handle, hand] of hands) {
       if (hand.kind === "act" && !this.table.ended) await this.declareFor(handle, hand.intent);
     }
-    const lapsed = mentioned.slice(this.floorBound);
-    for (const handle of lapsed) this.table.log("hand", "lapsed: named, but the round's floor is full", handle);
+    const lapsed: Handle[] = [];
+    const carried: Handle[] = [];
+    const carry = (handle: Handle) => {
+      if (!carried.includes(handle)) carried.push(handle);
+      this.table.log("hand", "carried: asked, but the round's floor is full", handle);
+    };
+    for (const handle of mentioned.slice(this.floorBound)) {
+      if (requested.has(handle)) carry(handle);
+      else {
+        lapsed.push(handle);
+        this.table.log("hand", "lapsed: named, but the round's floor is full", handle);
+      }
+    }
     // Lines spoken to a companion on the floor may hand it the floor next (party talk §4.4).
     let queue = speakingOrder(hands, handles, this.talkRounds.length);
     let used = false;
     let pending: HandedOff | undefined;
     let handedWake: Handle | undefined;
-    const carried: Handle[] = [];
     const heard = (addresses = this.table.takeAddresses()) => {
       const after = handOff(addresses, queue, handles, used);
       queue = after.queue;
@@ -706,6 +722,8 @@ export class TableLoop {
         pending = after.handedTo;
       }
       for (const handle of after.carried) if (!carried.includes(handle)) carried.push(handle);
+      // A request to a player still in the queue waits for its floor wake there.
+      for (const a of addresses) if (a.asks && a.to !== a.from && queue.includes(a.to)) requested.add(a.to);
     };
     heard([...namedAddresses, ...this.table.takeAddresses()]);
     while (queue.length > 0 && !this.table.ended) {
@@ -713,16 +731,15 @@ export class TableLoop {
       const handed = pending?.to === handle ? pending : undefined;
       if (handed) pending = undefined;
       if (floorWakes >= this.floorBound) {
-        if (handed?.asks) {
-          if (!carried.includes(handle)) carried.push(handle);
-          this.table.log("hand", `carried: ${handed.from} asked, but the round's floor is full`, handle);
-        } else {
+        if (requested.has(handle)) carry(handle);
+        else {
           lapsed.push(handle);
           this.table.log("hand", "lapsed: the round's floor is full", handle);
         }
         continue;
       }
       floorWakes += 1;
+      requested.delete(handle);
       if (handed) handedWake = handle;
       const why = !handed ? "you raised your hand" : `${handed.from} spoke to you${handed.raised ? ", and you raised your hand" : ""}`;
       await this.takeFloor(handle, `You have the floor: ${why}. Say your line with say if it still needs saying, and answer with what you set out to do in one sentence, or PASS.`);
