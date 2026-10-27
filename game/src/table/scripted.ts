@@ -89,6 +89,11 @@ export interface ScriptedPlayerPolicy {
   /** With the floor: speaks with `say` and returns what it sets out to do, or nothing to pass. */
   declare?: (tools: PlayerTools, briefing: string) => Promise<string | void>;
   granted?: (tools: PlayerTools) => Promise<void>;
+  /**
+   * Reacts between turns in a fight (party talk R1, AGT-34): speaks with `say`, or returns nothing to
+   * pass. Without it the player is never woken to react, so scripted runs play as before.
+   */
+  bark?: (tools: PlayerTools, briefing: string) => Promise<string | void>;
 }
 
 export class ScriptedPlayer implements PlayerAgent {
@@ -98,14 +103,35 @@ export class ScriptedPlayer implements PlayerAgent {
   readonly briefings: Array<{ wake: PlayerWake; briefing: string }> = [];
   /** The summaries each new scene's session started from. */
   readonly scenes: string[] = [];
+  /** The wakes the loop cancelled while they ran, for tests (a reaction whose moment passed, AGT-34). */
+  readonly cancelled: PlayerWake[] = [];
+  private running: PlayerWake | undefined;
 
   constructor(handle: Handle, policy: ScriptedPlayerPolicy = {}) {
     this.handle = handle;
     this.policy = policy;
   }
 
+  get reacts(): boolean {
+    return this.policy.bark !== undefined;
+  }
+
   async wake(wake: PlayerWake, briefing: string, tools: PlayerTools): Promise<string | void> {
     this.briefings.push({ wake, briefing });
+    this.running = wake;
+    try {
+      return await this.play(wake, briefing, tools);
+    } finally {
+      if (this.running === wake) this.running = undefined;
+    }
+  }
+
+  /** A scripted wake goes on to its end: a cancel is only recorded, and the loop refuses its late tool calls. */
+  cancel(): void {
+    if (this.running) this.cancelled.push(this.running);
+  }
+
+  private async play(wake: PlayerWake, briefing: string, tools: PlayerTools): Promise<string | void> {
     switch (wake) {
       case "combat_turn":
         return (this.policy.combat ?? attackNearest)(tools);
@@ -117,6 +143,8 @@ export class ScriptedPlayer implements PlayerAgent {
         return this.policy.declare?.(tools, briefing);
       case "granted":
         return this.policy.granted?.(tools);
+      case "bark":
+        return this.policy.bark?.(tools, briefing);
       case "summary":
         return `${this.handle} remembers the scene.`;
     }

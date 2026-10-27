@@ -19,11 +19,11 @@ import {
   type SdkMcpToolDefinition,
 } from "@anthropic-ai/claude-agent-sdk";
 import type { z, ZodRawShape } from "zod";
-import { TurnTimeout, UsageLimitReached } from "../errors.ts";
+import { TurnCancelled, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { agentEnv } from "./env.ts";
 import { apiEquivalentUsd, type UsageLog, type UsageRecord } from "../usage.ts";
 
-export { TurnTimeout, UsageLimitReached };
+export { TurnCancelled, TurnTimeout, UsageLimitReached };
 
 /** The MCP server name every seat's tools live under; the model sees `mcp__table__<tool>`. */
 export const TOOL_SERVER = "table";
@@ -114,6 +114,8 @@ export interface TurnSession {
   close(): Promise<void>;
   /** A timed-out turn's result is still to come, so a tool call now is that turn's (`AgentSession`). */
   readonly settling?: boolean;
+  /** Interrupts the turn in flight, if any, which fails with `TurnCancelled` (AGT-34). */
+  cancel?(): void;
 }
 
 /** What a turn produced. */
@@ -224,11 +226,10 @@ export class AgentSession {
         timer: undefined,
       };
       if (this.config.turnTimeoutMs) {
-        pending.timer = setTimeout(() => {
-          this.stale += 1;
-          void this.query.interrupt().catch(() => undefined);
-          this.settle(new TurnTimeout(`${this.config.agent}: turn timed out after ${this.config.turnTimeoutMs} ms`));
-        }, this.config.turnTimeoutMs);
+        pending.timer = setTimeout(
+          () => this.interrupt(new TurnTimeout(`${this.config.agent}: turn timed out after ${this.config.turnTimeoutMs} ms`)),
+          this.config.turnTimeoutMs,
+        );
       }
       this.pending = pending;
       this.inbox.push({
@@ -238,6 +239,21 @@ export class AgentSession {
         uuid: pending.uuid as `${string}-${string}-${string}-${string}-${string}`,
       });
     });
+  }
+
+  /**
+   * Interrupts the turn in flight, as a timeout does: the loop no longer wants its answer (a
+   * reaction whose moment passed, AGT-34). Without a turn in flight it does nothing.
+   */
+  cancel(): void {
+    if (this.pending) this.interrupt(new TurnCancelled(`${this.config.agent}: turn cancelled`));
+  }
+
+  /** Ends the turn in flight with `error`; its result, still to come, belongs to no turn. */
+  private interrupt(error: TurnTimeout): void {
+    this.stale += 1;
+    void this.query.interrupt().catch(() => undefined);
+    this.settle(error);
   }
 
   /** Ends the session and waits for the SDK to shut down. */
@@ -351,7 +367,8 @@ export class AgentSession {
     this.pending = undefined;
     if (turn.timer) clearTimeout(turn.timer);
     if (outcome instanceof Error) {
-      this.record(turn, outcome instanceof TurnTimeout ? "timeout" : outcome instanceof UsageLimitReached ? "limit" : "failed", null);
+      const how = outcome instanceof TurnCancelled ? "cancelled" : outcome instanceof TurnTimeout ? "timeout" : outcome instanceof UsageLimitReached ? "limit" : "failed";
+      this.record(turn, how, null);
       turn.reject(outcome);
     } else turn.resolve(outcome);
   }

@@ -50,6 +50,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0039](0039-party-talk-hand-raise-floor.md) | Party talk: each AI player raises its hand, and speakers take the floor in turn | Accepted | 2026-10-27 | Stas (decision cards, party-talk design thread) |
 | [0040](0040-every-address-hands-off.md) | Every address to a companion hands it the floor | Accepted | 2026-10-27 | Stas (decision card, party-talk thread) |
 | [0041](0041-engine-lines-wait-for-narration.md) | On the table screen, engine lines wait for the DM's narration of them (`--verbose` folds them under it) | Accepted | 2026-10-27 | Stas (decision card, chat transcript thread) |
+| [0042](0042-fight-reactions-first-line-wins.md) | In a fight, every AI player who may react is woken, and the first line shows at once | Accepted | 2026-10-27 | Stas (R1 spec D1 and D2, party-talk thread) |
 | [0043](0043-demo-acceptance-two-runs.md) | Demo acceptance is one unattended all-AI run and one run by Stas, with a narration check and latency reported | Accepted | 2026-10-27 | Stas (Milestone 7 design thread, D1-D3) |
 | [0044](0044-one-repo-through-m7.md) | nat20-table stays one repo through Milestone 7; the next contract goes on the line between the game loop and its clients | Accepted | 2026-10-27 | Stas (decision card, Milestone 7 design thread) |
 | [0045](0045-run-profiles-and-models.md) | Run settings live in named JSON profiles; testing runs a Sonnet DM and Haiku players | Accepted | 2026-10-27 | Stas (decision card, Milestone 7 design thread, D4-D5) |

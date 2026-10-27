@@ -14,3 +14,9 @@ export class UsageLimitReached extends Error {
 
 /** A turn ran past its timeout and was interrupted. */
 export class TurnTimeout extends Error {}
+
+/**
+ * A turn the loop interrupted because it no longer wants the answer: a reaction whose moment passed
+ * (party talk R1, AGT-34). The session goes on, as after a timeout.
+ */
+export class TurnCancelled extends TurnTimeout {}

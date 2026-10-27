@@ -9,7 +9,7 @@ import { NOTE_KINDS, type NoteKind } from "../table/state.ts";
 import type { PlayerTools } from "../table/tools.ts";
 import type { PlayerAgent, PlayerWake, ToolOutcome } from "../table/types.ts";
 import type { UsageLog } from "../usage.ts";
-import { TurnTimeout, UsageLimitReached } from "../errors.ts";
+import { TurnCancelled, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { playerLanguage, type Language } from "./language.ts";
 import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, type SeatTool, type SessionConfig, type TurnSession } from "./sdk-session.ts";
 
@@ -57,6 +57,7 @@ Each message says why you are woken:
 - "You may react now": call react with the choice number to take it, or with null to let it pass.
 - "Do you raise your hand?": out of combat, after the human's character acted, before anyone has the floor. First decide as ${name}: is any of this important to ${name} now, given ${name}'s goal, character and view of the others (your card's "Talk and silence" and "With the party", and your notes)? If not, just PASS: that is a normal answer, and in most rounds someone at the table stays quiet. If it is, ${name} may speak, act without a word, or both. Call no tool: your final answer starts with SPEAK (a line to say), BOTH (a line and a deed), ACT: and one sentence on what ${name} does without a word ("ACT: ${name} kneels to look at the tracks."), or PASS, and if you like, on the next line, half a sentence of why that nobody hears. Those who raise a hand then get the floor one at a time, each hearing what was said before.
 - "You have the floor": you raised your hand, someone named ${name}, or a companion spoke to ${name}. Read what was said since; if it has been said, a word of agreement or PASS. When you were named or asked, answer, in words, deeds or both, or refuse in character. To speak, say one short line in character with say. Then your final answer is one sentence on what ${name} sets out to do ("${name} kneels to look at the tracks."), or PASS when ${name} only spoke or does nothing new. Don't take an option here: the DM decides what happens, and may let you act. "Declare again" asks the same after a refusal.
+- "Something just happened in the fight": it isn't your turn, and the fight goes on without waiting. If ${name} would react aloud to it (an ally falling or back up, a foe down or yielding, a great blow, a hit on ${name}), say one short line with say; otherwise just answer PASS. Call no other tool. Only the first companion to speak is heard, so a line that comes too late reaches nobody.
 - "The DM lets you act now": take one of your options with submit_decision.
 - "The scene is over": your final answer is a summary in a few sentences of fiction, for your own memory: what happened, who you met, what you promised or suspect.
 
@@ -76,6 +77,7 @@ export function declaration(answer: string): string | undefined {
 
 export class ModelPlayer implements PlayerAgent {
   readonly handle: Handle;
+  readonly reacts = true;
   readonly systemPrompt: string;
   private readonly config: ModelPlayerConfig;
   /** The seat tools the model sees; each acts through the tools of the wake that is running. */
@@ -83,6 +85,9 @@ export class ModelPlayer implements PlayerAgent {
   private session: TurnSession | undefined;
   /** The bound tools while a wake runs; a call outside a wake (after a timeout) does nothing. */
   private current: PlayerTools | undefined;
+  /** The wake running, and the wakes cancelled before their turn was sent (AGT-34). */
+  private running: object | undefined;
+  private readonly cancelled = new WeakSet<object>();
   /** Its notes, in order (spec §3.6). */
   readonly notes: Array<{ kind: NoteKind; text: string }> = [];
   /** What it wrote at the end of each scene (AGT-6). */
@@ -96,9 +101,13 @@ export class ModelPlayer implements PlayerAgent {
   }
 
   async wake(wake: PlayerWake, briefing: string, tools: PlayerTools): Promise<string | void> {
+    const running = {};
+    this.running = running;
     this.current = tools;
     try {
       const seed = this.session ? undefined : this.seed(await tools.mySheet());
+      // Cancelled while its sheet came: the loop has moved on, maybe to this player's next wake.
+      if (this.cancelled.has(running)) throw new TurnCancelled(`${this.handle}: wake cancelled before its turn`);
       if (!this.session) {
         tools.record(this.systemPrompt);
         this.session = this.openSession();
@@ -106,15 +115,22 @@ export class ModelPlayer implements PlayerAgent {
       if (seed) tools.record(seed);
       const result = await this.session.turn(seed ? `${seed}\n\n${briefing}` : briefing, wake);
       if (wake === "declare") return declaration(result.final);
-      if (wake === "hand" || wake === "summary") return result.final;
+      if (wake === "hand" || wake === "summary" || wake === "bark") return result.final;
     } catch (error) {
       // A timed-out session goes on, and a plan limit stops the run. After any other failure the
       // session may be dead, so the next wake starts a fresh one from the seed.
       if (!(error instanceof TurnTimeout) && !(error instanceof UsageLimitReached)) await this.close();
       throw error;
     } finally {
-      this.current = undefined;
+      // A cancelled wake ends after the loop may have started the next one, whose tools stay.
+      if (this.current === tools) this.current = undefined;
+      if (this.running === running) this.running = undefined;
     }
+  }
+
+  cancel(): void {
+    if (this.running) this.cancelled.add(this.running);
+    this.session?.cancel?.();
   }
 
   async newScene(summary: string): Promise<void> {

@@ -8,7 +8,7 @@ import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure } from "../pack/adventure.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
-import type { RunReport, SceneChoice, TalkRound } from "../table/loop.ts";
+import type { FightReaction, RunReport, SceneChoice, TalkRound } from "../table/loop.ts";
 import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, summarize, type UsageRecord } from "../usage.ts";
@@ -17,7 +17,7 @@ import { percentile, summarize, type UsageRecord } from "../usage.ts";
 export const TARGET_P95_MS = { player: 10_000, dm: 6_000 };
 
 /** Talk-round targets (party talk §2, goals 2 and 5): the silent share of AI player slots, the first line's p50, the round's p95. */
-export const TALK_TARGETS = { silentShare: 0.3, firstLineP50Ms: 7_000, roundP95Ms: 20_000 };
+export const TALK_TARGETS = { silentShare: 0.3, firstLineP50Ms: 7_000, roundP95Ms: 20_000, fightLinesPerRound: 0.5 };
 
 export interface PackParty {
   /** The human's character. */
@@ -160,6 +160,24 @@ export function talkLines(rounds: TalkRound[]): string[] {
   ];
 }
 
+/**
+ * The report's lines on talk in fights (party talk goal 4, §5): the AI players' lines per combat
+ * round, on their own turns and between them, and how the reactions between turns went (R1).
+ */
+export function fightLines(run: Pick<RunReport, "reactions" | "fight">, usage: UsageRecord[]): string[] {
+  if (run.fight.rounds === 0) return [];
+  const count = (pick: (r: FightReaction) => number) => run.reactions.reduce((n, r) => n + pick(r), 0);
+  const barks = usage.filter((u) => u.purpose === "bark").map((u) => u.wall_ms);
+  return [
+    `- Fight talk: ${run.fight.lines} AI lines in ${run.fight.rounds} combat rounds, ${(run.fight.lines / run.fight.rounds).toFixed(2)} a round (target about ${TALK_TARGETS.fightLinesPerRound})`,
+    ...(run.reactions.length > 0
+      ? [
+          `- Fight reactions: triggers ${run.reactions.length}; bark wakes ${count((r) => r.woke.length)}; lines shown ${count((r) => (r.spoke ? 1 : 0))}, passed ${count((r) => r.passed.length)}, beaten by another's line ${count((r) => r.beaten.length)}, cancelled or timed out ${count((r) => r.cut.length)}; bark wake p50 ${percentile(barks, 50) || "n/a"} ms, p95 ${percentile(barks, 95) || "n/a"} ms`,
+        ]
+      : []),
+  ];
+}
+
 /** How often the AI players spoke to one companion with `say`'s `to` (party talk §4.4, goal 6). */
 export function addressLines(transcript: TranscriptRecord[]): string[] {
   const addresses = transcript.filter((r) => r.kind === "speech" && r.to !== undefined && !r.human);
@@ -197,6 +215,7 @@ export function reportSections(options: {
       ? [`- DM narrations: ${narrations.length}, p50 ${percentile(narrations, 50)} ms, p95 ${percentile(narrations, 95)} ms (target ${TARGET_P95_MS.dm} ms)`]
       : []),
     ...talkLines(run?.talkRounds ?? []),
+    ...(run ? fightLines(run, usage) : []),
     ...addressLines(transcript),
     "",
     // Per model wake, whether it ended with its result or not: a combat turn can take two.
