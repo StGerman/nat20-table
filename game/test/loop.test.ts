@@ -164,6 +164,7 @@ test("an engine refusal goes back to the agent that made the call, counts as a r
   assert.equal(report.ended, "test over");
   assert.match(refusal, /^unknown_option/);
   assert.equal(retries, 1);
+  assert.ok(runLines(t, "retry").some((l) => l.startsWith("ilsa: submit refused: unknown_option")), "the retry is on the record");
   assert.deepEqual(runLines(t, "fallback"), []);
   assert.doesNotMatch(humanInputs(t), /no_such_spell/);
   for (const player of ["torva", "maren"]) assert.ok(!table.drainInbox(player).some((l) => l.includes("no_such_spell")));
@@ -232,6 +233,31 @@ test("once two retries are spent, no further change reaches the engine and the t
   assert.equal(t.requests().filter((r) => r.cmd === "submit" && r.actor === "ilsa").length, 3, "the first try and two retries");
   assert.deepEqual(texts.slice(3), Array(3).fill("No retries left for this decision; the table moves on."));
   assert.ok(!runLines(t, "retry").includes("ilsa didn't end its turn; nudged"), "no nudge once retries are spent");
+  assert.ok(runLines(t, "fallback").includes("ilsa's turn ends"));
+});
+
+test("a refusal that isn't retryable is logged as a loop bug and ends the decision", async () => {
+  const texts: string[] = [];
+  let t!: TestTable;
+  await play({
+    seed: 27,
+    onTable: (table) => (t = table),
+    players: {
+      torva: {},
+      maren: {},
+      ilsa: {
+        combat: async (tools) => {
+          texts.push((await tools.submitDecision({ option_id: "dash", variant: "fast" })).text);
+          texts.push((await tools.endTurn()).text);
+          t.table.end("test over");
+        },
+      },
+    },
+    dm: fightAtOnce,
+  });
+  assert.match(texts[0], /^bad_request/);
+  assert.equal(texts[1], "No retries left for this decision; the table moves on.");
+  assert.ok(runLines(t, "error").includes("ilsa: submit answered bad_request: dash has no variants; send it without one."));
   assert.ok(runLines(t, "fallback").includes("ilsa's turn ends"));
 });
 

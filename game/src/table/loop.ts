@@ -319,8 +319,7 @@ export class TableLoop {
     const since = this.table.engine.logHead;
     const woke = await this.wakePlayer(agent, "combat_turn", briefing);
     if (woke !== FAILED && this.table.retries(handle) < this.table.maxRetries && (await this.sameTurn(handle, since))) {
-      this.table.retry(handle);
-      this.table.log("retry", `${handle} didn't end its turn; nudged`, handle);
+      this.table.retry(handle, `${handle} didn't end its turn; nudged`);
       await this.wakePlayer(agent, "combat_turn", NUDGE);
     }
     if (await this.sameTurn(handle, since)) await this.fallBack(handle, "end_turn");

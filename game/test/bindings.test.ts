@@ -122,6 +122,19 @@ test("out of combat a player acts once per DM grant, and only an AI player can b
   }
 });
 
+test("once the DM's retries are spent, it can't grant an action", async () => {
+  const t = await testTable({ seed: 27 });
+  try {
+    const dm = new DmTools(t.table);
+    await dm.loadScene("m5_s3_yard");
+    for (let i = 0; i < 3; i++) assert.equal(dm.grantAction("goblin_1").ok, false);
+    assert.equal(dm.grantAction("maren").text, "No retries left for this decision; the table moves on.");
+    assert.equal(t.table.grants.size, 0);
+  } finally {
+    t.close();
+  }
+});
+
 test("two calls made at once on one grant act once, and a refused one keeps the grant", async () => {
   const t = await testTable({ seed: 27 });
   try {

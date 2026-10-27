@@ -471,6 +471,7 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":233}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":233}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":233}
+{"at":"t","speaker":"ilsa","channel":"run","kind":"retry","text":"ilsa: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":233}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Dash.","rolls":[],"log_head":246}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is under Dash.","rolls":[],"log_head":246}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":246}
@@ -685,6 +686,7 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva is conscious.","rolls":[],"log_head":334}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva is no longer unconscious.","rolls":[],"log_head":334}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":334}
+{"at":"t","speaker":"torva","channel":"run","kind":"retry","text":"torva: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":334}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Dash.","rolls":[],"log_head":337}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Dash.","rolls":[],"log_head":337}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":337}
@@ -733,6 +735,7 @@
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":358}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":358}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":358}
+{"at":"t","speaker":"ilsa","channel":"run","kind":"retry","text":"ilsa: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":358}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Dash.","rolls":[],"log_head":368}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is under Dash.","rolls":[],"log_head":368}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":368}
@@ -764,6 +767,7 @@
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":373}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":373}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":373}
+{"at":"t","speaker":"maren","channel":"run","kind":"retry","text":"maren: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":373}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Dash.","rolls":[],"log_head":397}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren is under Dash.","rolls":[],"log_head":397}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":397}

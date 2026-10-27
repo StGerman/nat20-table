@@ -44,8 +44,9 @@ const CHANGES = new Set<Command["cmd"]>([
 /**
  * Sends one bound command and turns the response into a tool outcome. A `stale_prompt` is the
  * orchestrator's problem (spec §6): it refreshes the prompt and resends once, which is not a retry.
- * A retryable refusal counts as one of the decision's retries; once they are spent, no further
- * change reaches the engine and the loop falls back.
+ * A retryable refusal counts as one of the decision's retries; a refusal that isn't retryable ends
+ * the decision. Once a decision is spent, no further change reaches the engine and the loop falls
+ * back.
  */
 export async function send(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
   const changes = CHANGES.has(command.cmd);
@@ -66,13 +67,15 @@ export async function send(table: TableState, viewer: Viewer, command: Command, 
   if (code === "not_your_turn" || code === "stale_prompt") {
     return { ok: false, retryable: false, text: refusal(response) };
   }
-  if (response.error?.retryable) table.retry(viewer);
-  else {
-    // Not retryable: logged as a loop bug and counted against the decision (spec §6).
-    table.retry(viewer);
-    table.log("error", `${viewer}: ${command.cmd} answered ${refusal(response)}`);
+  const retryable = response.error?.retryable ?? false;
+  // Not retryable: logged as a loop bug, and the decision falls back (spec §6).
+  if (!retryable) table.log("error", `${viewer}: ${command.cmd} answered ${refusal(response)}`);
+  // The human's own decisions have no budget: the loop counts their rejections (spec §6).
+  if (viewer !== table.human) {
+    if (retryable) table.retry(viewer, `${viewer}: ${command.cmd} refused: ${refusal(response)}`);
+    else table.spend(viewer);
   }
-  return { ok: false, retryable: response.error?.retryable ?? false, text: refusal(response), data: response.error };
+  return { ok: false, retryable, text: refusal(response), data: response.error };
 }
 
 const notNow = (what: string): ToolOutcome => ({ ok: false, retryable: false, text: `not now: ${what}` });
@@ -209,7 +212,7 @@ export class DmTools {
     if (this.table.exhausted("dm")) return this.table.spent();
     const handles = await this.sceneHandles();
     if (handles.includes(actor)) return undefined;
-    this.table.retry("dm");
+    this.table.retry("dm", `dm: ${actor} is not in the scene`);
     return { ok: false, retryable: true, text: `unknown_creature: ${actor} is not in the scene. Creatures: ${handles.join(", ")}.` };
   }
 
@@ -304,9 +307,10 @@ export class DmTools {
 
   /** Lets an AI player take one of its own options out of combat (spec §3.3 step 4). */
   grantAction(actor: string): ToolOutcome {
+    if (this.table.exhausted("dm")) return this.table.spent();
     if (this.table.inCombat) return notNow("in a fight each player acts on its own turn");
     if (!this.table.players.includes(actor)) {
-      this.table.retry("dm");
+      this.table.retry("dm", `dm: grant refused: ${actor} is not an AI player`);
       return { ok: false, retryable: true, text: `${actor} is not an AI player; AI players: ${this.table.players.join(", ")}` };
     }
     this.table.grants.add(actor);

@@ -113,9 +113,18 @@ export class TableState {
     return this.retryCounts.get(seat) ?? 0;
   }
 
-  /** Counts one retry against `seat`'s current decision. */
-  retry(seat: string): void {
+  /**
+   * Counts one retry against `seat`'s current decision, and writes why to the run channel: the count
+   * decides the fallback, the records are what the run report counts (spec §6).
+   */
+  retry(seat: string, why: string): void {
     this.retryCounts.set(seat, this.retries(seat) + 1);
+    this.log("retry", why, seat);
+  }
+
+  /** Ends `seat`'s current decision at once (a refusal that isn't retryable, spec §6): the loop falls back. */
+  spend(seat: string): void {
+    this.retryCounts.set(seat, this.maxRetries + 1);
   }
 
   /** A new decision for `seat`: its retries start again. */
@@ -190,8 +199,7 @@ export class TableState {
 
   /** A refusal of free text: counts as a retry, or once retries are spent, drops the text. */
   private refuse(speaker: string, what: string, reason: string, fix: string): ToolOutcome {
-    this.retry(speaker);
-    this.transcript.add({ speaker, channel: "run", kind: "retry", text: `${what} refused: ${reason}` });
+    this.retry(speaker, `${what} refused: ${reason}`);
     if (this.exhausted(speaker)) return this.spent();
     return { ok: false, retryable: true, text: `Refused, nobody heard it: ${reason}. ${fix}` };
   }
@@ -210,7 +218,7 @@ export class TableState {
     const refused = this.narrationGuard(text);
     if (refused) return this.refuse("dm", "narration", refused, "Rewrite it.");
     if (to && to !== this.human && !this.players.includes(to)) {
-      this.retry("dm");
+      this.retry("dm", `narration refused: ${to} is not a seat`);
       return { ok: false, retryable: true, text: `${to} is not a seat at the table; address the table or one of ${[this.human, ...this.players].join(", ")}.` };
     }
     await this.flush();
@@ -303,7 +311,7 @@ export class TableState {
   remember(fact: string): ToolOutcome {
     const refused = this.narrationGuard(fact);
     if (refused) {
-      this.retry("dm");
+      this.retry("dm", `memory refused: ${refused}`);
       return { ok: false, retryable: true, text: `Not remembered: ${refused}. Memory holds fiction only.` };
     }
     this.dmMemory.push(fact);
