@@ -513,6 +513,21 @@ test("AI players declare in parallel and are heard in seat order; a refused decl
   assert.doesNotMatch(turn, /9 HP/);
 });
 
+test("the human's words reach the AI players marked as the human's, so the leak scan skips them", async () => {
+  const { t } = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "Is this DC 15?" }]),
+    dm: { scene_open: async (tools) => void (await tools.narrate("The yard is quiet.")) },
+  });
+  const heard = readFileSync(path.join(t.runDir, "inputs.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as { seat: string; text: string; quoted?: string[] })
+    .filter((r) => r.seat !== "bren" && r.text.includes("Is this DC 15?"));
+  assert.deepEqual(heard.map((r) => r.seat).sort(), ["ilsa", "maren", "torva"]);
+  for (const r of heard) assert.deepEqual(r.quoted, ["bren: Is this DC 15?"]);
+});
+
 test("each seat has its own retry budget, so one player's refusals don't spend another's", async () => {
   const { t } = await play({
     seed: 27,

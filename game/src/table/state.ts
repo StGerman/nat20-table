@@ -51,6 +51,8 @@ export class TableState {
   private readonly inboxes = new Map<Handle, string[]>();
   /** Lines the DM hears before its next wake: what players said and declared. */
   private dmInbox: string[] = [];
+  /** The lines that carry the human's typed words to the AI players, as they hear them. */
+  private readonly humanLines = new Set<string>();
   /** Each AI player's private notes, in order (spec §3.6). Only that player reads them. */
   readonly notes = new Map<Handle, Array<{ kind: NoteKind; text: string }>>();
   /** What the DM established in fiction (spec §3.6). Only the DM reads it. */
@@ -166,9 +168,15 @@ export class TableState {
     return response;
   }
 
-  /** Records a model input a seat received, for the leak scan (spec §3.5, crates/nat20-duel/src/leak_scan.rs). */
+  /**
+   * Records a model input a seat received, for the leak scan (spec §3.5, crates/nat20-duel/src/leak_scan.rs).
+   * The lines in it that carry the human's words go along as `quoted`: the human may say anything,
+   * so the scan skips them as it skips what the human typed.
+   */
   recordInput(seat: Handle, text: string, human = false): void {
-    if (this.inputsFile) appendFileSync(this.inputsFile, JSON.stringify({ seat, text, ...(human ? { human: true } : {}) }) + "\n");
+    if (!this.inputsFile) return;
+    const quoted = human ? [] : [...new Set(text.split("\n").filter((line) => this.humanLines.has(line)))];
+    appendFileSync(this.inputsFile, JSON.stringify({ seat, text, ...(human ? { human: true } : {}), ...(quoted.length > 0 ? { quoted } : {}) }) + "\n");
   }
 
   /** Shows the human something, and records it as the human seat's input. */
@@ -301,6 +309,7 @@ export class TableState {
       await this.flush();
       this.transcript.add({ speaker: from, channel: "table", kind, text, human });
       const line = kind === "speech" ? `${from} says: ${text}` : `${from}: ${text}`;
+      if (human) for (const part of line.split("\n")) this.humanLines.add(part);
       for (const player of this.players) if (player !== from) this.inboxes.get(player)?.push(line);
       this.dmInbox.push(line);
       if (!human) this.show({ kind, speaker: from, text });
