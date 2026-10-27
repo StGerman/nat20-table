@@ -165,7 +165,48 @@ export function eventLine(event: Event): string {
   return event.kind === "roll" ? `[${event.roll.id}] ${event.text}` : event.text;
 }
 
-/** Events a seat is told about. The session's own start line is bookkeeping, not fiction. */
-export function tellable(events: Event[]): Event[] {
-  return events.filter((e) => e.kind !== "session_started");
+/**
+ * Each creature's deaths and every scene load, by `seq`, as the table has read them so far. A
+ * creature is dead from its death until the next scene load, which may place a new creature
+ * under the same handle.
+ */
+export interface Deaths {
+  readonly died: Map<Handle, number[]>;
+  readonly loads: number[];
+}
+
+/** An empty record of deaths, for a table that has read nothing yet. */
+export function noDeaths(): Deaths {
+  return { died: new Map(), loads: [] };
+}
+
+/**
+ * Events a seat is told about. The session's own start line is bookkeeping, not fiction, and so
+ * is the empty turn the engine still gives a dead creature that keeps its place in the
+ * initiative order. The deaths and scene loads in `events` are added to `deaths`, so one record
+ * serves every reader, in any order.
+ */
+export function tellable(events: Event[], deaths: Deaths): Event[] {
+  const note = (list: number[], seq: number) => {
+    if (!list.includes(seq)) list.push(seq);
+  };
+  for (const e of events) {
+    if (e.kind === "life_state" && e.state === "dead") {
+      const list = deaths.died.get(e.target) ?? [];
+      note(list, e.seq);
+      deaths.died.set(e.target, list);
+    }
+    if (e.kind === "scene_loaded") note(deaths.loads, e.seq);
+  }
+  const dead = (handle: Handle, seq: number) => {
+    const before = (deaths.died.get(handle) ?? []).filter((d) => d < seq);
+    if (before.length === 0) return false;
+    const died = Math.max(...before);
+    return !deaths.loads.some((l) => l > died && l < seq);
+  };
+  return events.filter((e) => {
+    if (e.kind === "session_started") return false;
+    if (e.kind !== "turn_start" && e.kind !== "turn_end") return true;
+    return !dead(e.actor, e.seq);
+  });
 }
