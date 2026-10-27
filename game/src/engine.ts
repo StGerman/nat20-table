@@ -112,6 +112,11 @@ export class GameEngine {
     writeFileSync(file, response.result.events.map((event) => JSON.stringify(event) + "\n").join(""));
   }
 
+  /** What the engine said about itself on `hello`: the build a run records (M7 design §3.1). */
+  get hello(): { version: string; engine_rev: string; schema_sha256: string } {
+    return this.client.hello;
+  }
+
   close(): void {
     this.client.close();
   }

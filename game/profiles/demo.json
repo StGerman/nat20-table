@@ -1,0 +1,9 @@
+{
+  "_comment": "The demo run profile (M7 spec D4, decision 0045): DM Opus 5.5 at medium effort, AI players Sonnet 5.5 at low, in Russian, you in the human's seat in this terminal. For Stas's M7 run and for showing the game: npm run play:demo.",
+  "dm-model": "claude-opus-5-5",
+  "dm-effort": "medium",
+  "player-model": "claude-sonnet-5-5",
+  "effort": "low",
+  "lang": "ru",
+  "seat": "ink"
+}

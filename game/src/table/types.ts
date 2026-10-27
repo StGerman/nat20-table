@@ -192,4 +192,25 @@ export interface TranscriptRecord {
   human?: boolean;
   /** For speech: the character it is spoken to (party talk §4.4). */
   to?: Handle;
+  /** For a fallback: why the decision fell back (M7 design §3.3; acceptance 5 fails only on `retries`). */
+  cause?: FallbackCause;
+  /**
+   * For the human's refusals (a `retry`, or the DM's `unmapped` fallback): the decision they belong
+   * to, the engine's prompt id in a fight and `explore:<round>` out of one, so acceptance 5 counts
+   * refusals per decision (M7 design §3.3).
+   */
+  decision?: string;
 }
+
+/**
+ * Why a decision fell back (M7 design §3.3): its retries were spent on refusals (`retries`), its wake
+ * timed out or failed (`timeout`, `error`), the DM couldn't map the human's words (`unmapped`), or the
+ * wake ended with nothing refused and nothing done (`unanswered`).
+ */
+export type FallbackCause = "retries" | "timeout" | "error" | "unmapped" | "unanswered";
+
+/**
+ * Which stop ended a run early (M7 design §3.1): the time limit, a stall, the plan's usage limit, the
+ * network, the operator's Ctrl+C or `/quit`, or a crash of the engine or the loop.
+ */
+export type StopKind = "time_limit" | "stalled" | "usage_limit" | "offline" | "operator" | "crash";

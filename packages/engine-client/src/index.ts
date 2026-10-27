@@ -58,6 +58,8 @@ export class EngineClient {
   private readonly stderrTail: string[] = [];
   private nextId = 1;
   private stopped: EngineStopped | undefined;
+  /** What the engine said about itself on `hello`: its contract version, core revision and schema hash. */
+  hello!: { version: string; engine_rev: string; schema_sha256: string };
 
   private constructor(binary: string, options: StartOptions) {
     this.options = options;
@@ -94,6 +96,7 @@ export class EngineClient {
       client.close();
       throw new Error(`engine schema ${result?.schema_sha256 ?? "unknown"} does not match client schema ${SCHEMA_SHA256}; regenerate with \`npm run gen\``);
     }
+    client.hello = { version: result.version, engine_rev: result.engine_rev, schema_sha256: result.schema_sha256 };
     return client;
   }
 

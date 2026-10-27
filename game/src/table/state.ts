@@ -7,7 +7,7 @@ import type { GameEngine } from "../engine.ts";
 import { eventLine, noDeaths, tellable } from "../view.ts";
 import type { Address } from "./floor.ts";
 import { Transcript } from "./transcript.ts";
-import type { Seat, TableEvent, ToolOutcome } from "./types.ts";
+import type { FallbackCause, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
 /** Kinds of private note an AI player keeps (spec §3.6, AGT-21). */
 export const NOTE_KINDS = ["fact", "promise", "suspicion", "plan", "bond"] as const;
@@ -81,6 +81,8 @@ export class TableState {
   dmToHuman = 0;
   /** Why the run ended, once it has. */
   ended: string | undefined;
+  /** When the run ended early, which stop ended it (M7 design §3.1); unset when it ended in play. */
+  stop: StopKind | undefined;
   /** The human's own rejected decisions: no limit, but acceptance 5 counts them (spec §6). */
   humanRejections = 0;
   /** Fallbacks the loop took (spec §6). */
@@ -476,9 +478,11 @@ export class TableState {
     return { ok: true, text: "remembered" };
   }
 
-  /** Ends the run: the adventure's last exit, a stop, or the human's `/quit`. */
-  end(reason: string): void {
-    this.ended ??= reason;
+  /** Ends the run: the adventure's last exit, a stop, or the human's `/quit`. The first reason stands. */
+  end(reason: string, stop?: StopKind): void {
+    if (this.ended !== undefined) return;
+    this.ended = reason;
+    this.stop = stop;
   }
 
   /**
@@ -491,9 +495,12 @@ export class TableState {
     this.log("hand", refused ? `${word} (left out: ${refused})` : said ? `${word}: ${said}` : word, handle);
   }
 
-  /** The orchestrator's own bookkeeping line: a retry, a fallback, an error, a raised hand. */
-  log(kind: "retry" | "fallback" | "error" | "system" | "intent" | "hand", text: string, speaker = "table"): void {
-    this.transcript.add({ speaker, channel: "run", kind, text });
+  /**
+   * The orchestrator's own bookkeeping line: a retry, a fallback, an error, a raised hand. A fallback
+   * carries its cause, and the human's refusals the decision they belong to (M7 design §3.3).
+   */
+  log(kind: "retry" | "fallback" | "error" | "system" | "intent" | "hand", text: string, speaker = "table", about: { cause?: FallbackCause; decision?: string } = {}): void {
+    this.transcript.add({ speaker, channel: "run", kind, text, ...about });
     if (kind === "fallback" && speaker === "dm") this.unnarrated = true;
   }
 }

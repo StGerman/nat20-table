@@ -20,7 +20,12 @@
     "pack:schema": "node --experimental-strip-types --no-warnings game/src/pack/cli.ts schema",
     "play:ai-party": "node --experimental-strip-types --no-warnings game/src/play/ai-party.ts",
     "play:scene": "node --experimental-strip-types --no-warnings game/src/play/scene.ts",
-    "play:exit": "node --experimental-strip-types --no-warnings game/src/play/scene.ts --scenes s1_village_green,s3_mill_yard --seat ink"
+    "play:exit": "node --experimental-strip-types --no-warnings game/src/play/scene.ts --scenes s1_village_green,s3_mill_yard --seat ink",
+    "play:full": "node --experimental-strip-types --no-warnings game/src/play/full.ts",
+    "play:cheap": "node --experimental-strip-types --no-warnings game/src/play/full.ts --profile cheap",
+    "play:demo": "node --experimental-strip-types --no-warnings game/src/play/full.ts --profile demo",
+    "runs:verdict": "node --experimental-strip-types --no-warnings game/src/play/runs.ts verdict",
+    "runs:finish": "node --experimental-strip-types --no-warnings game/src/play/runs.ts finish"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

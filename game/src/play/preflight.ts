@@ -117,6 +117,19 @@ function terminal(): Check {
   };
 }
 
+/** On macOS, whether the Mac runs on its battery: a two-hour run should be on power (M7 design §3.1). */
+function power(): Check | undefined {
+  if (process.platform !== "darwin") return undefined;
+  const batt = sh("pmset", ["-g", "batt"]);
+  if (batt.error || batt.status !== 0) return undefined;
+  const onBattery = batt.stdout.includes("Battery Power");
+  return {
+    ok: "note",
+    what: "Power",
+    detail: onBattery ? "on battery: plug the Mac in before npm run play:full (the run keeps it awake with caffeinate)" : "on power",
+  };
+}
+
 function checkout(): Check {
   const head = sh("git", ["log", "-1", "--format=%h %s"]).stdout.trim();
   const branch = sh("git", ["branch", "--show-current"]).stdout.trim() || "detached";
@@ -124,7 +137,7 @@ function checkout(): Check {
   return { ok: "note", what: "Checkout", detail: `${branch} at ${head}${dirty ? ", with local changes" : ""}` };
 }
 
-const checks = [node(), packages(), rust(), engine(), ...claudeCode(), noApiKey(), terminal(), checkout()];
+const checks = [node(), packages(), rust(), engine(), ...claudeCode(), noApiKey(), terminal(), ...[power()].filter((c) => c !== undefined), checkout()];
 console.log("Preflight for the Milestone 6 live runs (docs/runbook/first-local-run.md, Part 1). Nothing here calls a model.\n");
 for (const c of checks) {
   console.log(`${c.ok === "note" ? "·" : c.ok ? "✓" : "✗"} ${c.what}: ${c.detail}`);

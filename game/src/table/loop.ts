@@ -3,7 +3,7 @@
 // decides who is woken next. Agents act only through their bound tools and the human only through
 // the seat; every number the human picks becomes a complete command with no model call (D5).
 import { EngineStopped, type Event, type Handle, type State } from "@nat20-table/engine-client";
-import { TurnTimeout, UsageLimitReached } from "../errors.ts";
+import { ConnectionLost, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
 import { FLOOR_BOUND, handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
@@ -11,7 +11,7 @@ import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
 import { BarkTools, DmTools, HandTools, PlayerTools, ReactionFloor, send } from "./tools.ts";
-import type { DmAgent, DmWake, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, ToolOutcome } from "./types.ts";
+import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, ToolOutcome } from "./types.ts";
 
 /**
  * What the run does with a scene the DM loads: play it, end the run before it, or pass over it, so
@@ -47,6 +47,29 @@ export interface LoopOptions {
   reactionGraceMs?: number;
   /** How long a reaction may take before it is cancelled. Default `BARK_TIMEOUT_MS`. */
   barkTimeoutMs?: number;
+  /**
+   * Explore rounds in a row with no engine event before the run stops as `stalled` (M7 design §3.1):
+   * the DM never moved the story on. Default 0: no stall stop.
+   */
+  stallRounds?: number;
+  /** Told each time a scene starts or ends and each time a fight ends: the unattended run's progress lines. */
+  onProgress?: (progress: Progress) => void;
+}
+
+/** A moment the unattended run prints a line for (M7 design §3.1). */
+export type Progress =
+  | { kind: "scene_start"; scene: string }
+  | { kind: "scene_end"; scene: string; rounds: number }
+  | { kind: "fight_end"; scene: string; text: string };
+
+/** One scene as the run played it, for `run.json` (M7 spec §4.1). */
+export interface SceneTime {
+  id: string;
+  started_at: string;
+  /** Absent for the scene the run ended in before it was left. */
+  ended_at?: string;
+  /** Combat rounds fought in it. */
+  rounds: number;
 }
 
 /** One trigger in a fight and the reactions it woke, for the report (party talk §5 R1, AGT-34). */
@@ -110,7 +133,14 @@ export interface RunReport {
   reactions: FightReaction[];
   /** Combat rounds played, and the AI players' lines in them: on their turns and between them (party talk goal 4). */
   fight: { rounds: number; lines: number };
+  /** Which stop ended the run early; absent when it ended in play (M7 design §3.1). */
+  stop?: StopKind;
+  /** Each scene played, with when it started and ended (M7 spec §4.1). */
+  sceneTimes: SceneTime[];
 }
+
+/** Model wakes in a row that lost the connection before the run stops as `offline` (M7 design §3.1). */
+export const OFFLINE_WAKES = 3;
 
 /** How long another wake of a player waits for its reaction in flight (R1 spec §6). */
 export const REACTION_GRACE_MS = 5_000;
@@ -129,9 +159,14 @@ const QUIET = new Set<Event["kind"]>(["turn_start", "turn_end", "round"]);
 /** A wake that ended in a model error or timeout: the decision falls back (spec §6). */
 const FAILED = Symbol("failed");
 
-/** A plan limit or a dead engine stops the run; nothing falls back (spec §6). */
+/** A plan limit, a lost network or a dead engine stops the run; nothing falls back (spec §6). */
 function stopsTheRun(error: unknown): error is Error {
-  return error instanceof UsageLimitReached || error instanceof EngineStopped;
+  return error instanceof UsageLimitReached || error instanceof EngineStopped || error instanceof ModelOffline;
+}
+
+/** Which stop an error that stops the run is (M7 design §3.1). */
+function stopOf(error: Error): StopKind {
+  return error instanceof UsageLimitReached ? "usage_limit" : error instanceof ModelOffline ? "offline" : "crash";
 }
 
 export class TableLoop {
@@ -184,6 +219,17 @@ export class TableLoop {
   private fightsOver = 0;
   /** Who last acted, as of the last look at the fight's events: a trigger's `by` (`doerAfter`). */
   private doer: Handle | undefined;
+  private readonly stallRounds: number;
+  /** Explore rounds in a row that changed nothing in the engine. */
+  private quietRounds = 0;
+  /** Explore rounds so far: the decision a human's refusal out of combat belongs to. */
+  private exploreRounds = 0;
+  /** Model wakes in a row that lost the connection. */
+  private offlineWakes = 0;
+  /** Why each seat's last wake failed, while it is the seat's last: a fallback's cause. */
+  private readonly failedWake = new Map<string, "timeout" | "error">();
+  private readonly onProgress: (progress: Progress) => void;
+  private readonly sceneTimes: SceneTime[] = [];
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -207,6 +253,8 @@ export class TableLoop {
     this.onScene = options.onScene ?? (() => "continue");
     this.maxSteps = options.maxSteps ?? 5000;
     this.situation = options.situation ?? false;
+    this.stallRounds = options.stallRounds ?? 0;
+    this.onProgress = options.onProgress ?? (() => undefined);
   }
 
   /** Plays from `firstScene` until the adventure ends, the human quits, or the run is stopped. */
@@ -218,18 +266,20 @@ export class TableLoop {
       if (!loaded.ok) throw new Error(`the first scene didn't load: ${loaded.text}`);
       while (!this.table.ended) {
         if (++steps > this.maxSteps) {
-          this.table.end(`stopped after ${this.maxSteps} steps`);
+          this.table.end(`stopped after ${this.maxSteps} steps`, "stalled");
           break;
         }
         await this.step();
       }
     } catch (error) {
-      if (stopsTheRun(error)) this.table.end(error.message);
+      if (stopsTheRun(error)) this.table.end(error.message, stopOf(error));
       else {
         failure = error;
-        this.table.end(`the loop failed: ${error instanceof Error ? error.message : String(error)}`);
+        this.table.end(`the loop failed: ${error instanceof Error ? error.message : String(error)}`, "crash");
       }
     }
+    // A run that ended in play left its last scene; one a stop cut short didn't.
+    if (!this.table.stop) this.endScene();
     // A reaction still in flight has nothing left to react to.
     await Promise.all([...this.barks.values()].map((bark) => (bark.cut(), bark.done)));
     const ended = this.table.ended ?? "ended";
@@ -265,6 +315,8 @@ export class TableLoop {
       talkRounds: [...this.talkRounds],
       reactions: [...this.reactions],
       fight: { rounds: this.fightRounds.size, lines: this.table.fightLines },
+      ...(this.table.stop ? { stop: this.table.stop } : {}),
+      sceneTimes: this.sceneTimes.map((t) => ({ ...t })),
     };
   }
 
@@ -317,7 +369,10 @@ export class TableLoop {
       return;
     }
     const first = this.scenes.length === 0;
+    this.endScene();
     this.scenes.push(sceneId);
+    this.sceneTimes.push({ id: sceneId, started_at: new Date().toISOString(), rounds: 0 });
+    this.onProgress({ kind: "scene_start", scene: sceneId });
     this.table.log("system", `scene ${sceneId}`);
     if (!first) await this.closeScene();
     if (this.table.ended) return;
@@ -334,6 +389,15 @@ export class TableLoop {
       `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`,
     );
     await this.settle();
+  }
+
+  /** The scene being played is over: its end time and its fight rounds, for `run.json`. */
+  private endScene(): void {
+    const scene = this.sceneTimes.at(-1);
+    if (!scene || scene.ended_at) return;
+    scene.ended_at = new Date().toISOString();
+    scene.rounds = [...this.fightRounds].filter((key) => key.split(":")[1] === scene.id).length;
+    this.onProgress({ kind: "scene_end", scene: scene.id, rounds: scene.rounds });
   }
 
   /**
@@ -468,8 +532,25 @@ export class TableLoop {
   private async humanRejected(outcome: ToolOutcome): Promise<void> {
     this.table.humanRejections += 1;
     const message = (outcome.data as { message?: string } | undefined)?.message ?? outcome.text;
-    this.table.log("retry", `${this.table.human}'s choice was not accepted: ${message}`, this.table.human);
+    this.table.log("retry", `${this.table.human}'s choice was not accepted: ${message}`, this.table.human, { decision: this.humanDecision() });
     this.table.show({ kind: "info", title: "Not accepted", text: message });
+  }
+
+  /**
+   * The decision the human is making now (M7 design §3.3): the engine's prompt in a fight, the
+   * explore round out of one.
+   */
+  private humanDecision(): string {
+    const a = this.table.awaiting;
+    return a.kind === "action" || a.kind === "reaction" ? a.prompt_id : `explore:${this.exploreRounds}`;
+  }
+
+  /**
+   * Why `seat`'s decision falls back (M7 design §3.3): its last wake failed, its retries were spent
+   * on refusals, or it ended with nothing refused and nothing done.
+   */
+  private causeOf(seat: string): FallbackCause {
+    return this.failedWake.get(seat) ?? (this.table.exhausted(seat) ? "retries" : "unanswered");
   }
 
   /** The human typed words on their combat turn: the DM maps them to the human's decisions (D5). */
@@ -505,7 +586,7 @@ export class TableLoop {
     // Words the DM only answered (talk, a question back) are understood: the turn goes on.
     if (this.table.acted === acted && this.table.dmToHuman === answered && still) {
       this.table.fallbacks += 1;
-      this.table.log("fallback", `the DM didn't map ${human}'s words; back to the human`, "dm");
+      this.table.log("fallback", `the DM didn't map ${human}'s words; back to the human`, "dm", { cause: "unmapped", decision: this.humanDecision() });
       this.table.show({ kind: "info", title: "Not understood", text: "I didn't get that; pick from /options." });
     }
     if (still) await this.offerChoices(true);
@@ -605,7 +686,7 @@ export class TableLoop {
   private async fallBack(handle: Handle, what: "end_turn" | "decline"): Promise<void> {
     const a = this.table.awaiting;
     this.table.fallbacks += 1;
-    this.table.log("fallback", what === "end_turn" ? `${handle}'s turn ends` : `${handle} lets the reaction pass`, handle);
+    this.table.log("fallback", what === "end_turn" ? `${handle}'s turn ends` : `${handle} lets the reaction pass`, handle, { cause: this.causeOf(handle) });
     const response =
       what === "end_turn" && a.kind === "action" && a.actor === handle
         ? await this.table.engine.request(handle, { cmd: "end_turn", actor: handle, prompt_id: a.prompt_id })
@@ -673,6 +754,7 @@ export class TableLoop {
   private async combatOver(event: Event): Promise<void> {
     // Its last blow or a surrender gets its reactions too (party talk R1).
     await this.startReactions();
+    this.onProgress({ kind: "fight_end", scene: this.scenes.at(-1) ?? "", text: event.text });
     await this.wakeDm("combat_over", undefined, `The fight is over: ${event.text}`, "Narrate how it ends, then go on with the scene.");
     await this.table.flush();
   }
@@ -721,6 +803,18 @@ export class TableLoop {
   /** One round out of combat (spec §3.3): the human, the AI players' declarations, the DM. */
   private async exploreRound(): Promise<void> {
     const human = this.table.human;
+    this.exploreRounds += 1;
+    const head = this.table.engine.logHead;
+    await this.exploreRoundBody(human);
+    // Out of combat the engine logs no turn bookkeeping, so a round that left the log as it was
+    // changed nothing: no check, move, rest, scene or fight (M7 design §3.1).
+    this.quietRounds = this.table.engine.logHead === head ? this.quietRounds + 1 : 0;
+    if (this.stallRounds > 0 && this.quietRounds >= this.stallRounds && !this.table.ended) {
+      this.table.end(`stalled: ${this.quietRounds} explore rounds in a row changed nothing in the engine`, "stalled");
+    }
+  }
+
+  private async exploreRoundBody(human: Handle): Promise<void> {
     await this.table.flush();
     this.top = this.shown = [];
     let line = "";
@@ -904,7 +998,7 @@ export class TableLoop {
       if (outcome.ok) return;
       if (!outcome.retryable) {
         this.table.fallbacks += 1;
-        this.table.log("fallback", `${handle}'s declaration is dropped: ${outcome.text}`, handle);
+        this.table.log("fallback", `${handle}'s declaration is dropped: ${outcome.text}`, handle, { cause: this.causeOf(handle) });
         return;
       }
       intent = await this.wakePlayer(
@@ -929,7 +1023,7 @@ export class TableLoop {
       await this.wakePlayer(agent, "granted", briefing);
       if (this.table.grants.delete(handle)) {
         this.table.fallbacks += 1;
-        this.table.log("fallback", `${handle} passes on the action it was granted`, handle);
+        this.table.log("fallback", `${handle} passes on the action it was granted`, handle, { cause: this.causeOf(handle) });
       }
       acted ||= this.table.acted > before;
     }
@@ -988,7 +1082,7 @@ export class TableLoop {
         this.table.show({ kind: "status", text: this.paused ? "Paused: AI players wait until /pause again." : "Resumed." });
         return;
       case "quit":
-        this.table.end("the human quit");
+        this.table.end("the human quit", "operator");
         return;
     }
   }
@@ -1059,10 +1153,15 @@ export class TableLoop {
     await this.quiet(agent.handle);
     this.table.recordInput(agent.handle, briefing);
     const done = this.waitFor(`${agent.handle} is thinking`);
+    this.failedWake.delete(agent.handle);
     try {
-      return await agent.wake(wake, briefing, tools ?? this.tools.get(agent.handle)!);
+      const answer = await agent.wake(wake, briefing, tools ?? this.tools.get(agent.handle)!);
+      this.online();
+      return answer;
     } catch (error) {
       if (stopsTheRun(error)) throw error;
+      this.offline(error);
+      this.failedWake.set(agent.handle, error instanceof TurnTimeout ? "timeout" : "error");
       const why = error instanceof TurnTimeout ? "timed out" : `failed: ${error instanceof Error ? error.message : String(error)}`;
       this.table.log("error", `${agent.handle} (${wake}) ${why}`, agent.handle);
       return FAILED;
@@ -1171,7 +1270,7 @@ export class TableLoop {
     const timer = setTimeout(() => cut("cut"), this.barkTimeoutMs);
     this.table.recordInput(handle, briefing);
     const woke = agent.wake("bark", briefing, tools).catch((error) => {
-      if (stopsTheRun(error)) this.table.end(error.message);
+      if (stopsTheRun(error)) this.table.end(error.message, stopOf(error));
       else if (!(error instanceof TurnTimeout)) this.table.log("error", `${handle} (bark) failed: ${error instanceof Error ? error.message : String(error)}`, handle);
     });
     const done = Promise.race([woke, stopped]).then(() => {
@@ -1227,21 +1326,38 @@ export class TableLoop {
     const done = this.waitFor("The DM is thinking");
     try {
       const said = await this.dm.wake(wake, briefing, this.dmTools);
+      this.online();
       if (this.table.exhausted("dm")) {
         this.table.fallbacks += 1;
-        this.table.log("fallback", `the DM's retries ran out (${wake}); the engine lines stand alone`, "dm");
+        this.table.log("fallback", `the DM's retries ran out (${wake}); the engine lines stand alone`, "dm", { cause: "retries" });
       }
       return said;
     } catch (error) {
       if (stopsTheRun(error)) throw error;
+      this.offline(error);
       const why = error instanceof TurnTimeout ? "timed out" : `failed: ${error instanceof Error ? error.message : String(error)}`;
       this.table.log("error", `dm (${wake}) ${why}`, "dm");
       this.table.fallbacks += 1;
-      this.table.log("fallback", `the DM's ${wake} is skipped; the engine lines stand alone`, "dm");
+      this.table.log("fallback", `the DM's ${wake} is skipped; the engine lines stand alone`, "dm", { cause: error instanceof TurnTimeout ? "timeout" : "error" });
       return undefined;
     } finally {
       done();
     }
+  }
+
+  /** A model wake came back: the connection is there. */
+  private online(): void {
+    this.offlineWakes = 0;
+  }
+
+  /**
+   * A model wake failed: one that lost the connection counts toward the `offline` stop, which the
+   * next wake throws (M7 design §3.1). Any other failure says nothing about the network.
+   */
+  private offline(error: unknown): void {
+    if (!(error instanceof ConnectionLost)) return;
+    this.offlineWakes += 1;
+    if (this.offlineWakes >= OFFLINE_WAKES) this.table.end(`${this.offlineWakes} model wakes in a row lost the connection to the API`, "offline");
   }
 
   /** Tells the seat a model wake started; the returned call says it ended. The newest one in flight is shown. */

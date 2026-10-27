@@ -1,0 +1,9 @@
+{
+  "_comment": "The cheap run profile (M7 spec D4, decision 0045): DM Sonnet 5.5 at medium effort, AI players Haiku 5.5 at high, in Russian. For the discovery run, every iteration run and the unattended M7 run: npm run play:cheap. The seat stays scripted until a table can have no human (AGT-40); then it becomes ai.",
+  "dm-model": "claude-sonnet-5-5",
+  "dm-effort": "medium",
+  "player-model": "claude-haiku-5-5",
+  "effort": "high",
+  "lang": "ru",
+  "seat": "scripted"
+}

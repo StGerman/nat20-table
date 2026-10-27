@@ -12,6 +12,7 @@ import type { FightReaction, RunReport, SceneChoice, TalkRound } from "../table/
 import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, summarize, type UsageRecord } from "../usage.ts";
+import type { RunRecord } from "./record.ts";
 
 /** p95 latency targets (scope §6.4): an AI player's turn, a DM narration. */
 export const TARGET_P95_MS = { player: 10_000, dm: 6_000 };
@@ -187,6 +188,23 @@ export function addressLines(transcript: TranscriptRecord[]): string[] {
   for (const r of addresses) pairs.set(`${r.speaker} to ${r.to}`, (pairs.get(`${r.speaker} to ${r.to}`) ?? 0) + 1);
   const most = [...pairs].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([pair, n]) => `${pair} ${n}`);
   return [`- Lines spoken to a companion: ${addresses.length} of ${speech} AI lines (${most.join(", ")})`];
+}
+
+/** The report's table of scene times against the pack's targets (M7 spec §4.1), from `run.json`. */
+export function timingLines(record: Pick<RunRecord, "scenes" | "ended_at">): string[] {
+  if (record.scenes.length === 0) return [];
+  const minutes = (ms: number) => (ms / 60_000).toFixed(1);
+  const rows = record.scenes.map((s) => {
+    const end = s.ended_at ?? record.ended_at;
+    const took = end ? Date.parse(end) - Date.parse(s.started_at) : undefined;
+    const over = took !== undefined && s.target_minutes !== null && took > s.target_minutes * 60_000;
+    return `| ${s.id} | ${took === undefined ? "n/a" : minutes(took)}${s.ended_at ? "" : " (not finished)"} | ${s.target_minutes ?? "n/a"}${over ? " (over)" : ""} | ${s.rounds} |`;
+  });
+  const first = Date.parse(record.scenes[0].started_at);
+  const last = record.scenes.at(-1)!.ended_at ?? record.ended_at;
+  const total = last ? minutes(Date.parse(last) - first) : "n/a";
+  const target = record.scenes.reduce((n, s) => n + (s.target_minutes ?? 0), 0);
+  return ["Scene times:", "", "| Scene | Minutes | Target | Combat rounds |", "|---|---|---|---|", ...rows, `| All | ${total} | ${target} | |`];
 }
 
 /** The report's Markdown sections on the run, the usage and the audit. */

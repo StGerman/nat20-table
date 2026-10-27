@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { REPO, SESSION_LOG, type GameEngine } from "../src/engine.ts";
 import { readPack } from "../src/pack/read.ts";
 import { guards, scenePlan } from "../src/play/run.ts";
-import { TurnTimeout, UsageLimitReached } from "../src/errors.ts";
+import { ConnectionLost, TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
 import { attackNearest, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
@@ -550,6 +550,57 @@ test("a model timeout falls back without a retry or a nudge", async () => {
   assert.deepEqual(runLines(t, "retry").filter((l) => l.startsWith("ilsa")), []);
 });
 
+test("a fallback says why: a timed-out wake is a timeout, not spent retries (M7 design §3.3)", async () => {
+  let t!: TestTable;
+  await play({
+    seed: 27,
+    onTable: (table) => (t = table),
+    players: {
+      torva: {},
+      maren: {},
+      ilsa: {
+        combat: async () => {
+          t.table.end("test over");
+          throw new TurnTimeout("ilsa: turn timed out after 20000 ms");
+        },
+      },
+    },
+    dm: fightAtOnce,
+  });
+  const fallback = t.table.transcript.records.find((r) => r.kind === "fallback" && r.speaker === "ilsa");
+  assert.equal(fallback?.cause, "timeout");
+});
+
+test("three model wakes in a row that lost the connection stop the run as offline (M7 design §3.1)", async () => {
+  const { report, t } = await play({
+    seed: 27,
+    // No AI player: a wake that comes back resets the count, and scripted players always do.
+    players: {},
+    dm: {
+      scene_open: async () => Promise.reject(new ConnectionLost("dm: no connection to the API")),
+      table_turn: async () => Promise.reject(new ConnectionLost("dm: no connection to the API")),
+      narrate: async () => Promise.reject(new ConnectionLost("dm: no connection to the API")),
+    },
+  });
+  assert.equal(report.stop, "offline");
+  assert.match(report.ended, /3 model wakes in a row lost the connection/);
+  assert.ok(t.table.transcript.records.filter((r) => r.kind === "fallback").every((r) => r.cause === "error"));
+});
+
+test("explore rounds that change nothing in the engine stop the run as stalled (M7 design §3.1)", async () => {
+  const { report } = await play({
+    seed: 27,
+    dm: { table_turn: async (tools) => void (await tools.narrate("The wind turns the mill's sails.")) },
+    loop: { stallRounds: 3 },
+  });
+  assert.equal(report.stop, "stalled");
+  assert.match(report.ended, /3 explore rounds in a row/);
+  // The scene the stop cut short has a start and no end.
+  assert.equal(report.sceneTimes.length, 1);
+  assert.equal(report.sceneTimes[0].id, "m5_s3_yard");
+  assert.equal(report.sceneTimes[0].ended_at, undefined);
+});
+
 test("the plan's usage limit stops the run cleanly and says so", async () => {
   const { t, report, seat } = await play({
     seed: 27,
@@ -559,6 +610,7 @@ test("the plan's usage limit stops the run cleanly and says so", async () => {
   assert.equal(report.ended, "The Claude plan's usage limit was reached.");
   assert.deepEqual(seat.shown.at(-1), { kind: "end", text: report.ended });
   assert.ok(runLines(t, "system").includes(`run ended: ${report.ended}`));
+  assert.equal(report.stop, "usage_limit");
   assert.deepEqual(runLines(t, "fallback"), []);
 });
 
