@@ -67,6 +67,8 @@ export class TableState {
   acted = 0;
   /** A question the DM asked the human that the human hasn't answered yet. */
   question: string | undefined;
+  /** DM narrations and questions the human was shown, so the loop can tell whether a wake answered them. */
+  dmToHuman = 0;
   /** Why the run ended, once it has. */
   ended: string | undefined;
   /** The human's own rejected decisions: no limit, but acceptance 5 counts them (spec §6). */
@@ -266,7 +268,10 @@ export class TableState {
     for (const player of this.players) {
       if (!to || to === player) this.inboxes.get(player)?.push(`DM${to ? " (to you)" : ""}: ${text}`);
     }
-    if (!to || to === this.human) this.show({ kind: "narration", speaker: "dm", text, ...(to ? { to } : {}) });
+    if (!to || to === this.human) {
+      this.dmToHuman += 1;
+      this.show({ kind: "narration", speaker: "dm", text, ...(to ? { to } : {}) });
+    }
     return { ok: true, text: "said" };
   }
 
@@ -278,6 +283,7 @@ export class TableState {
     await this.flush();
     this.transcript.add({ speaker: "dm", channel: `to:${this.human}`, kind: "question", text });
     this.question = text;
+    this.dmToHuman += 1;
     this.show({ kind: "question", text });
     return { ok: true, text: "asked; the answer comes with the human's next action" };
   }

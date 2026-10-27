@@ -450,6 +450,27 @@ test("the human's words in a fight go to the DM, and back to the human when the 
   assert.deepEqual(runLines(mapped.t, "fallback"), []);
 });
 
+test("the human's words in a fight that the DM answers in fiction are not 'not understood'", async () => {
+  // The exit run (2026-10-27): Bren asked a goblin a question; the DM answered and asked back, and the
+  // table still said "I didn't get that" and counted a fallback (TASKS.md AGT-29).
+  const talk = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "Ask the goblin what they want with the girl" }]),
+    dm: {
+      ...fightAtOnce,
+      map_combat: async (tools) => {
+        await tools.narrate("The goblin squeals that the boss wants the grain.");
+        await tools.askHuman("Do you spare him?");
+      },
+    },
+  });
+  assert.ok(!talk.seat.shown.some((e) => e.kind === "info" && e.text === "I didn't get that; pick from /options."));
+  assert.deepEqual(runLines(talk.t, "fallback"), []);
+  const asked = talk.seat.shown.findIndex((e) => e.kind === "question");
+  assert.ok(asked >= 0);
+  assert.equal(talk.seat.shown.slice(asked + 1).find((e) => e.kind === "options" || e.kind === "info")?.kind, "options", "the list comes back");
+});
+
 test("a check the DM repeats for the human is refused to the DM, and the check id never reaches the human", async () => {
   const outcomes: string[] = [];
   const { t } = await play({

@@ -360,6 +360,7 @@ export class TableLoop {
     const human = this.table.human;
     await this.table.declare(human, text);
     const acted = this.table.acted;
+    const answered = this.table.dmToHuman;
     const narrated = this.table.narratedTo;
     const turnOver = (e: Event) => e.kind === "combat_over" || (e.kind === "turn_end" && e.actor === human);
     // The DM's narration in this wake is about this turn: what follows the turn (the monsters'
@@ -384,7 +385,8 @@ export class TableLoop {
       this.dmBacklog = [...this.dmBacklog, ...events.filter((e) => e.seq > this.table.narratedTo)];
     }
     const still = await this.sameTurn(human, since);
-    if (this.table.acted === acted && still) {
+    // Words the DM only answered (talk, a question back) are understood: the turn goes on.
+    if (this.table.acted === acted && this.table.dmToHuman === answered && still) {
       this.table.fallbacks += 1;
       this.table.log("fallback", `the DM didn't map ${human}'s words; back to the human`, "dm");
       this.table.show({ kind: "info", title: "Not understood", text: "I didn't get that; pick from /options." });
