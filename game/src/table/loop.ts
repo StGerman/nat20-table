@@ -634,6 +634,8 @@ export class TableLoop {
   private async talkRound(humanLine: string): Promise<void> {
     const started = performance.now();
     const handles = [...this.agents.keys()];
+    // A table with no AI player has no talk round, and the report counts none.
+    if (handles.length === 0) return;
     this.table.beginTalk();
     for (const handle of handles) this.table.resetRetries(handle);
     // The DM's narration names the characters it tells about; only one it speaks to has the floor first.
@@ -664,8 +666,8 @@ export class TableLoop {
       const answer = answers[i];
       const hand: Hand = typeof answer === "string" ? handAnswer(answer) : { kind: "unread", text: answer === FAILED ? "(the wake failed)" : "" };
       hands.set(handle, hand);
-      const why = hand.kind === "unread" ? hand.text : hand.why;
-      this.table.log("hand", `${hand.kind.toUpperCase()}${hand.kind === "act" ? `: ${hand.intent}` : ""}${why ? ` (${why})` : ""}`, handle);
+      const said = hand.kind === "unread" ? hand.text : hand.kind === "act" ? [hand.intent, hand.why].filter(Boolean).join(" / ") : hand.why;
+      this.table.logHand(handle, hand.kind.toUpperCase(), said);
     }
     for (const [handle, hand] of hands) {
       if (hand.kind === "act" && !this.table.ended) await this.declareFor(handle, hand.intent);

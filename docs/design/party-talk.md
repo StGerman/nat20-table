@@ -103,7 +103,7 @@ sequenceDiagram
 ### 4.3 The hand-raise wake
 
 - A new player wake, `hand`. The brief holds what was heard and what happened, as today, and asks one question: "Is any of this important to {name} now, given her goal, her character and what she thinks of the others? If not, pass."
-- The answer is text only: `SPEAK`, `BOTH`, `ACT: <one sentence>` or `PASS`, with half a sentence of why that the loop logs and never shows. An answer that isn't one of the four counts as a pass. A `say`, `submit_decision`, `move`, `end_turn` or `react` call during a hand wake is refused ("wait for the floor"); `look`, `my_sheet` and `note` still work.
+- The answer is text only: `SPEAK`, `BOTH`, `ACT: <one sentence>` or `PASS`, with half a sentence of why that the loop logs and never shows (through the speech guard first, since the audit reads every transcript line). An answer that isn't one of the four counts as a pass. A `say`, `submit_decision`, `move`, `end_turn` or `react` call during a hand wake is refused ("wait for the floor"); `look`, `my_sheet` and `note` still work.
 - It runs in the agent's existing session for the scene, so its context comes from cache. One model call instead of two.
 
 ### 4.4 Addressing a companion

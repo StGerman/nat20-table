@@ -415,6 +415,16 @@ export class TableState {
     this.ended ??= reason;
   }
 
+  /**
+   * A raised hand on the run channel (party talk §4.3): its word, then what the player wrote after
+   * it. That text is the model's own and nobody hears it, but the audit reads every line, so it goes
+   * through the speech guard first: a number or a game term in it is left out, and the reason kept.
+   */
+  logHand(handle: Handle, word: string, said: string): void {
+    const refused = said ? this.speechGuard(said) : undefined;
+    this.log("hand", refused ? `${word} (left out: ${refused})` : said ? `${word}: ${said}` : word, handle);
+  }
+
   /** The orchestrator's own bookkeeping line: a retry, a fallback, an error, a raised hand. */
   log(kind: "retry" | "fallback" | "error" | "system" | "intent" | "hand", text: string, speaker = "table"): void {
     this.transcript.add({ speaker, channel: "run", kind, text });

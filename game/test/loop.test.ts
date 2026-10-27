@@ -130,6 +130,7 @@ test("the human, scripted, plays the Milestone 3 trail across five scenes, and t
   const lines = t.table.transcript.records.map((r) => r.text);
   assert.ok(lines.includes("Combat is over: the other side surrendered."));
   assert.ok(t.table.transcript.records.some((r) => r.kind === "question"), "the DM asked the human a question");
+  assert.deepEqual(report.talkRounds, [], "no AI player, no talk round");
   matchesFixture("m3_trail", t.runDir);
 });
 
@@ -613,7 +614,7 @@ test("a player the human names has the floor first and raises no hand; a silent 
   assert.match(players.get("ilsa")!.briefings[0].briefing, /You have the floor first: you were named\./);
   assert.deepEqual(players.get("torva")!.briefings.map((b) => b.wake), ["hand"]);
   assert.deepEqual(players.get("maren")!.briefings.map((b) => b.wake), ["hand"]);
-  assert.deepEqual(runLines(t, "hand"), ["ACT: Torva kicks the gate open. (she is bored)", "PASS (nothing for me)"]);
+  assert.deepEqual(runLines(t, "hand"), ["ACT: Torva kicks the gate open. / she is bored", "PASS: nothing for me"]);
   const screen = seat.shown.filter((e) => e.kind === "speech" || e.kind === "intent").map((e) => `${e.kind} ${e.speaker}: ${e.text}`);
   assert.deepEqual(screen, ["speech ilsa: It says: keep out.", "intent torva: Torva kicks the gate open."]);
   assert.deepEqual(report.talkRounds[0].named, ["ilsa"]);
@@ -665,6 +666,21 @@ test("raised hands past the round's floor bound lapse, and the next round turns 
   } finally {
     t.close();
   }
+});
+
+test("what a player writes after its hand goes through the speech guard before the transcript", async () => {
+  const { t } = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "We wait." }]),
+    speechGuard: (text) => (/\d/.test(text) ? "it names a game number" : undefined),
+    players: {
+      torva: { hand: async () => "PASS - I'd need a 15 on a d20" },
+      maren: { hand: async () => "ACT: Maren checks the wounded.\nfirst things first" },
+    },
+    dm: {},
+  });
+  assert.deepEqual(runLines(t, "hand"), ["PASS (left out: it names a game number)", "ACT: Maren checks the wounded. / first things first"]);
+  assert.ok(!t.table.transcript.records.some((r) => /d20|15/.test(r.text)), "no number reached the transcript");
 });
 
 test("during a hand wake a player can't speak or act, only answer", async () => {
