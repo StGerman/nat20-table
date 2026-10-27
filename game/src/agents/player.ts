@@ -10,6 +10,7 @@ import type { PlayerTools } from "../table/tools.ts";
 import type { PlayerAgent, PlayerWake, ToolOutcome } from "../table/types.ts";
 import type { UsageLog } from "../usage.ts";
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
+import { playerLanguage, type Language } from "./language.ts";
 import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, type SeatTool, type SessionConfig, type TurnSession } from "./sdk-session.ts";
 
 /** A player turn that runs longer falls back (spec §6). */
@@ -23,6 +24,8 @@ export interface ModelPlayerConfig {
   /** The character's personality card from the scenario pack (CHR-5), as Markdown. */
   card: string;
   choice: ModelChoice;
+  /** What the player says, declares, notes and summarises is written in; default `en` (decision 0038). */
+  language?: Language;
   usage?: UsageLog;
   /** Default `PLAYER_TURN_TIMEOUT_MS`. */
   turnTimeoutMs?: number;
@@ -36,7 +39,7 @@ function cardName(handle: Handle, card: string): string {
 }
 
 /** The player's system prompt: the same for every session of the run, so it stays cached. */
-export function playerPrompt(handle: Handle, card: string): string {
+export function playerPrompt(handle: Handle, card: string, language: Language = "en"): string {
   const name = cardName(handle, card);
   return `You are a player at a game of Dungeons & Dragons (fifth edition, 2024 rules). You play one character, ${name} (handle ${handle}), and only ${name}. Another AI runs the game as the Dungeon Master (DM). A human and other AI players play the other characters.
 
@@ -60,7 +63,7 @@ Speaking and notes:
 - say is heard by everyone at the table. Speak as ${name}, in character and briefly. Never put numbers or game terms in it: no Hit Points, Armor Class, DCs, dice or bonuses. Say "I'm badly hurt", not "I have 3 HP".
 - note keeps a private note that nobody else reads: a fact, promise, suspicion, plan or bond that will matter later in the adventure. Write fiction, never numbers: Hit Points, positions and results are always read fresh from the engine. Note only what matters to ${name}; one or two notes a scene is plenty.
 
-Be quick: at most a sentence of reasoning between tool calls. Text you write outside say, and outside your final answer to a declaration or a summary, reaches nobody.`;
+Be quick: at most a sentence of reasoning between tool calls. Text you write outside say, and outside your final answer to a declaration or a summary, reaches nobody.${playerLanguage(language)}`;
 }
 
 /** A declaration as the loop takes it: one line, or undefined for a pass. */
@@ -86,7 +89,7 @@ export class ModelPlayer implements PlayerAgent {
   constructor(config: ModelPlayerConfig) {
     this.config = config;
     this.handle = config.handle;
-    this.systemPrompt = playerPrompt(config.handle, config.card);
+    this.systemPrompt = playerPrompt(config.handle, config.card, config.language);
     this.seatTools = this.defineTools();
   }
 

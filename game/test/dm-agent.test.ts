@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { CRAFT_PLUGIN, craftSkills, ModelDm, type CraftMode } from "../src/agents/dm.ts";
+import { CRAFT_PLUGIN, craftSkills, dmPrompt, ModelDm, type CraftMode } from "../src/agents/dm.ts";
 import { ModelPlayer } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
@@ -273,6 +273,23 @@ test("the exit run's scene list plays Scene 1, passes over Scene 2 and plays Sce
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
+});
+
+test("with --lang ru the DM writes what the table hears in Russian; an English run's prompt has no language section", () => {
+  const english = dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt");
+  const russian = dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt", "ru");
+  assert.doesNotMatch(english, /## Language/);
+  assert.match(russian, /## Language\n\nWrite everything the table hears in Russian/);
+  assert.match(russian, /Tool inputs stay exactly as the tools take them/);
+  // Only the section is added: the rest of the prompt, and so its cache, is the same text.
+  assert.equal(russian.replace(/## Language\n[\s\S]*?\n\n(?=## The adventure)/, ""), english);
+  const cli = path.join(REPO, "game/src/play/scene.ts");
+  const run = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "--dry-run", "--lang", "ru"], { encoding: "utf8" });
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  assert.match(run.stdout, /Write everything the table hears in Russian/);
+  const unknown = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "--dry-run", "--lang", "de"], { encoding: "utf8" });
+  assert.equal(unknown.status, 2);
+  assert.match(unknown.stderr, /--lang is one of en, ru/);
 });
 
 test("the scene run command's dry run prints the DM's session settings and prompt and starts nothing", () => {

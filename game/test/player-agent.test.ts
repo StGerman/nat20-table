@@ -64,6 +64,17 @@ test("a model player's session has its own prompt with its card, its nine seat t
   }
 });
 
+test("with --lang ru a model player speaks, declares, notes and summarises in Russian, and still passes with PASS", () => {
+  const card = packParty(MILL).cards.get("maren")!;
+  const english = playerPrompt("maren", card);
+  const russian = playerPrompt("maren", card, "ru");
+  assert.doesNotMatch(english, /Russian/);
+  assert.ok(russian.startsWith(english), "the language rule is added at the end, after the same English prompt");
+  assert.match(russian, /write in Russian everything you say, declare, note or summarise/);
+  assert.match(russian, /just PASS, in Latin letters/);
+  assert.equal(declaration("PASS"), undefined);
+});
+
 test("a declaration is its one line, and PASS or nothing is a pass", () => {
   assert.equal(declaration(' "Maren kneels by the tracks." '), "Maren kneels by the tracks.");
   assert.equal(declaration("PASS"), undefined);

@@ -51,6 +51,36 @@ test("the narration guard refuses numbers, game statistics, DM-only ids and unkn
   }
 });
 
+test("the guards read Russian: numbers in words from ten up and game statistics are refused, plain Russian prose passes", () => {
+  // Runs with --lang ru (decision 0038): the DM and the AI players write Russian.
+  const guard = narrationGuard({ ids: packIds(MILL), knownRoll: (id) => id === "r12" });
+  const refused: Array<[string, RegExp]> = [
+    ["У гоблина осталось двенадцать хитов.", /number \(двенадцать\)/],
+    ["Двадцать гоблинов высыпают из мельницы.", /number \(Двадцать\)/],
+    ["Сто стрел летят во двор.", /number \(Сто\)/],
+    ["Волк выдержит ещё пятьдесят ударов.", /number \(пятьдесят\)/],
+    ["Его КД высок.", /game statistic \(КД\)/],
+    ["Это проверка со СЛ повыше.", /game statistic \(СЛ\)/],
+    ["Гоблин почти без хитов.", /game statistic \(хитов\)/],
+    ["Класс доспеха у волка невелик.", /game statistic \(Класс доспеха\)/],
+    ["У неё мало очков здоровья.", /game statistic \(очков здоровья\)/],
+    ["С таким бонусом атаки не промахнёшься.", /game statistic \(бонусом атаки\)/],
+  ];
+  for (const [text, why] of refused) assert.match(guard(text) ?? "(let through)", why, text);
+  for (const text of [
+    "Гоблин хитро ухмыляется у стола [r12].",
+    "Волк обходит двор с другой стороны; goblin_1 выглядит раненым.",
+    "Двое гоблинов и волк ждут у mill_door, в паре шагов от ворот.",
+    "Брен проходит в ворота, в s3_mill_yard стоит тишина.",
+  ]) {
+    assert.equal(guard(text), undefined, text);
+  }
+  const speech = speechGuard({ shown: packIds(MILL).shown });
+  assert.match(speech("У меня осталось пятнадцать хитов!") ?? "", /number \(пятнадцать\)/);
+  assert.match(speech("Мой класс доспеха их не сдержит.") ?? "", /game statistic \(класс доспеха\)/);
+  assert.equal(speech("Я тяжело ранена. Прикройте меня!"), undefined);
+});
+
 test("the speech guard refuses an AI player's numbers and game statistics, and lets plain talk through", () => {
   const guard = speechGuard({ shown: packIds(MILL).shown });
   assert.match(guard("I'm at 3 HP, cover me!") ?? "", /number \(3\)/);

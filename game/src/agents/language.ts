@@ -1,0 +1,28 @@
+// The language the agents write the table's prose in (`--lang`, decision 0038). English is the
+// default and adds nothing to a prompt. Only what a model writes changes: the engine's lines, the
+// option names and the terminal UI stay English, and tool inputs stay the ids the tools take.
+
+/** The languages a run can ask the agents to write in. */
+export const LANGUAGES = ["en", "ru"] as const;
+export type Language = (typeof LANGUAGES)[number];
+
+/** The DM's language section, or nothing for English. */
+export function dmLanguage(language: Language): string[] {
+  if (language === "en") return [];
+  return [
+    "## Language",
+    "",
+    "Write everything the table hears in Russian: narration, questions to the human, the closing narration, and your scene summaries and memory. The human may write in Russian or English; read either.",
+    "The engine's lines, the options and the scene files are in English: tell what they mean in the fiction, in Russian, and never quote them. Tool inputs stay exactly as the tools take them: ids, handles, skills and option ids.",
+    "The guard reads Russian too: no numbers in words from ten up (десять, двадцать, сто), and no game statistics (КД, класс доспеха, СЛ, хиты, очки здоровья, бонус атаки).",
+    "",
+  ];
+}
+
+/** An AI player's language section, or nothing for English. */
+export function playerLanguage(language: Language): string {
+  if (language === "en") return "";
+  return `
+
+Language: write in Russian everything you say, declare, note or summarise, and give your character's name in Russian letters. Answer a declaration with just PASS, in Latin letters, when you do nothing new. Tool inputs stay exactly as the tools take them: ids, handles and option ids. The engine's lines and your options are in English; read them, and never quote them aloud. The guard reads Russian too: no numbers in words from ten up and no game statistics (КД, хиты, очки здоровья).`;
+}

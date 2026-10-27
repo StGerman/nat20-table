@@ -19,6 +19,13 @@ const CITATION = /\[r(\d+)\]/g;
 const NUMBER_WORDS =
   /\b(ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)\b/i;
 
+/**
+ * The same in Russian, for runs whose agents write Russian (decision 0038), in every case form:
+ * the teens (-надцать), the tens (десять, двадцать, тридцать, сорок, пятьдесят to восемьдесят,
+ * девяносто), сто and тысяча. JavaScript's \b knows only Latin letters, hence the lookarounds.
+ */
+const RUSSIAN_NUMBER_WORDS = /(?<!\p{L})(?:\p{L}*(?:надцат|десят|двадцат|тридцат|девяност|тысяч)\p{L}*|сорока?|сто|ста)(?!\p{L})/iu;
+
 /** Game-stat terms no narration or spoken line names (spec §3.5). */
 const STAT_TERMS: RegExp[] = [
   /\barmou?r class\b/i,
@@ -30,6 +37,17 @@ const STAT_TERMS: RegExp[] = [
   /\bsaving throw bonus\b/i,
   /\battack bonus\b/i,
   /\bchallenge rating\b/i,
+  // Russian (decision 0038): Armor Class, DC, Hit Points, bonuses, challenge rating.
+  /класс\p{L}* (?:доспех|брон)\p{L}*/iu,
+  /(?<!\p{L})КД(?!\p{L})/iu,
+  /(?<!\p{L})СЛ(?!\p{L})/iu,
+  /класс\p{L}* сложност\p{L}*/iu,
+  /(?<!\p{L})хит(?:а|ы|ов|ам|ами|ах)(?!\p{L})/iu,
+  /(?<!\p{L})хит-?поинт\p{L}*/iu,
+  /очк\p{L}* (?:здоровья|жизни)/iu,
+  /(?<!\p{L})ОЗ(?!\p{L})/u,
+  /бонус\p{L}* (?:к )?(?:атак|спас)\p{L}*/iu,
+  /(?:показател|уровн)\p{L}* опасности/iu,
 ];
 
 /** Kinds of DM-only data that are no player's business by name (protocol §5): surrender triggers, a spawn's `unless`. */
@@ -47,7 +65,7 @@ const DM_ONLY_KINDS = [
 function numberIn(text: string): string | undefined {
   const digit = /\d+/.exec(text);
   if (digit) return `it holds a number (${digit[0]})`;
-  const word = NUMBER_WORDS.exec(text);
+  const word = NUMBER_WORDS.exec(text) ?? RUSSIAN_NUMBER_WORDS.exec(text);
   return word ? `it holds a number (${word[0]})` : undefined;
 }
 
