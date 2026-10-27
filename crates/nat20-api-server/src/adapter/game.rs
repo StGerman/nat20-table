@@ -2037,22 +2037,22 @@ impl Game {
                         },
                     ));
                 };
-                let creatures: Vec<Entity> = condition
+                // The side they surrender to is the other one.
+                let winner = match condition
                     .creatures
                     .iter()
-                    .filter_map(|h| self.entity(&h.0).ok())
-                    .collect();
-                // The side they surrender to is the other one.
-                let winner = match creatures.first().and_then(|e| self.side_of(*e)) {
+                    .find_map(|h| self.entity(&h.0).ok())
+                    .and_then(|e| self.side_of(e))
+                {
                     Some(Side::Hostile) => Some(Side::Party),
                     Some(Side::Party) => Some(Side::Hostile),
                     _ => None,
                 };
-                let surrendering: Vec<Entity> = creatures
-                    .into_iter()
-                    .filter(|e| life_state_name(&self.engine, *e) == "normal")
-                    .collect();
-                (surrendering, winner, CombatOverReason::Surrender)
+                (
+                    self.surrendering(condition),
+                    winner,
+                    CombatOverReason::Surrender,
+                )
             }
         };
 
@@ -2136,16 +2136,35 @@ impl Game {
             .encounters
             .iter()
             .map(|e| {
-                let is_running = running == Some(e.id.as_str());
+                let holding = e
+                    .surrender
+                    .as_ref()
+                    .filter(|c| running == Some(e.id.as_str()) && self.surrender_holds(c));
                 EncounterView {
                     id: e.id.clone(),
-                    running: is_running,
-                    surrender_available: is_running
-                        && e.surrender
-                            .as_ref()
-                            .is_some_and(|c| self.surrender_holds(c)),
+                    running: running == Some(e.id.as_str()),
+                    surrender_available: holding.is_some(),
+                    surrendering: holding
+                        .map(|c| {
+                            self.surrendering(c)
+                                .into_iter()
+                                .map(|e| Handle(self.handle_of(e)))
+                                .collect()
+                        })
+                        .unwrap_or_default(),
                 }
             })
+            .collect()
+    }
+
+    /// The creatures a surrender under `condition` would make neutral: its creatures in the scene
+    /// that are still conscious, in the condition's order.
+    fn surrendering(&self, condition: &SurrenderCondition) -> Vec<Entity> {
+        condition
+            .creatures
+            .iter()
+            .filter_map(|h| self.entity(&h.0).ok())
+            .filter(|e| life_state_name(&self.engine, *e) == "normal")
             .collect()
     }
 

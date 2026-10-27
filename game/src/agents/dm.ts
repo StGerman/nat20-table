@@ -119,7 +119,7 @@ The guard reads only what the table hears: tool inputs such as a check's DC are 
 
 - Checks: when one of the scene's checks fits what a character tries (the skeleton's check hints say which intent each answers), request it by its id; each is rolled once. Otherwise name a skill and a DC from the ladder: ${LADDER.join(", ")}. Call for a check only when the outcome is uncertain and something rides on it.
 - Fights: start_combat with the scene's encounter when its hint says so. end_combat with fled when one side gets away, scenario when the scene's prose ends the fight.
-- Surrender: while get_state shows a surrender is available, the human decides whether to accept it. Narrate the foes begging for their lives, then call offer_surrender with the handles of those who give up; never ask about it with ask_human. The table asks the human at once, and nothing happens in the fight before the answer: accepted, the fight ends and you narrate it; refused, you hear so and narrate the fight going on. The AI players may speak to it, but only ${human} decides. When ${human} is down, you decide: end_combat with surrender, or fight on.
+- Surrender: while get_state shows a surrender is available, the human decides whether to accept it. Narrate the foes begging for their lives, then call offer_surrender with the handles get_state lists as surrendering; never ask about it with ask_human. The table asks the human at once, and nothing happens in the fight before the answer: accepted, the fight ends and you narrate it; refused, you hear so and narrate the fight going on. The AI players may speak to it, but only ${human} decides. When ${human} is down, you decide: end_combat with surrender, or fight on.
 - Scenes: the skeleton lists the scenes in order with their exits. When an exit's condition holds, narrate the way there and call load_scene with the next scene's id and the party (${party.join(", ")}), adding the handle of any creature that surrendered when the exit carries captives. After the last scene, call end_adventure with the closing narration.
 - Memory: remember keeps a fact you established in fiction that the engine doesn't track (a name you improvised, a promise, a door you called locked) for the rest of the adventure. Fiction only: positions, Hit Points and results always come fresh from the engine. Memory can change which check you ask for; it never decides an outcome.
 - Actions the adventure didn't plan for (robbing an NPC, threatening a villager): turn the intent into what the engine can do, usually a ladder check. Nothing changes hands and nobody is hurt unless the engine says so; there is no fight with anyone the scene doesn't hold. A consequence the engine doesn't track is fiction you remember, and the adventure goes on along its exits.
@@ -265,7 +265,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "offer_surrender",
-        `Offer ${human} the surrender of these creatures, only while the engine shows one available. The table asks the human at once; nothing happens before the answer.`,
+        `Offer ${human} the surrender of the creatures get_state lists as surrendering, only while the engine shows one available. The table asks the human at once; nothing happens before the answer.`,
         { handles: z.array(handle).describe("The creatures that give up, as you narrated them.") },
         (i) => this.bound((t) => t.offerSurrender(i.handles)),
       ),

@@ -343,36 +343,44 @@ export class DmTools {
   /**
    * Offers the human the surrender of `handles` (AGT-30). The table asks the human at once and
    * holds every other change until they answer. Only while the engine shows a surrender available,
-   * for hostile creatures still standing, and not while the human's character is down: then the DM
-   * decides (decision D3).
+   * for exactly the creatures it would make neutral (`surrendering`), and not while the human's
+   * character is down: then the DM decides (decision D3). The offer is held from the call on, so a
+   * change the DM makes in parallel can't reach the engine while this one reads the state.
    */
   async offerSurrender(handles: string[]): Promise<ToolOutcome> {
     if (this.table.exhausted("dm")) return this.table.spent();
     if (this.table.surrender) return notNow("a surrender offer is already open");
     if (!this.table.inCombat) return notNow("there is no fight");
+    const held = { handles: [] as Handle[], words: false };
+    this.table.surrender = held;
+    const outcome = await this.openOffer(handles, held);
+    if (!outcome.ok && this.table.surrender === held) this.table.surrender = undefined;
+    return outcome;
+  }
+
+  private async openOffer(handles: string[], held: { handles: Handle[] }): Promise<ToolOutcome> {
     const state = await this.dmState();
     if (!state) return notNow("the scene can't be read");
     const refuse = (why: string, text: string): ToolOutcome => {
       this.table.retry("dm", `dm: offer_surrender refused: ${why}`);
       return { ok: false, retryable: true, text };
     };
-    if (!state.encounters.some((e) => e.running && e.surrender_available)) {
+    const surrendering = state.encounters.find((e) => e.running && e.surrender_available)?.surrendering ?? [];
+    if (surrendering.length === 0) {
       return refuse("no surrender is available", "surrender_not_available: no surrender is available now");
     }
     if (humanDown(state, this.table.human)) {
       return notNow(`${this.table.human} is down, so you decide: end_combat with surrender to accept it, or fight on`);
     }
-    const standing = state.creatures.filter((c) => c.side === "hostile" && c.life_state === "conscious").map((c) => c.handle);
     const named = [...new Set(handles)];
-    const wrong = named.filter((h) => !standing.includes(h));
-    if (named.length === 0 || wrong.length > 0) {
+    if (named.length !== surrendering.length || named.some((h) => !surrendering.includes(h))) {
       return refuse(
-        `bad handles ${wrong.join(", ")}`,
-        `name the creatures that surrender: hostile creatures still standing are ${standing.join(", ")}`,
+        `handles ${named.join(", ") || "none"} are not the surrendering creatures`,
+        `name exactly the creatures that would surrender: ${surrendering.join(", ")}`,
       );
     }
-    this.table.surrender = { handles: named, words: false };
-    this.table.log("system", `the DM offers ${this.table.human} the surrender of ${named.join(", ")}`, "dm");
+    held.handles = [...surrendering];
+    this.table.log("system", `the DM offers ${this.table.human} the surrender of ${held.handles.join(", ")}`, "dm");
     return { ok: true, text: `offered; ${this.table.human} answers before anything else happens` };
   }
 

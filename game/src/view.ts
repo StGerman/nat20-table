@@ -158,7 +158,7 @@ export function formatDmState(state: State): string {
     lines.push(`Checks: ${state.checks.map((c) => `${c.id} (${"skill" in c.test ? c.test.skill : c.test.ability} DC ${c.dc}${c.rolled ? ", rolled" : ""})`).join("; ")}.`);
   }
   if (state.encounters.length > 0) {
-    lines.push(`Encounters: ${state.encounters.map((e) => `${e.id}${e.running ? " (running)" : ""}${e.surrender_available ? " (surrender available)" : ""}`).join("; ")}.`);
+    lines.push(`Encounters: ${state.encounters.map((e) => `${e.id}${e.running ? " (running)" : ""}${e.surrender_available ? ` (surrender available: ${(e.surrendering ?? []).join(", ")})` : ""}`).join("; ")}.`);
   }
   if (state.spawns.length > 0) {
     lines.push(`Spawns: ${state.spawns.map((s) => `${s.id} (${s.when.kind}${s.placed ? ", placed" : ""})`).join("; ")}.`);

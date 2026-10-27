@@ -12,7 +12,7 @@ import { readPack } from "../src/pack/read.ts";
 import { guards, scenePlan } from "../src/play/run.ts";
 import { TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
-import { offerAnySurrender, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
+import { ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
 import type { DmTools, PlayerTools } from "../src/table/tools.ts";
 import type { PlayerIntent, TableEvent, ToolOutcome } from "../src/table/types.ts";
@@ -1221,9 +1221,9 @@ const intoTheYard = async (tools: DmTools): Promise<void> => {
 };
 
 /**
- * Opens the yard's fight; the first time a surrender is available, offers the standing goblins and
- * tries two changes in the same wake, which the open offer must hold. Ends the adventure with the
- * fight.
+ * Opens the yard's fight; the first time a surrender is available, offers a creature the engine
+ * doesn't list as surrendering (refused), then offers the ones it lists with an end_turn sent in
+ * parallel, then tries end_combat: the open offer must hold both. Ends the adventure with the fight.
  */
 function offeringDm(tried: ToolOutcome[], extra: DmScript = {}): DmScript {
   let offered = false;
@@ -1234,8 +1234,12 @@ function offeringDm(tried: ToolOutcome[], extra: DmScript = {}): DmScript {
       if (!offered && state.state.encounters.some((e) => e.running && e.surrender_available)) {
         offered = true;
         await tools.narrate("The goblins throw down their blades and beg.");
-        await offerAnySurrender(tools);
-        tried.push(await tools.endTurn(), await tools.endCombat("surrender"));
+        tried.push(await tools.offerSurrender(["goblin_1", "goblin_2"]));
+        const dm = (await tools.getState()).data as { state: { encounters: Array<{ running: boolean; surrendering?: string[] }> } };
+        const surrendering = dm.state.encounters.find((e) => e.running)?.surrendering ?? [];
+        const [offer, parallel] = await Promise.all([tools.offerSurrender(surrendering), tools.endTurn()]);
+        assert.equal(offer.ok, true, offer.text);
+        tried.push(parallel, await tools.endCombat("surrender"));
       }
       await tools.narrate("Blades flash.");
     },
@@ -1256,10 +1260,13 @@ test("the human accepts a surrender the DM offers: the table ends the fight, and
   assert.equal(report.ended, "the adventure is over");
   const offer = seat.shown.find((e) => e.kind === "options" && e.title === "Surrender");
   assert.deepEqual(offer?.kind === "options" ? offer.lines : [], ["1. Accept the surrender of goblin_2", "2. Fight on"]);
-  // The DM's own change in the offer's wake was held, and so was its own end_combat.
-  assert.deepEqual(tried.map((o) => o.ok), [false, false]);
-  assert.match(tried[0].text, /the surrender offer waits on bren's answer/);
+  // An offer of a creature the engine doesn't list as surrendering (goblin_1 is down) was refused.
+  assert.deepEqual([tried[0].ok, tried[0].retryable], [false, true]);
+  assert.match(tried[0].text, /name exactly the creatures that would surrender: goblin_2/);
+  // The DM's change sent in parallel with the offer was held, and so was its own end_combat.
+  assert.deepEqual(tried.slice(1).map((o) => o.ok), [false, false]);
   assert.match(tried[1].text, /the surrender offer waits on bren's answer/);
+  assert.match(tried[2].text, /the surrender offer waits on bren's answer/);
   // Nothing happened in the engine between the offer and the answer: the next event is the surrender.
   const log = readFileSync(path.join(t.runDir, SESSION_LOG), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { seq: number; kind: string });
   assert.equal(log.find((e) => e.seq > offeredAt!)?.kind, "surrendered");
@@ -1301,6 +1308,8 @@ test("no surrender can be offered while none is available, and the DM can't acce
     ...YARD,
     seat: seatThen([], { kind: "command", name: "quit" }),
     dm: {
+      // scene_open runs twice: on the green it loads the yard, and on the yard's own scene_open it
+      // starts the fight; the scene id read before intoTheYard says which wake this is.
       scene_open: async (tools) => {
         const state = (await tools.getState()).data as { state: { scene_id?: string | null } };
         await intoTheYard(tools);

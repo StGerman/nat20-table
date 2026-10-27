@@ -164,14 +164,14 @@ export function yardDm(encounter = "yard_fight"): ScriptedDm {
 }
 
 /**
- * Offers the human the surrender of every hostile creature still standing whenever the engine shows
- * one available (AGT-30, decision D4: a scripted run gets offers, and the scripted human accepts).
+ * Offers the human the surrender the engine shows available, of the creatures it names, whenever
+ * there is one (AGT-30, decision D4: a scripted run gets offers, and the scripted human accepts).
  */
 export async function offerAnySurrender(tools: DmTools): Promise<void> {
   const state = ((await tools.getState()).data as { state?: State } | undefined)?.state;
-  if (state?.view !== "dm" || !state.encounters.some((e) => e.running && e.surrender_available)) return;
-  const standing = state.creatures.filter((c) => c.side === "hostile" && c.life_state === "conscious").map((c) => c.handle);
-  if (standing.length > 0) await tools.offerSurrender(standing);
+  if (state?.view !== "dm") return;
+  const surrendering = state.encounters.find((e) => e.running && e.surrender_available)?.surrendering ?? [];
+  if (surrendering.length > 0) await tools.offerSurrender(surrendering);
 }
 
 /**

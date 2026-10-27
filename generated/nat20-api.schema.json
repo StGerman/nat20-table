@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.35"
+    "version": "1.0.0-dev.36"
   },
   "$defs": {
     "Ability": {
@@ -1625,6 +1625,13 @@
         "surrender_available": {
           "description": "Whether `end_combat{surrender}` would be accepted now: the encounter is running and its\nsurrender condition holds (decision D5). The engine works this out; the DM decides\nwhether to call it.",
           "type": "boolean"
+        },
+        "surrendering": {
+          "description": "The creatures that `end_combat{surrender}` would make `neutral` now: the surrender\ncondition's creatures still conscious, in the condition's order. Empty, and left out,\nunless `surrender_available`. A creature of the fight that the condition doesn't name\n(a wolf beside surrendering goblins) is never here and fights on.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
         }
       },
       "required": [
