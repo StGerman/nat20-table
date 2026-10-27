@@ -284,19 +284,15 @@ test("a line heard after a player already passed never cancels that player's nex
   assert.equal(report.ended, "the adventure is over");
 });
 
-test("a reaction line the speech guard refuses is dropped with no retry, and the next player's line is heard", async () => {
+test("a reaction line the speech guard refuses is dropped with no retry, and a line said at the same moment is heard", async () => {
   const { t, report } = await play({
     seed: 23,
     dm: yardDm(),
     speechGuard: (text) => (text.includes("3 HP") ? "a number" : undefined),
     players: {
       torva: { bark: async (tools) => void (await tools.say("I have 3 HP left!")) },
-      maren: {
-        bark: async (tools) => {
-          await new Promise((go) => setImmediate(go));
-          await tools.say("Stay with me!");
-        },
-      },
+      // Maren says hers at the same moment, while Torva's is still being checked.
+      maren: { bark: async (tools) => void (await tools.say("Stay with me!")) },
       ilsa: {},
     },
   });
@@ -305,6 +301,44 @@ test("a reaction line the speech guard refuses is dropped with no retry, and the
   for (const r of both) assert.equal(r.spoke, "maren");
   assert.ok(runLines(t, "system").includes("reaction dropped: a number"));
   assert.ok(!runLines(t, "retry").some((line) => line.includes("a number")), "a dropped reaction is no retry");
+});
+
+test("a reaction said after its speaker fell unconscious is refused, and nobody hears it", async () => {
+  const refused: ToolOutcome[] = [];
+  const life = async (tools: PlayerTools) => (JSON.parse((await tools.mySheet()).text) as { life_state: string }).life_state;
+  // Each reaction waits until its speaker is down, or for a while, then speaks.
+  const fallen = (handle: string) => async (tools: PlayerTools) => {
+    for (let i = 0; i < 200 && (await life(tools)) === "conscious"; i++) await new Promise((go) => setTimeout(go, 5));
+    const outcome = await tools.say(`${handle} cries out!`);
+    if (/not conscious/.test(outcome.text)) refused.push(outcome);
+  };
+  const { t, report } = await play({
+    seed: 23,
+    dm: yardDm(),
+    loop: { reactionGraceMs: 20, barkTimeoutMs: 60_000 },
+    players: { torva: { bark: fallen("torva") }, maren: { bark: fallen("maren") }, ilsa: { bark: fallen("ilsa") } },
+  });
+  assert.ok(refused.length > 0, "a speaker fell while its reaction ran");
+  for (const outcome of refused) assert.deepEqual(outcome, { ok: false, retryable: false, text: "not now: you can't speak: you are not conscious" });
+  const heard = new Set(t.table.transcript.records.filter((r) => r.kind === "speech").map((r) => r.text));
+  assert.equal([...heard].filter((line) => / cries out!$/.test(line)).length, report.reactions.filter((r) => r.spoke).length);
+});
+
+test("a reaction shows at once while the table collects lines, and its to never hands the floor on", async () => {
+  const t = await testTable({ seed: 1, players: ["torva", "maren"] });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    t.table.collect();
+    assert.equal((await t.table.speak("torva", "They yield!", "maren", true)).text, "said");
+    assert.ok(t.table.transcript.records.some((r) => r.kind === "speech" && r.text === "They yield!"), "shown before commit");
+    assert.deepEqual(t.table.takeAddresses(), [], "out of combat, as after a fight's end, a reaction's to queues no hand-off");
+    await t.table.speak("maren", "Torva, look.", "torva");
+    assert.ok(!t.table.transcript.records.some((r) => r.text === "Torva, look."), "an ordinary line still waits for commit");
+    await t.table.commit();
+    assert.deepEqual(t.table.takeAddresses(), [{ from: "maren", to: "torva" }]);
+  } finally {
+    t.close();
+  }
 });
 
 test("no AI player is woken to react out of combat, or when none takes reactions", async () => {

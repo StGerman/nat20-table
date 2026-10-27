@@ -247,6 +247,8 @@ export class ReactionFloor {
   closed = false;
   /** Called once, when the first line is heard. */
   private readonly onHeard: (speaker: Handle) => void;
+  /** The lines being tried, one at a time, so a refused line never beats one said just after it. */
+  private trying: Promise<unknown> = Promise.resolve();
 
   constructor(onHeard: (speaker: Handle) => void) {
     this.onHeard = onHeard;
@@ -270,6 +272,13 @@ export class ReactionFloor {
   heard(): void {
     this.closed = true;
     if (this.speaker) this.onHeard(this.speaker);
+  }
+
+  /** Runs `attempt` once every line tried before it has been heard or refused. */
+  next<T>(attempt: () => Promise<T>): Promise<T> {
+    const run = this.trying.then(attempt);
+    this.trying = run.catch(() => undefined);
+    return run;
   }
 }
 
@@ -316,16 +325,33 @@ export class BarkTools extends PlayerTools {
     return this.notYours();
   }
 
-  /** The line is heard only if nobody spoke first; a refused line is dropped, not retried. */
-  override async say(text: string, to?: Handle): Promise<ToolOutcome> {
-    if (this.over) return this.answer(notNow("the moment has passed"));
-    if (!this.floor.take(this.me)) {
-      return this.answer(notNow(this.floor.speaker ? `${this.floor.speaker} spoke first; the fight has moved on` : "the moment has passed"));
-    }
-    const outcome = await this.table.speak(this.me, text, to, true);
-    if (outcome.ok) this.floor.heard();
-    else this.floor.release();
-    return this.answer(outcome);
+  /**
+   * The line is heard only if nobody spoke first and its speaker can still speak; a refused line is
+   * dropped, not retried. Lines are tried one at a time, so a refused one frees the floor for the next.
+   */
+  override say(text: string, to?: Handle): Promise<ToolOutcome> {
+    return this.floor.next(async () => {
+      if (this.over) return this.answer(notNow("the moment has passed"));
+      // The fight went on while it thought. Unconscious includes Incapacitated, and an Incapacitated
+      // creature can't speak (SRD 5.2.1, Rules Glossary).
+      if (!(await this.conscious())) {
+        this.end();
+        return this.answer(notNow("you can't speak: you are not conscious"));
+      }
+      if (!this.floor.take(this.me)) {
+        return this.answer(notNow(this.floor.speaker ? `${this.floor.speaker} spoke first; the fight has moved on` : "the moment has passed"));
+      }
+      const outcome = await this.table.speak(this.me, text, to, true);
+      if (outcome.ok) this.floor.heard();
+      else this.floor.release();
+      return this.answer(outcome);
+    });
+  }
+
+  /** Whether its own character is conscious now, from its own sheet. */
+  private async conscious(): Promise<boolean> {
+    const r = this.table.observe(await this.table.engine.request(this.me, { cmd: "get_sheet", actor: this.me }));
+    return r.result?.cmd === "get_sheet" && r.result.sheet.life_state === "conscious";
   }
 }
 

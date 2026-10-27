@@ -389,7 +389,8 @@ export class TableState {
         // A reaction to a fight's end is a fight line too.
         if (this.inCombat || once) this.fightLines += 1;
         this.spokeThisRound.add(from);
-        if (to && !this.inCombat) this.addresses.push({ from, to });
+        // A reaction, even to a fight's end, never hands the floor on (party talk §4.4).
+        if (to && !this.inCombat && !once) this.addresses.push({ from, to });
       } else {
         this.declaredThisRound.add(from);
         if (this.spokeThisRound.has(from)) return;
@@ -397,7 +398,8 @@ export class TableState {
       this.firstShown ??= performance.now();
       this.show(kind === "speech" && to ? { kind, speaker: from, text, to } : { kind, speaker: from, text });
     };
-    const queue = this.collecting?.get(from);
+    // A reaction shows the moment it is said (decision 0042), even while the table collects.
+    const queue = once ? undefined : this.collecting?.get(from);
     if (queue) {
       queue.push(deliver);
       return { ok: true, text: "said; the table hears it in turn" };
