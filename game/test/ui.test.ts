@@ -230,6 +230,24 @@ test("/sheet reads as a sheet, in words the leak scan doesn't take for a target 
   }
 });
 
+test("an attack with no foe in reach this turn isn't offered as a list of friends", async () => {
+  // The exit run (2026-10-27): with the goblins beyond reach, "Longsword attack…" opened torva,
+  // maren and ilsa (TASKS.md AGT-28). The engine lists only targets reachable this turn.
+  const t = await testTable({ seed: 1 });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    const listed = await t.engine.request("bren", { cmd: "legal_actions", actor: "bren" });
+    assert.ok(listed.result?.cmd === "legal_actions");
+    const result = structuredClone(listed.result) as LegalActionsResult;
+    for (const option of result.options) option.targets = option.targets.filter((c) => c.side === "party");
+    const labels = buildChoices(result, undefined, false).map((c) => c.label);
+    assert.ok(!labels.some((l) => l.startsWith("Longsword attack")), labels.join("; "));
+    assert.ok(labels.some((l) => l.startsWith("Potion of Healing")), "a potion still lists friends");
+  } finally {
+    t.close();
+  }
+});
+
 test("a potion's quick picks are you and your allies, never a hostile", async () => {
   const t = await testTable({ seed: 1 });
   try {
