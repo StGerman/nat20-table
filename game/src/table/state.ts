@@ -5,6 +5,7 @@ import { appendFileSync } from "node:fs";
 import type { Awaiting, Event, Handle, Response } from "@nat20-table/engine-client";
 import type { GameEngine } from "../engine.ts";
 import { eventLine, noDeaths, tellable } from "../view.ts";
+import type { Address } from "./floor.ts";
 import { Transcript } from "./transcript.ts";
 import type { Seat, TableEvent, ToolOutcome } from "./types.ts";
 
@@ -100,6 +101,11 @@ export class TableState {
    * narrations («Ильса, твой ход») aren't kept, and a fight drops the ones before it.
    */
   private narrations: string[] = [];
+  /**
+   * Lines the AI players spoke to a companion out of combat, since the loop last took them (party
+   * talk §4.4): a request or a proposal hands its addressee the floor. A fight drops them.
+   */
+  private addresses: Address[] = [];
   /**
    * The AI players who spoke since the talk round began. A declaration from one of them retells its
    * own line, so the human's screen leaves it out (party talk §6); the DM and the transcript still
@@ -285,8 +291,10 @@ export class TableState {
     await this.flush();
     this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text });
     this.narratedTo = this.dmShownTo;
-    if (this.inCombat) this.narrations = [];
-    else if (!to) this.narrations.push(text);
+    if (this.inCombat) {
+      this.narrations = [];
+      this.addresses = [];
+    } else if (!to) this.narrations.push(text);
     for (const player of this.players) {
       if (!to || to === player) this.inboxes.get(player)?.push(`DM${to ? " (to you)" : ""}: ${text}`);
     }
@@ -312,10 +320,17 @@ export class TableState {
 
   /**
    * A character's spoken line, heard by every other seat. AI players' lines go through the speech
-   * guard (spec §3.5); the human's go as typed and are marked as the human's.
+   * guard (spec §3.5); the human's go as typed and are marked as the human's. `to` is the companion
+   * an AI player speaks to, and `asks` marks a request or a proposal (party talk §4.4): the
+   * addressee's brief says "<speaker> says to you", and out of combat the loop may hand it the floor.
    */
-  async speak(from: Handle, text: string): Promise<ToolOutcome> {
-    return this.say(from, text, "speech");
+  async speak(from: Handle, text: string, to?: Handle, asks = false): Promise<ToolOutcome> {
+    if (to !== undefined && (to === from || (to !== this.human && !this.players.includes(to)))) {
+      if (this.exhausted(from)) return this.spent();
+      const companions = [this.human, ...this.players].filter((seat) => seat !== from);
+      return this.refuse(from, "speech", `${to} is not a companion at the table`, `Give one of ${companions.join(", ")} as to, or leave it out.`);
+    }
+    return this.say(from, text, "speech", to, asks);
   }
 
   /**
@@ -326,7 +341,7 @@ export class TableState {
     return this.say(from, text, "intent");
   }
 
-  private async say(from: Handle, text: string, kind: "speech" | "intent"): Promise<ToolOutcome> {
+  private async say(from: Handle, text: string, kind: "speech" | "intent", to?: Handle, asks = false): Promise<ToolOutcome> {
     const human = from === this.human;
     if (!human) {
       if (this.exhausted(from)) return this.spent();
@@ -335,19 +350,23 @@ export class TableState {
     }
     const deliver = async () => {
       await this.flush();
-      this.transcript.add({ speaker: from, channel: "table", kind, text, human });
-      const line = kind === "speech" ? `${from} says: ${text}` : `${from}: ${text}`;
+      this.transcript.add({ speaker: from, channel: "table", kind, text, human, ...(to ? { to } : {}) });
+      const line = kind === "speech" ? `${from} says${to ? ` to ${to}` : ""}: ${text}` : `${from}: ${text}`;
       if (human) for (const part of line.split("\n")) this.humanLines.add(part);
-      for (const player of this.players) if (player !== from) this.inboxes.get(player)?.push(line);
+      for (const player of this.players) {
+        if (player !== from) this.inboxes.get(player)?.push(player === to ? `${from} says to you: ${text}` : line);
+      }
       this.dmInbox.push(line);
       if (human) return;
-      if (kind === "speech") this.spokeThisRound.add(from);
-      else {
+      if (kind === "speech") {
+        this.spokeThisRound.add(from);
+        if (to && !this.inCombat) this.addresses.push({ from, to, asks });
+      } else {
         this.declaredThisRound.add(from);
         if (this.spokeThisRound.has(from)) return;
       }
       this.firstShown ??= performance.now();
-      this.show({ kind, speaker: from, text });
+      this.show(kind === "speech" && to ? { kind, speaker: from, text, to } : { kind, speaker: from, text });
     };
     const queue = this.collecting?.get(from);
     if (queue) {
@@ -368,6 +387,13 @@ export class TableState {
     const narrations = this.narrations;
     this.narrations = [];
     return narrations;
+  }
+
+  /** Takes the lines AI players spoke to a companion out of combat since the last take, oldest first. */
+  takeAddresses(): Address[] {
+    const addresses = this.addresses;
+    this.addresses = [];
+    return addresses;
   }
 
   /** A talk round out of combat begins (party talk §4.2): who spoke and declared is counted afresh. */

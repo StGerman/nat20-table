@@ -155,9 +155,20 @@ export function talkLines(rounds: TalkRound[]): string[] {
   const share = slots === 0 ? 0 : Math.round((100 * silent) / slots);
   return [
     `- Talk rounds: ${rounds.length}; lines per round ${(sum((r) => r.spoke.length) / rounds.length).toFixed(1)}; silent share ${share}% (target at least ${100 * TALK_TARGETS.silentShare}%); floor wakes ${sum((r) => r.floor_wakes)}, hands lapsed ${sum((r) => r.lapsed.length)}`,
-    `- Hands: ${hands.join(", ")}; named players who answered first: ${answered} of ${named}`,
+    `- Hands: ${hands.join(", ")}; named players who answered first: ${answered} of ${named}; hand-offs ${sum((r) => (r.handed_to ? 1 : 0))}, requests carried to the next round ${sum((r) => r.carried.length)}`,
     `- Talk round time: first line p50 ${first.length > 0 ? `${percentile(first, 50)} ms` : "n/a"} (target ${TALK_TARGETS.firstLineP50Ms} ms), round p50 ${percentile(walls, 50)} ms, p95 ${percentile(walls, 95)} ms (target ${TALK_TARGETS.roundP95Ms} ms)`,
   ];
+}
+
+/** How often the AI players spoke to one companion with `say`'s `to` (party talk §4.4, goal 6). */
+export function addressLines(transcript: TranscriptRecord[]): string[] {
+  const addresses = transcript.filter((r) => r.kind === "speech" && r.to !== undefined && !r.human);
+  if (addresses.length === 0) return [];
+  const speech = transcript.filter((r) => r.kind === "speech" && !r.human).length;
+  const pairs = new Map<string, number>();
+  for (const r of addresses) pairs.set(`${r.speaker} to ${r.to}`, (pairs.get(`${r.speaker} to ${r.to}`) ?? 0) + 1);
+  const most = [...pairs].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([pair, n]) => `${pair} ${n}`);
+  return [`- Lines spoken to a companion: ${addresses.length} of ${speech} AI lines (${most.join(", ")})`];
 }
 
 /** The report's Markdown sections on the run, the usage and the audit. */
@@ -186,6 +197,7 @@ export function reportSections(options: {
       ? [`- DM narrations: ${narrations.length}, p50 ${percentile(narrations, 50)} ms, p95 ${percentile(narrations, 95)} ms (target ${TARGET_P95_MS.dm} ms)`]
       : []),
     ...talkLines(run?.talkRounds ?? []),
+    ...addressLines(transcript),
     "",
     // Per model wake, whether it ended with its result or not: a combat turn can take two.
     "| Agent | Wakes | p50 ms | p95 ms | Input | Cache read | Cache write | Output | API-equivalent $ |",

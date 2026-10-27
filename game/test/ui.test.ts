@@ -102,6 +102,8 @@ test("each event reads as lines: rolls inline with their ids, options numbered, 
   ]);
   assert.deepEqual(eventLines({ kind: "narration", speaker: "dm", text: "The reeve frowns.", to: "bren" }), [{ tone: "dm", text: "DM (to you): The reeve frowns." }]);
   assert.deepEqual(eventLines({ kind: "speech", speaker: "maren", text: "Easy now." }), [{ tone: "speech", text: "Maren says: Easy now." }]);
+  assert.deepEqual(eventLines({ kind: "speech", speaker: "maren", text: "Hold still.", to: "bren" }, "bren"), [{ tone: "speech", text: "Maren says to you: Hold still." }]);
+  assert.deepEqual(eventLines({ kind: "speech", speaker: "maren", text: "Hold still.", to: "ilsa" }, "bren"), [{ tone: "speech", text: "Maren says to Ilsa: Hold still." }]);
   assert.deepEqual(eventLines({ kind: "options", title: "Longsword", lines: ["1. goblin_1", "2. goblin_2"], choices: [] }), [
     { tone: "options", text: "Longsword:" },
     { tone: "options", text: "  1. goblin_1" },

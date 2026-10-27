@@ -1,7 +1,7 @@
-// Who takes the floor in a talk round out of combat (party talk §4.2 and §4.3, decision 0039,
-// TASKS.md AGT-32). Pure functions: the loop reads the human's and the DM's lines, wakes the
-// players, and asks these who goes first, what each raised hand says, and in which order the
-// speakers go.
+// Who takes the floor in a talk round out of combat (party talk §4.2 to §4.4, decision 0039,
+// TASKS.md AGT-32, AGT-33). Pure functions: the loop reads the human's and the DM's lines, wakes
+// the players, and asks these who goes first, what each raised hand says, in which order the
+// speakers go, and whom a line spoken to a companion hands the floor to.
 import type { Handle } from "@nat20-table/engine-client";
 
 /** At most this many floor wakes follow each other in a talk round: named players and speakers together. */
@@ -113,4 +113,54 @@ export function speakingOrder(hands: ReadonlyMap<Handle, Hand>, seats: readonly 
     const kind = hands.get(handle)?.kind;
     return kind === "speak" || kind === "both";
   });
+}
+
+/**
+ * A line an AI player spoke to a companion with `say`'s `to` (party talk §4.4). `asks` marks a
+ * request or a proposal, which wants the addressee's answer; a remark or an opinion doesn't.
+ */
+export interface Address {
+  from: Handle;
+  to: Handle;
+  asks: boolean;
+}
+
+/** The address that made a round's hand-off; `raised` when its addressee still had a hand up. */
+export type HandedOff = Address & { raised: boolean };
+
+/** The rest of a talk round after a floor wake's addresses (`handOff`). */
+export interface AfterAddresses {
+  /** The raised hands still to speak, in order; a moved addressee is first. */
+  queue: Handle[];
+  /** The round's one hand-off, when these addresses made it: its addressee has the floor next. */
+  handedTo?: HandedOff;
+  /** Requests and proposals that didn't get the hand-off: their addressees have the floor first next round. */
+  carried: Handle[];
+}
+
+/**
+ * What the addresses made in one floor wake do to the rest of the round (party talk §4.4). Only an
+ * AI player in `players` is ever handed the floor; the human's character hears its line and nobody
+ * waits for it. The round has one hand-off: the first address to a player whose hand is still up
+ * moves it to the front of `queue`, and the first request or proposal to a player who has no hand
+ * up puts it at the front for a floor wake of its own. A request or proposal after the hand-off is
+ * used is carried to the next round.
+ */
+export function handOff(addresses: readonly Address[], queue: readonly Handle[], players: readonly Handle[], used: boolean): AfterAddresses {
+  const rest = [...queue];
+  const carried: Handle[] = [];
+  let handedTo: HandedOff | undefined;
+  for (const address of addresses) {
+    if (!players.includes(address.to) || address.to === address.from) continue;
+    const raised = rest.includes(address.to);
+    if (!used && (raised || address.asks)) {
+      used = true;
+      handedTo = { ...address, raised };
+      if (raised) rest.splice(rest.indexOf(address.to), 1);
+      rest.unshift(address.to);
+    } else if (address.asks && !raised && !carried.includes(address.to)) {
+      carried.push(address.to);
+    }
+  }
+  return { queue: rest, ...(handedTo ? { handedTo } : {}), carried };
 }

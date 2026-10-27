@@ -22,7 +22,7 @@ export class Transcript {
     this.clock = clock;
   }
 
-  add(entry: { speaker: string; channel: Channel; kind: TranscriptRecord["kind"]; text: string; human?: boolean }): TranscriptRecord {
+  add(entry: { speaker: string; channel: Channel; kind: TranscriptRecord["kind"]; text: string; human?: boolean; to?: string }): TranscriptRecord {
     const record: TranscriptRecord = {
       at: this.clock(),
       speaker: entry.speaker,
@@ -32,6 +32,7 @@ export class Transcript {
       rolls: citedRolls(entry.text),
       log_head: this.logHead(),
       ...(entry.human ? { human: true } : {}),
+      ...(entry.to ? { to: entry.to } : {}),
     };
     this.records.push(record);
     if (this.file) appendFileSync(this.file, JSON.stringify(record) + "\n");

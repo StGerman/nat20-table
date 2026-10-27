@@ -22,7 +22,8 @@ export interface ToolOutcome {
 export type TableEvent =
   /** A line of DM narration (guarded, spec §3.5) or a character's spoken line. */
   | { kind: "narration"; speaker: string; text: string; to?: Handle }
-  | { kind: "speech"; speaker: Handle; text: string }
+  /** `to`: the character it is spoken to, the human's own included (party talk §4.4). */
+  | { kind: "speech"; speaker: Handle; text: string; to?: Handle }
   /** What a character sets out to do out of combat, as its player declared it. */
   | { kind: "intent"; speaker: Handle; text: string }
   /** An engine event's own text, rendered for the human's viewer, with its roll id if any. */
@@ -166,4 +167,6 @@ export interface TranscriptRecord {
   log_head: number;
   /** For a human line: it is the human's own, so the leak scan skips it (spec §3.5). */
   human?: boolean;
+  /** For speech: the character it is spoken to (party talk §4.4). */
+  to?: Handle;
 }
