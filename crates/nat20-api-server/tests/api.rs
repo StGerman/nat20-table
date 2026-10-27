@@ -894,12 +894,18 @@ fn a_combat_move_spends_movement_and_provokes() {
         json!({ "cmd": "move", "actor": "bren", "prompt_id": prompt,
             "to": { "kind": "point", "point": { "x_ft": -20.0, "y_ft": 0.0, "z_ft": 0.0 } } })
     };
-    // Leaving the goblin's reach gives it an opportunity attack, which stops Bren where he left.
+    // Leaving the goblin's reach gives it an opportunity attack. The scripted goblin settles it
+    // inside the move, and Bren walks on to where he was going (protocol §4.1).
     let moved = api.call("bren", away(&prompt));
     assert_eq!(moved["ok"], true, "{moved}");
     assert_eq!(moved["result"]["provoked"], json!(["goblin"]), "{moved}");
     let spent = moved["result"]["moved_ft"].as_f64().unwrap();
-    assert!(spent > 0.0 && spent < 5.0, "{moved}");
+    assert!(spent > 5.0 && spent <= 30.0, "{moved}");
+    let state = api.call("bren", json!({ "cmd": "get_state" }));
+    assert_eq!(
+        state["result"]["state"]["me"]["position_ft"]["x_ft"], -20.0,
+        "{state}"
+    );
     // A route longer than the movement left is refused and moves nobody.
     let prompt = moved["awaiting"]["prompt_id"].clone();
     let far = api.call(
@@ -909,7 +915,11 @@ fn a_combat_move_spends_movement_and_provokes() {
     );
     assert_eq!(far["error"]["reason"], "insufficient_resource", "{far}");
     // The rest of the movement still takes him on.
-    let rest = api.call("bren", away(&prompt));
+    let rest = api.call(
+        "bren",
+        json!({ "cmd": "move", "actor": "bren", "prompt_id": prompt,
+        "to": { "kind": "point", "point": { "x_ft": -22.0, "y_ft": 0.0, "z_ft": 0.0 } } }),
+    );
     assert_eq!(rest["ok"], true, "{rest}");
     assert_eq!(rest["result"]["provoked"], json!([]), "{rest}");
     assert!(
@@ -1237,7 +1247,7 @@ fn a_submit_on_a_target_beyond_the_movement_left_walks_and_drops_the_option() {
 }
 
 /// A goblin at 0 feet, Bren beside it at 4 and Torva at 7, so a walk east leaves the goblin's
-/// reach inside Torva's space; `far` adds a client-controlled goblin at 22 feet. The fight is
+/// reach inside Torva's space, and then Torva's reach; `far` adds a client-controlled goblin at 22 feet. The fight is
 /// run to Bren's first turn. Returns the session, its data folder and Bren's prompt.
 fn crowd(name: &str, goblin: &str, far: bool) -> (Api, PathBuf, Value) {
     let mut creatures = vec![
@@ -1309,12 +1319,12 @@ fn move_bren_to(api: &mut Api, last: &Value, x_ft: f32) -> Value {
     )
 }
 
-/// Bren leaves the goblin's reach inside Torva's space. A creature can move through another's
-/// space but can't end its move there (ENG-18), so Bren waits there while the goblin decides,
-/// then walks on to the first free spot, short of where he was going; that walk is logged as
-/// its own `moved`.
+/// Bren leaves the goblin's reach inside Torva's space and waits there while the goblin decides.
+/// Then he walks on, logged as its own `moved`, until he leaves Torva's reach: an ally gets an
+/// Opportunity Attack too (SRD 5.2.1). Once she declines he walks on to where he was going
+/// (protocol §4.1, ENG-22).
 #[test]
-fn a_move_that_provokes_inside_an_allys_space_walks_on_after_the_reaction() {
+fn a_move_that_provokes_walks_on_after_each_reaction() {
     let (mut api, dir, last) = crowd("walk_on", "client", false);
     let moved = move_bren_to(&mut api, &last, 20.0);
     assert_eq!(moved["result"]["provoked"], json!(["goblin"]), "{moved}");
@@ -1327,19 +1337,30 @@ fn a_move_that_provokes_inside_an_allys_space_walks_on_after_the_reaction() {
         json!({ "cmd": "react", "actor": "goblin", "prompt_id": moved["awaiting"]["prompt_id"],
             "choice": null }),
     );
-    std::fs::remove_dir_all(dir).ok();
     assert_eq!(declined["ok"], true, "{declined}");
     let walked_on = bren_moves(&declined);
     assert_eq!(walked_on.len(), 1, "{declined}");
     assert!(
         walked_on[0] > 9.0 && walked_on[0] < 20.0,
-        "Bren should stop past Torva's space, short of the goal: {declined}"
+        "Bren should wait at the edge of Torva's reach: {declined}"
     );
-    assert_eq!(declined["awaiting"]["actor"], "bren", "{declined}");
+    assert_eq!(declined["awaiting"]["actor"], "torva", "{declined}");
+    assert_eq!(declined["awaiting"]["kind"], "reaction", "{declined}");
+
+    let let_go = api.call(
+        "torva",
+        json!({ "cmd": "react", "actor": "torva", "prompt_id": declined["awaiting"]["prompt_id"],
+            "choice": null }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(let_go["ok"], true, "{let_go}");
+    assert_eq!(bren_moves(&let_go), vec![20.0], "{let_go}");
+    assert_eq!(let_go["awaiting"]["actor"], "bren", "{let_go}");
 }
 
 /// The goblin takes its Opportunity Attack on Bren in Torva's space. Bren walks on only after
-/// it, so his walk on is logged after the attack (protocol §4.1).
+/// it, so his walk on is logged after the attack (protocol §4.1), and it pauses again where he
+/// leaves Torva's reach.
 #[test]
 fn a_walk_on_is_logged_after_the_opportunity_attack_it_waited_for() {
     let (mut api, dir, last) = crowd("walk_on_attacked", "client", false);
@@ -1353,8 +1374,8 @@ fn a_walk_on_is_logged_after_the_opportunity_attack_it_waited_for() {
     std::fs::remove_dir_all(dir).ok();
     assert_eq!(attacked["ok"], true, "{attacked}");
     assert_eq!(
-        attacked["awaiting"]["actor"], "bren",
-        "Bren is still up: {attacked}"
+        attacked["awaiting"]["actor"], "torva",
+        "Bren is still up and walks on: {attacked}"
     );
     assert_eq!(bren_moves(&attacked).len(), 1, "{attacked}");
     assert!(
@@ -1364,7 +1385,8 @@ fn a_walk_on_is_logged_after_the_opportunity_attack_it_waited_for() {
 }
 
 /// A scripted goblin settles the Opportunity Attack inside the `move` command, so Bren walks on
-/// before it answers: `moved_ft` counts both stretches (protocol §4.1).
+/// before it answers, up to where he leaves Torva's reach: `moved_ft` counts both stretches
+/// (protocol §4.1).
 #[test]
 fn a_move_counts_the_walk_on_a_scripted_reaction_lets_it_finish() {
     let (mut api, dir, last) = crowd("walk_on_scripted", "scripted", false);
@@ -1377,15 +1399,16 @@ fn a_move_counts_the_walk_on_a_scripted_reaction_lets_it_finish() {
     assert!(stops[1] > 9.0, "{moved}");
     let moved_ft = moved["result"]["moved_ft"].as_f64().unwrap();
     assert!(moved_ft >= stops[1] - 4.0 - 0.5, "{moved}");
-    assert_eq!(moved["awaiting"]["actor"], "bren", "{moved}");
+    assert_eq!(moved["awaiting"]["actor"], "torva", "{moved}");
 }
 
 /// Bren swings at a goblin across the room; core walks him toward it through Torva's space, where
 /// he leaves the near goblin's reach. While the goblin decides, the walk so far is logged, and
-/// the reaction names it as its trigger (protocol §3). Once the goblin declines, he walks on and
-/// the swing is dropped (protocol §4.4).
+/// the reaction names it as its trigger (protocol §3). Once the goblin declines he walks on, and
+/// once Torva lets him leave her reach too, he gets to the far goblin and swings (protocol §4.1,
+/// ENG-22).
 #[test]
-fn a_submit_that_provokes_inside_an_allys_space_logs_the_walk_the_reaction_answers() {
+fn a_submit_that_provokes_logs_the_walk_the_reaction_answers_and_swings_after_it() {
     let (mut api, dir, last) = crowd("submit_walk_on", "client", true);
     let swung = api.call(
         "bren",
@@ -1409,14 +1432,27 @@ fn a_submit_that_provokes_inside_an_allys_space_logs_the_walk_the_reaction_answe
         json!({ "cmd": "react", "actor": "goblin", "prompt_id": swung["awaiting"]["prompt_id"],
             "choice": null }),
     );
-    std::fs::remove_dir_all(dir).ok();
     assert_eq!(declined["ok"], true, "{declined}");
     let walked_on = bren_moves(&declined);
     assert_eq!(walked_on.len(), 1, "{declined}");
     assert!(walked_on[0] > 9.0, "{declined}");
+    assert_eq!(declined["awaiting"]["actor"], "torva", "{declined}");
+
+    let let_go = api.call(
+        "torva",
+        json!({ "cmd": "react", "actor": "torva", "prompt_id": declined["awaiting"]["prompt_id"],
+            "choice": null }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(let_go["ok"], true, "{let_go}");
     assert!(
-        event_at(&declined, "moved", "bren") < event_at(&declined, "action_dropped", "bren"),
-        "{declined}"
+        event_at(&let_go, "moved", "bren") < event_at(&let_go, "action", "bren"),
+        "{let_go}"
+    );
+    let events = let_go["events"].as_array().unwrap();
+    assert!(
+        !events.iter().any(|e| e["kind"] == "action_dropped"),
+        "{let_go}"
     );
 }
 
@@ -2543,7 +2579,7 @@ fn scripted_monsters_take_no_opportunity_attack_on_an_ally() {
         .filter(|e| e["kind"] == "roll" && e["roll"]["kind"] == "attack")
         .collect();
     assert!(attacks.is_empty(), "{moved}");
-    // The reaction was offered, so the move stopped where it provoked (protocol §4.1).
+    // The reaction was offered and declined, and the walk went on past it (protocol §4.1).
     assert_eq!(moved["result"]["provoked"], json!(["goblin_b"]), "{moved}");
 }
 

@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.34"
+    "version": "1.0.0-dev.35"
   },
   "$defs": {
     "Ability": {
@@ -996,7 +996,7 @@
               "const": "move"
             },
             "moved_ft": {
-              "description": "Distance moved, in feet; less than the route when an opportunity attack stopped it.",
+              "description": "Distance moved by the time of the response, in feet; less than the route while an\nopportunity attack holds the creature where it provoked, or when the attack stopped it.",
               "type": "number",
               "format": "float"
             },
@@ -2053,7 +2053,7 @@
           ]
         },
         {
-          "description": "A creature walked to reach the target of the option it submitted (one whose target was out\nof reach or sight, protocol §4.4) and did not get to take it: the walk stopped short where\nit provoked an Opportunity Attack (§4.1), or the option could not be taken where it ended.\nNothing the option costs is spent; the movement is. In a fight the creature's action prompt\nstays open. Logged in place of the `action` it did not take.",
+          "description": "A creature walked to reach the target of the option it submitted (one whose target was out\nof reach or sight, protocol §4.4) and did not get to take it: an Opportunity Attack the walk\nprovoked dropped it or left it unable to move (§4.1), or the option could not be taken\nwhere it ended.\nNothing the option costs is spent; the movement is. In a fight the creature's action prompt\nstays open. Logged in place of the `action` it did not take.",
           "type": "object",
           "properties": {
             "actor": {
@@ -3489,7 +3489,7 @@
           ]
         },
         {
-          "description": "Moves a creature along a route on the map. In explore mode the walk costs no movement\nand provokes nobody. In combat it is a decision at the actor's action prompt: the whole\nroute must fit in the movement left, and an opportunity attack stops the creature where\nit provoked one. No route answers `rejected` with `no_path`.",
+          "description": "Moves a creature along a route on the map. In explore mode the walk costs no movement\nand provokes nobody. In combat it is a decision at the actor's action prompt: the whole\nroute must fit in the movement left, and an opportunity attack pauses the creature where\nit provoked one; it walks on once the reaction is resolved (protocol §4.1). No route\nanswers `rejected` with `no_path`.",
           "type": "object",
           "properties": {
             "actor": {

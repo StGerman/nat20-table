@@ -118,8 +118,9 @@ pub enum EventKind {
         targets: Vec<Handle>,
     },
     /// A creature walked to reach the target of the option it submitted (one whose target was out
-    /// of reach or sight, protocol §4.4) and did not get to take it: the walk stopped short where
-    /// it provoked an Opportunity Attack (§4.1), or the option could not be taken where it ended.
+    /// of reach or sight, protocol §4.4) and did not get to take it: an Opportunity Attack the walk
+    /// provoked dropped it or left it unable to move (§4.1), or the option could not be taken
+    /// where it ended.
     /// Nothing the option costs is spent; the movement is. In a fight the creature's action prompt
     /// stays open. Logged in place of the `action` it did not take.
     ActionDropped {

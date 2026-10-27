@@ -191,7 +191,7 @@ impl WalkThenAct {
 
 /// A walk core makes on its own: to reach an option's target (`MoveAndAct`), or toward a target it
 /// can't reach this turn (`Move`, a scripted monster's approach), or on from where a move provoked
-/// inside another creature's space (ENG-18). Logged as `moved` once the walker stops (API-32).
+/// an opportunity attack (ENG-22). Logged as `moved` once the walker stops (API-32).
 struct Walk {
     entity: Entity,
     from: Point3<f32>,
@@ -626,7 +626,38 @@ impl Game {
     /// Log entries produced since the last call, in order, without `seq`.
     pub fn take_entries(&mut self) -> Vec<Pending> {
         self.log_unseen_changes();
-        std::mem::take(&mut self.pending)
+        // A walk paused by a reaction that a scripted creature settled inside the same command
+        // logs two `moved` with nothing between them; the reader sees one walk (ENG-22).
+        let mut entries: Vec<Pending> = Vec::with_capacity(self.pending.len());
+        for entry in std::mem::take(&mut self.pending) {
+            if let (
+                Some(Pending {
+                    kind:
+                        EventKind::Moved {
+                            actor: walker,
+                            to: paused_at,
+                            anchor: paused_anchor @ None,
+                            ..
+                        },
+                    ..
+                }),
+                EventKind::Moved {
+                    actor,
+                    from,
+                    to,
+                    anchor,
+                },
+            ) = (entries.last_mut(), &entry.kind)
+                && walker == actor
+                && paused_at == from
+            {
+                *paused_at = *to;
+                paused_anchor.clone_from(anchor);
+                continue;
+            }
+            entries.push(entry);
+        }
+        entries
     }
 
     /// Logs what changed with no engine event of its own: Concentration that ran out, then
@@ -1441,7 +1472,8 @@ impl Game {
     /// Moves `actor` and returns the feet it moved and who it provoked. In explore mode the
     /// creature walks the whole route at no movement cost and provokes nobody, since nobody
     /// is fighting. In combat the session has checked the prompt: the route must fit in the
-    /// movement left, and an opportunity attack stops the creature where it was provoked.
+    /// movement left, and an opportunity attack holds the creature where it was provoked until
+    /// the reaction is resolved.
     pub fn move_to(
         &mut self,
         actor: &str,
@@ -1511,9 +1543,8 @@ impl Game {
         };
         let landed = systems::geometry::get_foot_position(&self.engine.world, entity)
             .expect("scene creatures have a position");
-        // A creature that provoked inside another creature's space is still walking: once the
-        // reaction is settled it walks on to the first free spot (ENG-18), and that walk is
-        // logged as `moved` when it stops (API-32).
+        // A creature that provoked is still walking: once the reaction is settled it walks on
+        // to its goal (ENG-22), and that walk is logged as `moved` when it stops (API-32).
         let walking_on = self
             .engine
             .world
@@ -1541,7 +1572,7 @@ impl Game {
             self.advance();
         }
         // A scripted reaction settled inside this command lets the creature walk on before the
-        // response (ENG-18), and that walk counts too. Movement left only grows again at the
+        // response (ENG-22), and that walk counts too. Movement left only grows again at the
         // creature's next turn, which `max` keeps out.
         let moved_m = if combat {
             moved_m.max(before - remaining_movement_m(&self.engine, entity))
@@ -3120,7 +3151,7 @@ impl Game {
             .is_some_and(|p| matches!(p.kind, ActionPromptKind::Reactions { .. }));
         let no_pending = scope.is_none_or(|s| s.pending_events().is_empty());
         // A reaction prompt holds everyone it doesn't wait on, even a creature still mid-move or
-        // mid-attack: one that provoked inside another creature's space (ENG-18), or an attacker
+        // mid-attack: one that provoked an opportunity attack (ENG-22), or an attacker
         // whose roll waits on Shield. Ticking on would change nothing.
         waiting_on_reaction || (all_idle && no_pending)
     }
@@ -3610,7 +3641,7 @@ impl Game {
 
         // A walk core made for an option is logged as a `move` is, once the walker has stopped:
         // right before its `action` when it got to act, else first, or last for a walk on after
-        // a reaction (API-32, ENG-18). The `action` ends the walk even while a reaction keeps the
+        // a reaction (API-32, ENG-22). The `action` ends the walk even while a reaction keeps the
         // walker busy. A walker a reaction holds mid-walk has its walk so far logged now, so the
         // reaction can name it (protocol §3), and walks on from there; any other walk still under
         // way waits for the next batch.
@@ -3665,8 +3696,9 @@ impl Game {
             );
         }
 
-        // A walk that stopped without the option it walked for: a move that provokes stops where
-        // it provoked (protocol §4.1), and core drops the option it carried (API-31).
+        // A walk that stopped without the option it walked for: the opportunity attack it
+        // provoked dropped the walker (protocol §4.1), or the option couldn't be taken where the
+        // walk ended, and core drops the option it carried (API-31).
         if let Some(walk) = self.walk_then_act.take() {
             let acted = entries
                 .iter()
