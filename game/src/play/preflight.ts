@@ -6,7 +6,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { engineBinary, REPO } from "../engine.ts";
+// Node built-ins and our own dependency-free modules only: the preflight must run before `npm ci`.
+import { agentEnv } from "../agents/env.ts";
+import { engineBinary, REPO } from "../paths.ts";
 
 interface Check {
   /** "note" is shown and never fails the preflight. */
@@ -18,7 +20,8 @@ interface Check {
 
 // Generous: the first `cargo` call in the repo installs the pinned Rust release, and the first engine
 // build fetches `nat20_core` and takes a few minutes.
-const sh = (cmd: string, args: string[]) => spawnSync(cmd, args, { cwd: REPO, encoding: "utf8", timeout: 600_000 });
+const sh = (cmd: string, args: string[], env?: NodeJS.ProcessEnv) =>
+  spawnSync(cmd, args, { cwd: REPO, encoding: "utf8", timeout: 600_000, ...(env ? { env } : {}) });
 const rel = (file: string) => path.relative(REPO, file) || file;
 
 function node(): Check {
@@ -68,13 +71,15 @@ function engine(): Check {
 }
 
 function claudeCode(): Check[] {
-  const version = sh("claude", ["--version"]);
+  // With the environment the agents get, so the login checked is the one they will use.
+  const env = agentEnv(process.env);
+  const version = sh("claude", ["--version"], env);
   if (version.error || version.status !== 0) {
     return [{ ok: false, what: "Claude Code", detail: "claude not found", fix: "npm install -g @anthropic-ai/claude-code" }];
   }
   let status: { loggedIn?: boolean; authMethod?: string } = {};
   try {
-    status = JSON.parse(sh("claude", ["auth", "status", "--json"]).stdout);
+    status = JSON.parse(sh("claude", ["auth", "status", "--json"], env).stdout);
   } catch {
     // Not logged in, or an older Claude Code without `auth status`: reported below.
   }

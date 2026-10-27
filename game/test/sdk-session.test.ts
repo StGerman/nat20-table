@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { z } from "zod";
 import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
-import { AgentSession, agentEnv, reply, seatTool, sessionOptions, TurnTimeout, UsageLimitReached, type SessionConfig } from "../src/agents/sdk-session.ts";
+import { agentEnv } from "../src/agents/env.ts";
+import { AgentSession, reply, seatTool, sessionOptions, TurnTimeout, UsageLimitReached, type SessionConfig } from "../src/agents/sdk-session.ts";
 import { apiEquivalentUsd, percentile, summarize, UsageLog, type UsageRecord } from "../src/usage.ts";
 
 const narrate = seatTool("narrate", "Say this to the table.", { text: z.string() }, async () => reply("said"));
