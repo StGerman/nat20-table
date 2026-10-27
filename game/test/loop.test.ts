@@ -136,6 +136,18 @@ test("each part of a turn shows its engine lines, then its narration, before the
   assert.ok(played > 4, `only ${played} PC turns played`);
 });
 
+test("two narrations made at once show each engine line once", async () => {
+  const loaded = "Scene m5_s3_yard loaded in explore mode.";
+  const { t, seat } = await play({
+    seed: 27,
+    players: { maren: {} },
+    seat: seatThen([]),
+    dm: { scene_open: async (tools) => void (await Promise.all([tools.narrate("The yard is quiet."), tools.narrate("Too quiet.")])) },
+  });
+  assert.equal(seat.shown.filter((e) => e.kind === "engine" && e.text === loaded).length, 1);
+  assert.equal(t.table.transcript.records.filter((r) => r.channel === "dm" && r.text === loaded).length, 1);
+});
+
 // --- Spec §6, row by row -------------------------------------------------------------------------
 
 test("an engine refusal goes back to the agent that made the call, counts as a retry, and reaches nobody else", async () => {
@@ -234,6 +246,30 @@ test("once two retries are spent, no further change reaches the engine and the t
   assert.deepEqual(texts.slice(3), Array(3).fill("No retries left for this decision; the table moves on."));
   assert.ok(!runLines(t, "retry").includes("ilsa didn't end its turn; nudged"), "no nudge once retries are spent");
   assert.ok(runLines(t, "fallback").includes("ilsa's turn ends"));
+});
+
+test("a seat's changes made at once go one at a time, so none slips past a spent decision", async () => {
+  const texts: string[] = [];
+  let t!: TestTable;
+  await play({
+    seed: 27,
+    onTable: (table) => (t = table),
+    players: {
+      torva: {},
+      maren: {},
+      ilsa: {
+        combat: async (tools) => {
+          const wrong = () => tools.submitDecision({ option_id: "cast/no_such_spell" });
+          for (const outcome of await Promise.all([wrong(), wrong(), wrong(), tools.endTurn()])) texts.push(outcome.text);
+          t.table.end("test over");
+        },
+      },
+    },
+    dm: fightAtOnce,
+  });
+  assert.equal(t.requests().filter((r) => r.cmd === "submit" && r.actor === "ilsa").length, 3);
+  assert.equal(texts[3], "No retries left for this decision; the table moves on.");
+  assert.ok(runLines(t, "fallback").includes("ilsa's turn ends"), "the end_turn made alongside them never reached the engine");
 });
 
 test("a refusal that isn't retryable is logged as a loop bug and ends the decision", async () => {

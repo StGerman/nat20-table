@@ -83,6 +83,10 @@ export class TableState {
   /** Engine events fetched for the human's screen and the DM's transcript lines, not written yet. */
   private screen: Event[] = [];
   private dmLines: Event[] = [];
+  /** The flush running now, if any: the next one starts after it. */
+  private flushing: Promise<void> = Promise.resolve();
+  /** Each seat's state changes in flight, one after another (see `oneAtATime`). */
+  private readonly changing = new Map<string, Promise<unknown>>();
   private readonly inputsFile: string | undefined;
   private readonly narrationGuard: TextGuard;
   private readonly speechGuard: TextGuard;
@@ -137,6 +141,16 @@ export class TableState {
     return this.retries(seat) > this.maxRetries;
   }
 
+  /**
+   * Runs `change` once every earlier change `seat` started has been answered, so each one sees the
+   * retries the ones before it spent: parallel tool calls can't slip past a spent decision.
+   */
+  oneAtATime<T>(seat: string, change: () => Promise<T>): Promise<T> {
+    const run = (this.changing.get(seat) ?? Promise.resolve()).then(change);
+    this.changing.set(seat, run.catch(() => undefined));
+    return run;
+  }
+
   /** Takes in a response: its `awaiting` is now the truth. */
   observe(response: Response): Response {
     this.awaiting = response.awaiting;
@@ -159,8 +173,15 @@ export class TableState {
    * them and the DM's view of the same stretch to the transcript (`to:<human>` and `dm`). Runs
    * before any text reaches the human, so a roll always shows before the narration about it.
    * Lines from the first event `holdFrom` matches (in the DM's view) onwards wait for a later flush.
+   * One flush runs at a time, so two overlapping ones can't both take the same new lines.
    */
-  async flush(holdFrom?: (event: Event) => boolean): Promise<void> {
+  flush(holdFrom?: (event: Event) => boolean): Promise<void> {
+    const run = this.flushing.then(() => this.flushNow(holdFrom));
+    this.flushing = run.catch(() => undefined);
+    return run;
+  }
+
+  private async flushNow(holdFrom: ((event: Event) => boolean) | undefined): Promise<void> {
     this.screen.push(...tellable(await this.engine.newEvents(this.human, "screen")));
     this.dmLines.push(...tellable(await this.engine.newEvents("dm", "transcript")));
     let limit = this.flushLimit ?? Number.POSITIVE_INFINITY;

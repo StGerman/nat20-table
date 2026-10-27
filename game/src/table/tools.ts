@@ -46,11 +46,15 @@ const CHANGES = new Set<Command["cmd"]>([
  * orchestrator's problem (spec §6): it refreshes the prompt and resends once, which is not a retry.
  * A retryable refusal counts as one of the decision's retries; a refusal that isn't retryable ends
  * the decision. Once a decision is spent, no further change reaches the engine and the loop falls
- * back.
+ * back. A seat's changes go one at a time, so each sees what the ones before it spent.
  */
-export async function send(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
+export function send(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
+  if (!CHANGES.has(command.cmd)) return sendNow(table, viewer, command, okText);
+  return table.oneAtATime(viewer, () => (table.exhausted(viewer) ? Promise.resolve(table.spent()) : sendNow(table, viewer, command, okText)));
+}
+
+async function sendNow(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
   const changes = CHANGES.has(command.cmd);
-  if (changes && table.exhausted(viewer)) return table.spent();
   let response = table.observe(await table.engine.request(viewer, command));
   if (!response.ok && response.error?.code === "stale_prompt" && "prompt_id" in command && command.prompt_id) {
     const fresh = table.observe(await table.engine.request(viewer, { cmd: "get_state" }));
