@@ -745,6 +745,13 @@ test("the scene plan plays the listed scenes in order, passes over the ones betw
   assert.equal(plan.onScene("s3_mill_yard", ["s1_village_green"]), "continue");
   assert.equal(plan.onScene("s2_mill_road", ["s1_village_green", "s3_mill_yard"]), "stop", "nothing listed is left to play");
   assert.equal(plan.onScene("s4_captured_goblin", ["s1_village_green"]), "stop");
+  // An id the pack doesn't have passes nothing over: it loads as asked, and the engine refuses it.
+  assert.equal(plan.onScene("s2_mill_raod", ["s1_village_green"]), "stop");
+  // Only a scene on the way forward is passed over, not one before the furthest scene played.
+  const later = scenePlan(pack, ["s3_mill_yard", "s5_mill_cellar"]);
+  assert.deepEqual(later.onScene("s4_captured_goblin", ["s3_mill_yard"]), { skipTo: "s5_mill_cellar" });
+  assert.equal(later.onScene("s2_mill_road", ["s3_mill_yard"]), "stop");
+  assert.equal(later.onScene("s1_village_green", []), "stop");
   assert.throws(() => scenePlan(pack, ["s3_mill_yard", "s1_village_green"]), /in the pack's order/);
   assert.throws(() => scenePlan(pack, ["s9_nowhere"]), /has no scene s9_nowhere/);
   assert.throws(() => scenePlan(pack, []), /no scene to play/);

@@ -64,8 +64,11 @@ export async function startAt(engine: GameEngine, pack: string, scene: string, p
 
 /**
  * Which scenes a run plays (`--scenes`): the listed ones, in the pack's order. A scene the DM loads
- * between two listed ones is passed over: the next listed scene not played yet loads in its place.
- * The run stops before any other scene. Returns the scene to start at and the loop's `onScene`.
+ * on the way forward, after the furthest scene played (or the first listed one) and before a listed
+ * one not played yet, is passed over: that listed scene loads in its place. The run stops before any
+ * other scene. An id that isn't in the pack is never passed over: it loads as asked, so the engine
+ * refuses an unknown one and the DM can try again. Returns the scene to start at and the loop's
+ * `onScene`.
  */
 export function scenePlan(pack: string, listed: string[]): { first: string; onScene: (sceneId: string, played: readonly string[]) => SceneChoice } {
   const order = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8"))).scenes.map((s) => s.id);
@@ -78,7 +81,9 @@ export function scenePlan(pack: string, listed: string[]): { first: string; onSc
     first: listed[0],
     onScene: (sceneId, played) => {
       if (listed.includes(sceneId)) return "continue";
-      const next = listed.find((id) => order.indexOf(id) > order.indexOf(sceneId) && !played.includes(id));
+      const here = order.indexOf(sceneId);
+      const furthest = Math.max(at[0], ...played.map((id) => order.indexOf(id)));
+      const next = here > furthest ? listed.find((id) => order.indexOf(id) > here && !played.includes(id)) : undefined;
       return next ? { skipTo: next } : "stop";
     },
   };
