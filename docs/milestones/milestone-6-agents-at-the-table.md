@@ -4,7 +4,7 @@
 - **Date:** 2026-10-23
 - **Owner:** Stas
 - **Depends on:** Milestones 3, 4 and 5 done (main 3f74dfe, contract `1.0.0-dev.30`, core pinned at fork `demo` d9c6b37). Open engine gaps that steps below wait on are listed in §9 with the step each must land before.
-- **Exit criterion** (`TASKS.md` § Milestones): one full scene of *The Silent Mill* played by the DM agent, the player agents and a human in the text UI, with visibility enforced. The exit run plays Scene 1 and Scene 3 (D1, Stas 2026-10-23).
+- **Exit criterion** (`TASKS.md` § Milestones): one full scene of *The Silent Mill* played by the DM agent, the player agents and a human in the text UI, with visibility enforced. The exit run plays Scene 1 and Scene 3 (D1, Stas 2026-10-23). Met on 2026-10-27; the run's records and findings are in [`m6-exit-run-2026-10-27/`](m6-exit-run-2026-10-27/README.md).
 
 Milestones 1 to 5 built the engine side: every rule the adventure needs resolves in `nat20_core`, behind contract v1, with seeded fixtures and an audit. Nothing on the game side exists yet: no `game/` directory, no agents, no text UI, and the adventure itself is only test scenes. This milestone builds the table: the game loop that drives the engine, the DM agent, one agent per AI player, the human's text UI, the transcript and its audit, and *The Silent Mill* as real content. It ends with Stas playing Bren through two scenes with an AI DM and an AI party.
 

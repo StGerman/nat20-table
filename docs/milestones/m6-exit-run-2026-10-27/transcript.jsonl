@@ -1,0 +1,894 @@
+{"at":"2026-10-27T12:35:09.507Z","speaker":"table","channel":"run","kind":"system","text":"scene s1_village_green","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:35:17.273Z","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s1_village_green loaded in explore mode.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:35:17.273Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene s1_village_green loaded in explore mode.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:35:17.278Z","speaker":"dm","channel":"table","kind":"narration","text":"Для базарного утра на лугу Вендфорда слишком тихо. Женщины у колодца замолкают, когда вы проходите мимо. Под старым дубом вас ждёт плотный мужчина в добротном буром кафтане, в руке у него бирка для счёта. Рядом стоит здоровяк на костыле, в складках его костяшек до сих пор белеет мука, и он то и дело поглядывает на дорожку, что уходит вверх по реке. Оттуда должен слышаться стук мельничного колеса, но там тишина.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:35:21.555Z","speaker":"dm","channel":"run","kind":"error","text":"dm (scene_open) timed out","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:35:21.555Z","speaker":"dm","channel":"run","kind":"fallback","text":"the DM's scene_open is skipped; the engine lines stand alone","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:36:24.850Z","speaker":"bren","channel":"table","kind":"intent","text":"Поздароваться с мужчинами и представится, спросить их как дела","rolls":[],"log_head":2,"human":true}
+{"at":"2026-10-27T12:36:31.274Z","speaker":"torva","channel":"table","kind":"speech","text":"Я Торва. Мельница молчит. Что тут стряслось? Говорите прямо.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:36:31.277Z","speaker":"maren","channel":"table","kind":"speech","text":"Доброго утра, добрые люди. Я Марен, служительница Эмбры. Почему мельница молчит, и отчего у вас такие лица? Если кто голоден или ранен, скажите, я помогу.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:36:31.279Z","speaker":"ilsa","channel":"table","kind":"speech","text":"Доброе утро. Меня зовут Ильса, я писарь и казначей отряда. Позвольте спросить: почему мельница молчит? В такой час колесо обычно стучит.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:36:31.282Z","speaker":"maren","channel":"table","kind":"intent","text":"Марен подходит к мужчинам под дубом и участливо смотрит на них, готовая выслушать, что случилось с мельницей.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:36:31.285Z","speaker":"ilsa","channel":"table","kind":"intent","text":"Ильса достаёт блокнот, записывает слова мужчин и ждёт ответа на вопрос о молчащей мельнице.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:36:36.336Z","speaker":"dm","channel":"table","kind":"narration","text":"— Ну что ж, — плотный мужчина важно кивает, оглядывая отряд, — добро пожаловать в Вендфорд. Осрик Хейл, староста. А это Бертил Пелл, наш мельник. Дела, скажу прямо, худо. Позавчера, ближе к полудню, колесо встало. Наверху была одна Венна, ученица Бертила: сам он, видите, со сломанной ногой. С тех пор она не вернулась, а наши туда ходить боятся, шепчут про проклятие. Найдите девочку, и община заплатит из общего сундука, слово старосты. Бертил тяжело опирается на костыль и тихо добавляет, не сводя глаз с дорожки к мельнице: — Она мне племянница. Это я её одну туда отпустил.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:38:32.447Z","speaker":"bren","channel":"table","kind":"intent","text":"Что за проклятие? Почему ты сам туда не сходишь или отправишь кого-то из Вендфорда?","rolls":[],"log_head":2,"human":true}
+{"at":"2026-10-27T12:38:39.271Z","speaker":"torva","channel":"table","kind":"speech","text":"Хватит болтать. Девочка там одна уже два дня. Плата — по слову старосты, так? Тогда идём к мельнице.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:38:39.274Z","speaker":"maren","channel":"table","kind":"speech","text":"Не вини себя, Бертил. Мы найдём девочку. Скажи только: Венна ела что-нибудь с собой, и нет ли у неё хворей? А тебе, Осрик, скажу мягко: страх страхом, а дитя в беде. Хлеб вот, возьми, Бертил, ты с утра, поди, не ел.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:38:39.276Z","speaker":"ilsa","channel":"table","kind":"speech","text":"Позвольте уточнить, староста: что именно шепчут про проклятие? Что видели люди и когда это началось? И в какой час Венна ушла наверх? Всё это я запишу.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:38:39.277Z","speaker":"torva","channel":"table","kind":"intent","text":"Торва кивает Бертилу и ждёт, когда отряд двинется по дорожке к мельнице.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:38:39.278Z","speaker":"maren","channel":"table","kind":"intent","text":"Марен протягивает Бертилу свой ломоть хлеба в платке и ждёт, что он расскажет о Венне и мельнице.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:38:39.280Z","speaker":"ilsa","channel":"table","kind":"intent","text":"Ильса раскрывает блокнот и ждёт ответа о проклятии и о том, когда Венна ушла на мельницу.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:38:45.269Z","speaker":"dm","channel":"table","kind":"narration","text":"— Ну что ж… — Осрик мнётся и крутит бирку в пальцах. — Проклятие — это бабьи толки, господин Брен. Мельница встала сама по себе, вот и болтают про дурной глаз да про водяного. А у меня тут пахари да пастухи, не солдаты. Сам я… — он кашляет, — я должен держать деревню в спокойствии. Ильсе он отвечает обстоятельно: Венна ушла на рассвете позавчера, а колесо замолчало к полудню; видеть никто ничего не видел, потому что никто туда и не ходил. Бертил берёт хлеб у Марен, долго молчит и наконец говорит: — Здорова она. Упрямая, вся в мать. Узелок с едой брала, на день. За мельницей двор, поленница, старая псарня. Внутри кладовая, под ней погреб с зерном, а сзади дверь на мельничный лоток. Идите, прошу вас.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:41:17.431Z","speaker":"bren","channel":"table","kind":"intent","text":"Ладно пойдем посмотрим что там с твоей мельницей, но пошли пару крепких парней с нами? Если что помогут с поисками если ее нет на мельнице","rolls":[],"log_head":2,"human":true}
+{"at":"2026-10-27T12:41:21.679Z","speaker":"maren","channel":"table","kind":"speech","text":"Благослови тебя Эмбра, Бертил. Держись, мы приведём её домой. Идём, мои дорогие, не будем терять время.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:41:21.682Z","speaker":"ilsa","channel":"table","kind":"speech","text":"Благодарю, Бертил, это очень полезно. Я записала: двор, поленница, псарня, кладовая, погреб и задняя дверь на лоток. Пойдёмте, пока след не остыл.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:41:21.684Z","speaker":"maren","channel":"table","kind":"intent","text":"Марен кладёт руку на плечо Бертилу и идёт с отрядом по дорожке к мельнице.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:41:21.686Z","speaker":"ilsa","channel":"table","kind":"intent","text":"Ильса прячет блокнот и идёт с отрядом по дорожке к мельнице, внимательно глядя под ноги.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:41:24.977Z","speaker":"dm","channel":"table","kind":"narration","text":"— Ну что ж… — Осрик оглядывается на мужчин у колодца, и те разом отводят глаза. — Боюсь, охотников не найдётся, господин Брен. Пусть идёт отряд, а если девочки там нет, пришлите весть, и тогда я подниму всю деревню. Бертил провожает вас взглядом, пока вы проходите мимо старого дуба и сворачиваете на дорожку к мельнице.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:41:26.217Z","speaker":"dm","channel":"memory:dm","kind":"memory","text":"Осрик отказался дать Брену деревенских парней в помощь и пообещал поднять деревню, если Венны не окажется на мельнице. Отряд не стал проверять старосту: про долг и следы ничего не узнал.","rolls":[],"log_head":2}
+{"at":"2026-10-27T12:41:26.704Z","speaker":"table","channel":"run","kind":"system","text":"scene s2_mill_road passed over; on to s3_mill_yard","rolls":[],"log_head":3}
+{"at":"2026-10-27T12:41:30.633Z","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s3_mill_yard loaded in explore mode.","rolls":[],"log_head":3}
+{"at":"2026-10-27T12:41:30.633Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene s3_mill_yard loaded in explore mode.","rolls":[],"log_head":3}
+{"at":"2026-10-27T12:41:30.634Z","speaker":"dm","channel":"table","kind":"narration","text":"Миля по тихой дорожке между живыми изгородями, и вот ворота мельницы открыты настежь. За ними мощёный двор: поленница, пустая псарня с вытянутой цепью, каменная колода, а в лотке неподвижно висит огромное колесо, и с него капает. Дверь мельницы приоткрыта. На поленнице и у двери сидят гоблины с позеленевшими зубами, и тут у псарни поднимает голову волк. Гоблины визжат и хватаются за луки.","rolls":[],"log_head":3}
+{"at":"2026-10-27T12:41:33.689Z","speaker":"dm","channel":"run","kind":"error","text":"dm (table_turn) timed out","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:33.690Z","speaker":"dm","channel":"run","kind":"fallback","text":"the DM's table_turn is skipped; the engine lines stand alone","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:33.690Z","speaker":"table","channel":"run","kind":"system","text":"scene s3_mill_yard","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:40.799Z","speaker":"torva","channel":"notes:torva","kind":"note","text":"summary: Мы пришли в Вендфорд. Староста Осрик Хейл и мельник Бертил Пелл с костылём попросили найти пропавшую ученицу мельника, Венну, его племянницу. Осрик обещал заплатить из общего сундука, но людей в помощь не дал: деревня боится проклятия. Я заявила, что хватит болтать и надо идти к мельнице. Мы шли милю по дорожке. Во дворе мельницы нас ждали гоблины с позеленевшими зубами и волки, и начался бой. Колесо стоит, с него капает, дверь приоткрыта. Бертил рассказал, что за мельницей есть двор, поленница, псарня, кладовая, погреб и задняя дверь на лоток. Венну надо искать там. Я слушаюсь Брена, а плату за работу не забываю: она нужна, чтобы выкупить ферму.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:41.094Z","speaker":"maren","channel":"notes:maren","kind":"note","text":"summary: Мы приехали в Вендфорд. Староста Осрик Хейл и мельник Бертил Пелл попросили найти пропавшую ученицу мельника, Венну. Бертил — её дядя, он со сломанной ногой и винит себя. Я отдала ему свой ломоть хлеба и пообещала, что мы приведём девочку домой. Деревенские побоялись идти с нами, и Осрик пообещал поднять всю деревню, если девочки на мельнице не окажется. Плата будет из общего сундука.\n\nНа мельничном дворе нас встретили гоблины с позеленевшими зубами и волки, и начался бой. Колесо стоит, с него капает вода. Дверь мельницы приоткрыта. За двором есть кладовая, под ней погреб с зерном, а сзади дверь на мельничный лоток. Венну надо искать живой. Если будут сдаваться, я попрошу их пощадить, но решать будет Брен.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:41.390Z","speaker":"ilsa","channel":"notes:ilsa","kind":"note","text":"summary: Сцена окончена. Резюме для памяти.\n\nВ Вендфорде нас встретили староста Осрик Хейл и мельник Бертил Пелл со сломанной ногой. Мельница молчала. Позавчера на рассвете туда ушла ученица мельника Венна, племянница Бертила, и не вернулась. Осрик обещал заплатить из общего сундука, но людей с нами не дал: деревня боится. Он велел прислать весть, если девочки на мельнице нет. Бертил рассказал про устройство двора: поленница, псарня, кладовая с погребом и задняя дверь на лоток. Я всё записала в блокнот.\n\nУ мельницы во дворе нас ждали гоблины с позеленевшими зубами и волки. Начался бой, и мой ход был первым. Венну пока не нашли. Я подозреваю, что разговоры о проклятии — прикрытие для гоблинов, а староста что-то недоговаривает.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:46.973Z","speaker":"dm","channel":"memory:dm","kind":"memory","text":"summary: Сводка для себя: на лугу Вендфорда отряд Серого Фонаря встретил старосту Осрика Хейла и мельника Бертила Пелла. Осрик рассказал, что колесо встало позавчера к полудню. Ученица Венна ушла на рассвете и пропала, а в деревне шепчутся о проклятии. Если отряд вернёт Венну, Осрик обещал заплатить из общего сундука. Бертил описал мельницу: двор с поленницей и псарней, кладовая, погреб, задняя дверь на лоток. Марен дала Бертилу хлеб. Брен просил парней в помощь, но Осрик отказал и пообещал поднять деревню, если Венны на мельнице не окажется. Ни Осрика, ни Бертила отряд не проверял, так что ни про долг за жёрнов, ни про следы на дорожке ничего не знает.\n\nДорога прошла без происшествий, и отряд вышел к воротам мельницы на виду у врага. Гоблины Крапивного Зуба на поленнице и у двери и волки у псарни заметили их, и во дворе начался бой. Первой ходит Ильса.\n\nЧто осталось открытым: судьба Венны, кто из гоблинов может сдаться (это будет Снитт) и погреб с главарём.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"Combat begins: ilsa, goblin_2, goblin_3, goblin_1, maren, wolf_3, bren, goblin_4, wolf_2, torva, wolf_1.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r5] ilsa rolls initiative: 1d20 (17) +1 = 18.","rolls":["r5"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r6] goblin_2 rolls initiative: 1d20 (16) +2 = 18.","rolls":["r6"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r7] goblin_3 rolls initiative: 1d20 (14) +2 = 16.","rolls":["r7"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r8] goblin_1 rolls initiative: 1d20 (13) +2 = 15.","rolls":["r8"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r9] maren rolls initiative: 1d20 (13) -1 = 12.","rolls":["r9"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r10] wolf_3 rolls initiative: 1d20 (10) +2 = 12.","rolls":["r10"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r11] bren rolls initiative: 1d20 (8) +2 = 10.","rolls":["r11"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r12] goblin_4 rolls initiative: 1d20 (8) +2 = 10.","rolls":["r12"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r13] wolf_2 rolls initiative: 1d20 (8) +2 = 10.","rolls":["r13"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r14] torva rolls initiative: 1d20 (5) +1 = 6.","rolls":["r14"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r15] wolf_1 rolls initiative: 1d20 (4) +2 = 6.","rolls":["r15"],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"Round 1 begins.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:53.993Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat begins: ilsa, goblin_2, goblin_3, goblin_1, maren, wolf_3, bren, goblin_4, wolf_2, torva, wolf_1.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r5] ilsa rolls initiative: 1d20 (17) = 18.","rolls":["r5"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r6] goblin_2 rolls initiative: 1d20 (16) = 18.","rolls":["r6"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r7] goblin_3 rolls initiative: 1d20 (14) = 16.","rolls":["r7"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r8] goblin_1 rolls initiative: 1d20 (13) = 15.","rolls":["r8"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r9] maren rolls initiative: 1d20 (13) = 12.","rolls":["r9"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r10] wolf_3 rolls initiative: 1d20 (10) = 12.","rolls":["r10"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r11] bren rolls initiative: 1d20 (8) = 10.","rolls":["r11"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r12] goblin_4 rolls initiative: 1d20 (8) = 10.","rolls":["r12"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r13] wolf_2 rolls initiative: 1d20 (8) = 10.","rolls":["r13"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r14] torva rolls initiative: 1d20 (5) = 6.","rolls":["r14"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r15] wolf_1 rolls initiative: 1d20 (4) = 6.","rolls":["r15"],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 1 begins.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:53.994Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:41:53.998Z","speaker":"dm","channel":"table","kind":"narration","text":"Тихая живая изгородь кончается, и ворота мельницы открыты прямо на мощёный двор. Там поленница, пустая псарня с вытравленной до конца цепью, каменная поилка, а в лотке неподвижно висит огромное колесо, и с него капает. Дверь мельницы приоткрыта. Тут у псарни поднимает голову волк, за ним ещё двое. Гоблины на поленнице и у двери скалят зубы, зелёные от крапивного сока: это Крапивный Зуб. Они перекликаются по-своему, хватаются за луки и клинки, а волки уже припадают к брусчатке. Ильса, ты успеваешь первой. Что делаешь?","rolls":[],"log_head":17}
+{"at":"2026-10-27T12:42:10.867Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on wolf_1.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:10.867Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r19] ilsa rolls an attack roll vs wolf_1: 1d20 (16) +4 = 20 vs AC 12, hit.","rolls":["r19"],"log_head":36}
+{"at":"2026-10-27T12:42:10.867Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r20] ilsa rolls fire damage: 1d10 (4) = 4.","rolls":["r20"],"log_head":36}
+{"at":"2026-10-27T12:42:10.868Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 takes 4 fire damage.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:10.868Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 has 7/11 Hit Points.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:10.868Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:10.868Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on wolf_1.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:10.868Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r19] ilsa rolls an attack roll vs wolf_1: 1d20 (16) = 20, hit.","rolls":["r19"],"log_head":36}
+{"at":"2026-10-27T12:42:10.868Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r20] ilsa rolls fire damage: 1d10 (4) = 4.","rolls":["r20"],"log_head":36}
+{"at":"2026-10-27T12:42:10.868Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1 takes 4 fire damage.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:10.868Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:10.870Z","speaker":"dm","channel":"table","kind":"narration","text":"Ильса выбрасывает вперёд ладонь, и сгусток огня с треском пересекает двор. Он бьёт в бок крайнего волка у псарни, шерсть дымится, и зверь с воем шарахается, но остаётся на лапах.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Shortbow attack on bren.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r26] goblin_2 rolls an attack roll vs bren: 1d20 (6) +4 = 10 vs AC 19, miss.","rolls":["r26"],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 uses Shortbow attack on bren.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r30] goblin_3 rolls an attack roll vs bren: 1d20 (13) +4 = 17 vs AC 19, miss.","rolls":["r30"],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 uses Shortbow attack on bren.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r34] goblin_1 rolls an attack roll vs bren: 1d20 (14) +4 = 18 vs AC 19, miss.","rolls":["r34"],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 uses Shortbow attack on bren.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r26] goblin_2 rolls an attack roll vs bren: 1d20 (6) = 10, miss.","rolls":["r26"],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3 uses Shortbow attack on bren.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r30] goblin_3 rolls an attack roll vs bren: 1d20 (13) = 17, miss.","rolls":["r30"],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.842Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.843Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 uses Shortbow attack on bren.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.843Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r34] goblin_1 rolls an attack roll vs bren: 1d20 (14) = 18, miss.","rolls":["r34"],"log_head":36}
+{"at":"2026-10-27T12:42:14.843Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:14.845Z","speaker":"dm","channel":"table","kind":"narration","text":"С поленницы и от двери разом щёлкают тетивы. Три стрелы летят в Брена: одна уходит в брусчатку, другая со звоном отскакивает от доспеха, третья проходит у самого виска. Гоблины визжат от досады и тянутся за новыми стрелами. Марен, твой ход.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:16.358Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:16.358Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":36}
+{"at":"2026-10-27T12:42:25.234Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Bless on bren, torva, ilsa.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.235Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren concentrates on Bless.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.235Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is under Bless from maren.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.235Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Bless from maren.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.235Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is under Bless from maren.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.235Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.235Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Bless on bren, torva, ilsa.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.235Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren concentrates on Bless.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.235Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is under Bless from maren.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.235Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:25.237Z","speaker":"dm","channel":"table","kind":"narration","text":"Марен поднимает святой знак и вполголоса призывает Эмбру, Матерь Очага. Брена, Торву и Ильсу окутывает тёплый свет, как от печи с хлебом, и рука у каждого становится твёрже.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:29.382Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:29.382Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 moves.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:29.382Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 uses Wolf Bite attack on torva.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:29.382Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r46] wolf_3 rolls an attack roll vs torva: 1d20 (2) +4 = 6 vs AC 13, miss.","rolls":["r46"],"log_head":48}
+{"at":"2026-10-27T12:42:29.382Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:29.382Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:29.383Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3 moves.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:29.383Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3 uses Wolf Bite attack on torva.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:29.383Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r46] wolf_3 rolls an attack roll vs torva: 1d20 (2) = 6, miss.","rolls":["r46"],"log_head":48}
+{"at":"2026-10-27T12:42:29.383Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:29.384Z","speaker":"dm","channel":"table","kind":"narration","text":"Серый волк пересекает двор длинными прыжками и бросается на Торву, но челюсти щёлкают впустую у её бедра. Зверь скользит когтями по мокрой брусчатке. Брен, гоблины на поленнице снова накладывают стрелы, волк рычит у самых ворот. Что делаешь?","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:31.395Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:42:31.395Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":48}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":54}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_3.","rolls":[],"log_head":54}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r51] bren rolls an attack roll vs wolf_3: 1d20 (15) + 1d4 (2) +5 = 22 vs AC 12, hit.","rolls":["r51"],"log_head":54}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r52] bren rolls slashing damage: 1d8 (5) +3 = 8.","rolls":["r52"],"log_head":54}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 takes 8 slashing damage.","rolls":[],"log_head":54}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 has 3/11 Hit Points.","rolls":[],"log_head":54}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":54}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on wolf_3.","rolls":[],"log_head":54}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r51] bren rolls an attack roll vs wolf_3: 1d20 (15) + 1d4 (2) = 22, hit.","rolls":["r51"],"log_head":54}
+{"at":"2026-10-27T12:43:41.494Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r52] bren rolls slashing damage: 1d8 (5) = 8.","rolls":["r52"],"log_head":54}
+{"at":"2026-10-27T12:43:41.495Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3 takes 8 slashing damage.","rolls":[],"log_head":54}
+{"at":"2026-10-27T12:44:02.496Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:02.496Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:02.499Z","speaker":"dm","channel":"table","kind":"narration","text":"Брен шагает к волку и рубит длинным мечом сверху. Клинок глубоко входит в плечо зверя, волк отскакивает, припадая на переднюю лапу, по серой шерсти течёт кровь.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.725Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.725Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r58] goblin_4 rolls an attack roll vs bren: 1d20 (18) +4 = 22 vs AC 19, hit.","rolls":["r58"],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r59] goblin_4 rolls piercing damage: 1d6 (2) +2 = 4.","rolls":["r59"],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren takes 4 piercing damage.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 16/20 Hit Points.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 moves.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 uses Wolf Bite attack on bren.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r66] wolf_2 rolls an attack roll vs bren: 2d20 (19, 13, kept 19) +4 = 23 vs AC 19, hit.","rolls":["r66"],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r67] wolf_2 rolls piercing damage: 1d6 (4) +2 = 6.","rolls":["r67"],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren takes 6 piercing damage.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 10/20 Hit Points.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is now prone.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r58] goblin_4 rolls an attack roll vs bren: 1d20 (18) = 22, hit.","rolls":["r58"],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r59] goblin_4 rolls piercing damage: 1d6 (2) = 4.","rolls":["r59"],"log_head":72}
+{"at":"2026-10-27T12:44:06.726Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren takes 4 piercing damage.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 16/20 Hit Points.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2 moves.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2 uses Wolf Bite attack on bren.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r66] wolf_2 rolls an attack roll vs bren: 2d20 (19, 13, kept 19) = 23, hit.","rolls":["r66"],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r67] wolf_2 rolls piercing damage: 1d6 (4) = 6.","rolls":["r67"],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren takes 6 piercing damage.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 10/20 Hit Points.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is now prone.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.727Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:06.730Z","speaker":"dm","channel":"table","kind":"narration","text":"Гоблин у двери мельницы наконец попадает: стрела входит Брену в щель у плеча. Тут же второй волк налетает сбоку, впивается в руку и валит его на мокрую брусчатку. Брен ранен и лежит под зверем. Торва, твой ход.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:08.611Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:08.611Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":72}
+{"at":"2026-10-27T12:44:19.972Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Rage.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Rage.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Greataxe) on wolf_3.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r76] torva rolls an attack roll vs wolf_3: 2d20 (9, 11, kept 11) + 1d4 (1) +5 = 17 vs AC 12, hit.","rolls":["r76"],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r77] torva rolls slashing damage: 1d12 (11) +5 = 16.","rolls":["r77"],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 takes 16 slashing damage.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 has 0/11 Hit Points.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 is dead.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Barbarian Rage.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Barbarian Reckless Attack (Greataxe) on wolf_3.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r76] torva rolls an attack roll vs wolf_3: 2d20 (9, 11, kept 11) + 1d4 (1) = 17, hit.","rolls":["r76"],"log_head":87}
+{"at":"2026-10-27T12:44:19.973Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r77] torva rolls slashing damage: 1d12 (11) = 16.","rolls":["r77"],"log_head":87}
+{"at":"2026-10-27T12:44:19.974Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3 takes 16 slashing damage.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.974Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3 is dead.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.974Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:19.976Z","speaker":"dm","channel":"table","kind":"narration","text":"Торва ревёт, лицо у неё темнеет от ярости. Не думая о защите, она обрушивает секиру на раненого волка, и удар разрубает зверя почти надвое. Мёртвый волк падает на брусчатку у ворот.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:23.682Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:23.682Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 moves.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:23.682Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:23.682Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:23.682Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1 moves.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:23.683Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:23.684Z","speaker":"dm","channel":"table","kind":"narration","text":"Обожжённый волк, с дымящимся боком, крадучись обходит двор и подбирается ближе, но пока не бросается. Брен всё ещё на земле, над ним рычит второй волк. Ильса, твой ход.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:25.154Z","speaker":"engine","channel":"dm","kind":"engine","text":"Round 2 begins.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:25.154Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:25.154Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 2 begins.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:25.154Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":87}
+{"at":"2026-10-27T12:44:33.434Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_1.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:33.434Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r89] ilsa rolls an attack roll vs goblin_1: 1d20 (5) + 1d4 (2) +4 = 11 vs AC 15, miss.","rolls":["r89"],"log_head":122}
+{"at":"2026-10-27T12:44:33.434Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:33.434Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on goblin_1.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:33.434Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r89] ilsa rolls an attack roll vs goblin_1: 1d20 (5) + 1d4 (2) = 11, miss.","rolls":["r89"],"log_head":122}
+{"at":"2026-10-27T12:44:33.434Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:33.436Z","speaker":"dm","channel":"table","kind":"narration","text":"Ильса швыряет огонь в гоблина на поленнице, но тот ныряет за дрова, и пламя лишь опаляет верхние поленья. Гоблин высовывается с пронзительным хохотом.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.142Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.142Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Shortbow attack on maren.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.142Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r93] goblin_2 rolls an attack roll vs maren: 1d20 (17) +4 = 21 vs AC 18, hit.","rolls":["r93"],"log_head":122}
+{"at":"2026-10-27T12:44:38.142Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r94] goblin_2 rolls piercing damage: 1d6 (6) +2 = 8.","rolls":["r94"],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r95] maren rolls a Constitution saving throw to keep Concentration: 1d20 (18) +2 = 20 vs DC 10, success.","rolls":["r95"],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren takes 8 piercing damage.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren has 9/17 Hit Points.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 uses Shortbow attack on maren.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r101] goblin_3 rolls an attack roll vs maren: 1d20 (20) +4 = 24 vs AC 18, critical hit.","rolls":["r101"],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r102] goblin_3 rolls critical piercing damage: 2d6 (6, 4) +2 = 12.","rolls":["r102"],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren stops concentrating on Bless, incapacitated.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer under Bless.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Bless.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is no longer under Bless.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren takes 12 piercing damage.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren has 0/17 Hit Points.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren is unconscious.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren is now unconscious.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 uses Shortbow attack on ilsa.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r114] goblin_1 rolls an attack roll vs ilsa: 1d20 (3) +4 = 7 vs AC 11, miss.","rolls":["r114"],"log_head":122}
+{"at":"2026-10-27T12:44:38.143Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r117] maren rolls a death saving throw: 1d20 (11) = 11 vs DC 10, success.","rolls":["r117"],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer prone.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 uses Shortbow attack on maren.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r93] goblin_2 rolls an attack roll vs maren: 1d20 (17) = 21, hit.","rolls":["r93"],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r94] goblin_2 rolls piercing damage: 1d6 (6) = 8.","rolls":["r94"],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r95] maren rolls a Constitution saving throw to keep Concentration: 1d20 (18) = 20, success.","rolls":["r95"],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren takes 8 piercing damage.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3 uses Shortbow attack on maren.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r101] goblin_3 rolls an attack roll vs maren: 1d20 (20) = 24, critical hit.","rolls":["r101"],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r102] goblin_3 rolls critical piercing damage: 2d6 (6, 4) = 12.","rolls":["r102"],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren stops concentrating on Bless, incapacitated.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer under Bless.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.144Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren takes 12 piercing damage.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren is unconscious.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren is now unconscious.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 uses Shortbow attack on ilsa.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r114] goblin_1 rolls an attack roll vs ilsa: 1d20 (3) = 7, miss.","rolls":["r114"],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r117] maren rolls a death saving throw: 1d20 (11) = 11, success.","rolls":["r117"],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.145Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer prone.","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:44:38.150Z","speaker":"dm","channel":"table","kind":"narration","text":"Стрелы находят Марен одна за другой: первую она выдерживает, стиснув зубы, но вторая бьёт точно под ключицу. Жрица оседает у края дорожки без сознания, и тёплый свет Эмбры гаснет. Стрела в Ильсу уходит в изгородь, Марен слабо хрипит, ещё держась. Брен, ты поднимаешься с брусчатки, рядом скалится волк. Что делаешь?","rolls":[],"log_head":122}
+{"at":"2026-10-27T12:45:20.229Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_2.","rolls":[],"log_head":127}
+{"at":"2026-10-27T12:45:20.229Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r124] bren rolls an attack roll vs wolf_2: 1d20 (10) +5 = 15 vs AC 12, hit.","rolls":["r124"],"log_head":127}
+{"at":"2026-10-27T12:45:20.230Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r125] bren rolls slashing damage: 1d8 (3) +3 = 6.","rolls":["r125"],"log_head":127}
+{"at":"2026-10-27T12:45:20.230Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 takes 6 slashing damage.","rolls":[],"log_head":127}
+{"at":"2026-10-27T12:45:20.230Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 has 5/11 Hit Points.","rolls":[],"log_head":127}
+{"at":"2026-10-27T12:45:20.230Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on wolf_2.","rolls":[],"log_head":127}
+{"at":"2026-10-27T12:45:20.230Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r124] bren rolls an attack roll vs wolf_2: 1d20 (10) = 15, hit.","rolls":["r124"],"log_head":127}
+{"at":"2026-10-27T12:45:20.230Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r125] bren rolls slashing damage: 1d8 (3) = 6.","rolls":["r125"],"log_head":127}
+{"at":"2026-10-27T12:45:20.230Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2 takes 6 slashing damage.","rolls":[],"log_head":127}
+{"at":"2026-10-27T12:46:28.805Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Fighter Second Wind.","rolls":[],"log_head":131}
+{"at":"2026-10-27T12:46:28.805Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r129] bren rolls healing: 1d10 (8) +2 = 10.","rolls":["r129"],"log_head":131}
+{"at":"2026-10-27T12:46:28.805Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren regains 10 Hit Points.","rolls":[],"log_head":131}
+{"at":"2026-10-27T12:46:28.805Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 20/20 Hit Points.","rolls":[],"log_head":131}
+{"at":"2026-10-27T12:46:28.805Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Fighter Second Wind.","rolls":[],"log_head":131}
+{"at":"2026-10-27T12:46:28.805Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r129] bren rolls healing: 1d10 (8) = 10.","rolls":["r129"],"log_head":131}
+{"at":"2026-10-27T12:46:28.805Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren regains 10 Hit Points.","rolls":[],"log_head":131}
+{"at":"2026-10-27T12:46:28.806Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 20/20 Hit Points.","rolls":[],"log_head":131}
+{"at":"2026-10-27T12:46:41.086Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:41.086Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:41.087Z","speaker":"dm","channel":"table","kind":"narration","text":"Брен вскакивает и рубит волка поперёк спины. Зверь отскакивает, весь в крови и хромая. Брен переводит дыхание, расправляет плечи, и боль от стрелы и укуса будто отступает: он снова стоит твёрдо, как в начале боя.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.827Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.827Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.827Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.827Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 uses Wolf Bite attack on bren.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.827Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r137] wolf_2 rolls an attack roll vs bren: 2d20 (3, 13, kept 13) +4 = 17 vs AC 19, miss.","rolls":["r137"],"log_head":140}
+{"at":"2026-10-27T12:46:44.827Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.827Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.827Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Reckless Attack Advantage.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.828Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.828Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.828Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.828Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2 uses Wolf Bite attack on bren.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.828Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r137] wolf_2 rolls an attack roll vs bren: 2d20 (3, 13, kept 13) = 17, miss.","rolls":["r137"],"log_head":140}
+{"at":"2026-10-27T12:46:44.828Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.828Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:44.830Z","speaker":"dm","channel":"table","kind":"narration","text":"Гоблин у двери мельницы медлит, выглядывая из-за косяка. Раненый волк кидается на Брена, но зубы соскальзывают по стали. Торва, твой ход.","rolls":[],"log_head":140}
+{"at":"2026-10-27T12:46:56.484Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":142}
+{"at":"2026-10-27T12:46:56.484Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves but doesn't get to use Potion of Healing.","rolls":[],"log_head":142}
+{"at":"2026-10-27T12:46:56.484Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva moves.","rolls":[],"log_head":142}
+{"at":"2026-10-27T12:46:56.484Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva moves but doesn't get to use Potion of Healing.","rolls":[],"log_head":142}
+{"at":"2026-10-27T12:46:56.487Z","speaker":"dm","channel":"table","kind":"narration","text":"Торва бросается к упавшей Марен и на бегу шарит на поясе в поисках склянки с целебным зельем, но влить его жрице не успевает.","rolls":[],"log_head":142}
+{"at":"2026-10-27T12:47:48.299Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Potion of Healing on maren.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.299Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva gives maren a Potion of Healing.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.299Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r145] torva rolls healing: 2d4 (1, 2) +2 = 5.","rolls":["r145"],"log_head":158}
+{"at":"2026-10-27T12:47:48.299Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren regains 5 Hit Points.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.299Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren has 5/17 Hit Points.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.299Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren is conscious.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.299Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren is no longer unconscious.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.299Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.299Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Potion of Healing on maren.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.300Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva gives maren a Potion of Healing.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.300Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r145] torva rolls healing: 2d4 (1, 2) = 5.","rolls":["r145"],"log_head":158}
+{"at":"2026-10-27T12:47:48.300Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren regains 5 Hit Points.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.300Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren is conscious.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.300Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren is no longer unconscious.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.300Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:48.302Z","speaker":"dm","channel":"table","kind":"narration","text":"Всё-таки Торва выдёргивает пробку зубами и вливает зелье Марен в рот. Жрица кашляет и открывает глаза: она тяжело ранена, но снова в сознании.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Rage.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 moves.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 uses Wolf Bite attack on bren.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r155] wolf_1 rolls an attack roll vs bren: 2d20 (9, 5, kept 9) +4 = 13 vs AC 19, miss.","rolls":["r155"],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1 moves.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1 uses Wolf Bite attack on bren.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r155] wolf_1 rolls an attack roll vs bren: 2d20 (9, 5, kept 9) = 13, miss.","rolls":["r155"],"log_head":158}
+{"at":"2026-10-27T12:47:52.495Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:52.498Z","speaker":"dm","channel":"table","kind":"narration","text":"Ярость Торвы гаснет, и она тяжело переводит дух над жрицей. Обожжённый волк заходит к Брену с другого бока и хватает зубами воздух у его колена. Теперь Брен стоит между двумя волками. Ильса, твой ход.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:53.793Z","speaker":"engine","channel":"dm","kind":"engine","text":"Round 3 begins.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:53.794Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:53.794Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 3 begins.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:47:53.794Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":158}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Magic Missile on goblin_2, goblin_2, goblin_2.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r160] ilsa rolls force damage: 1d4 (4) +1 = 5.","rolls":["r160"],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 takes 5 force damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 has 5/10 Hit Points.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r163] ilsa rolls force damage: 1d4 (4) +1 = 5.","rolls":["r163"],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 takes 5 force damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 has 0/10 Hit Points.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is dead.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r167] ilsa rolls force damage: 1d4 (1) +1 = 2.","rolls":["r167"],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 takes 2 force damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 has 0/10 Hit Points.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Magic Missile on goblin_2, goblin_2, goblin_2.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r160] ilsa rolls force damage: 1d4 (4) = 5.","rolls":["r160"],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 takes 5 force damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r163] ilsa rolls force damage: 1d4 (4) = 5.","rolls":["r163"],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 takes 5 force damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 is dead.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r167] ilsa rolls force damage: 1d4 (1) = 2.","rolls":["r167"],"log_head":187}
+{"at":"2026-10-27T12:48:06.890Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 takes 2 force damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.891Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:06.893Z","speaker":"dm","channel":"table","kind":"narration","text":"С пальцев Ильсы срываются три сияющие стрелы и одна за другой бьют в гоблина у поленницы, того самого, что подстрелил Марен. Он кувырком летит с дров и больше не двигается, а третья стрела гаснет уже над мёртвым телом.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 uses Shortbow attack on bren.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r175] goblin_3 rolls an attack roll vs bren: 1d20 (20) +4 = 24 vs AC 19, critical hit.","rolls":["r175"],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r176] goblin_3 rolls critical piercing damage: 2d6 (6, 2) +2 = 10.","rolls":["r176"],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren takes 10 piercing damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 10/20 Hit Points.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 uses Shortbow attack on torva.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r182] goblin_1 rolls an attack roll vs torva: 1d20 (17) +4 = 21 vs AC 13, hit.","rolls":["r182"],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r183] goblin_1 rolls piercing damage: 1d6 (1) +2 = 3.","rolls":["r183"],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva takes 3 piercing damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.893Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva has 20/23 Hit Points.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3 uses Shortbow attack on bren.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r175] goblin_3 rolls an attack roll vs bren: 1d20 (20) = 24, critical hit.","rolls":["r175"],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r176] goblin_3 rolls critical piercing damage: 2d6 (6, 2) = 10.","rolls":["r176"],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren takes 10 piercing damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 10/20 Hit Points.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 uses Shortbow attack on torva.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r182] goblin_1 rolls an attack roll vs torva: 1d20 (17) = 21, hit.","rolls":["r182"],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r183] goblin_1 rolls piercing damage: 1d6 (1) = 3.","rolls":["r183"],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva takes 3 piercing damage.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.894Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:10.898Z","speaker":"dm","channel":"table","kind":"narration","text":"Гоблин у двери мельницы стреляет и находит щель в доспехе Брена: стрела глубоко уходит в бедро, и Брен сильно ранен. С поленницы прилетает ещё одна стрела и чиркает Торву по руке, но та едва замечает царапину. Марен, ты лежишь у дорожки, слабая, но в сознании. Твой ход.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:12.686Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:12.686Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":187}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Healing Word on bren.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r189] maren rolls healing: 2d4 (3, 4) +2 = 9.","rolls":["r189"],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren regains 9 Hit Points.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 19/20 Hit Points.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on wolf_1.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r193] wolf_1 rolls a Dexterity saving throw: 1d20 (14) +2 = 16 vs DC 12, success.","rolls":["r193"],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Healing Word on bren.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r189] maren rolls healing: 2d4 (3, 4) = 9.","rolls":["r189"],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren regains 9 Hit Points.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.814Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 19/20 Hit Points.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.815Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Sacred Flame on wolf_1.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.815Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r193] wolf_1 rolls a Dexterity saving throw: 1d20 (14) = 16, success.","rolls":["r193"],"log_head":197}
+{"at":"2026-10-27T12:48:27.815Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:27.818Z","speaker":"dm","channel":"table","kind":"narration","text":"Марен, приподнявшись на локте, шепчет Брену слово исцеления, и рана в его бедре стягивается. Потом она призывает священное пламя на обожжённого волка, но зверь отпрыгивает, и столб света бьёт в пустую брусчатку.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:29.166Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:29.166Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:29.166Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:29.166Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:29.166Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:48:29.166Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":197}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_2.","rolls":[],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r199] bren rolls an attack roll vs wolf_2: 1d20 (7) +5 = 12 vs AC 12, hit.","rolls":["r199"],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r200] bren rolls slashing damage: 1d8 (6) +3 = 9.","rolls":["r200"],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 takes 9 slashing damage.","rolls":[],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 has 0/11 Hit Points.","rolls":[],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 is dead.","rolls":[],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on wolf_2.","rolls":[],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r199] bren rolls an attack roll vs wolf_2: 1d20 (7) = 12, hit.","rolls":["r199"],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r200] bren rolls slashing damage: 1d8 (6) = 9.","rolls":["r200"],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2 takes 9 slashing damage.","rolls":[],"log_head":203}
+{"at":"2026-10-27T12:49:42.491Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2 is dead.","rolls":[],"log_head":203}
+{"at":"2026-10-27T12:49:54.803Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Fighter Action Surge.","rolls":[],"log_head":205}
+{"at":"2026-10-27T12:49:54.803Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is under Action Surge.","rolls":[],"log_head":205}
+{"at":"2026-10-27T12:49:54.803Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Fighter Action Surge.","rolls":[],"log_head":205}
+{"at":"2026-10-27T12:49:54.803Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is under Action Surge.","rolls":[],"log_head":205}
+{"at":"2026-10-27T12:50:01.977Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_1.","rolls":[],"log_head":207}
+{"at":"2026-10-27T12:50:01.977Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r207] bren rolls an attack roll vs wolf_1: 1d20 (5) +5 = 10 vs AC 12, miss.","rolls":["r207"],"log_head":207}
+{"at":"2026-10-27T12:50:01.977Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on wolf_1.","rolls":[],"log_head":207}
+{"at":"2026-10-27T12:50:01.977Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r207] bren rolls an attack roll vs wolf_1: 1d20 (5) = 10, miss.","rolls":["r207"],"log_head":207}
+{"at":"2026-10-27T12:50:10.392Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:10.393Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:10.394Z","speaker":"dm","channel":"table","kind":"narration","text":"Меч Брена опускается на раненого волка, и тот падает замертво. Не останавливаясь, Брен с новым рывком сил разворачивается к обожжённому зверю, но клинок проходит над его загривком: волк успел пригнуться.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:11.878Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":213}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Rage.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Rage.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Greataxe) on wolf_1.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r218] torva rolls an attack roll vs wolf_1: 2d20 (7, 20, kept 20) +5 = 25 vs AC 12, critical hit.","rolls":["r218"],"log_head":228}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r219] torva rolls critical slashing damage: 2d12 (10, 2) +5 = 17.","rolls":["r219"],"log_head":228}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 takes 17 slashing damage.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 has 0/11 Hit Points.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 is dead.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.157Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.158Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.158Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Barbarian Rage.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.158Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva moves.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.158Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Barbarian Reckless Attack (Greataxe) on wolf_1.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.158Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r218] torva rolls an attack roll vs wolf_1: 2d20 (7, 20, kept 20) = 25, critical hit.","rolls":["r218"],"log_head":228}
+{"at":"2026-10-27T12:50:33.158Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r219] torva rolls critical slashing damage: 2d12 (10, 2) = 17.","rolls":["r219"],"log_head":228}
+{"at":"2026-10-27T12:50:33.158Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1 takes 17 slashing damage.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.158Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1 is dead.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.158Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:33.160Z","speaker":"dm","channel":"table","kind":"narration","text":"Торва снова впадает в ярость, с рёвом перемахивает через мёртвого волка и с размаху обрушивает секиру на последнего. Обожжённый зверь гибнет, не успев взвизгнуть. Во дворе не осталось ни одного волка, только гоблины у поленницы и у двери мельницы.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:34.693Z","speaker":"engine","channel":"dm","kind":"engine","text":"Round 4 begins.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:34.693Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:34.693Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:34.693Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:34.693Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 4 begins.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:34.693Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:34.693Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:34.693Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":228}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Magic Missile on goblin_1, goblin_1, goblin_1.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r230] ilsa rolls force damage: 1d4 (4) +1 = 5.","rolls":["r230"],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 takes 5 force damage.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 has 5/10 Hit Points.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r233] ilsa rolls force damage: 1d4 (1) +1 = 2.","rolls":["r233"],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 takes 2 force damage.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 has 3/10 Hit Points.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r236] ilsa rolls force damage: 1d4 (3) +1 = 4.","rolls":["r236"],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 takes 4 force damage.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 has 0/10 Hit Points.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 is dead.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Magic Missile on goblin_1, goblin_1, goblin_1.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r230] ilsa rolls force damage: 1d4 (4) = 5.","rolls":["r230"],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 takes 5 force damage.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r233] ilsa rolls force damage: 1d4 (1) = 2.","rolls":["r233"],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 takes 2 force damage.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r236] ilsa rolls force damage: 1d4 (3) = 4.","rolls":["r236"],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 takes 4 force damage.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 is dead.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.228Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:42.231Z","speaker":"dm","channel":"table","kind":"narration","text":"Ильса снова выпускает три сияющие стрелы, и они вонзаются в гоблина на поленнице, одна за другой. Он скатывается с дров и затихает в опилках. Во дворе остались только двое гоблинов у двери мельницы.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.150Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.150Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.150Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 uses Shortbow attack on bren.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r245] goblin_3 rolls an attack roll vs bren: 1d20 (12) +4 = 16 vs AC 19, miss.","rolls":["r245"],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3 uses Shortbow attack on bren.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r245] goblin_3 rolls an attack roll vs bren: 1d20 (12) = 16, miss.","rolls":["r245"],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.151Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:46.153Z","speaker":"dm","channel":"table","kind":"narration","text":"Один из гоблинов у двери, оставшись почти без своих, торопливо пускает стрелу в Брена, и та звякает о щит. Гоблины у косяка переглядываются и визгливо ругаются по-своему. Марен, твой ход.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:47.535Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:47.536Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":249}
+{"at":"2026-10-27T12:50:56.403Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Potion of Healing.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.404Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren drinks a Potion of Healing.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.404Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r252] maren rolls healing: 2d4 (1, 2) +2 = 5.","rolls":["r252"],"log_head":256}
+{"at":"2026-10-27T12:50:56.404Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren regains 5 Hit Points.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.404Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren has 10/17 Hit Points.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.404Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.404Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves but doesn't get to use Sacred Flame.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.404Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Potion of Healing.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.405Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren drinks a Potion of Healing.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.405Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r252] maren rolls healing: 2d4 (1, 2) = 5.","rolls":["r252"],"log_head":256}
+{"at":"2026-10-27T12:50:56.405Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren regains 5 Hit Points.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.405Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.405Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves but doesn't get to use Sacred Flame.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:50:56.407Z","speaker":"dm","channel":"table","kind":"narration","text":"Марен залпом выпивает целебное зелье, щёки у неё розовеют, и она поднимается на ноги. Жрица шагает вперёд, ближе к двери мельницы, и уже поднимает святой знак.","rolls":[],"log_head":256}
+{"at":"2026-10-27T12:51:09.099Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:09.100Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_3.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:09.100Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r259] goblin_3 rolls a Dexterity saving throw: 1d20 (20) +2 = 22 vs DC 12, success.","rolls":["r259"],"log_head":264}
+{"at":"2026-10-27T12:51:09.100Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:09.100Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:09.100Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Sacred Flame on goblin_3.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:09.100Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r259] goblin_3 rolls a Dexterity saving throw: 1d20 (20) = 22, success.","rolls":["r259"],"log_head":264}
+{"at":"2026-10-27T12:51:09.100Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:09.102Z","speaker":"dm","channel":"table","kind":"narration","text":"Священный огонь падает на гоблина у двери, но тот с визгом отскакивает за косяк, и пламя лишь опаляет доски порога.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:12.961Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:12.961Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:12.961Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:12.961Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer under Action Surge.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:12.961Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:12.961Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:12.961Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:12.961Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer under Action Surge.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:51:12.963Z","speaker":"dm","channel":"table","kind":"narration","text":"Двор усеян телами волков и гоблинов, у двери мельницы жмутся двое последних, с луками наготове. Брен, твой ход. Что делаешь?","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:52:09.676Z","speaker":"bren","channel":"table","kind":"intent","text":"Я хочу подбежать к ближайшему гоблину и ебнуть его мечом целось в его меркуй зеленую голово","rolls":[],"log_head":264,"human":true}
+{"at":"2026-10-27T12:52:14.279Z","speaker":"dm","channel":"run","kind":"retry","text":"dm: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":264}
+{"at":"2026-10-27T12:52:20.247Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:20.247Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:20.247Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:20.247Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:20.248Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:20.248Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:20.249Z","speaker":"dm","channel":"table","kind":"narration","text":"Брен срывается с места и во весь дух несётся через двор, перепрыгивая через мёртвых волков. Но до двери мельницы далеко, и пока он добегает до гоблина, на замах уже не хватает дыхания. Он встаёт вплотную к зеленозубому, и меч поднят: следующий удар будет его.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:21.674Z","speaker":"dm","channel":"run","kind":"error","text":"dm (map_combat) timed out","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:21.674Z","speaker":"dm","channel":"run","kind":"fallback","text":"the DM's map_combat is skipped; the engine lines stand alone","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r271] goblin_4 rolls an attack roll vs bren: 1d20 (8) +4 = 12 vs AC 19, miss.","rolls":["r271"],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Reckless Attack Advantage.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r271] goblin_4 rolls an attack roll vs bren: 1d20 (8) = 12, miss.","rolls":["r271"],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.081Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:24.083Z","speaker":"dm","channel":"table","kind":"narration","text":"Гоблин, к которому подбежал Брен, в панике стреляет в упор, но стрела скользит по доспеху и уходит в брусчатку. Торва, ты всё ещё в ярости, у ворот. Твой ход.","rolls":[],"log_head":276}
+{"at":"2026-10-27T12:52:43.302Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Dash.","rolls":[],"log_head":279}
+{"at":"2026-10-27T12:52:43.303Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Dash.","rolls":[],"log_head":279}
+{"at":"2026-10-27T12:52:43.303Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":279}
+{"at":"2026-10-27T12:52:43.303Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Dash.","rolls":[],"log_head":279}
+{"at":"2026-10-27T12:52:43.303Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva moves.","rolls":[],"log_head":279}
+{"at":"2026-10-27T12:52:43.304Z","speaker":"dm","channel":"table","kind":"narration","text":"Торва с рёвом мчится через двор следом за Бреном, тяжёлые сапоги грохочут по брусчатке, секира поднята над головой. Гоблины у двери мельницы пятятся к косяку, визжа всё отчаяннее.","rolls":[],"log_head":279}
+{"at":"2026-10-27T12:53:12.556Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:12.556Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Rage.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:12.556Z","speaker":"engine","channel":"dm","kind":"engine","text":"Round 5 begins.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:12.556Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:12.556Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:12.556Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:12.556Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 5 begins.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:12.556Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:12.556Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:12.559Z","speaker":"dm","channel":"table","kind":"narration","text":"Ярость Торвы отступает, но секира в её руках всё так же наготове. Во дворе на миг становится тихо, только у двери мельницы жмутся двое гоблинов и хрипло дышат. Ильса, твой ход.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:14.733Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:14.733Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":285}
+{"at":"2026-10-27T12:53:21.571Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:21.571Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_3.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:21.571Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r288] ilsa rolls an attack roll vs goblin_3: 1d20 (5) +4 = 9 vs AC 15, miss.","rolls":["r288"],"log_head":301}
+{"at":"2026-10-27T12:53:21.571Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:21.571Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:21.571Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on goblin_3.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:21.571Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r288] ilsa rolls an attack roll vs goblin_3: 1d20 (5) = 9, miss.","rolls":["r288"],"log_head":301}
+{"at":"2026-10-27T12:53:21.572Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:21.573Z","speaker":"dm","channel":"table","kind":"narration","text":"Ильса подходит ближе и бросает огонь в гоблина у косяка, но сгусток пламени проносится мимо и рассыпается искрами о каменную стену мельницы.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 uses Shortbow attack on torva.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r294] goblin_3 rolls an attack roll vs torva: 1d20 (18) +4 = 22 vs AC 13, hit.","rolls":["r294"],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r295] goblin_3 rolls piercing damage: 1d6 (2) +2 = 4.","rolls":["r295"],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva takes 4 piercing damage.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva has 16/23 Hit Points.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.783Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.784Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.784Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.784Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3 uses Shortbow attack on torva.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.784Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r294] goblin_3 rolls an attack roll vs torva: 1d20 (18) = 22, hit.","rolls":["r294"],"log_head":301}
+{"at":"2026-10-27T12:53:25.784Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r295] goblin_3 rolls piercing damage: 1d6 (2) = 4.","rolls":["r295"],"log_head":301}
+{"at":"2026-10-27T12:53:25.784Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva takes 4 piercing damage.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.784Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.784Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.784Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:25.786Z","speaker":"dm","channel":"table","kind":"narration","text":"Гоблин у косяка пускает стрелу в набегающую Торву, и та впивается ей в плечо. Торва лишь рычит и выдёргивает её. Марен, твой ход.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:27.406Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:27.406Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":301}
+{"at":"2026-10-27T12:53:41.779Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:41.780Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves but doesn't get to use Sacred Flame.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:41.780Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:41.780Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:41.780Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves but doesn't get to use Sacred Flame.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:41.780Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:41.781Z","speaker":"dm","channel":"table","kind":"narration","text":"Марен спешит через двор вслед за остальными, огибая мёртвых волков, но ухватить взглядом гоблина за косяком так и не успевает.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:46.957Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:46.957Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:46.957Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:46.957Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer under Dash.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:46.957Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:46.958Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:46.958Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:46.958Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer under Dash.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:53:46.960Z","speaker":"dm","channel":"table","kind":"narration","text":"Брен, ты стоишь вплотную к зеленозубому гоблину у двери мельницы, второй жмётся рядом за косяком. Меч у тебя поднят. Что делаешь?","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:55:04.585Z","speaker":"bren","channel":"table","kind":"intent","text":"Так что там по гоблинам! Подбежать к ближайшему и пнуть его ногой так что бы он отлетел на пару метров","rolls":[],"log_head":308,"human":true}
+{"at":"2026-10-27T12:55:09.088Z","speaker":"dm","channel":"run","kind":"retry","text":"dm: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":308}
+{"at":"2026-10-27T12:55:16.587Z","speaker":"dm","channel":"run","kind":"error","text":"dm (map_combat) timed out","rolls":[],"log_head":311}
+{"at":"2026-10-27T12:55:16.588Z","speaker":"dm","channel":"run","kind":"fallback","text":"the DM's map_combat is skipped; the engine lines stand alone","rolls":[],"log_head":311}
+{"at":"2026-10-27T12:55:16.588Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":311}
+{"at":"2026-10-27T12:55:16.588Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":311}
+{"at":"2026-10-27T12:55:16.588Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":311}
+{"at":"2026-10-27T12:55:16.588Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":311}
+{"at":"2026-10-27T12:55:16.588Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":311}
+{"at":"2026-10-27T12:55:16.588Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":311}
+{"at":"2026-10-27T12:55:20.239Z","speaker":"dm","channel":"table","kind":"narration","text":"Поправка к прошлому: двор оказался шире, чем виделось сгоряча. Мокрая брусчатка, туши волков под ногами, и до двери мельницы Брен тогда так и не добежал. Сейчас он снова бросается вперёд, скользя по камням, и оказывается посреди двора, у поилки. До гоблинов ещё несколько длинных шагов, пнуть пока некого.","rolls":[],"log_head":311}
+{"at":"2026-10-27T12:56:05.364Z","speaker":"bren","channel":"table","kind":"intent","text":"Встать в боевую стойку и приготовится к защете","rolls":[],"log_head":311,"human":true}
+{"at":"2026-10-27T12:56:10.150Z","speaker":"dm","channel":"table","kind":"narration","text":"Сил на рывок ушло много, и закрыться по-настоящему Брен уже не успевает. Он лишь встаёт потвёрже, щит повыше, меч наготове, и не сводит глаз с двух гоблинов у двери мельницы.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.018Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.018Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.018Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.018Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r315] goblin_4 rolls an attack roll vs bren: 1d20 (19) +4 = 23 vs AC 19, hit.","rolls":["r315"],"log_head":323}
+{"at":"2026-10-27T12:56:15.018Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r316] goblin_4 rolls piercing damage: 1d6 (2) +2 = 4.","rolls":["r316"],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren takes 4 piercing damage.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 15/20 Hit Points.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Dash.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r315] goblin_4 rolls an attack roll vs bren: 1d20 (19) = 23, hit.","rolls":["r315"],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r316] goblin_4 rolls piercing damage: 1d6 (2) = 4.","rolls":["r316"],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren takes 4 piercing damage.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 15/20 Hit Points.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.019Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:15.022Z","speaker":"dm","channel":"table","kind":"narration","text":"Гоблин у двери целится в Брена над краем щита, и стрела царапает ему руку выше наруча: рана неглубокая, но кровь проступает. Торва, твой ход.","rolls":[],"log_head":323}
+{"at":"2026-10-27T12:56:34.463Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Dash.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:34.464Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Dash.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:34.464Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:34.465Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:34.465Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Dash.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:34.465Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva moves.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:34.465Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:34.467Z","speaker":"dm","channel":"table","kind":"narration","text":"Торва обгоняет Брена и во весь опор несётся к двери мельницы, секира наперевес. Гоблины у косяка визжат и тычут в неё луками.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:36.368Z","speaker":"engine","channel":"dm","kind":"engine","text":"Round 6 begins.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:36.368Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:36.368Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:36.368Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:36.369Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 6 begins.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:36.369Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:36.369Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:36.369Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":331}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Magic Missile on goblin_3, goblin_3, goblin_3.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r333] ilsa rolls force damage: 1d4 (4) +1 = 5.","rolls":["r333"],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 takes 5 force damage.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 has 5/10 Hit Points.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r336] ilsa rolls force damage: 1d4 (2) +1 = 3.","rolls":["r336"],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 takes 3 force damage.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 has 2/10 Hit Points.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r339] ilsa rolls force damage: 1d4 (3) +1 = 4.","rolls":["r339"],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 takes 4 force damage.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 has 0/10 Hit Points.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 is dead.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Magic Missile on goblin_3, goblin_3, goblin_3.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r333] ilsa rolls force damage: 1d4 (4) = 5.","rolls":["r333"],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3 takes 5 force damage.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r336] ilsa rolls force damage: 1d4 (2) = 3.","rolls":["r336"],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3 takes 3 force damage.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r339] ilsa rolls force damage: 1d4 (3) = 4.","rolls":["r339"],"log_head":350}
+{"at":"2026-10-27T12:56:49.174Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3 takes 4 force damage.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.175Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3 is dead.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.175Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.177Z","speaker":"dm","channel":"table","kind":"narration","text":"Три сияющие стрелы Ильсы вонзаются в гоблина у косяка, и он валится на порог мельницы. Последний гоблин, тощий, с позеленевшими зубами, смотрит на мёртвого товарища, бросает лук на брусчатку и падает на колени, задрав руки. «Нет-нет, большие господа! Не надо убивать! Сдаюсь, сдаюсь! Я полезный, я много знаю!»","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:49.815Z","speaker":"dm","channel":"to:bren","kind":"question","text":"Последний гоблин бросил лук и молит о пощаде. Брен, принимаешь его сдачу и берёшь в плен, или бой продолжается?","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:52.643Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:56:55.629Z","speaker":"maren","channel":"table","kind":"speech","text":"Он сдаётся, мои дорогие. Опустите оружие, Эмбра просит щадить тех, кто просит пощады. А ты, малый, говори: где девочка, Венна? Но решать тебе, Брен.","rolls":[],"log_head":350}
+{"at":"2026-10-27T12:57:09.512Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Cure Wounds on bren.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:09.512Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r352] maren rolls healing: 2d8 (6, 4) +2 = 12.","rolls":["r352"],"log_head":359}
+{"at":"2026-10-27T12:57:09.512Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren regains 5 Hit Points.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:09.512Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 20/20 Hit Points.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:09.512Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:09.512Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Cure Wounds on bren.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:09.512Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r352] maren rolls healing: 2d8 (6, 4) = 12.","rolls":["r352"],"log_head":359}
+{"at":"2026-10-27T12:57:09.513Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren regains 5 Hit Points.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:09.513Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 20/20 Hit Points.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:09.513Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:09.515Z","speaker":"dm","channel":"table","kind":"narration","text":"Марен кладёт ладонь на раненую руку Брена, и тёплый свет Эмбры затягивает царапину от стрелы. Гоблин на коленях часто кивает, косясь на жрицу: «Девка внизу, живая, живая! Большие господа не убивают, и я всё скажу!» Он ждёт, что решит Брен.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:14.470Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:14.470Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:14.470Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:14.470Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer under Dash.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:14.470Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:14.470Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:14.470Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:14.470Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer under Dash.","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:57:14.472Z","speaker":"dm","channel":"table","kind":"narration","text":"Во дворе тихо, только с колеса капает вода. Гоблин на коленях не сводит с Брена глаз, руки у него трясутся над головой. Брен, его жизнь в твоих руках: щадишь или нет?","rolls":[],"log_head":359}
+{"at":"2026-10-27T12:58:45.857Z","speaker":"bren","channel":"table","kind":"intent","text":"Прежде чем принять решение, присесть на уровень гоблина так что бы смотреть ему глаза в глаза. Спросить тихо прямо в его ухо: \"Где девочка?\"","rolls":[],"log_head":359,"human":true}
+{"at":"2026-10-27T12:58:53.165Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":360}
+{"at":"2026-10-27T12:58:53.165Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":360}
+{"at":"2026-10-27T12:58:53.166Z","speaker":"dm","channel":"table","kind":"narration","text":"Брен подходит к гоблину через весь двор, приседает так, что их глаза оказываются вровень, и тихо спрашивает ему в самое ухо, где девочка. Гоблин сглатывает, зелёные зубы стучат: «Внизу, большой господин, под камнями, в погребе! Привязана у большого жернова, мелет зерно. Живая, клянусь!» Он тычет дрожащим пальцем в приоткрытую дверь мельницы и ждёт, что Брен решит.","rolls":[],"log_head":360}
+{"at":"2026-10-27T12:58:53.477Z","speaker":"dm","channel":"to:bren","kind":"question","text":"Гоблин ответил. Брен, ты щадишь его и берёшь в плен?","rolls":[],"log_head":360}
+{"at":"2026-10-27T12:59:22.307Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":362}
+{"at":"2026-10-27T12:59:22.307Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves but doesn't get to use Longsword attack.","rolls":[],"log_head":362}
+{"at":"2026-10-27T12:59:22.307Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":362}
+{"at":"2026-10-27T12:59:22.307Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves but doesn't get to use Longsword attack.","rolls":[],"log_head":362}
+{"at":"2026-10-27T12:59:25.248Z","speaker":"dm","channel":"table","kind":"narration","text":"Брен остаётся над гоблином, рука на рукояти меча, но клинок не поднимает. Гоблин замирает и боится даже вздохнуть.","rolls":[],"log_head":362}
+{"at":"2026-10-27T13:03:29.330Z","speaker":"bren","channel":"table","kind":"intent","text":"Убить гоблина так что бы он не смог позвать подмогу","rolls":[],"log_head":362,"human":true}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on goblin_4.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r365] bren rolls an attack roll vs goblin_4: 1d20 (10) +5 = 15 vs AC 15, hit.","rolls":["r365"],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r366] bren rolls slashing damage: 1d8 (6) +3 = 9.","rolls":["r366"],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 takes 9 slashing damage.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 1/10 Hit Points.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on goblin_4.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r365] bren rolls an attack roll vs goblin_4: 1d20 (10) = 15, hit.","rolls":["r365"],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r366] bren rolls slashing damage: 1d8 (6) = 9.","rolls":["r366"],"log_head":380}
+{"at":"2026-10-27T13:03:36.415Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 takes 9 slashing damage.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:36.418Z","speaker":"dm","channel":"table","kind":"narration","text":"Брен рывком выпрямляется и рубит. Меч распарывает гоблину бок, тот отлетает к порогу и корчится в крови, но ещё жив. Он хрипит, хватаясь за рану: «Не надо, большой господин, не надо!..»","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.378Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.378Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.378Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Monster Nimble Escape.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.378Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is under Disengage.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.378Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 moves.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"dm","kind":"engine","text":"[r375] goblin_4 rolls an attack roll vs bren: 1d20 (14) +4 = 18 vs AC 19, miss.","rolls":["r375"],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Dash.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Monster Nimble Escape.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 moves.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r375] goblin_4 rolls an attack roll vs bren: 1d20 (14) = 18, miss.","rolls":["r375"],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.379Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:40.382Z","speaker":"dm","channel":"table","kind":"narration","text":"Истекающий кровью гоблин по-змеиному выворачивается из-под Брена, отскакивает в сторону, хватает брошенный лук и в отчаянии стреляет. Стрела свистит над плечом Брена. Торва, твой ход.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:45.673Z","speaker":"torva","channel":"run","kind":"retry","text":"torva: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":380}
+{"at":"2026-10-27T13:03:56.472Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Dash.","rolls":[],"log_head":383}
+{"at":"2026-10-27T13:03:56.472Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Dash.","rolls":[],"log_head":383}
+{"at":"2026-10-27T13:03:56.472Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":383}
+{"at":"2026-10-27T13:03:56.472Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva uses Dash.","rolls":[],"log_head":383}
+{"at":"2026-10-27T13:03:56.472Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva moves.","rolls":[],"log_head":383}
+{"at":"2026-10-27T13:03:56.474Z","speaker":"dm","channel":"table","kind":"narration","text":"Торва бежит через двор к двери мельницы, отрезая раненому гоблину путь внутрь.","rolls":[],"log_head":383}
+{"at":"2026-10-27T13:04:12.640Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:12.640Z","speaker":"engine","channel":"dm","kind":"engine","text":"Round 7 begins.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:12.641Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:12.641Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:12.641Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:12.641Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:12.641Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 7 begins.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:12.641Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:12.641Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:12.641Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":388}
+{"at":"2026-10-27T13:04:18.393Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":390}
+{"at":"2026-10-27T13:04:18.393Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves but doesn't get to use Fire Bolt.","rolls":[],"log_head":390}
+{"at":"2026-10-27T13:04:18.393Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":390}
+{"at":"2026-10-27T13:04:18.393Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves but doesn't get to use Fire Bolt.","rolls":[],"log_head":390}
+{"at":"2026-10-27T13:04:18.395Z","speaker":"dm","channel":"table","kind":"narration","text":"Ильса перебегает через двор поближе и ищет взглядом гоблина за спинами товарищей, но поймать его на прицел ей не удаётся.","rolls":[],"log_head":390}
+{"at":"2026-10-27T13:04:29.067Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":392}
+{"at":"2026-10-27T13:04:29.067Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves but doesn't get to use Fire Bolt.","rolls":[],"log_head":392}
+{"at":"2026-10-27T13:04:29.067Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":392}
+{"at":"2026-10-27T13:04:29.067Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves but doesn't get to use Fire Bolt.","rolls":[],"log_head":392}
+{"at":"2026-10-27T13:04:29.069Z","speaker":"dm","channel":"table","kind":"narration","text":"Ильса делает ещё пару шагов, обходя мёртвого волка, но спины Брена и Торвы по-прежнему заслоняют гоблина.","rolls":[],"log_head":392}
+{"at":"2026-10-27T13:04:39.971Z","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.971Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.971Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_3's turn ends.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:39.972Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":400}
+{"at":"2026-10-27T13:04:49.639Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":402}
+{"at":"2026-10-27T13:04:49.639Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves but doesn't get to use Sacred Flame.","rolls":[],"log_head":402}
+{"at":"2026-10-27T13:04:49.639Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":402}
+{"at":"2026-10-27T13:04:49.639Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves but doesn't get to use Sacred Flame.","rolls":[],"log_head":402}
+{"at":"2026-10-27T13:04:49.641Z","speaker":"dm","channel":"table","kind":"narration","text":"Марен тоже подходит ближе, поднимает святой знак и медлит, глядя на окровавленного гоблина: свет Эмбры так и не срывается с её руки.","rolls":[],"log_head":402}
+{"at":"2026-10-27T13:05:00.928Z","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:00.928Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:00.928Z","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:00.928Z","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:00.928Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:00.928Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:00.928Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:00.928Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:23.251Z","speaker":"bren","channel":"table","kind":"intent","text":"Спросить у гоблина что он вообще тут делает? Зачем им девченка?","rolls":[],"log_head":406,"human":true}
+{"at":"2026-10-27T13:05:27.721Z","speaker":"dm","channel":"table","kind":"narration","text":"Брен кричит гоблину через двор, что они тут вообще забыли и зачем им девчонка. Гоблин, зажимая окровавленный бок, тараторит: «Зерно, большой господин! Много зерна! Босс велел. Девка мелет, а ещё она… чтобы деревня не лезла. Отпусти, я ничего плохого, я только сторожил!» Лук дрожит у него в руках, но стрелу он больше не накладывает.","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:28.137Z","speaker":"dm","channel":"to:bren","kind":"question","text":"Гоблин ранен, лук опущен, он снова просит пощады. Брен, ты принимаешь его сдачу или добиваешь?","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:31.107Z","speaker":"dm","channel":"run","kind":"fallback","text":"the DM didn't map bren's words; back to the human","rolls":[],"log_head":406}
+{"at":"2026-10-27T13:05:46.033Z","speaker":"bren","channel":"table","kind":"intent","text":"принимаю его сдачу","rolls":[],"log_head":406,"human":true}
+{"at":"2026-10-27T13:05:50.567Z","speaker":"dm","channel":"memory:dm","kind":"memory","text":"Сдавшийся во дворе гоблин (goblin_4) теперь Снитт, пленник отряда. Брен принял его сдачу, перед этим ранив его мечом. Снитт уже сказал, что девушка жива и привязана у жернова в погребе и что банде нужно зерно по приказу босса.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:05:52.390Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 surrenders.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:05:52.390Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 surrenders.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:05:52.391Z","speaker":"dm","channel":"table","kind":"narration","text":"Брен коротко кивает. Гоблин швыряет лук на брусчатку и падает лицом вниз, скуля по-своему, а потом на ломаном общем: «Спасибо, большой господин! Снитт полезный, Снитт всё покажет!» Во дворе стихает. Только капает с неподвижного колеса, шумит река да чадят опалённые поленья. Приоткрытая дверь мельницы ждёт, и откуда-то из-под камней доносится медленный скрежет.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:05:55.282Z","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:05:55.282Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:05:58.488Z","speaker":"dm","channel":"table","kind":"narration","text":"Снитт сидит на брусчатке, обхватив раненый бок, и заискивающе поглядывает то на Брена, то на Марен. Над колесом видно, что заслонка шлюза опущена: вот почему мельница молчит. А из приоткрытой двери тянет мукой и сыростью, и снизу всё так же скрежещет камень о камень.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:06:24.754Z","speaker":"bren","channel":"table","kind":"intent","text":"Спросить у гоблина что он вообще тут делает? Зачем им девченка?","rolls":[],"log_head":408,"human":true}
+{"at":"2026-10-27T13:06:29.109Z","speaker":"torva","channel":"table","kind":"speech","text":"Хватит болтать. Девчонка внизу — идём за ней. Снитт пойдёт первым, и пусть только дёрнется.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:06:29.111Z","speaker":"maren","channel":"table","kind":"speech","text":"Спасибо, Брен. Дай-ка я гляну твою рану, Снитт, пока кровь не вытекла вся. А потом — вниз, к девочке, скорее.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:06:29.112Z","speaker":"ilsa","channel":"table","kind":"speech","text":"Снитт, если ты соврал про погреб, я запишу это в блокнот вместе с твоим именем. Сначала свяжите ему руки, а потом пойдём вниз за девочкой. И расскажи нам про босса: как его зовут и сколько вас было?","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:06:29.114Z","speaker":"torva","channel":"table","kind":"intent","text":"Торва велит Сниттy идти первым и собирается спуститься в погреб за Веной.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:06:29.115Z","speaker":"maren","channel":"table","kind":"intent","text":"Марен подходит к Снитту, чтобы перевязать ему бок, а потом хочет идти в погреб за Венной.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:06:29.116Z","speaker":"ilsa","channel":"table","kind":"intent","text":"Ильса предлагает связать пленного Снитта и спуститься в погреб за Венной, а сама записывает его слова о боссе в блокнот.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:06:33.261Z","speaker":"dm","channel":"table","kind":"narration","text":"Снитт пожимает острыми плечами: «Зерно, большой господин, только зерно. Девка мелет, девка заложница, чтобы деревня не лезла». Марен туго перевязывает ему бок, Ильса стягивает ему руки верёвкой с псарни, и про босса гоблин юлит: «Потом, потом, госпожа, внутри скажу!» Торва толкает его в спину, и отряд входит в приоткрытую дверь мельницы.","rolls":[],"log_head":408}
+{"at":"2026-10-27T13:06:37.057Z","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Dash.","rolls":[],"log_head":411}
+{"at":"2026-10-27T13:06:37.057Z","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is no longer under Disengage.","rolls":[],"log_head":411}
+{"at":"2026-10-27T13:06:37.057Z","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s4_captured_goblin loaded in explore mode.","rolls":[],"log_head":411}
+{"at":"2026-10-27T13:06:37.057Z","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene s4_captured_goblin loaded in explore mode.","rolls":[],"log_head":411}
+{"at":"2026-10-27T13:06:37.059Z","speaker":"table","channel":"run","kind":"system","text":"run ended: the run stops before s4_captured_goblin","rolls":[],"log_head":411}
