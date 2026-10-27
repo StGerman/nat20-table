@@ -72,3 +72,12 @@ It writes `runs/full-<time>/` with `run.json` (the commit and whether the checko
 npm run runs:verdict -- runs/full-<time>
 npm run runs:finish -- runs/full-<time>
 ```
+
+Every play command then uploads its run folder to the private runs repo (AGT-41), so nothing needs zipping. One-time setup: create the private repo `StGerman/nat20-runs` on GitHub, add it to the Claude project's repositories, and add `export NAT20_RUNS_REPO=StGerman/nat20-runs` to `~/.zshrc`; `npm run preflight` checks that git can reach it. The first upload clones it to `~/.nat20/runs-repo`, then each run goes to `runs/<run-id>/` there in its own commit, with plain git and your own login. The run's last line gives its link. A folder holding something that looks like a key is refused. A failed upload never fails the run, and the folder stays in `runs/`:
+
+```bash
+npm run runs:upload -- runs/full-<time>   # one run: retries a failed push, or sends what runs:finish added
+npm run runs:upload                      # every folder in runs/; ones already up to date are skipped
+```
+
+`--upload <owner/repo>` sends one run elsewhere, `--no-upload` skips it, and `--zip` also writes `<run-id>.zip` next to the folder and shows it in Finder.

@@ -130,6 +130,22 @@ function power(): Check | undefined {
   };
 }
 
+/** The runs repo the play commands upload to (AGT-41): set, and reachable with your git login. */
+function runsRepo(): Check {
+  const repo = process.env.NAT20_RUNS_REPO;
+  if (!repo) {
+    return { ok: "note", what: "Runs repo", detail: "NAT20_RUNS_REPO is not set, so runs stay in runs/; to upload them, export NAT20_RUNS_REPO=StGerman/nat20-runs in ~/.zshrc" };
+  }
+  const url = /^[\w.-]+\/[\w.-]+$/.test(repo) && !existsSync(repo) ? `https://github.com/${repo}.git` : repo;
+  const seen = spawnSync("git", ["ls-remote", "--quiet", url], { encoding: "utf8", timeout: 30_000, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } });
+  return {
+    ok: seen.status === 0,
+    what: "Runs repo reachable",
+    detail: seen.status === 0 ? `${repo}` : `git ls-remote ${url} failed: ${(seen.stderr || seen.error?.message || "").trim().split("\n").at(-1)}`,
+    fix: "create the private repo StGerman/nat20-runs on GitHub, and check that git can push to github.com with your login (gh auth setup-git)",
+  };
+}
+
 function checkout(): Check {
   const head = sh("git", ["log", "-1", "--format=%h %s"]).stdout.trim();
   const branch = sh("git", ["branch", "--show-current"]).stdout.trim() || "detached";
@@ -137,7 +153,7 @@ function checkout(): Check {
   return { ok: "note", what: "Checkout", detail: `${branch} at ${head}${dirty ? ", with local changes" : ""}` };
 }
 
-const checks = [node(), packages(), rust(), engine(), ...claudeCode(), noApiKey(), terminal(), ...[power()].filter((c) => c !== undefined), checkout()];
+const checks = [node(), packages(), rust(), engine(), ...claudeCode(), noApiKey(), terminal(), ...[power()].filter((c) => c !== undefined), runsRepo(), checkout()];
 console.log("Preflight for the Milestone 6 live runs (docs/runbook/first-local-run.md, Part 1). Nothing here calls a model.\n");
 for (const c of checks) {
   console.log(`${c.ok === "note" ? "·" : c.ok ? "✓" : "✗"} ${c.what}: ${c.detail}`);

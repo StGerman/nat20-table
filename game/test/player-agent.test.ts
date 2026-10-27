@@ -350,7 +350,7 @@ test("the all-AI run command plays the yard with scripted players and writes its
     const cli = path.join(REPO, "game/src/play/ai-party.ts");
     const run = spawnSync(
       process.execPath,
-      ["--experimental-strip-types", "--no-warnings", cli, "--players", "scripted", "--seed", "23", "--no-audit", "--out", out],
+      ["--experimental-strip-types", "--no-warnings", cli, "--players", "scripted", "--seed", "23", "--no-audit", "--no-upload", "--out", out],
       { encoding: "utf8" },
     );
     assert.equal(run.status, 0, run.stderr || run.stdout);

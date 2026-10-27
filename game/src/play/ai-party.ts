@@ -9,7 +9,8 @@
 // Flags: --seed N, --player-model, --effort, --pack (where the cards come from), --scenes and
 // --scene and --encounter (what the engine plays), --players scripted (no model: checks the command
 // itself), --dry-run (prints each player's prompt and session settings, starts nothing),
-// --no-audit, --out DIR, --max-steps N, --lang en|ru (what the AI players write; decision 0038).
+// --no-audit, --out DIR, --max-steps N, --lang en|ru (what the AI players write; decision 0038),
+// --upload REPO, --no-upload, --zip (the runs repo, AGT-41).
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -24,6 +25,7 @@ import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { PlayerAgent } from "../table/types.ts";
 import { UsageLog } from "../usage.ts";
+import { uploadStage } from "./upload.ts";
 import { audit, endState, guards, packParty, refuseApiKey, reportSections, runFolder } from "./run.ts";
 
 const { values: flags } = parseArgs({
@@ -41,6 +43,9 @@ const { values: flags } = parseArgs({
     "no-audit": { type: "boolean", default: false },
     out: { type: "string", default: path.join(REPO, "runs") },
     "max-steps": { type: "string", default: "2000" },
+    upload: { type: "string" },
+    "no-upload": { type: "boolean", default: false },
+    zip: { type: "boolean", default: false },
   },
 });
 if (flags.players !== "model" && flags.players !== "scripted") {
@@ -111,4 +116,5 @@ const report = [
 ].join("\n");
 writeFileSync(path.join(runDir, "report.md"), report + "\n");
 console.log(`\n${report}\n\nWritten to ${path.relative(process.cwd(), runDir)}/. Send report.md back to the thread.`);
+for (const line of uploadStage(runDir, flags)) console.log(line);
 process.exitCode = failure || (checked && !checked.passed) ? 1 : 0;

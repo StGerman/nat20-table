@@ -3,18 +3,37 @@
 //   npm run runs:verdict -- <run-dir>   recomputes verdict.json and the verdict block in report.md
 //   npm run runs:finish -- <run-dir>    runs the stages whose files are missing (the audit, the
 //                                       report), then the verdict
+//   npm run runs:upload [-- <run-dir>]  uploads the folder to the runs repo, or every folder in runs/
 // The verdict needs nothing but the folder, so a thread can recompute it once Stas has answered the
 // flags in confirmations.json.
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { REPO } from "../paths.ts";
 import { readRunRecord } from "./record.ts";
 import { audit, timingLines } from "./run.ts";
+import { UPLOAD_SETUP, uploadRun, uploadTarget } from "./upload.ts";
 import { AUDIT_JSON, writeVerdict } from "./verdict.ts";
 
 const [stage, dir] = process.argv.slice(2);
+if (stage === "upload") {
+  const repo = uploadTarget({});
+  if (!repo) {
+    console.error(UPLOAD_SETUP);
+    process.exit(2);
+  }
+  // Every run folder in runs/ when none is named: old runs go up, runs already there are skipped.
+  const out = path.join(REPO, "runs");
+  const dirs = dir ? [dir] : existsSync(out) ? readdirSync(out, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => path.join(out, d.name)) : [];
+  let failed = 0;
+  for (const run of dirs) {
+    const result = uploadRun(run, { repo });
+    if (!result.ok) failed += 1;
+    console.log(`${path.basename(run)}: ${result.ok ? `${result.changed ? `commit ${result.commit}` : "up to date"}${result.pushed ? ", pushed" : ""}. ${result.where}` : result.why}`);
+  }
+  process.exit(failed === 0 ? 0 : 1);
+}
 if (!dir || !["verdict", "finish"].includes(stage) || !existsSync(dir)) {
-  console.error("usage: npm run runs:verdict -- <run-dir>, or npm run runs:finish -- <run-dir>");
+  console.error("usage: npm run runs:verdict -- <run-dir>, npm run runs:finish -- <run-dir>, or npm run runs:upload [-- <run-dir>]");
   process.exit(2);
 }
 if (stage === "finish" && !existsSync(path.join(dir, AUDIT_JSON))) {

@@ -239,7 +239,7 @@ test("the scene run command plays Scene 3 with a scripted DM and players, and wr
     const cli = path.join(REPO, "game/src/play/scene.ts");
     const run = spawnSync(
       process.execPath,
-      ["--experimental-strip-types", "--no-warnings", cli, "--dm", "scripted", "--players", "scripted", "--seed", "23", "--no-audit", "--out", out],
+      ["--experimental-strip-types", "--no-warnings", cli, "--dm", "scripted", "--players", "scripted", "--seed", "23", "--no-audit", "--no-upload", "--out", out],
       { encoding: "utf8" },
     );
     assert.equal(run.status, 0, run.stderr || run.stdout);
@@ -265,7 +265,7 @@ test("the exit run's scene list plays Scene 1, passes over Scene 2 and plays Sce
     const scenes = ["--scenes", "s1_village_green,s3_mill_yard"];
     const run = spawnSync(
       process.execPath,
-      ["--experimental-strip-types", "--no-warnings", cli, ...scenes, "--dm", "scripted", "--players", "scripted", "--seed", "5", "--no-audit", "--out", out],
+      ["--experimental-strip-types", "--no-warnings", cli, ...scenes, "--dm", "scripted", "--players", "scripted", "--seed", "5", "--no-audit", "--no-upload", "--out", out],
       { encoding: "utf8" },
     );
     assert.equal(run.status, 0, run.stderr || run.stdout);
