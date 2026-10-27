@@ -54,6 +54,7 @@ const DM_TOOLS = [
   "load_scene",
   "start_combat",
   "end_combat",
+  "offer_surrender",
   "spawn",
   "request_check",
   "help",

@@ -1,7 +1,7 @@
 // Scripted DMs for the game fixtures (M6 spec §8, §10): the DM side of a seeded run, from a fixed
 // plan, through the same bound tools the DM agent gets.
 import type { HitDiceSpend, State } from "@nat20-table/engine-client";
-import { ScriptedDm, yardDm } from "../src/table/scripted.ts";
+import { offerAnySurrender, ScriptedDm, yardDm } from "../src/table/scripted.ts";
 import type { DmTools } from "../src/table/tools.ts";
 
 type Step = (tools: DmTools) => Promise<unknown>;
@@ -21,7 +21,7 @@ export { yardDm };
 
 /**
  * The Milestone 3 trail (crates/nat20-duel/src/trail.rs) as a DM would run it: each human action
- * moves the scene one step on; the yard fight ends in a surrender when the goblins offer one, the
+ * moves the scene one step on; the yard fight ends in a surrender the human accepts when the goblins offer one, the
  * prisoners are carried into the storeroom, and the cellar fight brings in the reserve in round 2
  * and ends by the scenario in round 4.
  */
@@ -69,7 +69,7 @@ export function trailDm(): ScriptedDm {
     narrate: async (tools) => {
       const state = await dmState(tools);
       if (scene === "m3_s3_yard" && state.encounters.some((e) => e.running && e.surrender_available)) {
-        await tools.endCombat("surrender");
+        await offerAnySurrender(tools);
       } else if (scene === "m3_s5_cellar" && (state.round ?? 0) >= 4) {
         await tools.endCombat("scenario");
       } else if (scene === "m3_s5_cellar" && (state.round ?? 0) >= 2 && !reserve) {

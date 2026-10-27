@@ -562,6 +562,58 @@ export class TableLoop {
     if (!response.ok) throw new Error(`the fallback for ${handle} was refused: ${response.error?.message}`);
   }
 
+  /**
+   * The human answers the DM's surrender offer (AGT-30): accept it, and the table ends the fight
+   * with no model call; fight on, and the offer closes. Words go to the DM, which may accept the
+   * surrender for them or answer in fiction, and the offer stays open until it is answered.
+   */
+  private async answerSurrender(): Promise<void> {
+    const human = this.table.human;
+    while (this.table.surrender && !this.table.ended) {
+      const { handles } = this.table.surrender;
+      if (!this.table.inCombat) {
+        this.table.surrender = undefined;
+        return;
+      }
+      await this.table.flush();
+      const choices: Choice[] = [
+        { number: 1, label: `Accept the surrender of ${handles.join(", ")}` },
+        { number: 2, label: "Fight on" },
+      ];
+      this.table.show({ kind: "options", title: "Surrender", lines: choiceLines(choices), choices });
+      const intent = await this.ask({ kind: "surrender" });
+      if (!intent) return;
+      if (intent.kind === "option" && (intent.number === 1 || intent.number === 2)) {
+        this.table.surrender = undefined;
+        if (intent.number === 2) {
+          this.table.log("system", `${human} fights on`, human);
+          this.table.tellDm(`${human} refused the surrender of ${handles.join(", ")}: the fight goes on. Narrate the refusal with what happens next.`);
+          return;
+        }
+        this.table.log("system", `${human} accepts the surrender of ${handles.join(", ")}`, human);
+        const outcome = await send(this.table, "dm", { cmd: "end_combat", reason: "surrender" }, () => "the fight ended (surrender)");
+        if (!outcome.ok) await this.humanRejected(outcome);
+        return;
+      }
+      if (intent.kind !== "text") {
+        this.table.show({ kind: "info", title: "Surrender", text: "Pick 1 or 2, or say what you do." });
+        continue;
+      }
+      await this.table.declare(human, intent.text);
+      this.table.surrender.words = true;
+      try {
+        await this.wakeDmOnce(
+          "surrender_words",
+          undefined,
+          `You offered ${human} the surrender of ${handles.join(", ")}, and the human playing ${human} answered in words (above).`,
+          `If they accept it, call end_combat with surrender. Otherwise answer in fiction with narrate: the offer stays open until ${human} accepts it or fights on.`,
+        );
+      } finally {
+        if (this.table.surrender) this.table.surrender.words = false;
+      }
+    }
+  }
+
   /** The fight is over: the DM wraps it up, and the loop is back in explore mode (spec §3.3 step 7). */
   private async combatOver(event: Event): Promise<void> {
     await this.wakeDm("combat_over", undefined, `The fight is over: ${event.text}`, "Narrate how it ends, then go on with the scene.");
@@ -964,6 +1016,13 @@ export class TableLoop {
    * the wake fails or spends its retries, the engine lines stand alone (spec §6).
    */
   private async wakeDm(wake: DmWake, events: Event[] | undefined, ...lines: string[]): Promise<string | void> {
+    const said = await this.wakeDmOnce(wake, events, ...lines);
+    // A surrender the DM offered is answered at once, before anything else reaches the engine (AGT-30).
+    if (this.table.surrender && !this.table.surrender.words && !this.table.ended) await this.answerSurrender();
+    return said;
+  }
+
+  private async wakeDmOnce(wake: DmWake, events: Event[] | undefined, ...lines: string[]): Promise<string | void> {
     this.table.resetRetries("dm");
     const heard = this.table.drainDmInbox();
     let told = events;

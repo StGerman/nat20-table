@@ -12,9 +12,9 @@ import { readPack } from "../src/pack/read.ts";
 import { guards, scenePlan } from "../src/play/run.ts";
 import { TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
-import { ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
+import { offerAnySurrender, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
-import type { PlayerTools } from "../src/table/tools.ts";
+import type { DmTools, PlayerTools } from "../src/table/tools.ts";
 import type { PlayerIntent, TableEvent, ToolOutcome } from "../src/table/types.ts";
 import { testTable, type TestTable } from "./helpers.ts";
 import { trailDm, yardDm } from "./scripts.ts";
@@ -1203,4 +1203,113 @@ test("the scene plan plays the listed scenes in order, passes over the ones betw
   assert.throws(() => scenePlan(pack, ["s3_mill_yard", "s1_village_green"]), /in the pack's order/);
   assert.throws(() => scenePlan(pack, ["s9_nowhere"]), /has no scene s9_nowhere/);
   assert.throws(() => scenePlan(pack, []), /no scene to play/);
+});
+
+// --- Accepting a surrender (AGT-30) ---------------------------------------------------------------
+
+/**
+ * The Milestone 3 yard fight: two goblins who may surrender when beaten. The run starts on the green
+ * so Bren can be carried into the yard.
+ */
+const YARD = { seed: 5, scene: "m3_s1_green", players: {} };
+
+/** Carries Bren from the green into the yard and starts its fight. */
+const intoTheYard = async (tools: DmTools): Promise<void> => {
+  const state = (await tools.getState()).data as { state: { scene_id?: string | null } };
+  if (state.state.scene_id === "m3_s1_green") await tools.loadScene("m3_s3_yard", ["bren"]);
+  else await tools.startCombat("yard_fight");
+};
+
+/**
+ * Opens the yard's fight; the first time a surrender is available, offers the standing goblins and
+ * tries two changes in the same wake, which the open offer must hold. Ends the adventure with the
+ * fight.
+ */
+function offeringDm(tried: ToolOutcome[], extra: DmScript = {}): DmScript {
+  let offered = false;
+  return {
+    scene_open: intoTheYard,
+    narrate: async (tools) => {
+      const state = (await tools.getState()).data as { state: { view: string; encounters: Array<{ running: boolean; surrender_available: boolean }> } };
+      if (!offered && state.state.encounters.some((e) => e.running && e.surrender_available)) {
+        offered = true;
+        await tools.narrate("The goblins throw down their blades and beg.");
+        await offerAnySurrender(tools);
+        tried.push(await tools.endTurn(), await tools.endCombat("surrender"));
+      }
+      await tools.narrate("Blades flash.");
+    },
+    combat_over: async (tools) => void (await tools.endAdventure("The yard falls quiet.")),
+    ...extra,
+  };
+}
+
+test("the human accepts a surrender the DM offers: the table ends the fight, and nothing acts in between", async () => {
+  const tried: ToolOutcome[] = [];
+  let table: TestTable | undefined;
+  let offeredAt: number | undefined;
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "surrender") offeredAt = table!.table.engine.logHead;
+    return ScriptedSeat.fight(prompt, s);
+  });
+  const { t, report } = await play({ ...YARD, seat, dm: offeringDm(tried), onTable: (tt) => (table = tt) });
+  assert.equal(report.ended, "the adventure is over");
+  const offer = seat.shown.find((e) => e.kind === "options" && e.title === "Surrender");
+  assert.deepEqual(offer?.kind === "options" ? offer.lines : [], ["1. Accept the surrender of goblin_2", "2. Fight on"]);
+  // The DM's own change in the offer's wake was held, and so was its own end_combat.
+  assert.deepEqual(tried.map((o) => o.ok), [false, false]);
+  assert.match(tried[0].text, /the surrender offer waits on bren's answer/);
+  assert.match(tried[1].text, /the surrender offer waits on bren's answer/);
+  // Nothing happened in the engine between the offer and the answer: the next event is the surrender.
+  const log = readFileSync(path.join(t.runDir, SESSION_LOG), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { seq: number; kind: string });
+  assert.equal(log.find((e) => e.seq > offeredAt!)?.kind, "surrendered");
+  const lines = t.table.transcript.records.map((r) => r.text);
+  assert.ok(lines.includes("Combat is over: the other side surrendered."));
+  assert.ok(lines.includes("bren accepts the surrender of goblin_2"));
+});
+
+test("fighting on closes the offer, the DM hears the refusal, and the fight goes on", async () => {
+  const tried: ToolOutcome[] = [];
+  const dm = new ScriptedDm(offeringDm(tried));
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => (prompt.kind === "surrender" ? { kind: "option", number: 2 } : ScriptedSeat.fight(prompt, s)));
+  const { t } = await play({ ...YARD, seat, dm });
+  const lines = t.table.transcript.records.map((r) => r.text);
+  assert.ok(lines.includes("bren fights on"));
+  assert.ok(!lines.includes("Combat is over: the other side surrendered."), "nobody surrendered");
+  const refusedAt = dm.briefings.findIndex((b) => b.briefing.includes("bren refused the surrender of goblin_2"));
+  assert.ok(refusedAt > 0, "the DM heard the refusal");
+  // The fight went on after it: engine lines came after the refusal.
+  assert.ok(dm.briefings.slice(refusedAt).some((b) => b.wake === "narrate" || b.wake === "combat_over"));
+});
+
+test("the human's words on an offer go to the DM, which may accept the surrender for them", async () => {
+  const tried: ToolOutcome[] = [];
+  const dm = new ScriptedDm(offeringDm(tried, { surrender_words: async (tools) => void tried.push(await tools.endCombat("surrender")) }));
+  const seat = new ScriptedSeat("bren", [], (prompt, s) =>
+    prompt.kind === "surrender" ? { kind: "text", text: "I accept, lower your blades" } : ScriptedSeat.fight(prompt, s),
+  );
+  const { t, report } = await play({ ...YARD, seat, dm });
+  assert.equal(report.ended, "the adventure is over");
+  assert.ok(dm.briefings.some((b) => b.wake === "surrender_words" && b.briefing.includes("answered in words")));
+  assert.equal(tried.at(-1)?.ok, true, "the DM's end_combat in the words wake went through");
+  assert.ok(t.table.transcript.records.some((r) => r.text === "Combat is over: the other side surrendered."));
+});
+
+test("no surrender can be offered while none is available, and the DM can't accept one itself", async () => {
+  const tried: ToolOutcome[] = [];
+  const { report } = await play({
+    ...YARD,
+    seat: seatThen([], { kind: "command", name: "quit" }),
+    dm: {
+      scene_open: async (tools) => {
+        const state = (await tools.getState()).data as { state: { scene_id?: string | null } };
+        await intoTheYard(tools);
+        if (state.state.scene_id === "m3_s3_yard") tried.push(await tools.offerSurrender(["goblin_1"]), await tools.endCombat("surrender"));
+      },
+    },
+  });
+  assert.equal(report.ended, "the human quit");
+  assert.deepEqual(tried.map((o) => [o.ok, o.retryable]), [[false, true], [false, true]]);
+  assert.match(tried[0].text, /no surrender is available now/);
+  assert.match(tried[1].text, /bren decides on a surrender: offer it with offer_surrender/);
 });

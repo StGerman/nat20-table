@@ -155,9 +155,11 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 takes 8 slashing damage.","rolls":[],"log_head":68}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":69}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":69}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":89}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":89}
+{"at":"t","speaker":"dm","channel":"run","kind":"system","text":"the DM offers bren the surrender of goblin_1, goblin_2","rolls":[],"log_head":87}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":87}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":87}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":87}
+{"at":"t","speaker":"bren","channel":"run","kind":"system","text":"bren accepts the surrender of goblin_1, goblin_2","rolls":[],"log_head":87}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":89}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Monster Nimble Escape.","rolls":[],"log_head":89}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is under Disengage.","rolls":[],"log_head":89}

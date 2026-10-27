@@ -70,6 +70,13 @@ export class TableState {
   acted = 0;
   /** A question the DM asked the human that the human hasn't answered yet. */
   question: string | undefined;
+  /**
+   * A surrender the DM offered that the human hasn't answered yet (TASKS.md AGT-30): the creatures
+   * the DM named. While it is open nothing else changes the session, so no creature acts between
+   * the offer and the answer. `words` is set while the DM maps the human's typed answer: only then
+   * may the DM accept it with `end_combat`.
+   */
+  surrender: { handles: Handle[]; words: boolean } | undefined;
   /** DM narrations and questions the human was shown, so the loop can tell whether a wake answered them. */
   dmToHuman = 0;
   /** Why the run ended, once it has. */
