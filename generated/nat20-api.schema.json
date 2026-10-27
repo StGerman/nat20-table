@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.33"
+    "version": "1.0.0-dev.34"
   },
   "$defs": {
     "Ability": {
@@ -902,6 +902,17 @@
           "description": "The actor's options at the pending prompt.",
           "type": "object",
           "properties": {
+            "budget": {
+              "description": "What the actor has left of its turn, in combat mode. Absent in explore mode, where\nthere is no turn.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TurnBudget"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "can_end_turn": {
               "description": "Whether `end_turn` is accepted now; always false in explore mode.",
               "type": "boolean"
@@ -3335,7 +3346,7 @@
           ]
         },
         {
-          "description": "The options the actor can take at the pending action prompt.\nReturns `not_your_turn` when the engine is waiting on someone else.",
+          "description": "The options the actor can take at the pending action prompt. Only its owner and `dm` may\nask; anyone else gets `not_visible`. Returns `not_your_turn` when the engine is waiting on\nsomeone else.",
           "type": "object",
           "properties": {
             "actor": {
@@ -4866,6 +4877,52 @@
           "type": "string",
           "const": "area"
         }
+      ]
+    },
+    "TurnBudget": {
+      "description": "What a creature has left of its turn in a fight: its action economy and movement. Owner and DM\nonly, like the options it comes with.",
+      "type": "object",
+      "properties": {
+        "action": {
+          "description": "Actions left this turn: 1 at the start of a turn, one more after Action Surge, 0 once spent.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "bonus_action": {
+          "description": "Bonus Actions left this turn.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "movement_ft": {
+          "description": "Movement left this turn, in whole feet, rounded down.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "reaction": {
+          "description": "Reactions left until the start of its next turn.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "speed_ft": {
+          "description": "This turn's movement in feet, Dash included: what `movement_ft` counts down from.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "action",
+        "bonus_action",
+        "reaction",
+        "movement_ft",
+        "speed_ft"
       ]
     },
     "UnavailableOption": {

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Ability, ApiError, Awaiting, Event, Handle, OptionId, PointFt, PromptId, RollId, Sheet, Skill,
     State, V1, Viewer,
-    state::{ActionOption, UnavailableOption},
+    state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
 /// One request line sent to the engine.
@@ -61,8 +61,9 @@ pub enum Command {
         /// Whose sheet.
         actor: Handle,
     },
-    /// The options the actor can take at the pending action prompt.
-    /// Returns `not_your_turn` when the engine is waiting on someone else.
+    /// The options the actor can take at the pending action prompt. Only its owner and `dm` may
+    /// ask; anyone else gets `not_visible`. Returns `not_your_turn` when the engine is waiting on
+    /// someone else.
     LegalActions {
         /// The creature whose options are listed. In explore mode any creature of the scene:
         /// the options it could take on a turn of its own, as if that turn began now.
@@ -377,6 +378,10 @@ pub enum CommandResult {
         unavailable: Vec<UnavailableOption>,
         /// Whether `end_turn` is accepted now; always false in explore mode.
         can_end_turn: bool,
+        /// What the actor has left of its turn, in combat mode. Absent in explore mode, where
+        /// there is no turn.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        budget: Option<TurnBudget>,
     },
     /// The option was taken; its rolls and effects are in `events`.
     Submit {},

@@ -139,6 +139,15 @@ pub fn sheet(viewer: &Viewer, sheet: Sheet) -> Option<Sheet> {
     }
 }
 
+/// Whether `viewer` may list `actor`'s options, with their `unavailable` reasons and the turn's
+/// `budget`: its owner and the DM only (Rule 3, the §5 table), as for a sheet.
+pub fn lists_options(viewer: &Viewer, actor: &str) -> bool {
+    match viewer {
+        Viewer::Dm => true,
+        Viewer::Creature(handle) => handle == actor,
+    }
+}
+
 fn distance_ft(p: PointFt, q: PointFt) -> f32 {
     let d =
         ((p.x_ft - q.x_ft).powi(2) + (p.y_ft - q.y_ft).powi(2) + (p.z_ft - q.z_ft).powi(2)).sqrt();

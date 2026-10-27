@@ -197,7 +197,7 @@ impl Server {
             Command::StartCombat { encounter_id } => session.start_combat(encounter_id, viewer),
             Command::GetState => session.state(viewer),
             Command::EndCombat { reason } => session.end_combat(*reason, viewer),
-            Command::LegalActions { actor } => session.legal_actions(&actor.0),
+            Command::LegalActions { actor } => session.legal_actions(&actor.0, viewer),
             Command::Submit {
                 actor,
                 prompt_id,

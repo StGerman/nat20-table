@@ -16,7 +16,7 @@ use nat20_api_contract::{
     HitPointsRegained, Mode, MoveTarget, OptionArea, OptionId, OptionVariant, Placement, PointFt,
     PregenFile, ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn,
     SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate,
-    Targeting, UnavailableOption, Visibility,
+    Targeting, TurnBudget, UnavailableOption, Visibility,
 };
 use nat20_core::hecs::{self, Entity};
 use nat20_core::parry3d::na::Point3;
@@ -37,7 +37,7 @@ use nat20_core::{
             ActionId, ActionVariantId, EffectId, EntityIdentifier, FactionId, ItemId, ResourceId,
         },
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
-        resource::{RechargeRule, ResourceAmount, ResourceMap},
+        resource::{RechargeRule, ResourceAmount, ResourceBudgetKind, ResourceMap},
         saving_throw::SavingThrowKind,
         time::{TimeMode, TimeStep, TurnBoundary},
     },
@@ -2139,6 +2139,40 @@ impl Game {
         let entity = self.entity(actor)?;
         self.require_action_prompt(entity)?;
         Ok(self.listing(entity))
+    }
+
+    /// What `actor` has left of its turn: actions, Bonus Actions and Reactions by their resource
+    /// uses, movement from its effective Speed (Dash included).
+    pub fn turn_budget(&self, actor: &str) -> Result<TurnBudget, ApiError> {
+        let entity = self.entity(actor)?;
+        let engine = &self.engine;
+        let mut budget = TurnBudget {
+            action: 0,
+            bonus_action: 0,
+            reaction: 0,
+            movement_ft: 0,
+            speed_ft: 0,
+        };
+        if let Ok(map) = engine.world.get::<&ResourceMap>(entity) {
+            for (id, kind) in map.iter() {
+                let ResourceBudgetKind::Flat(uses) = kind else {
+                    continue;
+                };
+                match id.id() {
+                    "resource.action" => budget.action = uses.current_uses,
+                    "resource.bonus_action" => budget.bonus_action = uses.current_uses,
+                    "resource.reaction" => budget.reaction = uses.current_uses,
+                    _ => {}
+                }
+            }
+        }
+        let speed = systems::movement::speed(engine, entity);
+        let feet =
+            |length: uom::si::f32::Length| length.get::<uom::si::length::meter>() / METERS_PER_FOOT;
+        // A hair of slack so 30 ft stored as 9.144 m is not floored to 29.
+        budget.movement_ft = (feet(speed.remaining_movement()) + 1e-3).floor() as u32;
+        budget.speed_ft = feet(speed.total_speed()).round() as u32;
+        Ok(budget)
     }
 
     /// Out of combat: the options `actor` could take on a turn of its own, listed as if that turn
