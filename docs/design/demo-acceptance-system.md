@@ -144,7 +144,7 @@ sequenceDiagram
 | Contract | Change | Rule |
 |---|---|---|
 | Engine wire | API-35 only: optional `partial` on `move`, `reached` on its result (§3.5) | Rule 1, contract-first PR |
-| Transcript (TS writes, Rust reads) | Additive: `cause` on `fallback` records (`retries`, `timeout`, `error`), needed for criterion 5 | Game type; the Rust reader ignores unknown fields |
+| Transcript (TS writes, Rust reads) | Additive: `cause` on `fallback` records (`retries`, `timeout`, `error`, `unmapped`), and `prompt_id` on the human's `retry` records, needed for criterion 5 | Game type; the Rust reader ignores unknown fields |
 | Scenario pack | Additive: optional `pronouns` on party entries (§3.4) | `pack:schema`, `pack:check` |
 | Run folder | New files: `run.json`, `narration-digest.jsonl`, `narration-check.jsonl`, `confirmations.json`, `verdict.json` | Game records, `run_format: 1` |
 | Seat (`TableEvent`, `PlayerIntent`) | None. The no-human table has no seat at all (§3.2) | The Telegram milestone's line stays as is |
@@ -235,9 +235,11 @@ After the loop, the driver runs five stages. Each reads the run folder, writes o
 | 1a Party survives | Session log | Every party member down or dead at once |
 | 2 Audit | Audit output | Any problem |
 | 3 Narration | `narration-check.jsonl`, `confirmations.json` | A flag Stas confirmed. Flags not yet answered make it PENDING |
-| 5 Retries | Transcript `fallback` records with `cause: "retries"` | Any. Timeout fallbacks are latency (D1) and only reported |
+| 5 Retries | Transcript `fallback` records with `cause: "retries"`; the human's refusals per decision, grouped by `prompt_id`; `confirmations.json` | An AI player or DM fallback with `cause: "retries"`, or a human decision refused more than twice that Stas confirms (not yet answered: PENDING). Timeout fallbacks are latency (D1) and only reported |
 | Leak scan | Audit output | Any leak |
 | 4 Latency | `usage.jsonl` | Never: reported only |
+
+The human is never cut off after two refusals; the loop keeps offering the choice. A refusal of the human's decision is a `retry` record with the human as speaker, or the DM's "didn't map the words" fallback (`cause: "unmapped"`, which is the human's refusal, not a DM failure). A human decision refused more than twice becomes a flag like a narration flag: Stas confirms it (the table failed him) or dismisses it (his own doing). Only Stas's run has a human, so these rows are empty in the unattended run.
 
 VOID wins over FAIL (a cut-off run says nothing). `confirmations.json` maps each flag id to `confirmed` or `dismissed` with a note. Stas answers in a thread, the thread writes the file into the runs repo, and the verdict is recomputed there. No interactive tool is built for two runs.
 
@@ -249,12 +251,12 @@ VOID wins over FAIL (a cut-off run says nothing). `confirmations.json` maps each
 - every creature in the scene: side, HP and max, life state, conditions, position, surrendered or fled;
 - pairs within 5 ft, and each party member's distance to the nearest foe, so the judge never does 3D arithmetic;
 - the engine lines since the previous narration, `item_used` included;
-- each party member's equipment and consumables with quantities, from the replayed sheet, when they changed; coins come from the pregen's `money`, since the engine doesn't track money and nothing in this adventure changes a purse;
+- each party member's equipment and consumables with quantities, from the replayed sheet: in full on the first line of each judge batch, then only when they change; coins come from the pregen's `money`, since the engine doesn't track money and nothing in this adventure changes a purse;
 - the party's names (the pack's `names`) and pronouns.
 
 **Pronouns.** The English run called Torva "he" 17 times while her card says "she" (checked by hand on 2026-10-27). Cards carry no pronoun field, so the pack gets an optional `pronouns` on each party entry. The digest reads it, and the DM's prompt names it, which fixes the cause and not only the symptom.
 
-**Judge.** A TS command (`npm run audit:narration -- <run-dir>`) built on the agents' session plumbing (`sdk-session.ts`): Opus 5.5 at low effort, no built-in tools, and one strict tool, `report`, that takes a list of `{line, claim, kind, evidence_seq}`. The kinds are HP, death, position, condition, action, surrender, inventory and identity. The judge reads 10 narration lines a call, with their digests, in a fresh session each time, so its context never grows. The system prompt carries the rules from spec §4.3, including the three inventory flags and the untracked props that are listed, not flagged. A full run is about 15 calls. The judge isn't a seat: it has no game tool and its output reaches no agent.
+**Judge.** A TS command (`npm run audit:narration -- <run-dir>`) built on the agents' session plumbing (`sdk-session.ts`): Opus 5.5 at low effort, no built-in tools, and one strict tool, `report`, that takes a list of `{line, claim, kind, evidence_seq}`. The kinds are HP, death, position, condition, action, surrender, inventory and identity. The judge reads 10 narration lines a call, with their digests, in a fresh session each time, so its context never grows; because each batch opens with the party's full inventory, a fresh session always has the baseline an inventory flag needs. The system prompt carries the rules from spec §4.3, including the three inventory flags and the untracked props that are listed, not flagged. A full run is about 15 calls. The judge isn't a seat: it has no game tool and its output reaches no agent.
 
 **Calibration**, before the M7 runs:
 - *Recall.* A scripted fixture with two planted contradictions, modelled on the two real ones: a narration that puts Bren next to a goblin 24 ft away, and a goblin narrated as surrendering that then shoots. The digest runs on it in CI. The judge runs on it on the Mac and must flag both. A planted fixture works on any build; the real M6 runs replay only if the current engine still answers their requests the same way.
@@ -297,14 +299,14 @@ flowchart LR
   Done["Run folder complete"] --> Scan["Secret scan: sk-ant- and API-key patterns"]
   Scan -- clean --> Clone["~/.nat20/runs-repo: clone on first use, pull --rebase"]
   Scan -- found --> Stop["Refuse, say which file"]
-  Clone --> Copy["Copy to runs/run-id/"]
-  Copy --> Commit["Commit: run id, verdict, profile, commit, seed"]
-  Commit --> Push["Push; on rejection pull --rebase and push once more"]
+  Clone --> Copy["Copy over runs/run-id/: add and replace, never delete"]
+  Copy --> Commit["Commit if anything changed: run id, verdict, profile, commit, seed"]
+  Commit --> Push["Push if the clone is ahead; on rejection pull --rebase and push once more"]
   Push --> Line["Print the run's URL"]
 ```
 
 - Plain `git` with Stas's own login; no token in code or config. `NAT20_RUNS_REPO`, `--upload <repo>` and `--no-upload` as in spec §4.9.
-- Idempotent: `runs:upload` skips run ids already in the clone, so it can send old runs or retry a failed push.
+- Idempotent: `runs:upload` copies the folder over the clone's copy, commits only if a file changed, and pushes whenever the clone is ahead of the remote. So it retries a push that failed, sends what `runs:finish` added after the first upload (the judge's flags, the recomputed verdict), sends old runs, and does nothing for a run that is already up to date. It never deletes, so a `confirmations.json` a thread wrote in the repo stays, and it recomputes `verdict.json` in the clone after the copy (`runs:verdict`), so a stale verdict from the Mac never overwrites the confirmed one.
 - A failed upload never fails the run, and the folder stays in `runs/` either way.
 - Threads read the repo after Stas adds it to the project. Analysis files keep going to the project folder, never to either code repo.
 
@@ -343,6 +345,7 @@ Scale is one run at a time on one Mac, so the only load question is the runs rep
 | DM never moves the story on | Stall rule | FAIL, early | A row: prompt or pacing |
 | DM timeout skips a narration | Existing fallback | Reported (latency) | Optimisation milestone |
 | AI decision refused past its retries | `fallback` with `cause: "retries"` | FAIL, criterion 5 | A row; API-35 removes the known cause |
+| Human decision refused more than twice | The human's `retry` records by `prompt_id` | A flag; FAIL, criterion 5, if Stas confirms it | A row on what refused it |
 | Replay diverges in the digest | The digest's response check | Criterion 3 PENDING; nondeterminism | P0 engine row |
 | Judge flags a false contradiction | Stas dismisses it | None | Prompt fix if it repeats |
 | Push rejected or offline | git exit code | None | `runs:upload` |
