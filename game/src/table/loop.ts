@@ -6,6 +6,7 @@ import { EngineStopped, type Event, type Handle, type State } from "@nat20-table
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
+import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
 import { DmTools, PlayerTools, send } from "./tools.ts";
 import type { DmAgent, DmWake, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, ToolOutcome } from "./types.ts";
@@ -28,6 +29,11 @@ export interface LoopOptions {
   onScene?: (sceneId: string, played: readonly string[]) => SceneChoice;
   /** Loop steps before the run is stopped: a safety net for scripted runs. Default 5000. */
   maxSteps?: number;
+  /**
+   * Sends the human's seat a `situation` before each decision and with each set of options, for
+   * the terminal's situation panel (AGT-35). Off for seats that draw no panel. Default false.
+   */
+  situation?: boolean;
 }
 
 /** How a run went, for the run report (spec §6, §11). */
@@ -69,8 +75,11 @@ export class TableLoop {
   private readonly dmTools: DmTools;
   private readonly onScene: (sceneId: string, played: readonly string[]) => SceneChoice;
   private readonly maxSteps: number;
+  private readonly situation: boolean;
   /** `/pause`: AI players aren't woken until `/pause` again (spec §3.4). */
   private paused = false;
+  /** The model wakes in flight, oldest first, for the seat's loading indicator. */
+  private readonly waitingOn: string[] = [];
   private readonly scenes: string[] = [];
   private readonly passed: string[] = [];
   /** Scenes passed over since the last one played: the DM hears of them when the next one opens. */
@@ -101,6 +110,7 @@ export class TableLoop {
     });
     this.onScene = options.onScene ?? (() => "continue");
     this.maxSteps = options.maxSteps ?? 5000;
+    this.situation = options.situation ?? false;
   }
 
   /** Plays from `firstScene` until the adventure ends, the human quits, or the run is stopped. */
@@ -169,6 +179,7 @@ export class TableLoop {
       }
     }
     if (this.table.ended) return;
+    await this.showSituation();
     const awaiting = this.table.awaiting;
     switch (awaiting.kind) {
       case "action":
@@ -689,6 +700,19 @@ export class TableLoop {
     }
   }
 
+  /**
+   * The human's situation panel, from the human's own state (and, on their turn, their own options
+   * for who is in reach). A failed read sends an empty situation: the panel shows its last as stale.
+   */
+  private async showSituation(state?: State, options?: LegalActionsResult): Promise<void> {
+    if (!this.situation || this.table.ended) return;
+    const seen = state ?? (await this.humanState());
+    const a = this.table.awaiting;
+    const turn = a.kind === "action" ? a.actor : undefined;
+    const situation = seen ? situationOf(seen, turn, turn === this.table.human ? options : undefined) : undefined;
+    this.table.show({ kind: "situation", ...(situation ? { situation } : {}) });
+  }
+
   private async humanState(): Promise<State | undefined> {
     const r = this.table.observe(await this.table.engine.request(this.table.human, { cmd: "get_state" }));
     return r.result?.cmd === "get_state" ? r.result.state : undefined;
@@ -698,15 +722,17 @@ export class TableLoop {
   private async offerChoices(combat: boolean): Promise<void> {
     const human = this.table.human;
     const listed = this.table.observe(await this.table.engine.request(human, { cmd: "legal_actions", actor: human }));
-    const state = combat ? await this.humanState() : undefined;
+    const state = combat || this.situation ? await this.humanState() : undefined;
     if (!listed.ok || listed.result?.cmd !== "legal_actions") {
       this.top = this.shown = [];
       this.table.show({ kind: "info", title: "Options", text: listed.error?.message ?? "No options now." });
       return;
     }
     this.lastOptions = listed.result as LegalActionsResult;
-    this.top = this.shown = buildChoices(this.lastOptions, state, combat);
-    this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top });
+    this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat);
+    if (state) await this.showSituation(state, this.lastOptions);
+    const budget = this.lastOptions.budget ?? undefined;
+    this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top, ...(budget ? { budget } : {}) });
   }
 
   // --- Waking agents -------------------------------------------------------------------------------
@@ -725,6 +751,7 @@ export class TableLoop {
   /** Wakes an AI player. A model error or timeout makes the decision fall back; a plan limit stops the run. */
   private async wakePlayer(agent: PlayerAgent, wake: PlayerWake, briefing: string): Promise<string | void | typeof FAILED> {
     this.table.recordInput(agent.handle, briefing);
+    const done = this.waitFor(`${agent.handle} is thinking`);
     try {
       return await agent.wake(wake, briefing, this.tools.get(agent.handle)!);
     } catch (error) {
@@ -732,6 +759,8 @@ export class TableLoop {
       const why = error instanceof TurnTimeout ? "timed out" : `failed: ${error instanceof Error ? error.message : String(error)}`;
       this.table.log("error", `${agent.handle} (${wake}) ${why}`, agent.handle);
       return FAILED;
+    } finally {
+      done();
     }
   }
 
@@ -752,6 +781,7 @@ export class TableLoop {
       ...(told.length > 0 ? ["What happened:", ...told.map(eventLine)] : []),
       ...lines,
     ].join("\n");
+    const done = this.waitFor("The DM is thinking");
     try {
       const said = await this.dm.wake(wake, briefing, this.dmTools);
       if (this.table.exhausted("dm")) {
@@ -766,6 +796,18 @@ export class TableLoop {
       this.table.fallbacks += 1;
       this.table.log("fallback", `the DM's ${wake} is skipped; the engine lines stand alone`, "dm");
       return undefined;
+    } finally {
+      done();
     }
+  }
+
+  /** Tells the seat a model wake started; the returned call says it ended. The newest one in flight is shown. */
+  private waitFor(on: string): () => void {
+    this.waitingOn.push(on);
+    this.table.seat.busy?.(on);
+    return () => {
+      this.waitingOn.splice(this.waitingOn.lastIndexOf(on), 1);
+      this.table.seat.busy?.(this.waitingOn.at(-1));
+    };
   }
 }

@@ -2,8 +2,9 @@
 // projected for the human by the loop, so this only lays them out. Rolls show inline as the engine
 // rendered them for the human's viewer, with their roll id (dice, total and outcome; no AC or DC).
 import type { TableEvent } from "../table/types.ts";
+import type { Accent, Palette } from "./palette.ts";
 
-/** Ink's named colours that read on both light and dark terminals. */
+/** What a line means on screen; `TONE_STYLE` says how that looks. */
 export type Tone = "dm" | "speech" | "intent" | "engine" | "options" | "prompt" | "info" | "status" | "end" | "error";
 
 export interface Line {
@@ -11,19 +12,42 @@ export interface Line {
   tone: Tone;
 }
 
-/** The terminal colour of each tone (Ink `Text` `color`); undefined is the terminal's own. */
-export const TONE_COLOR: Record<Tone, string | undefined> = {
-  dm: "cyan",
-  speech: "yellow",
-  intent: "yellow",
-  engine: undefined,
-  options: "green",
-  prompt: "magenta",
-  info: "blue",
-  status: "gray",
-  end: "red",
-  error: "red",
+/** How a span looks: an accent from the palette, and type styles that survive NO_COLOR. */
+export interface Style {
+  accent?: Accent;
+  bold?: boolean;
+  italic?: boolean;
+  dim?: boolean;
+}
+
+/**
+ * Each tone in the Mill Table accent code (palette.ts): narration and plain values carry no accent,
+ * engine lines are secondary text, your turn and the run's end are rust.
+ */
+export const TONE_STYLE: Record<Tone, Style> = {
+  dm: {},
+  speech: { italic: true },
+  intent: { italic: true, accent: "hint" },
+  engine: { accent: "hint" },
+  options: {},
+  prompt: { accent: "rust", bold: true },
+  info: {},
+  status: { accent: "hint" },
+  end: { accent: "rust", bold: true },
+  error: { accent: "rust" },
 };
+
+/** Ink `Text` props for a style in a palette. */
+export function textProps(style: Style, palette: Palette): { color?: string; bold?: boolean; italic?: boolean; dimColor?: boolean } {
+  const color = style.accent ? palette[style.accent] : undefined;
+  return {
+    ...(color ? { color } : {}),
+    ...(style.bold ? { bold: true } : {}),
+    ...(style.italic ? { italic: true } : {}),
+    // Secondary text dims itself when there is no colour to mark it.
+    ...(style.dim || (style.accent === "hint" && !color) ? { dimColor: true } : {}),
+  };
+}
 
 const name = (handle: string) => handle.charAt(0).toUpperCase() + handle.slice(1);
 
@@ -53,5 +77,8 @@ export function eventLines(event: TableEvent): Line[] {
       return [{ tone: "status", text: `— ${event.text}` }];
     case "end":
       return [{ tone: "end", text: `The run is over: ${event.text}` }];
+    case "situation":
+      // The panel draws it; nothing goes into the log.
+      return [];
   }
 }

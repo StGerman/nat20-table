@@ -8,18 +8,19 @@ export const COMMANDS = ["sheet", "where", "options", "log", "pause", "quit"] as
 export type CommandName = (typeof COMMANDS)[number];
 
 /** What each command does, for `/help`. */
-export const COMMAND_HELP: Record<CommandName | "help", string> = {
+export const COMMAND_HELP: Record<CommandName | "help" | "panel", string> = {
   sheet: "your character sheet",
   where: "places and the creatures you can see, with distances",
   options: "your numbered options now",
   log: "the last engine lines, with their roll ids",
   pause: "AI players wait until you type /pause again",
   quit: "end the run (the run folder keeps everything so far)",
+  panel: "fold the situation panel to one line, or open it again",
   help: "this list",
 };
 
 /** A typed line as the seat reads it: an intent for the loop, help for the screen, or a mistake. */
-export type Typed = { kind: "intent"; intent: PlayerIntent } | { kind: "help" } | { kind: "error"; text: string } | { kind: "empty" };
+export type Typed = { kind: "intent"; intent: PlayerIntent } | { kind: "help" } | { kind: "panel" } | { kind: "error"; text: string } | { kind: "empty" };
 
 /**
  * Reads one typed line for a prompt (undefined: the table isn't waiting on the human). A number is
@@ -32,8 +33,9 @@ export function readLine(line: string, prompt: HumanPrompt | undefined): Typed {
   if (text.startsWith("/")) {
     const name = text.slice(1).split(/\s+/)[0].toLowerCase();
     if (name === "help" || name === "?") return { kind: "help" };
+    if (name === "panel") return { kind: "panel" };
     if ((COMMANDS as readonly string[]).includes(name)) return { kind: "intent", intent: { kind: "command", name: name as CommandName } };
-    return { kind: "error", text: `There is no /${name}. Commands: ${["help", ...COMMANDS].map((c) => `/${c}`).join(" ")}` };
+    return { kind: "error", text: `There is no /${name}. Commands: ${["help", "panel", ...COMMANDS].map((c) => `/${c}`).join(" ")}` };
   }
   if (!prompt) return { kind: "error", text: "The table is busy: wait for your prompt. A command typed now is answered when it comes." };
   if (prompt.kind === "paused") return { kind: "error", text: "Paused: only commands until /pause again." };
