@@ -571,6 +571,48 @@ test("a fallback says why: a timed-out wake is a timeout, not spent retries (M7 
   assert.equal(fallback?.cause, "timeout");
 });
 
+test("retries spent on refusals stay the cause when the wake then fails too", async () => {
+  let t!: TestTable;
+  await play({
+    seed: 27,
+    onTable: (table) => (t = table),
+    players: {
+      torva: {},
+      maren: {},
+      ilsa: {
+        combat: async (tools) => {
+          for (let i = 0; i < 4; i++) await tools.submitDecision({ option_id: "no_such_option" });
+          t.table.end("test over");
+          throw new TurnTimeout("ilsa: turn timed out after 20000 ms");
+        },
+      },
+    },
+    dm: fightAtOnce,
+  });
+  const fallback = t.table.transcript.records.find((r) => r.kind === "fallback" && r.speaker === "ilsa");
+  assert.equal(fallback?.cause, "retries");
+});
+
+test("a declaration wake that spends its retries on refused lines and then passes falls back", async () => {
+  const { t } = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "I look for tracks." }]),
+    speechGuard: (text) => (/HP/.test(text) ? "it names a game number" : undefined),
+    players: {
+      maren: {
+        declare: async (tools) => {
+          for (let i = 0; i < 4; i++) await tools.say("I have 9 HP left.");
+          return undefined;
+        },
+      },
+    },
+    dm: { scene_open: async (tools) => void (await tools.narrate("The yard is quiet.")) },
+  });
+  const fallback = t.table.transcript.records.find((r) => r.kind === "fallback" && r.speaker === "maren");
+  assert.equal(fallback?.text, "maren's declaration is dropped");
+  assert.equal(fallback?.cause, "retries");
+});
+
 test("three model wakes in a row that lost the connection stop the run as offline (M7 design §3.1)", async () => {
   const { report, t } = await play({
     seed: 27,
@@ -612,6 +654,9 @@ test("the plan's usage limit stops the run cleanly and says so", async () => {
   assert.ok(runLines(t, "system").includes(`run ended: ${report.ended}`));
   assert.equal(report.stop, "usage_limit");
   assert.deepEqual(runLines(t, "fallback"), []);
+  // The fight the stop cut short keeps no end time, and counts the rounds it got to.
+  assert.equal(report.sceneTimes[0].ended_at, undefined);
+  assert.ok(report.sceneTimes[0].rounds >= 1);
 });
 
 test("the engine dying stops the run, with the transcript written", async () => {

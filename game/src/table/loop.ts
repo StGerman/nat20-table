@@ -228,6 +228,8 @@ export class TableLoop {
   private offlineWakes = 0;
   /** Why each seat's last wake failed, while it is the seat's last: a fallback's cause. */
   private readonly failedWake = new Map<string, "timeout" | "error">();
+  /** Whether the DM's last wake failed (and its fallback is already recorded). */
+  private dmWakeFailed = false;
   private readonly onProgress: (progress: Progress) => void;
   private readonly sceneTimes: SceneTime[] = [];
 
@@ -316,7 +318,8 @@ export class TableLoop {
       reactions: [...this.reactions],
       fight: { rounds: this.fightRounds.size, lines: this.table.fightLines },
       ...(this.table.stop ? { stop: this.table.stop } : {}),
-      sceneTimes: this.sceneTimes.map((t) => ({ ...t })),
+      // A scene a stop cut short keeps no end time, and counts the rounds it got to.
+      sceneTimes: this.sceneTimes.map((t) => ({ ...t, ...(t.ended_at ? {} : { rounds: this.roundsIn(t.id) }) })),
     };
   }
 
@@ -391,12 +394,17 @@ export class TableLoop {
     await this.settle();
   }
 
+  /** The combat rounds fought in a scene so far. */
+  private roundsIn(sceneId: string): number {
+    return [...this.fightRounds].filter((key) => key.split(":")[1] === sceneId).length;
+  }
+
   /** The scene being played is over: its end time and its fight rounds, for `run.json`. */
   private endScene(): void {
     const scene = this.sceneTimes.at(-1);
     if (!scene || scene.ended_at) return;
     scene.ended_at = new Date().toISOString();
-    scene.rounds = [...this.fightRounds].filter((key) => key.split(":")[1] === scene.id).length;
+    scene.rounds = this.roundsIn(scene.id);
     this.onProgress({ kind: "scene_end", scene: scene.id, rounds: scene.rounds });
   }
 
@@ -546,11 +554,11 @@ export class TableLoop {
   }
 
   /**
-   * Why `seat`'s decision falls back (M7 design §3.3): its last wake failed, its retries were spent
-   * on refusals, or it ended with nothing refused and nothing done.
+   * Why `seat`'s decision falls back (M7 design §3.3): its retries were spent on refusals (even if
+   * the wake then failed too), its last wake failed, or it ended with nothing refused and nothing done.
    */
   private causeOf(seat: string): FallbackCause {
-    return this.failedWake.get(seat) ?? (this.table.exhausted(seat) ? "retries" : "unanswered");
+    return this.table.exhausted(seat) ? "retries" : (this.failedWake.get(seat) ?? "unanswered");
   }
 
   /** The human typed words on their combat turn: the DM maps them to the human's decisions (D5). */
@@ -583,8 +591,9 @@ export class TableLoop {
       this.dmBacklog = [...this.dmBacklog, ...events.filter((e) => e.seq > this.table.narratedTo)];
     }
     const still = await this.sameTurn(human, since);
-    // Words the DM only answered (talk, a question back) are understood: the turn goes on.
-    if (this.table.acted === acted && this.table.dmToHuman === answered && still) {
+    // Words the DM only answered (talk, a question back) are understood: the turn goes on. A wake
+    // that failed is latency, not a refusal, and has its own fallback.
+    if (this.table.acted === acted && this.table.dmToHuman === answered && still && !this.dmWakeFailed) {
       this.table.fallbacks += 1;
       this.table.log("fallback", `the DM didn't map ${human}'s words; back to the human`, "dm", { cause: "unmapped", decision: this.humanDecision() });
       this.table.show({ kind: "info", title: "Not understood", text: "I didn't get that; pick from /options." });
@@ -985,7 +994,7 @@ export class TableLoop {
   /** An AI player has the floor: one declare wake, its line heard at once, its intent declared. */
   private async takeFloor(handle: Handle, ask: string): Promise<void> {
     const declared = await this.wakePlayer(this.agents.get(handle)!, "declare", await this.playerBriefing(handle, ask));
-    if (typeof declared === "string") await this.declareFor(handle, declared);
+    await this.declareFor(handle, declared);
   }
 
   /**
@@ -1006,6 +1015,11 @@ export class TableLoop {
         "declare",
         await this.playerBriefing(handle, `Your declaration: ${outcome.text}`, "Declare again in one sentence, or PASS."),
       );
+    }
+    // A wake that spent its retries on refusals (its line, say) and then passed still fell back.
+    if (!this.table.ended && this.table.exhausted(handle)) {
+      this.table.fallbacks += 1;
+      this.table.log("fallback", `${handle}'s declaration is dropped`, handle, { cause: "retries" });
     }
   }
 
@@ -1312,6 +1326,7 @@ export class TableLoop {
 
   private async wakeDmOnce(wake: DmWake, events: Event[] | undefined, ...lines: string[]): Promise<string | void> {
     this.table.resetRetries("dm");
+    this.dmWakeFailed = false;
     const heard = this.table.drainDmInbox();
     let told = events;
     if (!told) {
@@ -1338,7 +1353,9 @@ export class TableLoop {
       const why = error instanceof TurnTimeout ? "timed out" : `failed: ${error instanceof Error ? error.message : String(error)}`;
       this.table.log("error", `dm (${wake}) ${why}`, "dm");
       this.table.fallbacks += 1;
-      this.table.log("fallback", `the DM's ${wake} is skipped; the engine lines stand alone`, "dm", { cause: error instanceof TurnTimeout ? "timeout" : "error" });
+      this.dmWakeFailed = true;
+      const cause = this.table.exhausted("dm") ? "retries" : error instanceof TurnTimeout ? "timeout" : "error";
+      this.table.log("fallback", `the DM's ${wake} is skipped; the engine lines stand alone`, "dm", { cause });
       return undefined;
     } finally {
       done();

@@ -271,6 +271,22 @@ export class InkSeat implements Seat {
     }
   }
 
+  /**
+   * The run stops from outside the seat (the time limit): a prompt waiting on the human is answered
+   * with quit, and so is any later one, so the table ends between decisions.
+   */
+  stopAsking(why: string): void {
+    if (this.interrupted) return;
+    this.interrupted = true;
+    this.add([{ tone: "end", text: `Stopping: ${why}.` }]);
+    const answer = this.answer;
+    if (answer) {
+      this.answer = undefined;
+      this.update({ prompt: undefined });
+      answer({ kind: "command", name: "quit" });
+    }
+  }
+
   /** Adds lines that aren't a message's: they end the message above, after a blank line. */
   private add(lines: Line[]): void {
     if (lines.length === 0) return;

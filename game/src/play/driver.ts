@@ -202,7 +202,12 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     if (firstLoad === undefined) {
       firstLoad = Date.now();
       const limit = flags["time-limit-min"];
-      if (limit > 0) deadline = setTimeout(() => table.end(`the ${limit}-minute time limit`, "time_limit"), limit * 60_000);
+      // The table keeps the first reason, so the quit that frees a waiting prompt doesn't replace it.
+      const stop = () => {
+        table.end(`the ${limit}-minute time limit`, "time_limit");
+        ink?.stopAsking(`the ${limit}-minute time limit`);
+      };
+      if (limit > 0) deadline = setTimeout(stop, limit * 60_000);
     }
     // The terminal shows the progress only when nobody plays in it.
     if (ink) return;

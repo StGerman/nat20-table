@@ -279,7 +279,8 @@ export class AgentSession {
     switch (message.type) {
       case "system":
         if (message.subtype === "init") this.init = message;
-        if (message.subtype === "api_retry" && message.error_status === null && turn && this.stale === 0) turn.offline = true;
+        // A retry with no HTTP status never reached the API; one with a status, or any answer, did.
+        if (message.subtype === "api_retry" && turn && this.stale === 0) turn.offline = message.error_status === null;
         return;
       case "rate_limit_event":
         if (message.rate_limit_info.status === "rejected") {
@@ -288,6 +289,7 @@ export class AgentSession {
         return;
       case "assistant": {
         if (!turn || this.stale > 0 || message.parent_tool_use_id !== null) return;
+        turn.offline = false;
         const api = message.message;
         turn.model = api.model ?? turn.model;
         // The SDK splits one API response into a message per content block, all with the same id.
