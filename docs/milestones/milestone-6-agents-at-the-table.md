@@ -286,7 +286,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 | Narration and speech guards | step 10 | DM text: digits outside a citation, a scene check id, a stat-block id and an unknown roll id are each refused. AI player: a scripted player that says its own HP and AC is refused, and the line reaches no other seat |
 | Agent memory | steps 9 and 10 | A note reaches only its owner; a `remember` holding a number is refused by the guard; a sentinel fact the scripted DM remembers and never narrates appears in no player agent's input |
 | Pack check | step 8, CI | The skeleton validates and has a known `format_version`; every id it names resolves; every prose and card file exists; every scene loads in order with the party carried |
-| Live runs | steps 1, 9, 10, 13 (manual, on Stas's Mac) | Reports in the PR description: latency, tokens, retries, fallbacks, audit result, any stop at a plan limit |
+| Live runs | steps 1, 9, 10, 13 (manual, on Stas's Mac) | Reports in the project folder, never committed: latency, tokens, retries, fallbacks, audit result, any stop at a plan limit |
 
 ## 11. Acceptance, tied to the demo criteria
 
@@ -299,7 +299,7 @@ Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where 
 | 5. Recovery within 2 retries | Every retry and fallback in the transcript; the exit run reports them |
 | 6. First-time player | Stas plays with `/options` and `/sheet`; option numbers work in a fight |
 
-**Done when:** Stas has played Scene 1 and Scene 3 through the text UI with the DM agent and the AI party on nat20-table `main` with CI green, the audit and the leak scan pass on that run's transcript, the run report with latency and token usage is committed, every Milestone 6 row is `done` or explicitly moved, and the TASKS.md milestone row shows the date.
+**Done when:** Stas has played Scene 1 and Scene 3 through the text UI with the DM agent and the AI party on nat20-table `main` with CI green, the audit and the leak scan pass on that run's transcript, the run report with latency and token usage is in the project folder (not the repo), every Milestone 6 row is `done` or explicitly moved, and the TASKS.md milestone row shows the date.
 
 ## 12. Decisions
 
