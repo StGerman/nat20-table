@@ -61,8 +61,9 @@ pub enum Command {
         /// Whose sheet.
         actor: Handle,
     },
-    /// The options the actor can take at the pending action prompt.
-    /// Returns `not_your_turn` when the engine is waiting on someone else.
+    /// The options the actor can take at the pending action prompt. Only its owner and `dm` may
+    /// ask; anyone else gets `not_visible`. Returns `not_your_turn` when the engine is waiting on
+    /// someone else.
     LegalActions {
         /// The creature whose options are listed. In explore mode any creature of the scene:
         /// the options it could take on a turn of its own, as if that turn began now.

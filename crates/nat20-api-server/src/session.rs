@@ -220,12 +220,19 @@ impl Session {
     }
 
     /// The options at `actor`'s pending action prompt. In explore mode, the options it could
-    /// take on a turn of its own, with no prompt id. The turn's `budget` is projected for `viewer`.
+    /// take on a turn of its own, with no prompt id. Only `actor`'s owner and the DM may list
+    /// them; anyone else gets `not_visible`.
     pub fn legal_actions(
         &mut self,
         actor: &str,
         viewer: &Viewer,
     ) -> Result<CommandResult, ApiError> {
+        if !projection::lists_options(viewer, actor) {
+            return Err(error(
+                ErrorCode::NotVisible,
+                format!("Only {actor}'s player and the DM can see {actor}'s options."),
+            ));
+        }
         if self.game_mut()?.mode() == Mode::Explore {
             let (options, unavailable) = self.game_mut()?.explore_legal_actions(actor)?;
             return Ok(CommandResult::LegalActions {
@@ -244,7 +251,7 @@ impl Session {
             options,
             unavailable,
             can_end_turn: true,
-            budget: projection::budget(viewer, actor, budget),
+            budget: Some(budget),
         })
     }
 

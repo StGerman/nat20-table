@@ -8,7 +8,7 @@
 use nat20_api_contract::{
     Anchor, AnchorObserved, AnchorView, CheckView, Condition, CreatureFull, CreatureObserved,
     EncounterView, Event, EventKind, Handle, Mode, PointFt, RollView, Sheet, SpawnView, State,
-    TurnBudget, Visibility,
+    Visibility,
 };
 
 use crate::render;
@@ -139,13 +139,12 @@ pub fn sheet(viewer: &Viewer, sheet: Sheet) -> Option<Sheet> {
     }
 }
 
-/// What is left of `actor`'s turn goes only to its owner and the DM (Rule 3, the §5 table): `None`
-/// for anyone else, so another creature's `legal_actions` listing carries no `budget`.
-pub fn budget(viewer: &Viewer, actor: &str, budget: TurnBudget) -> Option<TurnBudget> {
+/// Whether `viewer` may list `actor`'s options, with their `unavailable` reasons and the turn's
+/// `budget`: its owner and the DM only (Rule 3, the §5 table), as for a sheet.
+pub fn lists_options(viewer: &Viewer, actor: &str) -> bool {
     match viewer {
-        Viewer::Dm => Some(budget),
-        Viewer::Creature(handle) if handle == actor => Some(budget),
-        Viewer::Creature(_) => None,
+        Viewer::Dm => true,
+        Viewer::Creature(handle) => handle == actor,
     }
 }
 

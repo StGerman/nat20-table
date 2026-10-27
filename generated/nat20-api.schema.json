@@ -3346,7 +3346,7 @@
           ]
         },
         {
-          "description": "The options the actor can take at the pending action prompt.\nReturns `not_your_turn` when the engine is waiting on someone else.",
+          "description": "The options the actor can take at the pending action prompt. Only its owner and `dm` may\nask; anyone else gets `not_visible`. Returns `not_your_turn` when the engine is waiting on\nsomeone else.",
           "type": "object",
           "properties": {
             "actor": {
