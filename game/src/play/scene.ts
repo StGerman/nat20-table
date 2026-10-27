@@ -11,7 +11,8 @@
 // prints a report, also written to `report.md` in the folder.
 //
 // Flags: --scene ID, --scenes ID,ID (the scenes to play, in the pack's order; overrides --scene),
-// --seed N, --dm-model, --player-model, --effort, --craft prompt|skills (D10), --dm-timeout-ms,
+// --seed N, --dm-model, --player-model, --dm-effort (default medium), --effort (the AI players',
+// default low), --craft prompt|skills (D10), --dm-timeout-ms,
 // --pack DIR, --dm scripted and --players scripted (no model: checks the command itself; the
 // scripted DM starts each scene's fight from the pack, narrates plainly and moves on at the first
 // table turn), --seat scripted|ink (ink: you play the human's character in this terminal),
@@ -43,6 +44,7 @@ const { values: flags } = parseArgs({
     seed: { type: "string" },
     "dm-model": { type: "string", default: "claude-opus-5-5" },
     "player-model": { type: "string", default: "claude-sonnet-5-5" },
+    "dm-effort": { type: "string", default: "medium" },
     effort: { type: "string", default: "low" },
     craft: { type: "string", default: "prompt" },
     lang: { type: "string", default: "en" },
@@ -79,9 +81,8 @@ try {
   console.error(`${flags.scenes ? "--scenes" : "--scene"}: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(2);
 }
-const effort = flags.effort as EffortLevel;
-const dmChoice = { model: flags["dm-model"]!, effort };
-const playerChoice = { model: flags["player-model"]!, effort };
+const dmChoice = { model: flags["dm-model"]!, effort: flags["dm-effort"] as EffortLevel };
+const playerChoice = { model: flags["player-model"]!, effort: flags.effort as EffortLevel };
 const craft = flags.craft as CraftMode;
 const language = flags.lang as Language;
 const modelDm = (usage?: UsageLog) =>

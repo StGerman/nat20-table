@@ -297,6 +297,8 @@ test("the scene run command's dry run prints the DM's session settings and promp
   const run = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "--dry-run", "--craft", "skills"], { encoding: "utf8" });
   assert.equal(run.status, 0, run.stderr || run.stdout);
   assert.match(run.stdout, /"skills": \[\n\s+"nat20-dm-craft:checks"/);
+  // The DM thinks at medium effort unless told otherwise (Stas, 2026-10-27); the players stay at low.
+  assert.match(run.stdout, /"effort": "medium"/);
   assert.match(run.stdout, /You are the Dungeon Master of "The Silent Mill"/);
   assert.doesNotMatch(run.stdout, /ANTHROPIC_API_KEY=|sk-ant-/);
 });

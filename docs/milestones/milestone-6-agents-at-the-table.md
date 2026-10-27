@@ -225,7 +225,7 @@ Every model call records, in `usage.jsonl` next to the transcript: agent, model,
 
 | | DM | Each AI player |
 |---|---|---|
-| Model now, for Stas's own testing (D2) | Opus 5.5, low effort | Sonnet 5.5, low effort |
+| Model now, for Stas's own testing (D2) | Opus 5.5, medium effort (low until 2026-10-27, when Stas raised it after the first Scene 3 run) | Sonnet 5.5, low effort |
 | API list price per million tokens (2026-10-23), the reference for a beta on an API key | $4 in, $20 out, $0.20 cached read | $2 in, $10 out, $0.20 cached read |
 | Model later, for a beta (D2) | Sonnet 5.5 ($2 / $10) | Haiku 5.5 ($0.10 / $0.50) |
 | Latency target (scope §6.4) | narration p95 ≤ 6 s | turn p95 ≤ 10 s |
