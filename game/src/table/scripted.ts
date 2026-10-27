@@ -5,7 +5,7 @@ import type { ActionOption, Handle, State } from "@nat20-table/engine-client";
 import type { Choice } from "./choices.ts";
 import type { DmTools, PlayerTools } from "./tools.ts";
 import type { DmAgent, DmWake, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, Seat, TableEvent } from "./types.ts";
-import type { LegalActionsResult } from "../view.ts";
+import { reactingTo, type LegalActionsResult } from "../view.ts";
 
 /** A combat policy: what a scripted player does on its turn. */
 export type CombatPolicy = (tools: PlayerTools) => Promise<void>;
@@ -178,11 +178,6 @@ export function walkOnDm(order: string[], fights: Record<string, string>, party:
     narrate: async (tools) => void (await tools.narrate("Steel and teeth flash.")),
     combat_over: async (tools) => void (await tools.endAdventure("The fight is done.")),
   });
-}
-
-/** The creature a reaction answers, from the engine's trigger sentence ("bren may react to torva."). */
-function reactingTo(text: string): Handle | undefined {
-  return /may react to ([\w-]+)\.$/m.exec(text)?.[1];
 }
 
 /**
