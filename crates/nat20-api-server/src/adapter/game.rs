@@ -198,6 +198,9 @@ struct Walk {
     /// It goes on after a reaction the walker provoked, so it is logged after that reaction's
     /// entries, not before them.
     after_reaction: bool,
+    /// The anchor a `move` was walking to, and where its route ends: the `moved` that gets there
+    /// names it (protocol §4.1).
+    anchor: Option<(String, Point3<f32>)>,
 }
 
 #[derive(Clone)]
@@ -278,6 +281,9 @@ pub struct Game {
     walk_then_act: Option<WalkThenAct>,
     /// Walks core is making for an option, not yet logged (API-32).
     walks: Vec<Walk>,
+    /// While a `move` runs: the mover, and every creature its walk gave an opportunity attack
+    /// window so far, in prompt order (`provoked`, protocol §4.1).
+    provokers: Option<(Entity, Vec<Entity>)>,
     /// The highest round of this scene's fights whose round spawns were looked at, so each
     /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
@@ -598,6 +604,7 @@ impl Game {
             area_caught: Vec::new(),
             walk_then_act: None,
             walks: Vec::new(),
+            provokers: None,
             spawn_round: 0,
             stalls: 0,
             listed: None,
@@ -1518,28 +1525,20 @@ impl Game {
 
         let round = self.round();
         let before = remaining_movement_m(&self.engine, entity);
-        let (moved_m, provoked) = if combat {
+        let moved_m = if combat {
             self.engine
                 .submit_activity(Activity::Move { entity, goal: end })
                 .map_err(|e| refusal(&e))?;
+            self.provokers = Some((entity, Vec::new()));
             self.settle();
-            let provoked = match self.awaiting() {
-                Awaiting::Reaction { reactor, .. } => vec![Handle(self.handle_of(reactor))],
-                _ => Vec::new(),
-            };
-            (
-                before - remaining_movement_m(&self.engine, entity),
-                provoked,
-            )
+            self.note_provoker();
+            before - remaining_movement_m(&self.engine, entity)
         } else {
             // Nobody is fighting, so the creature is simply placed at the end of its route.
             systems::geometry::teleport_to(&mut self.engine.world, entity, &end);
             // An explore command that acts closes a finished fight's `combat_over`.
             self.close_finished_fight();
-            (
-                route.full_path.length.get::<uom::si::length::meter>(),
-                Vec::new(),
-            )
+            route.full_path.length.get::<uom::si::length::meter>()
         };
         let landed = systems::geometry::get_foot_position(&self.engine.world, entity)
             .expect("scene creatures have a position");
@@ -1555,6 +1554,7 @@ impl Game {
                 entity,
                 from: landed,
                 after_reaction: true,
+                anchor: anchor.clone().map(|anchor| (anchor, end)),
             });
         }
         let arrived = (landed - end).norm() < 0.05;
@@ -1570,7 +1570,18 @@ impl Game {
         self.drain();
         if combat {
             self.advance();
+            self.note_provoker();
         }
+        // Every window the walk opened in this command, the ones a scripted creature settled
+        // inside it included (protocol §4.1).
+        let provoked = self
+            .provokers
+            .take()
+            .map(|(_, reactors)| reactors)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|reactor| Handle(self.handle_of(reactor)))
+            .collect();
         // A scripted reaction settled inside this command lets the creature walk on before the
         // response (ENG-22), and that walk counts too. Movement left only grows again at the
         // creature's next turn, which `max` keeps out.
@@ -1580,6 +1591,26 @@ impl Game {
             moved_m
         };
         Ok((round_ft(moved_m), provoked))
+    }
+
+    /// While a `move` runs, records the creature a pending opportunity attack window on the
+    /// mover belongs to, once.
+    fn note_provoker(&mut self) {
+        let Some((mover, _)) = self.provokers else {
+            return;
+        };
+        if let Awaiting::Reaction {
+            reactor,
+            trigger: Some(trigger),
+            moving: true,
+            ..
+        } = self.awaiting()
+            && trigger == mover
+            && let Some((_, reactors)) = &mut self.provokers
+            && !reactors.contains(&reactor)
+        {
+            reactors.push(reactor);
+        }
     }
 
     /// Where a move ends, in core coordinates, and the anchor it names.
@@ -2944,6 +2975,7 @@ impl Game {
                 entity,
                 from,
                 after_reaction: false,
+                anchor: None,
             });
         }
         Ok(walks)
@@ -3176,6 +3208,7 @@ impl Game {
                 Awaiting::Reaction {
                     reactor, trigger, ..
                 } if self.control_of(reactor) == Some(Control::Scripted) => {
+                    self.note_provoker();
                     // Scripted creatures take the first reaction offered (for a goblin, the
                     // opportunity attack) when an enemy set it off, and decline otherwise: the
                     // engine offers an opportunity attack on any creature leaving reach, ally
@@ -3672,6 +3705,7 @@ impl Game {
                         entity: walk.entity,
                         from: landed,
                         after_reaction: true,
+                        anchor: walk.anchor.clone(),
                     });
                 } else {
                     self.walks.push(walk);
@@ -3690,7 +3724,10 @@ impl Game {
                         actor,
                         from: from_core_point(walk.from),
                         to: from_core_point(landed),
-                        anchor: None,
+                        anchor: walk
+                            .anchor
+                            .filter(|(_, end)| (landed - end).norm() < 0.05)
+                            .map(|(anchor, _)| anchor),
                     },
                 ),
             );

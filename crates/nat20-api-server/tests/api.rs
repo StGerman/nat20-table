@@ -1268,6 +1268,7 @@ fn crowd(name: &str, goblin: &str, far: bool) -> (Api, PathBuf, Value) {
         &[(
             "crowd",
             json!({ "id": "crowd", "creatures": creatures,
+                "anchors": [anchor("far_end", 20.0)],
                 "encounters": [{ "id": "crowd", "participants": participants }] }),
         )],
     );
@@ -1385,21 +1386,55 @@ fn a_walk_on_is_logged_after_the_opportunity_attack_it_waited_for() {
 }
 
 /// A scripted goblin settles the Opportunity Attack inside the `move` command, so Bren walks on
-/// before it answers, up to where he leaves Torva's reach: `moved_ft` counts both stretches
-/// (protocol §4.1).
+/// before it answers, up to where he leaves Torva's reach: `moved_ft` counts both stretches, and
+/// `provoked` names both windows the move opened (protocol §4.1).
 #[test]
 fn a_move_counts_the_walk_on_a_scripted_reaction_lets_it_finish() {
     let (mut api, dir, last) = crowd("walk_on_scripted", "scripted", false);
     let moved = move_bren_to(&mut api, &last, 20.0);
     std::fs::remove_dir_all(dir).ok();
     assert_eq!(moved["ok"], true, "{moved}");
-    assert_eq!(moved["result"]["provoked"], json!(["goblin"]), "{moved}");
+    assert_eq!(
+        moved["result"]["provoked"],
+        json!(["goblin", "torva"]),
+        "{moved}"
+    );
     let stops = bren_moves(&moved);
     assert_eq!(stops.len(), 2, "{moved}");
     assert!(stops[1] > 9.0, "{moved}");
     let moved_ft = moved["result"]["moved_ft"].as_f64().unwrap();
     assert!(moved_ft >= stops[1] - 4.0 - 0.5, "{moved}");
     assert_eq!(moved["awaiting"]["actor"], "torva", "{moved}");
+}
+
+/// A move to an anchor that provokes on the way still names the anchor: on the `moved` that gets
+/// there, after Torva lets Bren go (protocol §4.1).
+#[test]
+fn a_provoked_move_to_an_anchor_names_it_where_the_walk_arrives() {
+    let (mut api, dir, last) = crowd("walk_on_anchor", "scripted", false);
+    let moved = api.call(
+        "bren",
+        json!({ "cmd": "move", "actor": "bren", "prompt_id": last["awaiting"]["prompt_id"],
+            "to": { "kind": "anchor", "anchor": "far_end" } }),
+    );
+    assert_eq!(moved["ok"], true, "{moved}");
+    assert_eq!(moved["awaiting"]["actor"], "torva", "{moved}");
+    let walking: Vec<&Value> = moved["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "moved")
+        .collect();
+    assert!(walking.iter().all(|e| e.get("anchor").is_none()), "{moved}");
+    let let_go = api.call(
+        "torva",
+        json!({ "cmd": "react", "actor": "torva", "prompt_id": moved["awaiting"]["prompt_id"],
+            "choice": null }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    let arrived = &let_go["events"][event_at(&let_go, "moved", "bren")];
+    assert_eq!(arrived["to"]["x_ft"], 20.0, "{let_go}");
+    assert_eq!(arrived["anchor"], "far_end", "{let_go}");
 }
 
 /// Bren swings at a goblin across the room; core walks him toward it through Torva's space, where
