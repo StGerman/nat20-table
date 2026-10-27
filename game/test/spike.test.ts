@@ -18,7 +18,8 @@ function spike(args: string[], env: NodeJS.ProcessEnv) {
 test("the spike refuses an API key before it makes a run folder, and never prints the key", () => {
   const key = "sk-ant-spike-test-key";
   const before = spikeFolders();
-  const run = spike([], { ...process.env, ANTHROPIC_API_KEY: key });
+  // No turns: should the refusal ever break, the spike still sends no message to a model.
+  const run = spike(["--turns", "0"], { ...process.env, ANTHROPIC_API_KEY: key });
   assert.equal(run.status, 2, run.stderr);
   assert.match(run.stderr, /ANTHROPIC_API_KEY is set, so the run would bill the API instead of your Claude plan/);
   assert.doesNotMatch(run.stdout + run.stderr, new RegExp(key));
