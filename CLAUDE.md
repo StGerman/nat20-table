@@ -173,6 +173,7 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
   - registry JSON over code;
   - a test in `core/tests/`;
   - regenerated `assets/registries/.schemas` (his freshness test must pass);
+  - when the PR adds or changes a rules feature, its row in `docs/PROGRESS.md` in his format (padded tables, implementation and test links, notes on what is missing); adventure-only content in our overlay gets no row;
   - `cargo test --locked` green.
 - Keep his MIT `LICENSE` and commit history intact. Core commits take the normal attribution; the upstream-bound authorship convention is retired.
 

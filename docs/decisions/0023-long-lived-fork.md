@@ -1,6 +1,6 @@
 # 0023. Upstream declines our contributions: keep a long-lived fork that syncs upstream main
 
-- **Status:** Accepted
+- **Status:** Accepted (its PROGRESS.md part superseded by [0037](0037-fork-keeps-progress-md.md): core PRs into `demo` keep their PROGRESS.md rows)
 - **Date:** 2026-10-18
 - **Decided by:** Stas, in the project thread "Mads's reply" (picked "Fork" from Fork / Retry / Hard-fork). Supersedes [0020](0020-send-u1-u2-upstream-early.md) and the upstream-proposal parts of [0002](0002-fork-and-own-repo.md).
 
