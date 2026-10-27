@@ -1,6 +1,6 @@
 # The Demo Run: scope
 
-Status: accepted by Stas, 2026-10-16. Owner: Stas.
+Status: accepted by Stas, 2026-10-16; §6 amended with his agreement on 2026-10-27 (decision 0043). Owner: Stas.
 Milestone 1 (accepted 2026-10-16): build E1 and drive one Fighter vs one Goblin Warrior through it, with every roll in the engine log. In progress in its own project thread.
 Inputs: Nat20 checked at commit of 2026-09-27 (`docs/PROGRESS.md`, `assets/registries/`, `core/src`); SRD 5.2.1 data in `/mnt/project-files/dnd-wiki/`; mechanics backlog in `/mnt/project-files/engine/mechanics-backlog.md`.
 
@@ -159,12 +159,12 @@ Every roll is shown inline, for example "Goblin Warrior attacks Bren: 17 vs AC 1
 Character creation and level-up; long rests; loot economy and shops; lighting, vision and darkvision (the cellar is lantern-lit); Hide and Stealth; grappling; Weapon Mastery; Heroic Inspiration; magic items beyond Potions of Healing; maps or graphics; voice; more than one human; saving and resuming a campaign; subclasses.
 
 ## 6. Acceptance criteria
-1. Three internal playthroughs finish from Scene 1 to Scene 6 in 120 minutes or less without manual intervention.
+1. One unattended playthrough, with every character played by an AI player, and one played by Stas finish from Scene 1 to Scene 6 in 120 minutes or less, on the same build. (Until 2026-10-27: three internal playthroughs without manual intervention; decision 0043.)
 2. Zero rule outcomes produced by an LLM: every roll in the transcript appears in the engine log.
-3. Zero narration contradicting engine state (HP, death, positions), checked against the log after each playthrough.
-4. AI player turn latency at p95 is 10 seconds or less; DM narration at p95 is 6 seconds or less.
+3. Zero narration contradicting engine state (HP, death, positions) or a character's inventory, checked against the log after each playthrough.
+4. AI player turn latency at p95 is 10 seconds or less; DM narration at p95 is 6 seconds or less. A goal: Milestone 7 measures and reports it, and the optimisation milestone gates it.
 5. Every rejected human or AI decision recovers within 2 retries.
-6. A first-time player finishes without opening a rules page, using only `/options` and `/sheet`.
+6. A first-time player finishes without opening a rules page, using only `/options` and `/sheet`. Checked in friends-and-family testing after Milestone 7.
 
 ## 7. Risks
 1. **Nat20 is one maintainer with no releases.** Pin a commit and fork for the demo; upstream fixes where possible.
