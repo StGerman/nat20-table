@@ -22,9 +22,11 @@ const NUMBER_WORDS =
 /**
  * The same in Russian, for runs whose agents write Russian (decision 0038), in every case form:
  * the teens (-надцать), the tens (десять, двадцать, тридцать, сорок, пятьдесят to восемьдесят,
- * девяносто), сто and тысяча. JavaScript's \b knows only Latin letters, hence the lookarounds.
+ * девяносто), сто, сотня, the hundreds (двести to девятьсот: двухсот, тремстам, пятьюстами) and
+ * тысяча. JavaScript's \b knows only Latin letters, hence the lookarounds.
  */
-const RUSSIAN_NUMBER_WORDS = /(?<!\p{L})(?:\p{L}*(?:надцат|десят|двадцат|тридцат|девяност|тысяч)\p{L}*|сорока?|сто|ста)(?!\p{L})/iu;
+const RUSSIAN_NUMBER_WORDS =
+  /(?<!\p{L})(?:\p{L}*(?:надцат|десят|двадцат|тридцат|девяност|тысяч)\p{L}*|сорока?|сто|ста|сотн\p{L}*|сотен|двести|триста|четыреста|(?:двух|двум|двумя|тр[её]х|трем|тремя|четыр[её]х|четыр[её]м|четырьмя|пят[ьи]|пятью|шест[ьи]|шестью|сем[ьи]|семью|восемь|восьми|восемью|восьмью|девят[ьи]|девятью)(?:сот|стам|стами|стах))(?!\p{L})/iu;
 
 /** Game-stat terms no narration or spoken line names (spec §3.5). */
 const STAT_TERMS: RegExp[] = [
@@ -42,12 +44,12 @@ const STAT_TERMS: RegExp[] = [
   /(?<!\p{L})КД(?!\p{L})/iu,
   /(?<!\p{L})СЛ(?!\p{L})/iu,
   /класс\p{L}* сложност\p{L}*/iu,
-  /(?<!\p{L})хит(?:а|ы|ов|ам|ами|ах)(?!\p{L})/iu,
+  /(?<!\p{L})хит(?:|а|у|ом|е|ы|ов|ам|ами|ах)(?!\p{L})/iu,
   /(?<!\p{L})хит-?поинт\p{L}*/iu,
   /очк\p{L}* (?:здоровья|жизни)/iu,
   /(?<!\p{L})ОЗ(?!\p{L})/u,
   /бонус\p{L}* (?:к )?(?:атак|спас)\p{L}*/iu,
-  /(?:показател|уровн)\p{L}* опасности/iu,
+  /(?:показател|урове?н)\p{L}* опасности/iu,
 ];
 
 /** Kinds of DM-only data that are no player's business by name (protocol §5): surrender triggers, a spawn's `unless`. */

@@ -65,17 +65,31 @@ test("the guards read Russian: numbers in words from ten up and game statistics 
     ["Класс доспеха у волка невелик.", /game statistic \(Класс доспеха\)/],
     ["У неё мало очков здоровья.", /game statistic \(очков здоровья\)/],
     ["С таким бонусом атаки не промахнёшься.", /game statistic \(бонусом атаки\)/],
+    // Copilot on table #122: the bare singular, the hundreds, the nominative.
+    ["У гоблина остался один хит.", /game statistic \(хит\)/],
+    ["Он держится на последнем хите.", /game statistic \(хите\)/],
+    ["В деревне двести жителей.", /number \(двести\)/],
+    ["В деревне меньше двухсот жителей.", /number \(двухсот\)/],
+    ["Пятьсот шагов до мельницы.", /number \(Пятьсот\)/],
+    ["Сотни крыс шуршат в амбаре.", /number \(Сотни\)/],
+    ["Это низкий уровень опасности.", /game statistic \(уровень опасности\)/],
+    ["Для такого уровня опасности их маловато.", /game statistic \(уровня опасности\)/],
   ];
-  for (const [text, why] of refused) assert.match(guard(text) ?? "(let through)", why, text);
+  const speech = speechGuard({ shown: packIds(MILL).shown });
+  for (const [text, why] of refused) {
+    assert.match(guard(text) ?? "(let through)", why, `narration: ${text}`);
+    assert.match(speech(text) ?? "(let through)", why, `speech: ${text}`);
+  }
   for (const text of [
     "Гоблин хитро ухмыляется у стола [r12].",
+    "Хитрый гоблин прячется за пятистенком.",
+    "Семью мельника никто не видел с весны.",
     "Волк обходит двор с другой стороны; goblin_1 выглядит раненым.",
     "Двое гоблинов и волк ждут у mill_door, в паре шагов от ворот.",
     "Брен проходит в ворота, в s3_mill_yard стоит тишина.",
   ]) {
     assert.equal(guard(text), undefined, text);
   }
-  const speech = speechGuard({ shown: packIds(MILL).shown });
   assert.match(speech("У меня осталось пятнадцать хитов!") ?? "", /number \(пятнадцать\)/);
   assert.match(speech("Мой класс доспеха их не сдержит.") ?? "", /game statistic \(класс доспеха\)/);
   assert.equal(speech("Я тяжело ранена. Прикройте меня!"), undefined);
