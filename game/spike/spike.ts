@@ -9,7 +9,7 @@
 // setting sources stay empty (D10).
 //
 // Flags: --dry-run (print the session options, call no model), --dm-model, --player-model,
-// --effort, --turns N.
+// --dm-effort (default medium), --effort (the player's, default low), --turns N.
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -30,6 +30,7 @@ const { values: flags } = parseArgs({
     "dry-run": { type: "boolean", default: false },
     "dm-model": { type: "string", default: "claude-opus-5-5" },
     "player-model": { type: "string", default: "claude-sonnet-5-5" },
+    "dm-effort": { type: "string", default: "medium" },
     effort: { type: "string", default: "low" },
     turns: { type: "string", default: "3" },
   },
@@ -131,7 +132,7 @@ const player: SessionConfig = {
 };
 const dm: SessionConfig = {
   agent: "dm",
-  choice: { model: flags["dm-model"]!, effort },
+  choice: { model: flags["dm-model"]!, effort: flags["dm-effort"] as EffortLevel },
   systemPrompt: dmPrompt,
   tools: dmTools,
   plugins: [skillPlugin],

@@ -32,6 +32,7 @@ test("a dry run of the spike prints both seats' options and writes nothing", () 
   delete env.ANTHROPIC_API_KEY;
   const run = spike(["--dry-run"], env);
   assert.equal(run.status, 0, run.stderr);
-  assert.match(run.stdout, /^dm \{/m);
+  assert.match(run.stdout, /^dm \{[^]*?"effort": "medium"/m);
+  assert.match(run.stdout, /^maren \{[^]*?"effort": "low"/m);
   assert.deepEqual(spikeFolders(), before);
 });
