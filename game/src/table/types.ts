@@ -2,8 +2,9 @@
 // interfaces, and transcript records. None of these cross the engine boundary, so they are game
 // types, not wire (Rule 1). TableEvent and PlayerIntent map one-to-one onto AG-UI's text, state
 // and tool-call events, so a later web client can replace the terminal UI behind this boundary.
-import type { Handle } from "@nat20-table/engine-client";
+import type { Handle, TurnBudget } from "@nat20-table/engine-client";
 import type { Choice } from "./choices.ts";
+import type { Situation } from "./situation.ts";
 import type { DmTools, PlayerTools } from "./tools.ts";
 
 /** What a tool call gave back. `text` is what the model reads; `data` is for scripted agents. */
@@ -29,14 +30,21 @@ export type TableEvent =
   /**
    * Numbered decisions the human can pick by number (`/options`), or a follow-up pick inside one
    * (`title` names it). `choices` carries the same list as data for a seat that picks by rule.
+   * `budget` is what is left of the human's combat turn, from the same `legal_actions`.
    */
-  | { kind: "options"; title?: string; lines: string[]; choices: Choice[] }
+  | { kind: "options"; title?: string; lines: string[]; choices: Choice[]; budget?: TurnBudget }
   /** A reaction the human may take: yes or no. */
   | { kind: "reaction"; summary: string; options: string[] }
   /** A question the DM asks the human (guarded). */
   | { kind: "question"; text: string }
   /** The answer to a slash command (`/sheet`, `/where`, `/log`), already formatted. */
   | { kind: "info"; title: string; text: string }
+  /**
+   * What the human's character perceives now, for the situation panel (an AG-UI state snapshot):
+   * made from the human's own `get_state`, so it holds nothing the human can't see. Absent when the
+   * refresh failed; the panel keeps its last frame, marked stale.
+   */
+  | { kind: "situation"; situation?: Situation }
   /** Whose turn it is, the round, the scene. */
   | { kind: "status"; text: string }
   /** The run ended or stopped (scene exit, engine stop, plan limit). */
@@ -72,6 +80,12 @@ export interface Seat {
   readonly handle: Handle;
   show(event: TableEvent): void;
   ask(prompt: HumanPrompt): Promise<PlayerIntent>;
+  /**
+   * What the table waits on while it isn't asking the human ("The DM is thinking", "ilsa is thinking"), for
+   * the seat's loading indicator; `undefined` once nothing named is in flight. Not a TableEvent and
+   * not recorded: it names a seat, never what the seat is deciding.
+   */
+  busy?(on: string | undefined): void;
 }
 
 // --- Agents -----------------------------------------------------------------------------------

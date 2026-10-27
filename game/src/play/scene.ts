@@ -111,13 +111,31 @@ if (flags.seat === "ink" && !(process.stdin.isTTY && process.stdout.isTTY)) {
   process.exit(2);
 }
 
+// You at the keyboard, or a seat that fights by rule. Ctrl+C ends the table between decisions
+// (before the table is set, it exits). The keyboard seat draws from here, so the engine's start
+// shows its loading indicator too.
+let quit: () => void = () => process.exit(130);
+const ink = flags.seat === "ink" ? new InkSeat(party.human, { onQuit: () => quit() }) : undefined;
+// Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame.
+ink?.start({ interactive: true });
+ink?.busy("The engine is starting");
+
 const runDir = runFolder(flags.out!, "scene");
 const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
-const engine = await GameEngine.start({ pack: flags.pack!, runDir, seed: flags.seed === undefined ? undefined : Number(flags.seed) });
-const carried = await startAt(engine, flags.pack!, plan.first, [party.human, ...party.ai]);
+// A failed start gives the terminal back before its error prints.
+const started = await (async () => {
+  let engine: GameEngine | undefined;
+  try {
+    engine = await GameEngine.start({ pack: flags.pack!, runDir, seed: flags.seed === undefined ? undefined : Number(flags.seed) });
+    return { engine, carried: await startAt(engine, flags.pack!, plan.first, [party.human, ...party.ai]) };
+  } catch (error) {
+    engine?.close();
+    ink?.stop();
+    throw error;
+  }
+})();
+const { engine, carried } = started;
 const transcript = new Transcript(path.join(runDir, "transcript.jsonl"), () => engine.logHead);
-// You at the keyboard, or a seat that fights by rule. Ctrl+C ends the table between decisions.
-const ink = flags.seat === "ink" ? new InkSeat(party.human, { onQuit: () => table.end("the human quit") }) : undefined;
 const seat: Seat = ink ?? new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai);
 const table = new TableState({
   engine,
@@ -128,6 +146,7 @@ const table = new TableState({
   inputsFile: path.join(runDir, "inputs.jsonl"),
   ...guards(flags.pack!, engine),
 });
+quit = () => table.end("the human quit");
 const players: PlayerAgent[] = party.ai.map((handle) =>
   flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice: playerChoice, language, usage }),
 );
@@ -139,14 +158,15 @@ const loop = new TableLoop({
   players,
   onScene: plan.onScene,
   maxSteps: Number(flags["max-steps"]),
+  // The situation panel (AGT-36) is drawn only at the terminal.
+  situation: ink !== undefined,
 });
 
 const who = (kind: string | undefined, choice: { model: string; effort: string }) => (kind === "scripted" ? "scripted" : `${choice.model} (${choice.effort})`);
 console.log(
   `Playing ${played.join(" and ")} of ${pack.adventure.title} (seed ${engine.seed}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human} ${ink ? "played by you" : "scripted"}.`,
 );
-// Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame.
-ink?.start({ interactive: true });
+ink?.busy(undefined);
 let run: RunReport | undefined;
 let failure: unknown;
 try {

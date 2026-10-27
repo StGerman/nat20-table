@@ -50,6 +50,8 @@ interface Setup {
   guards?: (engine: GameEngine) => { narrationGuard: TextGuard; speechGuard: TextGuard };
   onScene?: LoopOptions["onScene"];
   maxSteps?: number;
+  /** Send the human's seat situations, as the terminal does (AGT-36). */
+  situation?: boolean;
   /** Sees the table before the run starts. */
   onTable?: (t: TestTable) => void;
 }
@@ -70,7 +72,7 @@ async function play(setup: Setup) {
   setup.onTable?.(t);
   const players = handles.map((h) => new ScriptedPlayer(h, policies[h]));
   const dm = setup.dm instanceof ScriptedDm ? setup.dm : new ScriptedDm(setup.dm);
-  const loop = new TableLoop({ table: t.table, dm, players, onScene: setup.onScene, maxSteps: setup.maxSteps ?? 400 });
+  const loop = new TableLoop({ table: t.table, dm, players, onScene: setup.onScene, maxSteps: setup.maxSteps ?? 400, situation: setup.situation });
   try {
     const report = await loop.run(setup.scene ?? "m5_s3_yard", setup.party);
     return { t, report, dm, players: new Map(players.map((p) => [p.handle, p])), seat: t.table.seat as ScriptedSeat };
@@ -109,7 +111,8 @@ const fightAtOnce: DmScript = {
 // --- The game fixtures -------------------------------------------------------------------------
 
 test("the party, scripted, plays the yard fight to its end, and the transcript replays exactly", async () => {
-  const { t, report, players, seat } = await play({ seed: 23, dm: yardDm() });
+  // With the situation panel on, so the leak scan over the fixture reads every situation the human got.
+  const { t, report, players, seat } = await play({ seed: 23, dm: yardDm(), situation: true });
   assert.equal(report.ended, "the adventure is over");
   assert.deepEqual(report.scenes, ["m5_s3_yard"]);
   assert.equal(report.fallbacks, 0);
