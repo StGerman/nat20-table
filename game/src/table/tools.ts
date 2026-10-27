@@ -129,7 +129,13 @@ export class PlayerTools {
     this.table.recordInput(this.me, text);
   }
 
+  /** The `my_sheet` tool. */
   mySheet(): Promise<ToolOutcome> {
+    return this.sheet();
+  }
+
+  /** Its own sheet, whatever the wake allows the model: a new session is seeded from it. */
+  sheet(): Promise<ToolOutcome> {
     return this.answer(send(this.table, this.me, { cmd: "get_sheet", actor: this.me }, (r) =>
       r.result?.cmd === "get_sheet" ? JSON.stringify(r.result.sheet) : "",
     ));
@@ -283,9 +289,9 @@ export class ReactionFloor {
 }
 
 /**
- * An AI player's tools in a `bark` wake (party talk R1, AGT-34): it may look, keep notes and say one
- * line, which is heard only if it is the first since the trigger. It never acts: its turn, if it
- * comes next, is a wake of its own.
+ * An AI player's tools in a `bark` wake (party talk R1, AGT-34): it may keep notes and say one line,
+ * which is heard only if it is the first since the trigger. Every other tool answers "not now": its
+ * brief already says what happened, and its turn, if it comes next, is a wake of its own.
  */
 export class BarkTools extends PlayerTools {
   private readonly floor: ReactionFloor;
@@ -303,6 +309,14 @@ export class BarkTools extends PlayerTools {
 
   private notYours(): Promise<ToolOutcome> {
     return this.answer(notNow("it isn't your turn: react in one line with say, or answer PASS"));
+  }
+
+  override mySheet(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override look(): Promise<ToolOutcome> {
+    return this.notYours();
   }
 
   override legalActions(): Promise<ToolOutcome> {
@@ -338,6 +352,8 @@ export class BarkTools extends PlayerTools {
         this.end();
         return this.answer(notNow("you can't speak: you are not conscious"));
       }
+      // Cancelled while its sheet came: a line not yet said reaches nobody.
+      if (this.over) return this.answer(notNow("the moment has passed"));
       if (!this.floor.take(this.me)) {
         return this.answer(notNow(this.floor.speaker ? `${this.floor.speaker} spoke first; the fight has moved on` : "the moment has passed"));
       }

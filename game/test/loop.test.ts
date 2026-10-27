@@ -14,7 +14,7 @@ import { TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
 import { attackNearest, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
-import type { DmTools, PlayerTools } from "../src/table/tools.ts";
+import { BarkTools, ReactionFloor, type DmTools, type PlayerTools } from "../src/table/tools.ts";
 import type { PlayerIntent, TableEvent, ToolOutcome } from "../src/table/types.ts";
 import { testTable, type TestTable } from "./helpers.ts";
 import { trailDm, yardDm } from "./scripts.ts";
@@ -305,7 +305,7 @@ test("a reaction line the speech guard refuses is dropped with no retry, and a l
 
 test("a reaction said after its speaker fell unconscious is refused, and nobody hears it", async () => {
   const refused: ToolOutcome[] = [];
-  const life = async (tools: PlayerTools) => (JSON.parse((await tools.mySheet()).text) as { life_state: string }).life_state;
+  const life = async (tools: PlayerTools) => (JSON.parse((await tools.sheet()).text) as { life_state: string }).life_state;
   // Each reaction waits until its speaker is down, or for a while, then speaks.
   const fallen = (handle: string) => async (tools: PlayerTools) => {
     for (let i = 0; i < 200 && (await life(tools)) === "conscious"; i++) await new Promise((go) => setTimeout(go, 5));
@@ -322,6 +322,29 @@ test("a reaction said after its speaker fell unconscious is refused, and nobody 
   for (const outcome of refused) assert.deepEqual(outcome, { ok: false, retryable: false, text: "not now: you can't speak: you are not conscious" });
   const heard = new Set(t.table.transcript.records.filter((r) => r.kind === "speech").map((r) => r.text));
   assert.equal([...heard].filter((line) => / cries out!$/.test(line)).length, report.reactions.filter((r) => r.spoke).length);
+});
+
+test("a reaction may only say and note, and one cancelled while its speaker's sheet comes says nothing", async () => {
+  const t = await testTable({ seed: 1, players: ["torva", "maren"] });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    const heard: string[] = [];
+    const floor = new ReactionFloor((speaker) => heard.push(speaker));
+    const tools = new BarkTools("torva", t.table, floor);
+    const notYours = { ok: false, retryable: false, text: "not now: it isn't your turn: react in one line with say, or answer PASS" };
+    for (const outcome of [await tools.look(), await tools.mySheet(), await tools.legalActions(), await tools.endTurn()]) assert.deepEqual(outcome, notYours);
+    assert.match((await tools.sheet()).text, /"life_state":"conscious"/, "the session's seed still reads the sheet");
+    assert.equal((await tools.note("plan", "Watch the wolves")).ok, true);
+    // Cut while the check that its speaker is conscious runs: the line was not said yet.
+    const said = tools.say("Hold the line!");
+    tools.end();
+    assert.deepEqual(await said, { ok: false, retryable: false, text: "not now: the moment has passed" });
+    assert.deepEqual(heard, []);
+    assert.equal(floor.speaker, undefined, "the floor is still free for another");
+    assert.ok(!t.table.transcript.records.some((r) => r.text === "Hold the line!"));
+  } finally {
+    t.close();
+  }
 });
 
 test("a reaction shows at once while the table collects lines, and its to never hands the floor on", async () => {

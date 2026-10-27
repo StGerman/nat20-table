@@ -326,9 +326,9 @@ test("a wake cancelled while its new session's sheet comes ends without a turn, 
     let sheetCame!: () => void;
     const slow = new Promise<void>((go) => (sheetCame = go));
     class SlowSheet extends PlayerTools {
-      override async mySheet() {
+      override async sheet() {
         await slow;
-        return super.mySheet();
+        return super.sheet();
       }
     }
     const bark = player.wake("bark", "Something just happened in the fight.", new SlowSheet("ilsa", t.table));

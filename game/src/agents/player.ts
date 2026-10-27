@@ -105,7 +105,7 @@ export class ModelPlayer implements PlayerAgent {
     this.running = running;
     this.current = tools;
     try {
-      const seed = this.session ? undefined : this.seed(await tools.mySheet());
+      const seed = this.session ? undefined : this.seed(await tools.sheet());
       // Cancelled while its sheet came: the loop has moved on, maybe to this player's next wake.
       if (this.cancelled.has(running)) throw new TurnCancelled(`${this.handle}: wake cancelled before its turn`);
       if (!this.session) {
