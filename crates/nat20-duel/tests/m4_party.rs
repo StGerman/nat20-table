@@ -1,10 +1,11 @@
 //! Milestone 4's exit run, `contract/fixtures/m4_party.jsonl`: the four level 2 pregens read
 //! their sheets, then fight three Goblin Warriors and a Wolf (`m4_party_yard`) with healing,
 //! Shield and an area spell in the fight, take a short rest, and heal out of combat with a Potion
-//! of Healing and Cure Wounds. Last, the Cleric concentrates on Guidance and a rotten stair hurts
-//! her, so she makes a Concentration save. The conformance test replays the fixture byte for
-//! byte; this test checks the exit criterion against it and audits the DM log it ends with, so an
-//! uncited healing roll, spell save, Concentration save or potion roll fails here.
+//! of Healing and Cure Wounds. Last, the Cleric walks to the Fighter to cast Guidance and doesn't
+//! get to (logged as `action_dropped`, API-31), and a rotten stair hurts her while she still
+//! concentrates on Bless, so she makes a Concentration save. The conformance test replays the
+//! fixture byte for byte; this test checks the exit criterion against it and audits the DM log it
+//! ends with, so an uncited healing roll, spell save, Concentration save or potion roll fails here.
 
 use std::path::Path;
 
@@ -131,6 +132,11 @@ fn the_cleric_heals_in_and_out_of_combat_and_shield_and_an_area_spell_resolve() 
         log.iter()
             .any(|e| e["kind"] == "roll" && e["roll"]["kind"] == "healing")
     );
+
+    // Guidance on the Fighter walks the Cleric to him and is dropped; the log says so.
+    assert!(after_rest.iter().any(|e| e["kind"] == "action_dropped"
+        && e["actor"] == "maren"
+        && e["option_id"] == "cast/guidance"));
 
     // Damage out of combat costs the concentrating Cleric a Concentration save.
     assert!(after_rest.iter().any(|e| {

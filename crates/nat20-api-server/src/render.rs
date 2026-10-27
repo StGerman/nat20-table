@@ -61,6 +61,9 @@ pub fn text(kind: &EventKind) -> String {
                 format!("{} uses {name} on {}.", actor.0, list(targets))
             }
         }
+        EventKind::ActionDropped { actor, name, .. } => {
+            format!("{} moves but doesn't get to use {name}.", actor.0)
+        }
         EventKind::Roll { roll } => {
             let (roller, label) = match roll {
                 RollView::Full { roller, label, .. } | RollView::Player { roller, label, .. } => {

@@ -1176,6 +1176,61 @@ fn held_goblin() -> Value {
     goblin
 }
 
+/// Bren swings at a goblin 60 feet away. The longsword is offered for the goblin 20 feet behind
+/// him, which he can reach, and his 30 feet of movement can't bring him into reach of the far one, so core walks him
+/// toward it without the swing: the submit is accepted, and the log says the option was dropped
+/// (protocol §4.4).
+#[test]
+fn a_submit_on_a_target_beyond_the_movement_left_walks_and_drops_the_option() {
+    let mut far = creature("far_goblin", ("monster", "goblin_warrior"), "hostile", 60.0);
+    far["control"] = json!("client");
+    let dir = data_dir(
+        "far_goblin",
+        &[(
+            "far",
+            json!({ "id": "far",
+                "creatures": [
+                    creature("bren", ("pregen", "fighter_l2"), "party", 0.0),
+                    held_goblin_at(-20.0),
+                    far
+                ],
+                "encounters": [{ "id": "far", "participants": ["bren", "goblin", "far_goblin"] }] }),
+        )],
+    );
+    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "far" }));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let mut last = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "far" }),
+    );
+    while last["awaiting"]["actor"] != "bren" {
+        let actor = last["awaiting"]["actor"].clone();
+        let prompt = last["awaiting"]["prompt_id"].clone();
+        last = api.call(
+            "dm",
+            json!({ "cmd": "end_turn", "actor": actor, "prompt_id": prompt }),
+        );
+        assert_eq!(last["ok"], true, "{last}");
+    }
+    let swung = api.call(
+        "bren",
+        json!({ "cmd": "submit", "actor": "bren", "prompt_id": last["awaiting"]["prompt_id"],
+            "option_id": "melee_attack/longsword", "targets": ["far_goblin"] }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(swung["ok"], true, "{swung}");
+    let events = swung["events"].as_array().unwrap();
+    let dropped = events
+        .iter()
+        .find(|e| e["kind"] == "action_dropped")
+        .unwrap_or_else(|| panic!("no action_dropped: {swung}"));
+    assert_eq!(dropped["actor"], "bren", "{swung}");
+    assert_eq!(dropped["option_id"], "melee_attack/longsword", "{swung}");
+    assert!(!events.iter().any(|e| e["kind"] == "action"), "{swung}");
+    assert_eq!(swung["awaiting"]["actor"], "bren", "{swung}");
+}
+
 #[test]
 fn a_party_creature_that_surrenders_can_share_the_next_scene_with_its_captor() {
     let dir = data_dir(
