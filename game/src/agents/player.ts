@@ -22,6 +22,8 @@ const NOTES_BUDGET = 2_000;
 export interface TurnSession {
   turn(message: string, purpose: string): Promise<TurnResult>;
   close(): Promise<void>;
+  /** A timed-out turn's result is still to come, so a tool call now is that turn's (`AgentSession`). */
+  readonly settling?: boolean;
 }
 
 export interface ModelPlayerConfig {
@@ -165,6 +167,8 @@ export class ModelPlayer implements PlayerAgent {
   private async bound(use: (tools: PlayerTools) => Promise<ToolOutcome>): Promise<CallToolResult> {
     const tools = this.current;
     if (!tools) return reply("not now: the table isn't waiting on you", true);
+    // A call from a turn that timed out must not act in the wake that came after it.
+    if (this.session?.settling) return reply("not now: that turn is over", true);
     const outcome = await use(tools);
     return reply(outcome.text, !outcome.ok);
   }

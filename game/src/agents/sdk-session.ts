@@ -196,6 +196,15 @@ export class AgentSession {
   /** The SDK's `init` message: the tools, skills and credential source the session really got. */
   init: SDKSystemMessage | undefined;
 
+  /**
+   * Whether a timed-out turn's result is still to come. Its tool calls can arrive until then, and
+   * Claude Code runs one turn at a time, so a tool call meanwhile is that turn's: the next turn's
+   * calls come only after that result, which the session reads first.
+   */
+  get settling(): boolean {
+    return this.stale > 0;
+  }
+
   constructor(config: SessionConfig) {
     this.config = config;
     const cwd = config.cwd ?? mkdtempSync(path.join(tmpdir(), `nat20-${config.agent}-`));

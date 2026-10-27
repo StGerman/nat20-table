@@ -32,6 +32,8 @@ type Script = (wake: PlayerWake, call: Call, message: string) => Promise<string>
 class StandIn implements TurnSession {
   readonly turns: Array<{ message: string; purpose: string }> = [];
   closed = false;
+  /** Set by a test: a timed-out turn's result is still to come. */
+  settling = false;
   readonly config: SessionConfig;
   private readonly script: Script;
 
@@ -220,6 +222,30 @@ test("after a timeout the session goes on; after any other failure the next wake
     await player.wake("declare", "Declare.", tools);
     assert.equal(sessions.length, 2);
     assert.match(sessions[1].turns[0].message, /^Your character sheet \(only you see it\):/);
+  } finally {
+    t.close();
+  }
+});
+
+test("a tool call that comes while a timed-out turn settles is refused, not acted on", async () => {
+  const answers: string[] = [];
+  const { player, sessions } = standInPlayer("ilsa", async (_wake, call) => {
+    answers.push((await call("look")).text);
+    return "";
+  });
+  const t = await testTable({ seed: 1, players: ["ilsa"] });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    const tools = new PlayerTools("ilsa", t.table);
+    await player.wake("declare", "Declare.", tools);
+    const looked = t.requests().filter((r) => r.cmd === "get_state").length;
+    sessions[0].settling = true;
+    await player.wake("declare", "Declare.", tools);
+    assert.equal(answers[1], "not now: that turn is over");
+    assert.equal(t.requests().filter((r) => r.cmd === "get_state").length, looked, "the late call never reached the engine");
+    sessions[0].settling = false;
+    await player.wake("declare", "Declare.", tools);
+    assert.doesNotMatch(answers[2], /^not now/);
   } finally {
     t.close();
   }
