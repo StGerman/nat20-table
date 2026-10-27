@@ -31,7 +31,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0020](0020-send-u1-u2-upstream-early.md) | Send the engine-plumbing items U1 and U2 upstream now, not at Milestone 8 | Superseded by 0023 | 2026-10-17 | Stas (decision card) |
 | [0021](0021-surrender-dm-call-engine-gate.md) | Surrender: the DM decides, within a scene condition the engine enforces | Accepted | 2026-10-17 | Stas (direction), delegated to the coordinator |
 | [0022](0022-ci-shape.md) | CI: parallel lint and test, one build, one required gate, cargo-deny, advisories and core drift off the gate | Accepted | 2026-10-17 | Claude (defaults for Stas's CI ask); Stas accepted by merging #10 |
-| [0023](0023-long-lived-fork.md) | Upstream declines our contributions: keep a long-lived fork that syncs upstream main | Accepted | 2026-10-18 | Stas (thread "Mads's reply") |
+| [0023](0023-long-lived-fork.md) | Upstream declines our contributions: keep a long-lived fork that syncs upstream main | Accepted, PROGRESS.md part superseded by 0037 | 2026-10-18 | Stas (thread "Mads's reply") |
 | [0024](0024-dependency-policy.md) | Dependencies: stay current behind a cooldown and hard gates, in both repos | Accepted (by merging table #44), amended by 0027 | 2026-10-18 | Stas asked; specifics by Claude |
 | [0025](0025-pregen-files-json.md) | Pregen files are JSON with a `_comment` key, typed in the contract crate | Accepted | 2026-10-18 | Stas (Milestone 4 spec D1) |
 | [0026](0026-monster-registry-kind.md) | Monster stat blocks are a thin core registry kind, typed by hand from SRD 5.2.1 | Accepted | 2026-10-20 | Stas (Milestone 5 spec D1, D2) |
@@ -45,6 +45,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0034](0034-agent-memory-per-run.md) | Agent memory lasts one run: typed player notes and a DM memory of invented facts | Accepted | 2026-10-23 | Stas (Milestone 6 spec D9) |
 | [0035](0035-unplanned-fights-dm-starts-engine-validates.md) | Unplanned fights: the DM starts them, the engine validates them (own milestone after Milestone 7) | Accepted | 2026-10-23 | Stas (Milestone 6 spec review, D11) |
 | [0036](0036-demo-runs-on-stas-subscription.md) | The demo runs on Stas's Claude subscription; an API key only when others play | Accepted | 2026-10-23 | Stas (Milestone 6 spec thread, D12) |
+| [0037](0037-fork-keeps-progress-md.md) | Core PRs into the fork's `demo` keep `docs/PROGRESS.md` current | Accepted | 2026-10-27 | Stas (project chat) |
 
 ## Open questions to watch
 
