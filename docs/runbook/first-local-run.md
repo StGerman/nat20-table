@@ -40,3 +40,11 @@ Each line names the Milestone 6 step that ships it. Before each run: `git pull`,
 | 13 | **Exit run:** you play Bren through Scene 1 and Scene 3 in the text UI | ships with step 13 | **Yes**, in a terminal (not through Remote Control: the UI needs your keyboard) | the run folder; the thread commits the transcript, engine log and usage records to the PR |
 
 If a run stops at the plan's usage limit, it says so and writes what it has; that is a clean stop, not a failure (spec §6).
+
+A game run's folder holds `transcript.jsonl` (every line each seat heard or wrote), `session-log.jsonl` (the engine's whole log as the DM sees it), `engine-log.jsonl` (every request and response), `inputs.jsonl` (everything each player agent and your seat were given) and `usage.jsonl` (tokens and latency per model call). The step 9, 10 and 13 commands check it themselves when they finish; to check a run folder by hand:
+
+```bash
+cargo run -p nat20-duel --bin nat20-audit -- --pack <the scenario pack> runs/<time>
+```
+
+It audits every roll on every channel against the log as that channel's listener saw it, and scans what each seat was given for anything its player may not know (spec §3.5, decision 0033). It exits 1 on any problem and prints each one.
