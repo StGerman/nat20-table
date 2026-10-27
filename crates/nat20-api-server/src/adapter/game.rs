@@ -4032,7 +4032,7 @@ fn refusal(problem: &impl std::fmt::Debug) -> ApiError {
 
 /// Maps an engine error's Debug text to a reject reason and one plain sentence.
 fn reason_for(debug: &str) -> (RejectReason, String) {
-    let table: [(&str, RejectReason, &str); 10] = [
+    let table: [(&str, RejectReason, &str); 11] = [
         (
             "Requires proficiency",
             RejectReason::NotProficient,
@@ -4082,6 +4082,11 @@ fn reason_for(debug: &str) -> (RejectReason, String) {
             "NotKnown",
             RejectReason::NotKnown,
             "The actor does not know this option.",
+        ),
+        (
+            "InsufficientSpeed",
+            RejectReason::InsufficientResource,
+            "Not enough movement left this turn to get there.",
         ),
     ];
     for (needle, reason, message) in table {
@@ -4172,6 +4177,15 @@ mod tests {
     use std::path::Path;
 
     use super::*;
+
+    /// A move the engine refuses for lack of movement says so, as the route check before it does,
+    /// instead of the catch-all sentence (Bren just up from prone, Scene 3 live run, 2026-10-27).
+    #[test]
+    fn a_move_refused_for_lack_of_movement_says_so() {
+        let (reason, message) = reason_for(&format!("{:?}", MovementError::InsufficientSpeed));
+        assert_eq!(reason, RejectReason::InsufficientResource);
+        assert_eq!(message, "Not enough movement left this turn to get there.");
+    }
 
     /// A fighter's failed stabilize out of combat opens Tactical Mind while the Help is still
     /// acting; the engine waits on that window, which is declined, instead of ticking on.
