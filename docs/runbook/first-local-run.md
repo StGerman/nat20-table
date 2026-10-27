@@ -18,6 +18,8 @@ Part 1 can be done today. Part 2 grows with each Milestone 6 step: a command is 
 | 8 | The engine, built once (the first build fetches `nat20_core` from the fork and takes a few minutes) | `cargo build -p nat20-api-server` | `target/debug/nat20-api-server` exists |
 | 9 | Remote Control, only if a project thread should run commands here for you (below) | see "Remote Control" | the thread sees your Mac |
 
+Once items 1 to 7 are done, `npm run preflight` checks them all at once and builds the engine (item 8). It calls no model, prints one line per item with the fix for any that fails, and exits 1 if a live run would fail to start or would bill the API. It works the same through Remote Control.
+
 Nothing else is configured by hand. The game reads no secrets and no config file: the model per agent, the scenario pack and the seed are command-line flags with defaults (decision 0032), and every run writes its files to `runs/<timestamp>/` in the repo (git-ignored).
 
 ### Remote Control (optional)
@@ -30,7 +32,7 @@ Every Part 2 command runs the same way in both cases. It needs no terminal input
 
 ## Part 2: the runs
 
-Each line names the Milestone 6 step that ships it. Before each run: `git pull`, `npm ci`, `cargo build -p nat20-api-server`.
+Each line names the Milestone 6 step that ships it. Before each run: `git pull`, `npm ci`, `npm run preflight` (it builds the engine).
 
 | Step | Run | Command | You play? | What to send back |
 |---|---|---|---|---|
