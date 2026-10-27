@@ -412,6 +412,17 @@ test("a reaction the agent doesn't take is declined; one against an ally is decl
   assert.ok(declinedUnasked > 0, "a reaction to an ally was declined with no wake");
 });
 
+test("the human is never asked to react to an ally: the table declines it, as for the AI seats", async () => {
+  const ignore = { reaction: async () => {} };
+  const { t, players, seat } = await play({ seed: 23, players: { torva: ignore, maren: ignore, ilsa: ignore }, dm: yardDm() });
+  const party = new Set(["bren", ...players.keys()]);
+  const shown = seat.shown.filter((e) => e.kind === "reaction");
+  // Walks go on past reaction windows, so an ally walking out of Bren's reach opens his (ENG-22).
+  for (const e of shown) assert.ok(e.kind === "reaction" && !party.has(/may react to ([\w-]+)\./.exec(e.summary)?.[1] ?? ""), "Bren was asked to react to an ally");
+  const declined = t.requests().filter((r) => r.cmd === "react" && r.actor === "bren" && r.choice === null).length;
+  assert.ok(declined > shown.length, "a reaction to an ally was declined without asking Bren");
+});
+
 test("the scripted human lets a reaction to an ally pass, and takes one to a foe", () => {
   // In the first live Scene 3 run, scripted Bren took an Opportunity Attack on Torva walking away.
   const seat = new ScriptedSeat("bren", [], ScriptedSeat.fight, ["torva", "maren", "ilsa"]);
@@ -954,7 +965,10 @@ test("a declaration refused again and again is dropped once its retries are spen
 });
 
 test("a reaction number the human wasn't shown asks again, and never takes a reaction", async () => {
-  // Seed 1: Bren is offered a reaction with two options in the yard fight. He types 3, then declines.
+  // The demo's scripted monsters never leave a creature's reach without Disengage, and the table
+  // declines the human's windows against allies (ENG-22, D2), so the test scene reaction_yard
+  // (seed 23, the DM driving the goblins) makes one: goblin_a walks out of Torva's reach, Torva
+  // lets it go, and the walk goes on out of Bren's reach. He types 3, then declines.
   const answers: PlayerIntent[] = [{ kind: "option", number: 3 }, { kind: "reaction", take: false }];
   let asked = 0;
   const seat = new ScriptedSeat("bren", [], (prompt, s) => {
@@ -962,13 +976,37 @@ test("a reaction number the human wasn't shown asks again, and never takes a rea
     asked += 1;
     return answers.shift() ?? { kind: "reaction", take: false };
   });
-  const { t } = await play({ seed: 1, seat, dm: yardDm() });
+  const t = await testTable({ seed: 23, seat, players: ["torva", "ilsa"] });
+  try {
+    const dm = async (command: Parameters<GameEngine["request"]>[1]) => {
+      const response = await t.table.engine.request("dm", command);
+      t.table.observe(response);
+      assert.equal(response.ok, true, JSON.stringify(response));
+    };
+    const awaiting = () => t.table.awaiting;
+    const prompt = () => {
+      const a = awaiting();
+      return a.kind === "action" || a.kind === "reaction" ? a.prompt_id : "";
+    };
+    await dm({ cmd: "load_scene", scene_id: "reaction_yard" });
+    await dm({ cmd: "start_combat", encounter_id: "brawl" });
+    await dm({ cmd: "move", actor: "goblin_a", prompt_id: prompt(), to: { kind: "point", point: { x_ft: 5, y_ft: 30, z_ft: 0 } } });
+    const torva = awaiting();
+    assert.ok(torva.kind === "reaction" && torva.actor === "torva");
+    await dm({ cmd: "react", actor: "torva", prompt_id: prompt(), choice: null });
+    const bren = awaiting();
+    assert.ok(bren.kind === "reaction" && bren.actor === "bren" && bren.options.length === 2);
+    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: [] });
+    await loop["humanReaction"]();
+  } finally {
+    t.close();
+  }
   assert.equal(asked, 2);
   const told = seat.shown.findIndex((e) => e.kind === "info" && e.title === "No such reaction");
   assert.ok(told > 0, "the human is told the number isn't one");
   assert.equal(seat.shown[told].kind === "info" && seat.shown[told].text, "There is no reaction 3. Answer y or n, or 1 or 2.");
-  const reacted = t.table.transcript.records.filter((r) => r.channel === "dm" && /^bren .*reaction|Opportunity Attack/.test(r.text) && r.text.startsWith("bren"));
-  assert.deepEqual(reacted, [], "Bren took no reaction");
+  const reacts = t.requests().filter((r) => r.cmd === "react" && r.actor === "bren");
+  assert.deepEqual(reacts.map((r) => r.choice), [null], "Bren took no reaction");
 });
 
 test("the human's words reach the AI players marked as the human's, so the leak scan skips them", async () => {

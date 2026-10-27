@@ -480,11 +480,17 @@ export class TableLoop {
     await this.narrateNew(handle);
   }
 
+  /**
+   * The human's reaction: a numbered choice. A reaction to a party member is declined without
+   * asking, as for the AI seats: nobody stabs a friend in this demo, and every window is a stop in
+   * play (TASKS.md ENG-22, spec decision D2).
+   */
   private async humanReaction(): Promise<void> {
     const human = this.table.human;
     await this.table.flush();
     const a = this.table.awaiting;
     if (a.kind !== "reaction" || a.actor !== human) return;
+    if (await this.declineReactionToAlly(human, false)) return;
     this.table.show({ kind: "reaction", summary: a.trigger.summary, options: a.options.map((o) => o.name) });
     let intent = await this.ask({ kind: "reaction" });
     // A number that isn't one of the reactions shown asks again: it never takes another one.
@@ -511,13 +517,7 @@ export class TableLoop {
     if (this.paused) return this.waitWhilePaused();
     const a = this.table.awaiting;
     if (a.kind !== "reaction") return;
-    const about = reactingTo(a.trigger.summary);
-    if (about && (about === this.table.human || this.table.players.includes(about))) {
-      const response = await this.table.engine.request(handle, { cmd: "react", actor: handle, prompt_id: a.prompt_id, choice: null });
-      this.table.observe(response);
-      if (!response.ok) throw new Error(`declining ${handle}'s reaction to ${about} was refused: ${response.error?.message}`);
-      return;
-    }
+    if (await this.declineReactionToAlly(handle, true)) return;
     this.table.resetRetries(handle);
     const briefing = await this.playerBriefing(
       handle,
@@ -528,6 +528,22 @@ export class TableLoop {
     await this.wakePlayer(this.agents.get(handle)!, "reaction", briefing);
     const still = this.table.awaiting;
     if (still.kind === "reaction" && still.prompt_id === a.prompt_id) await this.fallBack(handle, "decline");
+  }
+
+  /**
+   * Declines `handle`'s pending reaction when it answers a party member; true if it did. A
+   * reaction to the reactor's own action (Reckless Attack) counts as one only when `self` is set.
+   */
+  private async declineReactionToAlly(handle: Handle, self: boolean): Promise<boolean> {
+    const a = this.table.awaiting;
+    if (a.kind !== "reaction" || a.actor !== handle) return false;
+    const about = reactingTo(a.trigger.summary);
+    if (!about || (about !== this.table.human && !this.table.players.includes(about))) return false;
+    if (about === handle && !self) return false;
+    const response = await this.table.engine.request(handle, { cmd: "react", actor: handle, prompt_id: a.prompt_id, choice: null });
+    this.table.observe(response);
+    if (!response.ok) throw new Error(`declining ${handle}'s reaction to ${about} was refused: ${response.error?.message}`);
+    return true;
   }
 
   /** The fallback never invents an action: it ends the turn or declines the reaction (spec §6). */
