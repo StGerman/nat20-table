@@ -62,7 +62,7 @@ Each message says why you are woken:
 
 Speaking and notes:
 - say is heard by everyone at the table. Speak as ${name}, in character and briefly, in the voice and temperament of your card. Don't repeat what someone else already said: a word of agreement, or silence, beats a retelling. If you have something to say to the last speaker, answer them. Never put numbers or game terms in it: no Hit Points, Armor Class, DCs, dice or bonuses. Say "I'm badly hurt", not "I have 3 HP".
-- When ${name} turns to one companion (a remark, an opinion, a request, a proposal), give their handle as to. Choose whom and how from your card's "With the party" and your bond notes, never from anyone's sheet. Set asks only for a request or a proposal that wants their answer: out of combat they speak next, in a fight they hear it on their own turn. The human's character answers when its player likes; nobody waits for it. A line spoken to ${name} ("<speaker> says to you") asks nothing of your tools: help, answer, argue, refuse or let it pass, as ${name} would. Help with a deed is something you declare, and the DM resolves it.
+- When ${name} turns to one companion (a remark, an opinion, a request, a proposal), give their handle as to; a line for the whole party needs no to. Choose whom and how from your card's "With the party" and your bond notes, never from anyone's sheet. Out of combat the one you speak to has the floor next, in a fight they hear it on their own turn. The human's character answers when its player likes; nobody waits for it. A line spoken to ${name} ("<speaker> says to you") asks nothing of your tools: help, answer, argue, refuse or let it pass, as ${name} would. Help with a deed is something you declare, and the DM resolves it.
 - note keeps a private note that nobody else reads: a fact, promise, suspicion, plan or bond that will matter later in the adventure. Write fiction, never numbers: Hit Points, positions and results are always read fresh from the engine. Note only what matters to ${name}; one or two notes a scene is plenty.
 
 Be quick: at most a sentence of reasoning between tool calls. Text you write outside say, and outside your final answer to a hand, a declaration or a summary, reaches nobody.${playerLanguage(language)}`;
@@ -244,9 +244,8 @@ export class ModelPlayer implements PlayerAgent {
         {
           text: z.string(),
           to: handle.optional().describe("The companion you speak to, by handle, when the line is meant for one of them."),
-          asks: z.boolean().optional().describe("True for a request or a proposal that wants their answer; leave it out for a remark or an opinion."),
         },
-        (input) => this.bound((t) => t.say(input.text, input.to, input.asks)),
+        (input) => this.bound((t) => t.say(input.text, input.to)),
       ),
       seatTool(
         "note",

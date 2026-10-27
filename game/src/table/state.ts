@@ -103,7 +103,7 @@ export class TableState {
   private narrations: string[] = [];
   /**
    * Lines the AI players spoke to a companion out of combat, since the loop last took them (party
-   * talk §4.4): a request or a proposal hands its addressee the floor. The loop drops them in a fight.
+   * talk §4.4): one hands its addressee the floor. The loop drops them in a fight.
    */
   private addresses: Address[] = [];
   /**
@@ -330,16 +330,16 @@ export class TableState {
   /**
    * A character's spoken line, heard by every other seat. AI players' lines go through the speech
    * guard (spec §3.5); the human's go as typed and are marked as the human's. `to` is the companion
-   * an AI player speaks to, and `asks` marks a request or a proposal (party talk §4.4): the
-   * addressee's brief says "<speaker> says to you", and out of combat the loop may hand it the floor.
+   * an AI player speaks to (party talk §4.4): the addressee's brief says "<speaker> says to you",
+   * and out of combat the loop may hand it the floor.
    */
-  async speak(from: Handle, text: string, to?: Handle, asks = false): Promise<ToolOutcome> {
+  async speak(from: Handle, text: string, to?: Handle): Promise<ToolOutcome> {
     if (to !== undefined && (to === from || (to !== this.human && !this.players.includes(to)))) {
       if (this.exhausted(from)) return this.spent();
       const companions = [this.human, ...this.players].filter((seat) => seat !== from);
       return this.refuse(from, "speech", `${to} is not a companion at the table`, `Give one of ${companions.join(", ")} as to, or leave it out.`);
     }
-    return this.say(from, text, "speech", to, asks);
+    return this.say(from, text, "speech", to);
   }
 
   /**
@@ -350,7 +350,7 @@ export class TableState {
     return this.say(from, text, "intent");
   }
 
-  private async say(from: Handle, text: string, kind: "speech" | "intent", to?: Handle, asks = false): Promise<ToolOutcome> {
+  private async say(from: Handle, text: string, kind: "speech" | "intent", to?: Handle): Promise<ToolOutcome> {
     const human = from === this.human;
     if (!human) {
       if (this.exhausted(from)) return this.spent();
@@ -369,7 +369,7 @@ export class TableState {
       if (human) return;
       if (kind === "speech") {
         this.spokeThisRound.add(from);
-        if (to && !this.inCombat) this.addresses.push({ from, to, asks });
+        if (to && !this.inCombat) this.addresses.push({ from, to });
       } else {
         this.declaredThisRound.add(from);
         if (this.spokeThisRound.has(from)) return;

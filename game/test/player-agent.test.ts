@@ -75,8 +75,9 @@ test("a model player passes as a normal answer, plays from its card's Talk and s
   assert.match(prompt, /"Do you raise your hand\?": .*Call no tool: your final answer starts with SPEAK \(a line to say\), BOTH \(a line and a deed\), ACT: and one sentence/);
   assert.match(prompt, /"You have the floor": you raised your hand, someone named Maren, or a companion spoke to Maren\./);
   // Addressing a companion (party talk §4.4): whom and how from the card and bond notes, never sheets.
-  assert.match(prompt, /give their handle as to\. Choose whom and how from your card's "With the party" and your bond notes, never from anyone's sheet\./);
-  assert.match(prompt, /Set asks only for a request or a proposal that wants their answer/);
+  assert.match(prompt, /give their handle as to; a line for the whole party needs no to\. Choose whom and how from your card's "With the party" and your bond notes, never from anyone's sheet\./);
+  assert.match(prompt, /Out of combat the one you speak to has the floor next/);
+  assert.doesNotMatch(prompt, /Set asks|request or a proposal that wants/);
   assert.match(prompt, /The human's character answers when its player likes; nobody waits for it\./);
 });
 
@@ -104,10 +105,10 @@ test("a model player answers a hand wake with its answer as written, and its too
   }
 });
 
-test("a model player speaks to a companion with to and asks; the table marks the line and keeps the address", async () => {
+test("a model player speaks to a companion with to; the table marks the line and keeps the address", async () => {
   const { player } = standInPlayer("ilsa", async (wake, call) => {
     assert.equal(wake, "declare");
-    assert.equal((await call("say", { text: "Torva, the door?", to: "torva", asks: true })).isError, false);
+    assert.equal((await call("say", { text: "Torva, the door?", to: "torva" })).isError, false);
     assert.equal((await call("say", { text: "Bren, look.", to: "bren" })).isError, false);
     return "PASS";
   });
@@ -116,8 +117,8 @@ test("a model player speaks to a companion with to and asks; the table marks the
     t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
     await player.wake("declare", "You have the floor.", new PlayerTools("ilsa", t.table));
     assert.deepEqual(t.table.takeAddresses(), [
-      { from: "ilsa", to: "torva", asks: true },
-      { from: "ilsa", to: "bren", asks: false },
+      { from: "ilsa", to: "torva" },
+      { from: "ilsa", to: "bren" },
     ]);
     assert.deepEqual(t.table.drainInbox("torva"), ["ilsa says to you: Torva, the door?", "ilsa says to bren: Bren, look."]);
     assert.ok((t.table.seat as ScriptedSeat).shown.some((e) => e.kind === "speech" && e.to === "bren"), "the human sees the line spoken to their character");
@@ -145,7 +146,7 @@ test("the report counts talk rounds: lines, silence, hands, named players who an
     ]),
     [
       "- Talk rounds: 3; lines per round 1.3; silent share 44% (target at least 30%); floor wakes 4, hands lapsed 0",
-      "- Hands: speak 1, both 1, act 1, pass 4, unread 1; named players who answered first: 1 of 1; hand-offs 1, requests carried to the next round 1",
+      "- Hands: speak 1, both 1, act 1, pass 4, unread 1; named players who answered first: 1 of 1; hand-offs 1, addresses carried to the next round 1",
       "- Talk round time: first line p50 4000 ms (target 7000 ms), round p50 6000 ms, p95 12000 ms (target 20000 ms)",
     ],
   );
