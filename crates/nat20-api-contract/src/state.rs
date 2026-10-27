@@ -588,7 +588,7 @@ pub struct OptionVariant {
 /// only, like the options it comes with.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct TurnBudget {
-    /// Actions left this turn: 1 at the start of a turn, 2 after Action Surge, 0 once spent.
+    /// Actions left this turn: 1 at the start of a turn, one more after Action Surge, 0 once spent.
     pub action: u8,
     /// Bonus Actions left this turn.
     pub bonus_action: u8,
