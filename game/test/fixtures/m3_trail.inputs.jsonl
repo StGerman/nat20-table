@@ -113,6 +113,8 @@
 {"seat":"bren","text":"{\"kind\":\"option\",\"number\":6}","human":true}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren's turn ends.\",\"seq\":70,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"Blades flash.\"}"}
+{"seat":"bren","text":"{\"kind\":\"options\",\"title\":\"Surrender\",\"lines\":[\"1. Accept the surrender of goblin_1, goblin_2\",\"2. Fight on\"],\"choices\":[{\"number\":1,\"label\":\"Accept the surrender of goblin_1, goblin_2\"},{\"number\":2,\"label\":\"Fight on\"}]}"}
+{"seat":"bren","text":"{\"kind\":\"option\",\"number\":1}","human":true}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"goblin_2's turn.\",\"seq\":71}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"goblin_2 uses Monster Nimble Escape.\",\"seq\":72}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"goblin_2 moves.\",\"seq\":74}"}

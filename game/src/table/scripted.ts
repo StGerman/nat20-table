@@ -155,9 +155,23 @@ export function yardDm(encounter = "yard_fight"): ScriptedDm {
       await tools.narrate("Goblins and wolves wait in the mill yard.");
       await tools.startCombat(encounter);
     },
-    narrate: async (tools) => void (await tools.narrate("Steel and teeth flash in the yard.")),
+    narrate: async (tools) => {
+      await offerAnySurrender(tools);
+      await tools.narrate("Steel and teeth flash in the yard.");
+    },
     combat_over: async (tools) => void (await tools.endAdventure("The yard falls quiet.")),
   });
+}
+
+/**
+ * Offers the human the surrender the engine shows available, of the creatures it names, whenever
+ * there is one (AGT-30, decision D4: a scripted run gets offers, and the scripted human accepts).
+ */
+export async function offerAnySurrender(tools: DmTools): Promise<void> {
+  const state = ((await tools.getState()).data as { state?: State } | undefined)?.state;
+  if (state?.view !== "dm") return;
+  const surrendering = state.encounters.find((e) => e.running && e.surrender_available)?.surrendering ?? [];
+  if (surrendering.length > 0) await tools.offerSurrender(surrendering);
 }
 
 /**
@@ -182,7 +196,10 @@ export function walkOnDm(order: string[], fights: Record<string, string>, party:
       await tools.narrate("You move on.");
       await tools.loadScene(next, party);
     },
-    narrate: async (tools) => void (await tools.narrate("Steel and teeth flash.")),
+    narrate: async (tools) => {
+      await offerAnySurrender(tools);
+      await tools.narrate("Steel and teeth flash.");
+    },
     combat_over: async (tools) => void (await tools.endAdventure("The fight is done.")),
   });
 }
@@ -234,6 +251,9 @@ export class ScriptedSeat implements Seat {
       }
       case "paused":
         return { kind: "command", name: "pause" };
+      case "surrender":
+        // The scripted human accepts every surrender it is offered (decision D4).
+        return { kind: "option", number: 1 };
       default:
         return { kind: "text", text: "I wait." };
     }

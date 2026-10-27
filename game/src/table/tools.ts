@@ -13,6 +13,7 @@ import type {
   HitDiceSpend,
   MoveTarget,
   Response,
+  State,
   Viewer,
 } from "@nat20-table/engine-client";
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
@@ -50,6 +51,11 @@ const CHANGES = new Set<Command["cmd"]>([
  */
 export function send(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
   if (!CHANGES.has(command.cmd)) return sendNow(table, viewer, command, okText);
+  // An open surrender offer holds every change until the human answers it (AGT-30). The DM's
+  // `end_combat` is the one way through, and `DmTools.endCombat` says when it may take it.
+  if (table.surrender && !(viewer === "dm" && command.cmd === "end_combat")) {
+    return Promise.resolve(notNow(`the surrender offer waits on ${table.human}'s answer; nothing happens before it`));
+  }
   return table.oneAtATime(viewer, () => (table.exhausted(viewer) ? Promise.resolve(table.spent()) : sendNow(table, viewer, command, okText)));
 }
 
@@ -228,6 +234,12 @@ export class HandTools extends PlayerTools {
   }
 }
 
+/** Whether the human's character is at 0 Hit Points or dead: then the DM decides on a surrender (D3). */
+function humanDown(state: Extract<State, { view: "dm" }>, human: Handle): boolean {
+  const me = state.creatures.find((c) => c.handle === human);
+  return !me || me.life_state !== "conscious";
+}
+
 /** Only the three shapes of a move goal, field by field. */
 function moveTarget(to: MoveTarget): MoveTarget {
   switch (to.kind) {
@@ -305,8 +317,76 @@ export class DmTools {
     return send(this.table, "dm", { cmd: "start_combat", encounter_id }, () => "the fight is on; initiative rolled");
   }
 
-  endCombat(reason: EndCombatReason): Promise<ToolOutcome> {
-    return send(this.table, "dm", { cmd: "end_combat", reason }, () => `the fight ended (${reason})`);
+  /**
+   * Ends the fight. A surrender is the human's to accept (AGT-30): the DM takes it only while it
+   * maps the human's words answering its offer, or when the human's character is down (decision
+   * D3). Otherwise it offers one with `offerSurrender`.
+   */
+  async endCombat(reason: EndCombatReason): Promise<ToolOutcome> {
+    const offer = this.table.surrender;
+    if (offer && !(offer.words && reason === "surrender")) {
+      return notNow(`the surrender offer waits on ${this.table.human}'s answer`);
+    }
+    if (reason === "surrender" && !offer) {
+      if (this.table.exhausted("dm")) return this.table.spent();
+      const state = await this.dmState();
+      if (!state || !humanDown(state, this.table.human)) {
+        this.table.retry("dm", "dm: end_combat with surrender before the human accepted it");
+        return { ok: false, retryable: true, text: `${this.table.human} decides on a surrender: offer it with offer_surrender` };
+      }
+    }
+    const ended = await send(this.table, "dm", { cmd: "end_combat", reason }, () => `the fight ended (${reason})`);
+    if (ended.ok) this.table.surrender = undefined;
+    return ended;
+  }
+
+  /**
+   * Offers the human the surrender of `handles` (AGT-30). The table asks the human at once and
+   * holds every other change until they answer. Only while the engine shows a surrender available,
+   * for exactly the creatures it would make neutral (`surrendering`), and not while the human's
+   * character is down: then the DM decides (decision D3). The offer is held from the call on, so a
+   * change the DM makes in parallel can't reach the engine while this one reads the state.
+   */
+  async offerSurrender(handles: string[]): Promise<ToolOutcome> {
+    if (this.table.exhausted("dm")) return this.table.spent();
+    if (this.table.surrender) return notNow("a surrender offer is already open");
+    if (!this.table.inCombat) return notNow("there is no fight");
+    const held = { handles: [] as Handle[], words: false };
+    this.table.surrender = held;
+    const outcome = await this.openOffer(handles, held);
+    if (!outcome.ok && this.table.surrender === held) this.table.surrender = undefined;
+    return outcome;
+  }
+
+  private async openOffer(handles: string[], held: { handles: Handle[] }): Promise<ToolOutcome> {
+    const state = await this.dmState();
+    if (!state) return notNow("the scene can't be read");
+    const refuse = (why: string, text: string): ToolOutcome => {
+      this.table.retry("dm", `dm: offer_surrender refused: ${why}`);
+      return { ok: false, retryable: true, text };
+    };
+    const surrendering = state.encounters.find((e) => e.running && e.surrender_available)?.surrendering ?? [];
+    if (surrendering.length === 0) {
+      return refuse("no surrender is available", "surrender_not_available: no surrender is available now");
+    }
+    if (humanDown(state, this.table.human)) {
+      return notNow(`${this.table.human} is down, so you decide: end_combat with surrender to accept it, or fight on`);
+    }
+    const named = [...new Set(handles)];
+    if (named.length !== surrendering.length || named.some((h) => !surrendering.includes(h))) {
+      return refuse(
+        `handles ${named.join(", ") || "none"} are not the surrendering creatures`,
+        `name exactly the creatures that would surrender: ${surrendering.join(", ")}`,
+      );
+    }
+    held.handles = [...surrendering];
+    this.table.log("system", `the DM offers ${this.table.human} the surrender of ${held.handles.join(", ")}`, "dm");
+    return { ok: true, text: `offered; ${this.table.human} answers before anything else happens` };
+  }
+
+  private async dmState(): Promise<Extract<State, { view: "dm" }> | undefined> {
+    const r = this.table.observe(await this.table.engine.request("dm", { cmd: "get_state" }));
+    return r.ok && r.result?.cmd === "get_state" && r.result.state.view === "dm" ? r.result.state : undefined;
   }
 
   spawn(spawn_id: string): Promise<ToolOutcome> {

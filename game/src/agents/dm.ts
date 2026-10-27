@@ -111,13 +111,15 @@ The guard reads only what the table hears: tool inputs such as a check's DC are 
 - "The table has spoken": ${human} acted or spoke, then the AI players declared. Resolve it: ask for a check (request_check, with the character who tries as actor), move characters (move), have one help another (help), rest (short_rest), start the scene's fight (start_combat), or answer in fiction. When an AI player declares one of its own options, such as a spell or a potion, don't take it for them: grant_action, and they take it. ${human}'s own options go through submit. If ${human}'s intent is unclear, ask_human. Then narrate the outcome in one to three sentences.
 - "It is ${human}'s turn, and the human playing ${human} said": map the words to ${human}'s options (legal_actions, submit, move, end_turn), then narrate only what the engine did. If it can't be done, or a move is refused, say so in narration.
 - "Narrate these events": one to three sentences. The table reads your narration, not the engine's lines, and reads it as one running story: say who acted, against whom, and what came of it (missed, wounded, dropped, healed); don't say whose turn it is or comes next; don't set the scene again or describe again a creature the fight already met.
+- "answered your surrender offer in words": if the human accepts, end_combat with surrender; otherwise answer in fiction with narrate. The offer stays open until they accept or fight on.
 - "The fight is over": narrate how it ends, then go on with the scene.
 - "The scene is over": your final answer is a short summary for yourself: what happened, what you established, what is left open.
 
 ## Running the adventure
 
 - Checks: when one of the scene's checks fits what a character tries (the skeleton's check hints say which intent each answers), request it by its id; each is rolled once. Otherwise name a skill and a DC from the ladder: ${LADDER.join(", ")}. Call for a check only when the outcome is uncertain and something rides on it.
-- Fights: start_combat with the scene's encounter when its hint says so. end_combat with surrender only while get_state shows a surrender is available, fled when one side gets away, scenario when the scene's prose ends the fight.
+- Fights: start_combat with the scene's encounter when its hint says so. end_combat with fled when one side gets away, scenario when the scene's prose ends the fight.
+- Surrender: while get_state shows a surrender is available, the human decides whether to accept it. Narrate the foes begging for their lives, then call offer_surrender with the handles get_state lists as surrendering; never ask about it with ask_human. The table asks the human at once, and nothing happens in the fight before the answer: accepted, the fight ends and you narrate it; refused, you hear so and narrate the fight going on. The AI players may speak to it, but only ${human} decides. When ${human} is down, you decide: end_combat with surrender, or fight on.
 - Scenes: the skeleton lists the scenes in order with their exits. When an exit's condition holds, narrate the way there and call load_scene with the next scene's id and the party (${party.join(", ")}), adding the handle of any creature that surrendered when the exit carries captives. After the last scene, call end_adventure with the closing narration.
 - Memory: remember keeps a fact you established in fiction that the engine doesn't track (a name you improvised, a promise, a door you called locked) for the rest of the adventure. Fiction only: positions, Hit Points and results always come fresh from the engine. Memory can change which check you ask for; it never decides an outcome.
 - Actions the adventure didn't plan for (robbing an NPC, threatening a villager): turn the intent into what the engine can do, usually a ladder check. Nothing changes hands and nobody is hurt unless the engine says so; there is no fight with anyone the scene doesn't hold. A consequence the engine doesn't track is fiction you remember, and the adventure goes on along its exits.
@@ -257,9 +259,15 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "end_combat",
-        "End the running fight: surrender (only while the engine shows one available), fled, or scenario.",
+        `End the running fight: fled, or scenario. Surrender only after ${human} accepted your offer in words, or when ${human} is down.`,
         { reason: z.enum(["surrender", "fled", "scenario"]) },
         (i) => this.bound((t) => t.endCombat(i.reason)),
+      ),
+      seatTool(
+        "offer_surrender",
+        `Offer ${human} the surrender of the creatures get_state lists as surrendering, only while the engine shows one available. The table asks the human at once; nothing happens before the answer.`,
+        { handles: z.array(handle).describe("The creatures that give up, as you narrated them.") },
+        (i) => this.bound((t) => t.offerSurrender(i.handles)),
       ),
       seatTool("spawn", "Bring in one of the scene's spawns.", { spawn_id: z.string() }, (i) => this.bound((t) => t.spawn(i.spawn_id))),
       seatTool(

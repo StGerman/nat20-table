@@ -65,5 +65,7 @@ export function promptHint(prompt: HumanPrompt, handle: string): string {
       return "Pick a number from this list, or say what you do instead.";
     case "paused":
       return "Paused. Commands only; /pause goes on.";
+    case "surrender":
+      return "Accept the surrender (1), fight on (2), or say what you do.";
   }
 }

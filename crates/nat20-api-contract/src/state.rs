@@ -74,6 +74,12 @@ pub struct EncounterView {
     /// surrender condition holds (decision D5). The engine works this out; the DM decides
     /// whether to call it.
     pub surrender_available: bool,
+    /// The creatures that `end_combat{surrender}` would make `neutral` now: the surrender
+    /// condition's creatures still conscious, in the condition's order. Empty, and left out,
+    /// unless `surrender_available`. A creature of the fight that the condition doesn't name
+    /// (a wolf beside surrendering goblins) is never here and fights on.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub surrendering: Vec<Handle>,
 }
 
 /// A scene spawn as the DM sees it.

@@ -5,7 +5,7 @@
 //!
 //! A leak is: another creature's HP, max HP, temp HP or AC; any roll target (`against`, `dc`,
 //! `dc_source`) or roll modifiers; scenario data (`flags`, `checks`, `encounters`,
-//! `surrender_available`, `spawns`, `known_ids`) or the reasons behind Advantage
+//! `surrender_available`, `surrendering`, `spawns`, `known_ids`) or the reasons behind Advantage
 //! (`advantage_sources`); a DM-only or another owner's event, or a scenario event kind
 //! (`check_resolved`, `flag_set`, `hazard_triggered`, `spawned`) whatever its visibility; another
 //! creature's `hit_points` event; an AC or DC number in free text.
@@ -21,6 +21,7 @@ pub const HIDDEN_KEYS: &[&str] = &[
     "checks",
     "encounters",
     "surrender_available",
+    "surrendering",
     "spawns",
     "known_ids",
     "advantage_sources",

@@ -75,7 +75,9 @@ export type HumanPrompt =
   /** A follow-up pick inside a numbered option: its targets, variants or aims. */
   | { kind: "pick" }
   /** `/pause` is on and an AI player is next: only commands until `/pause` again. */
-  | { kind: "paused" };
+  | { kind: "paused" }
+  /** The DM offered a surrender: accept it (1), fight on (2), or say what you do (AGT-30). */
+  | { kind: "surrender" };
 
 /**
  * The human's seat (spec §3.4). The Ink UI implements it (step 11); scripted seats implement it
@@ -143,6 +145,8 @@ export type DmWake =
   | "map_combat"
   /** New engine events to narrate. */
   | "narrate"
+  /** The human answered a surrender offer in words: accept it for them, or answer in fiction (AGT-30). */
+  | "surrender_words"
   /** A fight ended. */
   | "combat_over"
   | "summary";
