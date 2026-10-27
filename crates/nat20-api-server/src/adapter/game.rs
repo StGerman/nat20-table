@@ -191,13 +191,16 @@ impl WalkThenAct {
 
 /// A walk core makes on its own: to reach an option's target (`MoveAndAct`), or toward a target it
 /// can't reach this turn (`Move`, a scripted monster's approach), or on from where a move provoked
-/// inside another creature's space (ENG-18). Logged as `moved` once the walker stops (API-32).
+/// an opportunity attack (ENG-22). Logged as `moved` once the walker stops (API-32).
 struct Walk {
     entity: Entity,
     from: Point3<f32>,
     /// It goes on after a reaction the walker provoked, so it is logged after that reaction's
     /// entries, not before them.
     after_reaction: bool,
+    /// The anchor a `move` was walking to, and where its route ends: the `moved` that gets there
+    /// names it (protocol §4.1).
+    anchor: Option<(String, Point3<f32>)>,
 }
 
 #[derive(Clone)]
@@ -278,6 +281,9 @@ pub struct Game {
     walk_then_act: Option<WalkThenAct>,
     /// Walks core is making for an option, not yet logged (API-32).
     walks: Vec<Walk>,
+    /// While a `move` runs: the mover, and every creature its walk gave an opportunity attack
+    /// window so far, in prompt order (`provoked`, protocol §4.1).
+    provokers: Option<(Entity, Vec<Entity>)>,
     /// The highest round of this scene's fights whose round spawns were looked at, so each
     /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
@@ -598,6 +604,7 @@ impl Game {
             area_caught: Vec::new(),
             walk_then_act: None,
             walks: Vec::new(),
+            provokers: None,
             spawn_round: 0,
             stalls: 0,
             listed: None,
@@ -626,7 +633,38 @@ impl Game {
     /// Log entries produced since the last call, in order, without `seq`.
     pub fn take_entries(&mut self) -> Vec<Pending> {
         self.log_unseen_changes();
-        std::mem::take(&mut self.pending)
+        // A walk paused by a reaction that a scripted creature settled inside the same command
+        // logs two `moved` with nothing between them; the reader sees one walk (ENG-22).
+        let mut entries: Vec<Pending> = Vec::with_capacity(self.pending.len());
+        for entry in std::mem::take(&mut self.pending) {
+            if let (
+                Some(Pending {
+                    kind:
+                        EventKind::Moved {
+                            actor: walker,
+                            to: paused_at,
+                            anchor: paused_anchor @ None,
+                            ..
+                        },
+                    ..
+                }),
+                EventKind::Moved {
+                    actor,
+                    from,
+                    to,
+                    anchor,
+                },
+            ) = (entries.last_mut(), &entry.kind)
+                && walker == actor
+                && paused_at == from
+            {
+                *paused_at = *to;
+                paused_anchor.clone_from(anchor);
+                continue;
+            }
+            entries.push(entry);
+        }
+        entries
     }
 
     /// Logs what changed with no engine event of its own: Concentration that ran out, then
@@ -1441,7 +1479,8 @@ impl Game {
     /// Moves `actor` and returns the feet it moved and who it provoked. In explore mode the
     /// creature walks the whole route at no movement cost and provokes nobody, since nobody
     /// is fighting. In combat the session has checked the prompt: the route must fit in the
-    /// movement left, and an opportunity attack stops the creature where it was provoked.
+    /// movement left, and an opportunity attack holds the creature where it was provoked until
+    /// the reaction is resolved.
     pub fn move_to(
         &mut self,
         actor: &str,
@@ -1486,34 +1525,25 @@ impl Game {
 
         let round = self.round();
         let before = remaining_movement_m(&self.engine, entity);
-        let (moved_m, provoked) = if combat {
+        let moved_m = if combat {
             self.engine
                 .submit_activity(Activity::Move { entity, goal: end })
                 .map_err(|e| refusal(&e))?;
+            self.provokers = Some((entity, Vec::new()));
             self.settle();
-            let provoked = match self.awaiting() {
-                Awaiting::Reaction { reactor, .. } => vec![Handle(self.handle_of(reactor))],
-                _ => Vec::new(),
-            };
-            (
-                before - remaining_movement_m(&self.engine, entity),
-                provoked,
-            )
+            self.note_provoker();
+            before - remaining_movement_m(&self.engine, entity)
         } else {
             // Nobody is fighting, so the creature is simply placed at the end of its route.
             systems::geometry::teleport_to(&mut self.engine.world, entity, &end);
             // An explore command that acts closes a finished fight's `combat_over`.
             self.close_finished_fight();
-            (
-                route.full_path.length.get::<uom::si::length::meter>(),
-                Vec::new(),
-            )
+            route.full_path.length.get::<uom::si::length::meter>()
         };
         let landed = systems::geometry::get_foot_position(&self.engine.world, entity)
             .expect("scene creatures have a position");
-        // A creature that provoked inside another creature's space is still walking: once the
-        // reaction is settled it walks on to the first free spot (ENG-18), and that walk is
-        // logged as `moved` when it stops (API-32).
+        // A creature that provoked is still walking: once the reaction is settled it walks on
+        // to its goal (ENG-22), and that walk is logged as `moved` when it stops (API-32).
         let walking_on = self
             .engine
             .world
@@ -1524,6 +1554,7 @@ impl Game {
                 entity,
                 from: landed,
                 after_reaction: true,
+                anchor: anchor.clone().map(|anchor| (anchor, end)),
             });
         }
         let arrived = (landed - end).norm() < 0.05;
@@ -1539,9 +1570,20 @@ impl Game {
         self.drain();
         if combat {
             self.advance();
+            self.note_provoker();
         }
+        // Every window the walk opened in this command, the ones a scripted creature settled
+        // inside it included (protocol §4.1).
+        let provoked = self
+            .provokers
+            .take()
+            .map(|(_, reactors)| reactors)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|reactor| Handle(self.handle_of(reactor)))
+            .collect();
         // A scripted reaction settled inside this command lets the creature walk on before the
-        // response (ENG-18), and that walk counts too. Movement left only grows again at the
+        // response (ENG-22), and that walk counts too. Movement left only grows again at the
         // creature's next turn, which `max` keeps out.
         let moved_m = if combat {
             moved_m.max(before - remaining_movement_m(&self.engine, entity))
@@ -1549,6 +1591,26 @@ impl Game {
             moved_m
         };
         Ok((round_ft(moved_m), provoked))
+    }
+
+    /// While a `move` runs, records the creature a pending opportunity attack window on the
+    /// mover belongs to, once.
+    fn note_provoker(&mut self) {
+        let Some((mover, _)) = self.provokers else {
+            return;
+        };
+        if let Awaiting::Reaction {
+            reactor,
+            trigger: Some(trigger),
+            moving: true,
+            ..
+        } = self.awaiting()
+            && trigger == mover
+            && let Some((_, reactors)) = &mut self.provokers
+            && !reactors.contains(&reactor)
+        {
+            reactors.push(reactor);
+        }
     }
 
     /// Where a move ends, in core coordinates, and the anchor it names.
@@ -2913,6 +2975,7 @@ impl Game {
                 entity,
                 from,
                 after_reaction: false,
+                anchor: None,
             });
         }
         Ok(walks)
@@ -3120,7 +3183,7 @@ impl Game {
             .is_some_and(|p| matches!(p.kind, ActionPromptKind::Reactions { .. }));
         let no_pending = scope.is_none_or(|s| s.pending_events().is_empty());
         // A reaction prompt holds everyone it doesn't wait on, even a creature still mid-move or
-        // mid-attack: one that provoked inside another creature's space (ENG-18), or an attacker
+        // mid-attack: one that provoked an opportunity attack (ENG-22), or an attacker
         // whose roll waits on Shield. Ticking on would change nothing.
         waiting_on_reaction || (all_idle && no_pending)
     }
@@ -3145,6 +3208,7 @@ impl Game {
                 Awaiting::Reaction {
                     reactor, trigger, ..
                 } if self.control_of(reactor) == Some(Control::Scripted) => {
+                    self.note_provoker();
                     // Scripted creatures take the first reaction offered (for a goblin, the
                     // opportunity attack) when an enemy set it off, and decline otherwise: the
                     // engine offers an opportunity attack on any creature leaving reach, ally
@@ -3610,7 +3674,7 @@ impl Game {
 
         // A walk core made for an option is logged as a `move` is, once the walker has stopped:
         // right before its `action` when it got to act, else first, or last for a walk on after
-        // a reaction (API-32, ENG-18). The `action` ends the walk even while a reaction keeps the
+        // a reaction (API-32, ENG-22). The `action` ends the walk even while a reaction keeps the
         // walker busy. A walker a reaction holds mid-walk has its walk so far logged now, so the
         // reaction can name it (protocol §3), and walks on from there; any other walk still under
         // way waits for the next batch.
@@ -3641,6 +3705,7 @@ impl Game {
                         entity: walk.entity,
                         from: landed,
                         after_reaction: true,
+                        anchor: walk.anchor.clone(),
                     });
                 } else {
                     self.walks.push(walk);
@@ -3659,14 +3724,18 @@ impl Game {
                         actor,
                         from: from_core_point(walk.from),
                         to: from_core_point(landed),
-                        anchor: None,
+                        anchor: walk
+                            .anchor
+                            .filter(|(_, end)| (landed - end).norm() < 0.05)
+                            .map(|(anchor, _)| anchor),
                     },
                 ),
             );
         }
 
-        // A walk that stopped without the option it walked for: a move that provokes stops where
-        // it provoked (protocol §4.1), and core drops the option it carried (API-31).
+        // A walk that stopped without the option it walked for: the opportunity attack it
+        // provoked dropped the walker (protocol §4.1), or the option couldn't be taken where the
+        // walk ended, and core drops the option it carried (API-31).
         if let Some(walk) = self.walk_then_act.take() {
             let acted = entries
                 .iter()

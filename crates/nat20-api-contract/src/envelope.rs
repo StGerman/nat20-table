@@ -115,8 +115,9 @@ pub enum Command {
     },
     /// Moves a creature along a route on the map. In explore mode the walk costs no movement
     /// and provokes nobody. In combat it is a decision at the actor's action prompt: the whole
-    /// route must fit in the movement left, and an opportunity attack stops the creature where
-    /// it provoked one. No route answers `rejected` with `no_path`.
+    /// route must fit in the movement left, and an opportunity attack pauses the creature where
+    /// it provoked one; it walks on once the reaction is resolved (protocol §4.1). No route
+    /// answers `rejected` with `no_path`.
     Move {
         /// The creature that moves.
         actor: Handle,
@@ -391,7 +392,8 @@ pub enum CommandResult {
     EndTurn {},
     /// The move happened.
     Move {
-        /// Distance moved, in feet; less than the route when an opportunity attack stopped it.
+        /// Distance moved by the time of the response, in feet; less than the route while an
+        /// opportunity attack holds the creature where it provoked, or when the attack stopped it.
         moved_ft: f32,
         /// Creatures that got an opportunity attack prompt from this move, in prompt order.
         provoked: Vec<Handle>,
