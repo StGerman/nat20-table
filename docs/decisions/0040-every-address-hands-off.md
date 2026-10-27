@@ -1,6 +1,6 @@
 # 0040. Every address to a companion hands it the floor
 
-- **Status:** Accepted
+- **Status:** Accepted (its carry of a reply to the line that handed its speaker the floor superseded by [0042](0042-reply-to-a-hand-off-is-not-carried.md): that reply reaches the brief only)
 - **Date:** 2026-10-27
 - **Decided by:** Stas, on a decision card in the party-talk thread, after table #139 shipped option A as a proposal
 

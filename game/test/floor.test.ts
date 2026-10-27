@@ -2,7 +2,7 @@
 // players, what a raised hand says, the speakers' order, and the hand-off. Pure functions, no engine.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { handAnswer, handOff, namedIn, speakingOrder, type Hand } from "../src/table/floor.ts";
+import { answersHandOff, handAnswer, handOff, namedIn, speakingOrder, type Hand } from "../src/table/floor.ts";
 
 const PLAYERS = ["torva", "maren", "ilsa"];
 const NAMES = new Map([
@@ -92,4 +92,13 @@ test("a line spoken to a companion hands it the floor once a round, whatever its
   assert.deepEqual(handOff([to("ilsa", "maren")], ["maren"], PLAYERS, true), { queue: ["maren"], carried: [] });
   // The human's character and the speaker itself are never handed the floor.
   assert.deepEqual(handOff([to("torva", "bren"), to("torva", "torva")], [], PLAYERS, false), { queue: [], carried: [] });
+});
+
+test("only a line back to the one who handed the speaker the floor answers the hand-off", () => {
+  const handed = { from: "torva", to: "ilsa" };
+  assert.equal(answersHandOff({ from: "ilsa", to: "torva" }, handed), true);
+  // A line to someone else, a line by someone else, or any line outside a hand-off wake doesn't.
+  assert.equal(answersHandOff({ from: "ilsa", to: "maren" }, handed), false);
+  assert.equal(answersHandOff({ from: "maren", to: "torva" }, handed), false);
+  assert.equal(answersHandOff({ from: "ilsa", to: "torva" }, undefined), false);
 });

@@ -124,6 +124,16 @@ export interface Address {
 /** The address that made a round's hand-off; `raised` when its addressee still had a hand up. */
 export type HandedOff = Address & { raised: boolean };
 
+/**
+ * Whether `address` answers the line that handed its speaker the floor: it goes back to that
+ * line's speaker. Such a reply reaches its addressee's brief, but never hands off or is carried,
+ * so an exchange between two players ends with the reply instead of opening the next round
+ * (decision 0040).
+ */
+export function answersHandOff(address: Address, handed: Address | undefined): boolean {
+  return handed !== undefined && address.from === handed.to && address.to === handed.from;
+}
+
 /** The rest of a talk round after a floor wake's addresses (`handOff`). */
 export interface AfterAddresses {
   /** The raised hands still to speak, in order; a moved addressee is first. */

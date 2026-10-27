@@ -682,7 +682,7 @@ test("a narration that speaks to a player still gives it the floor when a later 
   assert.deepEqual(report.talkRounds.map((r) => r.named), [[], ["torva"]]);
 });
 
-test("a line to a companion hands it the floor next, once a round; one made in the hand-off opens the next round", async () => {
+test("a line to a companion hands it the floor next, once a round; one made in the hand-off opens the next round, unless it answers the hand-off", async () => {
   const say = (line: string, to?: string) => async (tools: PlayerTools) => void (await tools.say(line, to));
   const { t, players, seat, report } = await play({
     seed: 27,
@@ -710,8 +710,9 @@ test("a line to a companion hands it the floor next, once a round; one made in t
   assert.match(ilsa, /torva says to you: Ilsa, read the sign for us\./);
   assert.match(ilsa, /You have the floor: torva spoke to you\./);
   // Her own line to Maren, made in the hand-off, opens the next round with Maren; Maren's remark to Ilsa
-  // takes that round's hand-off, and the lines after it wait for the round after.
-  assert.deepEqual([second.named, second.handed_to, second.floor_wakes, second.carried], [["maren"], "ilsa", 3, ["maren", "ilsa"]]);
+  // takes that round's hand-off. Ilsa's answer back to Maren there ends the exchange: it isn't carried,
+  // while Torva's line to Ilsa after the hand-off waits for the round after.
+  assert.deepEqual([second.named, second.handed_to, second.floor_wakes, second.carried], [["maren"], "ilsa", 3, ["ilsa"]]);
   const maren = players.get("maren")!.briefings.filter((b) => b.wake === "declare").at(-1)!.briefing;
   assert.match(maren, /ilsa says to you: Maren, hold the lamp\?/);
   assert.match(maren, /You have the floor first: a companion spoke to you, and you haven't answered yet\./);

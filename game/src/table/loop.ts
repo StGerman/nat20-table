@@ -6,7 +6,7 @@ import { EngineStopped, type Event, type Handle, type State } from "@nat20-table
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
-import { FLOOR_BOUND, handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
+import { FLOOR_BOUND, answersHandOff, handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
 import { DmTools, HandTools, PlayerTools, send } from "./tools.ts";
@@ -710,7 +710,7 @@ export class TableLoop {
    * wake. Then the raised hands have the floor one at a time, each hearing what was said before
    * it, until the round holds `floorBound` floor wakes. A line spoken to a companion on the floor
    * hands it the floor next, once a round (§4.4, decision 0040). An address the round can't answer
-   * opens the next round.
+   * opens the next round, unless it replies to the line that handed its speaker the floor.
    */
   private async talkRound(humanLine: string): Promise<void> {
     const started = performance.now();
@@ -782,7 +782,9 @@ export class TableLoop {
     let used = false;
     let pending: HandedOff | undefined;
     let handedWake: Handle | undefined;
-    const heard = (addresses = this.table.takeAddresses()) => {
+    // A reply to the line that handed the speaker the floor is heard in its addressee's brief only.
+    const heard = (all = this.table.takeAddresses(), handed?: Address) => {
+      const addresses = all.filter((a) => !answersHandOff(a, handed));
       const after = handOff(addresses, queue, handles, used);
       queue = after.queue;
       if (after.handedTo) {
@@ -811,7 +813,7 @@ export class TableLoop {
       if (handed) handedWake = handle;
       const why = !handed ? "you raised your hand" : `${handed.from} spoke to you${handed.raised ? ", and you raised your hand" : ""}`;
       await this.takeFloor(handle, `You have the floor: ${why}. Say your line with say if it still needs saying, and answer with what you set out to do in one sentence, or PASS.`);
-      heard();
+      heard(undefined, handed);
     }
     this.carried = carried;
     const { spoke, declared, firstLineMs } = this.table.talkSoFar();
