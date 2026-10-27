@@ -117,7 +117,7 @@ sequenceDiagram
 | Request | Ilsa to Torva: "Break that door, quietly." | yes |
 | Proposal | Ilsa to everyone: "We tie him up and he walks first." | yes, from whoever it names |
 
-The four forms aren't a field: the model reads them from the words, and the goal 6 numbers come from reading the transcript. The speaker marks only the column the loop needs, whether the line wants an answer: `asks` on `say`, set for a request or a proposal.
+The four forms aren't a field: the model reads them from the words, and the goal 6 numbers come from reading the transcript. The speaker marks only the column the loop needs, whether the line wants an answer: `asks` on `say`, set for a request or a proposal (decision 0040).
 
 **Where a character's view of the others comes from.** Two sources the player agent already has, both its own:
 
