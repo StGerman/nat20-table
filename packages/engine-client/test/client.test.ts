@@ -97,11 +97,30 @@ test("an engine that exits fails the pending request and every later one", async
   const client = await EngineClient.start(fake);
   await assert.rejects(client.request("dm", { cmd: "new_session" }), (error: Error) => {
     assert.ok(error instanceof EngineStopped);
-    // The stderr tail may or may not be read before the exit is seen, so only the exit is checked.
-    assert.match(error.message, /exited \(code 3\)/);
+    // The engine's last stderr line is read before the exit is reported.
+    assert.match(error.message, /exited \(code 3\); last stderr: fake engine: crashing on purpose/);
     return true;
   });
   await assert.rejects(client.request("dm", { cmd: "hello" }), EngineStopped);
+});
+
+test("an engine log that can't be written stops the engine instead of throwing", async () => {
+  const logFile = path.join(tmpdir(), "no-such-dir-for-engine-log", "engine-log.jsonl");
+  await assert.rejects(EngineClient.start(fake, { logFile }), (error: Error) => {
+    assert.ok(error instanceof EngineStopped);
+    assert.match(error.message, /engine log could not be written/);
+    return true;
+  });
+});
+
+test("a stderr file that can't be written stops the engine instead of throwing", async () => {
+  const stderrFile = path.join(tmpdir(), "no-such-dir-for-engine-stderr", "engine-stderr.log");
+  const client = await EngineClient.start(fake, { stderrFile });
+  await assert.rejects(client.request("dm", { cmd: "new_session" }), (error: Error) => {
+    assert.ok(error instanceof EngineStopped);
+    assert.match(error.message, /stderr could not be written/);
+    return true;
+  });
 });
 
 test("an engine that doesn't answer in time is stopped", async () => {

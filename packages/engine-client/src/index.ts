@@ -67,12 +67,20 @@ export class EngineClient {
     });
     createInterface({ input: this.child.stdout }).on("line", (line) => this.answer(line));
     createInterface({ input: this.child.stderr }).on("line", (line) => {
-      if (options.stderrFile) appendFileSync(options.stderrFile, line + "\n");
       this.stderrTail.push(line);
       if (this.stderrTail.length > STDERR_LINES_KEPT) this.stderrTail.shift();
+      if (options.stderrFile && !this.stopped) {
+        try {
+          appendFileSync(options.stderrFile, line + "\n");
+        } catch (error) {
+          this.abort(`the engine's stderr could not be written to ${options.stderrFile}: ${(error as Error).message}`);
+        }
+      }
     });
     this.child.on("error", (error) => this.stop(`the engine ${binary} could not run: ${error.message}`));
-    this.child.on("exit", (code, signal) => this.stop(`the engine exited (${signal ?? `code ${code}`})`));
+    // `close` comes after the engine's stdout and stderr are read to the end, so a crash's last
+    // lines are in the error and a response written just before the exit still arrives.
+    this.child.on("close", (code, signal) => this.stop(`the engine exited (${signal ?? `code ${code}`})`));
     // Writing to an engine that just died must not throw out of the event loop.
     this.child.stdin.on("error", () => undefined);
   }
@@ -99,10 +107,7 @@ export class EngineClient {
     const request = envelope(viewer, command, id);
     return new Promise((resolve, reject) => {
       const timeoutMs = this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-      const timer = setTimeout(() => {
-        this.stop(`the engine did not answer ${request.cmd} (${id}) within ${timeoutMs} ms`);
-        this.child.kill();
-      }, timeoutMs);
+      const timer = setTimeout(() => this.abort(`the engine did not answer ${request.cmd} (${id}) within ${timeoutMs} ms`), timeoutMs);
       this.pending.set(id, { request, resolve, reject, timer });
       this.child.stdin.write(JSON.stringify(request) + "\n");
     });
@@ -118,16 +123,35 @@ export class EngineClient {
   }
 
   private answer(line: string): void {
-    const response = JSON.parse(line) as Response;
+    let response: Response;
+    try {
+      response = JSON.parse(line) as Response;
+    } catch {
+      this.abort(`the engine wrote a line that is not JSON: ${line.slice(0, 200)}`);
+      return;
+    }
     const id = response.id ?? undefined;
     const pending = id === undefined ? undefined : this.pending.get(id);
     if (id === undefined || !pending) return;
+    // The log is the run's record (the audit reads it), so a response that can't be logged fails
+    // like a crash: every request still waiting is rejected and the engine is stopped.
+    if (this.options.logFile) {
+      try {
+        appendFileSync(this.options.logFile, JSON.stringify({ request: pending.request, response }) + "\n");
+      } catch (error) {
+        this.abort(`the engine log could not be written to ${this.options.logFile}: ${(error as Error).message}`);
+        return;
+      }
+    }
     this.pending.delete(id);
     clearTimeout(pending.timer);
-    if (this.options.logFile) {
-      appendFileSync(this.options.logFile, JSON.stringify({ request: pending.request, response }) + "\n");
-    }
     pending.resolve(response);
+  }
+
+  /** Stops the client and the engine process: for a failure no request can recover from. */
+  private abort(reason: string): void {
+    this.stop(reason);
+    this.child.kill();
   }
 
   private stop(reason: string): void {
