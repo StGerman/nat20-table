@@ -2,7 +2,8 @@
 // agent turn in `usage.jsonl` next to the transcript, whether the turn ended with its result or not.
 // Live runs use Stas's Claude subscription (decision 0036), so the cost here is the API-equivalent
 // price, kept as a reference.
-import { appendFileSync } from "node:fs";
+import { appendFileSync, mkdirSync } from "node:fs";
+import path from "node:path";
 
 /** What one agent turn cost: one user message in, until the session's `result` for it. */
 export interface UsageRecord {
@@ -66,10 +67,16 @@ export class UsageLog {
   readonly records: UsageRecord[] = [];
   private readonly file: string | undefined;
 
-  /** Creates `file` at once, so a run folder always has one, even for a run with no model call. */
+  /**
+   * Creates `file` at once, and its folder if there is none yet, so a run folder always has one,
+   * even for a run with no model call.
+   */
   constructor(file?: string) {
     this.file = file;
-    if (file) appendFileSync(file, "");
+    if (file) {
+      mkdirSync(path.dirname(file), { recursive: true });
+      appendFileSync(file, "");
+    }
   }
 
   add(record: UsageRecord): void {

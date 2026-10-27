@@ -1,5 +1,8 @@
 // The seat configuration of M6 spec §3.2 and each turn's usage record, checked without calling a model.
 import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 import { z } from "zod";
 import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
@@ -76,6 +79,23 @@ test("usage sums tokens and prices them at the API list price", () => {
     agent: "dm", turns: 2, p50_ms: 100, p95_ms: 300, input_tokens: 20, cache_read_tokens: 0,
     cache_write_tokens: 0, output_tokens: 2, api_equivalent_usd: 1,
   });
+});
+
+test("a usage log makes its run folder when there is none yet", () => {
+  // `npm run spike` crashed with ENOENT here: its usage log was opened before its run folder existed.
+  const dir = mkdtempSync(path.join(tmpdir(), "usage-log-"));
+  try {
+    const file = path.join(dir, "runs", "spike-1", "usage.jsonl");
+    const usage = new UsageLog(file);
+    assert.equal(readFileSync(file, "utf8"), "");
+    usage.add({
+      agent: "dm", model: "m", effort: "low", purpose: "t", session_turn: 1, outcome: "ok", input_tokens: 1, cache_read_tokens: 0,
+      cache_write_tokens: 0, output_tokens: 1, api_calls: 1, wall_ms: 1, ttft_ms: null, api_equivalent_usd: 0, tools: [], at: "",
+    });
+    assert.equal(readFileSync(file, "utf8").split("\n").filter(Boolean).length, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 /** A stand-in for the SDK's `query`: answers each user message with `answer`'s messages. */
