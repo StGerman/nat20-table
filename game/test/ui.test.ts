@@ -11,7 +11,7 @@ import { InkSeat } from "../src/ui/ink-seat.ts";
 import { readLine } from "../src/ui/input.ts";
 import { eventLines } from "../src/ui/lines.ts";
 import type { Event } from "@nat20-table/engine-client";
-import { formatSheet, tellable, type LegalActionsResult } from "../src/view.ts";
+import { formatSheet, noDeaths, tellable, type LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
 
 /** A terminal's output as Ink writes it in debug mode: every frame whole. */
@@ -280,8 +280,17 @@ test("a dead creature's empty turns are told to nobody, and its turns before it 
     at(5, "turn_end", { actor: "goblin_2" }),
     at(6, "turn_start", { actor: "bren" }),
   ];
-  const deaths = new Map<string, number>();
+  const deaths = noDeaths();
   // A reader that is told the death first, then another that reads the whole log afterwards.
   assert.deepEqual(tellable(log.slice(2), deaths).map((e) => e.seq), [3, 6]);
   assert.deepEqual(tellable(log, deaths).map((e) => e.seq), [1, 2, 3, 6]);
+  // A later scene may place a new creature under the same handle: its turns are told again.
+  const later = [
+    at(7, "scene_loaded", { scene_id: "s5", mode: "explore" }),
+    at(8, "turn_start", { actor: "goblin_2" }),
+    at(9, "life_state", { target: "goblin_2", state: "dead" }),
+    at(10, "turn_end", { actor: "goblin_2" }),
+  ];
+  assert.deepEqual(tellable(later, deaths).map((e) => e.seq), [7, 8, 9]);
+  assert.deepEqual(tellable(log.slice(3, 5), deaths).map((e) => e.seq), [], "a reader behind still drops the first goblin_2's empty turns");
 });

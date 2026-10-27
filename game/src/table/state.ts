@@ -4,7 +4,7 @@
 import { appendFileSync } from "node:fs";
 import type { Awaiting, Event, Handle, Response } from "@nat20-table/engine-client";
 import type { GameEngine } from "../engine.ts";
-import { eventLine, tellable } from "../view.ts";
+import { eventLine, noDeaths, tellable } from "../view.ts";
 import { Transcript } from "./transcript.ts";
 import type { Seat, TableEvent, ToolOutcome } from "./types.ts";
 
@@ -57,8 +57,8 @@ export class TableState {
   readonly notes = new Map<Handle, Array<{ kind: NoteKind; text: string }>>();
   /** What the DM established in fiction (spec §3.6). Only the DM reads it. */
   readonly dmMemory: string[] = [];
-  /** Each dead creature and the `seq` of its death, so its later empty turns are told to nobody. */
-  readonly deaths = new Map<Handle, number>();
+  /** Deaths and scene loads read so far, so a dead creature's later empty turns are told to nobody. */
+  readonly deaths = noDeaths();
   /**
    * Rejections and guard refusals in the decision each seat is making now (spec §6), by seat: a
    * player's handle, or `dm`. Per seat, because the AI players declare in parallel.
