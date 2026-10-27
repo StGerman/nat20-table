@@ -17,7 +17,10 @@ if (!dir || !["verdict", "finish"].includes(stage) || !existsSync(dir)) {
   process.exit(2);
 }
 if (stage === "finish" && !existsSync(path.join(dir, AUDIT_JSON))) {
-  const pack = (readRunRecord(dir).settings.pack?.value as string | undefined) ?? path.join(REPO, "scenarios/the_silent_mill");
+  // The pack as the run recorded it, when it is on this machine; a run from the Mac read in a thread
+  // has a path that only the Mac has, and the repo's own pack in its place.
+  const recorded = readRunRecord(dir).settings.pack?.value as string | undefined;
+  const pack = recorded && existsSync(recorded) ? recorded : path.join(REPO, "scenarios/the_silent_mill");
   console.log(`Running the audit and leak scan over ${dir}`);
   writeFileSync(path.join(dir, AUDIT_JSON), JSON.stringify(audit(pack, dir), null, 2) + "\n");
 }
