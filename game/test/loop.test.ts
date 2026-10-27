@@ -63,7 +63,7 @@ async function play(setup: Setup) {
     pack: setup.pack,
     guards: setup.guards,
     players: handles,
-    seat: setup.seat ?? new ScriptedSeat("bren", [], ScriptedSeat.fight),
+    seat: setup.seat ?? new ScriptedSeat("bren", [], ScriptedSeat.fight, handles),
     narrationGuard: setup.narrationGuard,
     speechGuard: setup.speechGuard,
   });
@@ -398,6 +398,17 @@ test("a reaction the agent doesn't take is declined", async () => {
     assert.equal(t.requests().filter((r) => r.cmd === "react" && r.actor === handle && r.choice === null).length, times);
   }
   assert.ok(asked > 0);
+});
+
+test("the scripted human lets a reaction to an ally pass, and takes one to a foe", () => {
+  // In the first live Scene 3 run, scripted Bren took an Opportunity Attack on Torva walking away.
+  const seat = new ScriptedSeat("bren", [], ScriptedSeat.fight, ["torva", "maren", "ilsa"]);
+  const offered = (about: string) => {
+    seat.show({ kind: "reaction", summary: `bren may react to ${about}.`, options: ["Opportunity Attack"] });
+    return ScriptedSeat.fight({ kind: "reaction" }, seat);
+  };
+  assert.deepEqual(offered("torva"), { kind: "reaction", take: false });
+  assert.deepEqual(offered("wolf_1"), { kind: "reaction", take: true });
 });
 
 test("the human's refused number gets the engine's sentence and the list again, and is counted", async () => {

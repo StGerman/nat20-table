@@ -112,7 +112,7 @@ const carried = await startAt(engine, flags.pack!, plan.first, [party.human, ...
 const transcript = new Transcript(path.join(runDir, "transcript.jsonl"), () => engine.logHead);
 // You at the keyboard, or a seat that fights by rule. Ctrl+C ends the table between decisions.
 const ink = flags.seat === "ink" ? new InkSeat(party.human, { onQuit: () => table.end("the human quit") }) : undefined;
-const seat: Seat = ink ?? new ScriptedSeat(party.human, [], ScriptedSeat.fight);
+const seat: Seat = ink ?? new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai);
 const table = new TableState({
   engine,
   human: party.human,

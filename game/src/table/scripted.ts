@@ -68,7 +68,7 @@ function choose(options: ActionOption[], inReachOnly = false): { option_id: stri
  * Opportunity Attack on an ally walking away, which the rules allow and no player takes).
  */
 async function reactUnlessAlly(me: Handle, briefing: string, tools: PlayerTools): Promise<void> {
-  const about = /may react to ([\w-]+)\.$/m.exec(briefing)?.[1];
+  const about = reactingTo(briefing);
   if (about && about !== me) {
     const state = (await tools.look()).data as State | undefined;
     const others = state?.view === "player" ? state.others : [];
@@ -180,6 +180,11 @@ export function walkOnDm(order: string[], fights: Record<string, string>, party:
   });
 }
 
+/** The creature a reaction answers, from the engine's trigger sentence ("bren may react to torva."). */
+function reactingTo(text: string): Handle | undefined {
+  return /may react to ([\w-]+)\.$/m.exec(text)?.[1];
+}
+
 /**
  * A human seat that answers from a list of intents in order, then from a fallback policy (by
  * default `ScriptedSeat.pass`). It keeps what the loop showed it, so a policy can pick by rule.
@@ -191,16 +196,28 @@ export class ScriptedSeat implements Seat {
   choices: Choice[] = [];
   /** The fight policy's place in its turn plan, reset by each "Your turn" status line. */
   private plan = { step: 0, attacks: 0, refused: false };
+  /** The other party members: a reaction that answers one of them is let pass. */
+  readonly allies: ReadonlySet<Handle>;
   private readonly answers: PlayerIntent[];
   private readonly fallback: (prompt: HumanPrompt) => PlayerIntent;
 
-  constructor(handle: Handle, answers: PlayerIntent[] = [], fallback?: (prompt: HumanPrompt, seat: ScriptedSeat) => PlayerIntent) {
+  constructor(
+    handle: Handle,
+    answers: PlayerIntent[] = [],
+    fallback?: (prompt: HumanPrompt, seat: ScriptedSeat) => PlayerIntent,
+    allies: Handle[] = [],
+  ) {
     this.handle = handle;
     this.answers = [...answers];
     this.fallback = (prompt) => (fallback ?? ScriptedSeat.pass)(prompt, this);
+    this.allies = new Set(allies);
   }
 
-  /** Ends every combat turn, takes every reaction, waits out of combat. */
+  /**
+   * Ends every combat turn, waits out of combat, and takes every reaction except one that answers
+   * an ally (an Opportunity Attack on a party member walking away, which the rules allow and no
+   * player takes).
+   */
   static pass(prompt: HumanPrompt, seat: ScriptedSeat): PlayerIntent {
     switch (prompt.kind) {
       case "combat_turn":
@@ -208,8 +225,11 @@ export class ScriptedSeat implements Seat {
         const end = seat.choices.find((c) => c.act?.kind === "end_turn");
         return end ? { kind: "option", number: end.number } : { kind: "command", name: "options" };
       }
-      case "reaction":
-        return { kind: "reaction", take: true };
+      case "reaction": {
+        const offered = [...seat.shown].reverse().find((e) => e.kind === "reaction");
+        const about = offered?.kind === "reaction" ? reactingTo(offered.summary) : undefined;
+        return { kind: "reaction", take: !(about && seat.allies.has(about)) };
+      }
       case "paused":
         return { kind: "command", name: "pause" };
       default:

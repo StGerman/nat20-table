@@ -71,7 +71,7 @@ const table = new TableState({
   engine,
   human: party.human,
   players: party.ai,
-  seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight),
+  seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai),
   transcript,
   inputsFile: path.join(runDir, "inputs.jsonl"),
   ...guards(flags.scenes!, engine),
