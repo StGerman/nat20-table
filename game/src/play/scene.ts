@@ -154,5 +154,8 @@ const report = [
   ...transcript.records.filter((r) => r.speaker === "dm" && r.kind === "narration").map((r) => `> ${r.text}`),
 ].join("\n");
 writeFileSync(path.join(runDir, "report.md"), report + "\n");
-console.log(`\n${report}\n\nWritten to ${path.relative(process.cwd(), runDir)}/. Send report.md back to the thread.`);
+const written = `Written to ${path.relative(process.cwd(), runDir)}/. Send report.md back to the thread.`;
+// The report is the DM's view (monster Hit Points, lines said to AI players only), so the terminal
+// you just played in shows only how the run ended; the rest stays in the run folder.
+console.log(ink ? `\nThe run is over: ${run?.ended ?? "it failed"}. ${written}` : `\n${report}\n\n${written}`);
 process.exitCode = failure || (checked && !checked.passed) ? 1 : 0;

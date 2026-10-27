@@ -26,7 +26,7 @@ A project thread can run the live commands on your Mac through Remote Control, s
 - **"Require trusted devices"** is on for your account (Settings, Account). Project threads can't start Remote Control sessions while it is on. Either turn it off, or skip Remote Control and run the Part 2 commands yourself and paste the run report into the thread.
 - The Mac must be connected: in a terminal, in the repo folder, run `claude remote-control`, or connect the Mac in the Claude Desktop app's settings.
 
-Every Part 2 command runs the same way in both cases. It needs no terminal input except where it says "you play", prints a short report at the end, and writes everything to `runs/<timestamp>/`, so a thread can run it and read the result.
+Every Part 2 command runs the same way in both cases. It needs no terminal input except where it says "you play", prints a short report at the end (after a run you played in the terminal UI, only how it ended and where the report is, since the report shows the DM's view), and writes everything to `runs/<timestamp>/`, so a thread can run it and read the result.
 
 ## Part 2: the runs
 
