@@ -1,4 +1,4 @@
-// The situation panel and the turn block (AGT-35): the data made from the human's own state, the
+// The situation panel and the turn block (AGT-36): the data made from the human's own state, the
 // rows at pinned terminal sizes (80x24, 60 columns, the fold), the palette, the seat's frames, and
 // the loop sending situations on the real engine, and the loading indicator while the table waits. Needs `cargo build -p nat20-api-server`.
 import assert from "node:assert/strict";

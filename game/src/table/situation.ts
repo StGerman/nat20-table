@@ -1,4 +1,4 @@
-// The situation panel's data (AGT-35, engine/m6/situation-panels-design.md): what the human's
+// The situation panel's data (AGT-36, engine/m6/situation-panels-design.md): what the human's
 // character perceives, made from the human's own `get_state` and `legal_actions`, both projected
 // for the human's viewer (Rule 3). Nothing here comes from the DM's view or the scenario, so the
 // panel can't show anything `/where`, `/options` and `/sheet` don't.

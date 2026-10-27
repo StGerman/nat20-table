@@ -1,4 +1,4 @@
-// The situation panel and the turn block (AGT-35, engine/m6/situation-panels-design.md), laid out
+// The situation panel and the turn block (AGT-36, engine/m6/situation-panels-design.md), laid out
 // as rows of styled spans for a terminal size. Pure, so the layout is tested without Ink. Checked
 // against the tui-design skill (github.com/gfargo/tui-design-skill): no borders, one accent and
 // one word per state, the side said once per group, distance in feet only, `in reach` only where

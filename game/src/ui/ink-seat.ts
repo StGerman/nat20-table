@@ -1,7 +1,7 @@
 // The human's seat in the terminal (M6 spec §3.4, step 11, TASKS.md AGT-7): an Ink app on the
 // `Seat` interface. Everything the loop shows scrolls up as it comes, rolls inline with their ids;
 // under it the situation panel and, while the table waits on the human, the turn block (the budget
-// and the numbered options, AGT-35), then what the table waits for (while no prompt is open, a
+// and the numbered options, AGT-36), then what the table waits for (while no prompt is open, a
 // braille spinner with who is thinking) and the line being typed. The loop answers the slash
 // commands (`/sheet`, `/where`, `/options`, `/log`, `/pause`, `/quit`); `/help` and `/panel` are
 // answered here. Written with `createElement`, not JSX, so the game still

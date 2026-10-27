@@ -147,7 +147,7 @@ const loop = new TableLoop({
   players,
   onScene: plan.onScene,
   maxSteps: Number(flags["max-steps"]),
-  // The situation panel (AGT-35) is drawn only at the terminal.
+  // The situation panel (AGT-36) is drawn only at the terminal.
   situation: ink !== undefined,
 });
 

@@ -50,7 +50,7 @@ interface Setup {
   guards?: (engine: GameEngine) => { narrationGuard: TextGuard; speechGuard: TextGuard };
   onScene?: LoopOptions["onScene"];
   maxSteps?: number;
-  /** Send the human's seat situations, as the terminal does (AGT-35). */
+  /** Send the human's seat situations, as the terminal does (AGT-36). */
   situation?: boolean;
   /** Sees the table before the run starts. */
   onTable?: (t: TestTable) => void;

@@ -31,7 +31,7 @@ export interface LoopOptions {
   maxSteps?: number;
   /**
    * Sends the human's seat a `situation` before each decision and with each set of options, for
-   * the terminal's situation panel (AGT-35). Off for seats that draw no panel. Default false.
+   * the terminal's situation panel (AGT-36). Off for seats that draw no panel. Default false.
    */
   situation?: boolean;
 }
