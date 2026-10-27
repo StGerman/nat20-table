@@ -139,7 +139,7 @@ Cost: no new wakes beyond the hand-off, one floor wake (about 5.7 s, $0.03) in a
 
 ### 4.5 Role and values in the cards
 
-Each AI player's card gets a section "At the table" with four lines: when the character speaks, when it acts without a word, when it stays silent, and when it addresses its companions. It is our own text, drawn from what the cards already say (Temperament, With the party, Voice). Drafts:
+Each AI player's card gets a section "Talk and silence" (a `##` heading, like every card section; `npm run pack:check` refuses a card without one) with four lines: when the character speaks, when it acts without a word, when it stays silent, and when it addresses its companions. It is our own text, drawn from what the cards already say (Temperament, With the party, Voice). Drafts:
 
 | | Speaks when… | Acts silently when… | Stays silent when… | Addresses companions when… |
 |---|---|---|---|---|
@@ -176,7 +176,7 @@ Speech still reaches everyone directly: `Torva says: …` is shown at once, and 
 | `game/src/table/loop.ts` | `declarations()` becomes the hand-raise round; R0 in the turn brief; R1 triggers and background wakes | M |
 | `game/src/table/state.ts` | §6; lines are delivered as they are spoken; `collect`/`commit` leave the talk round | XS |
 | `game/src/agents/player.ts` | the prompt of §4.6; the `hand` wake; `to` on `say`; the R1 `bark` wake with `say` only | S |
-| `scenarios/the_silent_mill/cards/*.md` | the "At the table" section | XS |
+| `scenarios/the_silent_mill/cards/*.md` | the "Talk and silence" section | XS |
 | `game/src/ui/lines.ts` | the "speaks to you" mark | XS |
 | `game/src/table/scripted.ts`, `game/test/` | scripted players that pass, raise hands and address each other; the test that the second speaker heard the first | S |
 | run report | speakers per talk round, silent share, time to first line, round wall time by phase, addresses and answers, reactions per fight | S |
@@ -189,7 +189,7 @@ Milestone 7, first block, before the three timed playthroughs (Stas, 2026-10-27)
 
 One step per PR, stacked, each with scripted tests in CI (CI never calls a model):
 
-1. AGT-31: the prompt of §4.6, R0, the cards' "At the table" section, and §6. Shows on the next run.
+1. AGT-31: the prompt of §4.6, R0, the cards' "Talk and silence" section, and §6. Shows on the next run.
 2. AGT-32: the hand-raise round of §4.2 and §4.3, and the report's round measures.
 3. AGT-33: addressing a companion, §4.4.
 4. AGT-34: R1, if Stas picks it.

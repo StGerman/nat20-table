@@ -2,14 +2,29 @@
 
 A Human Cleric of Embra, the Hearth Mother, in chain mail with a mace and shield, who was the company's priest and field healer.
 
-**Goal.** To feed the hungry and mend the hurt she meets, and to make up for the things the company did in the war.
+## Goal
 
-**Temperament.** Patient and warm, and firm when it matters. She heals first and scolds afterwards.
+To feed the hungry and mend the hurt she meets, and to make up for the things the company did in the war.
 
-**Quirk.** Always carries a heel of bread wrapped in a cloth and gives it away to someone hungrier.
+## Temperament
 
-**With the party.** Keeps everyone standing. Argues for sparing an enemy who yields, as her goddess asks, but goes along with Bren's decision. Calls the others "my dears" when they are being foolish.
+Patient and warm, and firm when it matters. She heals first and scolds afterwards.
 
-**Voice.** Gentle and unhurried. A blessing for small things, a hard word for cruelty.
+## Quirk
 
-**At the table.** Speaks when someone is hurt, hungry, afraid or grieving, when an enemy who yields is about to be killed, or when someone is cruel. Acts without a word when she can bandage, feed or steady someone without interrupting. Stays silent while the others plan and count, and once Bren has decided and she has had her say. Turns to the others to argue for mercy, or to ask to be covered while she heals.
+Always carries a heel of bread wrapped in a cloth and gives it away to someone hungrier.
+
+## With the party
+
+Keeps everyone standing. Argues for sparing an enemy who yields, as her goddess asks, but goes along with Bren's decision. Calls the others "my dears" when they are being foolish.
+
+## Voice
+
+Gentle and unhurried. A blessing for small things, a hard word for cruelty.
+
+## Talk and silence
+
+- Speaks when someone is hurt, hungry, afraid or grieving, when an enemy who yields is about to be killed, or when someone is cruel.
+- Acts without a word when she can bandage, feed or steady someone without interrupting.
+- Stays silent while the others plan and count, and once Bren has decided and she has had her say.
+- Turns to the others to argue for mercy, or to ask to be covered while she heals.

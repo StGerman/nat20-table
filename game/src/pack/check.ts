@@ -1,11 +1,11 @@
 // The pack check (M6 spec §4, decision 0031, TASKS.md MAP-4): what can break the game in a scenario
 // pack is caught before anyone plays it. CI runs it on every pack in `scenarios/`; anyone can run
 // it on a pack anywhere with `npm run pack:check -- <pack>`.
-import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../engine.ts";
-import { Adventure, FORMAT_VERSIONS } from "./adventure.ts";
+import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS } from "./adventure.ts";
 
 /** Every pack in the repository: each folder of `scenarios/`. */
 export function repoPacks(): string[] {
@@ -114,6 +114,11 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   }
   for (const member of adventure.party) {
     if (member.seat === "ai" && !member.card) problem(`party ${member.handle} has an AI seat and no card`);
+    // Any character may be played by an AI, so every card has every section, the human's too.
+    const card = member.card ? path.resolve(dir, member.card) : undefined;
+    if (!card || !existsSync(card) || !statSync(card).isFile()) continue;
+    const headings = new Set([...readFileSync(card, "utf8").matchAll(/^## +(.+?)\s*$/gm)].map((m) => m[1]));
+    for (const section of CARD_SECTIONS) if (!headings.has(section)) problem(`${member.card} has no "## ${section}" section`);
   }
 
   // Every id it names.
