@@ -1381,6 +1381,38 @@ fn a_spent_hit_point_die_stays_spent_in_the_next_scene() {
     );
 }
 
+/// A submit reuses the option list the last `legal_actions` built (API-17), but never across a
+/// command that changed the game: a short rest that gives Action Surge back makes it a legal
+/// submit again, though the list kept from before the rest did not have it.
+#[test]
+fn a_submit_after_a_rest_sees_what_the_rest_gave_back() {
+    let mut api = duel();
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "m3_s1_green" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let surge = json!({ "cmd": "submit", "actor": "bren", "option_id": "fighter/action_surge" });
+    let first = api.call("dm", surge.clone());
+    assert_eq!(first["ok"], true, "{first}");
+    let legal = api.call("dm", json!({ "cmd": "legal_actions", "actor": "bren" }));
+    let listed = |key: &str| {
+        legal["result"][key]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|o| o["option_id"] == "fighter/action_surge")
+    };
+    assert!(!listed("options") && listed("unavailable"), "{legal}");
+    let rested = api.call(
+        "dm",
+        json!({ "cmd": "short_rest", "participants": ["bren"] }),
+    );
+    assert_eq!(rested["ok"], true, "{rested}");
+    let again = api.call("dm", surge);
+    assert_eq!(again["ok"], true, "{again}");
+}
+
 /// Each initiative roll's roller and Advantage state, in initiative order.
 fn initiative_rolls(started: &Value) -> Vec<(String, String)> {
     started["events"]

@@ -197,6 +197,7 @@ struct Walk {
     from: Point3<f32>,
 }
 
+#[derive(Clone)]
 struct OptionEntry {
     option: ActionOption,
     action_id: ActionId,
@@ -279,6 +280,20 @@ pub struct Game {
     spawn_round: u32,
     /// How many times the engine did not settle this session; each is a bug, reported on stderr.
     stalls: usize,
+    /// The option list the last `legal_actions` built, kept for the `submit` that follows it
+    /// (API-17): building it probes a path for every option and target. The server drops it on
+    /// every command that can change the game ([`Game::forget_options`]), and a `submit` uses
+    /// it up.
+    listed: Option<Listed>,
+    /// Set while [`Game::as_if_next_turn`] runs, so a kept option list says which it was.
+    next_turn: bool,
+}
+
+/// One creature's option list, as built now or as if its next turn began (explore mode).
+struct Listed {
+    entity: Entity,
+    next_turn: bool,
+    options: Vec<OptionEntry>,
 }
 
 impl Game {
@@ -582,6 +597,26 @@ impl Game {
             walks: Vec::new(),
             spawn_round: 0,
             stalls: 0,
+            listed: None,
+            next_turn: false,
+        }
+    }
+
+    /// Drops the option list `legal_actions` kept (API-17). The server calls it before every
+    /// command that can change the game, so a `submit` only ever reuses a list built on the
+    /// state it acts on.
+    pub fn forget_options(&mut self) {
+        self.listed = None;
+    }
+
+    /// The options `entity` can take now: the list `legal_actions` kept, when it was built for
+    /// the same creature, both now or both as if its next turn began; else built afresh.
+    fn options_now(&mut self, entity: Entity) -> Vec<OptionEntry> {
+        match self.listed.take() {
+            Some(listed) if listed.entity == entity && listed.next_turn == self.next_turn => {
+                listed.options
+            }
+            _ => self.options(entity),
         }
     }
 
@@ -2097,16 +2132,25 @@ impl Game {
         let resources = systems::helpers::get_component_clone::<ResourceMap>(world, entity);
         let cooldowns = systems::helpers::get_component_clone::<ActionCooldownMap>(world, entity);
         systems::resources::recharge(world, entity, &RechargeRule::Turn);
+        let was = std::mem::replace(&mut self.next_turn, true);
         let out = f(self);
+        self.next_turn = was;
         let world = &mut self.engine.world;
         *systems::helpers::get_component_mut::<ResourceMap>(world, entity) = resources;
         *systems::helpers::get_component_mut::<ActionCooldownMap>(world, entity) = cooldowns;
         out
     }
 
-    /// The options `entity` can take now, and the ones it has but cannot take.
+    /// The options `entity` can take now, and the ones it has but cannot take. The list is kept
+    /// for a `submit` that follows.
     fn listing(&mut self, entity: Entity) -> (Vec<ActionOption>, Vec<UnavailableOption>) {
-        let options = self.options(entity).into_iter().map(|o| o.option).collect();
+        let entries = self.options(entity);
+        let options = entries.iter().map(|o| o.option.clone()).collect();
+        self.listed = Some(Listed {
+            entity,
+            next_turn: self.next_turn,
+            options: entries,
+        });
 
         // Actions the creature has but cannot use right now, so a caller can explain why not.
         let engine = &mut self.engine;
@@ -2290,7 +2334,7 @@ impl Game {
             .map(|t| self.entity(t))
             .collect::<Result<Vec<_>, _>>()?;
         let option = self
-            .options(entity)
+            .options_now(entity)
             .into_iter()
             .find(|o| o.option.option_id.0 == option_id)
             .ok_or_else(|| {
