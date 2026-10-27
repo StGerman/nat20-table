@@ -29,7 +29,7 @@ test("a player tool can't act out of turn, and the engine never sees the attempt
     }
     const acted = t.requests().filter((r) => ["submit", "end_turn", "move", "legal_actions", "react"].includes(r.cmd as string));
     assert.deepEqual(acted, [], "refused before the engine");
-    assert.equal(t.table.retries, 0, "an out-of-turn call is the loop's problem, not a retry");
+    assert.equal(t.table.retries("maren"), 0, "an out-of-turn call is the loop's problem, not a retry");
   } finally {
     t.close();
   }
@@ -48,7 +48,7 @@ test("tool input can't choose the viewer or the actor", async () => {
     const outcome = await ilsa.submitDecision(smuggled);
     assert.equal(outcome.ok, false);
     assert.equal(outcome.retryable, true);
-    assert.equal(t.table.retries, 1, "a retryable refusal counts toward the decision");
+    assert.equal(t.table.retries("ilsa"), 1, "a retryable refusal counts toward the decision");
     const submit = t.requests().find((r) => r.cmd === "submit")!;
     assert.equal(submit.viewer, "ilsa");
     assert.equal(submit.actor, "ilsa");
@@ -90,7 +90,7 @@ test("a stale prompt is refreshed and resent once, and is not a retry", async ()
     t.table.awaiting = { ...awaiting, prompt_id: "p1" }; // what the orchestrator believed earlier
     const ended = await new PlayerTools("ilsa", t.table).endTurn();
     assert.equal(ended.ok, true, ended.text);
-    assert.equal(t.table.retries, 0);
+    assert.equal(t.table.retries("ilsa"), 0);
     const ends = t.requests().filter((r) => r.cmd === "end_turn" && r.actor === "ilsa");
     assert.deepEqual(ends.map((r) => r.prompt_id), ["p1", awaiting.prompt_id]);
   } finally {
@@ -117,6 +117,19 @@ test("out of combat a player acts once per DM grant, and only an AI player can b
     const submits = t.requests().filter((r) => r.cmd === "submit");
     assert.equal(submits.length, 1);
     assert.equal(submits[0].prompt_id, undefined, "an explore submit carries no prompt id");
+  } finally {
+    t.close();
+  }
+});
+
+test("once the DM's retries are spent, it can't grant an action", async () => {
+  const t = await testTable({ seed: 27 });
+  try {
+    const dm = new DmTools(t.table);
+    await dm.loadScene("m5_s3_yard");
+    for (let i = 0; i < 3; i++) assert.equal(dm.grantAction("goblin_1").ok, false);
+    assert.equal(dm.grantAction("maren").text, "No retries left for this decision; the table moves on.");
+    assert.equal(t.table.grants.size, 0);
   } finally {
     t.close();
   }
