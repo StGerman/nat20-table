@@ -182,9 +182,9 @@ export class PlayerTools {
     ));
   }
 
-  /** A line aloud; `to` is the companion it is spoken to, `asks` a request or a proposal (party talk §4.4). */
-  say(text: string, to?: Handle, asks?: boolean): Promise<ToolOutcome> {
-    return this.answer(this.table.speak(this.me, text, to, asks));
+  /** A line aloud; `to` is the companion it is spoken to (party talk §4.4). */
+  say(text: string, to?: Handle): Promise<ToolOutcome> {
+    return this.answer(this.table.speak(this.me, text, to));
   }
 
   note(kind: NoteKind, text: string): Promise<ToolOutcome> {

@@ -155,7 +155,7 @@ export function talkLines(rounds: TalkRound[]): string[] {
   const share = slots === 0 ? 0 : Math.round((100 * silent) / slots);
   return [
     `- Talk rounds: ${rounds.length}; lines per round ${(sum((r) => r.spoke.length) / rounds.length).toFixed(1)}; silent share ${share}% (target at least ${100 * TALK_TARGETS.silentShare}%); floor wakes ${sum((r) => r.floor_wakes)}, hands lapsed ${sum((r) => r.lapsed.length)}`,
-    `- Hands: ${hands.join(", ")}; named players who answered first: ${answered} of ${named}; hand-offs ${sum((r) => (r.handed_to ? 1 : 0))}, requests carried to the next round ${sum((r) => r.carried.length)}`,
+    `- Hands: ${hands.join(", ")}; named players who answered first: ${answered} of ${named}; hand-offs ${sum((r) => (r.handed_to ? 1 : 0))}, addresses carried to the next round ${sum((r) => r.carried.length)}`,
     `- Talk round time: first line p50 ${first.length > 0 ? `${percentile(first, 50)} ms` : "n/a"} (target ${TALK_TARGETS.firstLineP50Ms} ms), round p50 ${percentile(walls, 50)} ms, p95 ${percentile(walls, 95)} ms (target ${TALK_TARGETS.roundP95Ms} ms)`,
   ];
 }

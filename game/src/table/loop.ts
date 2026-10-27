@@ -56,7 +56,7 @@ export interface TalkRound {
   lapsed: Handle[];
   /** The AI player a line spoken to it gave the floor next, the round's one hand-off (party talk §4.4). */
   handed_to?: Handle;
-  /** AI players asked something past the hand-off or the bound: they have the floor first next round. */
+  /** AI players spoken to and not answered past the hand-off or the bound: they have the floor first next round. */
   carried: Handle[];
   /** The AI players who spoke a line, who declared something, and who did neither. */
   spoke: Handle[];
@@ -133,7 +133,7 @@ export class TableLoop {
   private readonly playerTurns: RunReport["playerTurns"] = [];
   /** Talk rounds so far, for the report; their count shifts the speakers' seat order (party talk §4.2.6). */
   private readonly talkRounds: TalkRound[] = [];
-  /** AI players asked something the last talk round couldn't hand the floor for: they go first in the next one. */
+  /** AI players spoken to who didn't get the floor in the last talk round: they go first in the next one. */
   private carried: Handle[] = [];
 
   constructor(options: LoopOptions) {
@@ -641,8 +641,8 @@ export class TableLoop {
    * it does without a word, or PASS. A silent act is declared once the hands are in, with no floor
    * wake. Then the raised hands have the floor one at a time, each hearing what was said before
    * it, until the round holds `floorBound` floor wakes. A line spoken to a companion on the floor
-   * hands it the floor next, once a round (§4.4): a request or a proposal, or any line to one
-   * whose hand is up. A request the round can't answer opens the next round.
+   * hands it the floor next, once a round (§4.4, decision 0040). An address the round can't answer
+   * opens the next round.
    */
   private async talkRound(humanLine: string): Promise<void> {
     const started = performance.now();
@@ -653,12 +653,12 @@ export class TableLoop {
     if (handles.length === 0) return;
     this.table.beginTalk();
     for (const handle of handles) this.table.resetRetries(handle);
-    // A request or proposal made outside a floor wake (a granted action) or carried from the last
-    // round gives its addressee the floor first, after the players the human and the DM named.
+    // An address made outside a floor wake (a granted action) or carried from the last round gives
+    // its addressee the floor first, after the players the human and the DM named.
     const byName = namedIn([{ text: humanLine }, ...narrations], handles, this.names);
     const mentioned = [...new Set([...byName, ...this.carried, ...handOff(this.table.takeAddresses(), [], handles, true).carried])];
     this.carried = [];
-    // Who still waits on an answer to a request: carried again if the round's floor fills first.
+    // Who was spoken to and hasn't had the floor since: carried again if the round's floor fills first.
     const requested = new Set(mentioned.filter((h) => !byName.includes(h)));
     const named = mentioned.slice(0, this.floorBound);
     const raising = handles.filter((h) => !mentioned.includes(h));
@@ -675,7 +675,7 @@ export class TableLoop {
       for (const [i, handle] of named.entries()) {
         if (this.table.ended) return;
         floorWakes += 1;
-        const why = byName.includes(handle) ? "you were named" : "a companion asked you something that still wants your answer";
+        const why = byName.includes(handle) ? "you were named" : "a companion spoke to you, and you haven't answered yet";
         requested.delete(handle);
         await this.takeFloor(handle, `You have the floor first: ${why}. Answer: say your line with say if you have one, and answer with what you set out to do in one sentence, or PASS.`);
         namedAddresses.push(...this.table.takeAddresses().filter((a) => named.indexOf(a.to) <= i));
@@ -700,7 +700,7 @@ export class TableLoop {
     const carried: Handle[] = [];
     const carry = (handle: Handle) => {
       if (!carried.includes(handle)) carried.push(handle);
-      this.table.log("hand", "carried: asked, but the round's floor is full", handle);
+      this.table.log("hand", "carried: spoken to, but the round's floor is full", handle);
     };
     for (const handle of mentioned.slice(this.floorBound)) {
       if (requested.has(handle)) carry(handle);
@@ -722,8 +722,8 @@ export class TableLoop {
         pending = after.handedTo;
       }
       for (const handle of after.carried) if (!carried.includes(handle)) carried.push(handle);
-      // A request to a player still in the queue waits for its floor wake there.
-      for (const a of addresses) if (a.asks && a.to !== a.from && queue.includes(a.to)) requested.add(a.to);
+      // A line to a player still in the queue waits for its floor wake there.
+      for (const a of addresses) if (a.to !== a.from && queue.includes(a.to)) requested.add(a.to);
     };
     heard([...namedAddresses, ...this.table.takeAddresses()]);
     while (queue.length > 0 && !this.table.ended) {

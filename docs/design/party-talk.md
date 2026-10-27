@@ -74,7 +74,7 @@ The H and R figures are estimates: a wake that calls no tool is one model answer
 2. **Everyone else raises a hand or doesn't** (§4.3), in parallel with the named player's wake.
 3. **Speakers take the floor one at a time.** Each hears everything said before it, and can still drop its line at its turn ("Torva already said it").
 4. **A silent action doesn't queue.** It reaches the DM's inbox and the human's screen as soon as the hands are in (after the named player's wake, when one runs), as one line ("Maren silently bandages Snitt's side"). The DM resolves it in its one `table_turn` wake, with everything else said in the round; it costs no DM wake of its own.
-5. **A bound on the round.** At most three floor wakes follow each other in a round: the named player, the speakers, and one hand-off from §4.4 together. A hand still up when the bound is reached lapses, and so does a named player past it; a player still waiting on a request when the bound is reached is carried to the next round instead (§4.4).
+5. **A bound on the round.** At most three floor wakes follow each other in a round: the named player, the speakers, and one hand-off from §4.4 together. A hand still up when the bound is reached lapses, and so does a named player past it; a player spoken to and still waiting when the bound is reached is carried to the next round instead (§4.4).
 6. Ties between speakers go by seat order, shifted by one each round. That only breaks ties; it is not a rule about who talks.
 
 ```mermaid
@@ -117,7 +117,7 @@ sequenceDiagram
 | Request | Ilsa to Torva: "Break that door, quietly." | yes |
 | Proposal | Ilsa to everyone: "We tie him up and he walks first." | yes, from whoever it names |
 
-The four forms aren't a field: the model reads them from the words, and the goal 6 numbers come from reading the transcript. The speaker marks only the column the loop needs, whether the line wants an answer: `asks` on `say`, set for a request or a proposal (decision 0040).
+The four forms aren't a field: the model reads them from the words, and the goal 6 numbers come from reading the transcript. The loop doesn't tell them apart either: any address gives its addressee the chance to answer (decision 0040), and the addressee may answer a remark with silence.
 
 **Where a character's view of the others comes from.** Two sources the player agent already has, both its own:
 
@@ -128,16 +128,16 @@ The prompt asks the player to choose whom to address, and how, from these, never
 
 **How an address travels.**
 
-1. An address is a `say` line. The AI player's `say` seat tool gains an optional `to` (a companion's handle, the human's character included) and an optional `asks` (a request or a proposal). It's a game tool, not the engine contract. With `to`, the addressee is exact, so names are matched in text only in the human's and the DM's lines. A `to` that isn't a companion is refused and costs a retry. The addressee's brief marks the line "ilsa says to you: …", the others' briefs and the DM's say "ilsa says to torva: …", and the transcript's speech record carries `to`.
-2. **Out of combat:** an AI addressee gets the floor next in the same round when the address is a request or a proposal, or, for any address, when its hand is still up (it moves to the front). That is the round's one hand-off, inside the bound of §4.2. A request or proposal the round can't answer is carried: one made after the hand-off (in the hand-off itself, say), one made outside a floor wake (in a granted action), and one whose addressee is still waiting for the floor when the bound is reached, whether it was carried, queued with its hand up, or the hand-off. Its addressee has the floor first in the next round, after the players the human's and the DM's lines named, and its brief says a companion asked it something. A fight drops what was carried. A remark or an opinion to a player whose hand is down hands nothing: the addressee reads it in its next brief.
+1. An address is a `say` line. The AI player's `say` seat tool gains an optional `to` (a companion's handle, the human's character included). It's a game tool, not the engine contract. With `to`, the addressee is exact, so names are matched in text only in the human's and the DM's lines. A `to` that isn't a companion is refused and costs a retry. The addressee's brief marks the line "ilsa says to you: …", the others' briefs and the DM's say "ilsa says to torva: …", and the transcript's speech record carries `to`.
+2. **Out of combat:** an AI addressee gets the floor next in the same round, whatever the address's form (decision 0040): with its hand down it gets a floor wake of its own, and with its hand up it moves to the front. That is the round's one hand-off, inside the bound of §4.2. An address the round can't answer is carried: one made after the hand-off (in the hand-off itself, say), one made outside a floor wake (in a granted action), and one whose addressee is still waiting for the floor when the bound is reached, whether it was carried, queued with its hand up, or the hand-off. Its addressee has the floor first in the next round, after the players the human's and the DM's lines named, and its brief says a companion spoke to it. A fight drops what was carried.
 3. **In a fight:** the address is spoken on the speaker's own turn (§5, R0). The addressee reads it on its next turn in the brief, marked as in 1. With R1 a named address is also a trigger for a one-line answer, but the addressee acts only on its own turn.
 4. **The addressee decides** from its card and values: help, answer, argue, refuse in character ("Heal later, hit first"), or stay silent. An address never forces an action.
 5. **Mechanics only through the engine (Rule 4).** "Help me with the lock" becomes a declaration the DM resolves with `help` or `grant_action`; Help gives Advantage, as in SRD 5.2.1. "Heal me" in a fight becomes Maren's Healing Word on her turn, if she chooses it. No line sets a result.
 6. **An address to the human's character** (Bren in the demo, or whichever character the human plays) shows as an ordinary line, marked "Maren says to you: …"; one to an AI player shows as "Maren says to Ilsa: …". The human answers or not; the loop doesn't wait for it, and never hands the floor for it.
 
-The run report counts the hand-offs and the carried requests per run, and the lines spoken to a companion by who spoke to whom.
+The run report counts the hand-offs and the addresses carried to the next round per run, and the lines spoken to a companion by who spoke to whom.
 
-Cost: no new wakes beyond the hand-off, one floor wake (about 5.7 s, $0.03) in a round that has a request or a proposal. Nothing in a fight unless R1 is on.
+Cost: no new wakes beyond the hand-off, at most one floor wake (about 5.7 s, $0.03) in a round that has an address. Nothing in a fight unless R1 is on.
 
 ### 4.5 Role and values in the cards
 

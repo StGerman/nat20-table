@@ -76,22 +76,20 @@ test("raised hands to speak go in seat order, turned by one each round; ACT and 
   assert.deepEqual(speakingOrder(new Map(), PLAYERS, 0), []);
 });
 
-test("a line spoken to a companion hands it the floor once a round: a request to a lowered hand, any line to a raised one", () => {
-  const ask = (from: string, to: string) => ({ from, to, asks: true });
-  const remark = (from: string, to: string) => ({ from, to, asks: false });
-  // A request to Ilsa, whose hand is down, gives her a floor wake of her own, first.
-  assert.deepEqual(handOff([ask("torva", "ilsa")], ["maren"], PLAYERS, false), {
+test("a line spoken to a companion hands it the floor once a round, whatever its form", () => {
+  const to = (from: string, addressee: string) => ({ from, to: addressee });
+  // A line to Ilsa, whose hand is down, gives her a floor wake of her own, first.
+  assert.deepEqual(handOff([to("torva", "ilsa")], ["maren"], PLAYERS, false), {
     queue: ["ilsa", "maren"],
-    handedTo: { from: "torva", to: "ilsa", asks: true, raised: false },
+    handedTo: { from: "torva", to: "ilsa", raised: false },
     carried: [],
   });
-  // A remark to her hands nothing; a remark to a raised hand moves it first.
-  assert.deepEqual(handOff([remark("torva", "ilsa")], ["maren"], PLAYERS, false), { queue: ["maren"], carried: [] });
-  assert.deepEqual(handOff([remark("torva", "ilsa")], ["maren", "ilsa"], PLAYERS, false).queue, ["ilsa", "maren"]);
-  // One hand-off a round: the next request waits for the next round, unless its addressee speaks anyway.
-  assert.deepEqual(handOff([ask("torva", "ilsa"), ask("torva", "maren")], [], PLAYERS, false).carried, ["maren"]);
-  assert.deepEqual(handOff([ask("ilsa", "maren")], [], PLAYERS, true), { queue: [], carried: ["maren"] });
-  assert.deepEqual(handOff([ask("ilsa", "maren")], ["maren"], PLAYERS, true), { queue: ["maren"], carried: [] });
+  // A line to a raised hand moves it first.
+  assert.deepEqual(handOff([to("torva", "ilsa")], ["maren", "ilsa"], PLAYERS, false).queue, ["ilsa", "maren"]);
+  // One hand-off a round: the next line waits for the next round, unless its addressee speaks anyway.
+  assert.deepEqual(handOff([to("torva", "ilsa"), to("torva", "maren")], [], PLAYERS, false).carried, ["maren"]);
+  assert.deepEqual(handOff([to("ilsa", "maren")], [], PLAYERS, true), { queue: [], carried: ["maren"] });
+  assert.deepEqual(handOff([to("ilsa", "maren")], ["maren"], PLAYERS, true), { queue: ["maren"], carried: [] });
   // The human's character and the speaker itself are never handed the floor.
-  assert.deepEqual(handOff([ask("torva", "bren"), ask("torva", "torva")], [], PLAYERS, false), { queue: [], carried: [] });
+  assert.deepEqual(handOff([to("torva", "bren"), to("torva", "torva")], [], PLAYERS, false), { queue: [], carried: [] });
 });
