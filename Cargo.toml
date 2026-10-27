@@ -34,7 +34,7 @@ nat20-api-contract = { path = "crates/nat20-api-contract" }
 # 1ac0a59 = demo d7df872 (core #55, README only) plus core #56 (a move an opportunity attack
 # stops ends on a free spot, ENG-18), core #56's head until it merges.
 # 59bc67b = fork `demo` after core #56 merged; its tree is 1ac0a59's.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "2fa403e1849c5ede61c04b507855d4bd9a93b692" }
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "d00786a34261a362e2e7d0a9f56e2911cfad0ae9" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
