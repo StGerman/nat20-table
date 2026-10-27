@@ -156,6 +156,7 @@ export class TableLoop {
     this.scenes.push(sceneId);
     this.table.log("system", `scene ${sceneId}`);
     if (!first) await this.closeScene();
+    if (this.table.ended) return;
     await this.wakeDm("scene_open", undefined, `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`);
     await this.settle();
   }
@@ -165,6 +166,8 @@ export class TableLoop {
    * from that summary, so context stays bounded by one scene (AGT-6).
    */
   private async closeScene(): Promise<void> {
+    if (this.paused) await this.waitWhilePaused();
+    if (this.table.ended) return;
     const ask = "The scene is over. Sum it up for yourself in a few sentences of fiction: what happened, who you met, what you promised or suspect.";
     const players = [...this.agents.values()];
     const briefings: string[] = [];
@@ -500,7 +503,9 @@ export class TableLoop {
   private async grantedActions(): Promise<void> {
     let acted = false;
     for (const [handle, agent] of this.agents) {
-      if (!this.table.grants.has(handle) || this.table.ended) continue;
+      if (!this.table.grants.has(handle)) continue;
+      if (this.paused) await this.waitWhilePaused();
+      if (this.table.ended) return;
       this.table.resetRetries(handle);
       const options = await this.tools.get(handle)!.legalActions();
       const before = this.table.acted;

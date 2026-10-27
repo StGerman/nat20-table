@@ -540,6 +540,32 @@ test("/pause stops waking AI players until /pause again", async () => {
   assert.match(players.get("maren")!.briefings[0].briefing, /I step into the yard/);
 });
 
+test("/pause holds a granted action and the scene summaries until /pause again, and a /quit meanwhile ends the run", async () => {
+  const bless = { granted: async (tools: Parameters<NonNullable<ScriptedPlayerPolicy["granted"]>>[0]) => void (await tools.submitDecision({ option_id: "cast/bless/1", targets: ["bren", "maren"] })) };
+  const grant: DmScript = { table_turn: async (tools) => void tools.grantAction("maren") };
+  const pause = { kind: "command", name: "pause" } as const;
+  const words = { kind: "text", text: "Bless us before we go in." } as const;
+  const quit = await play({ seed: 27, seat: seatThen([pause, words]), players: { maren: bless }, dm: grant });
+  assert.equal(quit.report.ended, "the human quit");
+  assert.deepEqual(quit.players.get("maren")!.briefings, []);
+  assert.ok(!quit.t.requests().some((r) => r.cmd === "submit" && r.actor === "maren"));
+  assert.ok(quit.seat.shown.some((e) => e.kind === "status" && e.text === "Paused. Type /pause to go on."));
+
+  const resumed = await play({ seed: 27, seat: seatThen([pause, words, pause]), players: { maren: bless }, dm: grant });
+  assert.deepEqual(resumed.players.get("maren")!.briefings.map((b) => b.wake), ["granted"]);
+  assert.equal(resumed.t.requests().filter((r) => r.cmd === "submit" && r.actor === "maren").length, 1);
+
+  const summaries = await play({
+    seed: 27,
+    seat: seatThen([pause, { kind: "text", text: "We go down to the cellar." }]),
+    players: { maren: {} },
+    dm: { table_turn: async (tools) => void (await tools.loadScene("m5_s5_cellar", ["bren", "maren"])) },
+  });
+  assert.equal(summaries.report.ended, "the human quit");
+  assert.deepEqual(summaries.players.get("maren")!.briefings, [], "no summary while paused");
+  assert.deepEqual(summaries.dm.briefings.map((b) => b.wake), ["scene_open", "table_turn"]);
+});
+
 test("a granted action is taken once; an unused grant falls back to a pass; the DM narrates the outcome", async () => {
   const { t, dm } = await play({
     seed: 27,
