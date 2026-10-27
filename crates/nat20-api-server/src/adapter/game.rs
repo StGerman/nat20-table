@@ -1490,6 +1490,8 @@ impl Game {
     ) -> Result<(f32, Vec<Handle>, bool), ApiError> {
         let entity = self.entity(actor)?;
         let combat = self.mode() == Mode::Combat;
+        // Explore mode has no movement to run out of, so every walk there goes the whole way.
+        let partial = partial && combat;
         if combat {
             self.require_action_prompt(entity)?;
         } else if !systems::health::is_alive(&self.engine.world, entity)

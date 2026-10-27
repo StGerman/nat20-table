@@ -129,7 +129,8 @@ pub enum Command {
         /// Walk as far as movement allows: a route longer than the movement left is walked to
         /// the last free spot the movement reaches, and the result's `reached` says it stopped
         /// short. Without it (the default) such a move is refused with `insufficient_resource`
-        /// and changes nothing; so is a partial move that can't get anywhere.
+        /// and changes nothing; so is a partial move that can't get anywhere. Ignored in explore
+        /// mode, where there is no movement to run out of.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         partial: bool,
     },
