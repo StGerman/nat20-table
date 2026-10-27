@@ -124,6 +124,14 @@ export function sessionOptions(config: SessionConfig, cwd: string): Options {
   };
 }
 
+/** What an agent needs from a session: `AgentSession`, or a stand-in in tests. */
+export interface TurnSession {
+  turn(message: string, purpose: string): Promise<TurnResult>;
+  close(): Promise<void>;
+  /** A timed-out turn's result is still to come, so a tool call now is that turn's (`AgentSession`). */
+  readonly settling?: boolean;
+}
+
 /** What a turn produced. */
 export interface TurnResult {
   /** Everything the agent wrote in the turn, between tool calls included. */

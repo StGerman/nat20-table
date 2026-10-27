@@ -477,9 +477,9 @@ test("a refused narration reaches nobody; the DM rewrites it, and after two retr
   assert.ok(stubborn.seat.shown.some((e) => e.kind === "engine" && e.text === "Scene m5_s3_yard loaded in explore mode."));
 });
 
-test("AI players declare in parallel and are heard in seat order; a refused declaration is dropped", async () => {
+test("AI players declare in parallel and are heard in seat order; a refused declaration is asked for again", async () => {
   const later = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-  const { t, dm } = await play({
+  const { t, dm, players } = await play({
     seed: 27,
     seat: seatThen([{ kind: "text", text: "I look for tracks." }]),
     speechGuard: (text) => (/HP/.test(text) ? "it names a game number" : undefined),
@@ -491,7 +491,7 @@ test("AI players declare in parallel and are heard in seat order; a refused decl
           return "I guard the gate.";
         },
       },
-      maren: { declare: async () => "I pray, I have 9 HP left." },
+      maren: { declare: async (_tools, briefing) => (/Refused/.test(briefing) ? "I pray for us all." : "I pray, I have 9 HP left.") },
       ilsa: {
         declare: async (tools) => {
           await tools.say("Something is wrong here.");
@@ -507,12 +507,33 @@ test("AI players declare in parallel and are heard in seat order; a refused decl
     "torva: Stay close.",
     "ilsa: Something is wrong here.",
     "torva: I guard the gate.",
+    "maren: I pray for us all.",
     "ilsa: I read the old sign.",
   ]);
-  assert.ok(runLines(t, "fallback").some((l) => l.startsWith("maren's declaration is dropped")));
+  // Maren hears why, declares again, and nothing falls back.
+  const retold = players.get("maren")!.briefings.filter((b) => b.wake === "declare").map((b) => b.briefing);
+  assert.equal(retold.length, 2);
+  assert.match(retold[1], /Refused, nobody heard it: it names a game number/);
+  assert.ok(runLines(t, "retry").includes("declaration refused: it names a game number"));
+  assert.deepEqual(runLines(t, "fallback"), []);
   const turn = dm.briefings.find((b) => b.wake === "table_turn")!.briefing;
   assert.ok(turn.indexOf("bren: I look for tracks.") < turn.indexOf("torva: I guard the gate."));
   assert.doesNotMatch(turn, /9 HP/);
+});
+
+test("a declaration refused again and again is dropped once its retries are spent", async () => {
+  const { t, players } = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "I look for tracks." }]),
+    speechGuard: (text) => (/HP/.test(text) ? "it names a game number" : undefined),
+    players: { maren: { declare: async () => "I pray, I have 9 HP left." } },
+    dm: { scene_open: async (tools) => void (await tools.narrate("The yard is quiet.")) },
+  });
+  // The first declaration and two retries, then the third refusal spends them.
+  assert.equal(players.get("maren")!.briefings.filter((b) => b.wake === "declare").length, 3);
+  assert.equal(runLines(t, "retry").filter((l) => l.startsWith("declaration refused")).length, 3);
+  assert.ok(runLines(t, "fallback").some((l) => l.startsWith("maren's declaration is dropped")));
+  assert.ok(!t.table.transcript.records.some((r) => r.speaker === "maren" && r.kind === "intent"));
 });
 
 test("the human's words reach the AI players marked as the human's, so the leak scan skips them", async () => {

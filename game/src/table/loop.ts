@@ -507,7 +507,10 @@ export class TableLoop {
     await this.settle();
   }
 
-  /** Every AI player declares at most one thing, in parallel, heard in seat order (step 3). */
+  /**
+   * Every AI player declares at most one thing, in parallel, heard in seat order (step 3). A refused
+   * declaration goes back to its player, who declares again while it has retries (spec §6).
+   */
   private async declarations(): Promise<void> {
     const players = [...this.agents.values()];
     const briefings: string[] = [];
@@ -519,12 +522,20 @@ export class TableLoop {
     const declared = await Promise.all(players.map((agent, i) => this.wakePlayer(agent, "declare", briefings[i])));
     await this.table.commit();
     for (const [i, agent] of players.entries()) {
-      const intent = declared[i];
-      if (typeof intent !== "string" || intent.trim() === "") continue;
-      const outcome = await this.table.declare(agent.handle, intent.trim());
-      if (!outcome.ok) {
-        this.table.fallbacks += 1;
-        this.table.log("fallback", `${agent.handle}'s declaration is dropped: ${outcome.text}`, agent.handle);
+      let intent = declared[i];
+      while (typeof intent === "string" && intent.trim() !== "" && !this.table.ended) {
+        const outcome = await this.table.declare(agent.handle, intent.trim());
+        if (outcome.ok) break;
+        if (!outcome.retryable) {
+          this.table.fallbacks += 1;
+          this.table.log("fallback", `${agent.handle}'s declaration is dropped: ${outcome.text}`, agent.handle);
+          break;
+        }
+        intent = await this.wakePlayer(
+          agent,
+          "declare",
+          await this.playerBriefing(agent.handle, `Your declaration: ${outcome.text}`, "Declare again in one sentence, or PASS."),
+        );
       }
     }
   }

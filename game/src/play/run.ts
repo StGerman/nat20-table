@@ -6,7 +6,9 @@ import path from "node:path";
 import type { Handle, State } from "@nat20-table/engine-client";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure } from "../pack/adventure.ts";
+import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
 import type { RunReport } from "../table/loop.ts";
+import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, summarize, type UsageRecord } from "../usage.ts";
 
@@ -35,6 +37,29 @@ export function packParty(pack: string): PackParty {
     }),
   );
   return { human, ai: ai.map((p) => p.handle), cards };
+}
+
+/** The guards every live run puts on free text (spec §3.5): the DM's against the pack's ids. */
+export function guards(pack: string, engine: GameEngine): { narrationGuard: TextGuard; speechGuard: TextGuard } {
+  const ids = packIds(pack);
+  return { narrationGuard: narrationGuard({ ids, knownRoll: (id) => engine.rolls.has(id) }), speechGuard: speechGuard({ shown: ids.shown }) };
+}
+
+/**
+ * Loads the pack's scenes before `scene` in order, the party carried along, and marks all of it as
+ * read, so the run starts at `scene` with nobody told about the rest. Returns the party to carry
+ * into `scene`, or undefined when it is the first.
+ */
+export async function startAt(engine: GameEngine, pack: string, scene: string, party: Handle[]): Promise<Handle[] | undefined> {
+  const scenes = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8"))).scenes.map((s) => s.id);
+  const at = scenes.indexOf(scene);
+  if (at < 0) throw new Error(`${pack} has no scene ${scene}; its scenes: ${scenes.join(", ")}`);
+  for (const [i, id] of scenes.slice(0, at).entries()) {
+    const loaded = await engine.request("dm", { cmd: "load_scene", scene_id: id, party: i === 0 ? undefined : party });
+    if (!loaded.ok) throw new Error(`scene ${id} didn't load: ${loaded.error?.message}`);
+  }
+  engine.skipAll();
+  return at === 0 ? undefined : party;
 }
 
 /** A new run folder, `<out>/<name>-<time>/`. */
@@ -86,11 +111,15 @@ export function reportSections(options: {
   // wake counts at its timeout.
   const turns = run?.playerTurns.map((t) => t.wall_ms) ?? [];
   const wakes = run?.playerTurns.reduce((sum, t) => sum + t.wakes, 0) ?? 0;
+  const narrations = usage.filter((r) => r.agent === "dm" && r.purpose === "narrate").map((r) => r.wall_ms);
   const out = [
     `- Ended: ${run?.ended ?? `the run failed: ${options.failure instanceof Error ? options.failure.message : String(options.failure)}`}`,
     ...(outcome.length > 0 ? [`- Fights: ${outcome.join(" ")}`] : []),
     `- Fallbacks: ${run?.fallbacks ?? "n/a"}; retries: ${lines("retry").length}; errors and timeouts: ${lines("error").length}`,
     `- Player combat turns: ${turns.length} (${wakes} wakes), p50 ${percentile(turns, 50) || "n/a"} ms, p95 ${percentile(turns, 95) || "n/a"} ms (target ${TARGET_P95_MS.player} ms)`,
+    ...(narrations.length > 0
+      ? [`- DM narrations: ${narrations.length}, p50 ${percentile(narrations, 50)} ms, p95 ${percentile(narrations, 95)} ms (target ${TARGET_P95_MS.dm} ms)`]
+      : []),
     "",
     // Per model wake, whether it ended with its result or not: a combat turn can take two.
     "| Agent | Wakes | p50 ms | p95 ms | Input | Cache read | Cache write | Output | API-equivalent $ |",

@@ -22,14 +22,18 @@ export interface TestTable {
 
 export async function testTable(options: {
   seed: number;
+  /** A scenario pack; the engine's test scenes by default. */
+  pack?: string;
   human?: string;
   players?: string[];
   seat?: ScriptedSeat;
   narrationGuard?: TextGuard;
   speechGuard?: TextGuard;
+  /** Guards built on the started engine (the narration guard reads its roll ids), as the run commands do. */
+  guards?: (engine: GameEngine) => { narrationGuard: TextGuard; speechGuard: TextGuard };
 }): Promise<TestTable> {
   const runDir = mkdtempSync(path.join(tmpdir(), "table-"));
-  const engine = await GameEngine.start({ pack: TEST_PACK, runDir, seed: options.seed });
+  const engine = await GameEngine.start({ pack: options.pack ?? TEST_PACK, runDir, seed: options.seed });
   const human = options.human ?? "bren";
   const seat = options.seat ?? new ScriptedSeat(human);
   const table = new TableState({
@@ -41,6 +45,7 @@ export async function testTable(options: {
     inputsFile: path.join(runDir, "inputs.jsonl"),
     narrationGuard: options.narrationGuard,
     speechGuard: options.speechGuard,
+    ...options.guards?.(engine),
   });
   return {
     table,
