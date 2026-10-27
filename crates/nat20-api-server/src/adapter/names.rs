@@ -4,7 +4,7 @@ use nat20_api_contract::{DamageType as WireDamage, OptionItem, OptionSpell};
 use nat20_core::hecs::Entity;
 use nat20_core::{
     components::{
-        actions::action::ActionContext,
+        actions::action::{ActionAttackKind, ActionContext},
         damage::DamageType,
         id::{ActionId, ActionVariantId, EffectId, ItemId},
         items::{equipment::slots::EquipmentSlot, inventory::ItemContainer},
@@ -72,7 +72,9 @@ pub fn option_id_and_name(action_id: &ActionId, weapon: Option<&str>) -> (String
 /// The option id and display name of an action taken in `context`: a spell is
 /// `cast/<spell>/<slot level>` (a cantrip `cast/<spell>`) named after the spell; an item is
 /// `use/<item>` named after the item; anything else is [`option_id_and_name`] with the weapon
-/// the context uses.
+/// the context uses, and an action made with an attack that is more than the attack (Reckless
+/// Attack, an Opportunity Attack) is named after itself and what it attacks with, e.g.
+/// "Barbarian Reckless Attack (Greataxe)" or "Barbarian Reckless Attack (Unarmed)".
 pub fn option_for(
     engine: &EngineState,
     entity: Entity,
@@ -94,10 +96,31 @@ pub fn option_for(
         }
         None => {
             let weapon = weapon_of(engine, entity, context);
-            option_id_and_name(action_id, weapon.as_deref())
+            let (option_id, name) = option_id_and_name(action_id, weapon.as_deref());
+            match context.attack.as_ref() {
+                // Anything else made with an attack keeps its own name and says what it attacks
+                // with, so Reckless Attack with a greataxe doesn't read like a plain "Greataxe
+                // attack", and its Unarmed Strike doesn't read like the greataxe swing.
+                Some(attack) if !PLAIN_ATTACKS.contains(&option_stem(action_id).as_str()) => {
+                    let with = match (&weapon, &attack.kind) {
+                        (Some(weapon), _) => title(&weapon.replace('_', " ")),
+                        (None, ActionAttackKind::Unarmed) => "Unarmed".to_string(),
+                        (None, _) => return (option_id, name),
+                    };
+                    (
+                        option_id,
+                        format!("{} ({with})", title(&action_words(action_id))),
+                    )
+                }
+                _ => (option_id, name),
+            }
         }
     }
 }
+
+/// The actions that are nothing but an attack: their options are named after the weapon
+/// ("Longsword attack") or "Unarmed Attack".
+const PLAIN_ATTACKS: [&str; 3] = ["melee_attack", "ranged_attack", "unarmed_attack"];
 
 /// An item's id word, as on the sheet: `nat20_core::item.potion_of_healing` becomes
 /// `potion_of_healing`.
