@@ -22,12 +22,12 @@ This file holds the rules and points to everything else. When it disagrees with 
 - **Adventure:** *The Silent Mill*, an original one-shot (CC-BY-4.0): 4 level 2 pregens (Human Fighter for the human; Cleric, Wizard and optionally Barbarian for the AIs), 6 scenes, 2 goblin-and-wolf fights, a social hook, an exploration beat and an interrogation. SRD monsters only: Goblin Warrior, Goblin Boss, Wolf, Giant Rat.
 - **Out of scope:** character creation and level-up, long rests, loot and shops, vision and darkvision, Hide and Stealth, grappling, Weapon Mastery, Heroic Inspiration, magic items beyond Potions of Healing, graphics, voice, more than one human, saving a campaign, subclasses.
 - **Acceptance (scope §6):**
-  1. Three unattended playthroughs run Scene 1 to 6 in 120 minutes or less.
+  1. One unattended playthrough with every character an AI player, and one played by Stas, each run Scene 1 to 6 in 120 minutes or less, on the same build (decision 0043).
   2. Every roll in the transcript appears in the engine log.
-  3. No narration contradicts engine state.
-  4. AI player turn p95 is 10 s or less; DM narration p95 is 6 s or less.
+  3. No narration contradicts engine state or a character's inventory.
+  4. AI player turn p95 is 10 s or less; DM narration p95 is 6 s or less: measured and reported; the optimisation milestone gates it.
   5. Every rejected decision recovers within 2 retries.
-  6. A first-time player finishes using only `/options` and `/sheet`.
+  6. A first-time player finishes using only `/options` and `/sheet`: checked in friends-and-family testing after Milestone 7.
 
 ## Milestones
 
@@ -39,7 +39,7 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 4. The party: Cleric and healing, Human, items, pregens (done 2026-10-21)
 5. Monsters (done 2026-10-23)
 6. Agents at the table: one full scene with the DM agent, player agents and a human
-7. Demo acceptance: three timed playthroughs
+7. Demo acceptance: one unattended all-AI playthrough and one played by Stas
 
 Milestone 8 (upstream proposal) was dropped on 2026-10-18: upstream declines AI-authored contributions (`docs/decisions/0023-long-lived-fork.md`).
 

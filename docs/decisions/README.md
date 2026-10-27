@@ -40,7 +40,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0029](0029-no-self-hosted-runner-public-repo.md) | No self-hosted runner: CI runs on GitHub-hosted runners in the public repo | Accepted | 2026-10-23 | Stas (CI cost thread) |
 | [0030](0030-agent-harness-and-tool-binding.md) | Agents run as Agent SDK sessions with only our tools, bound by the game loop | Accepted with table #96 | 2026-10-23 | Claude (Milestone 6 spec D6) |
 | [0031](0031-adventure-file-game-typed.md) | Adventures are scenario packs: a JSON skeleton plus Markdown prose, loadable from any path | Accepted | 2026-10-23 | Stas (Milestone 6 spec D3) |
-| [0032](0032-agent-models-and-cost.md) | Agent models: Opus 5.5 DM and Sonnet 5.5 players while testing, Sonnet and Haiku for a beta | Accepted, amended by 0036 | 2026-10-23 | Stas (Milestone 6 spec D2) |
+| [0032](0032-agent-models-and-cost.md) | Agent models: Opus 5.5 DM and Sonnet 5.5 players while testing, Sonnet and Haiku for a beta | Accepted, amended by 0036 and 0045 | 2026-10-23 | Stas (Milestone 6 spec D2) |
 | [0033](0033-audit-stays-in-rust.md) | The transcript audit stays in Rust and runs as a CLI over game transcripts | Accepted | 2026-10-23 | Stas (Milestone 6 spec D4) |
 | [0034](0034-agent-memory-per-run.md) | Agent memory lasts one run: typed player notes and a DM memory of invented facts | Accepted | 2026-10-23 | Stas (Milestone 6 spec D9) |
 | [0035](0035-unplanned-fights-dm-starts-engine-validates.md) | Unplanned fights: the DM starts them, the engine validates them (own milestone after Milestone 7) | Accepted | 2026-10-23 | Stas (Milestone 6 spec review, D11) |
@@ -50,6 +50,9 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0039](0039-party-talk-hand-raise-floor.md) | Party talk: each AI player raises its hand, and speakers take the floor in turn | Accepted | 2026-10-27 | Stas (decision cards, party-talk design thread) |
 | [0040](0040-every-address-hands-off.md) | Every address to a companion hands it the floor | Accepted | 2026-10-27 | Stas (decision card, party-talk thread) |
 | [0041](0041-engine-lines-wait-for-narration.md) | On the table screen, engine lines wait for the DM's narration of them (`--verbose` folds them under it) | Accepted | 2026-10-27 | Stas (decision card, chat transcript thread) |
+| [0043](0043-demo-acceptance-two-runs.md) | Demo acceptance is one unattended all-AI run and one run by Stas, with a narration check and latency reported | Accepted | 2026-10-27 | Stas (Milestone 7 design thread, D1-D3) |
+| [0044](0044-one-repo-through-m7.md) | nat20-table stays one repo through Milestone 7; the next contract goes on the line between the game loop and its clients | Accepted | 2026-10-27 | Stas (decision card, Milestone 7 design thread) |
+| [0045](0045-run-profiles-and-models.md) | Run settings live in named JSON profiles; testing runs a Sonnet DM and Haiku players | Accepted | 2026-10-27 | Stas (decision card, Milestone 7 design thread, D4-D5) |
 
 ## Open questions to watch
 
