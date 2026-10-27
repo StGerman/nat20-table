@@ -46,8 +46,13 @@ export interface Verdict {
   verdict: "PASS" | "FAIL" | "VOID" | "PENDING";
   /** Why, in one line: the failed rows, the void's cause, or what is still missing. */
   why: string;
-  /** A run from a checkout with changes to tracked files can't count for acceptance. */
+  /**
+   * Whether the run can count for acceptance: not from a checkout with changes to tracked files,
+   * and its plan was the whole adventure (a `play:scene` run of a few scenes isn't).
+   */
   eligible: boolean;
+  /** Why not, when it isn't. */
+  not_eligible: string[];
   rows: VerdictRow[];
   flags: Flag[];
 }
@@ -73,7 +78,8 @@ function timeRow(run: RunRecord): VerdictRow {
   const title = "Scene 1 to 6 within the time limit";
   const first = run.scenes[0];
   const last = run.plan.at(-1);
-  const end = run.ended_at ?? run.scenes.at(-1)?.ended_at;
+  // When play ended: the last scene's end, not the folder's finishing after it.
+  const end = run.scenes.at(-1)?.ended_at ?? run.ended_at;
   const took = first && end ? Date.parse(end) - Date.parse(first.started_at) : undefined;
   const reached = last !== undefined && run.scenes.some((s) => s.id === last);
   const detail = `${run.scenes.length} of ${run.plan.length} scenes played${took === undefined ? "" : ` in ${minutes(took)}`}; ended: ${run.ended ?? "not recorded"}`;
@@ -183,7 +189,7 @@ function latencyRow(usage: UsageRecord[]): VerdictRow {
 /** The verdict of the run in `dir`, from its files alone. */
 export function computeVerdict(dir: string): Verdict {
   if (!existsSync(path.join(dir, RUN_JSON))) {
-    return { verdict: "PENDING", why: `no ${RUN_JSON}: not a play:full run, or it never started`, eligible: false, rows: [], flags: [] };
+    return { verdict: "PENDING", why: `no ${RUN_JSON}: not a play:full run, or it never started`, eligible: false, not_eligible: [`no ${RUN_JSON}`], rows: [], flags: [] };
   }
   const run = readRunRecord(dir);
   const transcript = readLines<TranscriptRecord>(path.join(dir, "transcript.jsonl"));
@@ -197,20 +203,24 @@ export function computeVerdict(dir: string): Verdict {
   const retries = retryRows(run, transcript, answers);
   const rows = [timeRow(run), partyRow(run, log), ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
   const flags = [...narrationFlags, ...retries.flags];
-  const eligible = !run.build.dirty;
+  const not_eligible = [
+    ...(run.build.dirty ? ["the checkout had changes"] : []),
+    ...(run.plan.join(",") === run.adventure.join(",") ? [] : [`it played ${run.plan.length} of the adventure's ${run.adventure.length} scenes`]),
+  ];
+  const eligible = not_eligible.length === 0;
   const failed = rows.filter((r) => r.status === "fail");
   const pending = rows.filter((r) => r.status === "pending");
-  if (run.stop && VOIDS.has(run.stop)) return { verdict: "VOID", why: `stopped from outside the game (${run.stop}): ${run.ended}`, eligible, rows, flags };
-  if (failed.length > 0) return { verdict: "FAIL", why: `failed: ${failed.map((r) => `${r.row} ${r.title}`).join("; ")}`, eligible, rows, flags };
-  if (pending.length > 0) return { verdict: "PENDING", why: `still open: ${pending.map((r) => `${r.row} ${r.title} (${r.detail})`).join("; ")}`, eligible, rows, flags };
-  return { verdict: "PASS", why: "every gating row passed", eligible, rows, flags };
+  if (run.stop && VOIDS.has(run.stop)) return { verdict: "VOID", why: `stopped from outside the game (${run.stop}): ${run.ended}`, eligible, not_eligible, rows, flags };
+  if (failed.length > 0) return { verdict: "FAIL", why: `failed: ${failed.map((r) => `${r.row} ${r.title}`).join("; ")}`, eligible, not_eligible, rows, flags };
+  if (pending.length > 0) return { verdict: "PENDING", why: `still open: ${pending.map((r) => `${r.row} ${r.title} (${r.detail})`).join("; ")}`, eligible, not_eligible, rows, flags };
+  return { verdict: "PASS", why: "every gating row passed", eligible, not_eligible, rows, flags };
 }
 
 /** The verdict as the Markdown block at the top of `report.md`. */
 export function verdictBlock(v: Verdict): string[] {
   return [
     VERDICT_START,
-    `## Verdict: ${v.verdict}${v.eligible ? "" : " (not eligible for acceptance: the checkout had changes)"}`,
+    `## Verdict: ${v.verdict}${v.eligible ? "" : ` (not eligible for acceptance: ${v.not_eligible.join("; ")})`}`,
     "",
     v.why,
     "",

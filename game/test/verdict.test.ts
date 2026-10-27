@@ -21,6 +21,7 @@ function runRecord(over: Partial<RunRecord> = {}): RunRecord {
     seed: 1,
     seats: { human: null, ai: ["bren", "torva", "maren", "ilsa"] },
     plan: SCENES,
+    adventure: SCENES,
     time_limit_min: 120,
     scenes: SCENES.map((id, i) => ({ id, started_at: new Date(Date.UTC(2026, 9, 28, 9, i * 10)).toISOString(), ended_at: new Date(Date.UTC(2026, 9, 28, 9, i * 10 + 9)).toISOString(), rounds: 0, target_minutes: 10 })),
     started_at: "2026-10-28T08:59:00.000Z",
@@ -110,6 +111,16 @@ test("an audit problem or a leak fails its row; a dirty checkout isn't eligible"
   assert.equal(v.verdict, "FAIL");
   assert.equal(v.eligible, false);
   assert.deepEqual(v.rows.filter((r) => r.status === "fail").map((r) => r.row), ["2", "leak"]);
+});
+
+test("a run of a few scenes isn't eligible; the time is play's, not the folder's finishing", () => {
+  const few = computeVerdict(folder(runRecord({ plan: SCENES.slice(2, 3), scenes: runRecord().scenes.slice(2, 3) })));
+  assert.equal(few.eligible, false);
+  assert.deepEqual(few.not_eligible, ["it played 1 of the adventure's 6 scenes"]);
+  // Play ends at 119 min; the run folder is finished two minutes later.
+  const scenes = runRecord().scenes.map((s, i) => (i === 5 ? { ...s, ended_at: "2026-10-28T10:58:00.000Z" } : s));
+  const late = computeVerdict(folder(runRecord({ scenes, ended_at: "2026-10-28T11:01:00.000Z" })));
+  assert.equal(late.rows.find((r) => r.row === "1")?.status, "pass");
 });
 
 test("writing the verdict replaces the block at the top of report.md and keeps the rest", () => {

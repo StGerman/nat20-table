@@ -40,6 +40,8 @@ export interface RunRecord {
   seats: { human: Handle | null; ai: Handle[] };
   /** The scenes the run set out to play, in order. */
   plan: string[];
+  /** The pack's whole adventure, in order: a run whose plan is less can't count for acceptance. */
+  adventure: string[];
   /** The stop after this many minutes from the first scene's load; 0 for none. */
   time_limit_min: number;
   /** Each scene played, with the pack's time target. */

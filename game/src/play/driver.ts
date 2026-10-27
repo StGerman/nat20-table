@@ -159,6 +159,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     seed: engine.seed,
     seats: { human: party.human, ai: party.ai },
     plan: played,
+    adventure: pack.adventure.scenes.map((s) => s.id),
     time_limit_min: flags["time-limit-min"],
     scenes: [],
     started_at: new Date().toISOString(),
