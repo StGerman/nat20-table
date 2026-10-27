@@ -32,8 +32,17 @@ const STAT_TERMS: RegExp[] = [
   /\bchallenge rating\b/i,
 ];
 
-/** Kinds of DM-only data that are no player's business by name (protocol §5). */
-const DM_ONLY_KINDS = ["check_resolved", "flag_set", "hazard_triggered", "spawned", "hp_fraction_at_most", "standing_at_most", "leader_down"];
+/** Kinds of DM-only data that are no player's business by name (protocol §5): surrender triggers, a spawn's `unless`. */
+const DM_ONLY_KINDS = [
+  "check_resolved",
+  "flag_set",
+  "hazard_triggered",
+  "spawned",
+  "hp_fraction_at_most",
+  "standing_at_most",
+  "leader_down",
+  "any_party_bloodied",
+];
 
 function numberIn(text: string): string | undefined {
   const digit = /\d+/.exec(text);
@@ -58,8 +67,12 @@ function bareToken(token: string): string {
   return token.replace(/^:+|:+$/g, "");
 }
 
+/** The text's tokens, and each part of a token with a colon in it ("check:reeve_insight" names reeve_insight). */
 function tokens(text: string): string[] {
-  return (text.match(TOKEN) ?? []).map(bareToken).filter((token) => token.length > 0);
+  return (text.match(TOKEN) ?? [])
+    .map(bareToken)
+    .flatMap((token) => (token.includes(":") ? [token, ...token.split(":")] : [token]))
+    .filter((token) => token.length > 0);
 }
 
 /** The text with every shown id taken out, so the digits in goblin_1 or s3_mill_yard don't count as numbers. */
@@ -93,7 +106,7 @@ interface SceneFileIds {
   checks?: Array<{ id: string; on_success?: Consequence[]; on_failure?: Consequence[] }>;
   hazards?: Array<{ id: string; on_success?: Consequence[]; on_failure?: Consequence[] }>;
   encounters?: Array<{ id: string; surprise?: { when_flag?: string } }>;
-  spawns?: Array<{ id: string; when?: { kind: string; flag?: string }; creatures?: Array<{ handle: string; monster?: string }> }>;
+  spawns?: Array<{ id: string; when?: { kind: string; flag?: string; unless?: string }; creatures?: Array<{ handle: string; monster?: string }> }>;
 }
 type Consequence = { kind: string; flag?: string };
 
@@ -140,6 +153,7 @@ export function packIds(pack: string): PackIds {
     for (const spawn of scene.spawns ?? []) {
       hidden.add(spawn.id);
       if (spawn.when?.kind === "flag" && spawn.when.flag) hidden.add(spawn.when.flag);
+      if (spawn.when?.unless) hidden.add(spawn.when.unless);
       for (const c of spawn.creatures ?? []) creature(c);
     }
   }

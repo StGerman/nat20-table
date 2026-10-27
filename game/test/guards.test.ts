@@ -11,7 +11,7 @@ const MILL = path.join(REPO, "scenarios/the_silent_mill");
 
 test("the DM-only ids of The Silent Mill are its checks, encounters, spawns, flags and stat blocks, never what players see", () => {
   const { dmOnly, shown } = packIds(MILL);
-  for (const id of ["reeve_insight", "yard_fight", "cellar_fight", "extra_warrior", "road_snare", "knows_goblin_tracks", "goblin_warrior", "goblin_boss", "giant_rat", "standing_at_most", "flag_set"]) {
+  for (const id of ["reeve_insight", "yard_fight", "cellar_fight", "extra_warrior", "road_snare", "knows_goblin_tracks", "goblin_warrior", "goblin_boss", "giant_rat", "standing_at_most", "flag_set", "any_party_bloodied"]) {
     assert.ok(dmOnly.has(id), `${id} is DM-only`);
   }
   // Scenes, places and creature handles are shown to players; a plain-word id can't be told from prose.
@@ -32,6 +32,10 @@ test("the narration guard refuses numbers, game statistics, DM-only ids and unkn
     ["Now yard_fight begins.", /names yard_fight/],
     ["They know about knows_goblin_tracks.", /names knows_goblin_tracks/],
     ["standing_at_most is close.", /names standing_at_most/],
+    ["The rats stay away because of any_party_bloodied.", /names any_party_bloodied/],
+    // A colon doesn't hide an id: each part of the token is checked.
+    ["The check:reeve_insight succeeds.", /names reeve_insight/],
+    ["Now (yard_fight:begun) starts.", /names yard_fight/],
     ["The blade bites deep [r999].", /cites \[r999\], a roll the log doesn't have/],
     ["goblin_1 has 4 left.", /number \(4\)/],
     ["The goblin_12 falls.", /number \(12\)/],
