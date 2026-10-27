@@ -1,6 +1,7 @@
 // Token and latency records for every model call (M6 spec §7, TASKS.md AGT-10). One JSON line per
-// agent turn in `usage.jsonl` next to the transcript. Live runs use Stas's Claude subscription
-// (decision 0036), so the cost here is the API-equivalent price, kept as a reference.
+// agent turn in `usage.jsonl` next to the transcript, whether the turn ended with its result or not.
+// Live runs use Stas's Claude subscription (decision 0036), so the cost here is the API-equivalent
+// price, kept as a reference.
 import { appendFileSync } from "node:fs";
 
 /** What one agent turn cost: one user message in, until the session's `result` for it. */
@@ -14,6 +15,12 @@ export interface UsageRecord {
   purpose: string;
   /** 1 for the first turn of a session (cold cache), counting up. */
   session_turn: number;
+  /**
+   * How the turn ended: with its result, past its timeout, failed, or stopped at the plan's limit.
+   * Tokens are what the turn's API calls reported until then; calls that answer after a timeout
+   * are not counted.
+   */
+  outcome: "ok" | "timeout" | "failed" | "limit";
   input_tokens: number;
   cache_read_tokens: number;
   cache_write_tokens: number;

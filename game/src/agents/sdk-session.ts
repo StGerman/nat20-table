@@ -70,6 +70,8 @@ export interface SessionConfig {
   usage?: UsageLog;
   /** A turn that runs longer is interrupted and fails with `TurnTimeout` (spec §6). */
   turnTimeoutMs?: number;
+  /** The SDK's `query`; a test passes a scripted stand-in, so no model is called. */
+  query?: typeof query;
 }
 
 /**
@@ -143,6 +145,8 @@ export interface TurnResult {
 interface PendingTurn {
   /** The uuid sent with the user message; the SDK echoes it on the turn's result. */
   uuid: string;
+  /** The turn's number in the session, from 1. */
+  number: number;
   purpose: string;
   sentAt: number;
   texts: string[];
@@ -204,7 +208,7 @@ export class AgentSession {
   constructor(config: SessionConfig) {
     this.config = config;
     const cwd = config.cwd ?? mkdtempSync(path.join(tmpdir(), `nat20-${config.agent}-`));
-    this.query = query({ prompt: this.inbox, options: sessionOptions(config, cwd) });
+    this.query = (config.query ?? query)({ prompt: this.inbox, options: sessionOptions(config, cwd) });
     this.pump = this.read();
   }
 
@@ -216,6 +220,7 @@ export class AgentSession {
     return new Promise<TurnResult>((resolve, reject) => {
       const pending: PendingTurn = {
         uuid: randomUUID(),
+        number: this.turns,
         purpose,
         sentAt: performance.now(),
         texts: [],
@@ -302,33 +307,7 @@ export class AgentSession {
           this.settle(new Error(`${this.config.agent}: turn failed (${message.subtype})`));
           return;
         }
-        const tokens = [...turn.calls.values()].reduce(
-          (sum, call) => ({
-            input: sum.input + call.input,
-            cacheRead: sum.cacheRead + call.cacheRead,
-            cacheWrite: sum.cacheWrite + call.cacheWrite,
-            output: sum.output + call.output,
-          }),
-          { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 },
-        );
-        const usage: UsageRecord = {
-          agent: this.config.agent,
-          model: turn.model,
-          effort: this.config.choice.effort,
-          purpose: turn.purpose,
-          session_turn: this.turns,
-          input_tokens: tokens.input,
-          cache_read_tokens: tokens.cacheRead,
-          cache_write_tokens: tokens.cacheWrite,
-          output_tokens: tokens.output,
-          api_calls: turn.calls.size,
-          wall_ms: Math.round(performance.now() - turn.sentAt),
-          ttft_ms: message.ttft_ms ?? null,
-          api_equivalent_usd: apiEquivalentUsd(turn.model, tokens),
-          tools: turn.tools,
-          at: new Date().toISOString(),
-        };
-        this.config.usage?.add(usage);
+        const usage = this.record(turn, "ok", message.ttft_ms ?? null);
         this.settle({ text: turn.texts.join("\n").trim(), usage });
         return;
       }
@@ -337,13 +316,52 @@ export class AgentSession {
     }
   }
 
+  /**
+   * Writes the turn's usage record. A turn that ends without a result (a timeout, a failure, the
+   * plan's limit) is recorded too, with what it spent until then, so a run's report counts every
+   * token and every slow turn.
+   */
+  private record(turn: PendingTurn, outcome: UsageRecord["outcome"], ttft: number | null): UsageRecord {
+    const tokens = [...turn.calls.values()].reduce(
+      (sum, call) => ({
+        input: sum.input + call.input,
+        cacheRead: sum.cacheRead + call.cacheRead,
+        cacheWrite: sum.cacheWrite + call.cacheWrite,
+        output: sum.output + call.output,
+      }),
+      { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 },
+    );
+    const usage: UsageRecord = {
+      agent: this.config.agent,
+      model: turn.model,
+      effort: this.config.choice.effort,
+      purpose: turn.purpose,
+      session_turn: turn.number,
+      outcome,
+      input_tokens: tokens.input,
+      cache_read_tokens: tokens.cacheRead,
+      cache_write_tokens: tokens.cacheWrite,
+      output_tokens: tokens.output,
+      api_calls: turn.calls.size,
+      wall_ms: Math.round(performance.now() - turn.sentAt),
+      ttft_ms: ttft,
+      api_equivalent_usd: apiEquivalentUsd(turn.model, tokens),
+      tools: turn.tools,
+      at: new Date().toISOString(),
+    };
+    this.config.usage?.add(usage);
+    return usage;
+  }
+
   private settle(outcome: TurnResult | Error): void {
     const turn = this.pending;
     if (!turn) return;
     this.pending = undefined;
     if (turn.timer) clearTimeout(turn.timer);
-    if (outcome instanceof Error) turn.reject(outcome);
-    else turn.resolve(outcome);
+    if (outcome instanceof Error) {
+      this.record(turn, outcome instanceof TurnTimeout ? "timeout" : outcome instanceof UsageLimitReached ? "limit" : "failed", null);
+      turn.reject(outcome);
+    } else turn.resolve(outcome);
   }
 
   private fail(error: Error): void {

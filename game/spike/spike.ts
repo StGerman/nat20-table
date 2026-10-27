@@ -189,7 +189,7 @@ report.push(
   "|---|---|---|---|---|---|---|---|---|---|---|---|",
   ...usage.records.map(
     (r) =>
-      `| ${r.agent} | ${r.model} | ${r.session_turn} (${r.purpose.replace("spike/", "")}) | ${r.wall_ms} | ${r.ttft_ms ?? ""} | ${r.input_tokens} | ${r.cache_read_tokens} | ${r.cache_write_tokens} | ${r.output_tokens} | ${r.api_calls} | ${r.api_equivalent_usd} | ${r.tools.join(" ")} |`,
+      `| ${r.agent} | ${r.model} | ${r.session_turn} (${r.purpose.replace("spike/", "")}${r.outcome === "ok" ? "" : `, ${r.outcome}`}) | ${r.wall_ms} | ${r.ttft_ms ?? ""} | ${r.input_tokens} | ${r.cache_read_tokens} | ${r.cache_write_tokens} | ${r.output_tokens} | ${r.api_calls} | ${r.api_equivalent_usd} | ${r.tools.join(" ")} |`,
   ),
   "",
   "| Agent | Turns | p50 ms | p95 ms | Target p95 | API-equivalent $ |",
