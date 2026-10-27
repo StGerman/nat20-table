@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.31"
+    "version": "1.0.0-dev.32"
   },
   "$defs": {
     "Ability": {
@@ -2435,7 +2435,7 @@
           ]
         },
         {
-          "description": "A creature moved.",
+          "description": "A creature moved: by a `move`, or on its own on the way to an option's target (a\n`submit` on a target out of reach, a scripted monster's approach), logged once it stopped\nand before the `action` it walked for (protocol §4.1).",
           "type": "object",
           "properties": {
             "actor": {
