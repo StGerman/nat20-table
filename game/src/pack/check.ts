@@ -1,7 +1,7 @@
 // The pack check (M6 spec §4, decision 0031, TASKS.md MAP-4): what can break the game in a scenario
 // pack is caught before anyone plays it. CI runs it on every pack in `scenarios/`; anyone can run
 // it on a pack anywhere with `npm run pack:check -- <pack>`.
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../engine.ts";
@@ -91,12 +91,26 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     ...adventure.npcs.map((n) => n.prose),
     ...adventure.scenes.map((s) => s.prose),
   ];
+  const outside = (relative: string) => path.isAbsolute(relative) || relative === ".." || relative.startsWith(`..${path.sep}`);
+  const root = realpathSync(dir);
   for (const file of own) {
-    const relative = path.relative(path.resolve(dir), path.resolve(dir, file));
-    if (path.isAbsolute(file) || relative === ".." || relative.startsWith(`..${path.sep}`)) problem(`${file} is outside the pack; only lore may be`);
+    const full = path.resolve(dir, file);
+    if (path.isAbsolute(file) || outside(path.relative(path.resolve(dir), full))) problem(`${file} is outside the pack; only lore may be`);
+    // A link inside the pack to a file outside it doesn't travel with the folder either.
+    else if (existsSync(full) && outside(path.relative(root, realpathSync(full)))) problem(`${file} links outside the pack; only lore may be`);
   }
+  // Each one is read here, as the game reads it: the engine never reads this text.
   for (const file of [...own, ...adventure.lore]) {
-    if (!existsSync(path.resolve(dir, file))) problem(`${file} is named but missing`);
+    const full = path.resolve(dir, file);
+    if (!existsSync(full)) {
+      problem(`${file} is named but missing`);
+      continue;
+    }
+    try {
+      readFileSync(full, "utf8");
+    } catch (error) {
+      problem(`${file} can't be read as a file: ${(error as NodeJS.ErrnoException).code ?? (error as Error).message}`);
+    }
   }
   for (const member of adventure.party) {
     if (member.seat === "ai" && !member.card) problem(`party ${member.handle} has an AI seat and no card`);
@@ -111,9 +125,14 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   ] as const) {
     for (const id of duplicates([...list])) problem(`${what} ${id} is listed twice`);
   }
-  const sceneFiles = existsSync(path.join(dir, "scenes"))
-    ? readdirSync(path.join(dir, "scenes")).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -".json".length))
-    : [];
+  let sceneFiles: string[] = [];
+  try {
+    if (existsSync(path.join(dir, "scenes"))) {
+      sceneFiles = readdirSync(path.join(dir, "scenes")).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -".json".length));
+    }
+  } catch (error) {
+    problem(`scenes can't be read as a folder: ${(error as NodeJS.ErrnoException).code ?? (error as Error).message}`);
+  }
   for (const orphan of sceneFiles.filter((f) => !sceneIdList.includes(f))) problem(`scenes/${orphan}.json is in no scene of the skeleton`);
   const ids = new Map<string, SceneIds>();
   for (const id of sceneIdList) {

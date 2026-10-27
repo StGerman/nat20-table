@@ -3,7 +3,7 @@
 // `cargo build -p nat20-api-server`.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -50,6 +50,23 @@ const PLANTS: [string, (skeleton: Adventure, pack: string) => void, string][] = 
   ["a missing card", (_, pack) => rmSync(path.join(pack, "cards/maren.md")), "cards/maren.md is named but missing"],
   ["an AI seat without a card", (s) => delete s.party[2].card, "party maren has an AI seat and no card"],
   ["prose outside the pack", (s) => (s.scenes[0].prose = "../../lore/the_wend_valley.md"), "is outside the pack"],
+  [
+    "a card that links outside the pack",
+    (_, pack) => {
+      rmSync(path.join(pack, "cards/maren.md"));
+      symlinkSync(path.join(pack, "../../lore/the_wend_valley.md"), path.join(pack, "cards/maren.md"));
+    },
+    "cards/maren.md links outside the pack",
+  ],
+  ["a folder named as a card", (s) => (s.party[2].card = "cards"), "cards can't be read as a file: EISDIR"],
+  [
+    "a file named scenes",
+    (_, pack) => {
+      rmSync(path.join(pack, "scenes"), { recursive: true });
+      writeFileSync(path.join(pack, "scenes"), "");
+    },
+    "scenes can't be read as a folder: ENOTDIR",
+  ],
   ["a check the scene file doesn't declare", (s) => (s.scenes[0].checks[0].check = "reeve_bribe"), "names check reeve_bribe"],
   ["an encounter the scene file doesn't declare", (s) => (s.scenes[2].encounters[0].encounter = "yard_brawl"), "names encounter yard_brawl"],
   ["an exit to an unlisted scene", (s) => (s.scenes[0].exits[0].to = "s9_nowhere"), "exits to s9_nowhere"],
