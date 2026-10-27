@@ -82,19 +82,22 @@ export function reportSections(options: {
   const { run, transcript, usage } = options;
   const lines = (kind: string) => transcript.filter((r) => r.channel === "run" && r.kind === kind).map((r) => `${r.speaker}: ${r.text}`);
   const outcome = transcript.filter((r) => r.channel === "dm" && r.text.startsWith("Combat is over")).map((r) => r.text);
-  const players = usage.filter((r) => r.agent !== "dm");
-  const turns = players.filter((r) => r.purpose === "combat_turn").map((r) => r.wall_ms);
+  // A combat turn is every wake it took, the nudge included, as the loop timed it; a timed-out
+  // wake counts at its timeout.
+  const turns = run?.playerTurns.map((t) => t.wall_ms) ?? [];
+  const wakes = run?.playerTurns.reduce((sum, t) => sum + t.wakes, 0) ?? 0;
   const out = [
     `- Ended: ${run?.ended ?? `the run failed: ${options.failure instanceof Error ? options.failure.message : String(options.failure)}`}`,
     ...(outcome.length > 0 ? [`- Fights: ${outcome.join(" ")}`] : []),
     `- Fallbacks: ${run?.fallbacks ?? "n/a"}; retries: ${lines("retry").length}; errors and timeouts: ${lines("error").length}`,
-    `- Player combat turns: ${turns.length}, p50 ${percentile(turns, 50) || "n/a"} ms, p95 ${percentile(turns, 95) || "n/a"} ms (target ${TARGET_P95_MS.player} ms)`,
+    `- Player combat turns: ${turns.length} (${wakes} wakes), p50 ${percentile(turns, 50) || "n/a"} ms, p95 ${percentile(turns, 95) || "n/a"} ms (target ${TARGET_P95_MS.player} ms)`,
     "",
-    "| Agent | Turns | p50 ms | p95 ms | Target p95 | Input | Cache read | Cache write | Output | API-equivalent $ |",
-    "|---|---|---|---|---|---|---|---|---|---|",
+    // Per model wake, whether it ended with its result or not: a combat turn can take two.
+    "| Agent | Wakes | p50 ms | p95 ms | Input | Cache read | Cache write | Output | API-equivalent $ |",
+    "|---|---|---|---|---|---|---|---|---|",
     ...summarize(usage).map(
       (s) =>
-        `| ${s.agent} | ${s.turns} | ${s.p50_ms} | ${s.p95_ms} | ${s.agent === "dm" ? TARGET_P95_MS.dm : TARGET_P95_MS.player} | ${s.input_tokens} | ${s.cache_read_tokens} | ${s.cache_write_tokens} | ${s.output_tokens} | ${s.api_equivalent_usd} |`,
+        `| ${s.agent} | ${s.turns} | ${s.p50_ms} | ${s.p95_ms} | ${s.input_tokens} | ${s.cache_read_tokens} | ${s.cache_write_tokens} | ${s.output_tokens} | ${s.api_equivalent_usd} |`,
     ),
     "",
     "End state (DM view):",

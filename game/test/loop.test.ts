@@ -213,12 +213,14 @@ test("an engine refusal goes back to the agent that made the call, counts as a r
 });
 
 test("an agent that ends its turn without acting is nudged once, then the turn falls back to end_turn", async () => {
-  const { t, players } = await play({
+  const { t, players, report } = await play({
     seed: 27,
     players: { torva: {}, maren: {}, ilsa: { combat: async () => {} } },
     seat: new ScriptedSeat("bren", [], (prompt, seat) => (seat.shown.filter((e) => e.kind === "status").length > 1 ? { kind: "command", name: "quit" } : ScriptedSeat.pass(prompt, seat))),
     dm: fightAtOnce,
   });
+  // The report times the turn, both wakes of it, not each wake on its own.
+  assert.equal(report.playerTurns.find((turn) => turn.handle === "ilsa")?.wakes, 2);
   const ilsa = players.get("ilsa")!;
   assert.deepEqual(ilsa.briefings.filter((b) => b.wake === "combat_turn").map((b) => b.briefing.split("\n").at(-1)).slice(0, 2), [
     "Act with your tools, then call end_turn.",

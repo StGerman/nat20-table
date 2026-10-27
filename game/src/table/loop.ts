@@ -30,6 +30,11 @@ export interface RunReport {
   scenes: string[];
   fallbacks: number;
   humanRejections: number;
+  /**
+   * Each AI player's combat turn as the table waited for it: from its first wake to the end of its
+   * last, the nudge included (scope §6.4 measures a turn, not a model call).
+   */
+  playerTurns: Array<{ handle: Handle; wall_ms: number; wakes: number }>;
 }
 
 /** What the nudge says when an AI player's turn is still open after its wake (spec §6). */
@@ -64,6 +69,8 @@ export class TableLoop {
   private lastOptions: LegalActionsResult | undefined;
   /** DM events read but held back for the next DM wake (a fight's end, kept for `combat_over`). */
   private dmBacklog: Event[] = [];
+  /** AI players' combat turns so far, for the report. */
+  private readonly playerTurns: RunReport["playerTurns"] = [];
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -120,7 +127,14 @@ export class TableLoop {
     await Promise.allSettled([this.dm.close?.(), ...[...this.agents.values()].map((a) => a.close?.())]);
     if (failure) throw failure;
     if (unwritten) throw unwritten;
-    return { ended, steps, scenes: [...this.scenes], fallbacks: this.table.fallbacks, humanRejections: this.table.humanRejections };
+    return {
+      ended,
+      steps,
+      scenes: [...this.scenes],
+      fallbacks: this.table.fallbacks,
+      humanRejections: this.table.humanRejections,
+      playerTurns: [...this.playerTurns],
+    };
   }
 
   /** One decision: whatever the engine waits on next. */
@@ -346,11 +360,15 @@ export class TableLoop {
     const options = await tools.legalActions();
     const briefing = await this.playerBriefing(handle, "It is your turn in the fight. Your options:", options.text, "Act with your tools, then call end_turn.");
     const since = this.table.engine.logHead;
+    const started = performance.now();
+    let wakes = 1;
     const woke = await this.wakePlayer(agent, "combat_turn", briefing);
     if (woke !== FAILED && this.table.retries(handle) < this.table.maxRetries && (await this.sameTurn(handle, since))) {
       this.table.retry(handle, `${handle} didn't end its turn; nudged`);
+      wakes += 1;
       await this.wakePlayer(agent, "combat_turn", NUDGE);
     }
+    this.playerTurns.push({ handle, wall_ms: Math.round(performance.now() - started), wakes });
     if (await this.sameTurn(handle, since)) await this.fallBack(handle, "end_turn");
     await this.narrateNew(handle);
   }
