@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
 import { buildChoices } from "../src/table/choices.ts";
+import type { Situation } from "../src/table/situation.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { yardDm, ScriptedPlayer } from "../src/table/scripted.ts";
 import { InkSeat } from "../src/ui/ink-seat.ts";
@@ -164,10 +165,17 @@ test("other characters' engine lines wait for the narration of them, and stay ou
   seat.show({ kind: "narration", speaker: "dm", text: "The arrow glances off Torva's pauldron." });
   assert.deepEqual(texts(), ["DM: Sparks fly from Ilsa's fingers.", "The arrow glances off Torva's pauldron."]);
   assert.equal(seat.getView().stale, true);
+  // A frame sent with no line held still waits: the loop sends it before the narration of the last turn.
+  const frame = { mode: "combat" } as unknown as Situation;
+  seat.show({ kind: "situation", situation: frame });
+  assert.equal(seat.getView().situation, undefined);
+  seat.show({ kind: "narration", speaker: "dm", text: "The goblin falls." });
+  assert.equal(seat.getView().situation, frame);
+  assert.equal(seat.getView().stale, false);
   // Another speaker starts a new message after a blank line.
   seat.show({ kind: "speech", speaker: "maren", text: "Hold on, Torva!" });
   seat.show({ kind: "intent", speaker: "maren", text: "Maren runs to Torva." });
-  assert.deepEqual(texts().slice(2), ["", "Maren: Hold on, Torva!", "Maren runs to Torva."]);
+  assert.deepEqual(texts().slice(3), ["", "Maren: Hold on, Torva!", "Maren runs to Torva."]);
 });
 
 test("with --verbose the engine lines a narration covers fold under it, dim and indented", () => {
@@ -193,10 +201,20 @@ test("the human's own lines, and any no narration covered before a decision, sho
   seat.show({ kind: "narration", speaker: "dm", text: "The goblin snarls." });
   seat.show({ kind: "engine", text: "bren rolls an attack roll vs goblin_1: 1d20 (14) = 19, hit.", roll: "r50", seq: 60, own: true });
   assert.deepEqual(texts(), ["DM: The goblin snarls.", "", "  [r50] bren rolls an attack roll vs goblin_1: 1d20 (14) = 19, hit."]);
-  // The DM's narration failed (a fallback): the next decision shows the engine lines alone.
+  // The human's own line doesn't take others' lines with it: they still wait for their narration.
+  goblinTurn(seat);
+  seat.show({ kind: "engine", text: "bren's turn ends.", seq: 61, own: true });
+  assert.equal(texts().at(-1), "  bren's turn ends.");
+  seat.show({ kind: "narration", speaker: "dm", text: "The arrow misses Torva." });
+  assert.equal(texts().at(-1), "DM: The arrow misses Torva.");
+  // The DM's narration failed (a fallback): the lines show alone.
+  goblinTurn(seat);
+  seat.unnarrated();
+  assert.deepEqual(texts().slice(-3), ["", "  goblin_1's turn.", "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss."]);
+  // So does a decision.
   goblinTurn(seat);
   seat.show({ kind: "reaction", summary: "goblin_1 leaves your reach.", options: ["Opportunity Attack"] });
-  assert.deepEqual(texts().slice(3), ["  goblin_1's turn.", "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss.", "Reaction: goblin_1 leaves your reach.", "  1. Opportunity Attack"]);
+  assert.deepEqual(texts().slice(-4), ["  goblin_1's turn.", "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss.", "Reaction: goblin_1 leaves your reach.", "  1. Opportunity Attack"]);
   goblinTurn(seat);
   void seat.ask({ kind: "explore" });
   assert.equal(texts().at(-1), "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss.");

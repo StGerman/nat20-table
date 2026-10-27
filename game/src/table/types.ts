@@ -91,6 +91,11 @@ export interface Seat {
    * not recorded: it names a seat, never what the seat is deciding.
    */
   busy?(on: string | undefined): void;
+  /**
+   * The DM's narration of the engine lines the seat was shown failed (a fallback): a seat that
+   * holds lines for their narration shows them now, as they are (AGT-37). Not recorded.
+   */
+  unnarrated?(): void;
 }
 
 // --- Agents -----------------------------------------------------------------------------------

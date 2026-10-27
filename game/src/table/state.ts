@@ -122,6 +122,8 @@ export class TableState {
   private dmLines: Event[] = [];
   /** The seq of the last engine line written to the DM's transcript. */
   private dmShownTo = -1;
+  /** The DM's narration failed: the lines the next flush shows stand alone (AGT-37). */
+  private unnarrated = false;
   /** Whose turn the human's screen is in, from the lines shown so far: the human's own lines show at once (AGT-37). */
   private screenTurn: Handle | undefined;
   /** The flush running now, if any: the next one starts after it. */
@@ -247,6 +249,10 @@ export class TableState {
       const own = this.screenTurn === this.human;
       if (event.kind === "turn_end" || event.kind === "combat_over") this.screenTurn = undefined;
       this.show({ kind: "engine", text: event.text, seq: event.seq, ...(event.kind === "roll" ? { roll: event.roll.id } : {}), ...(own ? { own: true as const } : {}) });
+    }
+    if (this.unnarrated) {
+      this.unnarrated = false;
+      this.seat.unnarrated?.();
     }
   }
 
@@ -466,6 +472,7 @@ export class TableState {
   /** The orchestrator's own bookkeeping line: a retry, a fallback, an error, a raised hand. */
   log(kind: "retry" | "fallback" | "error" | "system" | "intent" | "hand", text: string, speaker = "table"): void {
     this.transcript.add({ speaker, channel: "run", kind, text });
+    if (kind === "fallback" && speaker === "dm") this.unnarrated = true;
   }
 }
 

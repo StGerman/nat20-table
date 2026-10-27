@@ -32,7 +32,7 @@ A. Other characters' engine lines wait in the seat for the narration that covers
 
 ## Consequences
 
-- `game/src/ui/ink-seat.ts` and `lines.ts` hold, fold and label; `TableEvent` `engine` gains an optional `own`.
+- `game/src/ui/ink-seat.ts` and `lines.ts` hold, fold and label; the panel frame waits for the next narration or decision too. `TableEvent` `engine` gains an optional `own`, and the seat an optional `unnarrated()` that `TableState` calls after a DM fallback, so those lines show alone.
 - The DM prompt asks for narration that stands alone and names no turns.
 - `transcript.jsonl`, the engine and session logs, and `nat20-audit` are unchanged; `inputs.jsonl` gains `own`.
 - Row AGT-37 in `TASKS.md`.

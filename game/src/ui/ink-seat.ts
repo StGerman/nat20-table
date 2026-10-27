@@ -70,8 +70,8 @@ export class InkSeat implements Seat {
   private instance: Instance | undefined;
   private interrupted = false;
   /**
-   * Other characters' engine lines waiting for the DM's narration of them, and the panel frame
-   * that waits with them, so neither tells the outcome first (AGT-37).
+   * Other characters' engine lines waiting for the DM's narration of them, and the newest panel
+   * frame, which waits for the next narration or decision, so neither tells the outcome first (AGT-37).
    */
   private held: Line[] = [];
   private heldSituation: Extract<TableEvent, { kind: "situation" }> | undefined;
@@ -109,8 +109,11 @@ export class InkSeat implements Seat {
   show(event: TableEvent): void {
     switch (event.kind) {
       case "situation":
-        if (this.held.length > 0) this.heldSituation = event;
-        else this.situation(event);
+        // The loop refreshes the panel before each step, ahead of the narration of what came
+        // before it: the frame waits for that narration, or for the next decision. A turn block
+        // the frame shows is over goes at once.
+        this.heldSituation = event;
+        if (this.view.options?.budget && event.situation && endsTurn(event.situation, this.handle)) this.update({ options: undefined });
         return;
       case "options":
         // Numbered options stay above the prompt instead of scrolling away; `/options` prints them again.
@@ -118,13 +121,10 @@ export class InkSeat implements Seat {
         this.update({ options: event });
         return;
       case "engine": {
+        // The human's own line shows at once; others' lines before it still wait for their narration.
         const lines = eventLines(event, this.handle);
-        if (!event.own) {
-          this.held.push(...lines);
-          return;
-        }
-        this.release();
-        this.add(lines);
+        if (event.own) this.add(lines);
+        else this.held.push(...lines);
         return;
       }
       case "narration": {
@@ -171,6 +171,10 @@ export class InkSeat implements Seat {
   }
 
   readonly palette: Palette;
+
+  unnarrated(): void {
+    this.release();
+  }
 
   ask(prompt: HumanPrompt): Promise<PlayerIntent> {
     // Nothing waits for a narration while the human decides.

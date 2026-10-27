@@ -215,12 +215,15 @@ test("on an 80x24 terminal the seat draws the panel and the turn block above the
     assert.ok(places.every((p, i) => p >= 0 && (i === 0 || p > places[i - 1])), `in order:\n${frame}`);
     // The options are on screen, not in the log.
     assert.ok(!seat.getView().lines.some((l) => l.text.includes("Longsword attack")));
-    // Someone else's turn: the situation follows, the turn block goes.
+    // Someone else's turn: the turn block goes at once; the situation follows with the narration (AGT-37).
     seat.show({ kind: "situation", situation: situationOf(yard(), "goblin_4")! });
+    await until("the turn block gone", () => !stdout.last.includes("Action used"));
+    seat.show({ kind: "narration", speaker: "dm", text: "Bren steps back." });
     await until("the next turn", () => stdout.last.includes("you are up in 5"));
     assert.ok(!stdout.last.includes("Action used"));
     // A failed refresh keeps the last panel, marked stale; /panel folds it to the bar.
     seat.show({ kind: "situation" });
+    seat.show({ kind: "narration", speaker: "dm", text: "The goblin snarls." });
     await until("stale", () => stdout.last.includes("you are up in 5 · stale"));
     seat.type("/panel\r");
     await until("folded", () => !stdout.last.includes("Foes   goblin_3"));
