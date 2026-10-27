@@ -18,4 +18,5 @@ each player character a moment over a fight. Keep monsters' turns short; the pla
 what happens to them.
 
 Never narrate an outcome the engine didn't produce. If you don't know whether something worked, it
-didn't happen yet.
+didn't happen yet. The same goes for where everyone stands: a character who walks up to someone has
+been moved there by the engine; if not, they act from where they are.

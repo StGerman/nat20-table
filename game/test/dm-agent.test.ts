@@ -74,6 +74,10 @@ test("the DM's prompt holds the rules, the craft guidance and the whole pack; it
   assert.ok(dm.systemPrompt.includes(PACK.text), "the whole pack is in the prompt");
   assert.match(dm.systemPrompt, /^You are the Dungeon Master of "The Silent Mill"/);
   assert.match(dm.systemPrompt, /A human plays bren; AI players play torva, maren, ilsa\./);
+  // A live exit run (2026-10-27): the DM narrated Bren walking up to a goblin the engine still
+  // had 24 ft away (TASKS.md AGT-9).
+  assert.match(dm.systemPrompt, /Never narrate a character walking up to someone or somewhere unless move put them there\./);
+  assert.match(dm.systemPrompt, /in a fight only bren moves, on bren's turn/);
   for (const skill of craftSkills()) assert.ok(dm.systemPrompt.includes(skill.body), `the ${skill.name} craft text is in the prompt`);
   const options = sessionOptions({ agent: "dm", choice: CHOICE, systemPrompt: dm.systemPrompt, tools: dm.seatTools }, "/empty");
   assert.deepEqual(options.tools, []);

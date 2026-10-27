@@ -370,7 +370,7 @@ export class TableLoop {
         "map_combat",
         undefined,
         `It is ${human}'s turn, and the human playing ${human} said what ${human} does (above).`,
-        `Map it to ${human}'s options with legal_actions, submit, move and end_turn, then narrate. If it can't be done, say so in narration.`,
+        `Map it to ${human}'s options with legal_actions, submit, move and end_turn, then narrate only what the engine did. If it can't be done, or a move is refused, say so in narration.`,
         `${human}'s options:`,
         this.lastOptions ? formatOptions(this.lastOptions) : "(call legal_actions)",
       );
