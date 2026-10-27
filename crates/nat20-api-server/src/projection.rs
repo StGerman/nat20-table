@@ -8,7 +8,7 @@
 use nat20_api_contract::{
     Anchor, AnchorObserved, AnchorView, CheckView, Condition, CreatureFull, CreatureObserved,
     EncounterView, Event, EventKind, Handle, Mode, PointFt, RollView, Sheet, SpawnView, State,
-    Visibility,
+    TurnBudget, Visibility,
 };
 
 use crate::render;
@@ -135,6 +135,16 @@ pub fn sheet(viewer: &Viewer, sheet: Sheet) -> Option<Sheet> {
     match viewer {
         Viewer::Dm => Some(sheet),
         Viewer::Creature(handle) if *handle == sheet.handle.0 => Some(sheet),
+        Viewer::Creature(_) => None,
+    }
+}
+
+/// What is left of `actor`'s turn goes only to its owner and the DM (Rule 3, the §5 table): `None`
+/// for anyone else, so another creature's `legal_actions` listing carries no `budget`.
+pub fn budget(viewer: &Viewer, actor: &str, budget: TurnBudget) -> Option<TurnBudget> {
+    match viewer {
+        Viewer::Dm => Some(budget),
+        Viewer::Creature(handle) if handle == actor => Some(budget),
         Viewer::Creature(_) => None,
     }
 }

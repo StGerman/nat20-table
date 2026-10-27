@@ -220,8 +220,12 @@ impl Session {
     }
 
     /// The options at `actor`'s pending action prompt. In explore mode, the options it could
-    /// take on a turn of its own, with no prompt id.
-    pub fn legal_actions(&mut self, actor: &str) -> Result<CommandResult, ApiError> {
+    /// take on a turn of its own, with no prompt id. The turn's `budget` is projected for `viewer`.
+    pub fn legal_actions(
+        &mut self,
+        actor: &str,
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
         if self.game_mut()?.mode() == Mode::Explore {
             let (options, unavailable) = self.game_mut()?.explore_legal_actions(actor)?;
             return Ok(CommandResult::LegalActions {
@@ -240,7 +244,7 @@ impl Session {
             options,
             unavailable,
             can_end_turn: true,
-            budget: Some(budget),
+            budget: projection::budget(viewer, actor, budget),
         })
     }
 
