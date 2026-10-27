@@ -99,21 +99,27 @@ export class TableLoop {
       }
     }
     const ended = this.table.ended ?? "ended";
-    try {
-      await this.table.flush();
-    } catch {
-      // The engine is gone; the lines it showed are already written.
-    }
+    // A stopped engine leaves the run's record short, and the run says why it stopped. Any other
+    // failure to write the record (a full disk, a folder it can't write) fails the run, once the
+    // agents are closed: the audit needs that record.
+    let unwritten: unknown;
+    const writing = async (write: () => Promise<void>) => {
+      try {
+        await write();
+      } catch (error) {
+        if (!(error instanceof EngineStopped)) unwritten ??= error;
+      }
+    };
+    // When the engine is gone, the lines it showed are already written.
+    await writing(() => this.table.flush());
     this.table.log("system", `run ended: ${ended}`);
     this.table.show({ kind: "end", text: ended });
-    try {
-      await this.table.engine.writeLog();
-    } catch {
-      // The engine is gone: the run has its transcript and the engine's request log, not the
-      // session log, so the audit can't run on it (spec §6: no resume).
-    }
+    // When the engine is gone, the run has its transcript and the engine's request log, not the
+    // session log, so the audit can't run on it (spec §6: no resume).
+    await writing(() => this.table.engine.writeLog());
     await Promise.allSettled([this.dm.close?.(), ...[...this.agents.values()].map((a) => a.close?.())]);
     if (failure) throw failure;
+    if (unwritten) throw unwritten;
     return { ended, steps, scenes: [...this.scenes], fallbacks: this.table.fallbacks, humanRejections: this.table.humanRejections };
   }
 

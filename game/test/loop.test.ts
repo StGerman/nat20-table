@@ -3,7 +3,7 @@
 // The two game fixtures (transcript, session log, seat inputs) replay byte for byte; set
 // RECORD_FIXTURES=1 to write them again after a deliberate change, and read the diff.
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -526,6 +526,19 @@ test("the human's words reach the AI players marked as the human's, so the leak 
     .filter((r) => r.seat !== "bren" && r.text.includes("Is this DC 15?"));
   assert.deepEqual(heard.map((r) => r.seat).sort(), ["ilsa", "maren", "torva"]);
   for (const r of heard) assert.deepEqual(r.quoted, ["bren: Is this DC 15?"]);
+});
+
+test("a run whose record can't be written fails instead of ending as usual", async () => {
+  await assert.rejects(
+    play({
+      seed: 27,
+      seat: seatThen([]),
+      dm: fightAtOnce,
+      // The session log's place is taken by a folder, so writing it fails while the engine runs.
+      onTable: (t) => mkdirSync(path.join(t.runDir, SESSION_LOG)),
+    }),
+    /EISDIR/,
+  );
 });
 
 test("each seat has its own retry budget, so one player's refusals don't spend another's", async () => {
