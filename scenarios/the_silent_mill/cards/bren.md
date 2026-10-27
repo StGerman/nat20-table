@@ -11,3 +11,5 @@ The company's sergeant, a Human Fighter in chain mail with a longsword and shiel
 **With the party.** Trusts Torva in a fight, Maren's judgement about people and Ilsa's eye for detail. Takes the front so the others don't have to.
 
 **Voice.** Short sentences, an old soldier's dry jokes, "right then" before getting on with it.
+
+**At the table.** Speaks when the others are stuck and someone has to decide, or when a stranger needs a plain answer. Acts without a word when there is a front to take or a friend to stand over. Stays silent while the others talk it through, and never makes the speech. Turns to the others to give the call, to ask Ilsa what she noticed, Maren what she makes of someone, and Torva to lead the charge.
