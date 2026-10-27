@@ -642,6 +642,33 @@ test("a player the DM's narration speaks to has the floor first; one it only tel
   }
 });
 
+test("a narration that speaks to a player still gives it the floor when a later one in the same round doesn't", async () => {
+  let turns = 0;
+  const { report, dm } = await play({
+    seed: 27,
+    seat: seatThen([
+      { kind: "text", text: "We wait." },
+      { kind: "text", text: "Well?" },
+    ]),
+    players: {
+      torva: {},
+      maren: { granted: async (tools) => void (await tools.submitDecision({ option_id: "cast/bless/1", targets: ["bren", "maren", "torva"] })) },
+      ilsa: {},
+    },
+    dm: {
+      table_turn: async (tools) => {
+        if (++turns > 1) return;
+        await tools.narrate("The reeve turns: \"Torva, will you go first?\"");
+        tools.grantAction("maren");
+      },
+      narrate: async (tools) => void (await tools.narrate("Maren prays, and light settles on their shoulders.")),
+    },
+  });
+  // Maren's blessing was narrated after the address, and the address still counts.
+  assert.ok(dm.briefings.some((b) => b.wake === "narrate"), "the granted action was narrated");
+  assert.deepEqual(report.talkRounds.map((r) => r.named), [[], ["torva"]]);
+});
+
 test("raised hands past the round's floor bound lapse, and the next round turns the seat order by one", async () => {
   const say = (line: string) => async (tools: Parameters<NonNullable<ScriptedPlayerPolicy["declare"]>>[0]) => void (await tools.say(line));
   const t = await testTable({

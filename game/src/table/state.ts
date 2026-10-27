@@ -95,10 +95,11 @@ export class TableState {
    */
   private collecting: Map<Handle, Array<() => Promise<void>>> | undefined;
   /**
-   * The DM's last narration to the whole table since the loop last read it: an AI player it speaks
-   * to has the floor first in the next talk round (party talk §4.2).
+   * The DM's narrations to the whole table out of combat since the last talk round: an AI player
+   * one of them speaks to has the floor first in the next talk round (party talk §4.2). A fight's
+   * narrations («Ильса, твой ход») aren't kept.
    */
-  lastNarration = "";
+  private narrations: string[] = [];
   /**
    * The AI players who spoke since the talk round began. A declaration from one of them retells its
    * own line, so the human's screen leaves it out (party talk §6); the DM and the transcript still
@@ -284,7 +285,7 @@ export class TableState {
     await this.flush();
     this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text });
     this.narratedTo = this.dmShownTo;
-    if (!to) this.lastNarration = text;
+    if (!to && !this.inCombat) this.narrations.push(text);
     for (const player of this.players) {
       if (!to || to === player) this.inboxes.get(player)?.push(`DM${to ? " (to you)" : ""}: ${text}`);
     }
@@ -359,6 +360,13 @@ export class TableState {
   /** From now until `commit`, what the AI players say waits and is delivered in seat order. */
   collect(): void {
     this.collecting = new Map(this.players.map((player) => [player, []]));
+  }
+
+  /** Takes the DM's narrations to the table since the last talk round, oldest first. */
+  takeNarrations(): string[] {
+    const narrations = this.narrations;
+    this.narrations = [];
+    return narrations;
   }
 
   /** A talk round out of combat begins (party talk §4.2): who spoke and declared is counted afresh. */

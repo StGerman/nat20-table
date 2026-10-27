@@ -17,6 +17,9 @@ test("a hand is SPEAK, BOTH, ACT with what the character does, or PASS, with an 
   assert.deepEqual(handAnswer("**PASS** — nothing to add"), { kind: "pass", why: "nothing to add" });
   assert.deepEqual(handAnswer('"SPEAK - she was asked"'), { kind: "speak", why: "she was asked" });
   assert.deepEqual(handAnswer("ACT: Ильса молча записывает имя.\nэто важно"), { kind: "act", intent: "Ильса молча записывает имя.", why: "это важно" });
+  // A why on the same line is never part of what is declared.
+  assert.deepEqual(handAnswer("ACT: Maren bandages Snitt. — I want him to owe me."), { kind: "act", intent: "Maren bandages Snitt.", why: "— I want him to owe me." });
+  assert.deepEqual(handAnswer("ACT: Torva kicks the door"), { kind: "act", intent: "Torva kicks the door", why: "" });
   assert.deepEqual(handAnswer("Pass.\nThe others have it."), { kind: "pass", why: "The others have it." });
 });
 
@@ -46,6 +49,11 @@ test("the DM's narration names only a player it speaks to, and the human's line 
   assert.deepEqual(dm("Бертил берёт хлеб у Марен, долго молчит."), []);
   assert.deepEqual(dm("Марен тоже подходит ближе, а Торва ждёт."), []);
   assert.deepEqual(dm("Ильсе он отвечает обстоятельно."), []);
+  // A list or a clause after a name is not an address: the sentence must speak to someone.
+  assert.deepEqual(dm("У ворот стоят Торва, Марен, Ильса."), []);
+  assert.deepEqual(dm("Ильса, присев у двери, читает табличку."), []);
+  assert.deepEqual(dm("Torva, Maren and Ilsa follow the reeve."), []);
+  assert.deepEqual(dm("Снитт оборачивается. Торва, ты слышишь?"), ["torva"]);
   assert.deepEqual(
     namedIn([{ text: "Torva, the door." }, { text: "Ilsa, you see a sign.", addressOnly: true }], PLAYERS, NAMES),
     ["torva", "ilsa"],

@@ -639,9 +639,8 @@ export class TableLoop {
     this.table.beginTalk();
     for (const handle of handles) this.table.resetRetries(handle);
     // The DM's narration names the characters it tells about; only one it speaks to has the floor first.
-    const narration = this.table.lastNarration;
-    this.table.lastNarration = "";
-    const mentioned = namedIn([{ text: humanLine }, { text: narration, addressOnly: true }], handles, this.names);
+    const narrations = this.table.takeNarrations().map((text) => ({ text, addressOnly: true }));
+    const mentioned = namedIn([{ text: humanLine }, ...narrations], handles, this.names);
     const named = mentioned.slice(0, this.floorBound);
     const raising = handles.filter((h) => !mentioned.includes(h));
     let floorWakes = 0;

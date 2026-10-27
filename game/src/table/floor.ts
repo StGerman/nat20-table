@@ -20,8 +20,9 @@ const ANSWER = /^\s*["“*]*\s*(SPEAK|BOTH|ACT|PASS)\b["”*]*\s*[:.,\-–—]?\
 
 /**
  * Reads a hand wake's answer: `SPEAK`, `BOTH`, `ACT: <what the character does>` or `PASS`, in Latin
- * letters, then if the player likes half a sentence of why. For ACT the rest of the first line is
- * the intent and later lines are the why; for the others everything after the word is the why.
+ * letters, then if the player likes half a sentence of why. For ACT the intent is the first
+ * sentence after the word, and the rest is the why, which is never declared («ACT: Марен
+ * перевязывает Снитта. — Пусть будет должен.»); for the others everything after the word is the why.
  */
 export function handAnswer(text: string): Hand {
   const m = ANSWER.exec(text);
@@ -29,9 +30,11 @@ export function handAnswer(text: string): Hand {
   const word = m[1].toUpperCase();
   const rest = m[2].replace(/["”*]+\s*$/, "").trim();
   if (word === "ACT") {
-    const [intent, ...why] = rest.split("\n");
-    const line = intent.trim();
-    return line ? { kind: "act", intent: line, why: why.join(" ").trim() } : { kind: "unread", text: text.trim() };
+    const [first, ...later] = rest.split("\n");
+    const sentence = /^(.+?[.!?…]+)\s+(.+)$/s.exec(first.trim());
+    const intent = (sentence ? sentence[1] : first).trim();
+    const why = [sentence?.[2], ...later].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    return intent ? { kind: "act", intent, why } : { kind: "unread", text: text.trim() };
   }
   const why = rest.replace(/\s+/g, " ");
   return word === "SPEAK" ? { kind: "speak", why } : word === "BOTH" ? { kind: "both", why } : { kind: "pass", why };
@@ -47,19 +50,33 @@ export interface NamingLine {
 const NOT_WORD = "[\\p{L}\\p{N}_]";
 
 /**
+ * A sentence that speaks to someone: a question or an exclamation, a second-person word (ты, твой,
+ * вы, you), or a Russian verb in the second person singular («скажешь», «видишь»).
+ */
+const SPOKEN_TO = /[?!]|(?<![\p{L}\p{N}_])(?:ты|тебе|тебя|тобой|твой|твоя|твоё|твое|твои|твоего|твоей|твоих|вы|вам|вас|ваш|ваша|ваши|you|your|yours)(?![\p{L}\p{N}_])|\p{L}(?:ешь|ёшь|ишь)(?![\p{L}\p{N}_])/iu;
+
+/**
  * Where `form` first stands in `text` as a whole word, ignoring case («Торве» in «скажи Торве», not
  * inside «Торвеля»), or -1. With `addressOnly`, only where it is spoken to: after the start of a
- * sentence, a quote, a dash or a comma, and followed by a comma, `!` or `?` («Ильса, твой ход»,
- * «Брен, Торва, за мной!»), or closing a sentence after a comma («Что скажешь, Ильса.»). «Бертил
- * берёт хлеб у Марен, долго молчит» tells about Maren, and doesn't count.
+ * sentence, a quote, a dash or a comma and followed by a comma, `!` or `?` («Ильса, твой ход»,
+ * «Брен, Торва, за мной!»), or closing a sentence after a comma («Что скажешь, Ильса.»), and only
+ * in a sentence that speaks to someone (`SPOKEN_TO`). «Бертил берёт хлеб у Марен, долго молчит»,
+ * «У ворот стоят Торва, Марен, Ильса» and «Ильса, присев у двери, читает табличку» tell about them,
+ * and don't count.
  */
 function findName(text: string, form: string, addressOnly: boolean): number {
   const name = form.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = addressOnly
-    ? `(?:^|[,.!?…:;—–«"“(])\\s*${name}(?=\\s*[,!?])|,\\s*${name}(?=\\s*(?:[.!?…»”"]|$))`
-    : `(?<!${NOT_WORD})${name}(?!${NOT_WORD})`;
-  const m = new RegExp(pattern, "iu").exec(text);
-  return m ? m.index : -1;
+  if (!addressOnly) {
+    const m = new RegExp(`(?<!${NOT_WORD})${name}(?!${NOT_WORD})`, "iu").exec(text);
+    return m ? m.index : -1;
+  }
+  const address = new RegExp(`(?:^|[,.!?…:;—–«"“(])\\s*${name}(?=\\s*[,!?])|,\\s*${name}(?=\\s*(?:[.!?…»”"]|$))`, "iu");
+  for (const sentence of text.matchAll(/[^.!?…]+[.!?…]*["»”]*/gu)) {
+    if (!SPOKEN_TO.test(sentence[0])) continue;
+    const m = address.exec(sentence[0]);
+    if (m) return sentence.index! + m.index;
+  }
+  return -1;
 }
 
 /**
