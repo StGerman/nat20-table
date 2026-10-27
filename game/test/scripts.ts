@@ -1,7 +1,7 @@
 // Scripted DMs for the game fixtures (M6 spec §8, §10): the DM side of a seeded run, from a fixed
 // plan, through the same bound tools the DM agent gets.
 import type { HitDiceSpend, State } from "@nat20-table/engine-client";
-import { ScriptedDm } from "../src/table/scripted.ts";
+import { ScriptedDm, yardDm } from "../src/table/scripted.ts";
 import type { DmTools } from "../src/table/tools.ts";
 
 type Step = (tools: DmTools) => Promise<unknown>;
@@ -16,17 +16,8 @@ async function dmState(tools: DmTools): Promise<Extract<State, { view: "dm" }>> 
   return state;
 }
 
-/** The yard fight on its own: open the scene, start the fight, narrate, close the adventure. */
-export function yardDm(): ScriptedDm {
-  return new ScriptedDm({
-    scene_open: async (tools) => {
-      await tools.narrate("Goblins and wolves wait in the mill yard.");
-      await tools.startCombat("yard_fight");
-    },
-    narrate: async (tools) => void (await tools.narrate("Steel and teeth flash in the yard.")),
-    combat_over: async (tools) => void (await tools.endAdventure("The yard falls quiet.")),
-  });
-}
+/** The yard fight on its own; it lives in src because the step 9 run plays it too. */
+export { yardDm };
 
 /**
  * The Milestone 3 trail (crates/nat20-duel/src/trail.rs) as a DM would run it: each human action

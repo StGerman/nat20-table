@@ -126,8 +126,10 @@ export function sessionOptions(config: SessionConfig, cwd: string): Options {
 
 /** What a turn produced. */
 export interface TurnResult {
-  /** The agent's final text, if it wrote any (tool calls carry its decisions). */
+  /** Everything the agent wrote in the turn, between tool calls included. */
   text: string;
+  /** Its last message alone: the answer a declaration or a summary asks for. */
+  final: string;
   usage: UsageRecord;
 }
 
@@ -193,6 +195,15 @@ export class AgentSession {
   private stale = 0;
   /** The SDK's `init` message: the tools, skills and credential source the session really got. */
   init: SDKSystemMessage | undefined;
+
+  /**
+   * Whether a timed-out turn's result is still to come. Its tool calls can arrive until then, and
+   * Claude Code runs one turn at a time, so a tool call meanwhile is that turn's: the next turn's
+   * calls come only after that result, which the session reads first.
+   */
+  get settling(): boolean {
+    return this.stale > 0;
+  }
 
   constructor(config: SessionConfig) {
     this.config = config;
@@ -297,7 +308,7 @@ export class AgentSession {
           return;
         }
         const usage = this.record(turn, "ok", message.ttft_ms ?? null);
-        this.settle({ text: turn.texts.join("\n").trim(), usage });
+        this.settle({ text: turn.texts.join("\n").trim(), final: message.result.trim(), usage });
         return;
       }
       default:
