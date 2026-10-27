@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Ability, ApiError, Awaiting, Event, Handle, OptionId, PointFt, PromptId, RollId, Sheet, Skill,
     State, V1, Viewer,
-    state::{ActionOption, UnavailableOption},
+    state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
 /// One request line sent to the engine.
@@ -377,6 +377,10 @@ pub enum CommandResult {
         unavailable: Vec<UnavailableOption>,
         /// Whether `end_turn` is accepted now; always false in explore mode.
         can_end_turn: bool,
+        /// What the actor has left of its turn, in combat mode. Absent in explore mode, where
+        /// there is no turn.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        budget: Option<TurnBudget>,
     },
     /// The option was taken; its rolls and effects are in `events`.
     Submit {},

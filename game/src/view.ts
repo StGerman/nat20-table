@@ -1,17 +1,29 @@
 // Compact text an agent reads, made from engine responses that were already projected for that
 // agent's viewer (Rule 3: projection happens in the engine; this file only formats). Text instead
 // of raw JSON keeps every turn's input small, which is most of the latency and cost (M6 spec §7).
-import type { ActionOption, CommandResult, Event, Handle, Sheet, State } from "@nat20-table/engine-client";
+import type { ActionOption, CommandResult, Event, Handle, Sheet, State, TurnBudget } from "@nat20-table/engine-client";
 
 /** The result of `legal_actions`. */
 export type LegalActionsResult = Extract<CommandResult, { cmd: "legal_actions" }>;
 type Option = ActionOption;
 
-/** One line per option: id, name, cost, and its targets with distance and reach. */
+/** One line per option: id, name, cost, and its targets with distance and reach; in a fight, what is left of the turn first. */
 export function formatOptions(result: LegalActionsResult): string {
   const lines = result.options.map((option) => formatOption(option));
+  if (result.budget) lines.unshift(`Left this turn: ${formatBudget(result.budget)}`);
   if (result.can_end_turn) lines.push("- end_turn: end your turn");
   return lines.join("\n");
+}
+
+/** What is left of a turn: "Action used · Bonus Action free · Reaction free · 4 of 60 ft left". */
+export function formatBudget(budget: TurnBudget): string {
+  const use = (name: string, n: number) => `${name} ${n === 0 ? "used" : n === 1 ? "free" : `${n} left`}`;
+  return [
+    use("Action", budget.action),
+    use("Bonus Action", budget.bonus_action),
+    use("Reaction", budget.reaction),
+    `${budget.movement_ft} of ${budget.speed_ft} ft left`,
+  ].join(" · ");
 }
 
 function formatOption(option: Option): string {

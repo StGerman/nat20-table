@@ -229,15 +229,18 @@ impl Session {
                 options,
                 unavailable,
                 can_end_turn: false,
+                budget: None,
             });
         }
         let prompt_id = self.require_prompt(actor, None, false)?;
         let (options, unavailable) = self.game_mut()?.legal_actions(actor)?;
+        let budget = self.game_mut()?.turn_budget(actor)?;
         Ok(CommandResult::LegalActions {
             prompt_id: PromptId(prompt_id),
             options,
             unavailable,
             can_end_turn: true,
+            budget: Some(budget),
         })
     }
 

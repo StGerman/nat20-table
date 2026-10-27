@@ -584,6 +584,22 @@ pub struct OptionVariant {
     pub name: String,
 }
 
+/// What a creature has left of its turn in a fight: its action economy and movement. Owner and DM
+/// only, like the options it comes with.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct TurnBudget {
+    /// Actions left this turn: 1 at the start of a turn, 2 after Action Surge, 0 once spent.
+    pub action: u8,
+    /// Bonus Actions left this turn.
+    pub bonus_action: u8,
+    /// Reactions left until the start of its next turn.
+    pub reaction: u8,
+    /// Movement left this turn, in whole feet, rounded down.
+    pub movement_ft: u32,
+    /// This turn's movement in feet, Dash included: what `movement_ft` counts down from.
+    pub speed_ft: u32,
+}
+
 /// An option the actor has but cannot take now.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct UnavailableOption {
