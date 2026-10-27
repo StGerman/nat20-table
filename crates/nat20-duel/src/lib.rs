@@ -5,6 +5,7 @@
 //! the leak scan (Milestone 6 step 6, decision 0033).
 
 pub mod audit;
+pub mod balance;
 pub mod client;
 pub mod duel;
 pub mod game_audit;
