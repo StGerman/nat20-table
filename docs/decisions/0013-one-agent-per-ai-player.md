@@ -1,6 +1,6 @@
 # 0013. Each AI player is its own agent with its own context
 
-- **Status:** Accepted
+- **Status:** Accepted (its out-of-combat order, "all player agents are asked in parallel", superseded by [0039](0039-party-talk-hand-raise-floor.md): each player raises its hand, and speakers take the floor in turn)
 - **Date:** 2026-10-16
 - **Decided by:** Stas (review comment on the Demo Run scope: "AI player should be a dedicated agent player with own context window")
 

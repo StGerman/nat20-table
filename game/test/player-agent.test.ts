@@ -11,10 +11,10 @@ import { declaration, ModelPlayer, playerPrompt } from "../src/agents/player.ts"
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnTimeout } from "../src/errors.ts";
-import { packParty } from "../src/play/run.ts";
+import { packParty, talkLines } from "../src/play/run.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedSeat } from "../src/table/scripted.ts";
-import { PlayerTools } from "../src/table/tools.ts";
+import { HandTools, PlayerTools } from "../src/table/tools.ts";
 import type { PlayerWake } from "../src/table/types.ts";
 import { testTable } from "./helpers.ts";
 import { StandIn, type Script as PlayerScript } from "./stand-in.ts";
@@ -72,6 +72,49 @@ test("a model player passes as a normal answer, plays from its card's Talk and s
   assert.match(prompt, /your card's "Talk and silence" and "With the party", and your notes/);
   assert.match(prompt, /Don't repeat what someone else already said/);
   assert.match(prompt, /You may also say one short line with say, reacting to what happened since your last turn/);
+  assert.match(prompt, /"Do you raise your hand\?": .*Call no tool: your final answer starts with SPEAK \(a line to say\), BOTH \(a line and a deed\), ACT: and one sentence/);
+  assert.match(prompt, /"You have the floor": you raised your hand, or someone named Maren\./);
+});
+
+test("every party member has its names, whichever seat plays it: handle, card name and the pack's forms", () => {
+  const { names } = packParty(MILL);
+  assert.deepEqual(names.get("torva"), ["torva", "Torva", "Торва", "Торвы", "Торве", "Торву", "Торвой"]);
+  assert.deepEqual(names.get("maren"), ["maren", "Maren", "Марен"]);
+  assert.ok(names.get("bren")!.includes("Брену"), "the human's character too, for a run where an AI plays it");
+});
+
+test("a model player answers a hand wake with its answer as written, and its tools wait for the floor", async () => {
+  const { player } = standInPlayer("ilsa", async (wake, call) => {
+    if (wake !== "hand") return "PASS";
+    assert.deepEqual(await call("say", { text: "Me first!" }), { text: "not now: wait for the floor: answer SPEAK, BOTH, ACT: <what you do> or PASS", isError: true });
+    assert.equal((await call("look")).isError, false, "it may still look");
+    return "ACT: Ilsa writes the name down.\nit may matter";
+  });
+  const t = await testTable({ seed: 1, players: ["ilsa"] });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    assert.equal(await player.wake("hand", "Do you raise your hand?", new HandTools("ilsa", t.table)), "ACT: Ilsa writes the name down.\nit may matter");
+    assert.ok(!t.table.transcript.records.some((r) => r.kind === "speech"), "nothing was said");
+  } finally {
+    t.close();
+  }
+});
+
+test("the report counts talk rounds: lines, silence, hands, named players who answered, and time", () => {
+  const round = { named: [], hands: {}, floor_wakes: 0, lapsed: [], spoke: [], declared: [], silent: [], wall_ms: 0 };
+  assert.deepEqual(talkLines([]), []);
+  assert.deepEqual(
+    talkLines([
+      { ...round, named: ["ilsa"], hands: { torva: "act", maren: "pass" }, floor_wakes: 1, spoke: ["ilsa"], declared: ["torva"], silent: ["maren"], first_line_ms: 4000, wall_ms: 6000 },
+      { ...round, hands: { torva: "speak", maren: "both", ilsa: "pass" }, floor_wakes: 2, spoke: ["torva", "maren"], declared: ["maren"], silent: ["ilsa"], first_line_ms: 6000, wall_ms: 12000 },
+      { ...round, hands: { torva: "pass", maren: "pass", ilsa: "unread" }, silent: ["torva", "maren", "ilsa"], wall_ms: 3000 },
+    ]),
+    [
+      "- Talk rounds: 3; lines per round 1.0; silent share 56% (target at least 30%); floor wakes 3, hands lapsed 0",
+      "- Hands: speak 1, both 1, act 1, pass 4, unread 1; named players who answered first: 1 of 1",
+      "- Talk round time: first line p50 4000 ms (target 7000 ms), round p50 6000 ms, p95 12000 ms (target 20000 ms)",
+    ],
+  );
 });
 
 test("with --lang ru a model player speaks, declares, notes and summarises in Russian, and still passes with PASS", () => {

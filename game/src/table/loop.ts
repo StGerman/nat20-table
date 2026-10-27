@@ -6,9 +6,10 @@ import { EngineStopped, type Event, type Handle, type State } from "@nat20-table
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
+import { FLOOR_BOUND, handAnswer, namedIn, speakingOrder, type Hand } from "./floor.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { DmTools, PlayerTools, send } from "./tools.ts";
+import { DmTools, HandTools, PlayerTools, send } from "./tools.ts";
 import type { DmAgent, DmWake, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, ToolOutcome } from "./types.ts";
 
 /**
@@ -34,6 +35,33 @@ export interface LoopOptions {
    * the terminal's situation panel (AGT-36). Off for seats that draw no panel. Default false.
    */
   situation?: boolean;
+  /**
+   * What the table calls each AI player (`PackParty.names`): a line that names one gives it the
+   * floor first (party talk §4.2). A player missing here is named by its handle.
+   */
+  names?: ReadonlyMap<Handle, readonly string[]>;
+  /** Floor wakes a talk round may hold, named players and speakers together. Default `FLOOR_BOUND`. */
+  floorBound?: number;
+}
+
+/** One talk round out of combat, for the report (party talk §2, §7). */
+export interface TalkRound {
+  /** The AI players the human's line named or the DM's narration spoke to, who had the floor first. */
+  named: Handle[];
+  /** What each other AI player answered its hand wake with: `unread` for an answer that isn't one of the four, or a failed wake. */
+  hands: Partial<Record<Handle, Hand["kind"]>>;
+  /** Floor wakes in the round: the named players' and the speakers'. Retries of a refused declaration don't count. */
+  floor_wakes: number;
+  /** Raised hands that never got the floor: the round's bound was reached. */
+  lapsed: Handle[];
+  /** The AI players who spoke a line, who declared something, and who did neither. */
+  spoke: Handle[];
+  declared: Handle[];
+  silent: Handle[];
+  /** From the round's start to its first AI line on the human's screen; absent when nobody said or did anything. */
+  first_line_ms?: number;
+  /** From the round's start to the last AI player's answer, before the DM's wake. */
+  wall_ms: number;
 }
 
 /** How a run went, for the run report (spec §6, §11). */
@@ -51,6 +79,8 @@ export interface RunReport {
    * last, the nudge included (scope §6.4 measures a turn, not a model call).
    */
   playerTurns: Array<{ handle: Handle; wall_ms: number; wakes: number }>;
+  /** Each talk round out of combat (party talk §7). */
+  talkRounds: TalkRound[];
 }
 
 /** What the nudge says when an AI player's turn is still open after its wake (spec §6). */
@@ -72,6 +102,10 @@ export class TableLoop {
   private readonly dm: DmAgent;
   private readonly agents = new Map<Handle, PlayerAgent>();
   private readonly tools = new Map<Handle, PlayerTools>();
+  /** Each AI player's tools for a hand wake: they answer in text only (party talk §4.3). */
+  private readonly handTools = new Map<Handle, HandTools>();
+  private readonly names: ReadonlyMap<Handle, readonly string[]>;
+  private readonly floorBound: number;
   private readonly dmTools: DmTools;
   private readonly onScene: (sceneId: string, played: readonly string[]) => SceneChoice;
   private readonly maxSteps: number;
@@ -93,6 +127,8 @@ export class TableLoop {
   private dmBacklog: Event[] = [];
   /** AI players' combat turns so far, for the report. */
   private readonly playerTurns: RunReport["playerTurns"] = [];
+  /** Talk rounds so far, for the report; their count shifts the speakers' seat order (party talk §4.2.6). */
+  private readonly talkRounds: TalkRound[] = [];
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -100,7 +136,10 @@ export class TableLoop {
     for (const agent of options.players) {
       this.agents.set(agent.handle, agent);
       this.tools.set(agent.handle, new PlayerTools(agent.handle, this.table));
+      this.handTools.set(agent.handle, new HandTools(agent.handle, this.table));
     }
+    this.names = options.names ?? new Map();
+    this.floorBound = options.floorBound ?? FLOOR_BOUND;
     this.dmTools = new DmTools(this.table, {
       insteadOf: (sceneId) => {
         const choice = this.onScene(sceneId, this.scenes);
@@ -164,6 +203,7 @@ export class TableLoop {
       fallbacks: this.table.fallbacks,
       humanRejections: this.table.humanRejections,
       playerTurns: [...this.playerTurns],
+      talkRounds: [...this.talkRounds],
     };
   }
 
@@ -546,12 +586,14 @@ export class TableLoop {
     const human = this.table.human;
     await this.table.flush();
     this.top = this.shown = [];
+    let line = "";
     for (;;) {
       const intent = await this.ask(this.table.question ? { kind: "answer" } : this.shown !== this.top ? { kind: "pick" } : { kind: "explore" });
       if (!intent) return;
       if (intent.kind === "text") {
         this.table.question = undefined;
         await this.table.declare(human, intent.text);
+        line = intent.text;
         break;
       }
       if (intent.kind === "option") {
@@ -566,11 +608,12 @@ export class TableLoop {
         this.table.question = undefined;
         this.table.log("intent", `${human} picked: ${picked.label}`, human);
         this.table.tellDm(`${human} took an option: ${picked.label}`);
+        line = picked.label;
         break;
       }
       this.table.show({ kind: "info", title: "Nothing to react to", text: "Say what you do, or type /options." });
     }
-    if (!this.paused) await this.declarations();
+    if (!this.paused) await this.talkRound(line);
     await this.wakeDm(
       "table_turn",
       undefined,
@@ -581,35 +624,103 @@ export class TableLoop {
   }
 
   /**
-   * Every AI player declares at most one thing, in parallel, heard in seat order (step 3). A refused
-   * declaration goes back to its player, who declares again while it has retries (spec §6).
+   * The AI players' part of a round out of combat (step 3; party talk §4.2, §4.3, decision 0039).
+   * An AI player that `humanLine` names, or that the DM's narration since the last round speaks to,
+   * has the floor first. Every other one answers a hand wake meanwhile: SPEAK, BOTH, ACT with what
+   * it does without a word, or PASS. A silent act is declared once the hands are in, with no floor
+   * wake. Then the raised hands have the floor one at a time, each hearing what was said before
+   * it, until the round holds `floorBound` floor wakes.
    */
-  private async declarations(): Promise<void> {
-    const players = [...this.agents.values()];
-    const briefings: string[] = [];
-    for (const agent of players) {
-      this.table.resetRetries(agent.handle);
-      briefings.push(await this.playerBriefing(agent.handle, "Declare at most one thing your character does now: speak with say if you like, and answer with what you set out to do in one sentence, or PASS."));
+  private async talkRound(humanLine: string): Promise<void> {
+    const started = performance.now();
+    const handles = [...this.agents.keys()];
+    // The DM's narration names the characters it tells about; only one it speaks to has the floor first.
+    const narrations = this.table.takeNarrations().map((text) => ({ text, addressOnly: true }));
+    // A table with no AI player has no talk round, and the report counts none.
+    if (handles.length === 0) return;
+    this.table.beginTalk();
+    for (const handle of handles) this.table.resetRetries(handle);
+    const mentioned = namedIn([{ text: humanLine }, ...narrations], handles, this.names);
+    const named = mentioned.slice(0, this.floorBound);
+    const raising = handles.filter((h) => !mentioned.includes(h));
+    let floorWakes = 0;
+    // Every hand wake's brief is built before any wake runs, so none depends on which model is faster.
+    const asks: string[] = [];
+    for (const handle of raising) {
+      asks.push(await this.playerBriefing(handle, "Do you raise your hand? Answer SPEAK, BOTH, ACT: and what you do without a word, or PASS. Call no tool."));
     }
-    this.table.collect();
-    const declared = await Promise.all(players.map((agent, i) => this.wakePlayer(agent, "declare", briefings[i])));
-    await this.table.commit();
-    for (const [i, agent] of players.entries()) {
-      let intent = declared[i];
-      while (typeof intent === "string" && intent.trim() !== "" && !this.table.ended) {
-        const outcome = await this.table.declare(agent.handle, intent.trim());
-        if (outcome.ok) break;
-        if (!outcome.retryable) {
-          this.table.fallbacks += 1;
-          this.table.log("fallback", `${agent.handle}'s declaration is dropped: ${outcome.text}`, agent.handle);
-          break;
-        }
-        intent = await this.wakePlayer(
-          agent,
-          "declare",
-          await this.playerBriefing(agent.handle, `Your declaration: ${outcome.text}`, "Declare again in one sentence, or PASS."),
-        );
+    const namedFirst = async () => {
+      for (const handle of named) {
+        if (this.table.ended) return;
+        floorWakes += 1;
+        await this.takeFloor(handle, "You have the floor first: you were named. Answer: say your line with say if you have one, and answer with what you set out to do in one sentence, or PASS.");
       }
+    };
+    const [, answers] = await Promise.all([
+      namedFirst(),
+      Promise.all(raising.map((handle, i) => this.wakePlayer(this.agents.get(handle)!, "hand", asks[i], this.handTools.get(handle)))),
+    ]);
+    const hands = new Map<Handle, Hand>();
+    for (const [i, handle] of raising.entries()) {
+      const answer = answers[i];
+      const hand: Hand = typeof answer === "string" ? handAnswer(answer) : { kind: "unread", text: answer === FAILED ? "(the wake failed)" : "" };
+      hands.set(handle, hand);
+      const said = hand.kind === "unread" ? hand.text : hand.kind === "act" ? [hand.intent, hand.why].filter(Boolean).join(" / ") : hand.why;
+      this.table.logHand(handle, hand.kind.toUpperCase(), said);
+    }
+    for (const [handle, hand] of hands) {
+      if (hand.kind === "act" && !this.table.ended) await this.declareFor(handle, hand.intent);
+    }
+    const lapsed = mentioned.slice(this.floorBound);
+    for (const handle of lapsed) this.table.log("hand", "lapsed: named, but the round's floor is full", handle);
+    for (const handle of speakingOrder(hands, handles, this.talkRounds.length)) {
+      if (this.table.ended) break;
+      if (floorWakes >= this.floorBound) {
+        lapsed.push(handle);
+        this.table.log("hand", "lapsed: the round's floor is full", handle);
+        continue;
+      }
+      floorWakes += 1;
+      await this.takeFloor(handle, "You have the floor: you raised your hand. Say your line with say if it still needs saying, and answer with what you set out to do in one sentence, or PASS.");
+    }
+    const { spoke, declared, firstLineMs } = this.table.talkSoFar();
+    this.talkRounds.push({
+      named,
+      hands: Object.fromEntries([...hands].map(([handle, hand]) => [handle, hand.kind])),
+      floor_wakes: floorWakes,
+      lapsed,
+      spoke,
+      declared,
+      silent: handles.filter((h) => !spoke.includes(h) && !declared.includes(h)),
+      ...(firstLineMs === undefined ? {} : { first_line_ms: firstLineMs }),
+      wall_ms: Math.round(performance.now() - started),
+    });
+  }
+
+  /** An AI player has the floor: one declare wake, its line heard at once, its intent declared. */
+  private async takeFloor(handle: Handle, ask: string): Promise<void> {
+    const declared = await this.wakePlayer(this.agents.get(handle)!, "declare", await this.playerBriefing(handle, ask));
+    if (typeof declared === "string") await this.declareFor(handle, declared);
+  }
+
+  /**
+   * Declares what an AI player sets out to do. A refused declaration goes back to its player, who
+   * declares again while it has retries (spec §6).
+   */
+  private async declareFor(handle: Handle, intent: string | void | typeof FAILED): Promise<void> {
+    while (typeof intent === "string" && intent.trim() !== "" && !this.table.ended) {
+      const outcome = await this.table.declare(handle, intent.trim());
+      if (outcome.ok) return;
+      if (!outcome.retryable) {
+        this.table.fallbacks += 1;
+        this.table.log("fallback", `${handle}'s declaration is dropped: ${outcome.text}`, handle);
+        return;
+      }
+      intent = await this.wakePlayer(
+        this.agents.get(handle)!,
+        "declare",
+        await this.playerBriefing(handle, `Your declaration: ${outcome.text}`, "Declare again in one sentence, or PASS."),
+      );
     }
   }
 
@@ -748,12 +859,15 @@ export class TableLoop {
     ].join("\n");
   }
 
-  /** Wakes an AI player. A model error or timeout makes the decision fall back; a plan limit stops the run. */
-  private async wakePlayer(agent: PlayerAgent, wake: PlayerWake, briefing: string): Promise<string | void | typeof FAILED> {
+  /**
+   * Wakes an AI player, with its own tools unless `tools` says otherwise. A model error or timeout
+   * makes the decision fall back; a plan limit stops the run.
+   */
+  private async wakePlayer(agent: PlayerAgent, wake: PlayerWake, briefing: string, tools?: PlayerTools): Promise<string | void | typeof FAILED> {
     this.table.recordInput(agent.handle, briefing);
     const done = this.waitFor(`${agent.handle} is thinking`);
     try {
-      return await agent.wake(wake, briefing, this.tools.get(agent.handle)!);
+      return await agent.wake(wake, briefing, tools ?? this.tools.get(agent.handle)!);
     } catch (error) {
       if (stopsTheRun(error)) throw error;
       const why = error instanceof TurnTimeout ? "timed out" : `failed: ${error instanceof Error ? error.message : String(error)}`;

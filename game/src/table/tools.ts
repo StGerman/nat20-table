@@ -191,6 +191,42 @@ export class PlayerTools {
   }
 }
 
+/**
+ * An AI player's tools during a hand wake (party talk §4.3): it may look and keep notes, but it
+ * answers in text only, and speaks or acts once it has the floor.
+ */
+export class HandTools extends PlayerTools {
+  private wait(): Promise<ToolOutcome> {
+    const outcome = notNow("wait for the floor: answer SPEAK, BOTH, ACT: <what you do> or PASS");
+    this.record(outcome.text);
+    return Promise.resolve(outcome);
+  }
+
+  override legalActions(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override submitDecision(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override move(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override endTurn(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override react(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override say(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+}
+
 /** Only the three shapes of a move goal, field by field. */
 function moveTarget(to: MoveTarget): MoveTarget {
   switch (to.kind) {

@@ -86,7 +86,7 @@ const table = new TableState({
 const players: PlayerAgent[] = party.ai.map((handle) =>
   scripted ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice, language, usage }),
 );
-const loop = new TableLoop({ table, dm: yardDm(flags.encounter), players, maxSteps: Number(flags["max-steps"]) });
+const loop = new TableLoop({ table, dm: yardDm(flags.encounter), players, maxSteps: Number(flags["max-steps"]), names: party.names });
 
 console.log(`Playing ${flags.scene} (seed ${engine.seed}): ${party.ai.join(", ")} on ${scripted ? "scripted players" : `${choice.model} (${choice.effort})`}, ${party.human} scripted, DM scripted.`);
 let run: RunReport | undefined;

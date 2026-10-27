@@ -9,10 +9,10 @@
     "prose": ["prose/adventure.md"],
     "lore": ["../../lore/the_wend_valley.md"],
     "party": [
-        { "handle": "bren", "seat": "human", "card": "cards/bren.md", "_comment": "The human's seat by default; the card is for runs where an AI plays Bren." },
-        { "handle": "torva", "seat": "ai", "card": "cards/torva.md", "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped." },
-        { "handle": "maren", "seat": "ai", "card": "cards/maren.md" },
-        { "handle": "ilsa", "seat": "ai", "card": "cards/ilsa.md" }
+        { "handle": "bren", "seat": "human", "card": "cards/bren.md", "names": ["Bren", "Брен", "Брена", "Брену", "Бреном", "Брене"], "_comment": "The human's seat by default; the card is for runs where an AI plays Bren." },
+        { "handle": "torva", "seat": "ai", "card": "cards/torva.md", "names": ["Torva", "Торва", "Торвы", "Торве", "Торву", "Торвой"], "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped." },
+        { "handle": "maren", "seat": "ai", "card": "cards/maren.md", "names": ["Maren", "Марен"] },
+        { "handle": "ilsa", "seat": "ai", "card": "cards/ilsa.md", "names": ["Ilsa", "Ильса", "Ильсы", "Ильсе", "Ильсу", "Ильсой"] }
     ],
     "npcs": [
         { "id": "osric_hale", "name": "Osric Hale, the reeve", "prose": "prose/npcs/osric_hale.md" },

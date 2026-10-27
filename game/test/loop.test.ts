@@ -14,7 +14,7 @@ import { TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
-import type { PlayerIntent, TableEvent } from "../src/table/types.ts";
+import type { PlayerIntent, TableEvent, ToolOutcome } from "../src/table/types.ts";
 import { testTable, type TestTable } from "./helpers.ts";
 import { trailDm, yardDm } from "./scripts.ts";
 
@@ -130,6 +130,7 @@ test("the human, scripted, plays the Milestone 3 trail across five scenes, and t
   const lines = t.table.transcript.records.map((r) => r.text);
   assert.ok(lines.includes("Combat is over: the other side surrendered."));
   assert.ok(t.table.transcript.records.some((r) => r.kind === "question"), "the DM asked the human a question");
+  assert.deepEqual(report.talkRounds, [], "no AI player, no talk round");
   matchesFixture("m3_trail", t.runDir);
 });
 
@@ -526,9 +527,9 @@ test("a refused narration reaches nobody; the DM rewrites it, and after two retr
   assert.ok(stubborn.seat.shown.some((e) => e.kind === "engine" && e.text === "Scene m5_s3_yard loaded in explore mode."));
 });
 
-test("AI players declare in parallel and are heard in seat order; a refused declaration is asked for again", async () => {
+test("raised hands take the floor one at a time, each hearing the lines before it; a refused declaration is asked for again", async () => {
   const later = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-  const { t, dm, players } = await play({
+  const { t, dm, players, report } = await play({
     seed: 27,
     seat: seatThen([{ kind: "text", text: "I look for tracks." }]),
     speechGuard: (text) => (/HP/.test(text) ? "it names a game number" : undefined),
@@ -550,24 +551,200 @@ test("AI players declare in parallel and are heard in seat order; a refused decl
     },
     dm: { scene_open: async (tools) => void (await tools.narrate("The yard is quiet.")) },
   });
+  // Torva is slower than Ilsa, and still speaks first: the order is the seat order, not the models' speed.
   const heard = t.table.transcript.records.filter((r) => r.channel === "table" && (r.kind === "speech" || r.kind === "intent")).map((r) => `${r.speaker}: ${r.text}`);
   assert.deepEqual(heard, [
     "bren: I look for tracks.",
     "torva: Stay close.",
-    "ilsa: Something is wrong here.",
     "torva: I guard the gate.",
     "maren: I pray for us all.",
+    "ilsa: Something is wrong here.",
     "ilsa: I read the old sign.",
   ]);
-  // Maren hears why, declares again, and nothing falls back.
+  // Everyone raised a hand first; each floor wake heard what was said before it.
+  for (const player of players.values()) assert.deepEqual(player.briefings.map((b) => b.wake).slice(0, 2), ["hand", "declare"]);
+  const ilsa = players.get("ilsa")!.briefings.find((b) => b.wake === "declare")!.briefing;
+  assert.match(ilsa, /torva says: Stay close\.\ntorva: I guard the gate\.\nmaren: I pray for us all\./);
+  assert.match(ilsa, /You have the floor: you raised your hand\./);
+  assert.doesNotMatch(players.get("torva")!.briefings.find((b) => b.wake === "declare")!.briefing, /ilsa/);
+  // Maren hears why, declares again, and nothing falls back; her retry isn't a floor wake.
   const retold = players.get("maren")!.briefings.filter((b) => b.wake === "declare").map((b) => b.briefing);
   assert.equal(retold.length, 2);
   assert.match(retold[1], /Refused, nobody heard it: it names a game number/);
   assert.ok(runLines(t, "retry").includes("declaration refused: it names a game number"));
   assert.deepEqual(runLines(t, "fallback"), []);
+  assert.deepEqual(runLines(t, "hand"), ["BOTH", "BOTH", "BOTH"]);
   const turn = dm.briefings.find((b) => b.wake === "table_turn")!.briefing;
   assert.ok(turn.indexOf("bren: I look for tracks.") < turn.indexOf("torva: I guard the gate."));
   assert.doesNotMatch(turn, /9 HP/);
+  const [round] = report.talkRounds;
+  assert.deepEqual(
+    { ...round, first_line_ms: undefined, wall_ms: undefined },
+    {
+      named: [],
+      hands: { torva: "both", maren: "both", ilsa: "both" },
+      floor_wakes: 3,
+      lapsed: [],
+      spoke: ["torva", "ilsa"],
+      declared: ["torva", "maren", "ilsa"],
+      silent: [],
+      first_line_ms: undefined,
+      wall_ms: undefined,
+    },
+  );
+  assert.ok(round.first_line_ms! >= 30 && round.first_line_ms! <= round.wall_ms);
+});
+
+test("a player the human names has the floor first and raises no hand; a silent act is declared without the floor", async () => {
+  const { t, players, seat, report } = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "Ilsa, what does the sign say?" }]),
+    players: {
+      torva: { hand: async () => "ACT: Torva kicks the gate open.\nshe is bored" },
+      maren: { hand: async () => "PASS - nothing for me", declare: async () => "Maren prays." },
+      ilsa: {
+        declare: async (tools) => {
+          await tools.say("It says: keep out.");
+        },
+      },
+    },
+    dm: { scene_open: async (tools) => void (await tools.narrate("The yard is quiet.")) },
+  });
+  assert.deepEqual(players.get("ilsa")!.briefings.map((b) => b.wake), ["declare"]);
+  assert.match(players.get("ilsa")!.briefings[0].briefing, /You have the floor first: you were named\./);
+  assert.deepEqual(players.get("torva")!.briefings.map((b) => b.wake), ["hand"]);
+  assert.deepEqual(players.get("maren")!.briefings.map((b) => b.wake), ["hand"]);
+  assert.deepEqual(runLines(t, "hand"), ["ACT: Torva kicks the gate open. / she is bored", "PASS: nothing for me"]);
+  const screen = seat.shown.filter((e) => e.kind === "speech" || e.kind === "intent").map((e) => `${e.kind} ${e.speaker}: ${e.text}`);
+  assert.deepEqual(screen, ["speech ilsa: It says: keep out.", "intent torva: Torva kicks the gate open."]);
+  assert.deepEqual(report.talkRounds[0].named, ["ilsa"]);
+  assert.equal(report.talkRounds[0].floor_wakes, 1);
+  assert.deepEqual(report.talkRounds[0].silent, ["maren"]);
+});
+
+test("a player the DM's narration speaks to has the floor first; one it only tells about raises a hand", async () => {
+  const names = new Map([
+    ["torva", ["torva", "Torva", "Торва", "Торве", "Торву"]],
+    ["maren", ["maren", "Maren", "Марен"]],
+  ]);
+  const t = await testTable({ seed: 27, players: ["torva", "maren"], seat: seatThen([{ kind: "text", text: "Я жду." }]) });
+  const torva = new ScriptedPlayer("torva", { declare: async () => "Торва кивает." });
+  const maren = new ScriptedPlayer("maren", { declare: async () => "Марен молится." });
+  const dm = new ScriptedDm({ scene_open: async (tools) => void (await tools.narrate("Марен молчит. Староста оборачивается: «Торва, ты пойдёшь первой?»")) });
+  try {
+    const report = await new TableLoop({ table: t.table, dm, players: [torva, maren], names, maxSteps: 400 }).run("m5_s3_yard");
+    assert.deepEqual(report.talkRounds[0].named, ["torva"]);
+    assert.deepEqual(torva.briefings.map((b) => b.wake), ["declare"]);
+    assert.deepEqual(maren.briefings.map((b) => b.wake), ["hand", "declare"]);
+    assert.match(maren.briefings[1].briefing, /torva: Торва кивает\./);
+  } finally {
+    t.close();
+  }
+});
+
+test("a narration that speaks to a player still gives it the floor when a later one in the same round doesn't", async () => {
+  let turns = 0;
+  const { report, dm } = await play({
+    seed: 27,
+    seat: seatThen([
+      { kind: "text", text: "We wait." },
+      { kind: "text", text: "Well?" },
+    ]),
+    players: {
+      torva: {},
+      maren: { granted: async (tools) => void (await tools.submitDecision({ option_id: "cast/bless/1", targets: ["bren", "maren", "torva"] })) },
+      ilsa: {},
+    },
+    dm: {
+      table_turn: async (tools) => {
+        if (++turns > 1) return;
+        await tools.narrate("The reeve turns: \"Torva, will you go first?\"");
+        tools.grantAction("maren");
+      },
+      narrate: async (tools) => void (await tools.narrate("Maren prays, and light settles on their shoulders.")),
+    },
+  });
+  // Maren's blessing was narrated after the address, and the address still counts.
+  assert.ok(dm.briefings.some((b) => b.wake === "narrate"), "the granted action was narrated");
+  assert.deepEqual(report.talkRounds.map((r) => r.named), [[], ["torva"]]);
+});
+
+test("narrations wait for the next talk round out of combat, and a fight drops them", async () => {
+  const t = await testTable({ seed: 27 });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    await t.table.narrate("The reeve turns: \"Torva, will you go first?\"");
+    await t.table.narrate("Ilsa, you hear a door.", "ilsa");
+    t.table.awaiting = { kind: "action", actor: "torva" } as unknown as typeof t.table.awaiting;
+    await t.table.narrate("Ilsa, your move!");
+    t.table.awaiting = { kind: "none" };
+    await t.table.narrate("The dust settles.");
+    assert.deepEqual(t.table.takeNarrations(), ["The dust settles."]);
+    assert.deepEqual(t.table.takeNarrations(), []);
+  } finally {
+    t.close();
+  }
+});
+
+test("raised hands past the round's floor bound lapse, and the next round turns the seat order by one", async () => {
+  const say = (line: string) => async (tools: Parameters<NonNullable<ScriptedPlayerPolicy["declare"]>>[0]) => void (await tools.say(line));
+  const t = await testTable({
+    seed: 27,
+    players: ["torva", "maren", "ilsa"],
+    seat: seatThen([
+      { kind: "text", text: "We wait." },
+      { kind: "text", text: "We wait more." },
+    ]),
+  });
+  const players = [new ScriptedPlayer("torva", { declare: say("Torva here.") }), new ScriptedPlayer("maren", { declare: say("Maren here.") }), new ScriptedPlayer("ilsa", { declare: say("Ilsa here.") })];
+  try {
+    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players, floorBound: 2, maxSteps: 400 });
+    const report = await loop.run("m5_s3_yard");
+    assert.deepEqual(report.talkRounds.map((r) => [r.spoke, r.lapsed]), [
+      [["torva", "maren"], ["ilsa"]],
+      [["maren", "ilsa"], ["torva"]],
+    ]);
+    const spoken = t.table.transcript.records.filter((r) => r.kind === "speech").map((r) => r.speaker);
+    assert.deepEqual(spoken, ["torva", "maren", "maren", "ilsa"]);
+    assert.ok(runLines(t, "hand").includes("lapsed: the round's floor is full"));
+  } finally {
+    t.close();
+  }
+});
+
+test("what a player writes after its hand goes through the speech guard before the transcript", async () => {
+  const { t } = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "We wait." }]),
+    speechGuard: (text) => (/\d/.test(text) ? "it names a game number" : undefined),
+    players: {
+      torva: { hand: async () => "PASS - I'd need a 15 on a d20" },
+      maren: { hand: async () => "ACT: Maren checks the wounded.\nfirst things first" },
+    },
+    dm: {},
+  });
+  assert.deepEqual(runLines(t, "hand"), ["PASS (left out: it names a game number)", "ACT: Maren checks the wounded. / first things first"]);
+  assert.ok(!t.table.transcript.records.some((r) => /d20|15/.test(r.text)), "no number reached the transcript");
+});
+
+test("during a hand wake a player can't speak or act, only answer", async () => {
+  const t = await testTable({ seed: 27, players: ["maren"], seat: seatThen([{ kind: "text", text: "We wait." }]) });
+  let refused: ToolOutcome | undefined;
+  const maren = new ScriptedPlayer("maren", {
+    hand: async () => "PASS",
+  });
+  // A hand wake that tries to speak anyway, as a model might.
+  maren.wake = async (wake, briefing, tools) => {
+    if (wake === "hand") refused = await tools.say("I speak out of turn.");
+    return ScriptedPlayer.prototype.wake.call(maren, wake, briefing, tools);
+  };
+  try {
+    await new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: [maren], maxSteps: 400 }).run("m5_s3_yard");
+    assert.deepEqual(refused, { ok: false, retryable: false, text: "not now: wait for the floor: answer SPEAK, BOTH, ACT: <what you do> or PASS" });
+    assert.ok(!t.table.transcript.records.some((r) => r.kind === "speech" && r.speaker === "maren"));
+  } finally {
+    t.close();
+  }
 });
 
 test("a declaration that follows the same player's line this round stays off the human's screen; a silent one shows", async () => {
@@ -688,7 +865,7 @@ test("/pause stops waking AI players until /pause again", async () => {
     players: { maren: {} },
     dm: {},
   });
-  assert.deepEqual(players.get("maren")!.briefings.map((b) => b.wake), ["declare"]);
+  assert.deepEqual(players.get("maren")!.briefings.map((b) => b.wake), ["hand"]);
   assert.match(players.get("maren")!.briefings[0].briefing, /I step into the yard/);
 });
 

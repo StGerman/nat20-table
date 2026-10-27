@@ -70,16 +70,16 @@ The H and R figures are estimates: a wake that calls no tool is one model answer
 
 ### 4.2 Order at the table
 
-1. **The named player goes first, always.** When the human's last line or the DM's last narration names an AI player (the card's name with its Russian case endings: «Торва», «Торве», «Ильсу»; «Марен» doesn't decline), or an address carried over from the last round names it (§4.4), that player gets a full floor wake at once. It may answer in words, deeds or both. It may stay silent, but the prompt asks it to answer, since it was asked.
+1. **The named player goes first, always.** When the human's last line names an AI player, or the DM's narration since the last round speaks to one, or an address carried over from the last round names it (§4.4), that player gets a full floor wake at once. A name is the handle, the card's name, or a form listed in `names` on the pack's party entry, Russian cases included («Торва», «Торве», «Ильсу»; «Марен» doesn't decline). In the DM's narration only an address counts: the name set off by a comma in a sentence that speaks to someone, with a question, an exclamation or a second-person word («Ильса, что скажешь?», «Что скажешь, Ильса?»). A name it tells about doesn't count («Ильса читает табличку», «Бертил берёт хлеб у Марен», «У ворот стоят Торва, Марен, Ильса»). Narrations made during a fight («Ильса, твой ход») don't carry into the next talk round, and a fight drops the ones made before it. In the exit run, the DM's narration just before a human line named an AI player 4 times in 13, each time telling about it; it spoke to AI players only in a fight («Ильса, твой ход»). Counted as names, those four would each have cost a floor wake. It may answer in words, deeds or both. It may stay silent, but the prompt asks it to answer, since it was asked.
 2. **Everyone else raises a hand or doesn't** (§4.3), in parallel with the named player's wake.
 3. **Speakers take the floor one at a time.** Each hears everything said before it, and can still drop its line at its turn ("Torva already said it").
-4. **A silent action doesn't queue.** It reaches the DM's inbox and the human's screen at once, as one line ("Maren silently bandages Snitt's side"). The DM resolves it in its one `table_turn` wake, with everything else said in the round; it costs no DM wake of its own.
-5. **A bound on the round.** At most three floor wakes follow each other in a round: the named player, the speakers, and one hand-off from §4.4 together. A hand still up when the bound is reached lapses.
+4. **A silent action doesn't queue.** It reaches the DM's inbox and the human's screen as soon as the hands are in (after the named player's wake, when one runs), as one line ("Maren silently bandages Snitt's side"). The DM resolves it in its one `table_turn` wake, with everything else said in the round; it costs no DM wake of its own.
+5. **A bound on the round.** At most three floor wakes follow each other in a round: the named player, the speakers, and one hand-off from §4.4 together. A hand still up when the bound is reached lapses, and so does a named player past it.
 6. Ties between speakers go by seat order, shifted by one each round. That only breaks ties; it is not a rule about who talks.
 
 ```mermaid
 sequenceDiagram
-    participant H as Human (Bren)
+    participant H as Human
     participant L as Game loop
     participant N as Named player
     participant P as Other AI players
@@ -103,7 +103,7 @@ sequenceDiagram
 ### 4.3 The hand-raise wake
 
 - A new player wake, `hand`. The brief holds what was heard and what happened, as today, and asks one question: "Is any of this important to {name} now, given her goal, her character and what she thinks of the others? If not, pass."
-- The answer is text only: `SPEAK`, `BOTH`, `ACT: <one sentence>` or `PASS`, with half a sentence of why that the loop logs and never shows. A `say` or `submit_decision` call during a hand wake is refused ("wait for the floor").
+- The answer is text only: `SPEAK`, `BOTH`, `ACT: <one sentence>` or `PASS`, with half a sentence of why that the loop logs and never shows (through the speech guard first, since the audit reads every transcript line). An answer that isn't one of the four counts as a pass. A `say`, `submit_decision`, `move`, `end_turn` or `react` call during a hand wake is refused ("wait for the floor"); `look`, `my_sheet` and `note` still work.
 - It runs in the agent's existing session for the scene, so its context comes from cache. One model call instead of two.
 
 ### 4.4 Addressing a companion
@@ -133,7 +133,7 @@ The prompt asks the player to choose whom to address, and how, from these, never
 3. **In a fight:** the address is spoken on the speaker's own turn (§5, R0). The addressee reads it on its next turn as its own line in the brief: "Spoken to you: …". With R1 a named address is also a trigger for a one-line answer, but the addressee acts only on its own turn.
 4. **The addressee decides** from its card and values: help, answer, argue, refuse in character ("Heal later, hit first"), or stay silent. An address never forces an action.
 5. **Mechanics only through the engine (Rule 4).** "Help me with the lock" becomes a declaration the DM resolves with `help` or `grant_action`; Help gives Advantage, as in SRD 5.2.1. "Heal me" in a fight becomes Maren's Healing Word on her turn, if she chooses it. No line sets a result.
-6. **An address to the human** (Bren) shows as an ordinary line, marked "Maren speaks to you". The human answers or not; the loop doesn't wait for it.
+6. **An address to the human's character** (Bren in the demo, or whichever character the human plays) shows as an ordinary line, marked "Maren speaks to you". The human answers or not; the loop doesn't wait for it.
 
 Cost: no new wakes beyond the hand-off, one floor wake (about 5.7 s, $0.03) in a round that has a request or a proposal. Nothing in a fight unless R1 is on.
 
