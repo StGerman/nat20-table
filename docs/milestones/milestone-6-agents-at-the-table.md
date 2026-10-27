@@ -4,7 +4,7 @@
 - **Date:** 2026-10-23
 - **Owner:** Stas
 - **Depends on:** Milestones 3, 4 and 5 done (main 3f74dfe, contract `1.0.0-dev.30`, core pinned at fork `demo` d9c6b37). Open engine gaps that steps below wait on are listed in §9 with the step each must land before.
-- **Exit criterion** (`TASKS.md` § Milestones): one full scene of *The Silent Mill* played by the DM agent, the player agents and a human in the text UI, with visibility enforced. The exit run plays Scene 1 and Scene 3 (D1, Stas 2026-10-23).
+- **Exit criterion** (`TASKS.md` § Milestones): one full scene of *The Silent Mill* played by the DM agent, the player agents and a human in the text UI, with visibility enforced. The exit run plays Scene 1 and Scene 3 (D1, Stas 2026-10-23). Met on 2026-10-27; the run's records and findings are in the project folder (`engine/m6/runs/`), not in the repo.
 
 Milestones 1 to 5 built the engine side: every rule the adventure needs resolves in `nat20_core`, behind contract v1, with seeded fixtures and an audit. Nothing on the game side exists yet: no `game/` directory, no agents, no text UI, and the adventure itself is only test scenes. This milestone builds the table: the game loop that drives the engine, the DM agent, one agent per AI player, the human's text UI, the transcript and its audit, and *The Silent Mill* as real content. It ends with Stas playing Bren through two scenes with an AI DM and an AI party.
 
@@ -237,7 +237,7 @@ Latency levers, in order: the small own system prompt (no SDK default prompt), l
 
 ## 8. Ordered task breakdown
 
-Each step is one PR (Rule 8, one concern), stacked on the one before, green on every CI job, with its TASKS.md rows. **CI never calls a model:** every loop step ships with **scripted agents** (deterministic stand-ins that implement the same agent interface from a fixed policy) and a seeded game fixture, so the loop, the bindings, the transcript and the audit are tested without an API key. Live-model runs are manual, and their reports go to the PR description.
+Each step is one PR (Rule 8, one concern), stacked on the one before, green on every CI job, with its TASKS.md rows. **CI never calls a model:** every loop step ships with **scripted agents** (deterministic stand-ins that implement the same agent interface from a fixed policy) and a seeded game fixture, so the loop, the bindings, the transcript and the audit are tested without an API key. Live-model runs are manual. Their records stay out of the repo: in `runs/` (git-ignored) and the project folder.
 
 | # | PR | Rows | Needs | Size |
 |---|---|---|---|---|
@@ -253,11 +253,11 @@ Each step is one PR (Rule 8, one concern), stacked on the one before, green on e
 | 10 | DM agent on the Agent SDK: prompt, narration, the narration guard and the speech guard on AI-player lines (§3.5), intent mapping for the human, check selection from the adventure file or the DC ladder, scene exits, DM memory (§3.6), actions the adventure didn't plan for (§3.7), DM craft guidance in our own words (D10). Manual run: Scene 3 with the all-AI party | AGT-4, AGT-20 (new), AGT-21 | 8, 9; API-32 (C3) | L |
 | 11 | Text UI: Ink app on the `Seat` interface, `/sheet`, `/where`, `/options`, `/log`, `/pause`, inline engine lines, option numbers; `TableEvent`/`PlayerIntent` shaped per decision 0016 | AGT-7, AGT-13 (groundwork) | 10 | M |
 | 12 | Option-list cache in the server (C4) | API-17 | | S |
-| 13 | **Exit run.** Stas plays Bren through Scene 1 and Scene 3 (D1) with the DM and the AI party; the transcript, engine log and usage records go to the PR (and the project folder); the audit and the leak scan pass on them; the run report lists retries, fallbacks, p50/p95 latency, tokens and any stop at a plan limit | AGT-14 (groundwork) | 1-12 | S |
+| 13 | **Exit run.** Stas plays Bren through Scene 1 and Scene 3 (D1) with the DM and the AI party; the transcript, engine log and usage records go to the project folder, never into the repo; the audit and the leak scan pass on them; the run report lists retries, fallbacks, p50/p95 latency, tokens and any stop at a plan limit | AGT-14 (groundwork) | 1-12 | S |
 
 Steps 2, 7, 8 and 12 don't depend on the game loop; they sit in the stack where shown but can be reviewed and merged in any order once their own needs are in. The risk sits in step 5 (the loop's ordering rules under reactions and pipelined narration) and step 10 (a DM that maps intents well inside 6 s).
 
-**Where things run (D12):** live model calls run on Stas's Mac under Stas's Claude login. Steps 1, 9, 10 and 13 each ship a command Stas runs there (or a thread runs through a Remote Control session Stas approves), and the run report goes into the PR. Cloud threads build and test with scripted agents only, so the implementation environment needs network access to `registry.npmjs.org` and crates.io and no API key. Today the default cloud environment reaches neither, which blocks building `game/` there (TASKS.md row CON-14, new).
+**Where things run (D12):** live model calls run on Stas's Mac under Stas's Claude login. Steps 1, 9, 10 and 13 each ship a command Stas runs there (or a thread runs through a Remote Control session Stas approves), and the run report goes to the project folder, never into the repo. Cloud threads build and test with scripted agents only, so the implementation environment needs network access to `registry.npmjs.org` and crates.io and no API key. Today the default cloud environment reaches neither, which blocks building `game/` there (TASKS.md row CON-14, new).
 
 ## 9. Open demo gaps and when they must land
 
