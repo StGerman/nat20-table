@@ -89,16 +89,27 @@ export class TableState {
   /** The last engine lines shown to the human, for `/log`. */
   readonly recent: string[] = [];
   /**
-   * While the AI players declare in parallel (spec §3.3 explore step 3), what each one says waits
-   * here and reaches the table in seat order, so the order never depends on which model was faster.
+   * While the AI players are woken in parallel (the scene summaries), what each one says waits here
+   * and reaches the table in seat order, so the order never depends on which model was faster. In a
+   * talk round, lines reach the table as they are spoken (party talk §4.2).
    */
   private collecting: Map<Handle, Array<() => Promise<void>>> | undefined;
   /**
-   * The AI players who spoke since the declaration round began. A declaration from one of them
-   * retells its own line, so the human's screen leaves it out (party talk §6); the DM and the
-   * transcript still get it.
+   * The DM's last narration to the whole table since the loop last read it: an AI player it speaks
+   * to has the floor first in the next talk round (party talk §4.2).
+   */
+  lastNarration = "";
+  /**
+   * The AI players who spoke since the talk round began. A declaration from one of them retells its
+   * own line, so the human's screen leaves it out (party talk §6); the DM and the transcript still
+   * get it.
    */
   private readonly spokeThisRound = new Set<Handle>();
+  /** The AI players who declared something since the talk round began. */
+  private readonly declaredThisRound = new Set<Handle>();
+  /** When the talk round began, and when its first AI line reached the human's screen (`performance.now()`). */
+  private talkStarted = 0;
+  private firstShown: number | undefined;
   /** Engine events fetched for the human's screen and the DM's transcript lines, not written yet. */
   private screen: Event[] = [];
   private dmLines: Event[] = [];
@@ -273,6 +284,7 @@ export class TableState {
     await this.flush();
     this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text });
     this.narratedTo = this.dmShownTo;
+    if (!to) this.lastNarration = text;
     for (const player of this.players) {
       if (!to || to === player) this.inboxes.get(player)?.push(`DM${to ? " (to you)" : ""}: ${text}`);
     }
@@ -328,7 +340,11 @@ export class TableState {
       this.dmInbox.push(line);
       if (human) return;
       if (kind === "speech") this.spokeThisRound.add(from);
-      else if (this.spokeThisRound.has(from)) return;
+      else {
+        this.declaredThisRound.add(from);
+        if (this.spokeThisRound.has(from)) return;
+      }
+      this.firstShown ??= performance.now();
       this.show({ kind, speaker: from, text });
     };
     const queue = this.collecting?.get(from);
@@ -340,10 +356,26 @@ export class TableState {
     return { ok: true, text: "said" };
   }
 
-  /** A declaration round begins: from now until `commit`, what the AI players say waits and is delivered in seat order. */
+  /** From now until `commit`, what the AI players say waits and is delivered in seat order. */
   collect(): void {
     this.collecting = new Map(this.players.map((player) => [player, []]));
+  }
+
+  /** A talk round out of combat begins (party talk §4.2): who spoke and declared is counted afresh. */
+  beginTalk(): void {
     this.spokeThisRound.clear();
+    this.declaredThisRound.clear();
+    this.talkStarted = performance.now();
+    this.firstShown = undefined;
+  }
+
+  /** The talk round so far: which AI players spoke or declared, and how long its first line took to show. */
+  talkSoFar(): { spoke: Handle[]; declared: Handle[]; firstLineMs: number | undefined } {
+    return {
+      spoke: this.players.filter((p) => this.spokeThisRound.has(p)),
+      declared: this.players.filter((p) => this.declaredThisRound.has(p)),
+      firstLineMs: this.firstShown === undefined ? undefined : Math.round(this.firstShown - this.talkStarted),
+    };
   }
 
   /** Delivers what the AI players said while collecting, player by player in seat order. */
@@ -383,8 +415,8 @@ export class TableState {
     this.ended ??= reason;
   }
 
-  /** The orchestrator's own bookkeeping line: a retry, a fallback, an error. */
-  log(kind: "retry" | "fallback" | "error" | "system" | "intent", text: string, speaker = "table"): void {
+  /** The orchestrator's own bookkeeping line: a retry, a fallback, an error, a raised hand. */
+  log(kind: "retry" | "fallback" | "error" | "system" | "intent" | "hand", text: string, speaker = "table"): void {
     this.transcript.add({ speaker, channel: "run", kind, text });
   }
 }

@@ -21,7 +21,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0010](0010-data-sources.md) | Data sources: Foundry structured fields for mechanics, 5e-bits for monster numbers | Accepted | 2026-10-16 | Stas |
 | [0011](0011-content-licensing.md) | Content licensing boundary: CC-BY SRD, permissive data and our own words only | Accepted | 2026-10-16 | Stas |
 | [0012](0012-spatial-model.md) | Spatial model: hidden 5-ft grid narrated by the AI; the demo uses named anchors | Accepted, amended for the demo | 2026-10-16 | Stas |
-| [0013](0013-one-agent-per-ai-player.md) | Each AI player is its own agent with its own context | Accepted | 2026-10-16 | Stas |
+| [0013](0013-one-agent-per-ai-player.md) | Each AI player is its own agent with its own context | Accepted, parallel out-of-combat order superseded by 0039 | 2026-10-16 | Stas |
 | [0014](0014-level-2-pregens.md) | Four level 2 pregens: Fighter, Cleric, Wizard, optional Barbarian | Accepted | 2026-10-16 | Stas (scope) |
 | [0015](0015-scripted-monster-turns.md) | Monster turns run on a scripted engine policy, not an LLM | Accepted | 2026-10-16 | Stas (scope) |
 | [0016](0016-client-contract-deferred.md) | No client talks to the engine; the public client contract is deferred | Accepted, wire deferred | 2026-10-16 | Claude proposed; Stas acknowledged |

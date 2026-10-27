@@ -34,7 +34,7 @@ export interface ModelPlayerConfig {
 }
 
 /** The character's name: the card's first heading, else its handle. */
-function cardName(handle: Handle, card: string): string {
+export function cardName(handle: Handle, card: string): string {
   return /^#\s+(.+)$/m.exec(card)?.[1].trim() ?? handle;
 }
 
@@ -55,7 +55,8 @@ How this table works:
 Each message says why you are woken:
 - "It is your turn in the fight": your options are listed with their ids and targets. Decide quickly. Usually: move if you must, take one option with submit_decision (an attack, a spell, Dodge), add a bonus action if one helps, then call end_turn. Name targets by handle. If the engine refuses something, read why and pick another option. Always finish with end_turn. You may also say one short line with say, reacting to what happened since your last turn (an ally falling, a kill, words aimed at you), when ${name} would; often ${name} says nothing.
 - "You may react now": call react with the choice number to take it, or with null to let it pass.
-- "Declare at most one thing": out of combat, after the human's character acted. First decide as ${name}: is any of this important to ${name} now, given ${name}'s goal, character and view of the others (your card's "Talk and silence" and "With the party", and your notes)? If not, just PASS: that is a normal answer, and in most rounds someone at the table stays quiet. If it is, ${name} may speak, act without a word, or both. To speak, say one short line in character with say. Then your final answer is one sentence on what ${name} sets out to do ("${name} kneels to look at the tracks."), or PASS when ${name} only spoke or does nothing new. Don't take an option here: the DM decides what happens, and may let you act.
+- "Do you raise your hand?": out of combat, after the human's character acted, before anyone has the floor. First decide as ${name}: is any of this important to ${name} now, given ${name}'s goal, character and view of the others (your card's "Talk and silence" and "With the party", and your notes)? If not, just PASS: that is a normal answer, and in most rounds someone at the table stays quiet. If it is, ${name} may speak, act without a word, or both. Call no tool: your final answer starts with SPEAK (a line to say), BOTH (a line and a deed), ACT: and one sentence on what ${name} does without a word ("ACT: ${name} kneels to look at the tracks."), or PASS, and after it, if you like, half a sentence of why that nobody hears. Those who raise a hand then get the floor one at a time, each hearing what was said before.
+- "You have the floor": you raised your hand, or someone named ${name}. Read what was said since; if it has been said, a word of agreement or PASS. When you were named, answer, in words, deeds or both. To speak, say one short line in character with say. Then your final answer is one sentence on what ${name} sets out to do ("${name} kneels to look at the tracks."), or PASS when ${name} only spoke or does nothing new. Don't take an option here: the DM decides what happens, and may let you act. "Declare again" asks the same after a refusal.
 - "The DM lets you act now": take one of your options with submit_decision.
 - "The scene is over": your final answer is a summary in a few sentences of fiction, for your own memory: what happened, who you met, what you promised or suspect.
 
@@ -63,7 +64,7 @@ Speaking and notes:
 - say is heard by everyone at the table. Speak as ${name}, in character and briefly, in the voice and temperament of your card. Don't repeat what someone else already said: a word of agreement, or silence, beats a retelling. If you have something to say to the last speaker, answer them. Never put numbers or game terms in it: no Hit Points, Armor Class, DCs, dice or bonuses. Say "I'm badly hurt", not "I have 3 HP".
 - note keeps a private note that nobody else reads: a fact, promise, suspicion, plan or bond that will matter later in the adventure. Write fiction, never numbers: Hit Points, positions and results are always read fresh from the engine. Note only what matters to ${name}; one or two notes a scene is plenty.
 
-Be quick: at most a sentence of reasoning between tool calls. Text you write outside say, and outside your final answer to a declaration or a summary, reaches nobody.${playerLanguage(language)}`;
+Be quick: at most a sentence of reasoning between tool calls. Text you write outside say, and outside your final answer to a hand, a declaration or a summary, reaches nobody.${playerLanguage(language)}`;
 }
 
 /** A declaration as the loop takes it: one line, or undefined for a pass. */
@@ -104,7 +105,7 @@ export class ModelPlayer implements PlayerAgent {
       if (seed) tools.record(seed);
       const result = await this.session.turn(seed ? `${seed}\n\n${briefing}` : briefing, wake);
       if (wake === "declare") return declaration(result.final);
-      if (wake === "summary") return result.final;
+      if (wake === "hand" || wake === "summary") return result.final;
     } catch (error) {
       // A timed-out session goes on, and a plan limit stops the run. After any other failure the
       // session may be dead, so the next wake starts a fresh one from the seed.

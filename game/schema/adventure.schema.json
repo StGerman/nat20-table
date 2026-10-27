@@ -81,6 +81,14 @@
             "description": "Its personality card (CHR-5): the only character text in an AI player's prompt besides its sheet.",
             "type": "string",
             "minLength": 1
+          },
+          "names": {
+            "description": "What the table calls the character, every form of it: its name in each language and each case («Торва», «Торве», «Торву»). A line that names an AI player gives it the floor first (party talk §4.2); its handle and its card's name always count.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "required": [

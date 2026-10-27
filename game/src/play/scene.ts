@@ -160,6 +160,7 @@ const loop = new TableLoop({
   maxSteps: Number(flags["max-steps"]),
   // The situation panel (AGT-36) is drawn only at the terminal.
   situation: ink !== undefined,
+  names: party.names,
 });
 
 const who = (kind: string | undefined, choice: { model: string; effort: string }) => (kind === "scripted" ? "scripted" : `${choice.model} (${choice.effort})`);

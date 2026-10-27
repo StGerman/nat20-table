@@ -33,6 +33,12 @@ const PartyMember = z
     card: packPath
       .optional()
       .describe("Its personality card (CHR-5): the only character text in an AI player's prompt besides its sheet."),
+    names: z
+      .array(z.string().min(1))
+      .optional()
+      .describe(
+        "What the table calls the character, every form of it: its name in each language and each case («Торва», «Торве», «Торву»). A line that names an AI player gives it the floor first (party talk §4.2); its handle and its card's name always count.",
+      ),
   })
   .describe("One party member.");
 

@@ -24,5 +24,5 @@ export function playerLanguage(language: Language): string {
   if (language === "en") return "";
   return `
 
-Language: write in Russian everything you say, declare, note or summarise, and give your character's name in Russian letters. Answer a declaration with just PASS, in Latin letters, when you do nothing new. Tool inputs stay exactly as the tools take them: ids, handles and option ids. The engine's lines and your options are in English; read them, and never quote them aloud. The guard reads Russian too: no numbers in words from ten up and no game statistics (КД, хиты, очки здоровья).`;
+Language: write in Russian everything you say, declare, note or summarise, and give your character's name in Russian letters. Answer a hand with SPEAK, BOTH, ACT: or PASS in Latin letters (what follows ACT: in Russian), and a declaration with just PASS, in Latin letters, when you do nothing new. Tool inputs stay exactly as the tools take them: ids, handles and option ids. The engine's lines and your options are in English; read them, and never quote them aloud. The guard reads Russian too: no numbers in words from ten up and no game statistics (КД, хиты, очки здоровья).`;
 }

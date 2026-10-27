@@ -94,7 +94,16 @@ export interface Seat {
 export type PlayerWake =
   | "combat_turn"
   | "reaction"
-  /** Out of combat, after the human acted: at most one declaration (`say` and/or intent) or pass. */
+  /**
+   * Out of combat, after the human acted, before anyone has the floor: whether it raises its hand
+   * to speak, to act without a word, or both, or passes (party talk §4.3). It answers in text only;
+   * its tools refuse to speak or act.
+   */
+  | "hand"
+  /**
+   * Out of combat, with the floor: it was named, or raised its hand. At most one declaration
+   * (`say` and/or intent) or pass.
+   */
   | "declare"
   /** The DM granted it one of its own options out of combat (spec §3.3 step 4). */
   | "granted"
@@ -149,7 +158,7 @@ export interface TranscriptRecord {
   /** `dm`, a character handle, `engine` or `table` (the orchestrator). */
   speaker: string;
   channel: Channel;
-  kind: "narration" | "speech" | "question" | "engine" | "intent" | "note" | "memory" | "retry" | "fallback" | "error" | "system";
+  kind: "narration" | "speech" | "question" | "engine" | "intent" | "note" | "memory" | "retry" | "fallback" | "error" | "system" | "hand";
   text: string;
   /** Roll ids the text cites, `rN`. */
   rolls: string[];

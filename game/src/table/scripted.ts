@@ -81,7 +81,12 @@ export interface ScriptedPlayerPolicy {
   combat?: CombatPolicy;
   /** The reaction choice to take, or null to decline. Default: the first one offered, unless it answers an ally. */
   reaction?: (tools: PlayerTools) => Promise<void>;
-  /** Speaks with `say` and returns what it sets out to do, or nothing to pass. */
+  /**
+   * Answers a hand wake: `SPEAK`, `BOTH`, `ACT: <intent>` or `PASS` (party talk §4.3). Default:
+   * BOTH when it has a `declare` policy, so that policy gets the floor, and PASS when it has none.
+   */
+  hand?: (briefing: string) => Promise<string>;
+  /** With the floor: speaks with `say` and returns what it sets out to do, or nothing to pass. */
   declare?: (tools: PlayerTools, briefing: string) => Promise<string | void>;
   granted?: (tools: PlayerTools) => Promise<void>;
 }
@@ -106,6 +111,8 @@ export class ScriptedPlayer implements PlayerAgent {
         return (this.policy.combat ?? attackNearest)(tools);
       case "reaction":
         return this.policy.reaction ? this.policy.reaction(tools) : reactUnlessAlly(this.handle, briefing, tools);
+      case "hand":
+        return this.policy.hand ? this.policy.hand(briefing) : this.policy.declare ? "BOTH" : "PASS";
       case "declare":
         return this.policy.declare?.(tools, briefing);
       case "granted":

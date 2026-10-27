@@ -4,16 +4,20 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Handle, State } from "@nat20-table/engine-client";
+import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure } from "../pack/adventure.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
-import type { RunReport, SceneChoice } from "../table/loop.ts";
+import type { RunReport, SceneChoice, TalkRound } from "../table/loop.ts";
 import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, summarize, type UsageRecord } from "../usage.ts";
 
 /** p95 latency targets (scope §6.4): an AI player's turn, a DM narration. */
 export const TARGET_P95_MS = { player: 10_000, dm: 6_000 };
+
+/** Talk-round targets (party talk §2, goals 2 and 5): the silent share of AI player slots, the first line's p50, the round's p95. */
+export const TALK_TARGETS = { silentShare: 0.3, firstLineP50Ms: 7_000, roundP95Ms: 20_000 };
 
 export interface PackParty {
   /** The human's character. */
@@ -22,6 +26,11 @@ export interface PackParty {
   ai: Handle[];
   /** Each AI player's personality card (CHR-5). */
   cards: Map<Handle, string>;
+  /**
+   * What the table calls each party member, whichever seat plays it: its handle, its card's name
+   * and the pack's `names`. A line that names an AI player gives it the floor first (party talk §4.2).
+   */
+  names: Map<Handle, string[]>;
 }
 
 /** The party of a scenario pack's skeleton, with the AI players' cards read from the pack. */
@@ -36,7 +45,13 @@ export function packParty(pack: string): PackParty {
       return [p.handle, readFileSync(path.resolve(pack, p.card), "utf8")] as const;
     }),
   );
-  return { human, ai: ai.map((p) => p.handle), cards };
+  const names = new Map(
+    adventure.party.map((p): [Handle, string[]] => {
+      const card = p.card ? readFileSync(path.resolve(pack, p.card), "utf8") : "";
+      return [p.handle, [...new Set([p.handle, cardName(p.handle, card), ...(p.names ?? [])])]];
+    }),
+  );
+  return { human, ai: ai.map((p) => p.handle), cards, names };
 }
 
 /** The guards every live run puts on free text (spec §3.5): the DM's against the pack's ids. */
@@ -122,6 +137,29 @@ export async function endState(engine: GameEngine): Promise<string[]> {
   return state.creatures.map((c) => `${c.handle} (${c.side}): ${c.hp}/${c.hp_max} HP, ${c.life_state}`);
 }
 
+/**
+ * The report's lines on the talk rounds out of combat (party talk §2, §7): how many spoke, how many
+ * stayed silent, how hands went, whether named players answered, and how long a round took.
+ */
+export function talkLines(rounds: TalkRound[]): string[] {
+  if (rounds.length === 0) return [];
+  const sum = (count: (r: TalkRound) => number) => rounds.reduce((n, r) => n + count(r), 0);
+  const slots = sum((r) => new Set([...r.spoke, ...r.declared, ...r.silent]).size);
+  const silent = sum((r) => r.silent.length);
+  const kinds = ["speak", "both", "act", "pass", "unread"] as const;
+  const hands = kinds.map((kind) => `${kind} ${sum((r) => Object.values(r.hands).filter((k) => k === kind).length)}`);
+  const named = sum((r) => r.named.length);
+  const answered = sum((r) => r.named.filter((h) => r.spoke.includes(h) || r.declared.includes(h)).length);
+  const first = rounds.flatMap((r) => (r.first_line_ms === undefined ? [] : [r.first_line_ms]));
+  const walls = rounds.map((r) => r.wall_ms);
+  const share = slots === 0 ? 0 : Math.round((100 * silent) / slots);
+  return [
+    `- Talk rounds: ${rounds.length}; lines per round ${(sum((r) => r.spoke.length) / rounds.length).toFixed(1)}; silent share ${share}% (target at least ${100 * TALK_TARGETS.silentShare}%); floor wakes ${sum((r) => r.floor_wakes)}, hands lapsed ${sum((r) => r.lapsed.length)}`,
+    `- Hands: ${hands.join(", ")}; named players who answered first: ${answered} of ${named}`,
+    `- Talk round time: first line p50 ${first.length > 0 ? `${percentile(first, 50)} ms` : "n/a"} (target ${TALK_TARGETS.firstLineP50Ms} ms), round p50 ${percentile(walls, 50)} ms, p95 ${percentile(walls, 95)} ms (target ${TALK_TARGETS.roundP95Ms} ms)`,
+  ];
+}
+
 /** The report's Markdown sections on the run, the usage and the audit. */
 export function reportSections(options: {
   run: RunReport | undefined;
@@ -147,6 +185,7 @@ export function reportSections(options: {
     ...(narrations.length > 0
       ? [`- DM narrations: ${narrations.length}, p50 ${percentile(narrations, 50)} ms, p95 ${percentile(narrations, 95)} ms (target ${TARGET_P95_MS.dm} ms)`]
       : []),
+    ...talkLines(run?.talkRounds ?? []),
     "",
     // Per model wake, whether it ended with its result or not: a combat turn can take two.
     "| Agent | Wakes | p50 ms | p95 ms | Input | Cache read | Cache write | Output | API-equivalent $ |",
