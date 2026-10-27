@@ -52,15 +52,39 @@ export function textProps(style: Style, palette: Palette): { color?: string; bol
 
 const name = (handle: string) => handle.charAt(0).toUpperCase() + handle.slice(1);
 
-/** The lines one event adds to the screen; `you` is the human's own handle. */
-export function eventLines(event: TableEvent, you?: Handle): Line[] {
+/**
+ * Who a message is from (AGT-37): DM narration, a character's speech and intent, each with whom it
+ * is spoken to. Events in a row with the same speaker read as one message, labelled once.
+ * `undefined` for what isn't a message (engine lines, options, info, status).
+ */
+export function speakerOf(event: TableEvent): string | undefined {
   switch (event.kind) {
     case "narration":
-      return [{ tone: "dm", text: `${event.speaker === "dm" ? "DM" : name(event.speaker)}${event.to ? " (to you)" : ""}: ${event.text}` }];
+      return event.to ? `${event.speaker}>${event.to}` : event.speaker;
     case "speech":
-      return [{ tone: "speech", text: `${name(event.speaker)} says${event.to ? ` to ${event.to === you ? "you" : name(event.to)}` : ""}: ${event.text}` }];
+      return event.to ? `${event.speaker}>${event.to}` : event.speaker;
     case "intent":
-      return [{ tone: "intent", text: `${name(event.speaker)}: ${event.text}` }];
+      return event.speaker;
+    case "question":
+      return "dm?";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * The lines one event adds to the screen; `you` is the human's own handle. `continued`: the event
+ * goes on the message above it, so it carries no speaker label.
+ */
+export function eventLines(event: TableEvent, you?: Handle, continued = false): Line[] {
+  const label = (text: string) => (continued ? "" : `${text}: `);
+  switch (event.kind) {
+    case "narration":
+      return [{ tone: "dm", text: `${label(`${event.speaker === "dm" ? "DM" : name(event.speaker)}${event.to ? " (to you)" : ""}`)}${event.text}` }];
+    case "speech":
+      return [{ tone: "speech", text: `${label(`${name(event.speaker)}${event.to ? ` to ${event.to === you ? "you" : name(event.to)}` : ""}`)}${event.text}` }];
+    case "intent":
+      return [{ tone: "intent", text: `${label(name(event.speaker))}${event.text}` }];
     case "engine":
       return [{ tone: "engine", text: event.roll ? `  [${event.roll}] ${event.text}` : `  ${event.text}` }];
     case "options":
@@ -71,7 +95,7 @@ export function eventLines(event: TableEvent, you?: Handle): Line[] {
         ...event.options.map((option, i) => ({ tone: "options" as const, text: `  ${i + 1}. ${option}` })),
       ];
     case "question":
-      return [{ tone: "dm", text: `DM asks you: ${event.text}` }];
+      return [{ tone: "dm", text: `${label("DM asks you")}${event.text}` }];
     case "info":
       return [{ tone: "info", text: `${event.title}:` }, ...event.text.split("\n").map((text) => ({ tone: "info" as const, text: `  ${text}` }))];
     case "status":
@@ -83,3 +107,47 @@ export function eventLines(event: TableEvent, you?: Handle): Line[] {
       return [];
   }
 }
+
+/**
+ * Word-wraps a line to `width` columns, breaking at spaces and dropping them, so no wrapped row
+ * starts with a stray space (Ink's own wrap keeps it). A wrapped row is indented like the line,
+ * plus `hang` more columns; a word longer than a row is cut.
+ */
+export function wrapText(text: string, width: number, hang = 0): string {
+  if (width < 8) return text;
+  const length = (part: string) => [...part].length;
+  return text
+    .split("\n")
+    .map((paragraph) => {
+      const indent = " ".repeat(Math.min(paragraph.length - paragraph.trimStart().length + hang, Math.floor(width / 2)));
+      const rows: string[] = [];
+      let row = paragraph.slice(0, paragraph.length - paragraph.trimStart().length);
+      let fresh = true;
+      for (const word of paragraph.trimStart().split(/ +/)) {
+        if (word === "") continue;
+        const space = fresh ? "" : " ";
+        if (length(row) + length(space) + length(word) <= width) {
+          row += space + word;
+          fresh = false;
+          continue;
+        }
+        if (!fresh) {
+          rows.push(row);
+          row = indent;
+        }
+        let rest = [...word];
+        while (length(row) + rest.length > width) {
+          const cut = width - length(row);
+          rows.push(row + rest.slice(0, cut).join(""));
+          row = indent;
+          rest = rest.slice(cut);
+        }
+        row += rest.join("");
+        fresh = false;
+      }
+      rows.push(row);
+      return rows.join("\n");
+    })
+    .join("\n");
+}
+
