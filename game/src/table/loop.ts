@@ -634,12 +634,12 @@ export class TableLoop {
   private async talkRound(humanLine: string): Promise<void> {
     const started = performance.now();
     const handles = [...this.agents.keys()];
+    // The DM's narration names the characters it tells about; only one it speaks to has the floor first.
+    const narrations = this.table.takeNarrations().map((text) => ({ text, addressOnly: true }));
     // A table with no AI player has no talk round, and the report counts none.
     if (handles.length === 0) return;
     this.table.beginTalk();
     for (const handle of handles) this.table.resetRetries(handle);
-    // The DM's narration names the characters it tells about; only one it speaks to has the floor first.
-    const narrations = this.table.takeNarrations().map((text) => ({ text, addressOnly: true }));
     const mentioned = namedIn([{ text: humanLine }, ...narrations], handles, this.names);
     const named = mentioned.slice(0, this.floorBound);
     const raising = handles.filter((h) => !mentioned.includes(h));

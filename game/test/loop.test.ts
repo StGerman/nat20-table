@@ -669,6 +669,23 @@ test("a narration that speaks to a player still gives it the floor when a later 
   assert.deepEqual(report.talkRounds.map((r) => r.named), [[], ["torva"]]);
 });
 
+test("narrations wait for the next talk round out of combat, and a fight drops them", async () => {
+  const t = await testTable({ seed: 27 });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    await t.table.narrate("The reeve turns: \"Torva, will you go first?\"");
+    await t.table.narrate("Ilsa, you hear a door.", "ilsa");
+    t.table.awaiting = { kind: "action", actor: "torva" } as unknown as typeof t.table.awaiting;
+    await t.table.narrate("Ilsa, your move!");
+    t.table.awaiting = { kind: "none" };
+    await t.table.narrate("The dust settles.");
+    assert.deepEqual(t.table.takeNarrations(), ["The dust settles."]);
+    assert.deepEqual(t.table.takeNarrations(), []);
+  } finally {
+    t.close();
+  }
+});
+
 test("raised hands past the round's floor bound lapse, and the next round turns the seat order by one", async () => {
   const say = (line: string) => async (tools: Parameters<NonNullable<ScriptedPlayerPolicy["declare"]>>[0]) => void (await tools.say(line));
   const t = await testTable({

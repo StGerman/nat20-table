@@ -51,9 +51,10 @@ const NOT_WORD = "[\\p{L}\\p{N}_]";
 
 /**
  * A sentence that speaks to someone: a question or an exclamation, a second-person word (ты, твой,
- * вы, you), or a Russian verb in the second person singular («скажешь», «видишь»).
+ * вы, you), or a Russian verb in the second person singular («скажешь», «видишь»). The verb needs
+ * two letters before its ending, so «лишь» and «тишь» don't count.
  */
-const SPOKEN_TO = /[?!]|(?<![\p{L}\p{N}_])(?:ты|тебе|тебя|тобой|твой|твоя|твоё|твое|твои|твоего|твоей|твоих|вы|вам|вас|ваш|ваша|ваши|you|your|yours)(?![\p{L}\p{N}_])|\p{L}(?:ешь|ёшь|ишь)(?![\p{L}\p{N}_])/iu;
+const SPOKEN_TO = /[?!]|(?<![\p{L}\p{N}_])(?:ты|тебе|тебя|тобой|твой|твоя|твоё|твое|твои|твоего|твоей|твоих|вы|вам|вас|ваш|ваша|ваши|you|your|yours)(?![\p{L}\p{N}_])|\p{L}{2}(?:ешь|ёшь|ишь)(?![\p{L}\p{N}_])/iu;
 
 /**
  * Where `form` first stands in `text` as a whole word, ignoring case («Торве» in «скажи Торве», not

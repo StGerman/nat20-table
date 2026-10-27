@@ -97,7 +97,7 @@ export class TableState {
   /**
    * The DM's narrations to the whole table out of combat since the last talk round: an AI player
    * one of them speaks to has the floor first in the next talk round (party talk §4.2). A fight's
-   * narrations («Ильса, твой ход») aren't kept.
+   * narrations («Ильса, твой ход») aren't kept, and a fight drops the ones before it.
    */
   private narrations: string[] = [];
   /**
@@ -285,7 +285,8 @@ export class TableState {
     await this.flush();
     this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text });
     this.narratedTo = this.dmShownTo;
-    if (!to && !this.inCombat) this.narrations.push(text);
+    if (this.inCombat) this.narrations = [];
+    else if (!to) this.narrations.push(text);
     for (const player of this.players) {
       if (!to || to === player) this.inboxes.get(player)?.push(`DM${to ? " (to you)" : ""}: ${text}`);
     }

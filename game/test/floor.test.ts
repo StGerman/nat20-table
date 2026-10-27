@@ -52,6 +52,9 @@ test("the DM's narration names only a player it speaks to, and the human's line 
   // A list or a clause after a name is not an address: the sentence must speak to someone.
   assert.deepEqual(dm("У ворот стоят Торва, Марен, Ильса."), []);
   assert.deepEqual(dm("Ильса, присев у двери, читает табличку."), []);
+  assert.deepEqual(dm("Ильса, присев у двери, лишь кивает."), []);
+  assert.deepEqual(dm("Ильса, ты видишь табличку."), ["ilsa"]);
+  assert.deepEqual(dm("Что видишь, Ильса."), ["ilsa"]);
   assert.deepEqual(dm("Torva, Maren and Ilsa follow the reeve."), []);
   assert.deepEqual(dm("Снитт оборачивается. Торва, ты слышишь?"), ["torva"]);
   assert.deepEqual(
