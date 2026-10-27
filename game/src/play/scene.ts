@@ -17,7 +17,8 @@
 // scripted DM starts each scene's fight from the pack, narrates plainly and moves on at the first
 // table turn), --seat scripted|ink (ink: you play the human's character in this terminal),
 // --dry-run (prints the DM's prompt and session settings, starts nothing), --no-audit, --out DIR,
-// --max-steps N, --lang en|ru (what the DM and the AI players write; decision 0038).
+// --max-steps N, --lang en|ru (what the DM and the AI players write; decision 0038), --verbose (with
+// --seat ink: the engine lines a narration covers are folded under it, not left out; AGT-37).
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -57,6 +58,7 @@ const { values: flags } = parseArgs({
     "no-audit": { type: "boolean", default: false },
     out: { type: "string", default: path.join(REPO, "runs") },
     "max-steps": { type: "string", default: "2000" },
+    verbose: { type: "boolean", default: false },
   },
 });
 for (const [flag, value, allowed] of [
@@ -115,7 +117,7 @@ if (flags.seat === "ink" && !(process.stdin.isTTY && process.stdout.isTTY)) {
 // (before the table is set, it exits). The keyboard seat draws from here, so the engine's start
 // shows its loading indicator too.
 let quit: () => void = () => process.exit(130);
-const ink = flags.seat === "ink" ? new InkSeat(party.human, { onQuit: () => quit() }) : undefined;
+const ink = flags.seat === "ink" ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose }) : undefined;
 // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame.
 ink?.start({ interactive: true });
 ink?.busy("The engine is starting");

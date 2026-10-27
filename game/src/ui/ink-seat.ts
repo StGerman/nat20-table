@@ -1,6 +1,8 @@
 // The human's seat in the terminal (M6 spec §3.4, step 11, TASKS.md AGT-7): an Ink app on the
-// `Seat` interface. Everything the loop shows scrolls up as it comes, rolls inline with their ids;
-// under it the situation panel and, while the table waits on the human, the turn block (the budget
+// `Seat` interface. What the loop shows scrolls up as messages, one speaker label each (AGT-37);
+// other characters' engine lines wait for the DM's narration of them and are left out of the
+// scrollback, or folded under it with `verbose`; the human's own, and any before a decision, show
+// at once. Under it the situation panel and, while the table waits on the human, the turn block (the budget
 // and the numbered options, AGT-36), then what the table waits for (while no prompt is open, a
 // braille spinner with who is thinking) and the line being typed. The loop answers the slash
 // commands (`/sheet`, `/where`, `/options`, `/log`, `/pause`, `/quit`); `/help` and `/panel` are
@@ -12,7 +14,7 @@ import { createElement as h, useEffect, useState, useSyncExternalStore } from "r
 import type { Situation } from "../table/situation.ts";
 import type { HumanPrompt, PlayerIntent, Seat, TableEvent } from "../table/types.ts";
 import { COMMAND_HELP, promptHint, readLine } from "./input.ts";
-import { eventLines, textProps, TONE_STYLE, type Line } from "./lines.ts";
+import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette } from "./palette.ts";
 import { endsTurn, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
 
@@ -49,6 +51,11 @@ export interface InkSeatOptions {
   animate?: boolean;
   /** The clock for the wait's elapsed seconds; tests pass a fixed one. */
   now?: () => number;
+  /**
+   * Fold the engine lines a DM narration covers under it, dim. Default false: they stay out of the
+   * scrollback, and `/log` prints them (AGT-37).
+   */
+  verbose?: boolean;
 }
 
 export class InkSeat implements Seat {
@@ -62,6 +69,14 @@ export class InkSeat implements Seat {
   private readonly listeners = new Set<() => void>();
   private instance: Instance | undefined;
   private interrupted = false;
+  /**
+   * Other characters' engine lines waiting for the DM's narration of them, and the newest panel
+   * frame, which waits for the next narration or decision, so neither tells the outcome first (AGT-37).
+   */
+  private held: Line[] = [];
+  private heldSituation: Extract<TableEvent, { kind: "situation" }> | undefined;
+  /** The speaker of the message the last line belongs to; undefined after anything else. */
+  private speaker: string | undefined;
 
   constructor(handle: Handle, options: InkSeatOptions = {}) {
     this.handle = handle;
@@ -92,23 +107,78 @@ export class InkSeat implements Seat {
   }
 
   show(event: TableEvent): void {
-    if (event.kind === "situation") {
-      const situation = event.situation ?? this.view.situation;
-      const options = this.view.options?.budget && event.situation && endsTurn(event.situation, this.handle) ? undefined : this.view.options;
-      this.update({ situation, stale: !event.situation, options });
-      return;
+    switch (event.kind) {
+      case "situation":
+        // The loop refreshes the panel before each step, ahead of the narration of what came
+        // before it: the frame waits for that narration, or for the next decision. A turn block
+        // the frame shows is over goes at once.
+        this.heldSituation = event;
+        if (this.view.options?.budget && event.situation && endsTurn(event.situation, this.handle)) this.update({ options: undefined });
+        return;
+      case "options":
+        // Numbered options stay above the prompt instead of scrolling away; `/options` prints them again.
+        this.release();
+        this.update({ options: event });
+        return;
+      case "engine": {
+        // The human's own line shows at once; others' lines before it still wait for their narration.
+        const lines = eventLines(event, this.handle);
+        if (event.own) this.add(lines);
+        else this.held.push(...lines);
+        return;
+      }
+      case "narration": {
+        // The lines it narrates go under it, or nowhere: the narration tells them.
+        const covered = this.held.map((line) => ({ ...line, text: `    ${line.text.trimStart()}` }));
+        this.held = [];
+        this.message(event);
+        if (this.options.verbose) this.print(covered, false);
+        this.release();
+        return;
+      }
+      case "question":
+      case "reaction":
+      case "end":
+        this.release();
+        break;
     }
-    // Numbered options stay above the prompt instead of scrolling away; `/options` prints them again.
-    if (event.kind === "options") {
-      this.update({ options: event });
-      return;
-    }
-    this.add(eventLines(event, this.handle));
+    if (speakerOf(event) !== undefined) this.message(event);
+    else this.add(eventLines(event, this.handle));
+  }
+
+  /** A narration, a line, an intent or a question: on the message above when the speaker is the same. */
+  private message(event: TableEvent): void {
+    const speaker = speakerOf(event);
+    const continued = speaker === this.speaker;
+    this.print(eventLines(event, this.handle, continued), !continued);
+    this.speaker = speaker;
+  }
+
+  /** Shows the held engine lines as they are, with no narration over them, and the panel frame held with them. */
+  private release(): void {
+    const lines = this.held;
+    this.held = [];
+    this.add(lines);
+    const situation = this.heldSituation;
+    this.heldSituation = undefined;
+    if (situation) this.situation(situation);
+  }
+
+  private situation(event: Extract<TableEvent, { kind: "situation" }>): void {
+    const situation = event.situation ?? this.view.situation;
+    const options = this.view.options?.budget && event.situation && endsTurn(event.situation, this.handle) ? undefined : this.view.options;
+    this.update({ situation, stale: !event.situation, options });
   }
 
   readonly palette: Palette;
 
+  unnarrated(): void {
+    this.release();
+  }
+
   ask(prompt: HumanPrompt): Promise<PlayerIntent> {
+    // Nothing waits for a narration while the human decides.
+    this.release();
     const queued = this.queued.shift();
     if (queued) return Promise.resolve(queued);
     if (this.interrupted) return Promise.resolve({ kind: "command", name: "quit" });
@@ -201,9 +271,18 @@ export class InkSeat implements Seat {
     }
   }
 
+  /** Adds lines that aren't a message's: they end the message above, after a blank line. */
   private add(lines: Line[]): void {
     if (lines.length === 0) return;
-    this.update({ lines: [...this.view.lines, ...lines.map((line) => ({ ...line, id: this.nextId++ }))] });
+    this.print(lines, this.speaker !== undefined);
+    this.speaker = undefined;
+  }
+
+  /** Adds lines to the scrollback, after a blank line when `gap` (and the scrollback has lines). */
+  private print(lines: Line[], gap: boolean): void {
+    if (lines.length === 0) return;
+    const blank = gap && this.view.lines.length > 0 && this.view.lines.at(-1)!.text !== "" ? [{ tone: "status" as const, text: "" }] : [];
+    this.update({ lines: [...this.view.lines, ...[...blank, ...lines].map((line) => ({ ...line, id: this.nextId++ }))] });
   }
 
   private update(change: Partial<SeatView>): void {
@@ -262,7 +341,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
       items: view.lines,
       children: (item: unknown) => {
         const line = item as SeatView["lines"][number];
-        return h(Text, { key: line.id, ...textProps(TONE_STYLE[line.tone], palette) }, line.text);
+        // Wrapped here, at the width it is drawn at: a blank line still takes a row.
+        return h(Text, { key: line.id, ...textProps(TONE_STYLE[line.tone], palette) }, wrapText(line.text, size.columns, line.tone === "engine" ? 2 : 0) || " ");
       },
     }),
     ...(view.situation ? [block(situationRows(view.situation, size, { folded: view.folded, stale: view.stale }), "situation")] : []),

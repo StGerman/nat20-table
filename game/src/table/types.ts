@@ -26,8 +26,12 @@ export type TableEvent =
   | { kind: "speech"; speaker: Handle; text: string; to?: Handle }
   /** What a character sets out to do out of combat, as its player declared it. */
   | { kind: "intent"; speaker: Handle; text: string }
-  /** An engine event's own text, rendered for the human's viewer, with its roll id if any. */
-  | { kind: "engine"; text: string; roll?: string; seq: number }
+  /**
+   * An engine event's own text, rendered for the human's viewer, with its roll id if any. `own`: it
+   * happened on the human's own turn, so the seat shows it at once instead of holding it for the
+   * DM's narration (AGT-37).
+   */
+  | { kind: "engine"; text: string; roll?: string; seq: number; own?: true }
   /**
    * Numbered decisions the human can pick by number (`/options`), or a follow-up pick inside one
    * (`title` names it). `choices` carries the same list as data for a seat that picks by rule.
@@ -87,6 +91,11 @@ export interface Seat {
    * not recorded: it names a seat, never what the seat is deciding.
    */
   busy?(on: string | undefined): void;
+  /**
+   * The DM's narration of the engine lines the seat was shown failed (a fallback): a seat that
+   * holds lines for their narration shows them now, as they are (AGT-37). Not recorded.
+   */
+  unnarrated?(): void;
 }
 
 // --- Agents -----------------------------------------------------------------------------------
