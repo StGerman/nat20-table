@@ -3496,15 +3496,26 @@ impl Game {
         }
 
         // A walk core made for an option is logged as a `move` is, once the walker has stopped:
-        // right before its `action` when it got to act, else first (API-32). A walk still under
-        // way waits for the next batch.
+        // right before its `action` when it got to act, else first (API-32). The `action` ends
+        // the walk even while a reaction keeps the walker busy; a walk still under way without
+        // one waits for the next batch.
         use nat20_api_contract::EventKind as Kind;
         for walk in std::mem::take(&mut self.walks) {
+            let actor = Handle(
+                self.scene
+                    .handles
+                    .get(&walk.entity)
+                    .cloned()
+                    .unwrap_or_else(|| format!("{:?}", walk.entity)),
+            );
+            let acted = entries
+                .iter()
+                .position(|e| matches!(&e.kind, Kind::Action { actor: a, .. } if *a == actor));
             let walking = engine
                 .world
                 .get::<&ActivityState>(walk.entity)
                 .is_ok_and(|s| !s.is_idle());
-            if walking {
+            if walking && acted.is_none() {
                 self.walks.push(walk);
                 continue;
             }
@@ -3515,17 +3526,7 @@ impl Game {
             if (landed - walk.from).norm() < 0.05 {
                 continue;
             }
-            let actor = Handle(
-                self.scene
-                    .handles
-                    .get(&walk.entity)
-                    .cloned()
-                    .unwrap_or_else(|| format!("{:?}", walk.entity)),
-            );
-            let at = entries
-                .iter()
-                .position(|e| matches!(&e.kind, Kind::Action { actor: a, .. } if *a == actor))
-                .unwrap_or(0);
+            let at = acted.unwrap_or(0);
             entries.insert(
                 at,
                 Pending::public(

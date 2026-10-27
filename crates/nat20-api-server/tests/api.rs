@@ -2227,6 +2227,53 @@ fn a_dying_creature_makes_death_saves_and_an_ally_can_stabilize_it_in_a_fight() 
     assert!(stable, "{read}");
 }
 
+/// Ana walks 15 feet to Bren to stabilize him, fails the Medicine check (seed 1) and is offered
+/// Tactical Mind, so her action waits on a reaction when the response is written. The walk is
+/// still logged as `moved` before her `action` (protocol §4.1).
+#[test]
+fn a_walk_to_an_option_is_logged_before_an_action_a_reaction_pauses() {
+    let dir = data_dir(
+        "help_walk",
+        &[(
+            "yard",
+            json!({ "id": "yard",
+                "creatures": [
+                    creature("bren", ("pregen", "fighter_l2"), "party", 0.0),
+                    creature("ana", ("pregen", "fighter_l2"), "party", 20.0),
+                    held_goblin_at(60.0)
+                ],
+                "checks": [{ "id": "fall", "test": { "kind": "save", "ability": "dexterity" },
+                    "dc": 30,
+                    "on_failure": [{ "kind": "damage", "dice": "1d4+19", "damage_type": "bludgeoning" }] }],
+                "encounters": [{ "id": "brawl", "participants": ["bren", "ana", "goblin"] }] }),
+        )],
+    );
+    let mut api = bren_down_in_a_brawl(&dir);
+    let started = api.call(
+        "dm",
+        json!({ "cmd": "start_combat", "encounter_id": "brawl" }),
+    );
+    assert_eq!(started["ok"], true, "{started}");
+    let last = until_turn_of(&mut api, started, "ana");
+    let helped = api.call(
+        "dm",
+        json!({ "cmd": "submit", "actor": "ana", "prompt_id": last["awaiting"]["prompt_id"],
+            "option_id": "help/stabilize", "targets": ["bren"] }),
+    );
+    std::fs::remove_dir_all(dir).ok();
+    assert_eq!(helped["ok"], true, "{helped}");
+    assert_eq!(helped["awaiting"]["kind"], "reaction", "{helped}");
+    assert_eq!(helped["awaiting"]["actor"], "ana", "{helped}");
+    let mine: Vec<&str> = helped["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["actor"] == "ana")
+        .map(|e| e["kind"].as_str().unwrap())
+        .collect();
+    assert_eq!(mine, ["moved", "action"], "{helped}");
+}
+
 #[test]
 fn scripted_monsters_take_no_opportunity_attack_on_an_ally() {
     let mut held = held_goblin();
