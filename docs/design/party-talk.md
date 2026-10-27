@@ -166,7 +166,7 @@ R1 costs about $0.02–0.03 a trigger, so at most about $0.2 for a seven-round f
 
 ## 6. The echo line
 
-Speech still reaches everyone directly: `Torva says: …` is shown at once, and every player reads it in its inbox, as today. What changes is the third line of the same character in the same round: `Torva: …`, the intent that retells its own speech, is no longer shown to the human. The DM still gets it, and the transcript keeps it, so the audit and the metrics don't change. A silent action (an intent with no line) is still shown, or the human wouldn't know the character does anything. The change is in `game/src/ui/lines.ts` and undoes in one line.
+Speech still reaches everyone directly: `Torva says: …` is shown at once, and every player reads it in its inbox, as today. What changes is the third line of the same character in the same round: `Torva: …`, the intent that retells its own speech, is no longer shown to the human. The DM still gets it, and the transcript keeps it, so the audit and the metrics don't change. A silent action (an intent with no line) is still shown, or the human wouldn't know the character does anything. The change is in `TableState` (`game/src/table/state.ts`), which already decides what reaches the human's screen, and undoes in two lines.
 
 ## 7. What changes in code
 
@@ -174,10 +174,10 @@ Speech still reaches everyone directly: `Torva says: …` is shown at once, and 
 |---|---|---|
 | `game/src/table/floor.ts` (new) | the order of §4.2: named player, hands, the bound, the hand-off, ties; a pure function with unit tests | S |
 | `game/src/table/loop.ts` | `declarations()` becomes the hand-raise round; R0 in the turn brief; R1 triggers and background wakes | M |
-| `game/src/table/state.ts` | lines are delivered as they are spoken; `collect`/`commit` leave the talk round | XS |
+| `game/src/table/state.ts` | §6; lines are delivered as they are spoken; `collect`/`commit` leave the talk round | XS |
 | `game/src/agents/player.ts` | the prompt of §4.6; the `hand` wake; `to` on `say`; the R1 `bark` wake with `say` only | S |
 | `scenarios/the_silent_mill/cards/*.md` | the "At the table" section | XS |
-| `game/src/ui/lines.ts` | §6; the "speaks to you" mark | XS |
+| `game/src/ui/lines.ts` | the "speaks to you" mark | XS |
 | `game/src/table/scripted.ts`, `game/test/` | scripted players that pass, raise hands and address each other; the test that the second speaker heard the first | S |
 | run report | speakers per talk round, silent share, time to first line, round wall time by phase, addresses and answers, reactions per fight | S |
 

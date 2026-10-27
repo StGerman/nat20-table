@@ -93,6 +93,12 @@ export class TableState {
    * here and reaches the table in seat order, so the order never depends on which model was faster.
    */
   private collecting: Map<Handle, Array<() => Promise<void>>> | undefined;
+  /**
+   * The AI players who spoke since the declaration round began. A declaration from one of them
+   * retells its own line, so the human's screen leaves it out (party talk §6); the DM and the
+   * transcript still get it.
+   */
+  private readonly spokeThisRound = new Set<Handle>();
   /** Engine events fetched for the human's screen and the DM's transcript lines, not written yet. */
   private screen: Event[] = [];
   private dmLines: Event[] = [];
@@ -320,7 +326,10 @@ export class TableState {
       if (human) for (const part of line.split("\n")) this.humanLines.add(part);
       for (const player of this.players) if (player !== from) this.inboxes.get(player)?.push(line);
       this.dmInbox.push(line);
-      if (!human) this.show({ kind, speaker: from, text });
+      if (human) return;
+      if (kind === "speech") this.spokeThisRound.add(from);
+      else if (this.spokeThisRound.has(from)) return;
+      this.show({ kind, speaker: from, text });
     };
     const queue = this.collecting?.get(from);
     if (queue) {
@@ -331,9 +340,10 @@ export class TableState {
     return { ok: true, text: "said" };
   }
 
-  /** From now until `commit`, what the AI players say waits and is delivered in seat order. */
+  /** A declaration round begins: from now until `commit`, what the AI players say waits and is delivered in seat order. */
   collect(): void {
     this.collecting = new Map(this.players.map((player) => [player, []]));
+    this.spokeThisRound.clear();
   }
 
   /** Delivers what the AI players said while collecting, player by player in seat order. */

@@ -64,6 +64,16 @@ test("a model player's session has its own prompt with its card, its nine seat t
   }
 });
 
+test("a model player passes as a normal answer, plays from its card's At the table, and may speak on its own combat turn", () => {
+  const card = packParty(MILL).cards.get("maren")!;
+  assert.match(card, /\*\*At the table\.\*\* Speaks when/);
+  const prompt = playerPrompt("maren", card);
+  assert.match(prompt, /If not, just PASS: that is a normal answer/);
+  assert.match(prompt, /your card's "At the table" and "With the party", and your notes/);
+  assert.match(prompt, /Don't repeat what someone else already said/);
+  assert.match(prompt, /You may also say one short line with say, reacting to what happened since your last turn/);
+});
+
 test("with --lang ru a model player speaks, declares, notes and summarises in Russian, and still passes with PASS", () => {
   const card = packParty(MILL).cards.get("maren")!;
   const english = playerPrompt("maren", card);

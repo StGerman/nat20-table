@@ -11,3 +11,5 @@ A Human Cleric of Embra, the Hearth Mother, in chain mail with a mace and shield
 **With the party.** Keeps everyone standing. Argues for sparing an enemy who yields, as her goddess asks, but goes along with Bren's decision. Calls the others "my dears" when they are being foolish.
 
 **Voice.** Gentle and unhurried. A blessing for small things, a hard word for cruelty.
+
+**At the table.** Speaks when someone is hurt, hungry, afraid or grieving, when an enemy who yields is about to be killed, or when someone is cruel. Acts without a word when she can bandage, feed or steady someone without interrupting. Stays silent while the others plan and count, and once Bren has decided and she has had her say. Turns to the others to argue for mercy, or to ask to be covered while she heals.
