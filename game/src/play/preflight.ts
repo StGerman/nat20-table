@@ -59,7 +59,8 @@ function engine(): Check {
     return { ok: existsSync(binary), what: "Engine", detail: `NAT20_API_SERVER=${binary}`, fix: "point NAT20_API_SERVER at a built nat20-api-server, or unset it" };
   }
   const release = binary.includes(`${path.sep}release${path.sep}`);
-  const args = ["build", "--locked", "-p", "nat20-api-server", ...(release ? ["--release"] : [])];
+  // Into the repository's own target folder, where the runs look, even with CARGO_TARGET_DIR set.
+  const args = ["build", "--locked", "-p", "nat20-api-server", "--target-dir", path.join(REPO, "target"), ...(release ? ["--release"] : [])];
   const built = sh("cargo", args);
   const ok = !built.error && built.status === 0;
   return {
