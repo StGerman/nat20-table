@@ -5,6 +5,7 @@ An AI-run D&D 5e table (2024 rules, SRD 5.2.1): an AI DM and AI players, plus on
 - Rules for contributors and Claude Code sessions: [CLAUDE.md](CLAUDE.md)
 - System design: [docs/design/system-design.md](docs/design/system-design.md)
 - Demo scope and acceptance criteria: [docs/scope/demo-run-scope.md](docs/scope/demo-run-scope.md)
+- First local run on a Mac (Milestone 6 live runs): [docs/runbook/first-local-run.md](docs/runbook/first-local-run.md)
 - Engine API contract: [crates/nat20-api-contract](crates/nat20-api-contract) (source of truth), [contract/protocol.md](contract/protocol.md), generated schema in [generated/](generated/)
 
 ```bash
