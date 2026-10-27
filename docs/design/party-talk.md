@@ -70,10 +70,10 @@ The H and R figures are estimates: a wake that calls no tool is one model answer
 
 ### 4.2 Order at the table
 
-1. **The named player goes first, always.** When the human's last line or the DM's last narration names an AI player (the card's name stem, Russian cases included: «Марен», «Марены»), that player gets a full floor wake at once. It may answer in words, deeds or both. It may stay silent, but the prompt asks it to answer, since it was asked.
+1. **The named player goes first, always.** When the human's last line or the DM's last narration names an AI player (the card's name with its Russian case endings: «Торва», «Торве», «Ильсу»; «Марен» doesn't decline), or an address carried over from the last round names it (§4.4), that player gets a full floor wake at once. It may answer in words, deeds or both. It may stay silent, but the prompt asks it to answer, since it was asked.
 2. **Everyone else raises a hand or doesn't** (§4.3), in parallel with the named player's wake.
 3. **Speakers take the floor one at a time.** Each hears everything said before it, and can still drop its line at its turn ("Torva already said it").
-4. **A silent action doesn't queue.** It goes to the DM at once and shows to the human as one line ("Maren silently bandages Snitt's side").
+4. **A silent action doesn't queue.** It reaches the DM's inbox and the human's screen at once, as one line ("Maren silently bandages Snitt's side"). The DM resolves it in its one `table_turn` wake, with everything else said in the round; it costs no DM wake of its own.
 5. **A bound on the round.** At most three floor wakes follow each other in a round: the named player, the speakers, and one hand-off from §4.4 together. A hand still up when the bound is reached lapses.
 6. Ties between speakers go by seat order, shifted by one each round. That only breaks ties; it is not a rule about who talks.
 
@@ -92,7 +92,7 @@ sequenceDiagram
         L->>P: hand wake (answer only, no tools)
         P-->>L: SPEAK, BOTH, ACT with an intent, or PASS
     end
-    L->>DM: silent intents, as they arrive
+    L-->>DM: silent intents into the DM's inbox (no wake)
     loop each speaker in turn, within the bound
         L->>P: floor wake, with every line said so far
         P-->>L: line and/or intent, or PASS after all
