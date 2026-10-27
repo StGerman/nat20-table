@@ -106,11 +106,14 @@ test("at 80x24 the panel is the bar, your line, the creatures by side and the fa
     "Foes   goblin_3  Goblin Warrior  bloodied   5 ft  in reach",
     "       goblin_4  Goblin Warrior  unhurt    24 ft",
     "Party  torva                     unhurt    10 ft",
-    "       maren                     down     unconscious  20 ft",
+    "       maren                     down      20 ft",
     "       ilsa                      unhurt    30 ft",
     "Down   goblin_1, goblin_2, wolf_3",
   ]);
   assert.ok(rows.length <= Math.floor(24 / 3));
+  // Conditions come after the distance, so the feet stay in their column.
+  const scared = situationOf({ ...yard(), others: [other("goblin_3", "Goblin Warrior", "hostile", "bloodied", 5, ["frightened", "prone"])] } as State, "bren", listing)!;
+  assert.equal(rowText(situationRows(scared, { columns: 80, rows: 24 })[2]), "Foes   goblin_3  Goblin Warrior  bloodied   5 ft  in reach  frightened · prone");
   // One more creature than fits: the last row says how many more, and where to see them.
   const crowded = situationOf({ ...yard(), others: [...yard().others, other("wolf_9", "Wolf", "hostile", "unhurt", 50)] } as State, "bren", listing)!;
   const capped = situationRows(crowded, { columns: 80, rows: 24 }).map(rowText);

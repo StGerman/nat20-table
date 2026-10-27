@@ -104,9 +104,12 @@ function creatureRow(c: SituationCreature, label: string, widths: { handle: numb
   const row: Row = [{ text: label.padEnd(7), style: muted }, { text: c.handle.padEnd(widths.handle + 2) }];
   if (widths.name > 0) row.push({ text: (hasOwnName(c) ? c.name : "").padEnd(widths.name + 2), style: muted });
   row.push(health(c.health, 9));
-  for (const condition of c.conditions) row.push({ text: `${condition} `, style: magic });
+  // Distance keeps its column; conditions go last, where a narrow terminal cuts them first. `down`
+  // already says unconscious.
   row.push({ text: `${String(c.distance_ft).padStart(3)} ft` });
   if (c.in_reach) row.push({ text: "  in reach", style: { bold: true } });
+  const conditions = c.health === "down" ? c.conditions.filter((condition) => condition !== "unconscious") : c.conditions;
+  conditions.forEach((condition, i) => row.push({ text: i === 0 ? "  " : " · " }, { text: condition, style: magic }));
   return row;
 }
 
