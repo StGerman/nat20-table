@@ -2724,8 +2724,8 @@ impl Game {
 
     // ---- engine driving -------------------------------------------------
 
-    /// Submits one option to the engine. `Ok(true)` when the actor first walks to reach its target
-    /// and takes the option where the walk ends.
+    /// Submits one option to the engine. `Ok(true)` when the actor first walks toward its target,
+    /// to take the option where the walk ends if it gets in reach.
     fn submit_entity(
         &mut self,
         entity: Entity,
@@ -2784,7 +2784,12 @@ impl Game {
             }
         }
         let activity = builder.build(engine).map_err(|e| refusal(&e))?;
-        let walks = matches!(activity, Activity::MoveAndAct { .. });
+        // Core walks without acting (`Move`) when the target is beyond the movement left: the
+        // option is dropped where the walk ends, as for a walk an opportunity attack stops.
+        let walks = matches!(
+            activity,
+            Activity::MoveAndAct { .. } | Activity::Move { .. }
+        );
         engine.submit_activity(activity).map_err(|e| refusal(&e))?;
         Ok(walks)
     }
