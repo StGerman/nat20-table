@@ -33,6 +33,30 @@ export const attackNearest: CombatPolicy = async (tools) => {
   await tools.endTurn();
 };
 
+/** The pregens' spells that heal the creature they target. */
+const HEALING_SPELLS = new Set(["healing_word", "cure_wounds"]);
+
+/**
+ * A fight that looks after the party first (the whole-adventure fixture, AGT-39): a party member who
+ * is down gets a healing spell, else a Potion of Healing, from whoever can reach them; then the turn
+ * goes on as `attackNearest`. The engine decides whether the spell or the potion takes (Rule 4).
+ */
+export const rescueThenAttack: CombatPolicy = async (tools) => {
+  const state = (await tools.look()).data as State | undefined;
+  const down = state?.view === "player" ? state.others.filter((c) => c.side === "party" && c.health === "down").map((c) => c.handle) : [];
+  if (down.length > 0) {
+    const listed = await tools.legalActions();
+    const options = listed.ok ? (listed.data as LegalActionsResult).options : [];
+    const heals = [
+      ...options.filter((o) => o.spell && HEALING_SPELLS.has(o.spell.id)),
+      ...options.filter((o) => o.option_id.startsWith("use/potion_of_healing")),
+    ];
+    const pick = heals.flatMap((o) => o.targets.filter((t) => down.includes(t.handle) && t.in_range).map((t) => ({ option_id: o.option_id, targets: [t.handle] })))[0];
+    if (pick) await tools.submitDecision(pick);
+  }
+  await attackNearest(tools);
+};
+
 async function nearestAttack(tools: PlayerTools, inReachOnly: boolean): Promise<{ option_id: string; targets: string[] } | undefined> {
   const listed = await tools.legalActions();
   if (!listed.ok) return undefined;
@@ -229,6 +253,96 @@ export function walkOnDm(order: string[], fights: Record<string, string>, party:
       await tools.narrate("Steel and teeth flash.");
     },
     combat_over: async (tools) => void (await tools.endAdventure("The fight is done.")),
+  });
+}
+
+/** One scene of an adventure as `chainDm` plays it, from the scenario pack. */
+export interface ChainScene {
+  id: string;
+  /** The fight to start when the scene opens, if any. */
+  fight?: string;
+  /** The scene's checks, asked of the human's character in order when the scene opens. */
+  checks: string[];
+  /** Whether its exit carries the creatures that surrendered along with the party. */
+  captives: boolean;
+  /** Whether the party takes a short rest when it opens. */
+  rest: boolean;
+}
+
+/**
+ * The pack's scenes as `chainDm` plays them: each scene's first fight; an exploration scene's every
+ * check and any other scene's first one (one interrogation, not two); captives where the exit says
+ * so; a short rest in a scene that comes straight after a fight scene and holds no fight.
+ */
+export function chainScenes(
+  scenes: Array<{ id: string; beat: string; checks: Array<{ check: string }>; encounters: Array<{ encounter: string }>; exits: Array<{ carry: string }> }>,
+): ChainScene[] {
+  return scenes.map((s, i) => ({
+    id: s.id,
+    ...(s.encounters[0] ? { fight: s.encounters[0].encounter } : {}),
+    checks: (s.beat === "exploration" ? s.checks : s.checks.slice(0, 1)).map((c) => c.check),
+    captives: s.exits.some((e) => e.carry === "party_and_captives"),
+    rest: i > 0 && scenes[i - 1].beat === "fight" && s.encounters.length === 0,
+  }));
+}
+
+/**
+ * A DM for the whole adventure without a model (M7 spec §4.6, AGT-39): it opens each scene with
+ * one plain line, short-rests the party where the scene says so (one Hit Point Die for each member
+ * down any Hit Points; one at 0 can't rest), asks the scene's checks of the human's character (or
+ * the first party member still up), and starts its fight;
+ * it narrates every part with one plain line and offers any surrender the engine shows available;
+ * out of a fight, its first table turn takes the party, and any captive the exit carries, on to the
+ * next scene, and after the last scene it ends the adventure, as it does when a fight leaves nobody
+ * in the party standing. The engine rolls every check and
+ * decides every outcome (Rule 4): the chain only asks.
+ */
+export function chainDm(scenes: ChainScene[], party: Handle[], human: Handle): ScriptedDm {
+  let at = -1;
+  const dmState = async (tools: DmTools) => {
+    const state = ((await tools.getState()).data as { state?: State } | undefined)?.state;
+    return state?.view === "dm" ? state : undefined;
+  };
+  return new ScriptedDm({
+    scene_open: async (tools) => {
+      const state = await dmState(tools);
+      at = scenes.findIndex((s) => s.id === state?.scene_id);
+      const scene = scenes[at];
+      await tools.narrate(scene?.fight ? "Foes wait ahead." : "A new place opens before you.");
+      if (!scene || !state) return;
+      // Only a creature with Hit Points left may rest or make a check (SRD 5.2.1, Short Rest).
+      const up = party.filter((h) => state.creatures.some((c) => c.handle === h && c.hp > 0));
+      if (scene.rest && up.length > 0) {
+        const hurt = state.creatures.filter((c) => up.includes(c.handle) && c.hp < c.hp_max);
+        await tools.shortRest(up, hurt.map((c) => ({ handle: c.handle, count: 1 })));
+      }
+      const asked = up.includes(human) ? human : up[0];
+      if (asked) for (const check of scene.checks) await tools.requestCheck(asked, { kind: "scenario", check_id: check });
+      if (scene.fight) await tools.startCombat(scene.fight);
+    },
+    table_turn: async (tools) => {
+      const scene = scenes[at];
+      const next = scenes[at + 1];
+      if (!next) return void (await tools.endAdventure("The road ends here."));
+      const state = await dmState(tools);
+      const captives = scene?.captives
+        ? (state?.creatures ?? []).filter((c) => c.side === "neutral" && c.life_state === "conscious" && !party.includes(c.handle)).map((c) => c.handle)
+        : [];
+      await tools.narrate("You move on.");
+      await tools.loadScene(next.id, [...party, ...captives]);
+    },
+    narrate: async (tools) => {
+      await offerAnySurrender(tools);
+      await tools.narrate("Steel and teeth flash.");
+    },
+    combat_over: async (tools) => {
+      const state = await dmState(tools);
+      // A party with nobody standing goes no further.
+      if (state && !state.creatures.some((c) => party.includes(c.handle) && c.life_state === "conscious")) {
+        return void (await tools.endAdventure("The party falls."));
+      }
+      await tools.narrate("The fight is over.");
+    },
   });
 }
 

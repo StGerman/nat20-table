@@ -29,7 +29,7 @@ import { sessionOptions } from "../agents/sdk-session.ts";
 import { GameEngine, REPO } from "../engine.ts";
 import { readPack } from "../pack/read.ts";
 import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
-import { ScriptedPlayer, ScriptedSeat, walkOnDm } from "../table/scripted.ts";
+import { chainDm, chainScenes, ScriptedPlayer, ScriptedSeat, walkOnDm } from "../table/scripted.ts";
 import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat } from "../table/types.ts";
@@ -194,7 +194,12 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice: playerChoice, language, usage }),
   );
   const fights = Object.fromEntries(pack.adventure.scenes.flatMap((s) => (s.encounters[0] ? [[s.id, s.encounters[0].encounter]] : [])));
-  const dm: DmAgent = flags.dm === "scripted" ? walkOnDm(pack.adventure.scenes.map((s) => s.id), fights, [party.human, ...party.ai]) : modelDm(usage);
+  // A scripted whole-adventure run walks every scene (AGT-39); a scene run ends after its first fight.
+  const scripted = () =>
+    play.allScenes
+      ? chainDm(chainScenes(pack.adventure.scenes), [party.human, ...party.ai], party.human)
+      : walkOnDm(pack.adventure.scenes.map((s) => s.id), fights, [party.human, ...party.ai]);
+  const dm: DmAgent = flags.dm === "scripted" ? scripted() : modelDm(usage);
 
   // The time limit runs from the first scene's load; the loop stops between decisions, so a wake in
   // flight finishes or times out first.

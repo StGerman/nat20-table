@@ -1,7 +1,8 @@
 //! The game fixtures (M6 step 5, `game/test/fixtures/`) through the transcript audit and the leak
 //! scan (step 6, TASKS.md AGT-8, AGT-15, AGT-19): what CI runs on every game fixture.
 //! `game/test/loop.test.ts` proves the files are what the game writes today (each replays byte
-//! for byte); these tests prove they pass, and that a planted problem doesn't.
+//! for byte); these tests prove they pass, and that a planted problem doesn't. The Milestone 7
+//! fixtures play the real scenario pack, so their leak scan reads its secrets.
 
 use std::{fs, path::PathBuf, process::Command};
 
@@ -17,6 +18,16 @@ fn fixtures_dir() -> PathBuf {
 /// The engine's test scenes: the pack the game fixtures play.
 fn pack() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../nat20-api-server/data")
+}
+
+/// The pack a fixture plays: the Milestone 7 ones play The Silent Mill itself (AGT-39), the rest
+/// the engine's test scenes.
+fn pack_of(name: &str) -> PathBuf {
+    if name.starts_with("m7_") {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scenarios/the_silent_mill")
+    } else {
+        pack()
+    }
 }
 
 /// Every game fixture, by name: `<name>.transcript.jsonl` and its siblings.
@@ -41,18 +52,27 @@ fn read(name: &str, file: &str) -> String {
 fn every_game_fixture_passes_the_audit_and_the_leak_scan() {
     let names = fixtures();
     assert!(
-        names.contains(&"m5_yard".to_string()) && names.contains(&"m3_trail".to_string()),
+        ["m5_yard", "m3_trail", "m7_adventure"]
+            .iter()
+            .all(|n| names.contains(&n.to_string())),
         "{names:?}"
     );
     let secrets = Secrets::of_pack(&pack()).unwrap();
     assert!(secrets.ids.contains("yard_fight") && secrets.ids.contains("reeve_insight"));
+    let mill = Secrets::of_pack(&pack_of("m7_adventure")).unwrap();
+    assert!(mill.ids.contains("cellar_fight"), "{:?}", mill.ids);
     for name in names {
+        let secrets = if name.starts_with("m7_") {
+            &mill
+        } else {
+            &secrets
+        };
         let transcript = read_transcript(&read(&name, "transcript.jsonl")).unwrap();
         let log = read_session_log(&read(&name, "session-log.jsonl")).unwrap();
         let audit = audit_game(&transcript, &log, true);
         assert!(audit.passed(), "{name}: {:#?}", audit.problems);
         assert!(audit.rolls_in_log > 0 && audit.rolls_cited == audit.rolls_in_log);
-        let scan = scan_inputs(&read(&name, "inputs.jsonl"), &secrets).unwrap();
+        let scan = scan_inputs(&read(&name, "inputs.jsonl"), secrets).unwrap();
         assert!(scan.passed(), "{name}: {:#?}", scan.leaks);
         assert!(scan.inputs > 0 && scan.human_lines > 0, "{name}: {scan:?}");
     }
