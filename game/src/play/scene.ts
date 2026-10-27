@@ -122,8 +122,19 @@ ink?.busy("The engine is starting");
 
 const runDir = runFolder(flags.out!, "scene");
 const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
-const engine = await GameEngine.start({ pack: flags.pack!, runDir, seed: flags.seed === undefined ? undefined : Number(flags.seed) });
-const carried = await startAt(engine, flags.pack!, plan.first, [party.human, ...party.ai]);
+// A failed start gives the terminal back before its error prints.
+const started = await (async () => {
+  let engine: GameEngine | undefined;
+  try {
+    engine = await GameEngine.start({ pack: flags.pack!, runDir, seed: flags.seed === undefined ? undefined : Number(flags.seed) });
+    return { engine, carried: await startAt(engine, flags.pack!, plan.first, [party.human, ...party.ai]) };
+  } catch (error) {
+    engine?.close();
+    ink?.stop();
+    throw error;
+  }
+})();
+const { engine, carried } = started;
 const transcript = new Transcript(path.join(runDir, "transcript.jsonl"), () => engine.logHead);
 const seat: Seat = ink ?? new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai);
 const table = new TableState({
