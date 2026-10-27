@@ -73,6 +73,13 @@ export class TableState {
   fallbacks = 0;
   /** While set, `flush` shows only events up to this seq: the DM is narrating one part of a batch. */
   flushLimit: number | undefined;
+  /**
+   * While set, a `flush` given no `holdFrom` holds lines from the first event this matches: the DM
+   * is narrating the human's turn as it maps the human's words, and what follows the turn waits.
+   */
+  hold: ((event: Event) => boolean) | undefined;
+  /** The seq of the last engine line the DM's narration came after: what its latest narration covers. */
+  narratedTo = -1;
   /** The last engine lines shown to the human, for `/log`. */
   readonly recent: string[] = [];
   /**
@@ -83,6 +90,8 @@ export class TableState {
   /** Engine events fetched for the human's screen and the DM's transcript lines, not written yet. */
   private screen: Event[] = [];
   private dmLines: Event[] = [];
+  /** The seq of the last engine line written to the DM's transcript. */
+  private dmShownTo = -1;
   /** The flush running now, if any: the next one starts after it. */
   private flushing: Promise<void> = Promise.resolve();
   /** Each seat's state changes in flight, one after another (see `oneAtATime`). */
@@ -175,7 +184,7 @@ export class TableState {
    * Lines from the first event `holdFrom` matches (in the DM's view) onwards wait for a later flush.
    * One flush runs at a time, so two overlapping ones can't both take the same new lines.
    */
-  flush(holdFrom?: (event: Event) => boolean): Promise<void> {
+  flush(holdFrom = this.hold): Promise<void> {
     const run = this.flushing.then(() => this.flushNow(holdFrom));
     this.flushing = run.catch(() => undefined);
     return run;
@@ -189,6 +198,7 @@ export class TableState {
     if (held) limit = Math.min(limit, held.seq - 1);
     for (const event of take(this.dmLines, limit)) {
       this.transcript.add({ speaker: "engine", channel: "dm", kind: "engine", text: eventLine(event) });
+      this.dmShownTo = event.seq;
     }
     for (const event of take(this.screen, limit)) {
       const line = eventLine(event);
@@ -244,6 +254,7 @@ export class TableState {
     }
     await this.flush();
     this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text });
+    this.narratedTo = this.dmShownTo;
     for (const player of this.players) {
       if (!to || to === player) this.inboxes.get(player)?.push(`DM${to ? " (to you)" : ""}: ${text}`);
     }

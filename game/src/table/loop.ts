@@ -288,15 +288,29 @@ export class TableLoop {
     const human = this.table.human;
     await this.table.declare(human, text);
     const acted = this.table.acted;
-    await this.wakeDm(
-      "map_combat",
-      undefined,
-      `It is ${human}'s turn, and the human playing ${human} said what ${human} does (above).`,
-      `Map it to ${human}'s options with legal_actions, submit, move and end_turn, then narrate. If it can't be done, say so in narration.`,
-      `${human}'s options:`,
-      this.lastOptions ? formatOptions(this.lastOptions) : "(call legal_actions)",
-    );
-    await this.table.flush((e) => e.kind === "combat_over" || (e.kind === "turn_end" && e.actor === human));
+    const narrated = this.table.narratedTo;
+    const turnOver = (e: Event) => e.kind === "combat_over" || (e.kind === "turn_end" && e.actor === human);
+    // The DM's narration in this wake is about this turn: what follows the turn (the monsters'
+    // turns, a fight's end) waits for its own narration (spec §3.3 step 6).
+    this.table.hold = turnOver;
+    try {
+      await this.wakeDm(
+        "map_combat",
+        undefined,
+        `It is ${human}'s turn, and the human playing ${human} said what ${human} does (above).`,
+        `Map it to ${human}'s options with legal_actions, submit, move and end_turn, then narrate. If it can't be done, say so in narration.`,
+        `${human}'s options:`,
+        this.lastOptions ? formatOptions(this.lastOptions) : "(call legal_actions)",
+      );
+    } finally {
+      this.table.hold = undefined;
+    }
+    await this.table.flush(turnOver);
+    if (this.table.narratedTo !== narrated) {
+      // What the DM's narration came after is told; the rest is narrated with the turn's end.
+      const events = tellable(await this.table.engine.newEvents("dm", "brief"));
+      this.dmBacklog = [...this.dmBacklog, ...events.filter((e) => e.seq > this.table.narratedTo)];
+    }
     const still = await this.sameTurn(human, since);
     if (this.table.acted === acted && still) {
       this.table.fallbacks += 1;

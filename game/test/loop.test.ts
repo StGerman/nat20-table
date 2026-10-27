@@ -136,6 +136,27 @@ test("each part of a turn shows its engine lines, then its narration, before the
   assert.ok(played > 4, `only ${played} PC turns played`);
 });
 
+test("the DM's narration of the human's mapped words comes before the next turn, and the turn isn't narrated again", async () => {
+  const { seat, dm } = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "I run for the woodpile" }]),
+    dm: {
+      ...fightAtOnce,
+      map_combat: async (tools) => {
+        await tools.submit({ option_id: "dash" });
+        await tools.endTurn();
+        await tools.narrate("Bren sprints for the woodpile.");
+      },
+    },
+  });
+  const lines = seat.shown.flatMap((e) => (e.kind === "engine" || e.kind === "narration" ? [e.text] : []));
+  const narration = lines.indexOf("Bren sprints for the woodpile.");
+  assert.ok(lines.indexOf("bren uses Dash.") < narration);
+  assert.ok(narration < lines.indexOf("goblin_2's turn."), "the monsters' turns wait for the narration of Bren's");
+  assert.ok(!dm.briefings.some((b) => b.wake === "narrate" && b.briefing.includes("bren uses Dash.")), "the DM narrated Bren's turn once");
+  assert.ok(dm.briefings.some((b) => b.wake === "narrate" && b.briefing.includes("goblin_2's turn.")), "and the monsters' turns after it");
+});
+
 test("two narrations made at once show each engine line once", async () => {
   const loaded = "Scene m5_s3_yard loaded in explore mode.";
   const { t, seat } = await play({
