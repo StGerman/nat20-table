@@ -7,7 +7,7 @@ import type { Handle, State } from "@nat20-table/engine-client";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure } from "../pack/adventure.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
-import type { RunReport } from "../table/loop.ts";
+import type { RunReport, SceneChoice } from "../table/loop.ts";
 import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, summarize, type UsageRecord } from "../usage.ts";
@@ -60,6 +60,33 @@ export async function startAt(engine: GameEngine, pack: string, scene: string, p
   }
   engine.skipAll();
   return at === 0 ? undefined : party;
+}
+
+/**
+ * Which scenes a run plays (`--scenes`): the listed ones, in the pack's order. A scene the DM loads
+ * on the way forward, after the furthest scene played (or the first listed one) and before a listed
+ * one not played yet, is passed over: that listed scene loads in its place. The run stops before any
+ * other scene. An id that isn't in the pack is never passed over: it loads as asked, so the engine
+ * refuses an unknown one and the DM can try again. Returns the scene to start at and the loop's
+ * `onScene`.
+ */
+export function scenePlan(pack: string, listed: string[]): { first: string; onScene: (sceneId: string, played: readonly string[]) => SceneChoice } {
+  const order = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8"))).scenes.map((s) => s.id);
+  const at = listed.map((id) => order.indexOf(id));
+  const unknown = listed.filter((_, i) => at[i] < 0);
+  if (listed.length === 0) throw new Error("no scene to play");
+  if (unknown.length > 0) throw new Error(`${pack} has no scene ${unknown.join(", ")}; its scenes: ${order.join(", ")}`);
+  if (at.some((n, i) => i > 0 && n <= at[i - 1])) throw new Error(`list the scenes once each, in the pack's order: ${order.join(", ")}`);
+  return {
+    first: listed[0],
+    onScene: (sceneId, played) => {
+      if (listed.includes(sceneId)) return "continue";
+      const here = order.indexOf(sceneId);
+      const furthest = Math.max(at[0], ...played.map((id) => order.indexOf(id)));
+      const next = here > furthest ? listed.find((id) => order.indexOf(id) > here && !played.includes(id)) : undefined;
+      return next ? { skipTo: next } : "stop";
+    },
+  };
 }
 
 /** A new run folder, `<out>/<name>-<time>/`. */
