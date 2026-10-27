@@ -10,13 +10,14 @@
 //
 // Flags: --dry-run (print the session options, call no model), --dm-model, --player-model,
 // --effort, --turns N.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { AgentSession, UsageLimitReached, reply, seatTool, sessionOptions, type SessionConfig } from "../src/agents/sdk-session.ts";
+import { refuseApiKey, runFolder } from "../src/play/run.ts";
 import { UsageLog, summarize } from "../src/usage.ts";
 import { formatOptions, formatState, type LegalActionsResult } from "../src/view.ts";
 import type { Event, State } from "@nat20-table/engine-client";
@@ -114,8 +115,11 @@ const dmBatches = chunk(recorded.dm_events, turns).map((batch) =>
 
 const skillPlugin = path.join(here, "dm-craft-plugin");
 
-const runDir = path.join(repo, "runs", `spike-${new Date().toISOString().replace(/[:.]/g, "-")}`);
-const usage = new UsageLog(flags["dry-run"] ? undefined : path.join(runDir, "usage.jsonl"));
+// A dry run writes nothing. A live run refuses an API key before it makes its run folder, and makes
+// the folder before anything is written into it.
+if (!flags["dry-run"]) refuseApiKey();
+const runDir = flags["dry-run"] ? undefined : runFolder(path.join(repo, "runs"), "spike");
+const usage = new UsageLog(runDir && path.join(runDir, "usage.jsonl"));
 
 const player: SessionConfig = {
   agent: recorded.player,
@@ -136,7 +140,8 @@ const dm: SessionConfig = {
   turnTimeoutMs: 60_000,
 };
 
-if (flags["dry-run"]) {
+// A dry run has no run folder.
+if (!runDir) {
   for (const config of [player, dm]) {
     const { mcpServers, ...options } = sessionOptions(config, "<empty temp dir>");
     console.log(config.agent, JSON.stringify({ ...options, mcpServers: Object.keys(mcpServers ?? {}) }, null, 2));
@@ -144,12 +149,6 @@ if (flags["dry-run"]) {
   process.exit(0);
 }
 
-if (process.env.ANTHROPIC_API_KEY) {
-  console.error("ANTHROPIC_API_KEY is set, so the SDK would bill the API instead of your Claude plan (decision 0036). Unset it and run again.");
-  process.exit(2);
-}
-
-mkdirSync(runDir, { recursive: true });
 const report: string[] = [`# Agent SDK spike, ${new Date().toISOString()}`, ""];
 let stoppedAtLimit: string | undefined;
 
