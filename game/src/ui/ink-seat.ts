@@ -103,7 +103,7 @@ export class InkSeat implements Seat {
       this.update({ options: event });
       return;
     }
-    this.add(eventLines(event));
+    this.add(eventLines(event, this.handle));
   }
 
   readonly palette: Palette;

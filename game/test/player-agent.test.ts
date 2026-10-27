@@ -11,7 +11,7 @@ import { declaration, ModelPlayer, playerPrompt } from "../src/agents/player.ts"
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnTimeout } from "../src/errors.ts";
-import { packParty, talkLines } from "../src/play/run.ts";
+import { addressLines, packParty, talkLines } from "../src/play/run.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedSeat } from "../src/table/scripted.ts";
 import { HandTools, PlayerTools } from "../src/table/tools.ts";
@@ -73,7 +73,11 @@ test("a model player passes as a normal answer, plays from its card's Talk and s
   assert.match(prompt, /Don't repeat what someone else already said/);
   assert.match(prompt, /You may also say one short line with say, reacting to what happened since your last turn/);
   assert.match(prompt, /"Do you raise your hand\?": .*Call no tool: your final answer starts with SPEAK \(a line to say\), BOTH \(a line and a deed\), ACT: and one sentence/);
-  assert.match(prompt, /"You have the floor": you raised your hand, or someone named Maren\./);
+  assert.match(prompt, /"You have the floor": you raised your hand, someone named Maren, or a companion spoke to Maren\./);
+  // Addressing a companion (party talk §4.4): whom and how from the card and bond notes, never sheets.
+  assert.match(prompt, /give their handle as to\. Choose whom and how from your card's "With the party" and your bond notes, never from anyone's sheet\./);
+  assert.match(prompt, /Set asks only for a request or a proposal that wants their answer/);
+  assert.match(prompt, /The human's character answers when its player likes; nobody waits for it\./);
 });
 
 test("every party member has its names, whichever seat plays it: handle, card name and the pack's forms", () => {
@@ -100,18 +104,48 @@ test("a model player answers a hand wake with its answer as written, and its too
   }
 });
 
+test("a model player speaks to a companion with to and asks; the table marks the line and keeps the address", async () => {
+  const { player } = standInPlayer("ilsa", async (wake, call) => {
+    assert.equal(wake, "declare");
+    assert.equal((await call("say", { text: "Torva, the door?", to: "torva", asks: true })).isError, false);
+    assert.equal((await call("say", { text: "Bren, look.", to: "bren" })).isError, false);
+    return "PASS";
+  });
+  const t = await testTable({ seed: 1, players: ["ilsa", "torva"] });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    await player.wake("declare", "You have the floor.", new PlayerTools("ilsa", t.table));
+    assert.deepEqual(t.table.takeAddresses(), [
+      { from: "ilsa", to: "torva", asks: true },
+      { from: "ilsa", to: "bren", asks: false },
+    ]);
+    assert.deepEqual(t.table.drainInbox("torva"), ["ilsa says to you: Torva, the door?", "ilsa says to bren: Bren, look."]);
+    assert.ok((t.table.seat as ScriptedSeat).shown.some((e) => e.kind === "speech" && e.to === "bren"), "the human sees the line spoken to their character");
+  } finally {
+    t.close();
+  }
+});
+
+test("the report counts the lines spoken to a companion, by who spoke to whom", () => {
+  const line = (speaker: string, to?: string) => ({ at: "t", speaker, channel: "table" as const, kind: "speech" as const, text: "…", rolls: [], log_head: 0, ...(to ? { to } : {}) });
+  assert.deepEqual(addressLines([line("torva")]), []);
+  assert.deepEqual(addressLines([line("torva", "ilsa"), line("ilsa", "torva"), line("torva", "ilsa"), line("maren")]), [
+    "- Lines spoken to a companion: 3 of 4 AI lines (torva to ilsa 2, ilsa to torva 1)",
+  ]);
+});
+
 test("the report counts talk rounds: lines, silence, hands, named players who answered, and time", () => {
-  const round = { named: [], hands: {}, floor_wakes: 0, lapsed: [], spoke: [], declared: [], silent: [], wall_ms: 0 };
+  const round = { named: [], hands: {}, floor_wakes: 0, lapsed: [], carried: [], spoke: [], declared: [], silent: [], wall_ms: 0 };
   assert.deepEqual(talkLines([]), []);
   assert.deepEqual(
     talkLines([
       { ...round, named: ["ilsa"], hands: { torva: "act", maren: "pass" }, floor_wakes: 1, spoke: ["ilsa"], declared: ["torva"], silent: ["maren"], first_line_ms: 4000, wall_ms: 6000 },
-      { ...round, hands: { torva: "speak", maren: "both", ilsa: "pass" }, floor_wakes: 2, spoke: ["torva", "maren"], declared: ["maren"], silent: ["ilsa"], first_line_ms: 6000, wall_ms: 12000 },
+      { ...round, hands: { torva: "speak", maren: "both", ilsa: "pass" }, floor_wakes: 3, handed_to: "ilsa", carried: ["torva"], spoke: ["torva", "maren", "ilsa"], declared: ["maren"], silent: [], first_line_ms: 6000, wall_ms: 12000 },
       { ...round, hands: { torva: "pass", maren: "pass", ilsa: "unread" }, silent: ["torva", "maren", "ilsa"], wall_ms: 3000 },
     ]),
     [
-      "- Talk rounds: 3; lines per round 1.0; silent share 56% (target at least 30%); floor wakes 3, hands lapsed 0",
-      "- Hands: speak 1, both 1, act 1, pass 4, unread 1; named players who answered first: 1 of 1",
+      "- Talk rounds: 3; lines per round 1.3; silent share 44% (target at least 30%); floor wakes 4, hands lapsed 0",
+      "- Hands: speak 1, both 1, act 1, pass 4, unread 1; named players who answered first: 1 of 1; hand-offs 1, requests carried to the next round 1",
       "- Talk round time: first line p50 4000 ms (target 7000 ms), round p50 6000 ms, p95 12000 ms (target 20000 ms)",
     ],
   );

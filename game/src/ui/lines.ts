@@ -1,6 +1,7 @@
 // How each TableEvent reads on the human's screen (M6 spec §3.4, AGT-7): styled lines, already
 // projected for the human by the loop, so this only lays them out. Rolls show inline as the engine
 // rendered them for the human's viewer, with their roll id (dice, total and outcome; no AC or DC).
+import type { Handle } from "@nat20-table/engine-client";
 import type { TableEvent } from "../table/types.ts";
 import type { Accent, Palette } from "./palette.ts";
 
@@ -51,13 +52,13 @@ export function textProps(style: Style, palette: Palette): { color?: string; bol
 
 const name = (handle: string) => handle.charAt(0).toUpperCase() + handle.slice(1);
 
-/** The lines one event adds to the screen. */
-export function eventLines(event: TableEvent): Line[] {
+/** The lines one event adds to the screen; `you` is the human's own handle. */
+export function eventLines(event: TableEvent, you?: Handle): Line[] {
   switch (event.kind) {
     case "narration":
       return [{ tone: "dm", text: `${event.speaker === "dm" ? "DM" : name(event.speaker)}${event.to ? " (to you)" : ""}: ${event.text}` }];
     case "speech":
-      return [{ tone: "speech", text: `${name(event.speaker)} says: ${event.text}` }];
+      return [{ tone: "speech", text: `${name(event.speaker)} says${event.to ? ` to ${event.to === you ? "you" : name(event.to)}` : ""}: ${event.text}` }];
     case "intent":
       return [{ tone: "intent", text: `${name(event.speaker)}: ${event.text}` }];
     case "engine":
