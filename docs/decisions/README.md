@@ -47,6 +47,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0036](0036-demo-runs-on-stas-subscription.md) | The demo runs on Stas's Claude subscription; an API key only when others play | Accepted | 2026-10-23 | Stas (Milestone 6 spec thread, D12) |
 | [0037](0037-fork-keeps-progress-md.md) | Core PRs into the fork's `demo` keep `docs/PROGRESS.md` current | Accepted | 2026-10-27 | Stas (project chat) |
 | [0038](0038-agents-write-the-run-language.md) | The agents write the table's prose in the run's language (`--lang ru`); the engine and the UI stay English | Accepted | 2026-10-27 | Stas (decision card, Milestone 6 implementation thread) |
+| [0039](0039-party-talk-hand-raise-floor.md) | Party talk: each AI player raises its hand, and speakers take the floor in turn | Accepted | 2026-10-27 | Stas (decision cards, party-talk design thread) |
 
 ## Open questions to watch
 
