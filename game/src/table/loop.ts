@@ -176,10 +176,12 @@ export class TableLoop {
   private readonly barkTimeoutMs: number;
   /** Fight triggers reacted to so far, for the report. */
   private readonly reactions: FightReaction[] = [];
-  /** The scene and round of the last trigger reacted to: at most one a round. */
+  /** The fight, scene and round of the last trigger reacted to: at most one a round. */
   private reactedIn: string | undefined;
-  /** Every scene and combat round seen, for the report's count of fight rounds. */
+  /** Every fight, scene and combat round seen, for the report's count of fight rounds. */
   private readonly fightRounds = new Set<string>();
+  /** Fights over so far: rounds count again from 1 in the next one. */
+  private fightsOver = 0;
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -1076,7 +1078,10 @@ export class TableLoop {
    */
   private async startReactions(): Promise<void> {
     let events = await this.table.engine.newEvents("dm", "reactions");
-    for (const e of events) if (e.round !== null && e.round !== undefined) this.fightRounds.add(`${e.scene ?? ""}:${e.round}`);
+    for (const e of events) {
+      if (e.kind === "combat_over") this.fightsOver += 1;
+      else if (e.round !== null && e.round !== undefined) this.fightRounds.add(`${this.fightsOver}:${e.scene ?? ""}:${e.round}`);
+    }
     // What came before the last fight ended belongs to that fight.
     events = events.slice(events.map((e) => e.kind).lastIndexOf("combat_over") + 1);
     if (!this.table.inCombat || this.table.ended || this.paused || events.length === 0) return;
@@ -1088,7 +1093,7 @@ export class TableLoop {
     const party = state.creatures.filter((c) => c.side === "party").map((c) => c.handle);
     const trigger = triggerIn(events, party, reacting);
     if (!trigger) return;
-    const key = `${this.scenes.at(-1) ?? ""}:${trigger.round}`;
+    const key = `${this.fightsOver}:${this.scenes.at(-1) ?? ""}:${trigger.round}`;
     if (this.reactedIn === key) return;
     const conscious = new Set(state.creatures.filter((c) => c.life_state === "conscious").map((c) => c.handle));
     const a = this.table.awaiting;
