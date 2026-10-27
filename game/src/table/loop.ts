@@ -381,7 +381,7 @@ export class TableLoop {
     await this.table.flush(turnOver);
     if (this.table.narratedTo !== narrated) {
       // What the DM's narration came after is told; the rest is narrated with the turn's end.
-      const events = tellable(await this.table.engine.newEvents("dm", "brief"));
+      const events = tellable(await this.table.engine.newEvents("dm", "brief"), this.table.deaths);
       this.dmBacklog = [...this.dmBacklog, ...events.filter((e) => e.seq > this.table.narratedTo)];
     }
     const still = await this.sameTurn(human, since);
@@ -497,7 +497,7 @@ export class TableLoop {
    * `combat_over` wake.
    */
   private async narrateNew(pc?: Handle): Promise<void> {
-    let events = [...this.dmBacklog, ...tellable(await this.table.engine.newEvents("dm", "brief"))];
+    let events = [...this.dmBacklog, ...tellable(await this.table.engine.newEvents("dm", "brief"), this.table.deaths)];
     this.dmBacklog = [];
     const over = events.findIndex((e) => e.kind === "combat_over");
     if (over >= 0) {
@@ -714,7 +714,7 @@ export class TableLoop {
   /** What an AI player hears before a wake: lines said to it, then events projected for it. */
   private async playerBriefing(handle: Handle, ...lines: string[]): Promise<string> {
     const heard = this.table.drainInbox(handle);
-    const events = tellable(await this.table.engine.newEvents(handle));
+    const events = tellable(await this.table.engine.newEvents(handle), this.table.deaths);
     return [
       ...(heard.length > 0 ? ["What you heard:", ...heard] : []),
       ...(events.length > 0 ? ["What happened:", ...events.map(eventLine)] : []),
@@ -744,7 +744,7 @@ export class TableLoop {
     const heard = this.table.drainDmInbox();
     let told = events;
     if (!told) {
-      told = [...this.dmBacklog, ...tellable(await this.table.engine.newEvents("dm", "brief"))];
+      told = [...this.dmBacklog, ...tellable(await this.table.engine.newEvents("dm", "brief"), this.table.deaths)];
       this.dmBacklog = [];
     }
     const briefing = [

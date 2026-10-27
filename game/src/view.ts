@@ -165,7 +165,20 @@ export function eventLine(event: Event): string {
   return event.kind === "roll" ? `[${event.roll.id}] ${event.text}` : event.text;
 }
 
-/** Events a seat is told about. The session's own start line is bookkeeping, not fiction. */
-export function tellable(events: Event[]): Event[] {
-  return events.filter((e) => e.kind !== "session_started");
+/**
+ * Events a seat is told about. The session's own start line is bookkeeping, not fiction, and so
+ * is the empty turn the engine still gives a dead creature that keeps its place in the
+ * initiative order. `deaths` maps each dead creature to the `seq` of its death; the deaths in
+ * `events` are added to it, so one map serves every reader, in any order.
+ */
+export function tellable(events: Event[], deaths: Map<Handle, number>): Event[] {
+  for (const e of events) {
+    if (e.kind === "life_state" && e.state === "dead" && !deaths.has(e.target)) deaths.set(e.target, e.seq);
+  }
+  return events.filter((e) => {
+    if (e.kind === "session_started") return false;
+    if (e.kind !== "turn_start" && e.kind !== "turn_end") return true;
+    const died = deaths.get(e.actor);
+    return died === undefined || e.seq < died;
+  });
 }

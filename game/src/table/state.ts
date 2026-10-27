@@ -57,6 +57,8 @@ export class TableState {
   readonly notes = new Map<Handle, Array<{ kind: NoteKind; text: string }>>();
   /** What the DM established in fiction (spec §3.6). Only the DM reads it. */
   readonly dmMemory: string[] = [];
+  /** Each dead creature and the `seq` of its death, so its later empty turns are told to nobody. */
+  readonly deaths = new Map<Handle, number>();
   /**
    * Rejections and guard refusals in the decision each seat is making now (spec §6), by seat: a
    * player's handle, or `dm`. Per seat, because the AI players declare in parallel.
@@ -201,8 +203,8 @@ export class TableState {
   }
 
   private async flushNow(holdFrom: ((event: Event) => boolean) | undefined): Promise<void> {
-    this.screen.push(...tellable(await this.engine.newEvents(this.human, "screen")));
-    this.dmLines.push(...tellable(await this.engine.newEvents("dm", "transcript")));
+    this.screen.push(...tellable(await this.engine.newEvents(this.human, "screen"), this.deaths));
+    this.dmLines.push(...tellable(await this.engine.newEvents("dm", "transcript"), this.deaths));
     let limit = this.flushLimit ?? Number.POSITIVE_INFINITY;
     const held = holdFrom ? this.dmLines.find(holdFrom) : undefined;
     if (held) limit = Math.min(limit, held.seq - 1);
