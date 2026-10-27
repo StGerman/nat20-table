@@ -570,6 +570,31 @@ test("AI players declare in parallel and are heard in seat order; a refused decl
   assert.doesNotMatch(turn, /9 HP/);
 });
 
+test("a declaration that follows the same player's line this round stays off the human's screen; a silent one shows", async () => {
+  const seat = seatThen([{ kind: "text", text: "I look for tracks." }]);
+  const { t, dm } = await play({
+    seed: 27,
+    seat,
+    players: {
+      torva: {
+        declare: async (tools) => {
+          await tools.say("Stay close.");
+          return "Torva guards the gate.";
+        },
+      },
+      maren: { declare: async () => "Maren silently checks the wounded." },
+      ilsa: { declare: async () => undefined },
+    },
+    dm: { scene_open: async (tools) => void (await tools.narrate("The yard is quiet.")) },
+  });
+  const screen = seat.shown.filter((e) => e.kind === "speech" || e.kind === "intent").map((e) => `${e.kind} ${e.speaker}: ${e.text}`);
+  assert.deepEqual(screen, ["speech torva: Stay close.", "intent maren: Maren silently checks the wounded."]);
+  // The DM and the transcript still get Torva's declaration.
+  const turn = dm.briefings.find((b) => b.wake === "table_turn")!.briefing;
+  assert.match(turn, /torva: Torva guards the gate\./);
+  assert.ok(t.table.transcript.records.some((r) => r.speaker === "torva" && r.kind === "intent" && r.text === "Torva guards the gate."));
+});
+
 test("a declaration refused again and again is dropped once its retries are spent", async () => {
   const { t, players } = await play({
     seed: 27,

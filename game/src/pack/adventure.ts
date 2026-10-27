@@ -10,6 +10,12 @@ import { z } from "zod";
 /** The skeleton versions this game reads. A format change adds one and keeps reading the old. */
 export const FORMAT_VERSIONS = [1] as const;
 
+/**
+ * The sections of a personality card (CHR-5), each a `## ` heading under the card's `# Name`: the
+ * player prompt names some of them, so `pack:check` refuses a card without all of them.
+ */
+export const CARD_SECTIONS = ["Goal", "Temperament", "Quirk", "With the party", "Voice", "Talk and silence"] as const;
+
 /** A note for people editing the file. Allowed on the file and on every section. */
 const comment = z.string().optional().describe("A note for people editing the file; the game ignores it.");
 

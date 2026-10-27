@@ -60,6 +60,14 @@ const PLANTS: [string, (skeleton: Adventure, pack: string) => void, string][] = 
   ],
   ["a folder named as a card", (s) => (s.party[2].card = "cards"), "cards can't be read as a file: EISDIR"],
   [
+    "a card without one of its sections",
+    (_, pack) => {
+      const file = path.join(pack, "cards/bren.md");
+      writeFileSync(file, readFileSync(file, "utf8").replace("## Talk and silence", "**Talk and silence.**"));
+    },
+    'cards/bren.md has no "## Talk and silence" section',
+  ],
+  [
     "a file named scenes",
     (_, pack) => {
       rmSync(path.join(pack, "scenes"), { recursive: true });

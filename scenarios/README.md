@@ -8,11 +8,22 @@ An adventure is a scenario pack: a folder the game loads from any path (decision
                    target times, the prose files it uses (schema: game/schema/adventure.schema.json)
   prose/           Markdown the DM reads as written; prose/npcs/ has one file per named NPC
   scenes/          the engine's scene files, one per scene (contract-typed, protocol §2.1)
-  cards/           personality cards for the AI party members
+  cards/           personality cards, one per party member an AI may play
   README.md        credits, licence, scene list
 ```
 
 Shared setting text goes in `lore/` at the repo root; a pack names the lore it uses in its skeleton.
+
+A personality card is the only character text in an AI player's prompt besides its sheet. It is a `# Name` heading, a sentence on who the character is, and these `##` sections (`CARD_SECTIONS` in `game/src/pack/adventure.ts`; `pack:check` refuses a card that lacks one):
+
+- `## Goal`: what the character wants from the adventure.
+- `## Temperament`: how it meets people and trouble.
+- `## Quirk`: one habit the others notice.
+- `## With the party`: its view of each companion at the start.
+- `## Voice`: how it talks.
+- `## Talk and silence`: four lines, "Speaks when…", "Acts without a word when…", "Stays silent when…", "Turns to the others…" (party talk §4.5).
+
+Any character may be played by an AI, so the human's character gets a card too. `cards/torva.md` is a worked example.
 
 To make a pack, copy an existing one and change it. To check one, here or anywhere else:
 
