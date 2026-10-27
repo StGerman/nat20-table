@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.36"
+    "version": "1.0.0-dev.37"
   },
   "$defs": {
     "Ability": {
@@ -1006,12 +1006,17 @@
               "items": {
                 "$ref": "#/$defs/Handle"
               }
+            },
+            "reached": {
+              "description": "Whether the walk set out to end where the creature was sent (next to the creature, at\nthe anchor or the point). False only for a `partial` move that the movement left cut\nshort; a creature an opportunity attack holds on the way is still on a walk that\nreaches.",
+              "type": "boolean"
             }
           },
           "required": [
             "cmd",
             "moved_ft",
-            "provoked"
+            "provoked",
+            "reached"
           ]
         },
         {
@@ -3496,7 +3501,7 @@
           ]
         },
         {
-          "description": "Moves a creature along a route on the map. In explore mode the walk costs no movement\nand provokes nobody. In combat it is a decision at the actor's action prompt: the whole\nroute must fit in the movement left, and an opportunity attack pauses the creature where\nit provoked one; it walks on once the reaction is resolved (protocol §4.1). No route\nanswers `rejected` with `no_path`.",
+          "description": "Moves a creature along a route on the map. In explore mode the walk costs no movement\nand provokes nobody. In combat it is a decision at the actor's action prompt: the whole\nroute must fit in the movement left, unless `partial` is set, and an opportunity attack\npauses the creature where it provoked one; it walks on once the reaction is resolved\n(protocol §4.1). No route answers `rejected` with `no_path`.",
           "type": "object",
           "properties": {
             "actor": {
@@ -3506,6 +3511,10 @@
             "cmd": {
               "type": "string",
               "const": "move"
+            },
+            "partial": {
+              "description": "Walk as far as movement allows: a route longer than the movement left is walked to\nthe last free spot the movement reaches, and the result's `reached` says it stopped\nshort. Without it (the default) such a move is refused with `insufficient_resource`\nand changes nothing; so is a partial move that can't get anywhere.",
+              "type": "boolean"
             },
             "prompt_id": {
               "description": "The pending prompt's id. Required in combat, ignored in explore mode.",

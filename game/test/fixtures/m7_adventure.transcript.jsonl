@@ -1215,79 +1215,109 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":628}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":628}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":628}
-{"at":"t","speaker":"maren","channel":"run","kind":"retry","text":"maren: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":628}
-{"at":"t","speaker":"maren","channel":"run","kind":"retry","text":"maren: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":630}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Dash.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren is under Dash.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Dash.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":639}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is no longer under Disengage.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r635] boss rolls an attack roll vs bren: 1d20 (11) +4 = 15 vs AC 19, miss.","rolls":["r635"],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r637] boss rolls an attack roll vs bren: 1d20 (2) +4 = 6 vs AC 19, miss.","rolls":["r637"],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss's turn.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r635] boss rolls an attack roll vs bren: 1d20 (11) = 15, miss.","rolls":["r635"],"log_head":639}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r637] boss rolls an attack roll vs bren: 1d20 (2) = 6, miss.","rolls":["r637"],"log_head":639}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":639}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":639}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on boss.","rolls":[],"log_head":646}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r641] ilsa rolls an attack roll vs boss: 1d20 (18) +4 = 22 vs AC 17, hit.","rolls":["r641"],"log_head":646}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r642] ilsa rolls fire damage: 1d10 (6) = 6.","rolls":["r642"],"log_head":646}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss takes 6 fire damage.","rolls":[],"log_head":646}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss has 0/21 Hit Points.","rolls":[],"log_head":646}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is dead.","rolls":[],"log_head":646}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on boss.","rolls":[],"log_head":646}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r641] ilsa rolls an attack roll vs boss: 1d20 (18) = 22, hit.","rolls":["r641"],"log_head":646}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r642] ilsa rolls fire damage: 1d10 (6) = 6.","rolls":["r642"],"log_head":646}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss takes 6 fire damage.","rolls":[],"log_head":646}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss is dead.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":629}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":629}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":629}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":630}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":630}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":630}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on boss.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r632] boss rolls a Dexterity saving throw: 1d20 (11) +2 = 13 vs DC 12, success.","rolls":["r632"],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Sacred Flame on boss.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r632] boss rolls a Dexterity saving throw: 1d20 (11) = 13, success.","rolls":["r632"],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":646}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":646}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":646}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":646}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The fight is over.","rolls":[],"log_head":646}
-{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":646,"human":true}
-{"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":646}
-{"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":646}
-{"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":646}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":646}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren is no longer under Dash.","rolls":[],"log_head":648}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s6_wrap_up loaded in explore mode.","rolls":[],"log_head":648}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene s6_wrap_up loaded in explore mode.","rolls":[],"log_head":648}
-{"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene s6_wrap_up","rolls":[],"log_head":648}
-{"at":"t","speaker":"torva","channel":"notes:torva","kind":"note","text":"summary: torva remembers the scene.","rolls":[],"log_head":648}
-{"at":"t","speaker":"maren","channel":"notes:maren","kind":"note","text":"summary: maren remembers the scene.","rolls":[],"log_head":648}
-{"at":"t","speaker":"ilsa","channel":"notes:ilsa","kind":"note","text":"summary: ilsa remembers the scene.","rolls":[],"log_head":648}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":648}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r649] bren rolls a d10 Hit Point Die: 1d10 (6) +2 = 8.","rolls":["r649"],"log_head":658}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren regains 8 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 10/20 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r652] maren rolls a d8 Hit Point Die: 1d8 (8) +2 = 10.","rolls":["r652"],"log_head":658}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren regains 9 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren has 17/17 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r655] ilsa rolls a d6 Hit Point Die: 1d6 (2) +2 = 4.","rolls":["r655"],"log_head":658}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa regains 4 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa has 8/14 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren, maren, ilsa finish a short rest.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r649] bren rolls a d10 Hit Point Die: 1d10 (6) = 8.","rolls":["r649"],"log_head":658}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren regains 8 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 10/20 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r652] maren rolls a d8 Hit Point Die: 1d8 (8) = 10.","rolls":["r652"],"log_head":658}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren regains 9 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r655] ilsa rolls a d6 Hit Point Die: 1d6 (2) = 4.","rolls":["r655"],"log_head":658}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa regains 4 Hit Points.","rolls":[],"log_head":658}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren, maren, ilsa finish a short rest.","rolls":[],"log_head":658}
-{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":658,"human":true}
-{"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":658}
-{"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":658}
-{"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":658}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The road ends here.","rolls":[],"log_head":658}
-{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":658}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is no longer under Disengage.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r637] boss rolls an attack roll vs bren: 1d20 (2) +4 = 6 vs AC 19, miss.","rolls":["r637"],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r639] boss rolls an attack roll vs bren: 1d20 (18) +4 = 22 vs AC 19, hit.","rolls":["r639"],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r640] boss rolls piercing damage: 1d6 (4) +2 = 6.","rolls":["r640"],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren takes 6 piercing damage.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 0/20 Hit Points.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is unconscious.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is now unconscious.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss's turn.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r637] boss rolls an attack roll vs bren: 1d20 (2) = 6, miss.","rolls":["r637"],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r639] boss rolls an attack roll vs bren: 1d20 (18) = 22, hit.","rolls":["r639"],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r640] boss rolls piercing damage: 1d6 (4) = 6.","rolls":["r640"],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren takes 6 piercing damage.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 0/20 Hit Points.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is unconscious.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is now unconscious.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":646}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":646}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on boss.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r648] ilsa rolls an attack roll vs boss: 1d20 (11) +4 = 15 vs AC 17, miss.","rolls":["r648"],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on boss.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r648] ilsa rolls an attack roll vs boss: 1d20 (11) = 15, miss.","rolls":["r648"],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":666}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 8 begins.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r658] bren rolls a death saving throw: 1d20 (18) = 18 vs DC 10, success.","rolls":["r658"],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 8 begins.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r658] bren rolls a death saving throw: 1d20 (18) = 18, success.","rolls":["r658"],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":666}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":666}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on boss.","rolls":[],"log_head":673}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r668] boss rolls a Dexterity saving throw: 1d20 (4) +2 = 6 vs DC 12, failure.","rolls":["r668"],"log_head":673}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r669] maren rolls radiant damage: 1d8 (6) = 6.","rolls":["r669"],"log_head":673}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss takes 6 radiant damage.","rolls":[],"log_head":673}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss has 0/21 Hit Points.","rolls":[],"log_head":673}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is dead.","rolls":[],"log_head":673}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Sacred Flame on boss.","rolls":[],"log_head":673}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r668] boss rolls a Dexterity saving throw: 1d20 (4) = 6, failure.","rolls":["r668"],"log_head":673}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r669] maren rolls radiant damage: 1d8 (6) = 6.","rolls":["r669"],"log_head":673}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss takes 6 radiant damage.","rolls":[],"log_head":673}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss is dead.","rolls":[],"log_head":673}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":673}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":673}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":673}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The fight is over.","rolls":[],"log_head":673}
+{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":673,"human":true}
+{"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":673}
+{"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":673}
+{"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":673}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":673}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s6_wrap_up loaded in explore mode.","rolls":[],"log_head":674}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene s6_wrap_up loaded in explore mode.","rolls":[],"log_head":674}
+{"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene s6_wrap_up","rolls":[],"log_head":674}
+{"at":"t","speaker":"torva","channel":"notes:torva","kind":"note","text":"summary: torva remembers the scene.","rolls":[],"log_head":674}
+{"at":"t","speaker":"maren","channel":"notes:maren","kind":"note","text":"summary: maren remembers the scene.","rolls":[],"log_head":674}
+{"at":"t","speaker":"ilsa","channel":"notes:ilsa","kind":"note","text":"summary: ilsa remembers the scene.","rolls":[],"log_head":674}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":674}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r675] maren rolls a d8 Hit Point Die: 1d8 (7) +2 = 9.","rolls":["r675"],"log_head":681}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren regains 9 Hit Points.","rolls":[],"log_head":681}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren has 17/17 Hit Points.","rolls":[],"log_head":681}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r678] ilsa rolls a d6 Hit Point Die: 1d6 (4) +2 = 6.","rolls":["r678"],"log_head":681}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa regains 6 Hit Points.","rolls":[],"log_head":681}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa has 10/14 Hit Points.","rolls":[],"log_head":681}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren, ilsa finish a short rest.","rolls":[],"log_head":681}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r675] maren rolls a d8 Hit Point Die: 1d8 (7) = 9.","rolls":["r675"],"log_head":681}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren regains 9 Hit Points.","rolls":[],"log_head":681}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r678] ilsa rolls a d6 Hit Point Die: 1d6 (4) = 6.","rolls":["r678"],"log_head":681}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa regains 6 Hit Points.","rolls":[],"log_head":681}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren, ilsa finish a short rest.","rolls":[],"log_head":681}
+{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":681,"human":true}
+{"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":681}
+{"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":681}
+{"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":681}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The road ends here.","rolls":[],"log_head":681}
+{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":681}

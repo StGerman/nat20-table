@@ -653,146 +653,204 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":367}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa is no longer prone.","rolls":[],"log_head":367}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":367}
-{"at":"t","speaker":"ilsa","channel":"run","kind":"retry","text":"ilsa: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":367}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Dash.","rolls":[],"log_head":370}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is under Dash.","rolls":[],"log_head":370}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":370}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Dash.","rolls":[],"log_head":370}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":370}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":370}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":371}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":371}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":371}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":380}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":380}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":380}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":380}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":380}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":380}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":380}
-{"at":"t","speaker":"maren","channel":"run","kind":"retry","text":"maren: move refused: rejected (insufficient_resource): Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":380}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Dash.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren is under Dash.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Dash.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":390}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer prone.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":390}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer prone.","rolls":[],"log_head":390}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":390}
-{"at":"t","speaker":"bren","channel":"run","kind":"retry","text":"bren's choice was not accepted: Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":390,"decision":"p63"}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":368}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":368}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":368}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":369}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":369}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":369}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":379}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r371] ilsa rolls an attack roll vs goblin_4: 1d20 (6) +4 = 10 vs AC 15, miss.","rolls":["r371"],"log_head":379}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":379}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":379}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r371] ilsa rolls an attack roll vs goblin_4: 1d20 (6) = 10, miss.","rolls":["r371"],"log_head":379}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":379}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":379}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":379}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":379}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_4.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r382] goblin_4 rolls a Dexterity saving throw: 1d20 (20) +2 = 22 vs DC 12, success.","rolls":["r382"],"log_head":389}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Sacred Flame on goblin_4.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r382] goblin_4 rolls a Dexterity saving throw: 1d20 (20) = 22, success.","rolls":["r382"],"log_head":389}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":389}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer prone.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer prone.","rolls":[],"log_head":389}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":389}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":390}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":390}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":392}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":392}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":392}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":392}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":393}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":393}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":405}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 9 begins.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Scimitar attack on maren.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r402] goblin_4 rolls an attack roll vs maren: 1d20 (6) +4 = 10 vs AC 18, miss.","rolls":["r402"],"log_head":405}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is no longer under Dash.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 9 begins.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Scimitar attack on maren.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r402] goblin_4 rolls an attack roll vs maren: 1d20 (6) = 10, miss.","rolls":["r402"],"log_head":405}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":405}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":405}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":405}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":393}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":395}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":395}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":395}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":395}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":395}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":396}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":396}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":407}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 9 begins.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Scimitar attack on bren.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r405] goblin_4 rolls an attack roll vs bren: 1d20 (8) +4 = 12 vs AC 19, miss.","rolls":["r405"],"log_head":407}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 9 begins.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Scimitar attack on bren.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r405] goblin_4 rolls an attack roll vs bren: 1d20 (8) = 12, miss.","rolls":["r405"],"log_head":407}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":407}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":407}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":408}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":408}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":408}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":409}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":409}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":409}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":419}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r407] ilsa rolls an attack roll vs goblin_4: 1d20 (20) +4 = 24 vs AC 15, critical hit.","rolls":["r407"],"log_head":419}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r408] ilsa rolls critical fire damage: 2d10 (4, 4) = 8.","rolls":["r408"],"log_head":419}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 takes 8 fire damage.","rolls":[],"log_head":419}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 2/10 Hit Points.","rolls":[],"log_head":419}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r411] ilsa rolls an attack roll vs goblin_4: 1d20 (7) +4 = 11 vs AC 15, miss.","rolls":["r411"],"log_head":419}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":419}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":419}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r407] ilsa rolls an attack roll vs goblin_4: 1d20 (20) = 24, critical hit.","rolls":["r407"],"log_head":419}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r408] ilsa rolls critical fire damage: 2d10 (4, 4) = 8.","rolls":["r408"],"log_head":419}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 takes 8 fire damage.","rolls":[],"log_head":419}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r411] ilsa rolls an attack roll vs goblin_4: 1d20 (7) = 11, miss.","rolls":["r411"],"log_head":419}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":419}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":419}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":419}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren is no longer under Dash.","rolls":[],"log_head":419}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":419}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":419}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_4.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r421] goblin_4 rolls a Dexterity saving throw: 1d20 (20) +2 = 22 vs DC 12, success.","rolls":["r421"],"log_head":428}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Sacred Flame on goblin_4.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r421] goblin_4 rolls a Dexterity saving throw: 1d20 (20) = 22, success.","rolls":["r421"],"log_head":428}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":428}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer under Dash.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer under Dash.","rolls":[],"log_head":428}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":428}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on goblin_4.","rolls":[],"log_head":430}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r430] bren rolls an attack roll vs goblin_4: 1d20 (4) +5 = 9 vs AC 15, miss.","rolls":["r430"],"log_head":430}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on goblin_4.","rolls":[],"log_head":430}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r430] bren rolls an attack roll vs goblin_4: 1d20 (4) = 9, miss.","rolls":["r430"],"log_head":430}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":431}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":431}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":445}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 10 begins.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Monster Nimble Escape.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is under Disengage.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 moves.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r443] goblin_4 rolls an attack roll vs bren: 1d20 (14) +4 = 18 vs AC 19, miss.","rolls":["r443"],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 10 begins.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Monster Nimble Escape.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 moves.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Shortbow attack on bren.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r443] goblin_4 rolls an attack roll vs bren: 1d20 (14) = 18, miss.","rolls":["r443"],"log_head":445}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":445}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":445}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":446}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_4.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r422] goblin_4 rolls a Dexterity saving throw: 1d20 (20) +2 = 22 vs DC 12, success.","rolls":["r422"],"log_head":429}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Sacred Flame on goblin_4.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r422] goblin_4 rolls a Dexterity saving throw: 1d20 (20) = 22, success.","rolls":["r422"],"log_head":429}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":429}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer under Dash.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer under Dash.","rolls":[],"log_head":429}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":429}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on goblin_4.","rolls":[],"log_head":431}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r431] bren rolls an attack roll vs goblin_4: 1d20 (4) +5 = 9 vs AC 15, miss.","rolls":["r431"],"log_head":431}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on goblin_4.","rolls":[],"log_head":431}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r431] bren rolls an attack roll vs goblin_4: 1d20 (4) = 9, miss.","rolls":["r431"],"log_head":431}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":432}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":432}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":446}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":446}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":447}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":447}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":448}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":448}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":448}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":456}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r450] ilsa rolls an attack roll vs goblin_4: 1d20 (18) +4 = 22 vs AC 15, hit.","rolls":["r450"],"log_head":456}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r451] ilsa rolls fire damage: 1d10 (7) = 7.","rolls":["r451"],"log_head":456}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 takes 7 fire damage.","rolls":[],"log_head":456}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 0/10 Hit Points.","rolls":[],"log_head":456}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is dead.","rolls":[],"log_head":456}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is no longer under Disengage.","rolls":[],"log_head":456}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":456}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r450] ilsa rolls an attack roll vs goblin_4: 1d20 (18) = 22, hit.","rolls":["r450"],"log_head":456}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r451] ilsa rolls fire damage: 1d10 (7) = 7.","rolls":["r451"],"log_head":456}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 takes 7 fire damage.","rolls":[],"log_head":456}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 is dead.","rolls":[],"log_head":456}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":456}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":456}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":456}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The yard falls quiet.","rolls":[],"log_head":456}
-{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":456}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 10 begins.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Scimitar attack on maren.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r441] goblin_4 rolls an attack roll vs maren: 1d20 (14) +4 = 18 vs AC 18, hit.","rolls":["r441"],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r442] goblin_4 rolls slashing damage: 1d6 (6) +2 = 8.","rolls":["r442"],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren takes 8 slashing damage.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren has 9/17 Hit Points.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 10 begins.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Scimitar attack on maren.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r441] goblin_4 rolls an attack roll vs maren: 1d20 (14) = 18, hit.","rolls":["r441"],"log_head":446}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r442] goblin_4 rolls slashing damage: 1d6 (6) = 8.","rolls":["r442"],"log_head":446}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren takes 8 slashing damage.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":446}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":446}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":459}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r448] ilsa rolls an attack roll vs goblin_4: 1d20 (14) +4 = 18 vs AC 15, hit.","rolls":["r448"],"log_head":459}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r449] ilsa rolls fire damage: 1d10 (8) = 8.","rolls":["r449"],"log_head":459}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 takes 8 fire damage.","rolls":[],"log_head":459}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 2/10 Hit Points.","rolls":[],"log_head":459}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":459}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":459}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r448] ilsa rolls an attack roll vs goblin_4: 1d20 (14) = 18, hit.","rolls":["r448"],"log_head":459}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r449] ilsa rolls fire damage: 1d10 (8) = 8.","rolls":["r449"],"log_head":459}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 takes 8 fire damage.","rolls":[],"log_head":459}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":459}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":459}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":459}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":459}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_4.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r461] goblin_4 rolls a Dexterity saving throw: 1d20 (9) +2 = 11 vs DC 12, failure.","rolls":["r461"],"log_head":470}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r462] maren rolls radiant damage: 1d8 (1) = 1.","rolls":["r462"],"log_head":470}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 takes 1 radiant damage.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 1/10 Hit Points.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Sacred Flame on goblin_4.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r461] goblin_4 rolls a Dexterity saving throw: 1d20 (9) = 11, failure.","rolls":["r461"],"log_head":470}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r462] maren rolls radiant damage: 1d8 (1) = 1.","rolls":["r462"],"log_head":470}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 takes 1 radiant damage.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":470}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":470}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on goblin_4.","rolls":[],"log_head":472}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r472] bren rolls an attack roll vs goblin_4: 1d20 (1) +5 = 6 vs AC 15, miss.","rolls":["r472"],"log_head":472}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on goblin_4.","rolls":[],"log_head":472}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r472] bren rolls an attack roll vs goblin_4: 1d20 (1) = 6, miss.","rolls":["r472"],"log_head":472}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":473}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":473}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":487}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 11 begins.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Monster Nimble Escape.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is under Disengage.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 moves.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Shortbow attack on maren.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r485] goblin_4 rolls an attack roll vs maren: 1d20 (1) +4 = 5 vs AC 18, miss.","rolls":["r485"],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 11 begins.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Monster Nimble Escape.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 moves.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 uses Shortbow attack on maren.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r485] goblin_4 rolls an attack roll vs maren: 1d20 (1) = 5, miss.","rolls":["r485"],"log_head":487}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":487}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":487}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":495}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r489] ilsa rolls an attack roll vs goblin_4: 1d20 (18) +4 = 22 vs AC 15, hit.","rolls":["r489"],"log_head":495}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r490] ilsa rolls fire damage: 1d10 (9) = 9.","rolls":["r490"],"log_head":495}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 takes 9 fire damage.","rolls":[],"log_head":495}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 0/10 Hit Points.","rolls":[],"log_head":495}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is dead.","rolls":[],"log_head":495}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is no longer under Disengage.","rolls":[],"log_head":495}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":495}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r489] ilsa rolls an attack roll vs goblin_4: 1d20 (18) = 22, hit.","rolls":["r489"],"log_head":495}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r490] ilsa rolls fire damage: 1d10 (9) = 9.","rolls":["r490"],"log_head":495}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 takes 9 fire damage.","rolls":[],"log_head":495}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 is dead.","rolls":[],"log_head":495}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":495}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":495}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":495}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The yard falls quiet.","rolls":[],"log_head":495}
+{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":495}

@@ -356,7 +356,7 @@ export class ScriptedSeat implements Seat {
   /** The numbered list on screen now: the last options event. */
   choices: Choice[] = [];
   /** The fight policy's place in its turn plan, reset by each "Your turn" status line. */
-  private plan = { step: 0, attacks: 0, refused: false };
+  private plan = { step: 0, attacks: 0 };
   /** The other party members: a reaction that answers one of them is let pass. */
   readonly allies: ReadonlySet<Handle>;
   private readonly answers: PlayerIntent[];
@@ -403,8 +403,8 @@ export class ScriptedSeat implements Seat {
 
   /**
    * Fights by rule, the way the Milestone 3 trail driver does: attack a hostile in reach; else walk
-   * up to the nearest hostile it can see, and when that walk is refused, Dash and walk again; then
-   * end the turn.
+   * up to the nearest hostile it can see, as far as its movement goes, and when that leaves it out of
+   * reach, Dash and walk on; then end the turn.
    */
   static fight(prompt: HumanPrompt, seat: ScriptedSeat): PlayerIntent {
     if (prompt.kind === "pick") {
@@ -413,8 +413,6 @@ export class ScriptedSeat implements Seat {
     }
     if (prompt.kind !== "combat_turn") return ScriptedSeat.pass(prompt, seat);
     const plan = seat.plan;
-    const refused = plan.refused;
-    plan.refused = false;
     const attack = seat.choices.find((c) => harms(c) && c.target?.side === "hostile" && c.target.in_range);
     if (attack && plan.attacks < 3) {
       plan.attacks += 1;
@@ -426,7 +424,7 @@ export class ScriptedSeat implements Seat {
       plan.step = 1;
       return { kind: "option", number: move.number };
     }
-    if (plan.step === 1 && refused && dash && move) {
+    if (plan.step === 1 && dash && move) {
       plan.step = 2;
       return { kind: "option", number: dash.number };
     }
@@ -440,8 +438,7 @@ export class ScriptedSeat implements Seat {
   show(event: TableEvent): void {
     this.shown.push(event);
     if (event.kind === "options") this.choices = event.choices;
-    if (event.kind === "info" && event.title === "Not accepted") this.plan.refused = true;
-    if (event.kind === "status" && event.text.startsWith("Your turn")) this.plan = { step: 0, attacks: 0, refused: false };
+    if (event.kind === "status" && event.text.startsWith("Your turn")) this.plan = { step: 0, attacks: 0 };
   }
 
   async ask(prompt: HumanPrompt): Promise<PlayerIntent> {

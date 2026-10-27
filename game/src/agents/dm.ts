@@ -310,7 +310,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "move",
-        `Out of combat: move any creature to a place (anchor id) or next to a creature. In a fight: only ${human}, on ${human}'s turn.`,
+        `Out of combat: move any creature to a place (anchor id) or next to a creature. In a fight: only ${human}, on ${human}'s turn, as far as ${human}'s movement goes; the answer says if they stopped short.`,
         { actor: handle, place: z.string().optional(), creature: handle.optional() },
         (i) =>
           this.bound((t) => {

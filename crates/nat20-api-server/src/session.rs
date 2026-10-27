@@ -322,6 +322,7 @@ impl Session {
         actor: &str,
         to: &MoveTarget,
         prompt_id: Option<&str>,
+        partial: bool,
     ) -> Result<CommandResult, ApiError> {
         if self.game_mut()?.mode() == Mode::Combat {
             let Some(prompt_id) = prompt_id else {
@@ -332,10 +333,14 @@ impl Session {
             };
             self.require_prompt(actor, Some(prompt_id), false)?;
         }
-        let result = self.game_mut()?.move_to(actor, to);
+        let result = self.game_mut()?.move_to(actor, to, partial);
         self.after_decision(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
-        let (moved_ft, provoked) = result.expect("errors returned above");
-        Ok(CommandResult::Move { moved_ft, provoked })
+        let (moved_ft, provoked, reached) = result.expect("errors returned above");
+        Ok(CommandResult::Move {
+            moved_ft,
+            provoked,
+            reached,
+        })
     }
 
     /// Rolls a check in explore mode and applies a scenario check's consequences.

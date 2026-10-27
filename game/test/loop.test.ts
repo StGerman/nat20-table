@@ -754,15 +754,19 @@ test("the scripted human lets a reaction to an ally pass, and takes one to a foe
 test("the human's refused number gets the engine's sentence and the list again, and is counted", async () => {
   const { t, report, seat } = await play({
     seed: 27,
-    seat: new ScriptedSeat("bren", [], (prompt, s) =>
-      s.shown.filter((e) => e.kind === "status").length > 1 ? { kind: "command", name: "quit" } : ScriptedSeat.fight(prompt, s),
-    ),
+    // Walks at the goblins as far as Bren's movement goes (API-35), then again: with no movement
+    // left, the engine refuses the second walk.
+    seat: new ScriptedSeat("bren", [], (prompt, s) => {
+      if (s.shown.some((e) => e.kind === "info" && e.title === "Not accepted")) return { kind: "command", name: "quit" };
+      const move = s.choices.find((c) => c.next?.some((n) => n.act?.kind === "move" && n.target?.side === "hostile"));
+      return prompt.kind === "combat_turn" && move ? { kind: "option", number: move.number } : ScriptedSeat.fight(prompt, s);
+    }),
     dm: fightAtOnce,
   });
   assert.ok(report.humanRejections >= 1);
   const at = seat.shown.findIndex((e) => e.kind === "info" && e.title === "Not accepted");
   assert.ok(at >= 0);
-  assert.match((seat.shown[at] as { text: string }).text, /^Not enough movement/);
+  assert.match((seat.shown[at] as { text: string }).text, /^bren has no movement left/);
   assert.equal(seat.shown.slice(at + 1).find((e) => e.kind === "options" || e.kind === "info")?.kind, "options");
   assert.ok(runLines(t, "retry").some((l) => l.startsWith("bren's choice was not accepted")));
 });
@@ -1502,14 +1506,14 @@ test("a scene between two played ones is passed over: the party goes on to the n
 });
 
 test("a surrender ends the fight and still gets its reactions, as the fight's last blow does", async () => {
-  // Seed 14: the goblins yield in a round nobody has reacted in yet (one trigger a round).
+  // Seed 12: the goblins yield in a round nobody has reacted in yet (one trigger a round).
   const pack = path.join(REPO, "scenarios/the_silent_mill");
   const scenes = readPack(pack).adventure.scenes;
   const plan = scenePlan(pack, ["s1_village_green", "s3_mill_yard"]);
   const party = ["bren", "torva", "maren", "ilsa"];
   const bark = (line: string) => async (tools: PlayerTools) => void (await tools.say(line));
   const { t, report } = await play({
-    seed: 14,
+    seed: 12,
     pack,
     guards: (engine) => guards(pack, engine),
     scene: plan.first,

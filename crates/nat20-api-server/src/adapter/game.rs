@@ -1476,16 +1476,18 @@ impl Game {
         }
     }
 
-    /// Moves `actor` and returns the feet it moved and who it provoked. In explore mode the
-    /// creature walks the whole route at no movement cost and provokes nobody, since nobody
-    /// is fighting. In combat the session has checked the prompt: the route must fit in the
-    /// movement left, and an opportunity attack holds the creature where it was provoked until
-    /// the reaction is resolved.
+    /// Moves `actor` and returns the feet it moved, who it provoked, and whether its walk
+    /// reaches where it was sent. In explore mode the creature walks the whole route at no
+    /// movement cost and provokes nobody, since nobody is fighting. In combat the session has
+    /// checked the prompt: the route must fit in the movement left, or with `partial` it is
+    /// walked as far as the movement goes, to the last free spot (API-35); an opportunity attack
+    /// holds the creature where it was provoked until the reaction is resolved.
     pub fn move_to(
         &mut self,
         actor: &str,
         to: &MoveTarget,
-    ) -> Result<(f32, Vec<Handle>), ApiError> {
+        partial: bool,
+    ) -> Result<(f32, Vec<Handle>, bool), ApiError> {
         let entity = self.entity(actor)?;
         let combat = self.mode() == Mode::Combat;
         if combat {
@@ -1498,10 +1500,10 @@ impl Game {
                 format!("{actor} is down and cannot move."),
             ));
         }
-        let (goal, anchor) = self.goal(entity, to, combat)?;
+        let (goal, anchor) = self.goal(entity, to, combat, partial)?;
         let from = systems::geometry::get_foot_position(&self.engine.world, entity)
             .expect("scene creatures have a position");
-        let route = systems::movement::path(&self.engine, entity, &goal, false, combat).map_err(
+        let route = systems::movement::path(&self.engine, entity, &goal, partial, combat).map_err(
             |e| match e {
                 MovementError::NoPathFound => rejected(
                     RejectReason::NoPath,
@@ -1521,7 +1523,30 @@ impl Game {
                 other => refusal(&other),
             },
         )?;
-        let end = *route.full_path.points.last().unwrap_or(&from);
+        let full_end = *route.full_path.points.last().unwrap_or(&from);
+        // A partial walk ends where the movement runs out, stepped back to the last free spot:
+        // a creature can't end its move in another's space (SRD 5.2.1, Moving Around Other
+        // Creatures). With none along the way, nothing moves and the move is refused.
+        let end = if route.reaches_goal() || route.taken_path.points.is_empty() {
+            full_end
+        } else {
+            route
+                .taken_path
+                .points
+                .iter()
+                .rev()
+                .find(|p| systems::movement::is_free_spot(&self.engine, entity, p))
+                .copied()
+                .unwrap_or(from)
+        };
+        let reached = (end - full_end).norm() < 0.05;
+        if (end - from).norm() < 0.05 && !reached {
+            return Err(rejected(
+                RejectReason::InsufficientResource,
+                format!("{actor} has no movement left this turn to get any closer."),
+            ));
+        }
+        let anchor = anchor.filter(|_| reached);
 
         let round = self.round();
         let before = remaining_movement_m(&self.engine, entity);
@@ -1590,7 +1615,7 @@ impl Game {
         } else {
             moved_m
         };
-        Ok((round_ft(moved_m), provoked))
+        Ok((round_ft(moved_m), provoked, reached))
     }
 
     /// While a `move` runs, records the creature a pending opportunity attack window on the
@@ -1619,6 +1644,7 @@ impl Game {
         entity: Entity,
         to: &MoveTarget,
         combat: bool,
+        partial: bool,
     ) -> Result<(Point3<f32>, Option<String>), ApiError> {
         match to {
             MoveTarget::Point { point } => Ok((to_core_point(*point), None)),
@@ -1659,7 +1685,7 @@ impl Game {
                     entity,
                     &target,
                     uom::si::f32::Length::new::<uom::si::length::foot>(5.0),
-                    false,
+                    partial,
                     LineOfSight::ignore(),
                     combat,
                 )

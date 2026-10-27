@@ -10,7 +10,7 @@ import { FLOOR_BOUND, handAnswer, handOff, namedIn, speakingOrder, type Address,
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { BarkTools, DmTools, HandTools, PlayerTools, ReactionFloor, send } from "./tools.ts";
+import { BarkTools, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, ToolOutcome } from "./types.ts";
 
 /**
@@ -524,7 +524,7 @@ export class TableLoop {
         outcome = await send(this.table, human, { cmd: "submit", actor: human, ...prompt, ...act.decision }, () => "accepted");
         break;
       case "move":
-        outcome = await send(this.table, human, { cmd: "move", actor: human, ...prompt, to: act.to }, () => "moved");
+        outcome = await send(this.table, human, { cmd: "move", actor: human, ...prompt, to: act.to, partial: true }, movedText);
         break;
       case "end_turn":
         if (!promptId) return { ok: false, text: "There is no turn to end." };
