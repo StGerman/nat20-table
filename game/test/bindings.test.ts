@@ -4,6 +4,8 @@
 // Bren's turn, then goblin_2 and the wolves, then Ilsa (contract/fixtures/m5_fights.jsonl).
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { ActionOption } from "@nat20-table/engine-client";
+import { attackNearest } from "../src/table/scripted.ts";
 import { DmTools, PlayerTools } from "../src/table/tools.ts";
 import { testTable } from "./helpers.ts";
 
@@ -181,3 +183,18 @@ test("the DM names subjects that are in the scene; others are refused before the
   }
 });
 
+test("the scripted fight attacks a hostile creature in reach, and never heals or helps it", async () => {
+  const wolf = [{ handle: "wolf_3", side: "hostile", distance_ft: 5, in_range: true }];
+  const option = (option_id: string, spell?: string, variants: string[] = []) =>
+    ({ option_id, targeting: "single", targets: wolf, variants: variants.map((v) => ({ variant: v, name: v })), ...(spell ? { spell: { id: spell, level: 1, concentration: false } } : {}) }) as unknown as ActionOption;
+  // In the engine's order: by option id, so Cure Wounds and Guidance come before the mace.
+  const options = [option("cast/cure_wounds/1", "cure_wounds"), option("cast/guidance", "guidance", ["athletics"]), option("cast/healing_word/1", "healing_word"), option("melee_attack/mace")];
+  const submitted: unknown[] = [];
+  const tools = {
+    legalActions: async () => ({ ok: true, text: "", data: { options } }),
+    submitDecision: async (pick: unknown) => (submitted.push(pick), { ok: true, text: "accepted" }),
+    endTurn: async () => ({ ok: true, text: "turn ended" }),
+  } as unknown as PlayerTools;
+  await attackNearest(tools);
+  assert.deepEqual(submitted, [{ option_id: "melee_attack/mace", targets: ["wolf_3"] }]);
+});

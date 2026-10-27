@@ -23,8 +23,21 @@ export const attackNearest: CombatPolicy = async (tools) => {
   await tools.endTurn();
 };
 
+/** The pregens' spells that harm the creature they target. Cure Wounds or Guidance on a goblin is no attack. */
+const HARMFUL_SPELLS = new Set(["acid_splash", "fire_bolt", "guiding_bolt", "ice_knife", "ray_of_frost", "sacred_flame"]);
+
+/**
+ * Whether an option damages the one creature it targets: an attack, or a damaging spell. Help and
+ * items help, and an option with variants needs a pick this policy doesn't make.
+ */
+function damages(option: ActionOption): boolean {
+  if (option.targeting !== "single" || option.variants.length > 0) return false;
+  if (option.spell) return HARMFUL_SPELLS.has(option.spell.id);
+  return !option.option_id.startsWith("help/") && !option.option_id.startsWith("use/");
+}
+
 function choose(options: ActionOption[]): { option_id: string; targets: string[] } | undefined {
-  const harmful = options.filter((o) => o.targeting === "single" && !o.option_id.startsWith("help/") && !o.option_id.startsWith("use/"));
+  const harmful = options.filter(damages);
   for (const wantInRange of [true, false]) {
     for (const option of harmful) {
       const target = option.targets.find((t) => t.side === "hostile" && (t.in_range || !wantInRange));
