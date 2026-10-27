@@ -121,9 +121,11 @@ export class PlayerTools {
       return this.answer(send(this.table, this.me, { cmd: "submit", actor: this.me, prompt_id: prompt, ...decision(input) }, () => "accepted"));
     }
     if (this.table.inCombat || !this.table.grants.has(this.me)) return this.answer(notNow("it is not your turn"));
+    // One explore action per grant (spec §3.3 step 4). The grant is taken before the engine is
+    // asked, so a second call made meanwhile finds none; a refusal gives it back for a retry.
+    this.table.grants.delete(this.me);
     const outcome = await send(this.table, this.me, { cmd: "submit", actor: this.me, ...decision(input) }, () => "accepted");
-    // One explore action per grant (spec §3.3 step 4).
-    if (outcome.ok) this.table.grants.delete(this.me);
+    if (!outcome.ok) this.table.grants.add(this.me);
     return this.answer(outcome);
   }
 

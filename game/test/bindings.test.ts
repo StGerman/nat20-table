@@ -120,6 +120,28 @@ test("out of combat a player acts once per DM grant, and only an AI player can b
   }
 });
 
+test("two calls made at once on one grant act once, and a refused one keeps the grant", async () => {
+  const t = await testTable({ seed: 27 });
+  try {
+    const dm = new DmTools(t.table);
+    const maren = new PlayerTools("maren", t.table);
+    await dm.loadScene("m5_s3_yard");
+    dm.grantAction("maren");
+    const refused = await maren.submitDecision({ option_id: "no_such_option" });
+    assert.equal(refused.ok, false, refused.text);
+    assert.equal(t.table.grants.has("maren"), true, "a refused submit gives the grant back");
+    const [first, second] = await Promise.all([
+      maren.submitDecision({ option_id: "cast/bless/1", targets: ["bren", "torva", "ilsa"] }),
+      maren.submitDecision({ option_id: "cast/bless/1", targets: ["bren"] }),
+    ]);
+    assert.equal(first.ok, true, first.text);
+    assert.match(second.text, /^not now/);
+    assert.equal(t.requests().filter((r) => r.cmd === "submit" && r.option_id === "cast/bless/1").length, 1);
+  } finally {
+    t.close();
+  }
+});
+
 test("a player sees its own numbers and only health bands for others; notes reach only their owner", async () => {
   const t = await testTable({ seed: 27 });
   try {
@@ -158,3 +180,4 @@ test("the DM names subjects that are in the scene; others are refused before the
     t.close();
   }
 });
+
