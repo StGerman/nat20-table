@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Event } from "@nat20-table/engine-client";
-import { mayReact, triggerIn, type Trigger } from "../src/table/reactions.ts";
+import { doerAfter, mayReact, triggerIn, type Trigger } from "../src/table/reactions.ts";
 
 const PARTY = ["bren", "torva", "maren", "ilsa"];
 const PLAYERS = ["torva", "maren", "ilsa"];
@@ -14,6 +14,7 @@ const turn = (actor: string) => at({ kind: "turn_start", actor });
 const lifeState = (target: string, state: string) => at({ kind: "life_state", target, state });
 const roll = (roller: string, target: string, outcome: string) => at({ kind: "roll", roll: { roller, target, outcome } });
 const damage = (target: string) => at({ kind: "damage_taken", target, amount: 4, damage_type: "slashing" });
+const action = (actor: string) => at({ kind: "action", actor, option_id: "attack", name: "Attack", targets: [] });
 
 test("a batch's trigger is its most salient event, an ally down before anything else", () => {
   const events = [turn("goblin_1"), damage("torva"), roll("goblin_1", "maren", "critical_hit"), lifeState("goblin_2", "dead"), lifeState("bren", "unconscious")];
@@ -49,4 +50,17 @@ test("only a conscious AI player may react, never the one whose turn is next nor
   // The one it happened to reacts, unless it is down.
   const hit: Trigger = { kind: "hit", seq: 2, round: 2, subject: "ilsa", by: "goblin_1" };
   assert.deepEqual(mayReact(hit, PLAYERS, conscious, "torva"), ["maren", "ilsa"]);
+});
+
+test("the deed is the last actor's, across batches: a turn's kill read after its turn_start, or a reaction's on another's turn", () => {
+  // The pre-turn look read torva's turn_start; the post-turn batch holds only the kill.
+  const before = [turn("goblin_1"), turn("torva")];
+  const kill = [action("torva"), lifeState("goblin_2", "dead")];
+  assert.equal(doerAfter(before), "torva");
+  assert.equal(triggerIn(kill, PARTY, PLAYERS)?.by, "torva");
+  assert.equal(triggerIn([lifeState("goblin_2", "dead")], PARTY, PLAYERS, doerAfter(before))?.by, "torva");
+  // Maren's opportunity attack on the goblin's turn is Maren's deed.
+  assert.equal(triggerIn([turn("goblin_1"), action("maren"), lifeState("goblin_1", "dead")], PARTY, PLAYERS)?.by, "maren");
+  // A fight's end leaves nobody.
+  assert.equal(doerAfter([turn("torva"), at({ kind: "combat_over", winner: "party", reason: "side_down" }, null)]), undefined);
 });

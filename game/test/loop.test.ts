@@ -222,6 +222,8 @@ test("in a fight, a salient event wakes every AI player who may react at once, a
   for (const brief of briefs) assert.match(brief, /^What just happened:\n[\s\S]*Something just happened in the fight, and it isn't your turn\./);
   assert.ok(report.fight.rounds > 0);
   assert.ok(report.fight.lines >= heard.length);
+  // The blow that ends the fight gets its reactions too, though the fight is over by then.
+  assert.deepEqual([report.reactions.at(-1)?.trigger, report.reactions.at(-1)?.round], ["foe_down", report.fight.rounds]);
 });
 
 test("a reaction still running when its player is woken again gets a grace, then is cut, and its late line reaches nobody", async () => {
@@ -1310,6 +1312,28 @@ test("a scene between two played ones is passed over: the party goes on to the n
   assert.deepEqual(loads, [["s1_village_green", undefined], ["s3_mill_yard", party]]);
   assert.ok(t.table.transcript.records.some((r) => r.text.startsWith("Combat is over")));
   for (const handle of party) assert.ok(t.requests().some((r) => r.cmd === "submit" && r.actor === handle), `${handle} acted in the fight`);
+});
+
+test("a surrender ends the fight and still gets its reactions, as the fight's last blow does", async () => {
+  // Seed 14: the goblins yield in a round nobody has reacted in yet (one trigger a round).
+  const pack = path.join(REPO, "scenarios/the_silent_mill");
+  const scenes = readPack(pack).adventure.scenes;
+  const plan = scenePlan(pack, ["s1_village_green", "s3_mill_yard"]);
+  const party = ["bren", "torva", "maren", "ilsa"];
+  const bark = (line: string) => async (tools: PlayerTools) => void (await tools.say(line));
+  const { t, report } = await play({
+    seed: 14,
+    pack,
+    guards: (engine) => guards(pack, engine),
+    scene: plan.first,
+    onScene: plan.onScene,
+    dm: walkOnDm(scenes.map((s) => s.id), { s3_mill_yard: "yard_fight" }, party),
+    players: { torva: { bark: bark("They yield!") }, maren: { bark: bark("Mercy, then.") }, ilsa: { bark: bark("Bind them.") } },
+  });
+  assert.ok(t.table.transcript.records.some((r) => r.text === "Combat is over: the other side surrendered."));
+  const last = report.reactions.at(-1);
+  assert.equal(last?.trigger, "surrender");
+  assert.ok(last?.spoke, "a line was heard");
 });
 
 test("the scene plan plays the listed scenes in order, passes over the ones between, and stops after", () => {

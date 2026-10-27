@@ -386,7 +386,8 @@ export class TableState {
       this.dmInbox.push(line);
       if (human) return;
       if (kind === "speech") {
-        if (this.inCombat) this.fightLines += 1;
+        // A reaction to a fight's end is a fight line too.
+        if (this.inCombat || once) this.fightLines += 1;
         this.spokeThisRound.add(from);
         if (to && !this.inCombat) this.addresses.push({ from, to });
       } else {

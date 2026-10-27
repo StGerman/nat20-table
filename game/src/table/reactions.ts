@@ -15,24 +15,36 @@ export interface Trigger {
   round: number;
   /** The creature it happened to, when one did. */
   subject?: Handle;
-  /** Whose deed it was: the roller of a critical hit, else the creature whose turn it happened on. */
+  /** Whose deed it was: the roller of a critical hit, else the creature that last acted. */
   by?: Handle;
+}
+
+/**
+ * Who last acted after `events`: the actor of the latest `action` or `turn_start`, starting from
+ * `doer`, the one who last acted before them. A fight's end leaves nobody.
+ */
+export function doerAfter(events: readonly Event[], doer?: Handle): Handle | undefined {
+  for (const event of events) {
+    if (event.kind === "combat_over") doer = undefined;
+    else if (event.kind === "turn_start" || event.kind === "action") doer = event.actor;
+  }
+  return doer;
 }
 
 /**
  * The trigger the AI players may react to in a batch of events, in the DM's view, or undefined: the
  * first of `TRIGGER_KINDS` the batch holds, the earliest event of that kind. `party` is every
- * character at the table, whoever plays it; `players` are the AI players. A trigger is an event
- * every player view carries (a life state, a surrender, a roll's outcome, damage taken), so none
- * depends on what only the DM sees.
+ * character at the table, whoever plays it; `players` are the AI players; `doer` is who last acted
+ * before the batch (`doerAfter` of the batches before it), since a turn's own events can come in a
+ * batch after its `turn_start`. A trigger is an event every player view carries (a life state, a
+ * surrender, a roll's outcome, damage taken), so none depends on what only the DM sees.
  */
-export function triggerIn(events: readonly Event[], party: readonly Handle[], players: readonly Handle[]): Trigger | undefined {
+export function triggerIn(events: readonly Event[], party: readonly Handle[], players: readonly Handle[], doer?: Handle): Trigger | undefined {
   const found: Trigger[] = [];
-  let turn: Handle | undefined;
   for (const event of events) {
-    if (event.kind === "turn_start") turn = event.actor;
+    doer = doerAfter([event], doer);
     if (event.round === null || event.round === undefined) continue;
-    const at = { seq: event.seq, round: event.round, ...(turn ? { by: turn } : {}) };
+    const at = { seq: event.seq, round: event.round, ...(doer ? { by: doer } : {}) };
     if (event.kind === "life_state") {
       const ours = party.includes(event.target);
       if (ours && (event.state === "unconscious" || event.state === "dead")) found.push({ kind: "ally_down", subject: event.target, ...at });

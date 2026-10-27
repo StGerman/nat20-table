@@ -7,7 +7,7 @@ import { TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
 import { FLOOR_BOUND, handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
-import { mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
+import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
 import { BarkTools, DmTools, HandTools, PlayerTools, ReactionFloor, send } from "./tools.ts";
@@ -182,6 +182,8 @@ export class TableLoop {
   private readonly fightRounds = new Set<string>();
   /** Fights over so far: rounds count again from 1 in the next one. */
   private fightsOver = 0;
+  /** Who last acted, as of the last look at the fight's events: a trigger's `by` (`doerAfter`). */
+  private doer: Handle | undefined;
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -669,6 +671,8 @@ export class TableLoop {
 
   /** The fight is over: the DM wraps it up, and the loop is back in explore mode (spec §3.3 step 7). */
   private async combatOver(event: Event): Promise<void> {
+    // Its last blow or a surrender gets its reactions too (party talk R1).
+    await this.startReactions();
     await this.wakeDm("combat_over", undefined, `The fight is over: ${event.text}`, "Narrate how it ends, then go on with the scene.");
     await this.table.flush();
   }
@@ -1077,23 +1081,35 @@ export class TableLoop {
    * other wakes are cancelled then.
    */
   private async startReactions(): Promise<void> {
-    let events = await this.table.engine.newEvents("dm", "reactions");
+    const events = await this.table.engine.newEvents("dm", "reactions");
+    const doer = this.doer;
+    this.doer = doerAfter(events, doer);
     for (const e of events) {
       if (e.kind === "combat_over") this.fightsOver += 1;
       else if (e.round !== null && e.round !== undefined) this.fightRounds.add(`${this.fightsOver}:${e.scene ?? ""}:${e.round}`);
     }
-    // What came before the last fight ended belongs to that fight.
-    events = events.slice(events.map((e) => e.kind).lastIndexOf("combat_over") + 1);
-    if (!this.table.inCombat || this.table.ended || this.paused || events.length === 0) return;
+    // The fight running, or else the one this batch ended: a surrender, or the last foe down, ends
+    // a fight in the same batch. What came before a fight ended belongs to that fight.
+    const overs = events.flatMap((e, i) => (e.kind === "combat_over" ? [i] : []));
+    const inRound = (e: Event) => e.round !== null && e.round !== undefined;
+    let start = (overs.at(-1) ?? -1) + 1;
+    let fight = events.slice(start);
+    let fightIndex = this.fightsOver;
+    if (!fight.some(inRound) && overs.length > 0) {
+      start = (overs.at(-2) ?? -1) + 1;
+      fight = events.slice(start, overs.at(-1));
+      fightIndex -= 1;
+    }
+    if (this.table.ended || this.paused || !fight.some(inRound)) return;
     const reacting = [...this.agents.values()].filter((a) => a.reacts).map((a) => a.handle);
     if (reacting.length === 0) return;
     const r = this.table.observe(await this.table.engine.request("dm", { cmd: "get_state" }));
     const state = r.result?.cmd === "get_state" ? r.result.state : undefined;
     if (state?.view !== "dm") return;
     const party = state.creatures.filter((c) => c.side === "party").map((c) => c.handle);
-    const trigger = triggerIn(events, party, reacting);
+    const trigger = triggerIn(fight, party, reacting, doerAfter(events.slice(0, start), doer));
     if (!trigger) return;
-    const key = `${this.fightsOver}:${this.scenes.at(-1) ?? ""}:${trigger.round}`;
+    const key = `${fightIndex}:${this.scenes.at(-1) ?? ""}:${trigger.round}`;
     if (this.reactedIn === key) return;
     const conscious = new Set(state.creatures.filter((c) => c.life_state === "conscious").map((c) => c.handle));
     const a = this.table.awaiting;
@@ -1101,6 +1117,14 @@ export class TableLoop {
     const who = mayReact(trigger, reacting, conscious, next).filter((h) => !this.barks.has(h) && !this.busy.has(h));
     if (who.length === 0) return;
     this.reactedIn = key;
+    // Every brief first: once the first wake starts, a line can be heard at any await, and a wake
+    // started after it would never be cut.
+    const from = fight[0].seq;
+    const briefs = new Map<Handle, string>();
+    for (const handle of who) {
+      const seen = tellable(await this.table.engine.newEvents(handle, `bark:${handle}`), this.table.deaths).filter((e) => e.seq >= from);
+      briefs.set(handle, [...(seen.length > 0 ? ["What just happened:", ...seen.map(eventLine)] : []), BARK_ASK].join("\n"));
+    }
     const record: FightReaction = { trigger: trigger.kind, round: trigger.round, woke: who, passed: [], beaten: [], cut: [] };
     this.reactions.push(record);
     this.table.log("system", `reactions to ${trigger.kind.replace("_", " ")}: ${who.join(", ")}`);
@@ -1111,21 +1135,14 @@ export class TableLoop {
       record.line_ms = Math.round(performance.now() - started);
       for (const [handle, cut] of cuts) if (handle !== speaker) cut("beaten");
     });
-    const from = events[0].seq;
-    const dones: Array<Promise<void>> = [];
-    for (const handle of who) {
-      const seen = tellable(await this.table.engine.newEvents(handle, `bark:${handle}`), this.table.deaths).filter((e) => e.seq >= from);
-      const briefing = [...(seen.length > 0 ? ["What just happened:", ...seen.map(eventLine)] : []), BARK_ASK].join("\n");
-      const done = this.bark(handle, briefing, new BarkTools(handle, this.table, floor), (cut) => cuts.set(handle, cut));
-      dones.push(
-        done.then((why) => {
-          if (floor.speaker === handle) return;
-          if (why === "beaten" || floor.late.has(handle)) record.beaten.push(handle);
-          else if (why === "cut") record.cut.push(handle);
-          else record.passed.push(handle);
-        }),
-      );
-    }
+    const dones = who.map((handle) =>
+      this.bark(handle, briefs.get(handle)!, new BarkTools(handle, this.table, floor), (cut) => cuts.set(handle, cut)).then((why) => {
+        if (floor.speaker === handle) return;
+        if (why === "beaten" || floor.late.has(handle)) record.beaten.push(handle);
+        else if (why === "cut") record.cut.push(handle);
+        else record.passed.push(handle);
+      }),
+    );
     void Promise.all(dones).then(() => {
       floor.closed = true;
     });
