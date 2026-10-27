@@ -16,12 +16,13 @@
 // scripted DM starts each scene's fight from the pack, narrates plainly and moves on at the first
 // table turn), --seat scripted|ink (ink: you play the human's character in this terminal),
 // --dry-run (prints the DM's prompt and session settings, starts nothing), --no-audit, --out DIR,
-// --max-steps N.
+// --max-steps N, --lang en|ru (what the DM and the AI players write; decision 0038).
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { ModelDm, type CraftMode } from "../agents/dm.ts";
+import { LANGUAGES, type Language } from "../agents/language.ts";
 import { ModelPlayer } from "../agents/player.ts";
 import { sessionOptions } from "../agents/sdk-session.ts";
 import { GameEngine, REPO } from "../engine.ts";
@@ -44,6 +45,7 @@ const { values: flags } = parseArgs({
     "player-model": { type: "string", default: "claude-sonnet-5-5" },
     effort: { type: "string", default: "low" },
     craft: { type: "string", default: "prompt" },
+    lang: { type: "string", default: "en" },
     "dm-timeout-ms": { type: "string" },
     pack: { type: "string", default: path.join(REPO, "scenarios/the_silent_mill") },
     dm: { type: "string", default: "model" },
@@ -60,6 +62,7 @@ for (const [flag, value, allowed] of [
   ["--players", flags.players, ["model", "scripted"]],
   ["--craft", flags.craft, ["prompt", "skills"]],
   ["--seat", flags.seat, ["scripted", "ink"]],
+  ["--lang", flags.lang, LANGUAGES],
 ] as const) {
   if (!(allowed as readonly string[]).includes(value!)) {
     console.error(`${flag} is one of ${allowed.join(", ")}`);
@@ -80,6 +83,7 @@ const effort = flags.effort as EffortLevel;
 const dmChoice = { model: flags["dm-model"]!, effort };
 const playerChoice = { model: flags["player-model"]!, effort };
 const craft = flags.craft as CraftMode;
+const language = flags.lang as Language;
 const modelDm = (usage?: UsageLog) =>
   new ModelDm({
     pack,
@@ -87,6 +91,7 @@ const modelDm = (usage?: UsageLog) =>
     players: party.ai,
     choice: dmChoice,
     craft,
+    language,
     usage,
     ...(flags["dm-timeout-ms"] ? { turnTimeoutMs: Number(flags["dm-timeout-ms"]) } : {}),
   });
@@ -123,7 +128,7 @@ const table = new TableState({
   ...guards(flags.pack!, engine),
 });
 const players: PlayerAgent[] = party.ai.map((handle) =>
-  flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice: playerChoice, usage }),
+  flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice: playerChoice, language, usage }),
 );
 const fights = Object.fromEntries(pack.adventure.scenes.flatMap((s) => (s.encounters[0] ? [[s.id, s.encounters[0].encounter]] : [])));
 const dm: DmAgent = flags.dm === "scripted" ? walkOnDm(pack.adventure.scenes.map((s) => s.id), fights, [party.human, ...party.ai]) : modelDm(usage);
@@ -159,6 +164,7 @@ const report = [
   `- Scenes: ${played.join(", ")} of ${pack.adventure.title} (${path.relative(REPO, path.resolve(flags.pack!))}), seed ${engine.seed}`,
   `- Played: ${run?.scenes.join(", ") || "none"}${run && run.passedOver.length > 0 ? `; passed over: ${run.passedOver.join(", ")}` : ""}`,
   `- DM: ${who(flags.dm, dmChoice)}${flags.dm === "model" ? `, craft guidance in the ${craft === "prompt" ? "system prompt" : "skills"}` : ""}`,
+  ...(language === "en" ? [] : [`- Language of the DM's and the AI players' lines: ${language}`]),
   `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human} ${ink ? "played in the terminal UI" : "on a scripted seat"}`,
   ...(ink ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
   ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),

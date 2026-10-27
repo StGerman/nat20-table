@@ -9,11 +9,12 @@
 // Flags: --seed N, --player-model, --effort, --pack (where the cards come from), --scenes and
 // --scene and --encounter (what the engine plays), --players scripted (no model: checks the command
 // itself), --dry-run (prints each player's prompt and session settings, starts nothing),
-// --no-audit, --out DIR, --max-steps N.
+// --no-audit, --out DIR, --max-steps N, --lang en|ru (what the AI players write; decision 0038).
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
+import { LANGUAGES, type Language } from "../agents/language.ts";
 import { ModelPlayer } from "../agents/player.ts";
 import { sessionOptions } from "../agents/sdk-session.ts";
 import { GameEngine, REPO } from "../engine.ts";
@@ -35,6 +36,7 @@ const { values: flags } = parseArgs({
     scene: { type: "string", default: "m5_s3_yard" },
     encounter: { type: "string", default: "yard_fight" },
     players: { type: "string", default: "model" },
+    lang: { type: "string", default: "en" },
     "dry-run": { type: "boolean", default: false },
     "no-audit": { type: "boolean", default: false },
     out: { type: "string", default: path.join(REPO, "runs") },
@@ -45,13 +47,18 @@ if (flags.players !== "model" && flags.players !== "scripted") {
   console.error("--players is model or scripted");
   process.exit(2);
 }
+if (!(LANGUAGES as readonly string[]).includes(flags.lang!)) {
+  console.error(`--lang is one of ${LANGUAGES.join(", ")}`);
+  process.exit(2);
+}
+const language = flags.lang as Language;
 const scripted = flags.players === "scripted";
 const choice = { model: flags["player-model"]!, effort: flags.effort as EffortLevel };
 const party = packParty(flags.pack!);
 
 if (flags["dry-run"]) {
   for (const handle of party.ai) {
-    const player = new ModelPlayer({ handle, card: party.cards.get(handle)!, choice });
+    const player = new ModelPlayer({ handle, card: party.cards.get(handle)!, choice, language });
     const { mcpServers, systemPrompt, env, ...options } = sessionOptions(
       { agent: handle, choice, systemPrompt: player.systemPrompt, tools: player.seatTools },
       "<empty temp dir>",
@@ -77,7 +84,7 @@ const table = new TableState({
   ...guards(flags.scenes!, engine),
 });
 const players: PlayerAgent[] = party.ai.map((handle) =>
-  scripted ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice, usage }),
+  scripted ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice, language, usage }),
 );
 const loop = new TableLoop({ table, dm: yardDm(flags.encounter), players, maxSteps: Number(flags["max-steps"]) });
 
@@ -99,6 +106,7 @@ const report = [
   `- Scene: ${flags.scene} from ${path.relative(REPO, path.resolve(flags.scenes!)) || "."}, seed ${engine.seed}`,
   `- AI players: ${party.ai.join(", ")} on ${scripted ? "scripted players" : `${choice.model}, effort ${choice.effort}`}; cards from ${path.relative(REPO, path.resolve(flags.pack!))}`,
   `- ${party.human} on a scripted seat; the DM scripted`,
+  ...(language === "en" ? [] : [`- Language of the AI players' lines: ${language}`]),
   ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
 ].join("\n");
 writeFileSync(path.join(runDir, "report.md"), report + "\n");

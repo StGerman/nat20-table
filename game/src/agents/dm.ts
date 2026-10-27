@@ -15,6 +15,7 @@ import type { PackText } from "../pack/read.ts";
 import type { DmTools } from "../table/tools.ts";
 import type { DmAgent, DmWake, ToolOutcome } from "../table/types.ts";
 import type { UsageLog } from "../usage.ts";
+import { dmLanguage, type Language } from "./language.ts";
 import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, type SeatTool, type SessionConfig, type TurnSession } from "./sdk-session.ts";
 
 /** A DM turn that runs longer falls back to the engine lines alone (spec §6). */
@@ -74,7 +75,7 @@ export function craftSkills(dir = CRAFT_PLUGIN): Array<{ name: string; descripti
 }
 
 /** The DM's system prompt: the same for every session of a run. */
-export function dmPrompt(pack: PackText, human: Handle, players: Handle[], craft: CraftMode): string {
+export function dmPrompt(pack: PackText, human: Handle, players: Handle[], craft: CraftMode, language: Language = "en"): string {
   const party = [human, ...players];
   const skills = craftSkills();
   const guidance =
@@ -122,7 +123,7 @@ The guard reads only what the table hears: tool inputs such as a check's DC are 
 
 Be quick: decide, call the tools, narrate once. Most wakes need one to three tool calls.
 
-${guidance.join("\n")}
+${[...guidance, ...dmLanguage(language)].join("\n")}
 ## The adventure (only you see it)
 
 ${pack.text}`;
@@ -137,6 +138,8 @@ export interface ModelDmConfig {
   choice: ModelChoice;
   /** Default `prompt` (D10). */
   craft?: CraftMode;
+  /** What the table hears from the DM is written in; default `en` (decision 0038). */
+  language?: Language;
   usage?: UsageLog;
   /** Default `DM_TURN_TIMEOUT_MS`. */
   turnTimeoutMs?: number;
@@ -158,7 +161,7 @@ export class ModelDm implements DmAgent {
 
   constructor(config: ModelDmConfig) {
     this.config = config;
-    this.systemPrompt = dmPrompt(config.pack, config.human, config.players, config.craft ?? "prompt");
+    this.systemPrompt = dmPrompt(config.pack, config.human, config.players, config.craft ?? "prompt", config.language);
     this.seatTools = this.defineTools();
   }
 
