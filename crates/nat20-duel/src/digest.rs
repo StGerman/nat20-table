@@ -334,6 +334,19 @@ impl Replay {
     }
 }
 
+/// The request to replay. A `new_session` sent without a seed got one picked at random, so its
+/// replay asks for the seed the recorded response names: the same seed reproduces the session.
+fn seeded(request: &Value, recorded: &Value) -> Value {
+    let mut request = request.clone();
+    if request["cmd"] == "new_session"
+        && request.get("seed").is_none_or(Value::is_null)
+        && let Some(seed) = recorded["result"]["seed"].as_u64()
+    {
+        request["seed"] = json!(seed);
+    }
+    request
+}
+
 /// Replays `engine_log` (the run's `engine-log.jsonl`) on a fresh server over `pack`, and digests
 /// the engine's state at each DM narration in `transcript`. The replay stops at the first response
 /// that differs from the recorded one, and the narrations after it get no digest.
@@ -373,11 +386,11 @@ pub fn digest_run(
             digests.push(replay.digest(&party, &awaiting, said[next], next + 1));
             next += 1;
         }
-        let response: Value =
-            serde_json::from_str(&replay.server.handle_line(&entry["request"].to_string()))
-                .map_err(|e| {
-                    format!("engine log line {}: the replayed response: {e}", index + 1)
-                })?;
+        let request = seeded(&entry["request"], recorded);
+        let response: Value = serde_json::from_str(
+            &replay.server.handle_line(&request.to_string()),
+        )
+        .map_err(|e| format!("engine log line {}: the replayed response: {e}", index + 1))?;
         replayed += 1;
         if event_keys(&response) != event_keys(recorded) || response["ok"] != recorded["ok"] {
             diverged = Some(format!(

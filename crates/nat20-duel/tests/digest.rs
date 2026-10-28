@@ -128,3 +128,21 @@ fn a_replay_that_diverges_stops_there_and_says_where() {
     assert_eq!(run.requests_replayed, at + 1);
     assert!(run.digests.len() < run.narrations);
 }
+
+#[test]
+fn a_session_started_without_a_seed_replays_with_the_seed_it_was_given() {
+    // `play:full` sends `new_session` without a seed, so the engine picks one and names it in the
+    // response; the replay must ask for that seed or diverge at once (the first M7 run did).
+    let log = fixture("engine-log.jsonl");
+    let mut lines: Vec<String> = log.lines().map(str::to_owned).collect();
+    let at = lines
+        .iter()
+        .position(|l| l.contains("\"cmd\":\"new_session\""))
+        .unwrap();
+    let mut entry: serde_json::Value = serde_json::from_str(&lines[at]).unwrap();
+    entry["request"].as_object_mut().unwrap().remove("seed");
+    lines[at] = entry.to_string();
+    let run = digest(&(lines.join("\n") + "\n"));
+    assert_eq!(run.diverged, None);
+    assert_eq!(run.digests.len(), run.narrations);
+}
