@@ -30,3 +30,7 @@ path = "src/bin/audit.rs"
 [[bin]]
 name = "nat20-balance"
 path = "src/bin/balance.rs"
+
+[[bin]]
+name = "nat20-digest"
+path = "src/bin/digest.rs"

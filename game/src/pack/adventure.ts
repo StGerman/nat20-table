@@ -39,6 +39,11 @@ const PartyMember = z
       .describe(
         "What the table calls the character, every form of it: its name in each language and each case («Торва», «Торве», «Торву»). A line that names an AI player gives it the floor first (party talk §4.2); its handle and its card's name always count.",
       ),
+    pronouns: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("How the table refers to the character, such as she/her (M7 design §3.4): the DM's prompt names it, and the narration check holds the DM to it."),
   })
   .describe("One party member.");
 

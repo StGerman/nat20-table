@@ -80,6 +80,9 @@ export function dmPrompt(pack: PackText, human: Handle | undefined, players: Han
   // A table with no human (M7 spec §4.2, AGT-40): every character is an AI player, nobody is asked
   // anything, and a surrender is the DM's call.
   const seats = human ? `A human plays ${human}; AI players play ${players.join(", ")}.` : `AI players play every character: ${players.join(", ")}. No human sits at this table.`;
+  // The English run called Torva "he" throughout (M7 design §3.4): the pack names each one's pronouns.
+  const named = pack.adventure.party.filter((p) => p.pronouns).map((p) => `${p.handle} ${p.pronouns}`);
+  const pronouns = named.length > 0 ? ` Pronouns: ${named.join(", ")}; keep to them in every language.` : "";
   const fightMoves = human ? ` (in a fight only ${human} moves, on ${human}'s turn)` : "";
   const hears = human ? "narrate (to everyone, or to one character with `to`) and ask_human" : "narrate (to everyone, or to one character with `to`)";
   const spoken = human
@@ -100,7 +103,7 @@ export function dmPrompt(pack: PackText, human: Handle | undefined, players: Han
           `Your craft skills hold how to run the table well: ${skills.map((s) => `${CRAFT_NAME}:${s.name} (${s.description})`).join("; ")}. Load the one a situation needs, once per scene.`,
           "",
         ];
-  return `You are the Dungeon Master of "${pack.adventure.title}", a game of Dungeons & Dragons (fifth edition, 2024 rules). ${seats}
+  return `You are the Dungeon Master of "${pack.adventure.title}", a game of Dungeons & Dragons (fifth edition, 2024 rules). ${seats}${pronouns}
 
 ## How this table works
 

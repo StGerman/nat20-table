@@ -17,7 +17,7 @@ export const VERDICT_JSON = "verdict.json";
 export const AUDIT_JSON = "audit.json";
 /** Stas's answers to the run's flags: flag id to `confirmed` or `dismissed`, with a note. */
 export const CONFIRMATIONS_JSON = "confirmations.json";
-/** The narration check's flags (AGT-9), one JSON object a line, each with an `id`. */
+/** The narration check's flags (AGT-9), one JSON object a line, each with an `id`; a line with `untracked` lists a prop and is no flag. */
 export const NARRATION_CHECK = "narration-check.jsonl";
 
 /** How many refusals one human decision may take before it is a flag (scope §6.5: 2 retries). */
@@ -196,7 +196,8 @@ export function computeVerdict(dir: string): Verdict {
   const log = readLines<Event>(path.join(dir, SESSION_LOG));
   const usage = readLines<UsageRecord>(path.join(dir, "usage.jsonl"));
   const answers = readJson<Record<string, { answer: string }>>(path.join(dir, CONFIRMATIONS_JSON)) ?? {};
-  const narrationFlags: Flag[] = readLines<{ id: string; line?: number; claim?: string; kind?: string }>(path.join(dir, NARRATION_CHECK)).map((f) => {
+  // An untracked prop is listed, not flagged (spec §4.3): Stas has nothing to answer for it.
+  const narrationFlags: Flag[] = readLines<{ id: string; line?: number; claim?: string; kind?: string; untracked?: boolean }>(path.join(dir, NARRATION_CHECK)).filter((f) => !f.untracked).map((f) => {
     const answer = answers[f.id]?.answer;
     return { id: f.id, row: "3", text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
   });

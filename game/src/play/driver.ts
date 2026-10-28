@@ -9,13 +9,14 @@
 // the adventure, or at a stop: the time limit, a stall, the plan's usage limit, a lost network,
 // Ctrl+C, or a crash. It writes `runs/<name>-<time>/` with `run.json` (what ran: build, settings and
 // where each came from, seed, seats, per-scene timing), then runs the post-run stages over it (the
-// audit and leak scan, the verdict), writes `report.md` with the verdict on top, and uploads the
+// audit and leak scan, the narration check, the verdict), writes `report.md` with the verdict on top, and uploads the
 // folder to the runs repo (upload.ts).
 //
 // Settings (game/src/play/settings.ts): --profile NAME|PATH, --scene ID, --scenes ID,ID, --seed N,
 // --dm-model, --player-model, --dm-effort, --effort (the AI players'), --craft prompt|skills (D10),
 // --dm-timeout-ms, --pack DIR, --dm scripted and --players scripted (no model), --seat scripted|ink,
-// --dry-run (prints the DM's prompt and session settings, starts nothing), --no-audit, --out DIR,
+// --dry-run (prints the DM's prompt and session settings, starts nothing), --no-audit (no audit and
+// no narration check), --out DIR,
 // --max-steps N, --lang en|ru (decision 0038), --verbose (with --seat ink: AGT-37), --time-limit-min N,
 // --stall-rounds N, --upload REPO, --no-upload, --zip (AGT-41).
 import { spawn, type ChildProcess } from "node:child_process";
@@ -36,6 +37,8 @@ import type { DmAgent, PlayerAgent, Seat } from "../table/types.ts";
 import { InkSeat } from "../ui/ink-seat.ts";
 import { pickCharacter } from "../ui/pick.ts";
 import { UsageLog } from "../usage.ts";
+import { ModelJudge, ScriptedJudge } from "../check/judge.ts";
+import { narrationCheck } from "../check/narration.ts";
 import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, timingLines, type Casting, type PackParty } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
@@ -287,6 +290,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // The post-run stages (design §3.3): each reads the folder and writes its own file.
   const checked = flags["no-audit"] ? undefined : audit(flags.pack, runDir);
   if (checked) writeFileSync(path.join(runDir, AUDIT_JSON), JSON.stringify(checked, null, 2) + "\n");
+  // The narration check (AGT-9): a run with a scripted DM has nothing a model judge should read.
+  const narration = flags["no-audit"] ? undefined : await narrationCheck(flags.pack, runDir, flags.dm === "model" ? new ModelJudge() : new ScriptedJudge());
 
   const report = [
     `# ${play.command} run, ${new Date().toISOString()}`,
@@ -299,6 +304,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human ? `${party.human} ${ink ? "played in the terminal UI" : "on a scripted seat"}` : "no human at the table"}`,
     ...(ink ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
+    ...(narration ? ["", ...narration.lines] : []),
     "",
     ...timingLines(record),
     "",
