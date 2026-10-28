@@ -526,6 +526,15 @@ export class TableLoop {
       case "move":
         outcome = await send(this.table, human, { cmd: "move", actor: human, ...prompt, to: act.to, partial: true }, movedText);
         break;
+      case "dash_move": {
+        // Two decisions on one number: the Dash takes this prompt, the walk the one it leaves.
+        outcome = await send(this.table, human, { cmd: "submit", actor: human, ...prompt, option_id: "dash" }, () => "dashed");
+        const next = this.table.awaiting;
+        if (!outcome.ok || next.kind !== "action" || next.actor !== human) break;
+        const walk = await send(this.table, human, { cmd: "move", actor: human, prompt_id: next.prompt_id, to: act.to, partial: true }, movedText);
+        outcome = walk.ok ? { ...walk, text: `dashed, ${walk.text}` } : walk;
+        break;
+      }
       case "end_turn":
         if (!promptId) return { ok: false, text: "There is no turn to end." };
         outcome = await send(this.table, human, { cmd: "end_turn", actor: human, prompt_id: promptId }, () => "turn ended");

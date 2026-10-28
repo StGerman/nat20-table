@@ -11,6 +11,8 @@ import type { DecisionInput } from "./tools.ts";
 export type ChoiceAct =
   | { kind: "submit"; decision: DecisionInput }
   | { kind: "move"; to: MoveTarget }
+  /** Dash at this prompt, then walk to `to` on the doubled movement, as far as it goes. */
+  | { kind: "dash_move"; to: MoveTarget }
   | { kind: "end_turn" };
 
 export interface Choice {
@@ -33,7 +35,7 @@ type Item = Omit<Choice, "number">;
 export function buildChoices(result: LegalActionsResult, state: State | undefined, combat: boolean): Choice[] {
   const items = result.options.flatMap(optionItems);
   if (combat && state) {
-    const moves = moveItems(state);
+    const moves = moveItems(state, reachOf(result, state));
     if (moves.length > 0) items.push({ label: "Move…", next: numbered(moves) });
   }
   if (combat && result.can_end_turn) items.push({ label: "End turn", act: { kind: "end_turn" } });
@@ -142,20 +144,53 @@ function aimLabel(aim: Aim): string {
   }
 }
 
-/** Where the human can walk: next to a creature it can see (hostile first), or to a place. */
-function moveItems(state: State): Item[] {
+/** How far the human can walk this turn, and how much farther a Dash at this prompt would take them. */
+interface Reach {
+  movement_ft: number;
+  dash_ft?: number;
+}
+
+function reachOf(result: LegalActionsResult, state: State): Reach | undefined {
+  const budget = result.budget;
+  if (!budget || state.view !== "player") return undefined;
+  // A Dash adds the creature's speed again (SRD 5.2.1, Dash).
+  const dash = result.options.some((o) => o.option_id === "dash");
+  return { movement_ft: budget.movement_ft, ...(dash ? { dash_ft: state.me.speed_ft } : {}) };
+}
+
+/**
+ * Where the human can walk: next to a creature it can see (hostile first), or to a place. A
+ * destination farther than this turn's movement says so, since the walk stops short, and when a
+ * Dash would get there a line to Dash and walk follows it. Distances are straight lines and "next
+ * to" means 5 ft away, so a crooked route can still stop short; the engine walks it as far as it goes.
+ */
+function moveItems(state: State, reach: Reach | undefined): Item[] {
   if (state.view !== "player") return [];
   const sides: Side[] = ["hostile", "neutral", "party"];
   const creatures = state.others
     .filter((c) => c.health !== "down")
     .sort((a, b) => sides.indexOf(a.side) - sides.indexOf(b.side) || a.distance_ft - b.distance_ft || a.handle.localeCompare(b.handle))
-    .map((c) => ({
-      label: `Move next to ${c.handle} (${c.side}, ${Math.round(c.distance_ft)} ft)`,
-      act: { kind: "move", to: { kind: "creature", handle: c.handle } } as ChoiceAct,
-      target: { handle: c.handle, side: c.side, in_range: false },
-    }));
+    .flatMap((c) =>
+      walkItems(`next to ${c.handle}`, `${c.side}, ${Math.round(c.distance_ft)} ft`, Math.max(0, c.distance_ft - 5), { kind: "creature", handle: c.handle }, reach, {
+        handle: c.handle,
+        side: c.side,
+        in_range: false,
+      }),
+    );
   const places = [...state.anchors]
     .sort((a, b) => a.distance_ft - b.distance_ft || a.id.localeCompare(b.id))
-    .map((a) => ({ label: `Move to ${a.name} (${Math.round(a.distance_ft)} ft)`, act: { kind: "move", to: { kind: "anchor", anchor: a.id } } as ChoiceAct }));
+    .flatMap((a) => walkItems(`to ${a.name}`, `${Math.round(a.distance_ft)} ft`, a.distance_ft, { kind: "anchor", anchor: a.id }, reach));
   return [...creatures, ...places];
+}
+
+/** The line to walk somewhere, and the line to Dash and walk there when only a Dash reaches it. */
+function walkItems(where: string, about: string, need_ft: number, to: MoveTarget, reach: Reach | undefined, target?: Choice["target"]): Item[] {
+  const short = reach !== undefined && need_ft > reach.movement_ft;
+  const move: Item = {
+    label: `Move ${where} (${about}${short ? `; ${reach.movement_ft} ft this turn, stops short` : ""})`,
+    act: { kind: "move", to },
+    ...(target ? { target } : {}),
+  };
+  if (!short || reach.dash_ft === undefined || need_ft > reach.movement_ft + reach.dash_ft) return [move];
+  return [move, { label: `Dash, then move ${where} (${about})`, act: { kind: "dash_move", to } }];
 }
