@@ -97,6 +97,9 @@ async function sendNow(table: TableState, viewer: Viewer, command: Command, okTe
 
 const notNow = (what: string): ToolOutcome => ({ ok: false, retryable: false, text: `not now: ${what}` });
 
+/** What the DM's tools for the human's character answer at a table with no human (AGT-40). */
+const noHuman = notNow("no human sits at this table; every character takes its own options");
+
 function decision(input: DecisionInput): { option_id: string; targets?: string[]; variant?: string; aim?: Aim } {
   return {
     option_id: input.option_id,
@@ -416,6 +419,11 @@ export class DmTools {
     this.passes = passes;
   }
 
+  /** The human's character, or undefined at a table with no human (AGT-40): who decides a surrender. */
+  get human(): Handle | undefined {
+    return this.table.human;
+  }
+
   private async sceneHandles(): Promise<Handle[]> {
     const r = this.table.observe(await this.table.engine.request("dm", { cmd: "get_state" }));
     return r.ok && r.result?.cmd === "get_state" && r.result.state.view === "dm" ? r.result.state.creatures.map((c) => c.handle) : [];
@@ -471,8 +479,10 @@ export class DmTools {
     }
     if (reason === "surrender" && !offer) {
       if (this.table.exhausted("dm")) return this.table.spent();
-      const state = await this.dmState();
-      if (!state || !humanDown(state, this.table.human)) {
+      const human = this.table.human;
+      // With no human at the table, a surrender is the DM's call (M7 spec §4.2, AGT-40).
+      const state = human ? await this.dmState() : undefined;
+      if (human && (!state || !humanDown(state, human))) {
         this.table.retry("dm", "dm: end_combat with surrender before the human accepted it");
         return { ok: false, retryable: true, text: `${this.table.human} decides on a surrender: offer it with offer_surrender` };
       }
@@ -491,6 +501,7 @@ export class DmTools {
    */
   async offerSurrender(handles: string[]): Promise<ToolOutcome> {
     if (this.table.exhausted("dm")) return this.table.spent();
+    if (!this.table.human) return notNow("no human sits at this table, so you decide: end_combat with surrender to accept it, or fight on");
     if (this.table.surrender) return notNow("a surrender offer is already open");
     if (!this.table.inCombat) return notNow("there is no fight");
     const held = { handles: [] as Handle[], words: false };
@@ -511,7 +522,7 @@ export class DmTools {
     if (surrendering.length === 0) {
       return refuse("no surrender is available", "surrender_not_available: no surrender is available now");
     }
-    if (humanDown(state, this.table.human)) {
+    if (humanDown(state, this.table.human!)) {
       return notNow(`${this.table.human} is down, so you decide: end_combat with surrender to accept it, or fight on`);
     }
     const named = [...new Set(handles)];
@@ -562,6 +573,7 @@ export class DmTools {
   async move(actor: string, to: MoveTarget): Promise<ToolOutcome> {
     if (this.table.inCombat) {
       const a = this.table.awaiting;
+      if (!this.table.human) return notNow("in a fight each character moves on its own turn");
       if (actor !== this.table.human || a.kind !== "action" || a.actor !== this.table.human) {
         return notNow(`in a fight you move only ${this.table.human}, on ${this.table.human}'s turn`);
       }
@@ -572,29 +584,35 @@ export class DmTools {
 
   /** The human's character's options (any time out of combat; on its turn in a fight). */
   legalActions(): Promise<ToolOutcome> {
+    const human = this.table.human;
+    if (!human) return Promise.resolve(noHuman);
     const a = this.table.awaiting;
-    if (this.table.inCombat && !(a.kind === "action" && a.actor === this.table.human)) {
-      return Promise.resolve(notNow(`it is not ${this.table.human}'s turn`));
+    if (this.table.inCombat && !(a.kind === "action" && a.actor === human)) {
+      return Promise.resolve(notNow(`it is not ${human}'s turn`));
     }
-    return send(this.table, "dm", { cmd: "legal_actions", actor: this.table.human }, (r) =>
+    return send(this.table, "dm", { cmd: "legal_actions", actor: human }, (r) =>
       r.result?.cmd === "legal_actions" ? formatOptions(r.result as LegalActionsResult) : "",
     );
   }
 
   /** A decision for the human's character, mapped from the human's words (D5). */
   submit(input: DecisionInput): Promise<ToolOutcome> {
+    const human = this.table.human;
+    if (!human) return Promise.resolve(noHuman);
     const a = this.table.awaiting;
     if (this.table.inCombat) {
-      if (a.kind !== "action" || a.actor !== this.table.human) return Promise.resolve(notNow(`it is not ${this.table.human}'s turn`));
-      return send(this.table, "dm", { cmd: "submit", actor: this.table.human, prompt_id: a.prompt_id, ...decision(input) }, () => "accepted");
+      if (a.kind !== "action" || a.actor !== human) return Promise.resolve(notNow(`it is not ${human}'s turn`));
+      return send(this.table, "dm", { cmd: "submit", actor: human, prompt_id: a.prompt_id, ...decision(input) }, () => "accepted");
     }
-    return send(this.table, "dm", { cmd: "submit", actor: this.table.human, ...decision(input) }, () => "accepted");
+    return send(this.table, "dm", { cmd: "submit", actor: human, ...decision(input) }, () => "accepted");
   }
 
   endTurn(): Promise<ToolOutcome> {
+    const human = this.table.human;
+    if (!human) return Promise.resolve(noHuman);
     const a = this.table.awaiting;
-    if (a.kind !== "action" || a.actor !== this.table.human) return Promise.resolve(notNow(`it is not ${this.table.human}'s turn`));
-    return send(this.table, "dm", { cmd: "end_turn", actor: this.table.human, prompt_id: a.prompt_id }, () => "turn ended");
+    if (a.kind !== "action" || a.actor !== human) return Promise.resolve(notNow(`it is not ${human}'s turn`));
+    return send(this.table, "dm", { cmd: "end_turn", actor: human, prompt_id: a.prompt_id }, () => "turn ended");
   }
 
   /** Lets an AI player take one of its own options out of combat (spec §3.3 step 4). */

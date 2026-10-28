@@ -9,7 +9,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { REPO, SESSION_LOG, type GameEngine } from "../src/engine.ts";
 import { readPack } from "../src/pack/read.ts";
-import { guards, packParty, scenePlan } from "../src/play/run.ts";
+import { guards, castParty, scenePlan } from "../src/play/run.ts";
 import { ConnectionLost, TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
 import { attackNearest, chainDm, chainScenes, rescueThenAttack, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
@@ -142,7 +142,8 @@ test("the scripted table plays The Silent Mill from Scene 1 to 6, and the transc
   // first. Seed 123 is one where the party gets through the cellar (most seeds don't: MON-10).
   const pack = path.join(REPO, "scenarios/the_silent_mill");
   const scenes = readPack(pack).adventure.scenes;
-  const party = packParty(pack);
+  const cast = castParty(pack);
+  const party = { ...cast, human: cast.human! };
   const t = await testTable({
     seed: 123,
     pack,
@@ -165,6 +166,38 @@ test("the scripted table plays The Silent Mill from Scene 1 to 6, and the transc
     const rested = engine.findIndex((l) => l.endsWith("finish a short rest."));
     assert.ok(rested > engine.indexOf("Scene s4_captured_goblin loaded in explore mode."), "the party rests in Scene 4");
     matchesFixture("m7_adventure", t.runDir);
+  } finally {
+    t.close();
+  }
+});
+
+test("a table with no human plays The Silent Mill from Scene 1 to 6, and the transcript replays exactly (AGT-40)", async () => {
+  // `--seat ai`: all four characters are AI players, so nothing is shown to a human, nobody is
+  // asked, and the scripted DM accepts the yard's surrender itself (M7 spec §4.2). Seed 99 is one
+  // where the party gets through the cellar (MON-10).
+  const pack = path.join(REPO, "scenarios/the_silent_mill");
+  const scenes = readPack(pack).adventure.scenes;
+  const party = castParty(pack, "none");
+  assert.equal(party.human, undefined);
+  assert.deepEqual(party.ai, ["bren", "torva", "maren", "ilsa"]);
+  const t = await testTable({ seed: 99, pack, noHuman: true, players: party.ai, guards: (engine) => guards(pack, engine) });
+  try {
+    const dm = chainDm(chainScenes(scenes), party.ai, party.ai[0]);
+    const players = party.ai.map((h) => new ScriptedPlayer(h, { combat: rescueThenAttack }));
+    const report = await new TableLoop({ table: t.table, dm, players, maxSteps: 3000, names: party.names }).run(scenes[0].id);
+    assert.equal(report.ended, "the adventure is over");
+    assert.deepEqual(report.scenes, scenes.map((s) => s.id));
+    assert.equal(report.humanRejections, 0);
+    assert.deepEqual(t.seat.shown, [], "no human seat is shown anything");
+    const records = t.table.transcript.records;
+    assert.ok(!records.some((r) => r.human), "nothing at the table is the human's");
+    assert.ok(!records.some((r) => r.kind === "question"), "nobody is asked a question");
+    const engine = records.filter((r) => r.channel === "dm" && r.kind === "engine").map((r) => r.text);
+    assert.ok(engine.includes("Combat is over: the other side surrendered."), "the DM accepted the yard's surrender itself");
+    assert.ok(t.requests().some((r) => r.viewer === "bren" && r.cmd === "end_turn"), "Bren takes its own turns as an AI player");
+    const inputs = readFileSync(path.join(t.runDir, "inputs.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { seat: string; human?: boolean });
+    assert.ok(inputs.some((i) => i.seat === "bren") && !inputs.some((i) => i.human), "Bren's inputs are an AI player's, scanned like the others'");
+    matchesFixture("m7_adventure_ai", t.runDir);
   } finally {
     t.close();
   }

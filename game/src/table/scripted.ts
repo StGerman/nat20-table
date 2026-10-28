@@ -218,12 +218,16 @@ export function yardDm(encounter = "yard_fight"): ScriptedDm {
 /**
  * Offers the human the surrender the engine shows available, of the creatures it names, whenever
  * there is one (AGT-30, decision D4: a scripted run gets offers, and the scripted human accepts).
+ * With no human at the table, it accepts the surrender itself.
  */
 export async function offerAnySurrender(tools: DmTools): Promise<void> {
   const state = ((await tools.getState()).data as { state?: State } | undefined)?.state;
   if (state?.view !== "dm") return;
   const surrendering = state.encounters.find((e) => e.running && e.surrender_available)?.surrendering ?? [];
-  if (surrendering.length > 0) await tools.offerSurrender(surrendering);
+  if (surrendering.length === 0) return;
+  // With no human at the table, a surrender is the DM's to accept (M7 spec §4.2, AGT-40).
+  if (tools.human) await tools.offerSurrender(surrendering);
+  else await tools.endCombat("surrender");
 }
 
 /**
@@ -289,15 +293,15 @@ export function chainScenes(
 /**
  * A DM for the whole adventure without a model (M7 spec §4.6, AGT-39): it opens each scene with
  * one plain line, short-rests the party where the scene says so (one Hit Point Die for each member
- * down any Hit Points; one at 0 can't rest), asks the scene's checks of the human's character (or
- * the first party member still up), and starts its fight;
+ * down any Hit Points; one at 0 can't rest), asks the scene's checks of `checker` (the human's
+ * character, or the first party member still up), and starts its fight;
  * it narrates every part with one plain line and offers any surrender the engine shows available;
  * out of a fight, its first table turn takes the party, and any captive the exit carries, on to the
  * next scene, and after the last scene it ends the adventure, as it does when a fight leaves nobody
  * in the party standing. The engine rolls every check and
  * decides every outcome (Rule 4): the chain only asks.
  */
-export function chainDm(scenes: ChainScene[], party: Handle[], human: Handle): ScriptedDm {
+export function chainDm(scenes: ChainScene[], party: Handle[], checker: Handle): ScriptedDm {
   let at = -1;
   const dmState = async (tools: DmTools) => {
     const state = ((await tools.getState()).data as { state?: State } | undefined)?.state;
@@ -316,7 +320,7 @@ export function chainDm(scenes: ChainScene[], party: Handle[], human: Handle): S
         const hurt = state.creatures.filter((c) => up.includes(c.handle) && c.hp < c.hp_max);
         await tools.shortRest(up, hurt.map((c) => ({ handle: c.handle, count: 1 })));
       }
-      const asked = up.includes(human) ? human : up[0];
+      const asked = up.includes(checker) ? checker : up[0];
       if (asked) for (const check of scene.checks) await tools.requestCheck(asked, { kind: "scenario", check_id: check });
       if (scene.fight) await tools.startCombat(scene.fight);
     },

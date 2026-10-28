@@ -26,7 +26,7 @@ import { Transcript } from "../table/transcript.ts";
 import type { PlayerAgent } from "../table/types.ts";
 import { UsageLog } from "../usage.ts";
 import { uploadStage } from "./upload.ts";
-import { audit, endState, guards, packParty, refuseApiKey, reportSections, runFolder } from "./run.ts";
+import { audit, endState, guards, castParty, refuseApiKey, reportSections, runFolder } from "./run.ts";
 
 const { values: flags } = parseArgs({
   options: {
@@ -59,7 +59,10 @@ if (!(LANGUAGES as readonly string[]).includes(flags.lang!)) {
 const language = flags.lang as Language;
 const scripted = flags.players === "scripted";
 const choice = { model: flags["player-model"]!, effort: flags.effort as EffortLevel };
-const party = packParty(flags.pack!);
+const cast = castParty(flags.pack!);
+// The AI party plays beside a scripted human's character: this command always has one.
+if (!cast.human) throw new Error(`${flags.pack}: the party has no human seat`);
+const party = { ...cast, human: cast.human };
 
 if (flags["dry-run"]) {
   for (const handle of party.ai) {

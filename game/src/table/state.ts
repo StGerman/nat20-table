@@ -21,11 +21,12 @@ export type TextGuard = (text: string) => string | undefined;
 
 export interface TableOptions {
   engine: GameEngine;
-  /** The human's character. */
-  human: Handle;
+  /** The human's character; absent for a table with no human (M7 spec §4.2, AGT-40). */
+  human?: Handle;
   /** The AI players' characters. */
   players: Handle[];
-  seat: Seat;
+  /** The human's seat; absent with no human. */
+  seat?: Seat;
   transcript: Transcript;
   /** Every model input a player agent gets and everything the human seat gets (spec §3.5, AGT-19). */
   inputsFile?: string;
@@ -40,9 +41,9 @@ const RECENT_LINES = 20;
 
 export class TableState {
   readonly engine: GameEngine;
-  readonly human: Handle;
+  readonly human: Handle | undefined;
   readonly players: Handle[];
-  readonly seat: Seat;
+  readonly seat: Seat | undefined;
   readonly transcript: Transcript;
   /** The engine's last `awaiting`: whose decision it waits on. Every response updates it. */
   awaiting: Awaiting = { kind: "none" };
@@ -161,6 +162,11 @@ export class TableState {
     }
   }
 
+  /** Every character at the table: the human's first, when there is one, then the AI players'. */
+  get party(): Handle[] {
+    return this.human ? [this.human, ...this.players] : [...this.players];
+  }
+
   /** Whether a fight is running: the engine waits on a combat decision. */
   get inCombat(): boolean {
     return this.awaiting.kind === "action" || this.awaiting.kind === "reaction";
@@ -224,6 +230,8 @@ export class TableState {
 
   /** Shows the human something, and records it as the human seat's input. */
   show(event: TableEvent, typedByHuman = false): void {
+    // A table with no human has no screen (M7 spec §4.2): the transcript has the DM's view.
+    if (!this.human || !this.seat) return;
     this.recordInput(this.human, JSON.stringify(event), typedByHuman);
     this.seat.show(event);
   }
@@ -242,7 +250,7 @@ export class TableState {
   }
 
   private async flushNow(holdFrom: ((event: Event) => boolean) | undefined): Promise<void> {
-    this.screen.push(...tellable(await this.engine.newEvents(this.human, "screen"), this.deaths));
+    if (this.human) this.screen.push(...tellable(await this.engine.newEvents(this.human, "screen"), this.deaths));
     this.dmLines.push(...tellable(await this.engine.newEvents("dm", "transcript"), this.deaths));
     let limit = this.flushLimit ?? Number.POSITIVE_INFINITY;
     const held = holdFrom ? this.dmLines.find(holdFrom) : undefined;
@@ -263,7 +271,7 @@ export class TableState {
     }
     if (this.unnarrated) {
       this.unnarrated = false;
-      this.seat.unnarrated?.();
+      this.seat?.unnarrated?.();
     }
   }
 
@@ -312,9 +320,9 @@ export class TableState {
     if (this.exhausted("dm")) return this.spent();
     const refused = this.narrationGuard(text);
     if (refused) return this.refuse("dm", "narration", refused, "Rewrite it.");
-    if (to && to !== this.human && !this.players.includes(to)) {
+    if (to && !this.party.includes(to)) {
       this.retry("dm", `narration refused: ${to} is not a seat`);
-      return { ok: false, retryable: true, text: `${to} is not a seat at the table; address the table or one of ${[this.human, ...this.players].join(", ")}.` };
+      return { ok: false, retryable: true, text: `${to} is not a seat at the table; address the table or one of ${this.party.join(", ")}.` };
     }
     await this.flush();
     this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text });
@@ -324,7 +332,7 @@ export class TableState {
     for (const player of this.players) {
       if (!to || to === player) this.inboxes.get(player)?.push(`DM${to ? " (to you)" : ""}: ${text}`);
     }
-    if (!to || to === this.human) {
+    if (this.human && (!to || to === this.human)) {
       this.dmToHuman += 1;
       this.show({ kind: "narration", speaker: "dm", text, ...(to ? { to } : {}) });
     }
@@ -333,6 +341,7 @@ export class TableState {
 
   /** A DM question to the human, guarded like narration. The human's next input answers it. */
   async askHuman(text: string): Promise<ToolOutcome> {
+    if (!this.human) return { ok: false, retryable: false, text: "no human sits at this table; narrate instead" };
     if (this.exhausted("dm")) return this.spent();
     const refused = this.narrationGuard(text);
     if (refused) return this.refuse("dm", "question", refused, "Rewrite it.");
@@ -352,10 +361,10 @@ export class TableState {
    * in a fight, AGT-34) is dropped when it is refused, with no retry: its moment has passed.
    */
   async speak(from: Handle, text: string, to?: Handle, once = false): Promise<ToolOutcome> {
-    if (to !== undefined && (to === from || (to !== this.human && !this.players.includes(to)))) {
+    if (to !== undefined && (to === from || !this.party.includes(to))) {
       if (once) return this.dropped(from, `${to} is not a companion at the table`);
       if (this.exhausted(from)) return this.spent();
-      const companions = [this.human, ...this.players].filter((seat) => seat !== from);
+      const companions = this.party.filter((seat) => seat !== from);
       return this.refuse(from, "speech", `${to} is not a companion at the table`, `Give one of ${companions.join(", ")} as to, or leave it out.`);
     }
     return this.say(from, text, "speech", to, once);

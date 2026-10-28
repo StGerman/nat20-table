@@ -43,7 +43,7 @@ export const SETTINGS = {
   pack: { kind: "string", default: path.join(REPO, "scenarios/the_silent_mill") },
   dm: { kind: "string", default: "model", allowed: ["model", "scripted"] },
   players: { kind: "string", default: "model", allowed: ["model", "scripted"] },
-  seat: { kind: "string", default: "scripted", allowed: ["scripted", "ink"] },
+  seat: { kind: "string", default: "scripted", allowed: ["scripted", "ink", "ai"] },
   out: { kind: "string", default: path.join(REPO, "runs") },
   "max-steps": { kind: "int", default: 2000 },
   verbose: { kind: "bool", default: false },
