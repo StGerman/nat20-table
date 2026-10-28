@@ -44,6 +44,8 @@ export const SETTINGS = {
   dm: { kind: "string", default: "model", allowed: ["model", "scripted"] },
   players: { kind: "string", default: "model", allowed: ["model", "scripted"] },
   seat: { kind: "string", default: "scripted", allowed: ["scripted", "ink", "ai"] },
+  /** The character the human plays (AGT-35), by handle: skips the pick list. The pack's seat when unset. */
+  play: { kind: "string" },
   out: { kind: "string", default: path.join(REPO, "runs") },
   "max-steps": { kind: "int", default: 2000 },
   verbose: { kind: "bool", default: false },

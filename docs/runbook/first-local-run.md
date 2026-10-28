@@ -58,9 +58,11 @@ The whole adventure, Scene 1 to Scene 6, in one run (M7 spec §4.1). Before each
 
 | Run | Command | You play? |
 |---|---|---|
-| The cheap setup (DM Sonnet 5.5 medium, AI players Haiku 5.5 high, Russian): discovery, iteration and the unattended run | `npm run play:cheap` | No |
-| The demo setup (DM Opus 5.5 medium, AI players Sonnet 5.5 low, Russian): your acceptance run | `npm run play:demo` | **Yes**, in a terminal |
+| The cheap setup (DM Sonnet 5.5 medium, AI players Haiku 5.5 high, Russian), all four characters AI players: discovery, iteration and the unattended run | `npm run play:cheap` | No |
+| The demo setup (DM Opus 5.5 medium, AI players Sonnet 5.5 low, Russian): your acceptance run. It starts with the party list: pick who you play by number, or Enter for Bren; the other three become AI players | `npm run play:demo` | **Yes**, in a terminal |
 | Rehearsal with no model, a minute or two | `npm run play:full -- --dm scripted --players scripted` | No |
+
+`--play <handle>` (`bren`, `torva`, `maren`, `ilsa`) skips the list; `--seat ai` seats nobody at the keyboard.
 
 A profile is a JSON file in `game/profiles/` (`--profile <name>`), or your own anywhere (`--profile ~/.nat20/mine.json`). Any flag typed after the command wins over the profile: `npm run play:cheap -- --dm-model claude-opus-5-5`. A profile with a typo, a bad value or a model the price table doesn't know is refused before the engine starts. `-- --dry-run` prints the DM's prompt and every resolved setting with where it came from.
 
