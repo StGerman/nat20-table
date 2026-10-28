@@ -165,6 +165,8 @@ jobs:
         run: |
           mkdir -p dist
           cp target/debug/nat20-api-server dist/
+          # The narration check's digest (AGT-9): the ts job runs it on the planted fixture.
+          cp target/debug/nat20-digest dist/
           scan=$(cargo test --locked -p nat20-api-server --test visibility --all-features --no-run --message-format=json \
             | jq -r 'select(.reason == "compiler-artifact" and .target.name == "visibility") | .executable')
           cp "$scan" dist/visibility
@@ -238,9 +240,10 @@ jobs:
         with:
           name: engine-debug
           path: dist
-      - run: chmod +x dist/nat20-api-server && npm run check:ts
+      - run: chmod +x dist/nat20-api-server dist/nat20-digest && npm run check:ts
         env:
           NAT20_API_SERVER: ${{ github.workspace }}/dist/nat20-api-server
+          NAT20_DIGEST: ${{ github.workspace }}/dist/nat20-digest
           NAT20_REGISTRY_ROOT: ${{ github.workspace }}/dist/registries
 
   deny:

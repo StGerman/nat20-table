@@ -77,9 +77,17 @@ export function readDigest(dir: string): DigestRun {
   return { ...head, digests: lines.filter((l) => l.kind === "narration") as unknown as DigestRecord[] };
 }
 
-/** Runs `nat20-digest` over a run folder; it writes the digest, and fails (still writing it) on a replay divergence. */
+/**
+ * Runs `nat20-digest` over a run folder; it writes the digest, and fails (still writing it) on a
+ * replay divergence. `$NAT20_DIGEST` names a built binary (CI's ts job has no Rust toolchain);
+ * otherwise cargo builds and runs it.
+ */
 export function runDigest(pack: string, dir: string): { ok: boolean; output: string } {
-  const run = spawnSync("cargo", ["run", "--quiet", "-p", "nat20-duel", "--bin", "nat20-digest", "--", "--pack", pack, dir], { cwd: REPO, encoding: "utf8" });
+  const args = ["--pack", pack, dir];
+  const binary = process.env.NAT20_DIGEST;
+  const run = binary
+    ? spawnSync(binary, args, { cwd: REPO, encoding: "utf8" })
+    : spawnSync("cargo", ["run", "--quiet", "-p", "nat20-duel", "--bin", "nat20-digest", "--", ...args], { cwd: REPO, encoding: "utf8" });
   if (run.error) return { ok: false, output: `nat20-digest didn't run: ${run.error.message}` };
   return { ok: run.status === 0 && existsSync(path.join(dir, NARRATION_DIGEST)), output: `${run.stdout}${run.stderr}`.trim() };
 }
