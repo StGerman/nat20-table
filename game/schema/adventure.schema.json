@@ -89,6 +89,11 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          "pronouns": {
+            "description": "How the table refers to the character, such as she/her (M7 design §3.4): the DM's prompt names it, and the narration check holds the DM to it.",
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [

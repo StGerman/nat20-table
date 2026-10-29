@@ -2,7 +2,7 @@
 // `run.json`, written when the run starts and again when it ends, so a crash still leaves the run's
 // identity behind. Run folders stay out of the repo (`runs/` is gitignored); they go to the runs repo.
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Handle } from "@nat20-table/engine-client";
 import { REPO } from "../paths.ts";
@@ -68,4 +68,18 @@ export function writeRunRecord(runDir: string, record: RunRecord): void {
 
 export function readRunRecord(runDir: string): RunRecord {
   return JSON.parse(readFileSync(path.join(runDir, RUN_JSON), "utf8")) as RunRecord;
+}
+
+/**
+ * The pack a run played, as its run.json recorded it, when that path is on this machine; a run from
+ * the Mac read in a thread has a path only the Mac has, and the repo's own pack stands in for it.
+ */
+export function packOfRun(dir: string): string {
+  let recorded: string | undefined;
+  try {
+    recorded = readRunRecord(dir).settings.pack?.value as string | undefined;
+  } catch {
+    recorded = undefined;
+  }
+  return recorded && existsSync(recorded) ? recorded : path.join(REPO, "scenarios/the_silent_mill");
 }

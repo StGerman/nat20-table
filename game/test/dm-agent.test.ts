@@ -76,6 +76,8 @@ test("the DM's prompt holds the rules, the craft guidance and the whole pack; it
   assert.ok(dm.systemPrompt.includes(PACK.text), "the whole pack is in the prompt");
   assert.match(dm.systemPrompt, /^You are the Dungeon Master of "The Silent Mill"/);
   assert.match(dm.systemPrompt, /A human plays bren; AI players play torva, maren, ilsa\./);
+  // The English run called Torva "he" throughout (M7 design §3.4).
+  assert.match(dm.systemPrompt, /Pronouns: torva she\/her, maren she\/her, ilsa she\/her; keep to them in every language\./);
   // A live exit run (2026-10-27): the DM narrated Bren walking up to a goblin the engine still
   // had 24 ft away (TASKS.md AGT-9).
   assert.match(dm.systemPrompt, /Never narrate a character walking up to someone or somewhere unless move put them there\./);

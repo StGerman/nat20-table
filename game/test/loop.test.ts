@@ -12,10 +12,11 @@ import { readPack } from "../src/pack/read.ts";
 import { guards, castParty, scenePlan } from "../src/play/run.ts";
 import { ConnectionLost, TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
-import { attackNearest, chainDm, chainScenes, rescueThenAttack, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
+import { attackNearest, chainDm, offerAnySurrender, chainScenes, rescueThenAttack, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
 import { BarkTools, ReactionFloor, type DmTools, type PlayerTools } from "../src/table/tools.ts";
 import type { PlayerIntent, TableEvent, ToolOutcome } from "../src/table/types.ts";
+import type { State } from "@nat20-table/engine-client";
 import { testTable, type TestTable } from "./helpers.ts";
 import { trailDm, yardDm } from "./scripts.ts";
 
@@ -28,8 +29,8 @@ const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtur
 const RUN_FILES = [SESSION_LOG, "transcript.jsonl", "inputs.jsonl"];
 
 /** Compares a run's files with its fixture (`<name>.<file>`), or writes the fixture when recording. */
-function matchesFixture(name: string, runDir: string): void {
-  for (const run of RUN_FILES) {
+function matchesFixture(name: string, runDir: string, more: string[] = []): void {
+  for (const run of [...RUN_FILES, ...more]) {
     const actual = readFileSync(path.join(runDir, run), "utf8");
     const file = path.join(FIXTURES, `${name}.${run}`);
     if (process.env.RECORD_FIXTURES || !existsSync(file)) writeFileSync(file, actual);
@@ -210,6 +211,89 @@ test("a table with no human plays The Silent Mill from Scene 1 to 6, and the tra
     const inputs = readFileSync(path.join(t.runDir, "inputs.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { seat: string; human?: boolean });
     assert.ok(inputs.some((i) => i.seat === "bren") && !inputs.some((i) => i.human), "Bren's inputs are an AI player's, scanned like the others'");
     matchesFixture("m7_adventure_ai", t.runDir);
+  } finally {
+    t.close();
+  }
+});
+
+// --- The narration check's planted fixture (AGT-9) -------------------------------------------------
+
+/**
+ * A DM that walks the party from the green to the mill yard and plants the two contradictions the
+ * narration check must catch (M7 design §3.4, calibration), modelled on the two real ones: Bren
+ * narrated toe to toe with a goblin the engine has at 20 ft or more, and a goblin narrated as
+ * surrendering that the engine never saw surrender, so it fights on.
+ */
+function plantingDm(party: string[]): ScriptedDm {
+  const planted = { adjacent: false, surrender: false };
+  const dmState = async (tools: DmTools) => {
+    const state = ((await tools.getState()).data as { state?: State } | undefined)?.state;
+    return state?.view === "dm" ? state : undefined;
+  };
+  const feet = (a: { x_ft: number; y_ft: number }, b: { x_ft: number; y_ft: number }) => Math.hypot(a.x_ft - b.x_ft, a.y_ft - b.y_ft);
+  return new ScriptedDm({
+    scene_open: async (tools) => {
+      const state = await dmState(tools);
+      if (state?.scene_id !== "s3_mill_yard") return void (await tools.narrate("The village green is quiet under a grey sky."));
+      await tools.narrate("Goblins and wolves hold the mill yard.");
+      await tools.startCombat("yard_fight");
+    },
+    table_turn: async (tools) => {
+      const state = await dmState(tools);
+      if (state?.scene_id === "s3_mill_yard") return void (await tools.endAdventure("The yard falls quiet."));
+      await tools.narrate("You take the road to the mill.");
+      await tools.loadScene("s3_mill_yard", party);
+    },
+    narrate: async (tools) => {
+      const state = await dmState(tools);
+      const foes = (state?.creatures ?? []).filter((c) => c.side === "hostile" && c.life_state === "conscious");
+      const bren = state?.creatures.find((c) => c.handle === "bren" && c.life_state === "conscious");
+      const far = bren && foes.find((f) => f.handle.startsWith("goblin") && feet(f.position_ft, bren.position_ft) >= 20);
+      if (!planted.adjacent && far) {
+        planted.adjacent = true;
+        return void (await tools.narrate(`Bren stands toe to toe with ${far.handle}, their blades locked.`));
+      }
+      // The goblin farthest from the party: the one most likely to shoot again.
+      const archer = foes
+        .filter((f) => f.handle.startsWith("goblin"))
+        .map((f) => ({ f, d: Math.min(...(state?.creatures ?? []).filter((c) => c.side === "party").map((c) => feet(c.position_ft, f.position_ft))) }))
+        .sort((a, b) => b.d - a.d)[0]?.f;
+      if (planted.adjacent && !planted.surrender && archer) {
+        planted.surrender = true;
+        return void (await tools.narrate(`${archer.handle} throws down its bow and begs for mercy.`));
+      }
+      // Once both are planted, the fight ends as soon as it may, which keeps the engine log small.
+      if (planted.surrender) await offerAnySurrender(tools);
+      await tools.narrate("Steel and teeth flash in the yard.");
+    },
+    combat_over: async (tools) => void (await tools.endAdventure("The fight is done.")),
+  });
+}
+
+test("the narration check's planted fixture: two contradictions, with the engine log the digest replays (AGT-9)", async () => {
+  const pack = path.join(REPO, "scenarios/the_silent_mill");
+  const cast = castParty(pack);
+  const party = { ...cast, human: cast.human! };
+  const t = await testTable({
+    seed: 5,
+    pack,
+    players: party.ai,
+    seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai),
+  });
+  try {
+    const dm = plantingDm([party.human, ...party.ai]);
+    const players = party.ai.map((h) => new ScriptedPlayer(h, { combat: rescueThenAttack }));
+    const report = await new TableLoop({ table: t.table, dm, players, maxSteps: 2000, names: party.names }).run("s1_village_green");
+    assert.equal(report.ended, "the adventure is over");
+    const said = t.table.transcript.records.filter((r) => r.speaker === "dm" && r.kind === "narration").map((r) => r.text);
+    assert.ok(said.some((l) => l.includes("toe to toe")), "the adjacency contradiction is planted");
+    const surrender = said.find((l) => l.includes("begs for mercy"));
+    assert.ok(surrender, "the surrender contradiction is planted");
+    // The planted goblin really does fight on, or the second contradiction is no contradiction.
+    const archer = surrender.split(" ")[0];
+    const engine = t.table.transcript.records.filter((r) => (r.channel === "dm" && r.kind === "engine") || r.text === surrender).map((r) => r.text);
+    assert.ok(engine.slice(engine.indexOf(surrender)).some((l) => l.startsWith(`${archer} uses`)), `${archer} attacks after the planted surrender`);
+    matchesFixture("m7_narration", t.runDir, ["engine-log.jsonl"]);
   } finally {
     t.close();
   }

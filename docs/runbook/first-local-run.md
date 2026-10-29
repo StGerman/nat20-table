@@ -68,7 +68,16 @@ A profile is a JSON file in `game/profiles/` (`--profile <name>`), or your own a
 
 The run keeps the Mac awake (`caffeinate`) and stops by itself at 120 minutes, after 12 explore rounds in a row that changed nothing in the engine (a stall), at the plan's usage limit, when three model calls in a row lose the network, or at Ctrl+C (a second Ctrl+C exits at once). With nobody at the keyboard it prints one line when a scene starts or ends and when a fight ends.
 
-It writes `runs/full-<time>/` with `run.json` (the commit and whether the checkout had changes, the engine's core revision and contract, every setting and where it came from, the seed, the seats, and each scene's start, end and combat rounds), then the audit and leak scan (`audit.json`) and the verdict (`verdict.json`, and a block at the top of `report.md`): PASS, FAIL with the rows that failed, VOID when something outside the game cut it short, or PENDING while a check is still open. Until the narration check lands (AGT-9), row 3 keeps every run PENDING. To recompute the verdict after answering flags in `confirmations.json`, or to finish the stages of a run cut off in them:
+It writes `runs/full-<time>/` with `run.json` (the commit and whether the checkout had changes, the engine's core revision and contract, every setting and where it came from, the seed, the seats, and each scene's start, end and combat rounds), then the audit and leak scan (`audit.json`), the narration check, and the verdict (`verdict.json`, and a block at the top of `report.md`): PASS, FAIL with the rows that failed, VOID when something outside the game cut it short, or PENDING while a check is still open.
+
+The narration check (AGT-9) replays the run's engine log and lays out what the engine held at each DM narration line (`narration-digest.jsonl`), then an Opus 5.5 low-effort judge reads those lines ten at a time and writes what contradicts the engine to `narration-check.jsonl`: each flag has an id (`n<line>-<k>`) for you to confirm or dismiss in `confirmations.json` (a rerun keeps your answer only where the flag of that id is the same claim, and asks again otherwise); props the engine doesn't track (Maren's bread) are listed with a `u` id and need no answer. Row 3 passes with no confirmed flag. To run it again on a finished run folder, or once before the M7 runs on the planted fixture (it must flag both planted lines):
+
+```bash
+npm run audit:narration -- runs/full-<time>
+mkdir -p runs/planted && cp game/test/fixtures/m7_narration.transcript.jsonl runs/planted/transcript.jsonl && cp game/test/fixtures/m7_narration.engine-log.jsonl runs/planted/engine-log.jsonl && npm run audit:narration -- runs/planted
+```
+
+On the planted run the judge must flag the line where Bren is "toe to toe" with a goblin 20 ft or more away (position) and the line where a goblin "begs for mercy" (surrender). `--new-digest` replays the engine log again; a log that no longer replays on this build leaves row 3 PENDING and says where it diverged. To recompute the verdict after answering flags in `confirmations.json`, or to finish the stages of a run cut off in them:
 
 ```bash
 npm run runs:verdict -- runs/full-<time>

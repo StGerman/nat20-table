@@ -7,6 +7,7 @@
 pub mod audit;
 pub mod balance;
 pub mod client;
+pub mod digest;
 pub mod duel;
 pub mod game_audit;
 pub mod leak_scan;
