@@ -146,3 +146,21 @@ fn a_session_started_without_a_seed_replays_with_the_seed_it_was_given() {
     assert_eq!(run.diverged, None);
     assert_eq!(run.digests.len(), run.narrations);
 }
+
+#[test]
+fn a_log_cut_short_digests_no_line_said_after_its_end() {
+    // The run's engine log ends early (a crash mid-write): the lines said later have no state.
+    let log = fixture("engine-log.jsonl");
+    let lines: Vec<&str> = log.lines().collect();
+    let cut = lines[..lines.len() / 2].join("\n");
+    let run = digest(&cut);
+    let reason = run.diverged.expect("an incomplete replay says so");
+    assert!(
+        reason.starts_with("the engine log ends at log head "),
+        "{reason}"
+    );
+    assert!(run.digests.len() < run.narrations);
+    let last: serde_json::Value = serde_json::from_str(lines[lines.len() / 2 - 1]).unwrap();
+    let reached = last["response"]["log_head"].as_u64().unwrap();
+    assert!(run.digests.iter().all(|d| d.log_head <= reached));
+}
