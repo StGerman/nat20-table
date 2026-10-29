@@ -21,8 +21,8 @@ use std::path::Path;
 
 use nat20_api_contract::{
     ActionOption, Aim, Awaiting, CheckSpec, CheckTest, Command, CommandResult, CreatureFull,
-    Handle, HitDiceSpend, LifeState, MoveTarget, OptionId, PointFt, PromptId, Response, Sheet,
-    Side, State, Targeting, TurnBudget,
+    EncounterView, Handle, HitDiceSpend, LifeState, MoveTarget, OptionId, PointFt, PromptId,
+    Response, Sheet, Side, State, Targeting, TurnBudget,
 };
 use nat20_api_server::Server;
 use serde::Serialize;
@@ -380,6 +380,35 @@ impl Table {
         response
     }
 
+    /// Notes the fight's round, and the flags and placed spawns that make its variant, and says
+    /// whether the DM takes a surrender now: only goblins yield, a wolf fights on
+    /// (`prose/s3_mill_yard.md`).
+    fn sample(&mut self, encounter: &str, rounds: &mut u32, variant: &mut Vec<String>) -> bool {
+        let State::Dm {
+            encounters,
+            round,
+            flags,
+            spawns,
+            creatures,
+            ..
+        } = self.state()
+        else {
+            unreachable!("the DM's view")
+        };
+        *rounds = (*rounds).max(round.unwrap_or(0));
+        // Flags and spawns only ever add up: a fight never takes one back.
+        for id in flags
+            .into_iter()
+            .filter(|f| fight_flags(encounter).contains(&f.as_str()))
+            .chain(spawns.into_iter().filter(|s| s.placed).map(|s| s.id))
+        {
+            if !variant.contains(&id) {
+                variant.push(id);
+            }
+        }
+        takes_surrender(&encounters, &creatures)
+    }
+
     /// Starts the encounter and plays the party until it ends.
     fn fight(&mut self, encounter: &str) -> FightResult {
         let potions_before = self.potions;
@@ -395,30 +424,14 @@ impl Table {
         let mut rounds = 0;
         let mut variant = Vec::new();
         for _ in 0..TURNS_PER_FIGHT {
+            // What the fight has come to so far, whoever acts next: monsters may end it before
+            // the party ever acts.
+            let surrender = self.sample(encounter, &mut rounds, &mut variant);
             match response.awaiting.clone() {
                 Awaiting::Reaction { .. } => response = self.settle(response),
                 Awaiting::Action { prompt_id, actor } => {
-                    let State::Dm {
-                        encounters,
-                        round,
-                        flags,
-                        spawns,
-                        ..
-                    } = self.state()
-                    else {
-                        unreachable!("the DM's view")
-                    };
-                    rounds = rounds.max(round.unwrap_or(1));
-                    variant = flags
-                        .into_iter()
-                        .filter(|f| fight_flags(encounter).contains(&f.as_str()))
-                        .chain(spawns.into_iter().filter(|s| s.placed).map(|s| s.id))
-                        .collect();
                     // The DM takes a surrender the engine shows available (AGT-30).
-                    if encounters
-                        .iter()
-                        .any(|e| e.running && e.surrender_available)
-                    {
+                    if surrender {
                         response = self.dm(Command::EndCombat {
                             reason: nat20_api_contract::EndCombatReason::Surrender,
                         });
@@ -432,6 +445,9 @@ impl Table {
                 }
             }
         }
+        // The last round, flags and spawns, as the fight ended.
+        self.sample(encounter, &mut rounds, &mut variant);
+        variant.sort();
         if stalemate {
             self.dm(Command::EndCombat {
                 reason: nat20_api_contract::EndCombatReason::Scenario,
@@ -602,30 +618,9 @@ impl Table {
                     continue;
                 }
             }
-            // Attack the foe in reach with the fewest Hit Points. A healer keeps its spell slots
-            // for healing.
-            let healer = options.iter().any(|o| {
-                o.spell
-                    .as_ref()
-                    .is_some_and(|sp| HEALING_SPELLS.contains(&sp.id.as_str()))
-            });
-            let hp_of = |h: &Handle| {
-                foes.iter()
-                    .find(|f| &f.handle == h)
-                    .map_or(u32::MAX, |f| f.hp)
-            };
-            let attack = options
-                .iter()
-                .filter(|o| harms(o) && !(healer && o.cost.spell_slot.is_some()))
-                .flat_map(|o| {
-                    o.targets
-                        .iter()
-                        .filter(|t| {
-                            t.side == Side::Hostile && t.in_range && hp_of(&t.handle) != u32::MAX
-                        })
-                        .map(move |t| (o, t.handle.clone()))
-                })
-                .min_by_key(|(o, t)| (hp_of(t), u8::from(o.spell.is_some())));
+            // Attack the foe in reach with the fewest Hit Points.
+            let hp_of = |h: &Handle| foes.iter().find(|f| &f.handle == h).map(|f| f.hp);
+            let attack = best_attack(&options, hp_of);
             if let Some((option, target)) = attack
                 && self.attempt(&mut used, actor, prompt_id, option, vec![target], false)
             {
@@ -640,11 +635,7 @@ impl Table {
             }
             // Walk toward the nearest foe as far as movement allows, unless a ranged option
             // already reaches one.
-            let reach_ranged = options.iter().filter(|o| harms(o)).any(|o| {
-                o.targets
-                    .iter()
-                    .any(|t| t.side == Side::Hostile && t.in_range)
-            });
+            let reach_ranged = attack_in_reach(&options, hp_of);
             if budget.movement_ft >= 5 && budget.action > 0 && !reach_ranged && walks < 2 {
                 walks += 1;
                 let nearest = foes
@@ -735,6 +726,63 @@ impl Table {
         }
         false
     }
+}
+
+/// The attack to make: on the foe in reach (`hp_of` knows its Hit Points) with the fewest Hit
+/// Points, a weapon before an unarmed strike, then before a spell. A healer keeps its spell slots
+/// for healing.
+fn best_attack(
+    options: &[ActionOption],
+    hp_of: impl Fn(&Handle) -> Option<u32>,
+) -> Option<(&ActionOption, Handle)> {
+    let hp_of = &hp_of;
+    usable_attacks(options)
+        .flat_map(move |o| {
+            o.targets
+                .iter()
+                .filter(|t| t.side == Side::Hostile && t.in_range)
+                .filter_map(move |t| hp_of(&t.handle).map(|hp| (o, t.handle.clone(), hp)))
+        })
+        .min_by_key(|(o, _, hp)| (*hp, u8::from(unarmed(o)), u8::from(o.spell.is_some())))
+        .map(|(o, t, _)| (o, t))
+}
+
+/// Whether an option strikes unarmed: the plain Unarmed Strike, or a feature's attack made with
+/// no weapon (Torva's Reckless Attack lists one per weapon, and one unarmed).
+fn unarmed(option: &ActionOption) -> bool {
+    option.action.ends_with(".unarmed_attack") || option.name.ends_with("(Unarmed)")
+}
+
+/// Whether some attack `best_attack` would make reaches a foe from here, so walking can wait.
+fn attack_in_reach(options: &[ActionOption], hp_of: impl Fn(&Handle) -> Option<u32>) -> bool {
+    best_attack(options, hp_of).is_some()
+}
+
+/// The options that harm a foe and that the actor would spend on it: a healer's spell slots go to
+/// healing.
+fn usable_attacks(options: &[ActionOption]) -> impl Iterator<Item = &ActionOption> {
+    let healer = options.iter().any(|o| {
+        o.spell
+            .as_ref()
+            .is_some_and(|sp| HEALING_SPELLS.contains(&sp.id.as_str()))
+    });
+    options
+        .iter()
+        .filter(move |o| harms(o) && !(healer && o.cost.spell_slot.is_some()))
+}
+
+/// Whether the DM takes a surrender now: the engine shows one available, and every creature that
+/// would yield is a goblin. A wolf fights on (`prose/s3_mill_yard.md`).
+fn takes_surrender(encounters: &[EncounterView], creatures: &[CreatureFull]) -> bool {
+    encounters.iter().any(|e| {
+        e.running
+            && e.surrender_available
+            && e.surrendering.iter().all(|h| {
+                creatures
+                    .iter()
+                    .any(|c| &c.handle == h && c.name.contains("Goblin"))
+            })
+    })
 }
 
 /// The option that heals `target` from here, and whether it is a potion: a healing spell first.
@@ -841,5 +889,81 @@ fn variant_name(fight: &FightResult) -> String {
         "plain".into()
     } else {
         fight.variant.join(" + ")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Response `line` (1-based) of a conformance fixture.
+    fn fixture_response(fixture: &str, line: usize) -> Response {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../contract/fixtures")
+            .join(fixture);
+        let text = std::fs::read_to_string(path).unwrap();
+        let exchange: serde_json::Value =
+            serde_json::from_str(text.lines().nth(line - 1).unwrap()).unwrap();
+        serde_json::from_value(exchange["response"].clone()).unwrap()
+    }
+
+    fn options_at(fixture: &str, line: usize) -> Vec<ActionOption> {
+        match fixture_response(fixture, line).result {
+            Some(CommandResult::LegalActions { options, .. }) => options,
+            other => panic!("not a legal_actions result: {other:?}"),
+        }
+    }
+
+    fn any_foe(_: &Handle) -> Option<u32> {
+        Some(7)
+    }
+
+    /// Torva next to a goblin swings her greataxe, not her fist, though both hit the same foe
+    /// (Copilot on table #153; `m4_party.jsonl` line 15).
+    #[test]
+    fn a_weapon_beats_an_unarmed_strike() {
+        let options = options_at("m4_party.jsonl", 15);
+        let (option, _) = best_attack(&options, any_foe).expect("a goblin in reach");
+        assert!(
+            option.option_id.0.ends_with("greataxe"),
+            "{:?}",
+            option.option_id
+        );
+    }
+
+    /// A healer whose only attack in reach costs a spell slot keeps it for healing, and walks
+    /// instead: the walk check counts the same attacks as the pick (Copilot on table #153).
+    #[test]
+    fn a_healer_with_only_a_slot_spell_in_reach_walks() {
+        let mut options = options_at("m4_party.jsonl", 22);
+        for option in &mut options {
+            let reaches = option.option_id.0.starts_with("cast/guiding_bolt");
+            for target in &mut option.targets {
+                target.in_range = reaches;
+            }
+        }
+        assert!(best_attack(&options, any_foe).is_none());
+        assert!(!attack_in_reach(&options, any_foe));
+    }
+
+    /// The DM takes a goblin's surrender, never a wolf's (Copilot on table #153).
+    #[test]
+    fn only_goblins_surrender() {
+        let Some(CommandResult::GetState {
+            state:
+                State::Dm {
+                    encounters,
+                    mut creatures,
+                    ..
+                },
+        }) = fixture_response("encounter.jsonl", 21).result
+        else {
+            panic!("the DM's state");
+        };
+        assert!(takes_surrender(&encounters, &creatures));
+        for creature in &mut creatures {
+            creature.name = "Wolf".into();
+        }
+        assert!(!takes_surrender(&encounters, &creatures));
     }
 }
