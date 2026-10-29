@@ -20,3 +20,12 @@ export class TurnTimeout extends Error {}
  * (party talk R1, AGT-34). The session goes on, as after a timeout.
  */
 export class TurnCancelled extends TurnTimeout {}
+
+/**
+ * A turn that failed or timed out after the SDK lost its connection to the API (a retry with no HTTP
+ * response). The decision falls back like any failed turn; three in a row stop the run (M7 design §3.1).
+ */
+export class ConnectionLost extends Error {}
+
+/** Model wakes kept failing with no connection (M7 design §3.1): the run stops, and counts neither way. */
+export class ModelOffline extends Error {}

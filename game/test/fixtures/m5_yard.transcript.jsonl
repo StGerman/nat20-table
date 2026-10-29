@@ -688,7 +688,7 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":390}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is no longer prone.","rolls":[],"log_head":390}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":390}
-{"at":"t","speaker":"bren","channel":"run","kind":"retry","text":"bren's choice was not accepted: Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":390}
+{"at":"t","speaker":"bren","channel":"run","kind":"retry","text":"bren's choice was not accepted: Not enough movement left this turn to get next to that creature.","rolls":[],"log_head":390,"decision":"p63"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":392}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":392}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":392}

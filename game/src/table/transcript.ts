@@ -2,7 +2,7 @@
 // cites (M6 spec §3.5, §3.6). `nat20-audit` (crates/nat20-duel/src/game_audit.rs) checks it against
 // the session log.
 import { appendFileSync } from "node:fs";
-import type { Channel, TranscriptRecord } from "./types.ts";
+import type { Channel, FallbackCause, TranscriptRecord } from "./types.ts";
 
 /** Every `[rN]` the text cites, in order. */
 export function citedRolls(text: string): string[] {
@@ -22,7 +22,16 @@ export class Transcript {
     this.clock = clock;
   }
 
-  add(entry: { speaker: string; channel: Channel; kind: TranscriptRecord["kind"]; text: string; human?: boolean; to?: string }): TranscriptRecord {
+  add(entry: {
+    speaker: string;
+    channel: Channel;
+    kind: TranscriptRecord["kind"];
+    text: string;
+    human?: boolean;
+    to?: string;
+    cause?: FallbackCause;
+    decision?: string;
+  }): TranscriptRecord {
     const record: TranscriptRecord = {
       at: this.clock(),
       speaker: entry.speaker,
@@ -33,6 +42,8 @@ export class Transcript {
       log_head: this.logHead(),
       ...(entry.human ? { human: true } : {}),
       ...(entry.to ? { to: entry.to } : {}),
+      ...(entry.cause ? { cause: entry.cause } : {}),
+      ...(entry.decision ? { decision: entry.decision } : {}),
     };
     this.records.push(record);
     if (this.file) appendFileSync(this.file, JSON.stringify(record) + "\n");

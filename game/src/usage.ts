@@ -46,6 +46,11 @@ const PRICES: Record<string, { input: number; output: number; cacheRead: number 
   "claude-haiku-5-5": { input: 0.1, output: 0.5, cacheRead: 0.01 },
 };
 
+/** Whether the price table lists `model`: a run's settings refuse one it doesn't (M7 spec §4.1). */
+export function priced(model: string): boolean {
+  return Object.keys(PRICES).some((id) => model.startsWith(id));
+}
+
 /** The API-equivalent price of a turn; 0 for a model the table doesn't list. */
 export function apiEquivalentUsd(
   model: string,

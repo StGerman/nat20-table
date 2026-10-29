@@ -51,3 +51,24 @@ cargo run -p nat20-duel --bin nat20-audit -- --pack <the scenario pack> runs/<ti
 ```
 
 It audits every roll on every channel against the log as that channel's listener saw it, and scans what each seat was given for anything its player may not know (spec §3.5, decision 0033). It exits 1 on any problem and prints each one.
+
+## Part 3: the Milestone 7 runs
+
+The whole adventure, Scene 1 to Scene 6, in one run (M7 spec §4.1). Before each run: `git pull`, `npm ci`, `npm run preflight` (it also says when the Mac is on battery; plug it in, since a run can take up to two hours).
+
+| Run | Command | You play? |
+|---|---|---|
+| The cheap setup (DM Sonnet 5.5 medium, AI players Haiku 5.5 high, Russian): discovery, iteration and the unattended run | `npm run play:cheap` | No |
+| The demo setup (DM Opus 5.5 medium, AI players Sonnet 5.5 low, Russian): your acceptance run | `npm run play:demo` | **Yes**, in a terminal |
+| Rehearsal with no model, a minute or two | `npm run play:full -- --dm scripted --players scripted` | No |
+
+A profile is a JSON file in `game/profiles/` (`--profile <name>`), or your own anywhere (`--profile ~/.nat20/mine.json`). Any flag typed after the command wins over the profile: `npm run play:cheap -- --dm-model claude-opus-5-5`. A profile with a typo, a bad value or a model the price table doesn't know is refused before the engine starts. `-- --dry-run` prints the DM's prompt and every resolved setting with where it came from.
+
+The run keeps the Mac awake (`caffeinate`) and stops by itself at 120 minutes, after 12 explore rounds in a row that changed nothing in the engine (a stall), at the plan's usage limit, when three model calls in a row lose the network, or at Ctrl+C (a second Ctrl+C exits at once). With nobody at the keyboard it prints one line when a scene starts or ends and when a fight ends.
+
+It writes `runs/full-<time>/` with `run.json` (the commit and whether the checkout had changes, the engine's core revision and contract, every setting and where it came from, the seed, the seats, and each scene's start, end and combat rounds), then the audit and leak scan (`audit.json`) and the verdict (`verdict.json`, and a block at the top of `report.md`): PASS, FAIL with the rows that failed, VOID when something outside the game cut it short, or PENDING while a check is still open. Until the narration check lands (AGT-9), row 3 keeps every run PENDING. To recompute the verdict after answering flags in `confirmations.json`, or to finish the stages of a run cut off in them:
+
+```bash
+npm run runs:verdict -- runs/full-<time>
+npm run runs:finish -- runs/full-<time>
+```
