@@ -33,7 +33,13 @@ function matchesFixture(name: string, runDir: string): void {
     const actual = readFileSync(path.join(runDir, run), "utf8");
     const file = path.join(FIXTURES, `${name}.${run}`);
     if (process.env.RECORD_FIXTURES || !existsSync(file)) writeFileSync(file, actual);
-    assert.equal(actual, readFileSync(file, "utf8"), `${name}.${run} changed; RECORD_FIXTURES=1 rewrites it`);
+    const expected = readFileSync(file, "utf8");
+    if (actual === expected) continue;
+    // A whole-file diff is cut short in the test output: name the first line that differs.
+    const [a, e] = [actual.split("\n"), expected.split("\n")];
+    const at = a.findIndex((line, i) => line !== e[i]);
+    const line = at < 0 ? e.length : at;
+    assert.fail(`${name}.${run} changed at line ${line + 1}; RECORD_FIXTURES=1 rewrites it\n  actual:   ${a[line] ?? "(end)"}\n  expected: ${e[line] ?? "(end)"}`);
   }
 }
 
