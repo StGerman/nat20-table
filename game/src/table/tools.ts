@@ -403,6 +403,10 @@ export interface ScenePasses {
   insteadOf(sceneId: string): string | undefined;
   /** Called once the scene loaded instead of `sceneId` is in. */
   passedOver(sceneId: string, next: string): void;
+  /** The run's last scene: the adventure ends only after it has loaded (or with the whole party down). */
+  finale?: string;
+  /** The scene loaded last. */
+  current?(): string | undefined;
 }
 
 /**
@@ -639,9 +643,22 @@ export class DmTools {
     return this.table.remember(fact);
   }
 
+  /** Whether every party member is at 0 Hit Points: the adventure may end early then. */
+  private async partyDown(): Promise<boolean> {
+    const r = await this.table.engine.request("dm", { cmd: "get_state" });
+    const state = r.result?.cmd === "get_state" ? r.result.state : undefined;
+    if (state?.view !== "dm") return false;
+    const party = state.creatures.filter((c) => c.side === "party");
+    return party.length > 0 && party.every((c) => c.hp === 0);
+  }
+
   /** The adventure's last exit has fired: the closing narration, then the run ends. */
   async endAdventure(text: string): Promise<ToolOutcome> {
     if (this.table.inCombat) return notNow("finish the fight first");
+    const finale = this.passes?.finale;
+    if (finale && this.passes?.current?.() !== finale && !(await this.partyDown())) {
+      return notNow(`the adventure ends only after its last scene, ${finale}: follow the scene's exit with load_scene first`);
+    }
     const said = await this.table.narrate(text);
     if (said.ok) this.table.end("the adventure is over");
     return said.ok ? { ok: true, text: "the adventure is over" } : said;

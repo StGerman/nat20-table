@@ -254,6 +254,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     dm,
     players,
     onScene: plan.onScene,
+    // The adventure ends only after the run's last scene has loaded (or with the party down).
+    finale: played.at(-1),
     maxSteps: flags["max-steps"],
     // The situation panel (AGT-36) is drawn only at the terminal.
     situation: ink !== undefined,
