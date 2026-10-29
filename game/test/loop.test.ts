@@ -39,7 +39,8 @@ function matchesFixture(name: string, runDir: string): void {
     const [a, e] = [actual.split("\n"), expected.split("\n")];
     const at = a.findIndex((line, i) => line !== e[i]);
     const line = at < 0 ? e.length : at;
-    assert.fail(`${name}.${run} changed at line ${line + 1}; RECORD_FIXTURES=1 rewrites it\n  actual:   ${a[line] ?? "(end)"}\n  expected: ${e[line] ?? "(end)"}`);
+    const around = (lines: string[]) => lines.slice(Math.max(0, line - 12), line + 4).map((l, i) => `    ${Math.max(0, line - 12) + i + 1}: ${l}`).join("\n");
+    assert.fail(`${name}.${run} changed at line ${line + 1}; RECORD_FIXTURES=1 rewrites it\n  actual:\n${around(a)}\n  expected:\n${around(e)}`);
   }
 }
 
