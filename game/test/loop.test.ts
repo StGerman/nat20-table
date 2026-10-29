@@ -26,7 +26,7 @@ const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtur
  * A run's files a game fixture keeps: what the audit and the leak scan read (step 6,
  * `crates/nat20-duel/tests/game_fixtures.rs`).
  */
-const RUN_FILES = ["transcript.jsonl", SESSION_LOG, "inputs.jsonl"];
+const RUN_FILES = [SESSION_LOG, "transcript.jsonl", "inputs.jsonl"];
 
 /** Compares a run's files with its fixture (`<name>.<file>`), or writes the fixture when recording. */
 function matchesFixture(name: string, runDir: string, more: string[] = []): void {
@@ -34,7 +34,14 @@ function matchesFixture(name: string, runDir: string, more: string[] = []): void
     const actual = readFileSync(path.join(runDir, run), "utf8");
     const file = path.join(FIXTURES, `${name}.${run}`);
     if (process.env.RECORD_FIXTURES || !existsSync(file)) writeFileSync(file, actual);
-    assert.equal(actual, readFileSync(file, "utf8"), `${name}.${run} changed; RECORD_FIXTURES=1 rewrites it`);
+    const expected = readFileSync(file, "utf8");
+    if (actual === expected) continue;
+    // A whole-file diff is cut short in the test output: name the first line that differs.
+    const [a, e] = [actual.split("\n"), expected.split("\n")];
+    const at = a.findIndex((line, i) => line !== e[i]);
+    const line = at < 0 ? e.length : at;
+    const around = (lines: string[]) => lines.slice(Math.max(0, line - 12), line + 4).map((l, i) => `    ${Math.max(0, line - 12) + i + 1}: ${l}`).join("\n");
+    assert.fail(`${name}.${run} changed at line ${line + 1}; RECORD_FIXTURES=1 rewrites it\n  actual:\n${around(a)}\n  expected:\n${around(e)}`);
   }
 }
 
@@ -143,13 +150,13 @@ test("the human, scripted, plays the Milestone 3 trail across five scenes, and t
 
 test("the scripted table plays The Silent Mill from Scene 1 to 6, and the transcript replays exactly (AGT-39)", async () => {
   // The real pack, chained scene to scene by the scripted DM; the AI players heal a downed ally
-  // first. Seed 213 is one where the party gets through the cellar (most seeds don't: MON-10).
+  // first. Seed 350 is one where the party gets through the cellar (most seeds don't: MON-10).
   const pack = path.join(REPO, "scenarios/the_silent_mill");
   const scenes = readPack(pack).adventure.scenes;
   const cast = castParty(pack);
   const party = { ...cast, human: cast.human! };
   const t = await testTable({
-    seed: 213,
+    seed: 350,
     pack,
     players: party.ai,
     seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai),
