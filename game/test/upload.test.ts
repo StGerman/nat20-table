@@ -126,6 +126,72 @@ test("a folder holding a credential is refused before anything is copied", () =>
   }
 });
 
+test("an API key assignment is found with plain, escaped or doubly escaped quotes", () => {
+  const { root, runDir } = setup();
+  try {
+    const value = "abcdefghijklmnopqrstuvwxyz123456";
+    for (const typed of [`OPENAI_API_KEY="${value}"`, `OPENAI_API_KEY='${value}'`, `{"OPENAI_API_KEY": "${value}"}`, `OPENAI_API_KEY=${value}`]) {
+      // inputs.jsonl holds typed text JSON-escaped, and a nested record escapes it again.
+      for (const line of [JSON.stringify({ text: typed }), JSON.stringify({ text: JSON.stringify({ text: typed }) })]) {
+        writeFileSync(path.join(runDir, "inputs.jsonl"), `${line}\n`);
+        assert.equal(findSecret(runDir)?.what, "an API key assignment", line);
+      }
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a clone made for another runs repo is refused, not pushed to", () => {
+  const { root, remote, runDir, clone } = setup();
+  try {
+    assert.ok(uploadRun(runDir, { repo: remote, clone }).ok);
+    const other = path.join(root, "other.git");
+    git(root, "init", "--quiet", "--bare", "--initial-branch=main", other);
+    const refused = uploadRun(runDir, { repo: other, clone });
+    assert.equal(refused.ok, false);
+    assert.match(refused.ok ? "" : refused.why, /belongs to .*runs\.git, not .*other\.git: point NAT20_RUNS_CLONE at another folder/);
+    assert.equal(git(other, "rev-parse", "--verify", "--quiet", "main").status, 1, "nothing reached the other repo");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a relative path to the runs repo is read from where the command runs", () => {
+  const { root, remote, runDir, clone } = setup();
+  const cwd = process.cwd();
+  mkdirSync(path.join(clone, "nested"), { recursive: true });
+  try {
+    process.chdir(root);
+    // The clone's parent folder is not where the command runs: git would look for the path there.
+    const result = uploadRun(runDir, { repo: path.basename(remote), clone: path.join(clone, "nested", "clone") });
+    assert.ok(result.ok, result.ok ? "" : result.why);
+    assert.ok(remoteFiles(remote, path.basename(runDir)).includes("run.json"));
+  } finally {
+    process.chdir(cwd);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the repo's confirmations are never replaced by the Mac's older copy", () => {
+  const { root, remote, runDir, clone } = setup();
+  try {
+    writeFileSync(path.join(runDir, CONFIRMATIONS_JSON), `{"old":true}\n`);
+    assert.ok(uploadRun(runDir, { repo: remote, clone }).ok);
+    const other = path.join(root, "other");
+    git(root, "clone", "--quiet", remote, other);
+    writeFileSync(path.join(other, "runs", path.basename(runDir), CONFIRMATIONS_JSON), `{"new":true}\n`);
+    git(other, "commit", "--quiet", "-am", "confirmations");
+    git(other, "push", "--quiet");
+    writeFileSync(path.join(runDir, "report.md"), "# report\n");
+    assert.ok(uploadRun(runDir, { repo: remote, clone }).ok);
+    const kept = git(remote, "show", `main:runs/${path.basename(runDir)}/${CONFIRMATIONS_JSON}`).stdout;
+    assert.equal(kept, `{"new":true}\n`);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("the destination is --upload, else NAT20_RUNS_REPO, and none with --no-upload; owner/repo is on GitHub", () => {
   assert.equal(uploadTarget({ upload: "a/b" }, { NAT20_RUNS_REPO: "c/d" }), "a/b");
   assert.equal(uploadTarget({}, { NAT20_RUNS_REPO: "c/d" }), "c/d");
