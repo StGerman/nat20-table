@@ -12,8 +12,8 @@ export type CombatPolicy = (tools: PlayerTools) => Promise<void>;
 
 /**
  * The default fight: the first option that harms a hostile creature already in reach; with none in
- * reach, walk up to the nearest hostile it can see (dashing first if it is too far) and look again;
- * then end the turn.
+ * reach, walk up to the nearest hostile it can see (dashing and walking on if it is still out of
+ * reach) and look again; then end the turn.
  */
 export const attackNearest: CombatPolicy = async (tools) => {
   let pick = await nearestAttack(tools, true);
@@ -25,8 +25,14 @@ export const attackNearest: CombatPolicy = async (tools) => {
       : undefined;
     if (hostile) {
       const to = { kind: "creature", handle: hostile.handle } as const;
-      if (!(await tools.move(to)).ok && (await tools.submitDecision({ option_id: "dash" })).ok) await tools.move(to);
-      pick = await nearestAttack(tools, true);
+      // A walk that runs out of movement still goes part of the way: Dash and walk on if no
+      // attack is in reach yet.
+      const walked = (await tools.move(to)).ok;
+      pick = walked ? await nearestAttack(tools, true) : undefined;
+      if (!pick && (await tools.submitDecision({ option_id: "dash" })).ok) {
+        await tools.move(to);
+        pick = await nearestAttack(tools, true);
+      }
     }
   }
   if (pick) await tools.submitDecision(pick);
@@ -217,14 +223,16 @@ export function yardDm(encounter = "yard_fight"): ScriptedDm {
 
 /**
  * Offers the human the surrender the engine shows available, of the creatures it names, whenever
- * there is one (AGT-30, decision D4: a scripted run gets offers, and the scripted human accepts).
- * With no human at the table, it accepts the surrender itself.
+ * there is one and `may` allows every one of them by name (AGT-30, decision D4: a scripted run
+ * gets offers, and the scripted human accepts). With no human at the table, it accepts the
+ * surrender itself.
  */
-export async function offerAnySurrender(tools: DmTools): Promise<void> {
+export async function offerAnySurrender(tools: DmTools, may: (name: string) => boolean = () => true): Promise<void> {
   const state = ((await tools.getState()).data as { state?: State } | undefined)?.state;
   if (state?.view !== "dm") return;
   const surrendering = state.encounters.find((e) => e.running && e.surrender_available)?.surrendering ?? [];
-  if (surrendering.length === 0) return;
+  const named = (h: string) => state.creatures.find((c) => c.handle === h)?.name ?? h;
+  if (surrendering.length === 0 || !surrendering.every((h) => may(named(h)))) return;
   // With no human at the table, a surrender is the DM's to accept (M7 spec §4.2, AGT-40).
   if (tools.human) await tools.offerSurrender(surrendering);
   else await tools.endCombat("surrender");
@@ -271,12 +279,21 @@ export interface ChainScene {
   captives: boolean;
   /** Whether the party takes a short rest when it opens. */
   rest: boolean;
+  /** Whether its checks question a prisoner: it comes after an exit that carries captives. */
+  interrogation: boolean;
 }
+
+/**
+ * Who can be questioned as a prisoner. The pack has no creature types on the wire, and the Silent
+ * Mill's only foes that speak are its goblins; its wolves and rats are beasts (SRD 5.2.1).
+ */
+const SPEAKS = /goblin/i;
 
 /**
  * The pack's scenes as `chainDm` plays them: each scene's first fight; an exploration scene's every
  * check and any other scene's first one (one interrogation, not two); captives where the exit says
- * so; a short rest in a scene that comes straight after a fight scene and holds no fight.
+ * so; a short rest in a scene that comes straight after a fight scene and holds no fight; and an
+ * interrogation in a scene that comes after an exit carrying captives.
  */
 export function chainScenes(
   scenes: Array<{ id: string; beat: string; checks: Array<{ check: string }>; encounters: Array<{ encounter: string }>; exits: Array<{ carry: string }> }>,
@@ -287,6 +304,7 @@ export function chainScenes(
     checks: (s.beat === "exploration" ? s.checks : s.checks.slice(0, 1)).map((c) => c.check),
     captives: s.exits.some((e) => e.carry === "party_and_captives"),
     rest: i > 0 && scenes[i - 1].beat === "fight" && s.encounters.length === 0,
+    interrogation: i > 0 && scenes[i - 1].exits.some((e) => e.carry === "party_and_captives"),
   }));
 }
 
@@ -294,7 +312,8 @@ export function chainScenes(
  * A DM for the whole adventure without a model (M7 spec §4.6, AGT-39): it opens each scene with
  * one plain line, short-rests the party where the scene says so (one Hit Point Die for each member
  * down any Hit Points; one at 0 can't rest), asks the scene's checks of `checker` (the human's
- * character, or the first party member still up), and starts its fight;
+ * character, or the first party member still up; an interrogation only of a prisoner who can
+ * talk), and starts its fight;
  * it narrates every part with one plain line and offers any surrender the engine shows available;
  * out of a fight, its first table turn takes the party, and any captive the exit carries, on to the
  * next scene, and after the last scene it ends the adventure, as it does when a fight leaves nobody
@@ -320,8 +339,10 @@ export function chainDm(scenes: ChainScene[], party: Handle[], checker: Handle):
         const hurt = state.creatures.filter((c) => up.includes(c.handle) && c.hp < c.hp_max);
         await tools.shortRest(up, hurt.map((c) => ({ handle: c.handle, count: 1 })));
       }
+      // A prisoner's questioning needs a prisoner who can talk (the scene's prose: without one, nobody asks).
+      const prisoner = state.creatures.some((c) => c.side === "neutral" && c.life_state === "conscious" && SPEAKS.test(c.name));
       const asked = up.includes(checker) ? checker : up[0];
-      if (asked) for (const check of scene.checks) await tools.requestCheck(asked, { kind: "scenario", check_id: check });
+      if (asked && (!scene.interrogation || prisoner)) for (const check of scene.checks) await tools.requestCheck(asked, { kind: "scenario", check_id: check });
       if (scene.fight) await tools.startCombat(scene.fight);
     },
     table_turn: async (tools) => {
@@ -336,7 +357,8 @@ export function chainDm(scenes: ChainScene[], party: Handle[], checker: Handle):
       await tools.loadScene(next.id, [...party, ...captives]);
     },
     narrate: async (tools) => {
-      await offerAnySurrender(tools);
+      // Only a foe that speaks begs for mercy; a wolf fights on (prose/s3_mill_yard.md).
+      await offerAnySurrender(tools, (name) => SPEAKS.test(name));
       await tools.narrate("Steel and teeth flash.");
     },
     combat_over: async (tools) => {
