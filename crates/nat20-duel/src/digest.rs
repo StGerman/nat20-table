@@ -377,6 +377,7 @@ pub fn digest_run(
     let mut awaiting = Value::Null;
     let mut diverged = None;
     let mut replayed = 0;
+    let mut reached = 0;
     for (index, entry) in lines.iter().enumerate() {
         let recorded = &entry["response"];
         let head = recorded["log_head"].as_u64().unwrap_or(0);
@@ -401,9 +402,19 @@ pub fn digest_run(
             break;
         }
         awaiting = response["awaiting"].clone();
+        reached = response["log_head"].as_u64().unwrap_or(reached);
     }
     if diverged.is_none() {
         while next < said.len() {
+            // A log cut short ends before the moment a later line was said: that line has no state to judge.
+            if said[next].log_head > reached {
+                diverged = Some(format!(
+                    "the engine log ends at log head {reached}, before narration line {} at log head {}",
+                    next + 1,
+                    said[next].log_head
+                ));
+                break;
+            }
             digests.push(replay.digest(&party, &awaiting, said[next], next + 1));
             next += 1;
         }

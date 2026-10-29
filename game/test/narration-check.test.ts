@@ -11,8 +11,9 @@ import { REPO } from "../src/paths.ts";
 import type { SessionConfig, TurnSession } from "../src/agents/sdk-session.ts";
 import { NARRATION_DIGEST, readDigest } from "../src/check/digest.ts";
 import { batches, JUDGE_CHOICE, JUDGE_PROMPT, ModelJudge, ScriptedJudge, type JudgeFlag } from "../src/check/judge.ts";
-import { narrationCheck } from "../src/check/narration.ts";
-import { NARRATION_CHECK } from "../src/play/verdict.ts";
+import { narrationCheck, PREVIOUS_CHECK } from "../src/check/narration.ts";
+import { CONFIRMATIONS_JSON, NARRATION_CHECK } from "../src/play/verdict.ts";
+import type { DigestRecord, DigestRun } from "../src/check/digest.ts";
 
 const PACK = path.join(REPO, "scenarios/the_silent_mill");
 const FIXTURES = path.join(REPO, "game/test/fixtures");
@@ -147,4 +148,46 @@ test("the judge's prompt keeps to spec §4.3: the kinds, the three inventory fla
     const first = batches(readDigest(dir))[0];
     assert.deepEqual(first.lines, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   });
+});
+
+test("a check that fails after an earlier one leaves no check behind, so row 3 goes back to pending (AGT-9)", async () => {
+  const dir = plantedRun();
+  assert.ok((await narrationCheck(PACK, dir, new ScriptedJudge())).ok);
+  assert.ok(existsSync(path.join(dir, NARRATION_CHECK)));
+  const failing = { judge: async () => Promise.reject(new Error("offline")) };
+  const check = await narrationCheck(PACK, dir, failing);
+  assert.equal(check.ok, false);
+  assert.ok(!existsSync(path.join(dir, NARRATION_CHECK)), "the old check is not the verdict's any more");
+  assert.ok(existsSync(path.join(dir, PREVIOUS_CHECK)), "it is kept aside for the next attempt's answers");
+  assert.ok((await narrationCheck(PACK, dir, new ScriptedJudge())).ok);
+  assert.ok(existsSync(path.join(dir, NARRATION_CHECK)));
+  assert.ok(!existsSync(path.join(dir, PREVIOUS_CHECK)));
+});
+
+test("an answer stays with its flag only while a new check reports the same claim under that id (AGT-9)", async () => {
+  const dir = plantedRun();
+  assert.ok((await narrationCheck(PACK, dir, new ScriptedJudge())).ok);
+  const { adjacent, surrender } = planted(dir);
+  const position: JudgeFlag = { line: adjacent, claim: "Bren is next to a goblin", kind: "position", evidence_seq: [] };
+  const mercy: JudgeFlag = { line: surrender, claim: "a goblin surrenders", kind: "surrender", evidence_seq: [] };
+  assert.ok((await narrationCheck(PACK, dir, new ScriptedJudge([position, mercy]))).ok);
+  const answers = { [`n${adjacent}-1`]: { answer: "dismissed" }, [`n${surrender}-1`]: { answer: "confirmed" }, "refused:p7": { answer: "dismissed" } };
+  writeFileSync(path.join(dir, CONFIRMATIONS_JSON), JSON.stringify(answers));
+  // Run again: the same position claim, and another claim now holds the surrender line's first id.
+  const other: JudgeFlag = { line: surrender, claim: "goblin_3 is unhurt", kind: "hp", evidence_seq: [] };
+  assert.ok((await narrationCheck(PACK, dir, new ScriptedJudge([position, other, mercy]))).ok);
+  const kept = JSON.parse(readFileSync(path.join(dir, CONFIRMATIONS_JSON), "utf8"));
+  assert.deepEqual(Object.keys(kept).sort(), [`n${adjacent}-1`, "refused:p7"].sort(), "the surrender answer is dropped, not given to the hp claim");
+});
+
+test("lines said at one log head across a batch boundary carry their engine lines into the next batch (AGT-9)", () => {
+  const record = (line: number, log_head: number, engine_lines: string[]): DigestRecord => ({
+    line, text: `line ${line}`, channel: "table", log_head, scene: "s3", mode: "combat", round: 1, turn: null, combat_over: false,
+    creatures: [], fled: [], adjacent: [], nearest_foe_ft: [], foes_ft: {}, engine_lines, inventory: [],
+  });
+  const run = { party: [], digests: [record(1, 4, ["3: bren hits goblin_1"]), record(2, 9, ["8: goblin_1 misses bren"]), record(3, 9, [])] } as unknown as DigestRun;
+  const [first, second] = batches(run, 2);
+  assert.match(first.text, /8: goblin_1 misses bren/);
+  assert.match(second.text, /Engine lines from just before[^\n]*\n {2}8: goblin_1 misses bren\nNo engine lines since the line before\./);
+  assert.doesNotMatch(second.text, /3: bren hits goblin_1/, "only the lines at the same log head carry");
 });

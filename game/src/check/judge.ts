@@ -142,8 +142,12 @@ function partyBlock(run: DigestRun): string {
     .join("\n");
 }
 
-/** One line and its state, as the judge reads it. Inventory in full when `full`, else only what changed since `before`. */
-export function lineBlock(d: DigestRecord, full: boolean, before: DigestRecord | undefined): string {
+/**
+ * One line and its state, as the judge reads it. Inventory in full when `full`, else only what
+ * changed since `before`. `carried` are engine lines shown with earlier lines at the same log head
+ * in the batch before: a fresh session would not see them otherwise.
+ */
+export function lineBlock(d: DigestRecord, full: boolean, before: DigestRecord | undefined, carried: string[] = []): string {
   const out = [`## Line ${d.line} (${d.channel === "table" ? "to the table" : d.channel.replace("to:", "to ")})`, d.text, ""];
   const where = [`scene ${d.scene ?? "none"}`, d.mode === "combat" ? `combat round ${d.round ?? "?"}` : (d.mode ?? "explore"), d.turn ? `waiting on ${d.turn}` : "", d.combat_over ? "a fight just ended" : ""].filter(Boolean);
   out.push(`State: ${where.join(", ")}.`);
@@ -158,6 +162,10 @@ export function lineBlock(d: DigestRecord, full: boolean, before: DigestRecord |
   if (foes.length > 0) {
     out.push("Feet from each party member to each foe:");
     for (const [member, each] of foes) out.push(`- ${member}: ${Object.entries(each).map(([f, ft]) => `${f} ${ft}`).join(", ")}`);
+  }
+  if (carried.length > 0) {
+    out.push("Engine lines from just before, shown with the lines before this one in the last batch (nothing happened between them and this line):");
+    for (const l of carried) out.push(`  ${l}`);
   }
   out.push(d.engine_lines.length > 0 ? "Engine lines since the line before:" : "No engine lines since the line before.");
   for (const l of d.engine_lines) out.push(`  ${l}`);
@@ -178,7 +186,10 @@ export function batches(run: DigestRun, size = BATCH_LINES): Array<{ lines: numb
   const out: Array<{ lines: number[]; text: string }> = [];
   for (let at = 0; at < run.digests.length; at += size) {
     const part = run.digests.slice(at, at + size);
-    const blocks = part.map((d, i) => lineBlock(d, i === 0, i === 0 ? undefined : part[i - 1]));
+    // Lines said at the same log head share one moment: carry their engine lines across the batch boundary.
+    const carried: string[] = [];
+    for (let k = at - 1; k >= 0 && run.digests[k].log_head === part[0].log_head; k--) carried.unshift(...run.digests[k].engine_lines);
+    const blocks = part.map((d, i) => lineBlock(d, i === 0, i === 0 ? undefined : part[i - 1], i === 0 ? carried : []));
     out.push({ lines: part.map((d) => d.line), text: [`# The party`, partyBlock(run), "", ...blocks].join("\n\n") });
   }
   return out;
