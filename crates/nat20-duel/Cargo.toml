@@ -26,3 +26,7 @@ path = "src/bin/duel.rs"
 [[bin]]
 name = "nat20-audit"
 path = "src/bin/audit.rs"
+
+[[bin]]
+name = "nat20-balance"
+path = "src/bin/balance.rs"
