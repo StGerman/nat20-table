@@ -19,7 +19,7 @@ use nat20_api_contract::{
     Targeting, TurnBudget, UnavailableOption, Visibility,
 };
 use nat20_core::hecs::{self, Entity};
-use nat20_core::parry3d::na::Point3;
+use nat20_core::parry3d::{na::Point3, query::PointQuery};
 use nat20_core::{
     components::{
         actions::{
@@ -46,7 +46,7 @@ use nat20_core::{
         encounter::EncounterId,
         engine_state::EngineState,
         event::{Event as EngineEvent, EventKind as EngineKind},
-        geometry::WorldGeometry,
+        geometry::{WorldGeometry, WorldPath},
         prompt::PromptScopeId,
     },
     registry::registry::ItemsRegistry,
@@ -1502,7 +1502,7 @@ impl Game {
                 format!("{actor} is down and cannot move."),
             ));
         }
-        let (goal, anchor) = self.goal(entity, to, combat, partial)?;
+        let (goal, anchor, goal_in_reach) = self.goal(entity, to, combat, partial)?;
         let from = systems::geometry::get_foot_position(&self.engine.world, entity)
             .expect("scene creatures have a position");
         let route = systems::movement::path(&self.engine, entity, &goal, partial, combat).map_err(
@@ -1532,16 +1532,12 @@ impl Game {
         let end = if route.reaches_goal() || route.taken_path.points.is_empty() {
             full_end
         } else {
-            route
-                .taken_path
-                .points
-                .iter()
-                .rev()
-                .find(|p| systems::movement::is_free_spot(&self.engine, entity, p))
-                .copied()
+            self.last_free_spot(entity, &route.taken_path)
                 .unwrap_or(from)
         };
-        let reached = (end - full_end).norm() < 0.05;
+        // A creature goal can itself fall short of the creature: core cuts a partial path to a
+        // creature back to a free spot, and that spot is the goal then (`goal`).
+        let reached = (end - full_end).norm() < 0.05 && goal_in_reach;
         if (end - from).norm() < 0.05 && !reached {
             return Err(rejected(
                 RejectReason::InsufficientResource,
@@ -1647,9 +1643,9 @@ impl Game {
         to: &MoveTarget,
         combat: bool,
         partial: bool,
-    ) -> Result<(Point3<f32>, Option<String>), ApiError> {
+    ) -> Result<(Point3<f32>, Option<String>, bool), ApiError> {
         match to {
-            MoveTarget::Point { point } => Ok((to_core_point(*point), None)),
+            MoveTarget::Point { point } => Ok((to_core_point(*point), None, true)),
             MoveTarget::Anchor { anchor } => {
                 let found = self.scene.anchors.iter().find(|a| a.id == *anchor);
                 let Some(found) = found else {
@@ -1668,7 +1664,7 @@ impl Game {
                     }
                     return Err(e);
                 };
-                Ok((to_core_point(found.position_ft), Some(anchor.clone())))
+                Ok((to_core_point(found.position_ft), Some(anchor.clone()), true))
             }
             MoveTarget::Creature { handle } => {
                 let target = self.entity(&handle.0)?;
@@ -1682,11 +1678,12 @@ impl Game {
                     entity: EntityIdentifier::from_world(&self.engine.world, target),
                     point_on_entity: None,
                 };
+                let reach = uom::si::f32::Length::new::<uom::si::length::foot>(5.0);
                 let near = systems::movement::path_in_range_of_target(
                     &mut self.engine,
                     entity,
                     &target,
-                    uom::si::f32::Length::new::<uom::si::length::foot>(5.0),
+                    reach,
                     partial,
                     LineOfSight::ignore(),
                     combat,
@@ -1710,9 +1707,42 @@ impl Game {
                     .last()
                     .copied()
                     .unwrap_or(here);
-                Ok((end, None))
+                // Within reach the way core measures it: from the mover's shape standing there.
+                let target_point = target
+                    .position(&self.engine.world)
+                    .expect("a scene creature has a position");
+                let in_reach = systems::geometry::get_shape_at_point(
+                    &self.engine.world,
+                    &self.engine.geometry,
+                    entity,
+                    &end,
+                )
+                .is_some_and(|(shape, pose)| {
+                    shape.distance_to_point(&pose, &target_point, true)
+                        <= reach.get::<uom::si::length::meter>() + 0.01
+                });
+                Ok((end, None, in_reach))
             }
         }
+    }
+
+    /// The furthest point along `path` where `entity` could end its move, searched by distance
+    /// rather than by the path's corners: a straight walk has only its two ends, and the far one
+    /// may be another creature's space.
+    fn last_free_spot(&self, entity: Entity, path: &WorldPath) -> Option<Point3<f32>> {
+        const STEP_M: f32 = 0.25;
+        let start = *path.points.first()?;
+        let mut distance = path.length.get::<uom::si::length::meter>();
+        while distance > 0.0 {
+            let point = path.point_at_distance(uom::si::f32::Length::new::<
+                uom::si::length::meter,
+            >(distance))?;
+            if systems::movement::is_free_spot(&self.engine, entity, &point) {
+                return Some(point);
+            }
+            distance -= STEP_M;
+        }
+        Some(start)
     }
 
     /// Starts the scene encounter `encounter_id`: rolls initiative for its participants, the
@@ -4394,6 +4424,77 @@ mod tests {
 
         assert!(systems::effects::has_effect(&game.engine, held, &prone));
         assert!(!systems::effects::has_effect(&game.engine, free, &prone));
+    }
+
+    /// `crowded_yard` in combat with Bren to act first: Bren at 0, Maren 30 feet west, a goblin
+    /// 60 feet west.
+    fn crowded_yard() -> Game {
+        let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+        let scene = scene::read(&data, "crowded_yard").unwrap();
+        let start = |seed| {
+            crate::adapter::seed_dice(seed);
+            let Ok(mut game) = Game::load(None, &scene, &[]) else {
+                panic!("crowded_yard loads");
+            };
+            game.start_combat("yard_fight").unwrap();
+            game
+        };
+        let seed = (1..50)
+            .find(|seed| {
+                let game = start(*seed);
+                game.require_action_prompt(game.entity("bren").unwrap())
+                    .is_ok()
+            })
+            .expect("some seed gives Bren the first turn");
+        start(seed)
+    }
+
+    /// A partial move whose movement runs out in an ally's space stops short of the ally, at
+    /// the last free spot along the straight walk, instead of not moving at all (Copilot on
+    /// table #154): a straight walk's only corners are its two ends.
+    #[test]
+    fn a_partial_move_that_runs_out_in_an_allys_space_stops_before_it() {
+        let mut game = crowded_yard();
+        let far = MoveTarget::Point {
+            point: PointFt {
+                x_ft: -40.0,
+                y_ft: 0.0,
+                z_ft: 0.0,
+            },
+        };
+
+        let (_, _, reached) = game.move_to("bren", &far, true).unwrap();
+
+        assert!(!reached);
+        let bren = game.entity("bren").unwrap();
+        let landed = systems::geometry::get_foot_position(&game.engine.world, bren).unwrap();
+        let x_ft = from_core_point(landed).x_ft;
+        assert!(
+            x_ft < -15.0 && x_ft > -30.0,
+            "Bren stops short of Maren, at {x_ft} ft"
+        );
+    }
+
+    /// A partial move towards a creature out of range, whose movement runs out in an ally's
+    /// space, ends where core cut it back to a free spot, and says the creature wasn't reached
+    /// (Copilot on table #154).
+    #[test]
+    fn a_partial_move_that_ends_short_of_a_creature_did_not_reach_it() {
+        let mut game = crowded_yard();
+        let goblin = MoveTarget::Creature {
+            handle: Handle("goblin_a".to_owned()),
+        };
+
+        let (_, _, reached) = game.move_to("bren", &goblin, true).unwrap();
+
+        assert!(!reached);
+        let bren = game.entity("bren").unwrap();
+        let landed = systems::geometry::get_foot_position(&game.engine.world, bren).unwrap();
+        let x_ft = from_core_point(landed).x_ft;
+        assert!(
+            x_ft < -15.0 && x_ft > -30.0,
+            "Bren walked towards the goblin and stopped short of Maren, at {x_ft} ft"
+        );
     }
 
     fn at_ft(x_ft: f32, y_ft: f32) -> Point3<f32> {
