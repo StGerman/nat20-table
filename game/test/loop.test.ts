@@ -936,6 +936,67 @@ test("the human's refused number gets the engine's sentence and the list again, 
   assert.ok(runLines(t, "retry").some((l) => l.startsWith("bren's choice was not accepted")));
 });
 
+test("a foe beyond the human's movement says the walk stops short, and one number Dashes and walks there", async () => {
+  // Stas's run of 2026-10-28: Bren at the yard gate, the goblins 41 ft off, 30 ft of movement.
+  // "Move next to goblin_1 (hostile, 41 ft)" was refused five times, and Dash never came up.
+  let menu: string[] = [];
+  const { t, report, seat } = await play({
+    seed: 27,
+    seat: new ScriptedSeat("bren", [], (prompt, s) => {
+      if (s.shown.some((e) => e.kind === "engine" && /^bren moves/.test(e.text))) return { kind: "command", name: "quit" };
+      if (prompt.kind === "pick") {
+        menu = s.choices.map((c) => c.label);
+        const dash = s.choices.find((c) => c.act?.kind === "dash_move");
+        return dash ? { kind: "option", number: dash.number } : { kind: "command", name: "quit" };
+      }
+      const move = s.choices.find((c) => c.next?.some((n) => n.act?.kind === "move" && n.target?.side === "hostile"));
+      return prompt.kind === "combat_turn" && move ? { kind: "option", number: move.number } : ScriptedSeat.fight(prompt, s);
+    }),
+    dm: fightAtOnce,
+  });
+  const short = menu.findIndex((l) => /^Move next to goblin_\d \(hostile, \d+ ft; 30 ft this turn, stops short\)$/.test(l));
+  assert.ok(short >= 0, menu.join("; "));
+  const target = menu[short].split(" ")[3];
+  assert.equal(menu[short + 1], `Dash, then move next to ${target}${menu[short].slice(menu[short].indexOf(" ("), menu[short].indexOf(";"))})`);
+  assert.equal(report.humanRejections, 0);
+  const lines = seat.shown.flatMap((e) => (e.kind === "engine" ? [e.text] : []));
+  const dashed = lines.findIndex((l) => l === "bren uses Dash.");
+  assert.ok(dashed >= 0 && lines.slice(dashed).some((l) => l.startsWith("bren moves")), lines.join("\n"));
+  assert.ok(runLines(t, "retry").length === 0);
+});
+
+test("once the human has Dashed this turn, Action Surge's action brings no Dash line: a second Dash adds no movement", async () => {
+  // Core's Dash doubles speed as an effect that a second Dash only renews, and `me.speed_ft` is
+  // then already doubled, so a "Dash, then move" line would spend the action and go nowhere.
+  const steps = ["Dash", "Move…", "far", "Fighter Action Surge", "Move…", "look"];
+  let menu: string[] = [];
+  const { report, seat } = await play({
+    seed: 27,
+    seat: new ScriptedSeat("bren", [], (prompt, s) => {
+      const step = steps[0];
+      if (prompt.kind === "pick" && step === "far") {
+        steps.shift();
+        return { kind: "option", number: s.choices.at(-1)!.number };
+      }
+      if (prompt.kind === "pick" && step === "look") {
+        steps.shift();
+        menu = s.choices.map((c) => c.label);
+        return { kind: "command", name: "quit" };
+      }
+      const line = s.choices.find((c) => c.label === step);
+      if (prompt.kind !== "combat_turn" || !line) return ScriptedSeat.fight(prompt, s);
+      steps.shift();
+      return { kind: "option", number: line.number };
+    }),
+    dm: fightAtOnce,
+  });
+  assert.deepEqual(steps, [], `stopped before: ${steps.join(", ")}`);
+  assert.ok(seat.shown.some((e) => e.kind === "engine" && e.text === "bren is under Dash."));
+  assert.equal(report.humanRejections, 0);
+  assert.ok(menu.some((l) => l.includes("stops short")), menu.join("; "));
+  assert.ok(!menu.some((l) => l.startsWith("Dash, then")), menu.join("; "));
+});
+
 test("the human's words in a fight go to the DM, and back to the human when the DM can't map them", async () => {
   const words = "I do a backflip over the goblins";
   const unmapped = await play({ seed: 27, seat: seatThen([{ kind: "text", text: words }]), dm: fightAtOnce });
