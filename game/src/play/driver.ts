@@ -34,9 +34,10 @@ import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat } from "../table/types.ts";
 import { InkSeat } from "../ui/ink-seat.ts";
+import { pickCharacter } from "../ui/pick.ts";
 import { UsageLog } from "../usage.ts";
 import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
-import { audit, endState, guards, castParty, refuseApiKey, reportSections, runFolder, scenePlan, startAt, timingLines } from "./run.ts";
+import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, timingLines, type Casting, type PackParty } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
 import { uploadStage } from "./upload.ts";
 import { AUDIT_JSON, verdictBlock, writeVerdict } from "./verdict.ts";
@@ -70,9 +71,20 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   }
   const flags = settings.values;
   const pack = readPack(flags.pack);
-  // `--seat ai`: no human at the table, and every character an AI player (AGT-40).
-  const party = castParty(flags.pack, flags.seat === "ai" ? "none" : "default");
-  const everyone = [...(party.human ? [party.human] : []), ...party.ai];
+  // `--seat ai`: no human at the table, and every character an AI player (AGT-40). `--play` puts
+  // the human on another character (AGT-35); with `--seat ink` and no `--play`, the pick list does.
+  if (flags.seat === "ai" && flags.play) {
+    console.error("--play names the human's character, and --seat ai has no human.");
+    process.exit(2);
+  }
+  const casting: Casting = flags.seat === "ai" ? "none" : flags.play ? { play: flags.play } : "default";
+  let party: PackParty;
+  try {
+    party = castParty(flags.pack, casting);
+  } catch (error) {
+    console.error(`--play: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(2);
+  }
   const typedScenes = settings.provenance.scenes ?? settings.provenance.scene;
   const played =
     play.allScenes && (!typedScenes || typedScenes.from === "default")
@@ -120,6 +132,11 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     console.error("--seat ink needs your keyboard and screen: run it in a terminal, not through a pipe or Remote Control.");
     process.exit(2);
   }
+  if (flags.seat === "ink" && !flags.play && party.human) {
+    const picked = await pickCharacter(partyRoster(flags.pack), party.human);
+    if (picked !== party.human) party = castParty(flags.pack, { play: picked });
+  }
+  const everyone = [...(party.human ? [party.human] : []), ...party.ai];
 
   // You at the keyboard, or a seat that fights by rule. Ctrl+C ends the table between decisions
   // (before the table is set, it exits). The keyboard seat draws from here, so the engine's start
@@ -184,6 +201,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     inputsFile: path.join(runDir, "inputs.jsonl"),
     ...guards(flags.pack, engine),
   });
+  // Who plays whom, in the transcript as in run.json (AGT-35).
+  table.log("system", party.human ? `the human plays ${party.human}; AI players: ${party.ai.join(", ")}` : `no human; AI players: ${party.ai.join(", ")}`);
   quit = () => table.end("the human quit", "operator");
   // Without a keyboard seat, Ctrl+C stops the run between decisions; a second one exits at once.
   const interrupted = () => {

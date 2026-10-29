@@ -46,6 +46,8 @@ function matchesFixture(name: string, runDir: string): void {
 
 interface Setup {
   seed: number;
+  /** The human's character; Bren by default. */
+  human?: string;
   /** A scenario pack; the engine's test scenes by default. */
   pack?: string;
   scene?: string;
@@ -74,8 +76,9 @@ async function play(setup: Setup) {
     seed: setup.seed,
     pack: setup.pack,
     guards: setup.guards,
+    ...(setup.human ? { human: setup.human } : {}),
     players: handles,
-    seat: setup.seat ?? new ScriptedSeat("bren", [], ScriptedSeat.fight, handles),
+    seat: setup.seat ?? new ScriptedSeat(setup.human ?? "bren", [], ScriptedSeat.fight, handles),
     narrationGuard: setup.narrationGuard,
     speechGuard: setup.speechGuard,
   });
@@ -210,6 +213,35 @@ test("a table with no human plays The Silent Mill from Scene 1 to 6, and the tra
   } finally {
     t.close();
   }
+});
+
+// --- Who plays whom (AGT-35) ----------------------------------------------------------------------
+
+test("the human may play any of the four, and the bindings, the leak scan and the ally auto-decline follow the pick (AGT-35)", async () => {
+  const party = ["bren", "torva", "maren", "ilsa"];
+  let declinedUnasked = 0;
+  for (const human of party) {
+    const others = party.filter((h) => h !== human);
+    // The AI players let their reactions pass, as in the Bren-only test of the same seed above.
+    const { t, report, seat } = await play({ seed: 23, human, players: Object.fromEntries(others.map((h) => [h, { reaction: async () => {} }])), dm: yardDm() });
+    assert.equal(report.ended, "the adventure is over", human);
+    const requests = t.requests();
+    // The human's seat speaks as the human's character only, and each AI player only as itself.
+    const mine = requests.filter((r) => r.viewer === human && typeof r.actor === "string");
+    assert.ok(mine.some((r) => r.cmd === "legal_actions" && r.actor === human), `${human}'s own options were asked as ${human}`);
+    assert.ok(mine.every((r) => r.actor === human), `${human}'s seat acted for nobody else`);
+    for (const ai of others) assert.ok(requests.filter((r) => r.viewer === ai && typeof r.actor === "string").every((r) => r.actor === ai), `${ai} acted only as itself`);
+    // The human seat's inputs are the human's character's, and the AI players' are their own.
+    const inputs = readFileSync(path.join(t.runDir, "inputs.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { seat: string });
+    assert.ok(inputs.some((i) => i.seat === human), `${human}'s screen is recorded under ${human}`);
+    assert.deepEqual([...new Set(inputs.map((i) => i.seat))].sort(), [...party].sort());
+    // A reaction against a party member never reaches the human's screen: it is declined unasked.
+    const shownReactions = seat.shown.filter((e): e is Extract<TableEvent, { kind: "reaction" }> => e.kind === "reaction");
+    assert.ok(shownReactions.every((e) => !party.some((p) => e.summary.endsWith(` react to ${p}.`))), `${human} was never asked to strike a friend`);
+    declinedUnasked += Math.max(0, requests.filter((r) => r.cmd === "react" && r.viewer === human && r.choice === null).length - shownReactions.length);
+  }
+  // At seed 23 the human's character gets at least one window against a friend, declined unasked.
+  assert.ok(declinedUnasked > 0, "some reaction to a party member was declined without asking the human");
 });
 
 // --- Combat order --------------------------------------------------------------------------------

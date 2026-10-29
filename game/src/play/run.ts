@@ -36,16 +36,21 @@ export interface PackParty {
 
 /**
  * Who plays whom (M7 spec §4.2, design §3.2): the pack's party, with the human on the character the
- * pack seats there by default, or with no human (`none`): then every character is an AI player.
- * The AI players' cards are read from the pack.
+ * pack seats there by default, on the character a handle names (the pick list or `--play`, AGT-35),
+ * or with no human (`none`): then every character is an AI player. The others are AI players from
+ * their cards, read from the pack.
  */
-export type Casting = "default" | "none";
+export type Casting = "default" | "none" | { play: Handle };
 
 /** The party of a scenario pack's skeleton, cast per `casting`, with the AI players' cards read from the pack. */
 export function castParty(pack: string, casting: Casting = "default"): PackParty {
   const adventure = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8")));
-  const human = casting === "none" ? undefined : adventure.party.find((p) => p.seat === "human")?.handle;
+  const human =
+    casting === "none" ? undefined : typeof casting === "object" ? casting.play : adventure.party.find((p) => p.seat === "human")?.handle;
   if (casting !== "none" && !human) throw new Error(`${pack}: the party has no human seat`);
+  if (human && !adventure.party.some((p) => p.handle === human)) {
+    throw new Error(`${human} is not in the party; pick one of ${adventure.party.map((p) => p.handle).join(", ")}`);
+  }
   const ai = adventure.party.filter((p) => p.handle !== human);
   const cards = new Map(
     ai.map((p) => {
@@ -60,6 +65,40 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
     }),
   );
   return { ...(human ? { human } : {}), ai: ai.map((p) => p.handle), cards, names };
+}
+
+/** One line of the pick list (AGT-35): a party member as a player picking a pregen sees it. */
+export interface RosterEntry {
+  handle: Handle;
+  name: string;
+  species: string;
+  class: string;
+  level: number;
+  /** The first line of the card's Goal. */
+  goal: string;
+}
+
+/**
+ * The pack's party for the pick list, in the pack's order: each character's name from its card,
+ * species, class and level from its pregen in the first scene, and the first line of its Goal.
+ */
+export function partyRoster(pack: string, pregens = process.env.NAT20_PREGENS_DIR ?? path.join(REPO, "pregens")): RosterEntry[] {
+  const adventure = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8")));
+  const first = JSON.parse(readFileSync(path.join(pack, "scenes", `${adventure.scenes[0].id}.json`), "utf8")) as { creatures: Array<{ handle: string; pregen?: string }> };
+  // "nat20_core::class.fighter" reads "Fighter".
+  const named = (id: string) => (id.split(".").at(-1) ?? id).replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+  return adventure.party.map((p) => {
+    const card = p.card ? readFileSync(path.resolve(pack, p.card), "utf8") : "";
+    const pregen = first.creatures.find((c) => c.handle === p.handle)?.pregen;
+    const sheet = pregen ? (JSON.parse(readFileSync(path.join(pregens, `${pregen}.json`), "utf8")) as { species: string; class: string; level: number }) : undefined;
+    const goal = /^## Goal\s*\n+([^\n]+)/m.exec(card)?.[1].trim() ?? "";
+    return { handle: p.handle, name: cardName(p.handle, card), species: sheet ? named(sheet.species) : "", class: sheet ? named(sheet.class) : "", level: sheet?.level ?? 0, goal };
+  });
+}
+
+/** The pick list as the terminal prints it: one numbered line per character. */
+export function rosterLines(roster: RosterEntry[], fallback?: Handle): string[] {
+  return roster.map((r, i) => `${i + 1}. ${r.name}: ${[r.species, r.class].filter(Boolean).join(" ")}, level ${r.level}${r.handle === fallback ? " (the default)" : ""}. ${r.goal}`);
 }
 
 /** The guards every live run puts on free text (spec §3.5): the DM's against the pack's ids. */
