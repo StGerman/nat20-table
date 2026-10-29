@@ -1930,3 +1930,19 @@ test("with the whole party down the DM may end the adventure before its last sce
   assert.deepEqual(tried.map((o) => o.ok), [true]);
   assert.equal(report.ended, "the adventure is over");
 });
+
+test("the DM may load the last scene and end the adventure in the same wake", async () => {
+  const tried: ToolOutcome[] = [];
+  const { report } = await play({
+    ...YARD,
+    loop: { finale: "m3_s3_yard" },
+    dm: {
+      scene_open: async (tools) => {
+        tried.push(await tools.loadScene("m3_s3_yard", ["bren"]));
+        tried.push(await tools.endAdventure("The yard is quiet. The end."));
+      },
+    },
+  });
+  assert.deepEqual(tried.map((o) => o.ok), [true, true], tried.map((o) => o.text).join(" | "));
+  assert.equal(report.ended, "the adventure is over");
+});

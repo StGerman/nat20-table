@@ -417,6 +417,8 @@ export interface ScenePasses {
 export class DmTools {
   private readonly table: TableState;
   private readonly passes: ScenePasses | undefined;
+  /** The scene this DM's own load_scene loaded last: the loop hears of it only after the wake. */
+  private loaded: string | undefined;
 
   constructor(table: TableState, passes?: ScenePasses) {
     this.table = table;
@@ -459,6 +461,7 @@ export class DmTools {
     const loaded = await send(this.table, "dm", { cmd: "load_scene", scene_id: instead ?? scene_id, ...(party ? { party: [...party] } : {}) }, (r) =>
       r.result?.cmd === "load_scene" ? formatDmState(r.result.state) : "loaded",
     );
+    if (loaded.ok) this.loaded = instead ?? scene_id;
     if (!instead || !loaded.ok) return loaded;
     this.passes!.passedOver(scene_id, instead);
     return {
@@ -656,7 +659,7 @@ export class DmTools {
   async endAdventure(text: string): Promise<ToolOutcome> {
     if (this.table.inCombat) return notNow("finish the fight first");
     const finale = this.passes?.finale;
-    if (finale && this.passes?.current?.() !== finale && !(await this.partyDown())) {
+    if (finale && (this.loaded ?? this.passes?.current?.()) !== finale && !(await this.partyDown())) {
       return notNow(`the adventure ends only after its last scene, ${finale}: follow the scene's exit with load_scene first`);
     }
     const said = await this.table.narrate(text);
