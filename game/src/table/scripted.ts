@@ -12,8 +12,8 @@ export type CombatPolicy = (tools: PlayerTools) => Promise<void>;
 
 /**
  * The default fight: the first option that harms a hostile creature already in reach; with none in
- * reach, walk up to the nearest hostile it can see (dashing first if it is too far) and look again;
- * then end the turn.
+ * reach, walk up to the nearest hostile it can see (dashing and walking on if it is still out of
+ * reach) and look again; then end the turn.
  */
 export const attackNearest: CombatPolicy = async (tools) => {
   let pick = await nearestAttack(tools, true);
@@ -25,8 +25,14 @@ export const attackNearest: CombatPolicy = async (tools) => {
       : undefined;
     if (hostile) {
       const to = { kind: "creature", handle: hostile.handle } as const;
-      if (!(await tools.move(to)).ok && (await tools.submitDecision({ option_id: "dash" })).ok) await tools.move(to);
-      pick = await nearestAttack(tools, true);
+      // A walk that runs out of movement still goes part of the way: Dash and walk on if no
+      // attack is in reach yet.
+      const walked = (await tools.move(to)).ok;
+      pick = walked ? await nearestAttack(tools, true) : undefined;
+      if (!pick && (await tools.submitDecision({ option_id: "dash" })).ok) {
+        await tools.move(to);
+        pick = await nearestAttack(tools, true);
+      }
     }
   }
   if (pick) await tools.submitDecision(pick);
