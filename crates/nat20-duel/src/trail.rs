@@ -154,6 +154,7 @@ fn walk(client: &mut Client, t: &mut String, anchor: &str) {
                 anchor: anchor.into(),
             },
             prompt_id: None,
+            partial: false,
         },
     );
     assert!(response.ok, "move to {anchor}: {:?}", response.error);
@@ -342,6 +343,7 @@ fn fight(
                                 handle: target.handle.clone(),
                             },
                             prompt_id: Some(prompt_id.clone()),
+                            partial: false,
                         }
                     } else if has("fighter/action_surge") && surged_round != Some(round) {
                         surged_round = Some(round);

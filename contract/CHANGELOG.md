@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.37 (2026-10-27)
+- New optional field `partial` on `move` (API-35; protocol.md §4.1), additive: a route longer than the movement left is walked as far as it goes, to the last free spot along it, instead of being refused with `insufficient_resource`. Core already paths partially (`allow_partial`); the adapter used to pass `false`. In the live runs so far nearly every retry, and the one AI fallback, was this refusal (M7 spec §4.5).
+- New field `reached` on the `move` result: whether the walk ends where the creature was sent. It is `false` only for a partial move cut short, so an agent knows not to attack yet. A partial move cut short names no anchor on its `moved`.
+- Every fixture with a `move` result gains `"reached": true`, at the same seeds; nothing else changes (`dropped_action`, `explore`, `fled`, `m3_trail`, `m4_party`, `m5_fights`, `pack`, `reactions`, `turn_budget`).
+- New fixture `move_partial.jsonl` (scene `fled_yard`, seed 1): Bren's move to a point 40 feet away is refused whole (pm-4); with `partial` he walks his 30 feet and `reached` is false (pm-5); the budget then shows no movement (pm-6); a second partial move, with no movement left, is refused with `insufficient_resource` (pm-7).
+
 ## 1.0.0-dev.36 (2026-10-27)
 - New optional field `EncounterView.surrendering` (DM state only): the creatures `end_combat{surrender}` would make `neutral` now, the surrender condition's creatures still conscious, in the condition's order. Left out unless `surrender_available` (protocol.md §4.4, §5). The table needs it to offer the human the surrender of exactly those creatures (AGT-30): a participant the condition doesn't name, such as the yard's wolf, fights on and must not be in the offer. It is a hidden key in the leak scan.
 - `encounter.jsonl` en-20 and `m3_trail.jsonl` t-27 show it: `goblin_2` is the only goblin still standing when the condition holds.

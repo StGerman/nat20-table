@@ -232,7 +232,7 @@ export class ModelPlayer implements PlayerAgent {
       ),
       seatTool(
         "move",
-        "On your turn in a fight: walk to a place (its anchor id) or up to a creature (its handle). Leaving an enemy's reach can provoke an Opportunity Attack.",
+        "On your turn in a fight: walk to a place (its anchor id) or up to a creature (its handle). If it is farther than your movement, you walk as far as you can and the answer says you stopped short. Leaving an enemy's reach can provoke an Opportunity Attack.",
         { place: z.string().optional().describe("An anchor id from look."), creature: handle.optional() },
         (input) => {
           if (Boolean(input.place) === Boolean(input.creature)) {

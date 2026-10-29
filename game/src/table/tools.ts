@@ -49,6 +49,13 @@ const CHANGES = new Set<Command["cmd"]>([
  * the decision. Once a decision is spent, no further change reaches the engine and the loop falls
  * back. A seat's changes go one at a time, so each sees what the ones before it spent.
  */
+/** A fight move goes as far as the turn's movement allows (API-35); the answer says when it stopped short. */
+export function movedText(r: Response): string {
+  if (r.result?.cmd !== "move") return "moved";
+  const short = r.result.reached ? "" : "; stopped short, as far as movement goes: not there yet";
+  return `moved ${Math.round(r.result.moved_ft)} ft${short}${r.result.provoked.length ? `; provoked ${r.result.provoked.join(", ")}` : ""}`;
+}
+
 export function send(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
   if (!CHANGES.has(command.cmd)) return sendNow(table, viewer, command, okText);
   // An open surrender offer holds every change until the human answers it (AGT-30). The DM's
@@ -174,9 +181,7 @@ export class PlayerTools {
   move(to: MoveTarget): Promise<ToolOutcome> {
     const prompt = this.myAction();
     if (!prompt) return this.answer(notNow("you move on your own turn in a fight; out of combat, say where you go"));
-    return this.answer(send(this.table, this.me, { cmd: "move", actor: this.me, prompt_id: prompt, to: moveTarget(to) }, (r) =>
-      r.result?.cmd === "move" ? `moved ${Math.round(r.result.moved_ft)} ft${r.result.provoked.length ? `; provoked ${r.result.provoked.join(", ")}` : ""}` : "moved",
-    ));
+    return this.answer(send(this.table, this.me, { cmd: "move", actor: this.me, prompt_id: prompt, to: moveTarget(to), partial: true }, movedText));
   }
 
   endTurn(): Promise<ToolOutcome> {
@@ -560,7 +565,7 @@ export class DmTools {
       if (actor !== this.table.human || a.kind !== "action" || a.actor !== this.table.human) {
         return notNow(`in a fight you move only ${this.table.human}, on ${this.table.human}'s turn`);
       }
-      return send(this.table, "dm", { cmd: "move", actor, prompt_id: a.prompt_id, to: moveTarget(to) }, () => "moved");
+      return send(this.table, "dm", { cmd: "move", actor, prompt_id: a.prompt_id, to: moveTarget(to), partial: true }, movedText);
     }
     return (await this.inScene(actor)) ?? send(this.table, "dm", { cmd: "move", actor, to: moveTarget(to) }, () => "moved");
   }

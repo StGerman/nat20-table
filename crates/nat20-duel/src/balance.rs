@@ -13,8 +13,8 @@
 //! their Hit Points or less drinks a potion, the Barbarian rages, the Fighter takes Second Wind and
 //! Action Surge, the Cleric blesses three allies and keeps her spell slots for healing, the Wizard
 //! aims an area spell where it catches two foes and no ally, and everyone attacks the foe in reach
-//! with the fewest Hit Points, walking toward the nearest foe as far as movement allows (to a point
-//! short of it until `move` can go part of the way, API-35). Between fights the Cleric heals whoever is down, and the
+//! with the fewest Hit Points, walking toward the nearest foe as far as movement allows (`move`
+//! with `partial`, API-35). Between fights the Cleric heals whoever is down, and the
 //! short rest spends Hit Point Dice up to full.
 
 use std::path::Path;
@@ -299,6 +299,7 @@ impl Table {
                         handle: down.clone(),
                     },
                     prompt_id: None,
+                    partial: false,
                 });
                 let options = self.options(&healer.0).0;
                 if let Some((option, potion)) = heal_option(&options, &down)
@@ -645,7 +646,7 @@ impl Table {
                             .total_cmp(&distance(&me.position_ft, &b.position_ft))
                     })
                     .unwrap();
-                if self.walk_toward(actor, prompt_id, &me, nearest, budget.movement_ft) {
+                if self.walk_toward(actor, prompt_id, nearest) {
                     continue;
                 }
             }
@@ -682,49 +683,20 @@ impl Table {
         ok
     }
 
-    /// Moves next to `foe`, or, out of reach this turn, to a point on the way as far as
-    /// `movement_ft` goes. Whether the route is open is the engine's call.
-    fn walk_toward(
-        &mut self,
-        actor: &str,
-        prompt_id: &PromptId,
-        me: &CreatureFull,
-        foe: &CreatureFull,
-        movement_ft: u32,
-    ) -> bool {
-        let next_to = self.dm(Command::Move {
+    /// Walks toward `foe`, next to it if the movement left reaches, else as far as it goes
+    /// (`partial`, API-35). Whether the route is open is the engine's call.
+    fn walk_toward(&mut self, actor: &str, prompt_id: &PromptId, foe: &CreatureFull) -> bool {
+        let moved = self.dm(Command::Move {
             actor: Handle(actor.into()),
             to: MoveTarget::Creature {
                 handle: foe.handle.clone(),
             },
             prompt_id: Some(prompt_id.clone()),
+            partial: true,
         });
-        if next_to.ok {
-            return self.settle(next_to).ok;
-        }
-        let gap = distance(&me.position_ft, &foe.position_ft);
-        // Stop a step short of the full movement, so a route that bends still fits.
-        for step in [movement_ft as f32 - 5.0, movement_ft as f32 / 2.0] {
-            let along = step.min(gap - 5.0);
-            if along < 5.0 {
-                continue;
-            }
-            let t = along / gap;
-            let point = PointFt {
-                x_ft: me.position_ft.x_ft + (foe.position_ft.x_ft - me.position_ft.x_ft) * t,
-                y_ft: me.position_ft.y_ft + (foe.position_ft.y_ft - me.position_ft.y_ft) * t,
-                z_ft: me.position_ft.z_ft,
-            };
-            let moved = self.dm(Command::Move {
-                actor: Handle(actor.into()),
-                to: MoveTarget::Point { point },
-                prompt_id: Some(prompt_id.clone()),
-            });
-            if moved.ok {
-                return self.settle(moved).ok;
-            }
-        }
-        false
+        let walked =
+            matches!(moved.result, Some(CommandResult::Move { moved_ft, .. }) if moved_ft > 0.0);
+        moved.ok && self.settle(moved).ok && walked
     }
 }
 

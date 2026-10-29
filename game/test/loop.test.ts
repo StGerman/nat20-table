@@ -25,7 +25,7 @@ const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtur
  * A run's files a game fixture keeps: what the audit and the leak scan read (step 6,
  * `crates/nat20-duel/tests/game_fixtures.rs`).
  */
-const RUN_FILES = ["transcript.jsonl", SESSION_LOG, "inputs.jsonl"];
+const RUN_FILES = [SESSION_LOG, "transcript.jsonl", "inputs.jsonl"];
 
 /** Compares a run's files with its fixture (`<name>.<file>`), or writes the fixture when recording. */
 function matchesFixture(name: string, runDir: string): void {
@@ -33,7 +33,14 @@ function matchesFixture(name: string, runDir: string): void {
     const actual = readFileSync(path.join(runDir, run), "utf8");
     const file = path.join(FIXTURES, `${name}.${run}`);
     if (process.env.RECORD_FIXTURES || !existsSync(file)) writeFileSync(file, actual);
-    assert.equal(actual, readFileSync(file, "utf8"), `${name}.${run} changed; RECORD_FIXTURES=1 rewrites it`);
+    const expected = readFileSync(file, "utf8");
+    if (actual === expected) continue;
+    // A whole-file diff is cut short in the test output: name the first line that differs.
+    const [a, e] = [actual.split("\n"), expected.split("\n")];
+    const at = a.findIndex((line, i) => line !== e[i]);
+    const line = at < 0 ? e.length : at;
+    const around = (lines: string[]) => lines.slice(Math.max(0, line - 12), line + 4).map((l, i) => `    ${Math.max(0, line - 12) + i + 1}: ${l}`).join("\n");
+    assert.fail(`${name}.${run} changed at line ${line + 1}; RECORD_FIXTURES=1 rewrites it\n  actual:\n${around(a)}\n  expected:\n${around(e)}`);
   }
 }
 
@@ -139,12 +146,12 @@ test("the human, scripted, plays the Milestone 3 trail across five scenes, and t
 
 test("the scripted table plays The Silent Mill from Scene 1 to 6, and the transcript replays exactly (AGT-39)", async () => {
   // The real pack, chained scene to scene by the scripted DM; the AI players heal a downed ally
-  // first. Seed 203 is one where the party gets through the cellar (most seeds don't: MON-10).
+  // first. Seed 350 is one where the party gets through the cellar (most seeds don't: MON-10).
   const pack = path.join(REPO, "scenarios/the_silent_mill");
   const scenes = readPack(pack).adventure.scenes;
   const party = packParty(pack);
   const t = await testTable({
-    seed: 203,
+    seed: 350,
     pack,
     players: party.ai,
     seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai),
@@ -188,6 +195,9 @@ test("each part of a turn shows its engine lines, then its narration, before the
     while (start > 0 && shown[start].text !== `${pc}'s turn.`) start -= 1;
     if (!shown.slice(start, i).some((x) => x.text.startsWith(`${pc} uses `) || x.text === `${pc} moves.`)) continue;
     played += 1;
+    // A turn whose last lines were narrated already (inside a reaction window) has only its end left.
+    const narrated = shown.slice(start, i).map((x) => x.kind).lastIndexOf("narration");
+    if (narrated >= 0 && !shown.slice(start + narrated + 1, i).some((x) => x.kind === "engine")) continue;
     const next = shown.slice(i + 1).find((x) => x.kind === "narration" || /'s turn\.$/.test(x.text));
     assert.equal(next?.kind, "narration", `narration before the next turn after: ${e.text}`);
   }
@@ -232,7 +242,7 @@ test("two narrations made at once show each engine line once", async () => {
 test("in a fight, a salient event wakes every AI player who may react at once, and only the first line is heard", async () => {
   const bark = (line: string) => async (tools: PlayerTools) => void (await tools.say(line));
   const { t, report, players } = await play({
-    seed: 23,
+    seed: 5,
     dm: yardDm(),
     players: { torva: { bark: bark("Hold the line!") }, maren: { bark: bark("Stay with me!") }, ilsa: { bark: async () => "PASS" } },
   });
@@ -756,15 +766,23 @@ test("the scripted human lets a reaction to an ally pass, and takes one to a foe
 test("the human's refused number gets the engine's sentence and the list again, and is counted", async () => {
   const { t, report, seat } = await play({
     seed: 27,
-    seat: new ScriptedSeat("bren", [], (prompt, s) =>
-      s.shown.filter((e) => e.kind === "status").length > 1 ? { kind: "command", name: "quit" } : ScriptedSeat.fight(prompt, s),
-    ),
+    // Walks at the goblins as far as Bren's movement goes (API-35), then again: with no movement
+    // left, the engine refuses the second walk.
+    seat: new ScriptedSeat("bren", [], (prompt, s) => {
+      if (s.shown.some((e) => e.kind === "info" && e.title === "Not accepted")) return { kind: "command", name: "quit" };
+      const move = s.choices.find((c) => c.next?.some((n) => n.act?.kind === "move" && n.target?.side === "hostile"));
+      return prompt.kind === "combat_turn" && move ? { kind: "option", number: move.number } : ScriptedSeat.fight(prompt, s);
+    }),
     dm: fightAtOnce,
   });
   assert.ok(report.humanRejections >= 1);
   const at = seat.shown.findIndex((e) => e.kind === "info" && e.title === "Not accepted");
   assert.ok(at >= 0);
-  assert.match((seat.shown[at] as { text: string }).text, /^Not enough movement/);
+  assert.match((seat.shown[at] as { text: string }).text, /^bren has no movement left/);
+  // The first walk went part of the way, and the human was told it stopped short.
+  const short = seat.shown.findIndex((e) => e.kind === "info" && e.title === "Stopped short");
+  assert.ok(short >= 0 && short < at);
+  assert.match((seat.shown[short] as { text: string }).text, /^You moved \d+ ft; stopped short/);
   assert.equal(seat.shown.slice(at + 1).find((e) => e.kind === "options" || e.kind === "info")?.kind, "options");
   assert.ok(runLines(t, "retry").some((l) => l.startsWith("bren's choice was not accepted")));
 });
@@ -1504,14 +1522,14 @@ test("a scene between two played ones is passed over: the party goes on to the n
 });
 
 test("a surrender ends the fight and still gets its reactions, as the fight's last blow does", async () => {
-  // Seed 14: the goblins yield in a round nobody has reacted in yet (one trigger a round).
+  // Seed 26: the goblins yield in a round nobody has reacted in yet (one trigger a round).
   const pack = path.join(REPO, "scenarios/the_silent_mill");
   const scenes = readPack(pack).adventure.scenes;
   const plan = scenePlan(pack, ["s1_village_green", "s3_mill_yard"]);
   const party = ["bren", "torva", "maren", "ilsa"];
   const bark = (line: string) => async (tools: PlayerTools) => void (await tools.say(line));
   const { t, report } = await play({
-    seed: 14,
+    seed: 26,
     pack,
     guards: (engine) => guards(pack, engine),
     scene: plan.first,

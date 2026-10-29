@@ -242,7 +242,13 @@ impl Server {
                 actor,
                 to,
                 prompt_id,
-            } => session.move_creature(&actor.0, to, prompt_id.as_ref().map(|p| p.0.as_str())),
+                partial,
+            } => session.move_creature(
+                &actor.0,
+                to,
+                prompt_id.as_ref().map(|p| p.0.as_str()),
+                *partial,
+            ),
             Command::GetSheet { actor } => session.sheet(&actor.0, viewer),
             Command::RequestCheck { actor, check } => session.request_check(&actor.0, check),
             Command::ShortRest {

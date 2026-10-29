@@ -12,8 +12,8 @@ export type CombatPolicy = (tools: PlayerTools) => Promise<void>;
 
 /**
  * The default fight: the first option that harms a hostile creature already in reach; with none in
- * reach, walk up to the nearest hostile it can see (dashing first if it is too far) and look again;
- * then end the turn.
+ * reach, walk up to the nearest hostile it can see (dashing and walking on if it is still out of
+ * reach) and look again; then end the turn.
  */
 export const attackNearest: CombatPolicy = async (tools) => {
   let pick = await nearestAttack(tools, true);
@@ -25,8 +25,14 @@ export const attackNearest: CombatPolicy = async (tools) => {
       : undefined;
     if (hostile) {
       const to = { kind: "creature", handle: hostile.handle } as const;
-      if (!(await tools.move(to)).ok && (await tools.submitDecision({ option_id: "dash" })).ok) await tools.move(to);
-      pick = await nearestAttack(tools, true);
+      // A walk that runs out of movement still goes part of the way: Dash and walk on if no
+      // attack is in reach yet.
+      const walked = (await tools.move(to)).ok;
+      pick = walked ? await nearestAttack(tools, true) : undefined;
+      if (!pick && (await tools.submitDecision({ option_id: "dash" })).ok) {
+        await tools.move(to);
+        pick = await nearestAttack(tools, true);
+      }
     }
   }
   if (pick) await tools.submitDecision(pick);
@@ -371,7 +377,7 @@ export class ScriptedSeat implements Seat {
   /** The numbered list on screen now: the last options event. */
   choices: Choice[] = [];
   /** The fight policy's place in its turn plan, reset by each "Your turn" status line. */
-  private plan = { step: 0, attacks: 0, refused: false };
+  private plan = { step: 0, attacks: 0 };
   /** The other party members: a reaction that answers one of them is let pass. */
   readonly allies: ReadonlySet<Handle>;
   private readonly answers: PlayerIntent[];
@@ -418,8 +424,8 @@ export class ScriptedSeat implements Seat {
 
   /**
    * Fights by rule, the way the Milestone 3 trail driver does: attack a hostile in reach; else walk
-   * up to the nearest hostile it can see, and when that walk is refused, Dash and walk again; then
-   * end the turn.
+   * up to the nearest hostile it can see, as far as its movement goes, and when that leaves it out of
+   * reach, Dash and walk on; then end the turn.
    */
   static fight(prompt: HumanPrompt, seat: ScriptedSeat): PlayerIntent {
     if (prompt.kind === "pick") {
@@ -428,8 +434,6 @@ export class ScriptedSeat implements Seat {
     }
     if (prompt.kind !== "combat_turn") return ScriptedSeat.pass(prompt, seat);
     const plan = seat.plan;
-    const refused = plan.refused;
-    plan.refused = false;
     const attack = seat.choices.find((c) => harms(c) && c.target?.side === "hostile" && c.target.in_range);
     if (attack && plan.attacks < 3) {
       plan.attacks += 1;
@@ -441,7 +445,7 @@ export class ScriptedSeat implements Seat {
       plan.step = 1;
       return { kind: "option", number: move.number };
     }
-    if (plan.step === 1 && refused && dash && move) {
+    if (plan.step === 1 && dash && move) {
       plan.step = 2;
       return { kind: "option", number: dash.number };
     }
@@ -455,8 +459,7 @@ export class ScriptedSeat implements Seat {
   show(event: TableEvent): void {
     this.shown.push(event);
     if (event.kind === "options") this.choices = event.choices;
-    if (event.kind === "info" && event.title === "Not accepted") this.plan.refused = true;
-    if (event.kind === "status" && event.text.startsWith("Your turn")) this.plan = { step: 0, attacks: 0, refused: false };
+    if (event.kind === "status" && event.text.startsWith("Your turn")) this.plan = { step: 0, attacks: 0 };
   }
 
   async ask(prompt: HumanPrompt): Promise<PlayerIntent> {

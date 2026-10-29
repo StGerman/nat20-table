@@ -115,9 +115,9 @@ pub enum Command {
     },
     /// Moves a creature along a route on the map. In explore mode the walk costs no movement
     /// and provokes nobody. In combat it is a decision at the actor's action prompt: the whole
-    /// route must fit in the movement left, and an opportunity attack pauses the creature where
-    /// it provoked one; it walks on once the reaction is resolved (protocol §4.1). No route
-    /// answers `rejected` with `no_path`.
+    /// route must fit in the movement left, unless `partial` is set, and an opportunity attack
+    /// pauses the creature where it provoked one; it walks on once the reaction is resolved
+    /// (protocol §4.1). No route answers `rejected` with `no_path`.
     Move {
         /// The creature that moves.
         actor: Handle,
@@ -126,6 +126,13 @@ pub enum Command {
         /// The pending prompt's id. Required in combat, ignored in explore mode.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         prompt_id: Option<PromptId>,
+        /// Walk as far as movement allows: a route longer than the movement left is walked to
+        /// the last free spot the movement reaches, and the result's `reached` says it stopped
+        /// short. Without it (the default) such a move is refused with `insufficient_resource`
+        /// and changes nothing; so is a partial move that can't get anywhere. Ignored in explore
+        /// mode, where there is no movement to run out of.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        partial: bool,
     },
     /// Asks the engine to roll an ability check or saving throw in explore mode. The engine rolls
     /// and decides success, and applies the scenario check's consequences. Each scenario check is
@@ -397,6 +404,11 @@ pub enum CommandResult {
         moved_ft: f32,
         /// Creatures that got an opportunity attack prompt from this move, in prompt order.
         provoked: Vec<Handle>,
+        /// Whether the walk set out to end where the creature was sent (next to the creature, at
+        /// the anchor or the point). False only for a `partial` move that the movement left cut
+        /// short; a creature an opportunity attack holds on the way is still on a walk that
+        /// reaches.
+        reached: bool,
     },
     /// The check's roll and outcome.
     RequestCheck {

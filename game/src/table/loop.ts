@@ -10,7 +10,7 @@ import { FLOOR_BOUND, handAnswer, handOff, namedIn, speakingOrder, type Address,
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { BarkTools, DmTools, HandTools, PlayerTools, ReactionFloor, send } from "./tools.ts";
+import { BarkTools, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, ToolOutcome } from "./types.ts";
 
 /**
@@ -524,7 +524,7 @@ export class TableLoop {
         outcome = await send(this.table, human, { cmd: "submit", actor: human, ...prompt, ...act.decision }, () => "accepted");
         break;
       case "move":
-        outcome = await send(this.table, human, { cmd: "move", actor: human, ...prompt, to: act.to }, () => "moved");
+        outcome = await send(this.table, human, { cmd: "move", actor: human, ...prompt, to: act.to, partial: true }, movedText);
         break;
       case "end_turn":
         if (!promptId) return { ok: false, text: "There is no turn to end." };
@@ -534,6 +534,11 @@ export class TableLoop {
     // The human sees their own action's lines at once. What follows their turn (the monsters'
     // turns, a fight's end) waits for the DM to narrate the turn first.
     await this.table.flush((e) => e.kind === "combat_over" || (e.kind === "turn_end" && e.actor === human));
+    // The engine's line says only that the character moved: a walk that ran out of movement says so.
+    const moved = outcome.ok ? (outcome.data as { cmd?: string; reached?: boolean } | undefined) : undefined;
+    if (moved?.cmd === "move" && moved.reached === false) {
+      this.table.show({ kind: "info", title: "Stopped short", text: `You ${outcome.text}.` });
+    }
     return outcome;
   }
 
