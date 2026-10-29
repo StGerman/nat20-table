@@ -9,10 +9,10 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { REPO, SESSION_LOG, type GameEngine } from "../src/engine.ts";
 import { readPack } from "../src/pack/read.ts";
-import { guards, scenePlan } from "../src/play/run.ts";
+import { guards, packParty, scenePlan } from "../src/play/run.ts";
 import { ConnectionLost, TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
-import { attackNearest, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
+import { attackNearest, chainDm, chainScenes, rescueThenAttack, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
 import { BarkTools, ReactionFloor, type DmTools, type PlayerTools } from "../src/table/tools.ts";
 import type { PlayerIntent, TableEvent, ToolOutcome } from "../src/table/types.ts";
@@ -135,6 +135,41 @@ test("the human, scripted, plays the Milestone 3 trail across five scenes, and t
   assert.ok(t.table.transcript.records.some((r) => r.kind === "question"), "the DM asked the human a question");
   assert.deepEqual(report.talkRounds, [], "no AI player, no talk round");
   matchesFixture("m3_trail", t.runDir);
+});
+
+test("the scripted table plays The Silent Mill from Scene 1 to 6, and the transcript replays exactly (AGT-39)", async () => {
+  // The real pack, chained scene to scene by the scripted DM; the AI players heal a downed ally
+  // first. Seed 203 is one where the party gets through the cellar (most seeds don't: MON-10).
+  const pack = path.join(REPO, "scenarios/the_silent_mill");
+  const scenes = readPack(pack).adventure.scenes;
+  const party = packParty(pack);
+  const t = await testTable({
+    seed: 203,
+    pack,
+    players: party.ai,
+    seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai),
+    guards: (engine) => guards(pack, engine),
+  });
+  try {
+    const dm = chainDm(chainScenes(scenes), [party.human, ...party.ai], party.human);
+    const players = party.ai.map((h) => new ScriptedPlayer(h, { combat: rescueThenAttack }));
+    const report = await new TableLoop({ table: t.table, dm, players, maxSteps: 3000, names: party.names }).run(scenes[0].id);
+    assert.equal(report.ended, "the adventure is over");
+    assert.deepEqual(report.scenes, scenes.map((s) => s.id));
+    const engine = t.table.transcript.records.filter((r) => r.channel === "dm" && r.kind === "engine").map((r) => r.text);
+    assert.deepEqual(
+      engine.filter((l) => l.startsWith("Combat is over")),
+      ["Combat is over: the other side surrendered.", "Combat is over. The party side wins."],
+      "the yard fight ends in a surrender, the cellar fight in a win",
+    );
+    // The goblin that surrendered in the yard is questioned in Scene 4, once.
+    assert.equal(engine.filter((l) => l.includes("(Intimidation) check")).length, 1, "one interrogation of the prisoner");
+    const rested = engine.findIndex((l) => l.endsWith("finish a short rest."));
+    assert.ok(rested > engine.indexOf("Scene s4_captured_goblin loaded in explore mode."), "the party rests in Scene 4");
+    matchesFixture("m7_adventure", t.runDir);
+  } finally {
+    t.close();
+  }
 });
 
 // --- Combat order --------------------------------------------------------------------------------
