@@ -25,7 +25,7 @@ const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtur
  * A run's files a game fixture keeps: what the audit and the leak scan read (step 6,
  * `crates/nat20-duel/tests/game_fixtures.rs`).
  */
-const RUN_FILES = ["transcript.jsonl", SESSION_LOG, "inputs.jsonl"];
+const RUN_FILES = [SESSION_LOG, "transcript.jsonl", "inputs.jsonl"];
 
 /** Compares a run's files with its fixture (`<name>.<file>`), or writes the fixture when recording. */
 function matchesFixture(name: string, runDir: string): void {
