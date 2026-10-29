@@ -11,7 +11,7 @@ import { declaration, ModelPlayer, playerPrompt } from "../src/agents/player.ts"
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnCancelled, TurnTimeout } from "../src/errors.ts";
-import { addressLines, packParty, talkLines } from "../src/play/run.ts";
+import { addressLines, castParty, talkLines } from "../src/play/run.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedSeat } from "../src/table/scripted.ts";
 import { HandTools, PlayerTools } from "../src/table/tools.ts";
@@ -27,7 +27,7 @@ type Script = PlayerScript<PlayerWake>;
 /** A model player whose sessions are stand-ins playing `script`; `sessions` lists them as they open. */
 function standInPlayer(handle: string, script: Script): { player: ModelPlayer; sessions: StandIn<PlayerWake>[] } {
   const sessions: StandIn<PlayerWake>[] = [];
-  const card = packParty(MILL).cards.get(handle)!;
+  const card = castParty(MILL).cards.get(handle)!;
   const player = new ModelPlayer({
     handle,
     card,
@@ -47,7 +47,7 @@ function inputs(runDir: string): Array<{ seat: string; text: string }> {
 
 test("a model player's session has its own prompt with its card, its nine seat tools and nothing built in", () => {
   const { player } = standInPlayer("maren", async () => "");
-  const card = packParty(MILL).cards.get("maren")!;
+  const card = castParty(MILL).cards.get("maren")!;
   assert.equal(player.systemPrompt, playerPrompt("maren", card));
   assert.ok(player.systemPrompt.includes(card.trim()), "the card is in the prompt as written");
   assert.match(player.systemPrompt, /You play one character, Maren \(handle maren\)/);
@@ -65,7 +65,7 @@ test("a model player's session has its own prompt with its card, its nine seat t
 });
 
 test("a model player passes as a normal answer, plays from its card's Talk and silence, and may speak on its own combat turn", () => {
-  const card = packParty(MILL).cards.get("maren")!;
+  const card = castParty(MILL).cards.get("maren")!;
   assert.match(card, /## Talk and silence\n\n- Speaks when/);
   const prompt = playerPrompt("maren", card);
   assert.match(prompt, /If not, just PASS: that is a normal answer/);
@@ -85,7 +85,7 @@ test("a model player passes as a normal answer, plays from its card's Talk and s
 });
 
 test("every party member has its names, whichever seat plays it: handle, card name and the pack's forms", () => {
-  const { names } = packParty(MILL);
+  const { names } = castParty(MILL);
   assert.deepEqual(names.get("torva"), ["torva", "Torva", "Торва", "Торвы", "Торве", "Торву", "Торвой"]);
   assert.deepEqual(names.get("maren"), ["maren", "Maren", "Марен"]);
   assert.ok(names.get("bren")!.includes("Брену"), "the human's character too, for a run where an AI plays it");
@@ -156,7 +156,7 @@ test("the report counts talk rounds: lines, silence, hands, named players who an
 });
 
 test("with --lang ru a model player speaks, declares, notes and summarises in Russian, and still passes with PASS", () => {
-  const card = packParty(MILL).cards.get("maren")!;
+  const card = castParty(MILL).cards.get("maren")!;
   const english = playerPrompt("maren", card);
   const russian = playerPrompt("maren", card, "ru");
   assert.doesNotMatch(english, /Russian/);
@@ -164,6 +164,20 @@ test("with --lang ru a model player speaks, declares, notes and summarises in Ru
   assert.match(russian, /write in Russian everything you say, declare, note or summarise/);
   assert.match(russian, /just PASS, in Latin letters/);
   assert.equal(declaration("PASS"), undefined);
+});
+
+test("with no human at the table, a player hears that only AI players play the others, Bren too (AGT-40)", () => {
+  const all = castParty(MILL, "none");
+  const card = all.cards.get("bren")!;
+  const alone = playerPrompt("bren", card, "en", false);
+  assert.match(alone, /You play one character, Bren \(handle bren\), and only Bren\./);
+  assert.match(alone, /Other AI players play the other characters\./);
+  assert.match(alone, /out of combat, after the DM narrated, before anyone has the floor/);
+  // Bren's card says a human may sit in Bren's seat; the table's rules say nothing of a human.
+  assert.doesNotMatch(alone.replace(card.trim(), ""), /human/);
+  // With a human, the prompt is as it was.
+  assert.match(playerPrompt("maren", all.cards.get("maren")!), /A human and other AI players play the other characters\./);
+  assert.equal(new ModelPlayer({ handle: "bren", card, choice: CHOICE, withHuman: false }).systemPrompt, alone);
 });
 
 test("a declaration is its one line, and PASS or nothing is a pass", () => {

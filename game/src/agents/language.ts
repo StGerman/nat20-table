@@ -7,12 +7,14 @@ export const LANGUAGES = ["en", "ru"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 /** The DM's language section, or nothing for English. */
-export function dmLanguage(language: Language): string[] {
+export function dmLanguage(language: Language, human = true): string[] {
   if (language === "en") return [];
   return [
     "## Language",
     "",
-    "Write everything the table hears in Russian: narration, questions to the human, the closing narration, and your scene summaries and memory. The human may write in Russian or English; read either.",
+    human
+      ? "Write everything the table hears in Russian: narration, questions to the human, the closing narration, and your scene summaries and memory. The human may write in Russian or English; read either."
+      : "Write everything the table hears in Russian: narration, the closing narration, and your scene summaries and memory.",
     "The engine's lines, the options and the scene files are in English: tell what they mean in the fiction, in Russian, and never quote them. Tool inputs stay exactly as the tools take them: ids, handles, skills and option ids.",
     "The guard reads Russian too: no numbers in words from ten up (десять, двадцать, сто), and no game statistics (КД, класс доспеха, СЛ, хиты, очки здоровья, бонус атаки).",
     "",

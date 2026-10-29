@@ -26,6 +26,8 @@ export async function testTable<S extends Seat = ScriptedSeat>(options: {
   /** A scenario pack; the engine's test scenes by default. */
   pack?: string;
   human?: string;
+  /** A table with no human (AGT-40): every character is in `players`, and `seat` is never shown anything. */
+  noHuman?: boolean;
   players?: string[];
   /** The human's seat; a scripted seat that passes by default. */
   seat?: S;
@@ -40,9 +42,8 @@ export async function testTable<S extends Seat = ScriptedSeat>(options: {
   const seat = options.seat ?? (new ScriptedSeat(human) as Seat as S);
   const table = new TableState({
     engine,
-    human,
+    ...(options.noHuman ? {} : { human, seat }),
     players: options.players ?? ["torva", "maren", "ilsa"],
-    seat,
     transcript: new Transcript(path.join(runDir, "transcript.jsonl"), () => engine.logHead, () => "t"),
     inputsFile: path.join(runDir, "inputs.jsonl"),
     narrationGuard: options.narrationGuard,

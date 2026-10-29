@@ -467,7 +467,7 @@ export class TableLoop {
 
   /** The human's combat turn: numbers act directly, words go to the DM to map (D5). */
   private async humanTurn(): Promise<void> {
-    const human = this.table.human;
+    const human = this.human;
     await this.narrateNew();
     if (!this.isTurnOf(human)) return;
     this.table.show({ kind: "status", text: "Your turn: pick a number from the list, or say what you do." });
@@ -512,7 +512,7 @@ export class TableLoop {
 
   /** Sends what a number stands for, as the human's own viewer: its refusal is projected for them. */
   private async humanAct(act: ChoiceAct): Promise<ToolOutcome> {
-    const human = this.table.human;
+    const human = this.human;
     const a = this.table.awaiting;
     const promptId = a.kind === "action" && a.actor === human ? a.prompt_id : undefined;
     const prompt = promptId ? { prompt_id: promptId } : {};
@@ -545,7 +545,7 @@ export class TableLoop {
   private async humanRejected(outcome: ToolOutcome): Promise<void> {
     this.table.humanRejections += 1;
     const message = (outcome.data as { message?: string } | undefined)?.message ?? outcome.text;
-    this.table.log("retry", `${this.table.human}'s choice was not accepted: ${message}`, this.table.human, { decision: this.humanDecision() });
+    this.table.log("retry", `${this.human}'s choice was not accepted: ${message}`, this.human, { decision: this.humanDecision() });
     this.table.show({ kind: "info", title: "Not accepted", text: message });
   }
 
@@ -568,7 +568,7 @@ export class TableLoop {
 
   /** The human typed words on their combat turn: the DM maps them to the human's decisions (D5). */
   private async mapHumanWords(text: string, since: number): Promise<void> {
-    const human = this.table.human;
+    const human = this.human;
     await this.table.declare(human, text);
     const acted = this.table.acted;
     const answered = this.table.dmToHuman;
@@ -636,7 +636,7 @@ export class TableLoop {
    * play (TASKS.md ENG-22, spec decision D2).
    */
   private async humanReaction(): Promise<void> {
-    const human = this.table.human;
+    const human = this.human;
     await this.table.flush();
     const a = this.table.awaiting;
     if (a.kind !== "reaction" || a.actor !== human) return;
@@ -688,7 +688,7 @@ export class TableLoop {
     const a = this.table.awaiting;
     if (a.kind !== "reaction" || a.actor !== handle) return false;
     const about = reactingTo(a.trigger.summary);
-    if (!about || (about !== this.table.human && !this.table.players.includes(about))) return false;
+    if (!about || !this.table.party.includes(about)) return false;
     if (about === handle && !self) return false;
     const response = await this.table.engine.request(handle, { cmd: "react", actor: handle, prompt_id: a.prompt_id, choice: null });
     this.table.observe(response);
@@ -718,7 +718,7 @@ export class TableLoop {
    * surrender for them or answer in fiction, and the offer stays open until it is answered.
    */
   private async answerSurrender(): Promise<void> {
-    const human = this.table.human;
+    const human = this.human;
     while (this.table.surrender && !this.table.ended) {
       const { handles } = this.table.surrender;
       if (!this.table.inCombat) {
@@ -819,13 +819,30 @@ export class TableLoop {
     const human = this.table.human;
     this.exploreRounds += 1;
     const head = this.table.engine.logHead;
-    await this.exploreRoundBody(human);
+    if (human) await this.exploreRoundBody(human);
+    else await this.aiRound();
     // Out of combat the engine logs no turn bookkeeping, so a round that left the log as it was
     // changed nothing: no check, move, rest, scene or fight (M7 design §3.1).
     this.quietRounds = this.table.engine.logHead === head ? this.quietRounds + 1 : 0;
     if (this.stallRounds > 0 && this.quietRounds >= this.stallRounds && !this.table.ended) {
       this.table.end(`stalled: ${this.quietRounds} explore rounds in a row changed nothing in the engine`, "stalled");
     }
+  }
+
+  /**
+   * A round out of combat at a table with no human (M7 spec §4.2, AGT-40): it starts from the DM's
+   * narration, so only the players the DM spoke to have the floor first; then the DM resolves it.
+   */
+  private async aiRound(): Promise<void> {
+    await this.table.flush();
+    await this.talkRound("");
+    await this.wakeDm(
+      "table_turn",
+      undefined,
+      "The table has spoken (above). Resolve it: call checks and moves, grant AI players their own options, or answer in fiction. Then narrate.",
+    );
+    await this.grantedActions();
+    await this.settle();
   }
 
   private async exploreRoundBody(human: Handle): Promise<void> {
@@ -1052,15 +1069,31 @@ export class TableLoop {
   // --- The human seat ------------------------------------------------------------------------------
 
   /**
+   * The human's character. Only the human's own paths read it (their turn, reaction, words, list and
+   * commands), and a table with no human never takes them (M7 spec §4.2, AGT-40).
+   */
+  private get human(): Handle {
+    const human = this.table.human;
+    if (!human) throw new Error("this table has no human");
+    return human;
+  }
+
+  private get seat(): NonNullable<TableState["seat"]> {
+    const seat = this.table.seat;
+    if (!seat) throw new Error("this table has no human seat");
+    return seat;
+  }
+
+  /**
    * Asks the human, answering slash commands until something else comes back. Returns undefined
    * when the run ended meanwhile, or (for the paused prompt) when `/pause` was lifted.
    */
   private async ask(prompt: HumanPrompt): Promise<PlayerIntent | undefined> {
     for (;;) {
       if (this.table.ended) return undefined;
-      const intent = await this.table.seat.ask(prompt);
+      const intent = await this.seat.ask(prompt);
       if (intent.kind === "text" || intent.kind === "option") {
-        this.table.recordInput(this.table.human, JSON.stringify(intent), true);
+        this.table.recordInput(this.human, JSON.stringify(intent), true);
       }
       if (intent.kind !== "command") return intent;
       await this.command(intent.name);
@@ -1069,7 +1102,7 @@ export class TableLoop {
   }
 
   private async command(name: "sheet" | "where" | "options" | "log" | "pause" | "quit"): Promise<void> {
-    const human = this.table.human;
+    const human = this.human;
     switch (name) {
       case "sheet": {
         const r = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
@@ -1120,7 +1153,7 @@ export class TableLoop {
    * for who is in reach). A failed read sends an empty situation: the panel shows its last as stale.
    */
   private async showSituation(state?: State, options?: LegalActionsResult): Promise<void> {
-    if (!this.situation || this.table.ended) return;
+    if (!this.situation || this.table.ended || !this.table.human) return;
     const seen = state ?? (await this.humanState());
     const a = this.table.awaiting;
     const turn = a.kind === "action" ? a.actor : undefined;
@@ -1129,13 +1162,13 @@ export class TableLoop {
   }
 
   private async humanState(): Promise<State | undefined> {
-    const r = this.table.observe(await this.table.engine.request(this.table.human, { cmd: "get_state" }));
+    const r = this.table.observe(await this.table.engine.request(this.human, { cmd: "get_state" }));
     return r.result?.cmd === "get_state" ? r.result.state : undefined;
   }
 
   /** Shows the human's numbered options: their own `legal_actions` and state, projected for them. */
   private async offerChoices(combat: boolean): Promise<void> {
-    const human = this.table.human;
+    const human = this.human;
     const listed = this.table.observe(await this.table.engine.request(human, { cmd: "legal_actions", actor: human }));
     const state = combat || this.situation ? await this.humanState() : undefined;
     if (!listed.ok || listed.result?.cmd !== "legal_actions") {
@@ -1385,10 +1418,10 @@ export class TableLoop {
   /** Tells the seat a model wake started; the returned call says it ended. The newest one in flight is shown. */
   private waitFor(on: string): () => void {
     this.waitingOn.push(on);
-    this.table.seat.busy?.(on);
+    this.table.seat?.busy?.(on);
     return () => {
       this.waitingOn.splice(this.waitingOn.lastIndexOf(on), 1);
-      this.table.seat.busy?.(this.waitingOn.at(-1));
+      this.table.seat?.busy?.(this.waitingOn.at(-1));
     };
   }
 }

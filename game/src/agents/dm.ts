@@ -75,8 +75,21 @@ export function craftSkills(dir = CRAFT_PLUGIN): Array<{ name: string; descripti
 }
 
 /** The DM's system prompt: the same for every session of a run. */
-export function dmPrompt(pack: PackText, human: Handle, players: Handle[], craft: CraftMode, language: Language = "en"): string {
-  const party = [human, ...players];
+export function dmPrompt(pack: PackText, human: Handle | undefined, players: Handle[], craft: CraftMode, language: Language = "en"): string {
+  const party = [...(human ? [human] : []), ...players];
+  // A table with no human (M7 spec §4.2, AGT-40): every character is an AI player, nobody is asked
+  // anything, and a surrender is the DM's call.
+  const seats = human ? `A human plays ${human}; AI players play ${players.join(", ")}.` : `AI players play every character: ${players.join(", ")}. No human sits at this table.`;
+  const fightMoves = human ? ` (in a fight only ${human} moves, on ${human}'s turn)` : "";
+  const hears = human ? "narrate (to everyone, or to one character with `to`) and ask_human" : "narrate (to everyone, or to one character with `to`)";
+  const spoken = human
+    ? `- "The table has spoken": ${human} acted or spoke, then the AI players declared. Resolve it: ask for a check (request_check, with the character who tries as actor), move characters (move), have one help another (help), rest (short_rest), start the scene's fight (start_combat), or answer in fiction. When an AI player declares one of its own options, such as a spell or a potion, don't take it for them: grant_action, and they take it. ${human}'s own options go through submit. If ${human}'s intent is unclear, ask_human. Then narrate the outcome in one to three sentences.
+- "It is ${human}'s turn, and the human playing ${human} said": map the words to ${human}'s options (legal_actions, submit, move, end_turn), then narrate only what the engine did. If it can't be done, or a move is refused, say so in narration.`
+    : `- "The table has spoken": the AI players declared. Resolve it: ask for a check (request_check, with the character who tries as actor), move characters (move), have one help another (help), rest (short_rest), start the scene's fight (start_combat), or answer in fiction. When an AI player declares one of its own options, such as a spell or a potion, don't take it for them: grant_action, and they take it. Then narrate the outcome in one to three sentences.`;
+  const surrenderWords = human ? `- "answered your surrender offer in words": if the human accepts, end_combat with surrender; otherwise answer in fiction with narrate. The offer stays open until they accept or fight on.\n` : "";
+  const surrender = human
+    ? `- Surrender: while get_state shows a surrender is available, the human decides whether to accept it. Narrate the foes begging for their lives, then call offer_surrender with the handles get_state lists as surrendering; never ask about it with ask_human. The table asks the human at once, and nothing happens in the fight before the answer: accepted, the fight ends and you narrate it; refused, you hear so and narrate the fight going on. The AI players may speak to it, but only ${human} decides. When ${human} is down, you decide: end_combat with surrender, or fight on.`
+    : "- Surrender: while get_state shows a surrender is available, you decide, as no human sits at this table: narrate the foes begging for their lives, then end_combat with surrender to accept it, or narrate the fight going on. The AI players may speak to it.";
   const skills = craftSkills();
   const guidance =
     craft === "prompt"
@@ -87,14 +100,14 @@ export function dmPrompt(pack: PackText, human: Handle, players: Handle[], craft
           `Your craft skills hold how to run the table well: ${skills.map((s) => `${CRAFT_NAME}:${s.name} (${s.description})`).join("; ")}. Load the one a situation needs, once per scene.`,
           "",
         ];
-  return `You are the Dungeon Master of "${pack.adventure.title}", a game of Dungeons & Dragons (fifth edition, 2024 rules). A human plays ${human}; AI players play ${players.join(", ")}.
+  return `You are the Dungeon Master of "${pack.adventure.title}", a game of Dungeons & Dragons (fifth edition, 2024 rules). ${seats}
 
 ## How this table works
 
 - A rules engine resolves every rule and every roll: attacks, damage, checks, saves, and the monsters' turns, which it plays itself. You never decide an outcome and never set a number. Never narrate a hit, a wound, a death, a success or a failure the engine didn't report.
-- Where everyone stands is the engine's too. Never narrate a character walking up to someone or somewhere unless move put them there. If move is refused, or not allowed now (in a fight only ${human} moves, on ${human}'s turn), the character acts from where they stand: calls out, waits, points.
+- Where everyone stands is the engine's too. Never narrate a character walking up to someone or somewhere unless move put them there. If move is refused, or not allowed now${fightMoves}, the character acts from where they stand: calls out, waits, points.
 - You act only through your tools. get_state shows you everything in the scene (creatures with their Hit Points, positions, checks, encounters, spawns, flags); call it when you need it.
-- What the table hears from you goes through narrate (to everyone, or to one character with \`to\`) and ask_human. Anything else you write reaches nobody.
+- What the table hears from you goes through ${hears}. Anything else you write reaches nobody.
 
 ## What the table may hear
 
@@ -108,25 +121,23 @@ The guard reads only what the table hears: tool inputs such as a check's DC are 
 ## Each message says why you are woken
 
 - "Scene ... is loaded": open the scene for the table in two to five sentences, from its prose: what the characters see, and what they can obviously do.
-- "The table has spoken": ${human} acted or spoke, then the AI players declared. Resolve it: ask for a check (request_check, with the character who tries as actor), move characters (move), have one help another (help), rest (short_rest), start the scene's fight (start_combat), or answer in fiction. When an AI player declares one of its own options, such as a spell or a potion, don't take it for them: grant_action, and they take it. ${human}'s own options go through submit. If ${human}'s intent is unclear, ask_human. Then narrate the outcome in one to three sentences.
-- "It is ${human}'s turn, and the human playing ${human} said": map the words to ${human}'s options (legal_actions, submit, move, end_turn), then narrate only what the engine did. If it can't be done, or a move is refused, say so in narration.
+${spoken}
 - "Narrate these events": one to three sentences. The table reads your narration, not the engine's lines, and reads it as one running story: say who acted, against whom, and what came of it (missed, wounded, dropped, healed); don't say whose turn it is or comes next; don't set the scene again or describe again a creature the fight already met.
-- "answered your surrender offer in words": if the human accepts, end_combat with surrender; otherwise answer in fiction with narrate. The offer stays open until they accept or fight on.
-- "The fight is over": narrate how it ends, then go on with the scene.
+${surrenderWords}- "The fight is over": narrate how it ends, then go on with the scene.
 - "The scene is over": your final answer is a short summary for yourself: what happened, what you established, what is left open.
 
 ## Running the adventure
 
 - Checks: when one of the scene's checks fits what a character tries (the skeleton's check hints say which intent each answers), request it by its id; each is rolled once. Otherwise name a skill and a DC from the ladder: ${LADDER.join(", ")}. Call for a check only when the outcome is uncertain and something rides on it.
 - Fights: start_combat with the scene's encounter when its hint says so. end_combat with fled when one side gets away, scenario when the scene's prose ends the fight.
-- Surrender: while get_state shows a surrender is available, the human decides whether to accept it. Narrate the foes begging for their lives, then call offer_surrender with the handles get_state lists as surrendering; never ask about it with ask_human. The table asks the human at once, and nothing happens in the fight before the answer: accepted, the fight ends and you narrate it; refused, you hear so and narrate the fight going on. The AI players may speak to it, but only ${human} decides. When ${human} is down, you decide: end_combat with surrender, or fight on.
+${surrender}
 - Scenes: the skeleton lists the scenes in order with their exits. When an exit's condition holds, narrate the way there and call load_scene with the next scene's id and the party (${party.join(", ")}), adding the handle of any creature that surrendered when the exit carries captives. After the last scene, call end_adventure with the closing narration.
 - Memory: remember keeps a fact you established in fiction that the engine doesn't track (a name you improvised, a promise, a door you called locked) for the rest of the adventure. Fiction only: positions, Hit Points and results always come fresh from the engine. Memory can change which check you ask for; it never decides an outcome.
 - Actions the adventure didn't plan for (robbing an NPC, threatening a villager): turn the intent into what the engine can do, usually a ladder check. Nothing changes hands and nobody is hurt unless the engine says so; there is no fight with anyone the scene doesn't hold. A consequence the engine doesn't track is fiction you remember, and the adventure goes on along its exits.
 
 Be quick: decide, call the tools, narrate once. Most wakes need one to three tool calls.
 
-${[...guidance, ...dmLanguage(language)].join("\n")}
+${[...guidance, ...dmLanguage(language, Boolean(human))].join("\n")}
 ## The adventure (only you see it)
 
 ${pack.text}`;
@@ -134,8 +145,8 @@ ${pack.text}`;
 
 export interface ModelDmConfig {
   pack: PackText;
-  /** The human's character. */
-  human: Handle;
+  /** The human's character; absent for a table with no human (AGT-40). */
+  human?: Handle;
   /** The AI players' characters. */
   players: Handle[];
   choice: ModelChoice;
@@ -237,7 +248,7 @@ export class ModelDm implements DmAgent {
     const human = this.config.human;
     const handle = z.string().describe("A creature's handle, such as goblin_1.");
     const refuse = (text: string): ToolOutcome => ({ ok: false, text });
-    return [
+    const tools = [
       seatTool(
         "get_state",
         "Everything in the scene now, as only you see it: creatures with Hit Points, AC, state and position, places, checks, encounters, spawns, flags.",
@@ -259,7 +270,9 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "end_combat",
-        `End the running fight: fled, or scenario. Surrender only after ${human} accepted your offer in words, or when ${human} is down.`,
+        human
+          ? `End the running fight: fled, or scenario. Surrender only after ${human} accepted your offer in words, or when ${human} is down.`
+          : "End the running fight: fled, scenario, or surrender while get_state shows one available.",
         { reason: z.enum(["surrender", "fled", "scenario"]) },
         (i) => this.bound((t) => t.endCombat(i.reason)),
       ),
@@ -310,7 +323,9 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "move",
-        `Out of combat: move any creature to a place (anchor id) or next to a creature. In a fight: only ${human}, on ${human}'s turn, as far as ${human}'s movement goes; the answer says if they stopped short.`,
+        human
+          ? `Out of combat: move any creature to a place (anchor id) or next to a creature. In a fight: only ${human}, on ${human}'s turn, as far as ${human}'s movement goes; the answer says if they stopped short.`
+          : "Out of combat: move any creature to a place (anchor id) or next to a creature. In a fight the characters move themselves.",
         { actor: handle, place: z.string().optional(), creature: handle.optional() },
         (i) =>
           this.bound((t) => {
@@ -385,5 +400,8 @@ export class ModelDm implements DmAgent {
         (i) => this.bound((t) => t.endAdventure(i.text)),
       ),
     ];
+    // With no human at the table, nothing is the human's to take, ask or answer (M7 spec §4.2).
+    const humanOnly = new Set(["offer_surrender", "legal_actions", "submit", "end_turn", "ask_human"]);
+    return human ? tools : tools.filter((tool) => !humanOnly.has(tool.name));
   }
 }

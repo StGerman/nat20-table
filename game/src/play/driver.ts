@@ -36,7 +36,7 @@ import type { DmAgent, PlayerAgent, Seat } from "../table/types.ts";
 import { InkSeat } from "../ui/ink-seat.ts";
 import { UsageLog } from "../usage.ts";
 import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
-import { audit, endState, guards, packParty, refuseApiKey, reportSections, runFolder, scenePlan, startAt, timingLines } from "./run.ts";
+import { audit, endState, guards, castParty, refuseApiKey, reportSections, runFolder, scenePlan, startAt, timingLines } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
 import { uploadStage } from "./upload.ts";
 import { AUDIT_JSON, verdictBlock, writeVerdict } from "./verdict.ts";
@@ -70,7 +70,9 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   }
   const flags = settings.values;
   const pack = readPack(flags.pack);
-  const party = packParty(flags.pack);
+  // `--seat ai`: no human at the table, and every character an AI player (AGT-40).
+  const party = castParty(flags.pack, flags.seat === "ai" ? "none" : "default");
+  const everyone = [...(party.human ? [party.human] : []), ...party.ai];
   const typedScenes = settings.provenance.scenes ?? settings.provenance.scene;
   const played =
     play.allScenes && (!typedScenes || typedScenes.from === "default")
@@ -123,7 +125,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // (before the table is set, it exits). The keyboard seat draws from here, so the engine's start
   // shows its loading indicator too.
   let quit: () => void = () => process.exit(130);
-  const ink = flags.seat === "ink" ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose }) : undefined;
+  const ink = flags.seat === "ink" && party.human ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose }) : undefined;
   // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame.
   ink?.start({ interactive: true });
   ink?.busy("The engine is starting");
@@ -135,7 +137,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     let engine: GameEngine | undefined;
     try {
       engine = await GameEngine.start({ pack: flags.pack, runDir, seed: flags.seed });
-      return { engine, carried: await startAt(engine, flags.pack, plan.first, [party.human, ...party.ai]) };
+      return { engine, carried: await startAt(engine, flags.pack, plan.first, everyone) };
     } catch (error) {
       engine?.close();
       ink?.stop();
@@ -159,7 +161,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
       os: `${process.platform} ${process.arch}`,
     },
     seed: engine.seed,
-    seats: { human: party.human, ai: party.ai },
+    seats: { human: party.human ?? null, ai: party.ai },
     plan: played,
     adventure: pack.adventure.scenes.map((s) => s.id),
     time_limit_min: flags["time-limit-min"],
@@ -172,7 +174,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   writeRunRecord(runDir, record);
 
   const transcript = new Transcript(path.join(runDir, "transcript.jsonl"), () => engine.logHead);
-  const seat: Seat = ink ?? new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai);
+  const seat: Seat | undefined = ink ?? (party.human ? new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai) : undefined);
   const table = new TableState({
     engine,
     human: party.human,
@@ -191,14 +193,14 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   };
   if (!ink) process.on("SIGINT", interrupted);
   const players: PlayerAgent[] = party.ai.map((handle) =>
-    flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice: playerChoice, language, usage }),
+    flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice: playerChoice, language, withHuman: Boolean(party.human), usage }),
   );
   const fights = Object.fromEntries(pack.adventure.scenes.flatMap((s) => (s.encounters[0] ? [[s.id, s.encounters[0].encounter]] : [])));
   // A scripted whole-adventure run walks every scene (AGT-39); a scene run ends after its first fight.
   const scripted = () =>
     play.allScenes
-      ? chainDm(chainScenes(pack.adventure.scenes), [party.human, ...party.ai], party.human)
-      : walkOnDm(pack.adventure.scenes.map((s) => s.id), fights, [party.human, ...party.ai]);
+      ? chainDm(chainScenes(pack.adventure.scenes), everyone, everyone[0])
+      : walkOnDm(pack.adventure.scenes.map((s) => s.id), fights, everyone);
   const dm: DmAgent = flags.dm === "scripted" ? scripted() : modelDm(usage);
 
   // The time limit runs from the first scene's load; the loop stops between decisions, so a wake in
@@ -240,7 +242,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
 
   const who = (kind: string | undefined, choice: { model: string; effort: string }) => (kind === "scripted" ? "scripted" : `${choice.model} (${choice.effort})`);
   console.log(
-    `Playing ${played.join(", ")} of ${pack.adventure.title} (seed ${engine.seed}${settings.profile ? `, profile ${settings.profile.name}` : ""}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human} ${ink ? "played by you" : "scripted"}. Run folder ${path.relative(process.cwd(), runDir)}/.`,
+    `Playing ${played.join(", ")} of ${pack.adventure.title} (seed ${engine.seed}${settings.profile ? `, profile ${settings.profile.name}` : ""}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human ? `${party.human} ${ink ? "played by you" : "scripted"}` : "no human"}. Run folder ${path.relative(process.cwd(), runDir)}/.`,
   );
   ink?.busy(undefined);
   let run: RunReport | undefined;
@@ -275,7 +277,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     `- Played: ${run?.scenes.join(", ") || "none"}${run && run.passedOver.length > 0 ? `; passed over: ${run.passedOver.join(", ")}` : ""}`,
     `- DM: ${who(flags.dm, dmChoice)}${flags.dm === "model" ? `, craft guidance in the ${craft === "prompt" ? "system prompt" : "skills"}` : ""}`,
     ...(language === "en" ? [] : [`- Language of the DM's and the AI players' lines: ${language}`]),
-    `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human} ${ink ? "played in the terminal UI" : "on a scripted seat"}`,
+    `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human ? `${party.human} ${ink ? "played in the terminal UI" : "on a scripted seat"}` : "no human at the table"}`,
     ...(ink ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
     "",

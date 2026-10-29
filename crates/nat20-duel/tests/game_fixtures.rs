@@ -52,7 +52,7 @@ fn read(name: &str, file: &str) -> String {
 fn every_game_fixture_passes_the_audit_and_the_leak_scan() {
     let names = fixtures();
     assert!(
-        ["m5_yard", "m3_trail", "m7_adventure"]
+        ["m5_yard", "m3_trail", "m7_adventure", "m7_adventure_ai"]
             .iter()
             .all(|n| names.contains(&n.to_string())),
         "{names:?}"
@@ -74,7 +74,12 @@ fn every_game_fixture_passes_the_audit_and_the_leak_scan() {
         assert!(audit.rolls_in_log > 0 && audit.rolls_cited == audit.rolls_in_log);
         let scan = scan_inputs(&read(&name, "inputs.jsonl"), secrets).unwrap();
         assert!(scan.passed(), "{name}: {:#?}", scan.leaks);
-        assert!(scan.inputs > 0 && scan.human_lines > 0, "{name}: {scan:?}");
+        // A table with no human (AGT-40) has no human seat: every input is an AI player's.
+        let human_seat = !name.ends_with("_ai");
+        assert!(
+            scan.inputs > 0 && (scan.human_lines > 0) == human_seat,
+            "{name}: {scan:?}"
+        );
     }
 }
 

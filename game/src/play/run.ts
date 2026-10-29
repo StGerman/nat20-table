@@ -21,8 +21,8 @@ export const TARGET_P95_MS = { player: 10_000, dm: 6_000 };
 export const TALK_TARGETS = { silentShare: 0.3, firstLineP50Ms: 7_000, roundP95Ms: 20_000, fightLinesPerRound: 0.5 };
 
 export interface PackParty {
-  /** The human's character. */
-  human: Handle;
+  /** The human's character; absent for a table with no human (`--seat ai`, AGT-40). */
+  human?: Handle;
   /** The AI players' characters, in seat order. */
   ai: Handle[];
   /** Each AI player's personality card (CHR-5). */
@@ -34,12 +34,19 @@ export interface PackParty {
   names: Map<Handle, string[]>;
 }
 
-/** The party of a scenario pack's skeleton, with the AI players' cards read from the pack. */
-export function packParty(pack: string): PackParty {
+/**
+ * Who plays whom (M7 spec §4.2, design §3.2): the pack's party, with the human on the character the
+ * pack seats there by default, or with no human (`none`): then every character is an AI player.
+ * The AI players' cards are read from the pack.
+ */
+export type Casting = "default" | "none";
+
+/** The party of a scenario pack's skeleton, cast per `casting`, with the AI players' cards read from the pack. */
+export function castParty(pack: string, casting: Casting = "default"): PackParty {
   const adventure = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8")));
-  const human = adventure.party.find((p) => p.seat === "human")?.handle;
-  if (!human) throw new Error(`${pack}: the party has no human seat`);
-  const ai = adventure.party.filter((p) => p.seat === "ai");
+  const human = casting === "none" ? undefined : adventure.party.find((p) => p.seat === "human")?.handle;
+  if (casting !== "none" && !human) throw new Error(`${pack}: the party has no human seat`);
+  const ai = adventure.party.filter((p) => p.handle !== human);
   const cards = new Map(
     ai.map((p) => {
       if (!p.card) throw new Error(`${pack}: party ${p.handle} has an AI seat and no card (npm run pack:check)`);
@@ -52,7 +59,7 @@ export function packParty(pack: string): PackParty {
       return [p.handle, [...new Set([p.handle, cardName(p.handle, card), ...(p.names ?? [])])]];
     }),
   );
-  return { human, ai: ai.map((p) => p.handle), cards, names };
+  return { ...(human ? { human } : {}), ai: ai.map((p) => p.handle), cards, names };
 }
 
 /** The guards every live run puts on free text (spec §3.5): the DM's against the pack's ids. */

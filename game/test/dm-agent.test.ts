@@ -13,7 +13,7 @@ import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnTimeout } from "../src/errors.ts";
 import { readPack } from "../src/pack/read.ts";
-import { guards, packParty, startAt } from "../src/play/run.ts";
+import { guards, castParty, startAt } from "../src/play/run.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedSeat } from "../src/table/scripted.ts";
 import { DmTools } from "../src/table/tools.ts";
@@ -23,7 +23,8 @@ import { StandIn, type Script } from "./stand-in.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 const PACK = readPack(MILL);
-const PARTY = packParty(MILL);
+const CAST = castParty(MILL);
+const PARTY = { ...CAST, human: CAST.human! };
 const CHOICE = { model: "claude-opus-5-5", effort: "low" } as const;
 
 /** A model DM whose sessions are stand-ins playing `script`; `sessions` lists them as they open. */
@@ -258,6 +259,28 @@ test("the scene run command plays Scene 3 with a scripted DM and players, and wr
   }
 });
 
+test("--seat ai plays the scene with every character an AI player and records no human seat (AGT-40)", () => {
+  const out = mkdtempSync(path.join(tmpdir(), "scene-"));
+  try {
+    const cli = path.join(REPO, "game/src/play/scene.ts");
+    const run = spawnSync(
+      process.execPath,
+      ["--experimental-strip-types", "--no-warnings", cli, "--seat", "ai", "--dm", "scripted", "--players", "scripted", "--seed", "5", "--no-audit", "--no-upload", "--out", out],
+      { encoding: "utf8" },
+    );
+    assert.equal(run.status, 0, run.stderr || run.stdout);
+    const [folder] = readdirSync(out);
+    const record = JSON.parse(readFileSync(path.join(out, folder, "run.json"), "utf8")) as { seats: { human: string | null; ai: string[] } };
+    assert.deepEqual(record.seats, { human: null, ai: ["bren", "torva", "maren", "ilsa"] });
+    const report = readFileSync(path.join(out, folder, "report.md"), "utf8");
+    assert.match(report, /- AI players: bren, torva, maren, ilsa, scripted; no human at the table\n/);
+    // The ts job has no Rust toolchain, so the audit stays off here (as in the other CLI tests); the
+    // no-human leak scan is game_fixtures.rs on m7_adventure_ai, which CI runs in rust-test.
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
 test("the exit run's scene list plays Scene 1, passes over Scene 2 and plays Scene 3", () => {
   const out = mkdtempSync(path.join(tmpdir(), "scene-"));
   try {
@@ -278,6 +301,23 @@ test("the exit run's scene list plays Scene 1, passes over Scene 2 and plays Sce
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
+});
+
+test("with no human at the table, the DM's prompt and tools leave the human out (AGT-40)", () => {
+  const all = castParty(MILL, "none");
+  const dm = new ModelDm({ pack: PACK, players: all.ai, choice: CHOICE });
+  assert.match(dm.systemPrompt, /AI players play every character: bren, torva, maren, ilsa\. No human sits at this table\./);
+  assert.doesNotMatch(dm.systemPrompt, /ask_human|offer_surrender|the human playing|A human plays/);
+  assert.doesNotMatch(dm.systemPrompt, /undefined/);
+  assert.match(dm.systemPrompt, /- Surrender: while get_state shows a surrender is available, you decide/);
+  assert.match(dm.systemPrompt, /call load_scene with the next scene's id and the party \(bren, torva, maren, ilsa\)/);
+  const names = dm.seatTools.map((t) => t.name);
+  for (const gone of ["offer_surrender", "legal_actions", "submit", "end_turn", "ask_human"]) assert.ok(!names.includes(gone), `no ${gone}`);
+  assert.deepEqual(names, DM_TOOLS.filter((t) => !["offer_surrender", "legal_actions", "submit", "end_turn", "ask_human"].includes(t)));
+  for (const tool of dm.seatTools) assert.doesNotMatch(tool.description, /undefined|human/, `${tool.name}'s description`);
+  // The human's table is unchanged.
+  assert.equal(dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt"), new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).systemPrompt);
+  assert.doesNotMatch(dmPrompt(PACK, undefined, all.ai, "prompt", "ru"), /questions to the human|The human may write/);
 });
 
 test("with --lang ru the DM writes what the table hears in Russian; an English run's prompt has no language section", () => {
