@@ -403,6 +403,10 @@ export interface ScenePasses {
   insteadOf(sceneId: string): string | undefined;
   /** Called once the scene loaded instead of `sceneId` is in. */
   passedOver(sceneId: string, next: string): void;
+  /** The run's last scene: the adventure ends only after it has loaded (or with the whole party down). */
+  finale?: string;
+  /** The scene loaded last. */
+  current?(): string | undefined;
 }
 
 /**
@@ -413,6 +417,8 @@ export interface ScenePasses {
 export class DmTools {
   private readonly table: TableState;
   private readonly passes: ScenePasses | undefined;
+  /** The scene this DM's own load_scene loaded last: the loop hears of it only after the wake. */
+  private loaded: string | undefined;
 
   constructor(table: TableState, passes?: ScenePasses) {
     this.table = table;
@@ -455,6 +461,7 @@ export class DmTools {
     const loaded = await send(this.table, "dm", { cmd: "load_scene", scene_id: instead ?? scene_id, ...(party ? { party: [...party] } : {}) }, (r) =>
       r.result?.cmd === "load_scene" ? formatDmState(r.result.state) : "loaded",
     );
+    if (loaded.ok) this.loaded = instead ?? scene_id;
     if (!instead || !loaded.ok) return loaded;
     this.passes!.passedOver(scene_id, instead);
     return {
@@ -639,9 +646,22 @@ export class DmTools {
     return this.table.remember(fact);
   }
 
+  /** Whether every party member is at 0 Hit Points: the adventure may end early then. */
+  private async partyDown(): Promise<boolean> {
+    const r = await this.table.engine.request("dm", { cmd: "get_state" });
+    const state = r.result?.cmd === "get_state" ? r.result.state : undefined;
+    if (state?.view !== "dm") return false;
+    const party = state.creatures.filter((c) => c.side === "party");
+    return party.length > 0 && party.every((c) => c.hp === 0);
+  }
+
   /** The adventure's last exit has fired: the closing narration, then the run ends. */
   async endAdventure(text: string): Promise<ToolOutcome> {
     if (this.table.inCombat) return notNow("finish the fight first");
+    const finale = this.passes?.finale;
+    if (finale && (this.loaded ?? this.passes?.current?.()) !== finale && !(await this.partyDown())) {
+      return notNow(`the adventure ends only after its last scene, ${finale}: follow the scene's exit with load_scene first`);
+    }
     const said = await this.table.narrate(text);
     if (said.ok) this.table.end("the adventure is over");
     return said.ok ? { ok: true, text: "the adventure is over" } : said;

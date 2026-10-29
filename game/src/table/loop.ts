@@ -29,6 +29,11 @@ export interface LoopOptions {
    * scenes played so far. Default: play every scene.
    */
   onScene?: (sceneId: string, played: readonly string[]) => SceneChoice;
+  /**
+   * The run's last scene: the DM may end the adventure only once it has loaded, unless the whole
+   * party is down (the first M7 run ended in Scene 5 and never played the wrap-up). None by default.
+   */
+  finale?: string;
   /** Loop steps before the run is stopped: a safety net for scripted runs. Default 5000. */
   maxSteps?: number;
   /**
@@ -251,6 +256,7 @@ export class TableLoop {
         return typeof choice === "object" ? choice.skipTo : undefined;
       },
       passedOver: (sceneId, next) => this.passedOver(sceneId, next),
+      ...(options.finale ? { finale: options.finale, current: () => this.scenes.at(-1) } : {}),
     });
     this.onScene = options.onScene ?? (() => "continue");
     this.maxSteps = options.maxSteps ?? 5000;

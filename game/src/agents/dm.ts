@@ -398,7 +398,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "end_adventure",
-        "The adventure's last scene is over: the closing narration, then the run ends.",
+        "The adventure's last scene is over: the closing narration, then the run ends. Refused before the last scene has loaded, unless the whole party is down.",
         { text: z.string() },
         (i) => this.bound((t) => t.endAdventure(i.text)),
       ),

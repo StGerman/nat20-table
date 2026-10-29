@@ -1891,3 +1891,65 @@ test("no surrender can be offered while none is available, and the DM can't acce
   assert.match(tried[0].text, /no surrender is available now/);
   assert.match(tried[1].text, /bren decides on a surrender: offer it with offer_surrender/);
 });
+
+test("the DM can't end the adventure before its last scene has loaded, and can once it has", async () => {
+  const tried: ToolOutcome[] = [];
+  const { report } = await play({
+    ...YARD,
+    loop: { finale: "m3_s3_yard" },
+    dm: {
+      scene_open: async (tools) => {
+        const state = (await tools.getState()).data as { state: { scene_id?: string | null } };
+        if (state.state.scene_id === "m3_s1_green") {
+          tried.push(await tools.endAdventure("The green is quiet. The end."));
+          await tools.loadScene("m3_s3_yard", ["bren"]);
+        } else {
+          tried.push(await tools.endAdventure("The yard is quiet. The end."));
+        }
+      },
+    },
+  });
+  assert.deepEqual(tried.map((o) => o.ok), [false, true]);
+  assert.equal(tried[0].retryable, false);
+  assert.match(tried[0].text, /the adventure ends only after its last scene, m3_s3_yard: follow the scene's exit with load_scene first/);
+  assert.equal(report.ended, "the adventure is over");
+});
+
+test("with the whole party down the DM may end the adventure before its last scene", async () => {
+  const tried: ToolOutcome[] = [];
+  const brenHp: number[] = [];
+  const { report } = await play({
+    ...YARD,
+    // Bren never acts, so the yard's goblins and wolves bring Bren down.
+    seat: new ScriptedSeat("bren"),
+    loop: { finale: "m3_s6_never" },
+    dm: {
+      scene_open: intoTheYard,
+      narrate: async (tools) => void (await tools.narrate("Teeth and blades.")),
+      combat_over: async (tools) => {
+        const state = (await tools.getState()).data as { state: { creatures: Array<{ handle: string; hp: number }> } };
+        brenHp.push(state.state.creatures.find((c) => c.handle === "bren")?.hp ?? -1);
+        tried.push(await tools.endAdventure("Bren falls, and the trail ends here."));
+      },
+    },
+  });
+  assert.deepEqual(brenHp, [0]);
+  assert.deepEqual(tried.map((o) => o.ok), [true]);
+  assert.equal(report.ended, "the adventure is over");
+});
+
+test("the DM may load the last scene and end the adventure in the same wake", async () => {
+  const tried: ToolOutcome[] = [];
+  const { report } = await play({
+    ...YARD,
+    loop: { finale: "m3_s3_yard" },
+    dm: {
+      scene_open: async (tools) => {
+        tried.push(await tools.loadScene("m3_s3_yard", ["bren"]));
+        tried.push(await tools.endAdventure("The yard is quiet. The end."));
+      },
+    },
+  });
+  assert.deepEqual(tried.map((o) => o.ok), [true, true], tried.map((o) => o.text).join(" | "));
+  assert.equal(report.ended, "the adventure is over");
+});
