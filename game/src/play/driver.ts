@@ -9,14 +9,15 @@
 // the adventure, or at a stop: the time limit, a stall, the plan's usage limit, a lost network,
 // Ctrl+C, or a crash. It writes `runs/<name>-<time>/` with `run.json` (what ran: build, settings and
 // where each came from, seed, seats, per-scene timing), then runs the post-run stages over it (the
-// audit and leak scan, the verdict) and writes `report.md` with the verdict on top.
+// audit and leak scan, the verdict), writes `report.md` with the verdict on top, and uploads the
+// folder to the runs repo (upload.ts).
 //
 // Settings (game/src/play/settings.ts): --profile NAME|PATH, --scene ID, --scenes ID,ID, --seed N,
 // --dm-model, --player-model, --dm-effort, --effort (the AI players'), --craft prompt|skills (D10),
 // --dm-timeout-ms, --pack DIR, --dm scripted and --players scripted (no model), --seat scripted|ink,
 // --dry-run (prints the DM's prompt and session settings, starts nothing), --no-audit, --out DIR,
 // --max-steps N, --lang en|ru (decision 0038), --verbose (with --seat ink: AGT-37), --time-limit-min N,
-// --stall-rounds N.
+// --stall-rounds N, --upload REPO, --no-upload, --zip (AGT-41).
 import { spawn, type ChildProcess } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
@@ -37,6 +38,7 @@ import { UsageLog } from "../usage.ts";
 import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { audit, endState, guards, packParty, refuseApiKey, reportSections, runFolder, scenePlan, startAt, timingLines } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
+import { uploadStage } from "./upload.ts";
 import { AUDIT_JSON, verdictBlock, writeVerdict } from "./verdict.ts";
 
 export interface PlayCommand {
@@ -286,6 +288,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // The report is the DM's view (monster Hit Points, lines said to AI players only), so the terminal
   // you just played in shows only how the run ended; the rest stays in the run folder.
   console.log(ink ? `\nThe run is over: ${record.ended}. ${verdictLine}\n${written}` : `\n${[...verdictBlock(verdict).slice(1, -1), "", report].join("\n")}\n\n${written}`);
+  // Last, so a slow or failed push never holds back the record or the verdict.
+  for (const line of uploadStage(runDir, flags)) console.log(line);
   process.exitCode = failure || (checked && !checked.passed) ? 1 : 0;
 }
 

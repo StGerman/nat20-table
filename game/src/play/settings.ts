@@ -52,6 +52,11 @@ export const SETTINGS = {
   "time-limit-min": { kind: "int", default: 0 },
   /** Explore rounds in a row with no engine event before the run stops as a fail (`stalled`); 0 for none. */
   "stall-rounds": { kind: "int", default: 0 },
+  /** The runs repo to upload the run folder to (AGT-41): `owner/repo`, a git URL or a path; `NAT20_RUNS_REPO` when unset. */
+  upload: { kind: "string" },
+  "no-upload": { kind: "bool", default: false },
+  /** Also zip the run folder next to it, and show it in Finder. */
+  zip: { kind: "bool", default: false },
   "dry-run": { kind: "bool", default: false, flagOnly: true },
   profile: { kind: "string", flagOnly: true },
 } as const satisfies Record<string, Spec>;

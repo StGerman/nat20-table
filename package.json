@@ -25,7 +25,8 @@
     "play:cheap": "node --experimental-strip-types --no-warnings game/src/play/full.ts --profile cheap",
     "play:demo": "node --experimental-strip-types --no-warnings game/src/play/full.ts --profile demo",
     "runs:verdict": "node --experimental-strip-types --no-warnings game/src/play/runs.ts verdict",
-    "runs:finish": "node --experimental-strip-types --no-warnings game/src/play/runs.ts finish"
+    "runs:finish": "node --experimental-strip-types --no-warnings game/src/play/runs.ts finish",
+    "runs:upload": "node --experimental-strip-types --no-warnings game/src/play/runs.ts upload"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
