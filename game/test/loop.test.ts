@@ -146,12 +146,12 @@ test("the human, scripted, plays the Milestone 3 trail across five scenes, and t
 
 test("the scripted table plays The Silent Mill from Scene 1 to 6, and the transcript replays exactly (AGT-39)", async () => {
   // The real pack, chained scene to scene by the scripted DM; the AI players heal a downed ally
-  // first. Seed 213 is one where the party gets through the cellar (most seeds don't: MON-10).
+  // first. Seed 350 is one where the party gets through the cellar (most seeds don't: MON-10).
   const pack = path.join(REPO, "scenarios/the_silent_mill");
   const scenes = readPack(pack).adventure.scenes;
   const party = packParty(pack);
   const t = await testTable({
-    seed: 213,
+    seed: 350,
     pack,
     players: party.ai,
     seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai),
