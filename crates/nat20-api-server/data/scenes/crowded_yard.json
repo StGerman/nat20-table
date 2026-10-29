@@ -1,0 +1,61 @@
+{
+    "id": "crowded_yard",
+    "description": "Test scene for a partial move whose movement runs out in another creature's space (Copilot on table #154): Bren has 30 feet of movement, Maren stands 30 feet west of him, and a goblin waits 60 feet west, so a walk west towards a point or towards the goblin runs out where Maren is.",
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -30.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin_a",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -60.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "yard_fight",
+            "participants": [
+                "bren",
+                "maren",
+                "goblin_a"
+            ],
+            "end_reasons": [
+                "scenario"
+            ]
+        }
+    ]
+}
