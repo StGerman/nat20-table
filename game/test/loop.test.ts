@@ -175,14 +175,14 @@ test("the scripted table plays The Silent Mill from Scene 1 to 6, and the transc
 
 test("a table with no human plays The Silent Mill from Scene 1 to 6, and the transcript replays exactly (AGT-40)", async () => {
   // `--seat ai`: all four characters are AI players, so nothing is shown to a human, nobody is
-  // asked, and the scripted DM accepts the yard's surrender itself (M7 spec §4.2). Seed 99 is one
+  // asked, and the scripted DM accepts the yard's surrender itself (M7 spec §4.2). Seed 150 is one
   // where the party gets through the cellar (MON-10).
   const pack = path.join(REPO, "scenarios/the_silent_mill");
   const scenes = readPack(pack).adventure.scenes;
   const party = castParty(pack, "none");
   assert.equal(party.human, undefined);
   assert.deepEqual(party.ai, ["bren", "torva", "maren", "ilsa"]);
-  const t = await testTable({ seed: 99, pack, noHuman: true, players: party.ai, guards: (engine) => guards(pack, engine) });
+  const t = await testTable({ seed: 150, pack, noHuman: true, players: party.ai, guards: (engine) => guards(pack, engine) });
   try {
     const dm = chainDm(chainScenes(scenes), party.ai, party.ai[0]);
     const players = party.ai.map((h) => new ScriptedPlayer(h, { combat: rescueThenAttack }));
