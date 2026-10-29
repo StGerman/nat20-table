@@ -13,7 +13,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSyn
 import { homedir } from "node:os";
 import path from "node:path";
 import { readRunRecord, RUN_JSON } from "./record.ts";
-import { writeVerdict } from "./verdict.ts";
+import { CONFIRMATIONS_JSON, writeVerdict } from "./verdict.ts";
 
 /** Names the destination when no `--upload` is typed: `owner/repo`, a git URL, or a path. */
 export const RUNS_REPO_ENV = "NAT20_RUNS_REPO";
@@ -26,7 +26,8 @@ const SECRETS: Array<[string, RegExp]> = [
   ["a GitHub token", /\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})/],
   ["an AWS access key", /\bAKIA[0-9A-Z]{16}\b/],
   ["a private key", /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
-  ["an API key assignment", /\b[A-Z_]*API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]{16,}/],
+  // Quotes around the name or the value may be JSON-escaped, once or more (`inputs.jsonl` holds typed text).
+  ["an API key assignment", /\b[A-Z_]*API_KEY(?:\\*["'])?\s*[=:]\s*(?:\\*["'])?[A-Za-z0-9_-]{16,}/],
 ];
 
 export interface UploadOptions {
@@ -49,9 +50,13 @@ export function uploadTarget(flags: { upload?: string; "no-upload"?: boolean }, 
 /** How to set the destination up, printed when a run has none. */
 export const UPLOAD_SETUP = `The run was not uploaded: no runs repo is set. Create the private repo StGerman/nat20-runs on GitHub, then add \`export ${RUNS_REPO_ENV}=StGerman/nat20-runs\` to ~/.zshrc (or pass --upload StGerman/nat20-runs; --no-upload skips it). Older runs go up with npm run runs:upload.`;
 
-/** The git URL for `repo`: `owner/repo` is a GitHub repo; anything else is a URL or a path as given. */
+/**
+ * The git URL for `repo`: `owner/repo` is a GitHub repo; a path that exists is made absolute (git
+ * clones from the clone's parent folder); anything else is a URL as given.
+ */
 export function remoteUrl(repo: string): string {
-  return /^[\w.-]+\/[\w.-]+$/.test(repo) && !existsSync(repo) ? `https://github.com/${repo}.git` : repo;
+  if (existsSync(repo)) return path.resolve(repo);
+  return /^[\w.-]+\/[\w.-]+$/.test(repo) ? `https://github.com/${repo}.git` : repo;
 }
 
 /** The first credential in the folder, if any: the file and what it looks like. */
@@ -81,6 +86,13 @@ function ensureClone(remote: string, clone: string): string | undefined {
     mkdirSync(path.dirname(clone), { recursive: true });
     const cloned = git(path.dirname(clone), "clone", "--quiet", remote, clone);
     if (cloned.status !== 0) return `git clone ${remote} failed: ${(cloned.stderr || cloned.error?.message || "").trim()}`;
+  }
+  // A clone made for another runs repo would push there: refuse it rather than send runs to the wrong place.
+  // The raw config, before any `insteadOf` rewrite; a push URL, when set, must match too.
+  const fetchUrl = git(clone, "config", "--get", "remote.origin.url").stdout.trim();
+  const pushUrl = git(clone, "config", "--get", "remote.origin.pushurl").stdout.trim() || fetchUrl;
+  for (const url of [fetchUrl, pushUrl]) {
+    if (url !== remote) return `the clone ${clone} belongs to ${url || "no remote"}, not ${remote}: point ${RUNS_CLONE_ENV} at another folder for this repo`;
   }
   // An empty repo has no branch yet: the first commit makes main.
   if (git(clone, "rev-parse", "--verify", "--quiet", "HEAD").status !== 0) {
@@ -122,6 +134,8 @@ export function uploadRun(runDir: string, options: UploadOptions): UploadResult 
     if (cloned) return { ok: false, why: cloned };
     const target = path.join(clone, "runs", runId);
     for (const file of files(runDir)) {
+      // Stas's answers in the repo are newer than the Mac's copy: never overwrite them.
+      if (file === CONFIRMATIONS_JSON && existsSync(path.join(target, file))) continue;
       mkdirSync(path.dirname(path.join(target, file)), { recursive: true });
       copyFileSync(path.join(runDir, file), path.join(target, file));
     }
