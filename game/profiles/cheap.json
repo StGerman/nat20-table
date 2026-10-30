@@ -1,5 +1,5 @@
 {
-  "_comment": "The cheap run profile (M7 spec D4, decision 0045): DM Sonnet 5.5 at medium effort, AI players Haiku 5.5 at high, in Russian. For the discovery run, every iteration run and the unattended M7 run: npm run play:cheap. No human sits at the table: all four characters are AI players (seat ai, AGT-40).",
+  "_comment": "The cheap run profile (M7 spec D4, decision 0045): DM Sonnet 5.5 at medium effort, AI players Haiku 5.5 at high, in Russian. For the discovery run and every iteration run: npm run play:cheap. The unattended M7 run has its own profile (decision 0046). No human sits at the table: all four characters are AI players (seat ai, AGT-40).",
   "dm-model": "claude-sonnet-5-5",
   "dm-effort": "medium",
   "player-model": "claude-haiku-5-5",

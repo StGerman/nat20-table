@@ -127,7 +127,7 @@ A thin command over `play:scene` with all six scenes, `--lang ru` by default:
 - `--profile <name>` on `play:scene` and `play:full` loads it; a path (`--profile ~/.nat20/mine.json`) loads a personal profile that never enters the repo. Order: built-in defaults, then the profile, then flags typed on the command line (`npm run play:cheap -- --dm-model claude-opus-5-5`).
 - An unknown key, a bad value, or a model missing from the price table in `usage.ts` stops the run before it starts, so a typo never costs a run. A test in `check:ts` loads every committed profile.
 - `run.json` records the profile's name and sha256 and every resolved setting with where it came from (default, profile, flag). The report's first line names the profile and the models.
-- Two npm aliases for the Mac: `npm run play:cheap` and `npm run play:demo` (`play:full -- --profile <name>`).
+- Two npm aliases for the Mac: `npm run play:cheap` and `npm run play:demo` (`play:full -- --profile <name>`). A third, `npm run play:unattended`, came with decision 0046.
 - Not a Makefile: it would be a second command surface on top of npm, it can't check a value or record what ran, and the repo's data is JSON with `_comment` throughout.
 
 ### 4.2 Who plays whom: any character, or nobody (D2, AGT-40, AGT-35)
@@ -224,7 +224,7 @@ First block (owned by the party-talk and run-analysis threads, landing before st
 4. **API-35 (§4.5).** Contract first (Rule 1).
 5. **Seats (§4.2).** a) Any character may be an AI player, and the table may have no human (AGT-40), with a scripted test of a round and a fight with four AI seats on the real loop. b) The character list at the start of `--seat ink`, and `--play` (AGT-35).
 6. **Narration check (§4.3).** Digest, judge command, and the smoke check on the Mac.
-7. **Freeze and the all-AI run.** Tag the candidate; `npm run play:cheap` (`--seat ai`), or with `--dm-model claude-opus-5-5` if D4 fell back. Runs go to the runs repo (AGT-41) and analyses to the project folder's `engine/m7/runs/`, never into this repo.
+7. **Freeze and the all-AI run.** Tag the candidate; `npm run play:unattended` (`--seat ai`; DM Opus 5.5 low since decision 0046, as D4 fell back). Runs go to the runs repo (AGT-41) and analyses to the project folder's `engine/m7/runs/`, never into this repo.
 8. **Stas's run.** `npm run play:demo` (`--seat ink`) on the same commit, as the character he picks. Then M7 is marked done in TASKS.md.
 
 ## 6. Decisions (Stas: D1 to D3 at 2026-10-27 20:04Z, D4 and D5 at 20:53Z)

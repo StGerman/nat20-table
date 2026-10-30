@@ -15,7 +15,7 @@ function profileFile(json: unknown): string {
 
 test("every committed profile loads and passes its checks", () => {
   const names = readdirSync(PROFILES).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, ""));
-  assert.ok(names.includes("cheap") && names.includes("demo"));
+  assert.ok(names.includes("cheap") && names.includes("demo") && names.includes("unattended"));
   for (const name of names) {
     const profile = readProfile(name);
     assert.equal(profile.name, name);

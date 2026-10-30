@@ -1,0 +1,9 @@
+{
+  "_comment": "The unattended run profile (decision 0046): DM Opus 5.5 at low effort, AI players Haiku 5.5 at high, in Russian. For Milestone 7's unattended all-AI run: npm run play:unattended. No human sits at the table: all four characters are AI players (seat ai, AGT-40). Iteration runs stay on the cheap profile.",
+  "dm-model": "claude-opus-5-5",
+  "dm-effort": "low",
+  "player-model": "claude-haiku-5-5",
+  "effort": "high",
+  "lang": "ru",
+  "seat": "ai"
+}
