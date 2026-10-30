@@ -59,7 +59,7 @@
 ```mermaid
 flowchart LR
   subgraph Mac["Stas's Mac: subscription, no API key"]
-    CLI["play:full, play:cheap, play:demo"] --> Settings["Settings resolver<br/>defaults, profile, flags"]
+    CLI["play:full, play:cheap, play:unattended, play:demo"] --> Settings["Settings resolver<br/>defaults, profile, flags"]
     Settings --> Driver["Run driver playRun()"]
     Driver --> Cast["Seat map castParty()"]
     Driver --> Loop["TableLoop"]
@@ -123,7 +123,7 @@ sequenceDiagram
   participant Agents as DM and AI players
   participant Post as Post-run stages
   participant Runs as nat20-runs
-  Stas->>Full: npm run play:cheap
+  Stas->>Full: npm run play:unattended
   Full->>Full: resolve settings, preflight, caffeinate
   Full->>Eng: start with the seed; hello gives engine_rev and schema hash
   Full->>Full: write run.json (identity, settings, seat map)
