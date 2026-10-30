@@ -30,5 +30,9 @@ export async function pickCharacter(
     }
   } finally {
     rl.close();
+    // Closing the interface pauses the input, and on a terminal the table screen's key listener
+    // then never hears a key: the first prompt took none, Ctrl+C included (Stas's `play:demo`,
+    // 2026-10-30, AGT-54). Resuming hands the keyboard on.
+    io.input.resume();
   }
 }
