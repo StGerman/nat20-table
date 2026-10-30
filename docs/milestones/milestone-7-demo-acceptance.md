@@ -1,6 +1,6 @@
 # Milestone 7: demo acceptance
 
-- **Status:** Agreed with Stas on 2026-10-27: he dropped the three timed runs (19:59Z), answered D1 to D3 (20:04Z), picked the upload destination (20:18Z) and accepted D4 and D5 (20:53Z), §6. Nothing here is built yet.
+- **Status:** Done 2026-10-30, closed for now by Stas on the accepted all-AI run `full-2026-10-30T18-45-48-638Z` (7e7c0a5) and his recorded run `full-2026-10-30T20-40-59-111Z` (0608849); the same-build pair waits for friends-and-family testing (decision 0051). Agreed with Stas on 2026-10-27: he dropped the three timed runs (19:59Z), answered D1 to D3 (20:04Z), picked the upload destination (20:18Z) and accepted D4 and D5 (20:53Z), §6.
 - **Date:** 2026-10-27
 - **Owner:** Stas
 - **Baseline:** table main 63e1f34 (everything through table #145, plus #141 and #143), contract `1.0.0-dev.36`, core pinned at d00786a (fork `demo` after core #59). M7 validates this build and what it adds.

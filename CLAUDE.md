@@ -39,7 +39,7 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 4. The party: Cleric and healing, Human, items, pregens (done 2026-10-21)
 5. Monsters (done 2026-10-23)
 6. Agents at the table: one full scene with the DM agent, player agents and a human
-7. Demo acceptance: one unattended all-AI playthrough and one played by Stas
+7. Demo acceptance: one unattended all-AI playthrough and one played by Stas (closed for now 2026-10-30 on the accepted all-AI run and Stas's recorded run, which are not on one build: `docs/decisions/0051-m7-closed-for-now.md`)
 
 Milestone 8 (upstream proposal) was dropped on 2026-10-18: upstream declines AI-authored contributions (`docs/decisions/0023-long-lived-fork.md`).
 

@@ -59,6 +59,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0048](0048-ai-players-table-knowledge.md) | AI players get a rules primer and teamwork guidance in their prompt, and nothing about what lies ahead | Accepted | 2026-10-30 | Stas (M7 implementation thread) |
 | [0049](0049-every-hand-speaks.md) | Every named player and every raised hand speaks in its talk round; the bound of three floor wakes goes | Accepted | 2026-10-30 | Stas (decision card, cellar thread) |
 | [0050](0050-dm-sees-who-waits.md) | The DM's wake names who still waits for the floor, and the DM decides whether the scene may end; no `load_scene` hold | Accepted | 2026-10-30 | Stas (decision card, cellar thread) |
+| [0051](0051-m7-closed-for-now.md) | Milestone 7 closes for now on the accepted all-AI run and Stas's recorded run, one build apart; the same-build pair of 0043 waits for friends-and-family testing | Accepted | 2026-10-30 | Stas (Milestone 7 implementation thread) |
 
 ## Open questions to watch
 
