@@ -7,11 +7,12 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { declaration, ModelPlayer, PLAYER_LONG_WAKE_TIMEOUT_MS, PLAYER_TURN_TIMEOUT_MS, playerPrompt } from "../src/agents/player.ts";
+import { declaration, ModelPlayer, PLAYER_LONG_WAKE_TIMEOUT_MS, PLAYER_TURN_TIMEOUT_MS, playerPrompt, rulesPrimer } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnCancelled, TurnTimeout } from "../src/errors.ts";
 import { addressLines, castParty, talkLines } from "../src/play/run.ts";
+import { packIds } from "../src/table/guards.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedSeat } from "../src/table/scripted.ts";
 import { HandTools, PlayerTools } from "../src/table/tools.ts";
@@ -188,6 +189,59 @@ test("with no human at the table, a player hears that only AI players play the o
   // With a human, the prompt is as it was.
   assert.match(playerPrompt("maren", all.cards.get("maren")!), /A human and other AI players play the other characters\./);
   assert.equal(new ModelPlayer({ handle: "bren", card, choice: CHOICE, withHuman: false }).systemPrompt, alone);
+});
+
+test("each party member's class comes from its pregen, for its block of the rules primer (AGT-52)", () => {
+  assert.deepEqual(Object.fromEntries(castParty(MILL).classes), { bren: "fighter", torva: "barbarian", maren: "cleric", ilsa: "wizard" });
+  const common = rulesPrimer();
+  assert.match(common, /^## The rules you know\n/);
+  assert.equal(rulesPrimer("bard"), common, "a class with no block gets the common rules only");
+  assert.equal(rulesPrimer("../fighter"), common, "a class is a bare name, never a path");
+  assert.ok(rulesPrimer("fighter").startsWith(`${common}\n\n## Your class: Fighter\n`));
+});
+
+test("a player's prompt follows the table's four rules: at the table, the rules, the character, the team (AGT-52)", () => {
+  const all = castParty(MILL, "none");
+  const blocks = { bren: "Fighter", torva: "Barbarian", maren: "Cleric", ilsa: "Wizard" } as const;
+  for (const [handle, block] of Object.entries(blocks)) {
+    const card = all.cards.get(handle)!;
+    for (const prompt of [playerPrompt(handle, card, "en", true, all.classes.get(handle)), playerPrompt(handle, card, "ru", false, all.classes.get(handle))]) {
+      const sections = ["## At the table", "## The rules you know", `## Your class: ${block}`, "## Your character", "## Play as a team", "## How this table works", "## Why you are woken", "## Speaking and notes"];
+      const at = sections.map((heading) => prompt.indexOf(`\n${heading}\n`));
+      assert.ok(at.every((i) => i > 0), `${handle}: every section is there`);
+      assert.deepEqual([...at].sort((a, b) => a - b), at, `${handle}: the sections come in order`);
+      for (const other of Object.values(blocks).filter((b) => b !== block)) assert.doesNotMatch(prompt, new RegExp(`## Your class: ${other}`), `${handle} gets only its own class block`);
+      assert.doesNotMatch(prompt, /undefined/);
+    }
+  }
+  const maren = playerPrompt("maren", all.cards.get("maren")!, "en", false, "cleric");
+  // Role-play first; the party's decisions are noted as plans, followed, and summed up at a scene's end.
+  assert.match(maren, /never throw Maren's life, or a companion's, away for a moment of drama/);
+  assert.match(maren, /write it down with note as a plan, and follow it later, also in a new scene\. If it goes against what Maren believes or would never do, Maren comes first: say so aloud/);
+  assert.match(maren, /a decision the party made is a plan\./);
+  assert.match(maren, /what happened, who you met, what the party decided, what you promised or suspect/);
+  // A plan, a rest or a companion in danger is worth a raised hand; idle talk can still pass.
+  assert.match(maren, /A plan, a rest or a companion in danger always is\. If not, just PASS/);
+  // A short check before a combat action replaces "Be quick"; there is no Dodge in the engine.
+  assert.match(maren, /Before you act in a fight, check three things/);
+  assert.doesNotMatch(maren, /Be quick|Decide quickly|Dodge/);
+});
+
+test("a player's prompt says nothing of what lies ahead: no scenario id, foe or count of fights (Rule 3, AGT-52)", () => {
+  const all = castParty(MILL, "none");
+  const { dmOnly, shown } = packIds(MILL);
+  const adventure = JSON.parse(readFileSync(path.join(MILL, "adventure.json"), "utf8")) as { npcs: Array<{ id: string; name: string }> };
+  const party = new Set(all.ai);
+  const ids = [...dmOnly, ...[...shown].filter((id) => !party.has(id))];
+  const names = [...adventure.npcs.flatMap((n) => [n.id, n.name.split(/[ ,]/)[0]]), "Goblin", "Wolf", "Rat", "Gritch"];
+  for (const handle of all.ai) {
+    const card = all.cards.get(handle)!;
+    const rules = playerPrompt(handle, card, "en", false, all.classes.get(handle)).replace(card.trim(), "");
+    for (const id of ids) assert.ok(!new RegExp(`\\b${id}\\b`).test(rules), `${handle}'s prompt names the pack's ${id}`);
+    for (const name of names) assert.ok(!new RegExp(`\\b${name}\\b`, "i").test(rules), `${handle}'s prompt names ${name}`);
+    assert.doesNotMatch(rules, /\b(one|two|three|four|five|six|\d+)\s+(more\s+)?(fights?|scenes?|encounters?|battles?)\b/i);
+    assert.match(rules, /You don't know what lies ahead: not how many fights, places or foes the adventure holds\./);
+  }
 });
 
 test("a declaration is its one line, and PASS or nothing is a pass", () => {

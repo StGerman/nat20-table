@@ -56,6 +56,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0045](0045-run-profiles-and-models.md) | Run settings live in named JSON profiles; testing runs a Sonnet DM and Haiku players | Accepted, amended by 0046 | 2026-10-27 | Stas (decision card, Milestone 7 design thread, D4-D5) |
 | [0046](0046-unattended-run-opus-low-dm.md) | The unattended Milestone 7 run's DM is Opus 5.5 at low effort; iteration runs keep the Sonnet DM | Accepted, amended by 0047 | 2026-10-30 | Stas (M7 implementation thread) |
 | [0047](0047-unattended-run-sonnet-players.md) | The unattended Milestone 7 run's AI players are Sonnet 5.5 at medium effort | Accepted | 2026-10-30 | Stas (M7 implementation thread) |
+| [0048](0048-ai-players-table-knowledge.md) | AI players get a rules primer and teamwork guidance in their prompt, and nothing about what lies ahead | Accepted | 2026-10-30 | Stas (M7 implementation thread) |
 
 ## Open questions to watch
 

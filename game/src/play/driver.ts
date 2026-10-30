@@ -215,7 +215,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   };
   if (!ink) process.on("SIGINT", interrupted);
   const players: PlayerAgent[] = party.ai.map((handle) =>
-    flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, choice: playerChoice, language, withHuman: Boolean(party.human), usage }),
+    flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle), choice: playerChoice, language, withHuman: Boolean(party.human), usage }),
   );
   const fights = Object.fromEntries(pack.adventure.scenes.flatMap((s) => (s.encounters[0] ? [[s.id, s.encounters[0].encounter]] : [])));
   // A scripted whole-adventure run walks every scene (AGT-39); a scene run ends after its first fight.
