@@ -1246,6 +1246,11 @@ fn a_submit_on_a_target_beyond_the_movement_left_walks_and_drops_the_option() {
     assert_eq!(swung["awaiting"]["actor"], "bren", "{swung}");
 }
 
+/// The dice seed for [`crowd`]. Unseeded, a goblin's critical Opportunity Attack could drop Bren
+/// and end his walk before the reaction a test waits for: seeds 164, 225 and 855 of the first
+/// 1,500 do, about one run in 500.
+const CROWD_SEED: u32 = 1;
+
 /// A goblin at 0 feet, Bren beside it at 4 and Torva at 7, so a walk east leaves the goblin's
 /// reach inside Torva's space, and then Torva's reach; `far` adds a client-controlled goblin at 22 feet. The fight is
 /// run to Bren's first turn. Returns the session, its data folder and Bren's prompt.
@@ -1272,7 +1277,11 @@ fn crowd(name: &str, goblin: &str, far: bool) -> (Api, PathBuf, Value) {
                 "encounters": [{ "id": "crowd", "participants": participants }] }),
         )],
     );
-    let mut api = Api::new(Server::with_data_dir(dir.clone()));
+    // Seeded: each test assumes the goblin's attacks leave Bren standing.
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": CROWD_SEED }),
+    );
     let loaded = api.call("dm", json!({ "cmd": "load_scene", "scene_id": "crowd" }));
     assert_eq!(loaded["ok"], true, "{loaded}");
     let mut last = api.call(
