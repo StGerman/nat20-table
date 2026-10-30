@@ -7,7 +7,7 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, wri
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { declaration, ModelPlayer, PLAYER_LONG_WAKE_TIMEOUT_MS, PLAYER_TURN_TIMEOUT_MS, playerPrompt, rulesPrimer } from "../src/agents/player.ts";
+import { declaration, ModelPlayer, PLAYER_LONG_WAKE_TIMEOUT_MS, PLAYER_TURN_TIMEOUT_MS, playerPrompt, promptCard, rulesPrimer } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnCancelled, TurnTimeout } from "../src/errors.ts";
@@ -61,7 +61,7 @@ test("a model player's session has its own prompt with its card, its nine seat t
   const { player } = standInPlayer("maren", async () => "");
   const card = castParty(MILL).cards.get("maren")!;
   assert.equal(player.systemPrompt, playerPrompt("maren", card, "cleric"));
-  assert.ok(player.systemPrompt.includes(card.trim()), "the card is in the prompt as written");
+  assert.ok(player.systemPrompt.includes(promptCard(card)), "the card is in the prompt as written, but for its Russian voice");
   assert.match(player.systemPrompt, /You play one character, Maren \(handle maren\)/);
   const options = sessionOptions({ agent: "maren", choice: CHOICE, systemPrompt: player.systemPrompt, tools: player.seatTools }, "/empty");
   assert.deepEqual(options.tools, []);
@@ -181,6 +181,21 @@ test("with --lang ru a model player speaks, declares, notes and summarises in Ru
   assert.equal(declaration("PASS"), undefined);
 });
 
+test("a card's Voice in Russian reaches only a Russian prompt, after the rule to carry the voice by meaning", () => {
+  const card = castParty(MILL).cards.get("maren")!;
+  assert.match(card, /## Voice in Russian\n\n/);
+  const english = playerPrompt("maren", card, "cleric");
+  const russian = playerPrompt("maren", card, "cleric", "ru");
+  assert.doesNotMatch(english, /Voice in Russian|[А-Яа-яЁё]/);
+  assert.ok(russian.startsWith(english), "the Russian voice is added at the end, after the same English prompt");
+  assert.match(russian, /never translate its catchphrases or forms of address word for word, and never leave them in English\./);
+  assert.match(russian, /How your character sounds in Russian, from your card:\n\nГоворит как полковой капеллан/);
+  assert.match(english, /## Voice\n\nA field chaplain's[^\n]*\n\n## Talk and silence/);
+  // A card without the section still gets the rule, and no empty voice block.
+  const torva = playerPrompt("torva", castParty(MILL).cards.get("torva")!, "barbarian", "ru");
+  assert.match(torva, /never leave them in English\.$/);
+});
+
 test("with no human at the table, a player hears that only AI players play the others, Bren too (AGT-40)", () => {
   const all = castParty(MILL, "none");
   const card = all.cards.get("bren")!;
@@ -189,7 +204,7 @@ test("with no human at the table, a player hears that only AI players play the o
   assert.match(alone, /Other AI players play the other characters\./);
   assert.match(alone, /out of combat, after the DM narrated, before anyone has the floor/);
   // Bren's card says a human may sit in Bren's seat; the table's rules say nothing of a human.
-  assert.doesNotMatch(alone.replace(card.trim(), ""), /human/);
+  assert.doesNotMatch(alone.replace(promptCard(card), ""), /human/);
   // With a human, the prompt is as it was.
   assert.match(playerPrompt("maren", all.cards.get("maren")!, "cleric"), /A human and other AI players play the other characters\./);
   assert.equal(new ModelPlayer({ handle: "bren", card, characterClass: "fighter", choice: CHOICE, withHuman: false }).systemPrompt, alone);
@@ -262,7 +277,7 @@ test("a player's prompt says nothing of what lies ahead: no scenario id, foe or 
   const names = [...adventure.npcs.flatMap((n) => [n.id, n.name.split(/[ ,]/)[0]]), "Goblin", "Wolf", "Rat", "Gritch"];
   for (const handle of all.ai) {
     const card = all.cards.get(handle)!;
-    const rules = playerPrompt(handle, card, all.classes.get(handle)!, "en", false).replace(card.trim(), "");
+    const rules = playerPrompt(handle, card, all.classes.get(handle)!, "en", false).replace(promptCard(card), "");
     for (const id of ids) assert.ok(!new RegExp(`\\b${id}\\b`).test(rules), `${handle}'s prompt names the pack's ${id}`);
     for (const name of names) assert.ok(!new RegExp(`\\b${name}\\b`, "i").test(rules), `${handle}'s prompt names ${name}`);
     assert.doesNotMatch(rules, /\b(one|two|three|four|five|six|\d+)\s+(more\s+)?(fights?|scenes?|encounters?|battles?)\b/i);
@@ -346,7 +361,7 @@ test("a new scene starts a new session from the sheet, the summaries and the new
   const { player, sessions } = standInPlayer("maren", async (wake, call) => {
     if (wake === "summary") return "We reached the mill. I promised Bren I would watch the gate.";
     if (pass) return "PASS";
-    assert.deepEqual(await call("say", { text: "Easy, my dears. Let me look first." }), { text: "said", isError: false });
+    assert.deepEqual(await call("say", { text: "Easy. Let me look first." }), { text: "said", isError: false });
     for (let i = 0; i < 60; i += 1) await call("note", { kind: "plan", text: `Plan ${i}: keep the bread for whoever is hungriest.` });
     await call("note", { kind: "promise", text: "I told Bren I would watch the gate." });
     return "Maren kneels beside the gate to look at the tracks.";
@@ -372,7 +387,7 @@ test("a new scene starts a new session from the sheet, the summaries and the new
     assert.doesNotMatch(seed, /Plan 0:/);
     // Its line reached the table; its notes reached only its own channel.
     const records = t.table.transcript.records;
-    assert.ok(records.some((r) => r.channel === "table" && r.speaker === "maren" && r.text === "Easy, my dears. Let me look first."));
+    assert.ok(records.some((r) => r.channel === "table" && r.speaker === "maren" && r.text === "Easy. Let me look first."));
     assert.ok(records.filter((r) => r.kind === "note").every((r) => r.channel === "notes:maren"));
   } finally {
     t.close();

@@ -66,14 +66,27 @@ export interface ModelPlayerConfig {
   open?: (config: SessionConfig) => TurnSession;
 }
 
+/**
+ * A card's optional `## Voice in Russian` section: how the character sounds in Russian, in our own
+ * Russian words. It leaves the card and reaches only a Russian prompt, after the language rule.
+ */
+const RUSSIAN_VOICE = /^## +Voice in Russian[ \t]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m;
+
+/** The card as the prompt shows it under "Your character": without its Russian voice. */
+export function promptCard(card: string): string {
+  return card.replace(RUSSIAN_VOICE, "").trim();
+}
+
 /** The character's name: the card's first heading, else its handle. */
 export function cardName(handle: Handle, card: string): string {
   return /^#\s+(.+)$/m.exec(card)?.[1].trim() ?? handle;
 }
 
 /** The player's system prompt: the same for every session of the run, so it stays cached. */
-export function playerPrompt(handle: Handle, card: string, characterClass: string, language: Language = "en", human = true): string {
-  const name = cardName(handle, card);
+export function playerPrompt(handle: Handle, fullCard: string, characterClass: string, language: Language = "en", human = true): string {
+  const name = cardName(handle, fullCard);
+  const russianVoice = RUSSIAN_VOICE.exec(fullCard)?.[1].trim();
+  const card = promptCard(fullCard);
   // A table with no human has only AI players, and a round starts from the DM (M7 spec §4.2, AGT-40).
   const others = human ? "A human and other AI players play the other characters." : "Other AI players play the other characters.";
   const after = human ? "after the human's character acted" : "after the DM narrated";
@@ -130,7 +143,7 @@ Each message says why:
 - When ${name} turns to one companion (a remark, an opinion, a request, a proposal), give their handle as to; a line for the whole party needs no to. Choose whom and how from your card's "With the party" and your bond notes, never from anyone's sheet. Out of combat the one you speak to has the floor next, in a fight they hear it on their own turn.${waits} A line spoken to ${name} ("<speaker> says to you") asks nothing of your tools: help, answer, argue, refuse or let it pass, as ${name} would. Help with a deed is something you declare, and the DM resolves it.
 - note keeps a private note that nobody else reads: a fact, promise, suspicion, plan or bond that will matter later in the adventure; a decision the party made is a plan. Write fiction, never numbers: Hit Points, positions and results are always read fresh from the engine. Note only what matters to ${name}; one or two notes a scene is plenty, besides the party's decisions.
 
-Before you act in a fight, check three things in a line or two: is a companion down within your reach or range, which foe your companions are hitting, and whether you stand where many foes can reach you. Then act. Elsewhere, keep your reasoning to a sentence between tool calls. Text you write outside say, and outside your final answer to a hand, a declaration or a summary, reaches nobody.${playerLanguage(language)}`;
+Before you act in a fight, check three things in a line or two: is a companion down within your reach or range, which foe your companions are hitting, and whether you stand where many foes can reach you. Then act. Elsewhere, keep your reasoning to a sentence between tool calls. Text you write outside say, and outside your final answer to a hand, a declaration or a summary, reaches nobody.${playerLanguage(language, russianVoice)}`;
 }
 
 /** A declaration as the loop takes it: one line, or undefined for a pass. */

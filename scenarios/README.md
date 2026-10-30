@@ -23,6 +23,8 @@ A personality card is the only character text in an AI player's prompt besides i
 - `## Voice`: how it talks.
 - `## Talk and silence`: four lines, "Speaks when…", "Acts without a word when…", "Stays silent when…", "Turns to the others…" (party talk §4.5).
 
+A card may add `## Voice in Russian`: how the character sounds in Russian, in our own Russian words, with a line or two of example speech and the words it never uses. The cards are English and a Russian run (`--lang ru`) otherwise translates the voice word for word ("my dears" becomes a grandmother's «мои дорогие»). Only a Russian run's prompt carries the section, after its language rule; an English prompt never sees it.
+
 Any character may be played by an AI, so the human's character gets a card too. `cards/torva.md` is a worked example.
 
 To make a pack, copy an existing one and change it. To check one, here or anywhere else:
