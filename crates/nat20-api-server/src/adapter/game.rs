@@ -2571,10 +2571,15 @@ impl Game {
                     .iter()
                     .find(|v| names::variant_stem(v) == wanted)
                     .ok_or_else(|| {
+                        // The valid ids, so a caller that sent a bare `heal` for
+                        // `divine_spark/heal` can fix it on its retry.
+                        let valid: Vec<String> =
+                            option.variants.iter().map(names::variant_stem).collect();
                         error(
                             ErrorCode::UnknownOption,
                             format!(
-                                "{wanted} is not one of {option_id}'s variants right now; see legal_actions."
+                                "{wanted} is not one of {option_id}'s variants right now; send one of: {}.",
+                                valid.join(", ")
                             ),
                         )
                     })?
