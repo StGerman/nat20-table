@@ -154,6 +154,23 @@ test("a turn stopped at the plan's limit is recorded with the tokens it spent", 
   await s.close();
 });
 
+test("a purpose with its own limit times out at that limit, not the session's", async () => {
+  const usage = new UsageLog();
+  const s = new AgentSession({
+    agent: "dm",
+    choice: { model: "claude-sonnet-5-5", effort: "low" },
+    systemPrompt: "p",
+    tools: [],
+    cwd: "/empty",
+    usage,
+    query: scripted(() => [call("a1", 40, 2)]),
+    turnTimeoutMs: 60_000,
+    turnTimeoutsMs: { narrate: 300 },
+  });
+  await assert.rejects(s.turn("go", "narrate"), (e: Error) => e instanceof TurnTimeout && /after 300 ms/.test(e.message));
+  await s.close();
+});
+
 test("a turn that times out is recorded with its time and the tokens it spent", async () => {
   // The stand-in answers at once and never ends the turn; the timeout leaves it room on a busy machine.
   const { session: s, usage } = session(() => [call("a1", 40, 2)], 300);

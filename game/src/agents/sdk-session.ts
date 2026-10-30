@@ -74,6 +74,8 @@ export interface SessionConfig {
   usage?: UsageLog;
   /** A turn that runs longer is interrupted and fails with `TurnTimeout` (spec §6). */
   turnTimeoutMs?: number;
+  /** A longer or shorter limit for turns of some purposes, in place of `turnTimeoutMs`. */
+  turnTimeoutsMs?: Partial<Record<string, number>>;
   /** The SDK's `query`; a test passes a scripted stand-in, so no model is called. */
   query?: typeof query;
 }
@@ -228,11 +230,9 @@ export class AgentSession {
         reject,
         timer: undefined,
       };
-      if (this.config.turnTimeoutMs) {
-        pending.timer = setTimeout(
-          () => this.interrupt(new TurnTimeout(`${this.config.agent}: turn timed out after ${this.config.turnTimeoutMs} ms`)),
-          this.config.turnTimeoutMs,
-        );
+      const limit = this.config.turnTimeoutsMs?.[purpose] ?? this.config.turnTimeoutMs;
+      if (limit) {
+        pending.timer = setTimeout(() => this.interrupt(new TurnTimeout(`${this.config.agent}: turn timed out after ${limit} ms`)), limit);
       }
       this.pending = pending;
       this.inbox.push({

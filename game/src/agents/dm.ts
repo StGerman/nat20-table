@@ -21,6 +21,14 @@ import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, t
 /** A DM turn that runs longer falls back to the engine lines alone (spec §6). */
 export const DM_TURN_TIMEOUT_MS = 12_000;
 
+/**
+ * The DM's wakes that may run longer: opening a scene (a fresh session's first turn writes the
+ * whole prompt to the cache), resolving the table's turn (several tool calls) and the scene's
+ * summary. A timeout there drops a scene's beats, such as its rest, not just a line of narration.
+ */
+export const DM_LONG_WAKE_TIMEOUT_MS = 30_000;
+const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary"];
+
 /** The DM's craft guidance (D10): our own text, one skill per file, for the DM session only. */
 export const CRAFT_PLUGIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../dm-craft");
 
@@ -158,7 +166,7 @@ export interface ModelDmConfig {
   /** What the table hears from the DM is written in; default `en` (decision 0038). */
   language?: Language;
   usage?: UsageLog;
-  /** Default `DM_TURN_TIMEOUT_MS`. */
+  /** Every wake's limit. Default `DM_TURN_TIMEOUT_MS`, and `DM_LONG_WAKE_TIMEOUT_MS` for the long wakes. */
   turnTimeoutMs?: number;
   /** Opens a session; `AgentSession` by default. Tests pass one that calls the tools as a model would. */
   open?: (config: SessionConfig) => TurnSession;
@@ -221,6 +229,7 @@ export class ModelDm implements DmAgent {
       ...(craft === "skills" ? { plugins: [CRAFT_PLUGIN], skills: craftSkills().map((s) => `${CRAFT_NAME}:${s.name}`) } : {}),
       usage: this.config.usage,
       turnTimeoutMs: this.config.turnTimeoutMs ?? DM_TURN_TIMEOUT_MS,
+      ...(this.config.turnTimeoutMs === undefined ? { turnTimeoutsMs: Object.fromEntries(DM_LONG_WAKES.map((w) => [w, DM_LONG_WAKE_TIMEOUT_MS])) } : {}),
     };
   }
 
