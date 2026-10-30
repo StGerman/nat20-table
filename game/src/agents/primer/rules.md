@@ -25,7 +25,7 @@ Your class and your spells add more. Your options list everything you can do rig
 - A Prone creature's own attacks have Disadvantage.
 - It stands up at the start of its turn, which costs half its Speed.
 
-**Falling.** At 0 Hit Points a character falls Unconscious and makes a death saving throw on each of its turns:
+**Falling.** A character who loses their last Hit Point falls Unconscious and makes a death saving throw on each of their turns:
 - three successes and it is Stable;
 - three failures and it dies;
 - every hit it takes while down counts as a failure, and a critical hit counts as two.

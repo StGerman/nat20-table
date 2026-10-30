@@ -240,6 +240,14 @@ test("a player's prompt says nothing of what lies ahead: no scenario id, foe or 
     for (const id of ids) assert.ok(!new RegExp(`\\b${id}\\b`).test(rules), `${handle}'s prompt names the pack's ${id}`);
     for (const name of names) assert.ok(!new RegExp(`\\b${name}\\b`, "i").test(rules), `${handle}'s prompt names ${name}`);
     assert.doesNotMatch(rules, /\b(one|two|three|four|five|six|\d+)\s+(more\s+)?(fights?|scenes?|encounters?|battles?)\b/i);
+    // The audit's leak scan reads this prompt among the player's inputs; nothing in our text may look
+    // like a creature's current Hit Points or an AC or DC number to it (shows_current_hp and
+    // names_a_target_number in crates/nat20-duel/src/leak_scan.rs and nat20-api-server's leaks.rs).
+    for (const line of rules.split("\n")) {
+      assert.doesNotMatch(line, /\b(has|at|to|with)\s+\d+\s+(HP|hit\b)/i, `${handle}: reads as current Hit Points: ${line}`);
+      assert.doesNotMatch(line, /\d\/\d+ (HP|Hit Points)/, `${handle}: reads as current Hit Points: ${line}`);
+      assert.doesNotMatch(line, /(^|[^\p{L}\p{N}])(AC|DC) \d/u, `${handle}: reads as an AC or DC number: ${line}`);
+    }
     assert.match(rules, /You don't know what lies ahead: not how many fights, places or foes the adventure holds\./);
   }
 });
