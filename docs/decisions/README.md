@@ -54,7 +54,8 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0043](0043-demo-acceptance-two-runs.md) | Demo acceptance is one unattended all-AI run and one run by Stas, with a narration check and latency reported | Accepted | 2026-10-27 | Stas (Milestone 7 design thread, D1-D3) |
 | [0044](0044-one-repo-through-m7.md) | nat20-table stays one repo through Milestone 7; the next contract goes on the line between the game loop and its clients | Accepted | 2026-10-27 | Stas (decision card, Milestone 7 design thread) |
 | [0045](0045-run-profiles-and-models.md) | Run settings live in named JSON profiles; testing runs a Sonnet DM and Haiku players | Accepted, amended by 0046 | 2026-10-27 | Stas (decision card, Milestone 7 design thread, D4-D5) |
-| [0046](0046-unattended-run-opus-low-dm.md) | The unattended Milestone 7 run's DM is Opus 5.5 at low effort; iteration runs keep the Sonnet DM | Accepted | 2026-10-30 | Stas (M7 implementation thread) |
+| [0046](0046-unattended-run-opus-low-dm.md) | The unattended Milestone 7 run's DM is Opus 5.5 at low effort; iteration runs keep the Sonnet DM | Accepted, amended by 0047 | 2026-10-30 | Stas (M7 implementation thread) |
+| [0047](0047-unattended-run-sonnet-players.md) | The unattended Milestone 7 run's AI players are Sonnet 5.5 at medium effort | Accepted | 2026-10-30 | Stas (M7 implementation thread) |
 
 ## Open questions to watch
 

@@ -53,7 +53,7 @@ What the live runs so far show (run folders in the project folder, `engine/m6/ru
 - **The party has won the yard in all four live runs** (ai-party, Scene 3 with the DM, the exit run, the Russian party-talk run). **No agent has ever played the cellar.** With the crude scripted driver, the party won both fights in about 41% of seeds 1 to 51 (MON-10).
 - **Scenes 2, 4, 5 and 6 have never been played by the DM agent.** They load in order with the party carried (`game/test/pack.test.ts`), and the cellar fight starts. Scene 2 was passed over in every live run.
 - **Time is not the risk.** The Russian run played Scene 1 in 3 min 47 s and Scene 3 in about 17 min, against targets of 10 and 25. A rough projection for all six scenes, with the cellar at 25 min, is 50 to 60 minutes against the 120-minute limit.
-- **The DM times out.** It hit the 12 s limit 5 times in a 21-minute run, and each time its narration was skipped. This is latency (D1), but a timed-out `table_turn` in explore mode could also stall a scene, so the first full run has to check for that. It did: in the first full run on main (2026-10-29) a fresh scene session's first turn ran past 12 s in Scene 4, the next `table_turn` timed out too and loaded Scene 5, and the party went into the cellar without its short rest. The DM's `scene_open`, `table_turn` and `summary` wakes now get 30 s; narration keeps 12 s. A scene the skeleton marks with `rest` also reminds the DM once when it loads the next scene while someone in the party is hurt and nobody has rested there (AGT-46).
+- **The DM times out.** It hit the 12 s limit 5 times in a 21-minute run, and each time its narration was skipped. This is latency (D1), but a timed-out `table_turn` in explore mode could also stall a scene, so the first full run has to check for that. It did: in the first full run on main (2026-10-29) a fresh scene session's first turn ran past 12 s in Scene 4, the next `table_turn` timed out too and loaded Scene 5, and the party went into the cellar without its short rest. The DM's `scene_open`, `table_turn` and `summary` wakes now get 30 s; narration keeps 12 s. A scene the skeleton marks with `rest` also reminds the DM once when it loads the next scene while someone in the party is hurt and nobody has rested there (AGT-46). An AI player's combat turn and a granted action get 45 s for the same reason: a timeout there loses the character's turn (decision 0047).
 - **Run folders don't record the table commit.** The stage-1 facts for the Russian run had to infer the build.
 
 The "gaps blocking the demo" list, checked against the code on 2026-10-27:
@@ -77,7 +77,7 @@ Both runs are on Stas's Mac under his Claude subscription (decision 0036), in Ru
 1. **The unattended run.** `--seat ai`: no human; Bren, Torva, Maren and Ilsa are all AI players (D2). Nobody types anything after the command starts. It goes first because it costs none of Stas's time.
 2. **Stas's run.** `--seat ink`: the run starts by asking Stas which character to play, and AI players take the other three (§4.2).
 
-Which models each run uses comes from a run profile (§4.1): the unattended run on `cheap` and Stas's run on `demo` (D4).
+Which models each run uses comes from a run profile (§4.1): the unattended run on `unattended` (decisions 0046 and 0047; `cheap` until then, D4) and Stas's run on `demo`.
 
 If either run fails, the fix makes a new commit. The unattended run is then repeated on it, since it costs no time. Stas's run is repeated only if it was the one that failed. Both passing runs must be on the same commit. An unattended run cut short by something outside the game (the plan's usage limit, the Mac sleeping or losing power, the network dropping) is void: it is run again and counts neither way. An engine crash, a model timeout that stalls the game, or a stuck scene is the product's fault and fails the run.
 
@@ -121,7 +121,8 @@ A thin command over `play:scene` with all six scenes, `--lang ru` by default:
 
 | Profile | DM | AI players | Language | Seat | For |
 |---|---|---|---|---|---|
-| `cheap` | Sonnet 5.5, medium | Haiku 5.5, high | ru | `ai` | Discovery, iteration and the unattended run (D4) |
+| `cheap` | Sonnet 5.5, medium | Haiku 5.5, high | ru | `ai` | Discovery and iteration runs (D4) |
+| `unattended` | Opus 5.5, low | Sonnet 5.5, medium | ru | `ai` | The unattended run (decisions 0046, 0047) |
 | `demo` | Opus 5.5, medium | Sonnet 5.5, low | ru | `ink` | Stas's run and showing the game |
 
 - `--profile <name>` on `play:scene` and `play:full` loads it; a path (`--profile ~/.nat20/mine.json`) loads a personal profile that never enters the repo. Order: built-in defaults, then the profile, then flags typed on the command line (`npm run play:cheap -- --dm-model claude-opus-5-5`).
@@ -224,7 +225,7 @@ First block (owned by the party-talk and run-analysis threads, landing before st
 4. **API-35 (§4.5).** Contract first (Rule 1).
 5. **Seats (§4.2).** a) Any character may be an AI player, and the table may have no human (AGT-40), with a scripted test of a round and a fight with four AI seats on the real loop. b) The character list at the start of `--seat ink`, and `--play` (AGT-35).
 6. **Narration check (§4.3).** Digest, judge command, and the smoke check on the Mac.
-7. **Freeze and the all-AI run.** Tag the candidate; `npm run play:unattended` (`--seat ai`; DM Opus 5.5 low since decision 0046, as D4 fell back). Runs go to the runs repo (AGT-41) and analyses to the project folder's `engine/m7/runs/`, never into this repo.
+7. **Freeze and the all-AI run.** Tag the candidate; `npm run play:unattended` (`--seat ai`; DM Opus 5.5 low since decision 0046, as D4 fell back, and players Sonnet 5.5 medium since decision 0047). Runs go to the runs repo (AGT-41) and analyses to the project folder's `engine/m7/runs/`, never into this repo.
 8. **Stas's run.** `npm run play:demo` (`--seat ink`) on the same commit, as the character he picks. Then M7 is marked done in TASKS.md.
 
 ## 6. Decisions (Stas: D1 to D3 at 2026-10-27 20:04Z, D4 and D5 at 20:53Z)
