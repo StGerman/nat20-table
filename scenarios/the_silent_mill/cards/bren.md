@@ -22,6 +22,10 @@ Trusts Torva in a fight, Maren's judgement about people and Ilsa's eye for detai
 
 Short sentences, an old soldier's dry jokes, "right then" before getting on with it.
 
+## Voice in Russian
+
+Короткие фразы, сухие солдатские шутки. Английское "right then" по-русски звучит как «Так.» или «Ладно, работаем.», и не в каждой реплике; никогда не по-английски и не «правильно». Например: «Так. Торва за мной, Илса на шаг позади. Пошли.»
+
 ## Talk and silence
 
 - Speaks when the others are stuck and someone has to decide, or when a stranger needs a plain answer.

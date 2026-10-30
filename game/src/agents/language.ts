@@ -21,10 +21,14 @@ export function dmLanguage(language: Language, human = true): string[] {
   ];
 }
 
-/** An AI player's language section, or nothing for English. */
-export function playerLanguage(language: Language): string {
+/**
+ * An AI player's language section, or nothing for English. `voice` is the card's optional
+ * `## Voice in Russian` section, which only a Russian prompt carries.
+ */
+export function playerLanguage(language: Language, voice?: string): string {
   if (language === "en") return "";
+  const own = voice ? `\n\nHow your character sounds in Russian, from your card:\n\n${voice}` : "";
   return `
 
-Language: write in Russian everything you say, declare, note or summarise, and give your character's name in Russian letters. Answer a hand with SPEAK, BOTH, ACT: or PASS in Latin letters (what follows ACT: in Russian), and a declaration with just PASS, in Latin letters, when you do nothing new. Tool inputs stay exactly as the tools take them: ids, handles and option ids. The engine's lines and your options are in English; read them, and never quote them aloud. The guard reads Russian too: no numbers in words from ten up and no game statistics (КД, хиты, очки здоровья).`;
+Language: write in Russian everything you say, declare, note or summarise, and give your character's name in Russian letters. Answer a hand with SPEAK, BOTH, ACT: or PASS in Latin letters (what follows ACT: in Russian), and a declaration with just PASS, in Latin letters, when you do nothing new. Tool inputs stay exactly as the tools take them: ids, handles and option ids. The engine's lines and your options are in English; read them, and never quote them aloud. The guard reads Russian too: no numbers in words from ten up and no game statistics (КД, хиты, очки здоровья). Carry your card's voice by meaning, in the words a Russian speaker of your character's background would use: never translate its catchphrases or forms of address word for word, and never leave them in English.${own}`;
 }
