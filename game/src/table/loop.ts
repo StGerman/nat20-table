@@ -1009,7 +1009,7 @@ export class TableLoop {
         pending = after.handedTo;
       }
       for (const handle of after.carried) {
-        const from = addresses.filter((a) => a.to === handle).map((a) => a.from);
+        const from = addresses.filter((a) => a.to === handle && a.from !== handle).map((a) => a.from);
         carried.set(handle, [...new Set([...(carried.get(handle) ?? []), ...from])]);
       }
     };
