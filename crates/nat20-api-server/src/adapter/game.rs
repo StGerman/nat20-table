@@ -70,7 +70,7 @@ use crate::{
     scene,
 };
 
-/// Where a refused variant's message starts listing the valid ids (AGT-47). Only the actor's
+/// Where a refused variant's message starts listing the valid ids (AGT-50). Only the actor's
 /// owner and the DM may see them, so the server cuts the message here for anyone else.
 pub const VALID_VARIANTS: &str = "; send one of: ";
 

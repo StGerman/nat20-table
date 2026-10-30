@@ -231,7 +231,7 @@ impl Server {
                     aim.as_ref(),
                     variant.as_deref(),
                 );
-                // A refused variant lists the actor's valid ones (AGT-47): only the actor's
+                // A refused variant lists the actor's valid ones (AGT-50): only the actor's
                 // owner and the DM may list its options, as with legal_actions.
                 submitted.map_err(|mut error| {
                     if !projection::lists_options(viewer, &actor.0)
