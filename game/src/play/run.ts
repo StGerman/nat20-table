@@ -8,7 +8,7 @@ import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure } from "../pack/adventure.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
-import type { FightReaction, RunReport, SceneChoice, TalkRound } from "../table/loop.ts";
+import type { FightReaction, RunReport, SceneChoice, SceneTime, TalkRound } from "../table/loop.ts";
 import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, summarize, type UsageRecord } from "../usage.ts";
@@ -207,9 +207,10 @@ export async function endState(engine: GameEngine): Promise<string[]> {
 
 /**
  * The report's lines on the talk rounds out of combat (party talk §2, §7): how many spoke, how many
- * stayed silent, how hands went, whether named players answered, and how long a round took.
+ * stayed silent, how hands went, whether named players answered, how often a scene was left while
+ * someone still waited for the floor (decision 0050), and how long a round took.
  */
-export function talkLines(rounds: TalkRound[]): string[] {
+export function talkLines(rounds: TalkRound[], scenes: readonly SceneTime[] = []): string[] {
   if (rounds.length === 0) return [];
   const sum = (count: (r: TalkRound) => number) => rounds.reduce((n, r) => n + count(r), 0);
   const slots = sum((r) => new Set([...r.spoke, ...r.declared, ...r.silent]).size);
@@ -224,7 +225,7 @@ export function talkLines(rounds: TalkRound[]): string[] {
   const share = slots === 0 ? 0 : Math.round((100 * silent) / slots);
   return [
     `- Talk rounds: ${rounds.length}; lines per round ${(sum((r) => r.spoke.length) / rounds.length).toFixed(1)}; silent share ${share}% (target at least ${100 * TALK_TARGETS.silentShare}%); floor wakes ${sum((r) => r.floor_wakes)} (p50 ${percentile(floors, 50)}, max ${Math.max(...floors)} a round), hands lapsed ${sum((r) => r.lapsed.length)} (must be 0)`,
-    `- Hands: ${hands.join(", ")}; named players who answered first: ${answered} of ${named}; hand-offs ${sum((r) => (r.handed_to ? 1 : 0))}, addresses carried to the next round ${sum((r) => r.carried.length)}`,
+    `- Hands: ${hands.join(", ")}; named players who answered first: ${answered} of ${named}; hand-offs ${sum((r) => (r.handed_to ? 1 : 0))}, addresses carried to the next round ${sum((r) => r.carried.length)}, scene exits with someone waiting ${scenes.filter((s) => s.left_waiting).length}`,
     `- Talk round time: first line p50 ${first.length > 0 ? `${percentile(first, 50)} ms` : "n/a"} (target ${TALK_TARGETS.firstLineP50Ms} ms), round p50 ${percentile(walls, 50)} ms, p95 ${percentile(walls, 95)} ms (target ${TALK_TARGETS.roundP95Ms} ms)`,
   ];
 }
@@ -300,7 +301,7 @@ export function reportSections(options: {
     ...(narrations.length > 0
       ? [`- DM narrations: ${narrations.length}, p50 ${percentile(narrations, 50)} ms, p95 ${percentile(narrations, 95)} ms (target ${TARGET_P95_MS.dm} ms)`]
       : []),
-    ...talkLines(run?.talkRounds ?? []),
+    ...talkLines(run?.talkRounds ?? [], run?.sceneTimes),
     ...(run ? fightLines(run, usage) : []),
     ...addressLines(transcript),
     "",

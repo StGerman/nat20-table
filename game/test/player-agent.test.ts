@@ -150,7 +150,7 @@ test("the report counts the lines spoken to a companion, by who spoke to whom", 
   ]);
 });
 
-test("the report counts talk rounds: lines, silence, hands, named players who answered, and time", () => {
+test("the report counts talk rounds: lines, silence, hands, named players who answered, scenes left with someone waiting, and time", () => {
   const round = { named: [], hands: {}, floor_wakes: 0, lapsed: [], carried: [], spoke: [], declared: [], silent: [], wall_ms: 0 };
   assert.deepEqual(talkLines([]), []);
   assert.deepEqual(
@@ -158,10 +158,13 @@ test("the report counts talk rounds: lines, silence, hands, named players who an
       { ...round, named: ["ilsa"], hands: { torva: "act", maren: "pass" }, floor_wakes: 1, spoke: ["ilsa"], declared: ["torva"], silent: ["maren"], first_line_ms: 4000, wall_ms: 6000 },
       { ...round, hands: { torva: "speak", maren: "both", ilsa: "pass" }, floor_wakes: 3, handed_to: "ilsa", carried: ["torva"], spoke: ["torva", "maren", "ilsa"], declared: ["maren"], silent: [], first_line_ms: 6000, wall_ms: 12000 },
       { ...round, hands: { torva: "pass", maren: "pass", ilsa: "unread" }, silent: ["torva", "maren", "ilsa"], wall_ms: 3000 },
+    ], [
+      { id: "s2_mill_road", started_at: "2026-10-30T18:50:00.000Z", ended_at: "2026-10-30T18:55:00.000Z", rounds: 0, left_waiting: ["torva"] },
+      { id: "s3_mill_yard", started_at: "2026-10-30T18:55:00.000Z", rounds: 0 },
     ]),
     [
       "- Talk rounds: 3; lines per round 1.3; silent share 44% (target at least 30%); floor wakes 4 (p50 1, max 3 a round), hands lapsed 0 (must be 0)",
-      "- Hands: speak 1, both 1, act 1, pass 4, unread 1; named players who answered first: 1 of 1; hand-offs 1, addresses carried to the next round 1",
+      "- Hands: speak 1, both 1, act 1, pass 4, unread 1; named players who answered first: 1 of 1; hand-offs 1, addresses carried to the next round 1, scene exits with someone waiting 1",
       "- Talk round time: first line p50 4000 ms (target 7000 ms), round p50 6000 ms, p95 12000 ms (target 20000 ms)",
     ],
   );
