@@ -34,6 +34,8 @@ export interface LoopOptions {
    * party is down (the first M7 run ended in Scene 5 and never played the wrap-up). None by default.
    */
   finale?: string;
+  /** Scenes that offer a Short Rest (the skeleton's `rest`): leaving one unrested reminds the DM once. None by default. */
+  rests?: string[];
   /** Loop steps before the run is stopped: a safety net for scripted runs. Default 5000. */
   maxSteps?: number;
   /**
@@ -256,7 +258,9 @@ export class TableLoop {
         return typeof choice === "object" ? choice.skipTo : undefined;
       },
       passedOver: (sceneId, next) => this.passedOver(sceneId, next),
-      ...(options.finale ? { finale: options.finale, current: () => this.scenes.at(-1) } : {}),
+      current: () => this.scenes.at(-1),
+      ...(options.finale ? { finale: options.finale } : {}),
+      ...(options.rests ? { rests: new Set(options.rests) } : {}),
     });
     this.onScene = options.onScene ?? (() => "continue");
     this.maxSteps = options.maxSteps ?? 5000;

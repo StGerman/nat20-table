@@ -92,6 +92,7 @@
                 { "check": "interrogate_intimidation", "intent": "Threatening the prisoner into talking." },
                 { "check": "interrogate_persuasion", "intent": "Bargaining with the prisoner, promising mercy, talking him round." }
             ],
+            "rest": "short",
             "exits": [{ "to": "s5_mill_cellar", "when": "The party goes down the stair to the cellar.", "carry": "party" }]
         },
         {
