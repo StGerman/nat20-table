@@ -16,7 +16,7 @@ The cellar is 450 XP, between Low (400) and Moderate (600) on the SRD 5.2.1 budg
 
 ## Options
 
-### A. Keep Haiku players and rely on player guidance alone (AGT-49)
+### A. Keep Haiku players and rely on player guidance alone (AGT-52)
 - Pro: cheapest per run.
 - Con: the id slips and the tactical misses are about the model, and guidance alone is untested.
 
@@ -35,7 +35,8 @@ C. Profile `unattended` gets players on Sonnet 5.5 at medium effort (`player-mod
 ## Consequences
 
 - Amends 0046 for the players.
-- Rows AGT-48 (this profile) and AGT-49 (player guidance) both work on the same gap.
+- Rows AGT-51 (this profile) and AGT-52 (player guidance) both work on the same gap.
+- An AI player's combat turn and a granted action get 45 s instead of 20 s, in every profile. Sonnet players at low effort already timed out on 2 of 18 combat turns in an M6 scene run, and a timeout loses the turn. Other player wakes keep 20 s.
 - Iteration runs on `cheap` still use Haiku players, so they are no longer a stand-in for the unattended run's players.
 
 ## Revisit when

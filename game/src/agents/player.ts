@@ -15,6 +15,13 @@ import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, t
 
 /** A player turn that runs longer falls back (spec §6). */
 export const PLAYER_TURN_TIMEOUT_MS = 20_000;
+/**
+ * The limit for a combat turn or an action the DM granted. They take a few model calls each, and a
+ * fallback there loses the character's turn; Sonnet players at low effort already ran combat turns
+ * past 20 s, and the unattended run's are at medium (decision 0047).
+ */
+export const PLAYER_LONG_WAKE_TIMEOUT_MS = 45_000;
+const PLAYER_LONG_WAKES: PlayerWake[] = ["combat_turn", "granted"];
 
 /** How much of its notes a new session is seeded with; older notes live on in the summaries. */
 const NOTES_BUDGET = 2_000;
@@ -29,7 +36,7 @@ export interface ModelPlayerConfig {
   /** Whether a human plays one of the other characters; default true. False for a table with no human (AGT-40). */
   withHuman?: boolean;
   usage?: UsageLog;
-  /** Default `PLAYER_TURN_TIMEOUT_MS`. */
+  /** Every wake's limit. Default `PLAYER_TURN_TIMEOUT_MS`, and `PLAYER_LONG_WAKE_TIMEOUT_MS` for the long wakes. */
   turnTimeoutMs?: number;
   /** Opens a session; `AgentSession` by default. Tests pass one that calls the tools as a model would. */
   open?: (config: SessionConfig) => TurnSession;
@@ -150,16 +157,21 @@ export class ModelPlayer implements PlayerAgent {
     await session?.close();
   }
 
-  private openSession(): TurnSession {
-    const config: SessionConfig = {
+  /** What each of its sessions is opened with. */
+  sessionConfig(): SessionConfig {
+    return {
       agent: this.handle,
       choice: this.config.choice,
       systemPrompt: this.systemPrompt,
       tools: this.seatTools,
       usage: this.config.usage,
       turnTimeoutMs: this.config.turnTimeoutMs ?? PLAYER_TURN_TIMEOUT_MS,
+      ...(this.config.turnTimeoutMs === undefined ? { turnTimeoutsMs: Object.fromEntries(PLAYER_LONG_WAKES.map((w) => [w, PLAYER_LONG_WAKE_TIMEOUT_MS])) } : {}),
     };
-    return (this.config.open ?? ((c) => new AgentSession(c)))(config);
+  }
+
+  private openSession(): TurnSession {
+    return (this.config.open ?? ((c) => new AgentSession(c)))(this.sessionConfig());
   }
 
   /** A new session's first lines: its sheet, the newest notes that fit, and the story so far. */

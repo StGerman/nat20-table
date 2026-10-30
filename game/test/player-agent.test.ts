@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { declaration, ModelPlayer, playerPrompt } from "../src/agents/player.ts";
+import { declaration, ModelPlayer, PLAYER_LONG_WAKE_TIMEOUT_MS, PLAYER_TURN_TIMEOUT_MS, playerPrompt } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnCancelled, TurnTimeout } from "../src/errors.ts";
@@ -44,6 +44,16 @@ function standInPlayer(handle: string, script: Script): { player: ModelPlayer; s
 function inputs(runDir: string): Array<{ seat: string; text: string }> {
   return readFileSync(path.join(runDir, "inputs.jsonl"), "utf8").trim().split("\n").map((line) => JSON.parse(line));
 }
+
+test("a player's combat turns and granted actions get the long limit; a set limit applies to every wake", () => {
+  const card = castParty(MILL).cards.get("torva")!;
+  const config = new ModelPlayer({ handle: "torva", card, choice: CHOICE }).sessionConfig();
+  assert.equal(config.turnTimeoutMs, PLAYER_TURN_TIMEOUT_MS);
+  assert.deepEqual(config.turnTimeoutsMs, { combat_turn: PLAYER_LONG_WAKE_TIMEOUT_MS, granted: PLAYER_LONG_WAKE_TIMEOUT_MS });
+  const flat = new ModelPlayer({ handle: "torva", card, choice: CHOICE, turnTimeoutMs: 5_000 }).sessionConfig();
+  assert.equal(flat.turnTimeoutMs, 5_000);
+  assert.equal(flat.turnTimeoutsMs, undefined);
+});
 
 test("a model player's session has its own prompt with its card, its nine seat tools and nothing built in", () => {
   const { player } = standInPlayer("maren", async () => "");
