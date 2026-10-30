@@ -76,3 +76,15 @@ test("--play puts the human's seat on that character, in run.json and the transc
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("the pick list hands the keyboard on: its input is flowing again once the pick is made (AGT-54)", async () => {
+  // Stas's `play:demo`, 2026-10-30: after the pick, the table screen's first prompt took no key,
+  // Ctrl+C included, because closing the pick list had paused the terminal's input.
+  const input = new PassThrough();
+  const output = new PassThrough();
+  output.resume();
+  input.write("2\n");
+  assert.equal(await pickCharacter(partyRoster(MILL), "bren", { input, output }), "torva");
+  assert.equal(input.isPaused(), false, "the input is no longer paused");
+  input.end();
+});
