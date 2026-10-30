@@ -100,6 +100,10 @@ const Scene = z
     npcs: z.array(id).default([]).describe("NPCs present, by id."),
     checks: z.array(CheckHint).default([]),
     encounters: z.array(EncounterHint).default([]),
+    rest: z
+      .literal("short")
+      .optional()
+      .describe("The DM offers a Short Rest here. Leaving the scene while the party is hurt and nobody rested in it reminds the DM once."),
     exits: z.array(Exit).describe("Empty for the last scene."),
   })
   .describe("One scene, in play order.");

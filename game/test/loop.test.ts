@@ -1938,6 +1938,52 @@ test("with the whole party down the DM may end the adventure before its last sce
   assert.equal(report.ended, "the adventure is over");
 });
 
+/**
+ * The yard offers a Short Rest in these tests; after its fight the DM tries to leave for the green,
+ * resting first if `rest`, and ends the adventure when the green opens.
+ */
+async function leaveTheYard(rest: boolean) {
+  const tried: ToolOutcome[] = [];
+  const brenHp: string[] = [];
+  let left = false;
+  const { report } = await play({
+    ...YARD,
+    loop: { rests: ["m3_s3_yard"] },
+    dm: {
+      scene_open: async (tools) => {
+        if (left) return void (await tools.endAdventure("The green again. The end."));
+        await intoTheYard(tools);
+      },
+      narrate: async (tools) => void (await tools.narrate("Steel rings.")),
+      combat_over: async (tools) => {
+        const state = (await tools.getState()).data as { state: { creatures: Array<{ handle: string; hp: number; hp_max: number }> } };
+        const bren = state.state.creatures.find((c) => c.handle === "bren");
+        brenHp.push(`${bren?.hp}/${bren?.hp_max}`);
+        if (rest) tried.push(await tools.shortRest(["bren"]));
+        left = true;
+        tried.push(await tools.loadScene("m3_s1_green"));
+        if (!tried.at(-1)!.ok) tried.push(await tools.loadScene("m3_s1_green"));
+      },
+    },
+  });
+  return { tried, brenHp, report };
+}
+
+test("leaving a scene that offers a Short Rest, hurt and unrested, reminds the DM once; the next load_scene goes through", async () => {
+  const { tried, brenHp, report } = await leaveTheYard(false);
+  const [hp, max] = brenHp[0].split("/").map(Number);
+  assert.ok(hp > 0 && hp < max, `Bren hurt but standing after the fight: ${brenHp[0]}`);
+  assert.deepEqual(tried.map((o) => [o.ok, o.retryable]), [[false, false], [true, undefined]]);
+  assert.match(tried[0].text, new RegExp(`m3_s3_yard offers a Short Rest, and nobody has rested here; hurt: bren ${brenHp[0]}\\. Offer it`));
+  assert.equal(report.ended, "the adventure is over");
+});
+
+test("after a Short Rest in the scene, load_scene goes through at once", async () => {
+  const { tried, report } = await leaveTheYard(true);
+  assert.deepEqual(tried.map((o) => o.ok), [true, true], tried.map((o) => o.text).join(" | "));
+  assert.equal(report.ended, "the adventure is over");
+});
+
 test("the DM may load the last scene and end the adventure in the same wake", async () => {
   const tried: ToolOutcome[] = [];
   const { report } = await play({

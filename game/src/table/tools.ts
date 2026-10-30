@@ -407,6 +407,8 @@ export interface ScenePasses {
   finale?: string;
   /** The scene loaded last. */
   current?(): string | undefined;
+  /** Scenes that offer a Short Rest (the skeleton's `rest`): leaving one unrested reminds the DM once. */
+  rests?: ReadonlySet<string>;
 }
 
 /**
@@ -419,6 +421,10 @@ export class DmTools {
   private readonly passes: ScenePasses | undefined;
   /** The scene this DM's own load_scene loaded last: the loop hears of it only after the wake. */
   private loaded: string | undefined;
+  /** Scenes in which the party took a Short Rest. */
+  private readonly restedIn = new Set<string>();
+  /** Scenes whose missed rest the DM has been reminded of: once each. */
+  private readonly reminded = new Set<string>();
 
   constructor(table: TableState, passes?: ScenePasses) {
     this.table = table;
@@ -457,6 +463,8 @@ export class DmTools {
    * run plays loads in its place with the same party, and the DM is told so.
    */
   async loadScene(scene_id: string, party?: string[]): Promise<ToolOutcome> {
+    const reminder = await this.restReminder();
+    if (reminder) return reminder;
     const instead = this.passes?.insteadOf(scene_id);
     const loaded = await send(this.table, "dm", { cmd: "load_scene", scene_id: instead ?? scene_id, ...(party ? { party: [...party] } : {}) }, (r) =>
       r.result?.cmd === "load_scene" ? formatDmState(r.result.state) : "loaded",
@@ -468,6 +476,29 @@ export class DmTools {
       ...loaded,
       text: `This run passes over ${scene_id}, so ${instead} is loaded instead, with the same party. Nothing in ${scene_id} happens at the table.\n${loaded.text}`,
     };
+  }
+
+  /** The scene being played, as `load_scene` or the loop last loaded it. */
+  private current(): string | undefined {
+    return this.loaded ?? this.passes?.current?.();
+  }
+
+  /**
+   * The party is leaving a scene that offers a Short Rest, nobody rested in it, and someone is hurt:
+   * the DM hears so once and decides (the first M7 run on main went into the cellar unrested). A
+   * reminder is not a refusal: it costs no retry, and the next `load_scene` goes through.
+   */
+  private async restReminder(): Promise<ToolOutcome | undefined> {
+    const scene = this.current();
+    if (!scene || !this.passes?.rests?.has(scene) || this.restedIn.has(scene) || this.reminded.has(scene) || this.table.inCombat) return undefined;
+    const state = await this.dmState();
+    // Only a creature with Hit Points left benefits from a Short Rest (SRD 5.2.1).
+    const hurt = (state?.creatures ?? []).filter((c) => c.side === "party" && c.hp > 0 && c.hp < c.hp_max).map((c) => `${c.handle} ${c.hp}/${c.hp_max}`);
+    if (hurt.length === 0) return undefined;
+    this.reminded.add(scene);
+    return notNow(
+      `${scene} offers a Short Rest, and nobody has rested here; hurt: ${hurt.join(", ")}. Offer it (short_rest, if the party takes it), or call load_scene again to go on without it`,
+    );
   }
 
   startCombat(encounter_id: string): Promise<ToolOutcome> {
@@ -570,10 +601,13 @@ export class DmTools {
     return (await this.inScene(actor)) ?? send(this.table, "dm", { cmd: "help", actor, help }, () => "helped");
   }
 
-  shortRest(participants: string[], hit_dice?: HitDiceSpend[]): Promise<ToolOutcome> {
-    return send(this.table, "dm", { cmd: "short_rest", participants: [...participants], ...(hit_dice ? { hit_dice } : {}) }, (r) =>
+  async shortRest(participants: string[], hit_dice?: HitDiceSpend[]): Promise<ToolOutcome> {
+    const scene = this.current();
+    const rested = await send(this.table, "dm", { cmd: "short_rest", participants: [...participants], ...(hit_dice ? { hit_dice } : {}) }, (r) =>
       r.result?.cmd === "short_rest" ? r.result.healed.map((h) => `${h.handle} +${h.amount}`).join(", ") : "rested",
     );
+    if (rested.ok && scene) this.restedIn.add(scene);
+    return rested;
   }
 
   /** Out of combat: moves any creature in the scene. In a fight: the human's character only. */

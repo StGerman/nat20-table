@@ -269,6 +269,11 @@
               "description": "A fight the scene holds."
             }
           },
+          "rest": {
+            "description": "The DM offers a Short Rest here. Leaving the scene while the party is hurt and nobody rested in it reminds the DM once.",
+            "type": "string",
+            "const": "short"
+          },
           "exits": {
             "type": "array",
             "items": {

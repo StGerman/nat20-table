@@ -256,6 +256,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     onScene: plan.onScene,
     // The adventure ends only after the run's last scene has loaded (or with the party down).
     finale: played.at(-1),
+    // Leaving a scene that offers a Short Rest, unrested and hurt, reminds the DM once (AGT-46).
+    rests: pack.adventure.scenes.filter((s) => s.rest).map((s) => s.id),
     maxSteps: flags["max-steps"],
     // The situation panel (AGT-36) is drawn only at the terminal.
     situation: ink !== undefined,
