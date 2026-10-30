@@ -10,7 +10,11 @@ use nat20_api_contract::{
     PROTOCOL_NAME, RejectReason, Request, Response, V1,
 };
 
-use crate::{adapter, errors, paths, projection::Viewer, session::Session};
+use crate::{
+    adapter, errors, paths,
+    projection::{self, Viewer},
+    session::Session,
+};
 
 /// SHA-256 over the wire, scene and pregen schemas (`generated/nat20-api.schema.json`, then
 /// `generated/nat20-scene.schema.json`, then `generated/nat20-pregen.schema.json`), written by
@@ -219,14 +223,25 @@ impl Server {
                     (None, Some(point)) => Some(Aim::Point { point: *point }),
                     (None, None) => None,
                 };
-                session.submit(
+                let submitted = session.submit(
                     &actor.0,
                     prompt_id.as_ref().map(|p| p.0.as_str()),
                     option_id,
                     targets,
                     aim.as_ref(),
                     variant.as_deref(),
-                )
+                );
+                // A refused variant lists the actor's valid ones (AGT-47): only the actor's
+                // owner and the DM may list its options, as with legal_actions.
+                submitted.map_err(|mut error| {
+                    if !projection::lists_options(viewer, &actor.0)
+                        && let Some(at) = error.message.find(adapter::game::VALID_VARIANTS)
+                    {
+                        error.message.truncate(at);
+                        error.message.push_str("; see legal_actions.");
+                    }
+                    error
+                })
             }
             Command::React {
                 actor,

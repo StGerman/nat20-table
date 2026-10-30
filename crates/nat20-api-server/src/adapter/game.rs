@@ -70,6 +70,10 @@ use crate::{
     scene,
 };
 
+/// Where a refused variant's message starts listing the valid ids (AGT-47). Only the actor's
+/// owner and the DM may see them, so the server cuts the message here for anyone else.
+pub const VALID_VARIANTS: &str = "; send one of: ";
+
 /// Simulated seconds per engine tick while settling.
 const TICK_SECONDS: f32 = 0.1;
 /// Upper bound on ticks per settle; a single action or move finishes far sooner, so hitting
@@ -2572,13 +2576,14 @@ impl Game {
                     .find(|v| names::variant_stem(v) == wanted)
                     .ok_or_else(|| {
                         // The valid ids, so a caller that sent a bare `heal` for
-                        // `divine_spark/heal` can fix it on its retry.
+                        // `divine_spark/heal` can fix it on its retry. The server drops
+                        // them for a viewer who may not list the actor's options.
                         let valid: Vec<String> =
                             option.variants.iter().map(names::variant_stem).collect();
                         error(
                             ErrorCode::UnknownOption,
                             format!(
-                                "{wanted} is not one of {option_id}'s variants right now; send one of: {}.",
+                                "{wanted} is not one of {option_id}'s variants right now{VALID_VARIANTS}{}.",
                                 valid.join(", ")
                             ),
                         )
