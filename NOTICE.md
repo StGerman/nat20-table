@@ -18,3 +18,7 @@ Dungeons & Dragons, D&D, Wizards of the Coast and their logos are trademarks of 
 ## Rules engine
 
 The rules engine is `nat20_core` from [Nat20](https://github.com/MadsWedendahlKruse/nat20) by Mads Wedendahl Kruse (MIT), used through our fork https://github.com/StGerman/nat20.
+
+## Agent skills
+
+`.agents/skills/ink-layout-styling/` is the Ink Layout and Styling skill from [han](https://github.com/thebushidocollective/han) (`plugins/frameworks/ink/`), copyright 2025 The Bushido Collective, unmodified. The han repository is licensed under the Functional Source License 1.1, ALv2 Future License (https://github.com/thebushidocollective/han/blob/main/LICENSE); its Ink plugin manifest declares Apache-2.0. `skills-lock.json` pins the source path and hash.

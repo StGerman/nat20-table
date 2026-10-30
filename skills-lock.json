@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "ink-layout-styling": {
+      "source": "thebushidocollective/han",
+      "sourceType": "github",
+      "skillPath": "plugins/frameworks/ink/skills/ink-layout-styling/SKILL.md",
+      "computedHash": "8fb60b8ed37bbd12ed03cefa4dee05cbc6f14a77173794793703ce6c94c2135b"
+    }
+  }
+}
