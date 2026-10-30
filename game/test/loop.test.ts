@@ -1984,6 +1984,22 @@ test("after a Short Rest in the scene, load_scene goes through at once", async (
   assert.equal(report.ended, "the adventure is over");
 });
 
+test("a start_combat sent with load_scene in parallel follows the load", async () => {
+  const tried: ToolOutcome[] = [];
+  const { report } = await play({
+    ...YARD,
+    seat: seatThen([]),
+    dm: {
+      scene_open: async (tools) => {
+        const state = (await tools.getState()).data as { state: { scene_id?: string | null } };
+        if (state.state.scene_id === "m3_s1_green") tried.push(...(await Promise.all([tools.loadScene("m3_s3_yard", ["bren"]), tools.startCombat("yard_fight")])));
+      },
+    },
+  });
+  assert.deepEqual(tried.map((o) => o.ok), [true, true], tried.map((o) => o.text).join(" | "));
+  assert.equal(report.ended, "the human quit");
+});
+
 test("the DM may load the last scene and end the adventure in the same wake", async () => {
   const tried: ToolOutcome[] = [];
   const { report } = await play({
