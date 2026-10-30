@@ -168,6 +168,18 @@ test("the scripted table plays The Silent Mill from Scene 1 to 6, and the transc
     const report = await new TableLoop({ table: t.table, dm, players, maxSteps: 3000, names: party.names }).run(scenes[0].id);
     assert.equal(report.ended, "the adventure is over");
     assert.deepEqual(report.scenes, scenes.map((s) => s.id));
+    // Each turn that began with a fallen ally in reach is on the report (hands-and-check spec A3-M).
+    // The scripted rescue lifts with a spell or a potion in range now, and never with Divine Spark
+    // or after a walk, so Maren's last two chances in the cellar are missed.
+    assert.deepEqual(
+      report.liftChances.map((c) => [c.handle, c.scene, c.fallen, c.lifted]),
+      [
+        ["maren", "s3_mill_yard", ["bren"], ["bren"]],
+        ["torva", "s5_mill_cellar", ["bren"], ["bren"]],
+        ["maren", "s5_mill_cellar", ["torva"], []],
+        ["maren", "s5_mill_cellar", ["torva"], []],
+      ],
+    );
     const engine = t.table.transcript.records.filter((r) => r.channel === "dm" && r.kind === "engine").map((r) => r.text);
     assert.deepEqual(
       engine.filter((l) => l.startsWith("Combat is over")),

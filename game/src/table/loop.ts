@@ -6,6 +6,7 @@ import { EngineStopped, type Event, type Handle, type State } from "@nat20-table
 import { ConnectionLost, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
+import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
@@ -141,6 +142,8 @@ export interface RunReport {
   talkRounds: TalkRound[];
   /** Each fight trigger the AI players were woken to react to (party talk §5 R1). */
   reactions: FightReaction[];
+  /** Each AI combat turn that began with a fallen ally the player could lift, and what it did (hands-and-check spec A3-M). */
+  liftChances: LiftChance[];
   /** Combat rounds played, and the AI players' lines in them: on their turns and between them (party talk goal 4). */
   fight: { rounds: number; lines: number };
   /** Which stop ended the run early; absent when it ended in play (M7 design §3.1). */
@@ -218,6 +221,8 @@ export class TableLoop {
   private dmBacklog: Event[] = [];
   /** AI players' combat turns so far, for the report. */
   private readonly playerTurns: RunReport["playerTurns"] = [];
+  /** AI combat turns that began with a fallen ally to lift, for the report. */
+  private readonly liftChances: LiftChance[] = [];
   /** Talk rounds so far, for the report; their count shifts the speakers' seat order (party talk §4.2.6). */
   private readonly talkRounds: TalkRound[] = [];
   /**
@@ -340,6 +345,7 @@ export class TableLoop {
       playerTurns: [...this.playerTurns],
       talkRounds: [...this.talkRounds],
       reactions: [...this.reactions],
+      liftChances: [...this.liftChances],
       fight: { rounds: this.fightRounds.size, lines: this.table.fightLines },
       ...(this.table.stop ? { stop: this.table.stop } : {}),
       // A scene a stop cut short keeps no end time, and counts the rounds it got to.
@@ -656,6 +662,7 @@ export class TableLoop {
     const options = await tools.legalActions();
     const briefing = await this.playerBriefing(handle, "It is your turn in the fight. Your options:", options.text, "Act with your tools, then call end_turn.");
     const since = this.table.engine.logHead;
+    const chance = await this.liftsAtStart(handle, options);
     const started = performance.now();
     let wakes = 1;
     const woke = await this.wakePlayer(agent, "combat_turn", briefing);
@@ -666,7 +673,32 @@ export class TableLoop {
     }
     this.playerTurns.push({ handle, wall_ms: Math.round(performance.now() - started), wakes });
     if (await this.sameTurn(handle, since)) await this.fallBack(handle, "end_turn");
+    if (chance) {
+      const r = await this.table.engine.request("dm", { cmd: "events", since });
+      const events = r.result?.cmd === "events" ? r.result.events : [];
+      this.liftChances.push({ handle, ...chance, ...turnOutcome(events, handle, chance.fallen) });
+    }
     await this.narrateNew(handle);
+  }
+
+  /**
+   * The fallen allies an AI player's combat turn begins with, and the lifts its options can reach
+   * on them; undefined when there is none (hands-and-check spec A3-M). Read in the DM's view, for
+   * the report only: nothing here reaches the player.
+   */
+  private async liftsAtStart(
+    handle: Handle,
+    options: ToolOutcome,
+  ): Promise<Omit<LiftChance, "handle" | "lifted" | "did"> | undefined> {
+    const listed = options.ok ? (options.data as LegalActionsResult | undefined) : undefined;
+    if (!listed?.options.some(lifts)) return undefined;
+    const r = await this.table.engine.request("dm", { cmd: "get_state" });
+    const state = r.result?.cmd === "get_state" ? r.result.state : undefined;
+    if (state?.view !== "dm") return undefined;
+    const fallen = state.creatures.filter((c) => c.side === "party" && c.handle !== handle && isFallen(c.life_state)).map((c) => c.handle);
+    const reach: Lift[] = liftsOn(listed.options, fallen, listed.budget);
+    if (reach.length === 0) return undefined;
+    return { at: new Date().toISOString(), scene: this.scenes.at(-1) ?? "", fallen, lifts: reach };
   }
 
   /**

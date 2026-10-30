@@ -112,6 +112,7 @@ Decision 0043 records the change, the dropped options (three runs in a row; thre
 A thin command over `play:scene` with all six scenes, `--lang ru` by default:
 - `run.json` in the run folder: table commit and whether the tree was dirty, core rev, contract version, schema hash, models and efforts, language, seed, Node version, seat, and for each scene its load time, end time, `target_minutes` and rounds fought;
 - a timing table in `report.md` against the targets;
+- a "Fallen allies" line in `report.md`: the AI combat turns that began with a fallen ally the player could lift (a Potion of Healing, Divine Spark's heal, Cure Wounds or Healing Word, in range or within a walk), how many lifted one, and one line for each missed. It is an observation like latency, not a row of §3.2; a miss puts the cellar note's C1 back on the table (hands-and-check spec A3-M, AGT-57);
 - a verdict block at the top of `report.md`: `PASS`, `FAIL` with the failed rows of §3.2, or `VOID` with the cause. Criterion 3 shows the narration check's flags as "to confirm" until Stas has gone through them;
 - a stop at 120 minutes, recorded as a fail;
 - `caffeinate` on macOS for the length of the run, so the Mac doesn't sleep.
