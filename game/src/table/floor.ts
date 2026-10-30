@@ -1,11 +1,8 @@
-// Who takes the floor in a talk round out of combat (party talk §4.2 to §4.4, decision 0039,
-// TASKS.md AGT-32, AGT-33). Pure functions: the loop reads the human's and the DM's lines, wakes
-// the players, and asks these who goes first, what each raised hand says, in which order the
-// speakers go, and whom a line spoken to a companion hands the floor to.
+// Who takes the floor in a talk round out of combat (party talk §4.2 to §4.4, decisions 0039,
+// 0040 and 0049, TASKS.md AGT-32, AGT-33, AGT-55). Pure functions: the loop reads the human's and
+// the DM's lines, wakes the players, and asks these who goes first, what each raised hand says, in
+// which order the speakers go, and whom a line spoken to a companion hands the floor to.
 import type { Handle } from "@nat20-table/engine-client";
-
-/** At most this many floor wakes follow each other in a talk round: named players and speakers together. */
-export const FLOOR_BOUND = 3;
 
 /** What a player answers a hand wake with: speak, speak and act, act without a word, or pass. */
 export type Hand =

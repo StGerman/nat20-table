@@ -220,9 +220,10 @@ export function talkLines(rounds: TalkRound[]): string[] {
   const answered = sum((r) => r.named.filter((h) => r.spoke.includes(h) || r.declared.includes(h)).length);
   const first = rounds.flatMap((r) => (r.first_line_ms === undefined ? [] : [r.first_line_ms]));
   const walls = rounds.map((r) => r.wall_ms);
+  const floors = rounds.map((r) => r.floor_wakes);
   const share = slots === 0 ? 0 : Math.round((100 * silent) / slots);
   return [
-    `- Talk rounds: ${rounds.length}; lines per round ${(sum((r) => r.spoke.length) / rounds.length).toFixed(1)}; silent share ${share}% (target at least ${100 * TALK_TARGETS.silentShare}%); floor wakes ${sum((r) => r.floor_wakes)}, hands lapsed ${sum((r) => r.lapsed.length)}`,
+    `- Talk rounds: ${rounds.length}; lines per round ${(sum((r) => r.spoke.length) / rounds.length).toFixed(1)}; silent share ${share}% (target at least ${100 * TALK_TARGETS.silentShare}%); floor wakes ${sum((r) => r.floor_wakes)} (p50 ${percentile(floors, 50)}, max ${Math.max(...floors)} a round), hands lapsed ${sum((r) => r.lapsed.length)} (must be 0)`,
     `- Hands: ${hands.join(", ")}; named players who answered first: ${answered} of ${named}; hand-offs ${sum((r) => (r.handed_to ? 1 : 0))}, addresses carried to the next round ${sum((r) => r.carried.length)}`,
     `- Talk round time: first line p50 ${first.length > 0 ? `${percentile(first, 50)} ms` : "n/a"} (target ${TALK_TARGETS.firstLineP50Ms} ms), round p50 ${percentile(walls, 50)} ms, p95 ${percentile(walls, 95)} ms (target ${TALK_TARGETS.roundP95Ms} ms)`,
   ];

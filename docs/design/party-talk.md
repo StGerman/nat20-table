@@ -74,7 +74,7 @@ The H and R figures are estimates: a wake that calls no tool is one model answer
 2. **Everyone else raises a hand or doesn't** (§4.3), in parallel with the named player's wake.
 3. **Speakers take the floor one at a time.** Each hears everything said before it, and can still drop its line at its turn ("Torva already said it").
 4. **A silent action doesn't queue.** It reaches the DM's inbox and the human's screen as soon as the hands are in (after the named player's wake, when one runs), as one line ("Maren silently bandages Snitt's side"). The DM resolves it in its one `table_turn` wake, with everything else said in the round; it costs no DM wake of its own.
-5. **A bound on the round.** At most three floor wakes follow each other in a round: the named player, the speakers, and one hand-off from §4.4 together. A hand still up when the bound is reached lapses, and so does a named player past it; a player spoken to and still waiting when the bound is reached is carried to the next round instead (§4.4).
+5. **Every hand has its floor (decision 0049).** Each named player and each raised hand gets one floor wake in its round, however many there are, and the round adds its one hand-off from §4.4. No hand lapses. A bound of three floor wakes a round (decision 0039) cut the rest until 2026-10-30. In runs 21-48, 12-54 and 17-35 it cut 17 raised hands in 13 of 23 rounds, and 10 of those rounds ended with the DM loading the next scene before the cut players spoke. The report still counts lapsed hands, as a guard that must read 0: only a table that ends mid-round leaves one.
 6. Ties between speakers go by seat order, shifted by one each round. That only breaks ties; it is not a rule about who talks.
 
 ```mermaid
@@ -93,7 +93,7 @@ sequenceDiagram
         P-->>L: SPEAK, BOTH, ACT with an intent, or PASS
     end
     L-->>DM: silent intents into the DM's inbox (no wake)
-    loop each speaker in turn, within the bound
+    loop each speaker in turn
         L->>P: floor wake, with every line said so far
         P-->>L: line and/or intent, or PASS after all
     end
@@ -129,7 +129,7 @@ The prompt asks the player to choose whom to address, and how, from these, never
 **How an address travels.**
 
 1. An address is a `say` line. The AI player's `say` seat tool gains an optional `to` (a companion's handle, the human's character included). It's a game tool, not the engine contract. With `to`, the addressee is exact, so names are matched in text only in the human's and the DM's lines. A `to` that isn't a companion is refused and costs a retry. The addressee's brief marks the line "ilsa says to you: …", the others' briefs and the DM's say "ilsa says to torva: …", and the transcript's speech record carries `to`.
-2. **Out of combat:** an AI addressee gets the floor next in the same round, whatever the address's form (decision 0040): with its hand down it gets a floor wake of its own, and with its hand up it moves to the front. That is the round's one hand-off, inside the bound of §4.2. An address the round can't answer is carried: one made after the hand-off (in the hand-off itself, say), one made outside a floor wake (in a granted action), and one whose addressee is still waiting for the floor when the bound is reached, whether it was carried, queued with its hand up, or the hand-off. Its addressee has the floor first in the next round, after the players the human's and the DM's lines named, and its brief says a companion spoke to it. A fight drops what was carried.
+2. **Out of combat:** an AI addressee gets the floor next in the same round, whatever the address's form (decision 0040): with its hand down it gets a floor wake of its own, and with its hand up it moves to the front. That is the round's one hand-off. An address made after it to a player whose hand is up is answered on that player's own floor in the round. An address the round can't answer is carried: one made after the hand-off to a player with no floor still to come (in the hand-off itself, say), and one made outside a floor wake (in a granted action). Its addressee has the floor first in the next round, after the players the human's and the DM's lines named, and its brief says a companion spoke to it. A fight drops what was carried.
 3. **In a fight:** the address is spoken on the speaker's own turn (§5, R0). The addressee reads it on its next turn in the brief, marked as in 1, and acts only on its own turn. An address is not an R1 trigger (§5), and a `to` in a fight never hands off.
 4. **The addressee decides** from its card and values: help, answer, argue, refuse in character ("Heal later, hit first"), or stay silent. An address never forces an action.
 5. **Mechanics only through the engine (Rule 4).** "Help me with the lock" becomes a declaration the DM resolves with `help` or `grant_action`; Help gives Advantage, as in SRD 5.2.1. "Heal me" in a fight becomes Maren's Healing Word on her turn, if she chooses it. No line sets a result.
@@ -182,7 +182,7 @@ Speech still reaches everyone directly: `Torva says: …` is shown at once, and 
 
 | Where | What | Size |
 |---|---|---|
-| `game/src/table/floor.ts` (new) | the order of §4.2: named player, hands, the bound, the hand-off, ties; a pure function with unit tests | S |
+| `game/src/table/floor.ts` (new) | the order of §4.2: named player, hands, the hand-off, ties (the bound of three went with decision 0049); a pure function with unit tests | S |
 | `game/src/table/loop.ts` | `declarations()` becomes the hand-raise round; R0 in the turn brief; R1 triggers and background wakes | M |
 | `game/src/table/state.ts` | §6; lines are delivered as they are spoken; `collect`/`commit` leave the talk round | XS |
 | `game/src/agents/player.ts` | the prompt of §4.6; the `hand` wake; `to` on `say`; the R1 `bark` wake with `say` only | S |
@@ -209,7 +209,7 @@ After steps 1 and 2 Stas plays `npm run play:exit` on his Mac and attaches the r
 ## 9. Risks
 
 - A round with two speakers waits longer than today's (about 12 s against 6–10 s). The first line comes sooner, and the human reads two lines instead of six.
-- Sonnet at low effort may talk anyway. The bound of §4.2 holds that in the loop, not in the prompt.
+- Sonnet at low effort may talk anyway. The hand holds that: a player with nothing to add passes (in run 17-35, 10 of 36 hands were PASS, and 48% of seats stayed silent against a target of at least 30%). The bound of three that held it in the loop went with decision 0049.
 - Matching Russian names in the human's and the DM's text is brittle (cases, nicknames). An implicit address ("who here can heal?") isn't matched, but the hand-raise catches it: Maren decides the question is hers.
 - R1 adds concurrency to an agent's session, which was strictly sequential. That's why it is the last step and its own PR. The loop never wakes a player with a reaction in flight for another reaction, makes any other wake of that player wait for it (at most 5 s), and cancels it only while it runs, so a cancel never ends the player's next wake.
 - In R1 the fastest player, not the most moved one, can win the floor. A run report with one character speaking nearly every reaction shows it.

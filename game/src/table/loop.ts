@@ -6,7 +6,7 @@ import { EngineStopped, type Event, type Handle, type State } from "@nat20-table
 import { ConnectionLost, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
-import { FLOOR_BOUND, handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
+import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
@@ -48,8 +48,6 @@ export interface LoopOptions {
    * floor first (party talk §4.2). A player missing here is named by its handle.
    */
   names?: ReadonlyMap<Handle, readonly string[]>;
-  /** Floor wakes a talk round may hold, named players and speakers together. Default `FLOOR_BOUND`. */
-  floorBound?: number;
   /** How long another wake of a player waits for its reaction in flight before cancelling it. Default `REACTION_GRACE_MS`. */
   reactionGraceMs?: number;
   /** How long a reaction may take before it is cancelled. Default `BARK_TIMEOUT_MS`. */
@@ -103,11 +101,14 @@ export interface TalkRound {
   hands: Partial<Record<Handle, Hand["kind"]>>;
   /** Floor wakes in the round: the named players', the speakers' and the hand-off's. Retries of a refused declaration don't count. */
   floor_wakes: number;
-  /** Raised hands that never got the floor: the round's bound was reached. */
+  /**
+   * Named players and raised hands that never got the floor. Every one of them speaks in its round
+   * (decision 0049), so only a table that ended mid-round leaves any: the report keeps the count as a guard.
+   */
   lapsed: Handle[];
   /** The AI player a line spoken to it gave the floor next, the round's one hand-off (party talk §4.4). */
   handed_to?: Handle;
-  /** AI players spoken to and not answered past the hand-off or the bound: they have the floor first next round. */
+  /** AI players spoken to after the round's hand-off and not answered in it: they have the floor first next round. */
   carried: Handle[];
   /** The AI players who spoke a line, who declared something, and who did neither. */
   spoke: Handle[];
@@ -184,7 +185,6 @@ export class TableLoop {
   /** Each AI player's tools for a hand wake: they answer in text only (party talk §4.3). */
   private readonly handTools = new Map<Handle, HandTools>();
   private readonly names: ReadonlyMap<Handle, readonly string[]>;
-  private readonly floorBound: number;
   private readonly dmTools: DmTools;
   private readonly onScene: (sceneId: string, played: readonly string[]) => SceneChoice;
   private readonly maxSteps: number;
@@ -249,7 +249,6 @@ export class TableLoop {
       this.handTools.set(agent.handle, new HandTools(agent.handle, this.table));
     }
     this.names = options.names ?? new Map();
-    this.floorBound = options.floorBound ?? FLOOR_BOUND;
     this.reactionGraceMs = options.reactionGraceMs ?? REACTION_GRACE_MS;
     this.barkTimeoutMs = options.barkTimeoutMs ?? BARK_TIMEOUT_MS;
     this.dmTools = new DmTools(this.table, {
@@ -917,10 +916,10 @@ export class TableLoop {
    * An AI player that `humanLine` names, or that the DM's narration since the last round speaks to,
    * has the floor first. Every other one answers a hand wake meanwhile: SPEAK, BOTH, ACT with what
    * it does without a word, or PASS. A silent act is declared once the hands are in, with no floor
-   * wake. Then the raised hands have the floor one at a time, each hearing what was said before
-   * it, until the round holds `floorBound` floor wakes. A line spoken to a companion on the floor
-   * hands it the floor next, once a round (§4.4, decision 0040). An address the round can't answer
-   * opens the next round.
+   * wake. Then every raised hand has the floor, one at a time, each hearing what was said before
+   * it: no hand lapses (decision 0049). A line spoken to a companion on the floor hands it the
+   * floor next, once a round (§4.4, decision 0040). An address made after that hand-off opens the
+   * next round.
    */
   private async talkRound(humanLine: string): Promise<void> {
     const started = performance.now();
@@ -932,15 +931,14 @@ export class TableLoop {
     this.table.beginTalk();
     for (const handle of handles) this.table.resetRetries(handle);
     // An address made outside a floor wake (a granted action) or carried from the last round gives
-    // its addressee the floor first, after the players the human and the DM named.
+    // its addressee the floor first, after the players the human and the DM named. Every one of
+    // them has it, however many there are (decision 0049).
     const byName = namedIn([{ text: humanLine }, ...narrations], handles, this.names);
-    const mentioned = [...new Set([...byName, ...this.carried, ...handOff(this.table.takeAddresses(), [], handles, true).carried])];
+    const named = [...new Set([...byName, ...this.carried, ...handOff(this.table.takeAddresses(), [], handles, true).carried])];
     this.carried = [];
-    // Who was spoken to and hasn't had the floor since: carried again if the round's floor fills first.
-    const requested = new Set(mentioned.filter((h) => !byName.includes(h)));
-    const named = mentioned.slice(0, this.floorBound);
-    const raising = handles.filter((h) => !mentioned.includes(h));
+    const raising = handles.filter((h) => !named.includes(h));
     let floorWakes = 0;
+    const hadFloor = new Set<Handle>();
     // Every hand wake's brief is built before any wake runs, so none depends on which model is faster.
     const asks: string[] = [];
     for (const handle of raising) {
@@ -954,7 +952,7 @@ export class TableLoop {
         if (this.table.ended) return;
         floorWakes += 1;
         const why = byName.includes(handle) ? "you were named" : "a companion spoke to you, and you haven't answered yet";
-        requested.delete(handle);
+        hadFloor.add(handle);
         await this.takeFloor(handle, `You have the floor first: ${why}. Answer: say your line with say if you have one, and answer with what you set out to do in one sentence, or PASS.`);
         namedAddresses.push(...this.table.takeAddresses().filter((a) => named.indexOf(a.to) <= i));
       }
@@ -974,19 +972,7 @@ export class TableLoop {
     for (const [handle, hand] of hands) {
       if (hand.kind === "act" && !this.table.ended) await this.declareFor(handle, hand.intent);
     }
-    const lapsed: Handle[] = [];
     const carried: Handle[] = [];
-    const carry = (handle: Handle) => {
-      if (!carried.includes(handle)) carried.push(handle);
-      this.table.log("hand", "carried: spoken to, but the round's floor is full", handle);
-    };
-    for (const handle of mentioned.slice(this.floorBound)) {
-      if (requested.has(handle)) carry(handle);
-      else {
-        lapsed.push(handle);
-        this.table.log("hand", "lapsed: named, but the round's floor is full", handle);
-      }
-    }
     // Lines spoken to a companion on the floor may hand it the floor next (party talk §4.4).
     let queue = speakingOrder(hands, handles, this.talkRounds.length);
     let used = false;
@@ -1000,30 +986,23 @@ export class TableLoop {
         pending = after.handedTo;
       }
       for (const handle of after.carried) if (!carried.includes(handle)) carried.push(handle);
-      // A line to a player still in the queue waits for its floor wake there.
-      for (const a of addresses) if (a.to !== a.from && queue.includes(a.to)) requested.add(a.to);
     };
     heard([...namedAddresses, ...this.table.takeAddresses()]);
     while (queue.length > 0 && !this.table.ended) {
       const handle = queue.shift()!;
       const handed = pending?.to === handle ? pending : undefined;
       if (handed) pending = undefined;
-      if (floorWakes >= this.floorBound) {
-        if (requested.has(handle)) carry(handle);
-        else {
-          lapsed.push(handle);
-          this.table.log("hand", "lapsed: the round's floor is full", handle);
-        }
-        continue;
-      }
       floorWakes += 1;
-      requested.delete(handle);
+      hadFloor.add(handle);
       if (handed) handedWake = handle;
       const why = !handed ? "you raised your hand" : `${handed.from} spoke to you${handed.raised ? ", and you raised your hand" : ""}`;
       await this.takeFloor(handle, `You have the floor: ${why}. Say your line with say if it still needs saying, and answer with what you set out to do in one sentence, or PASS.`);
       heard();
     }
     this.carried = carried;
+    // Only a table that ended mid-round leaves a named player or a raised hand without the floor.
+    const lapsed = [...named, ...speakingOrder(hands, handles, this.talkRounds.length)].filter((h) => !hadFloor.has(h));
+    for (const handle of lapsed) this.table.log("hand", "lapsed: the table ended before its floor", handle);
     const { spoke, declared, firstLineMs } = this.table.talkSoFar();
     this.talkRounds.push({
       named,

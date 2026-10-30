@@ -1318,7 +1318,7 @@ test("a line between two named players is answered on the second one's own floor
   assert.match(players.get("ilsa")!.briefings.find((b) => b.wake === "declare")!.briefing, /torva says to you: Ilsa, the sign\?[\s\S]*You have the floor first: you were named\./);
 });
 
-test("a player spoken to and still waiting when the round's floor fills is carried again, whether it was carried or queued", async () => {
+test("a player spoken to after the round's hand-off has the floor first next round, however many others are named (decision 0049)", async () => {
   const say = (tools: PlayerTools, line: string, to: string) => tools.say(line, to);
   let torvaAsked = false;
   const t = await testTable({
@@ -1343,20 +1343,21 @@ test("a player spoken to and still waiting when the round's floor fills is carri
     }),
   ];
   try {
-    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players, floorBound: 2, maxSteps: 400 });
+    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players, maxSteps: 400 });
     const report = await loop.run("m5_s3_yard");
     const [first, second] = report.talkRounds;
     // Round one: Torva's line to Ilsa takes the hand-off; Ilsa's, made in it, is carried.
     assert.deepEqual([first.handed_to, first.carried, first.floor_wakes], ["ilsa", ["maren"], 2]);
-    // Round two: the human names two, the bound is two, and Maren is still waiting to answer.
-    assert.deepEqual([second.named, second.carried, second.lapsed], [["torva", "ilsa"], ["maren"], []]);
-    assert.ok(runLines(t, "hand").includes("carried: spoken to, but the round's floor is full"));
+    // Round two: the human names two, and Maren, still waiting to answer, has the floor too.
+    assert.deepEqual([second.named, second.floor_wakes, second.carried, second.lapsed], [["torva", "ilsa", "maren"], 3, [], []]);
+    const maren = players[1].briefings.filter((b) => b.wake === "declare").map((b) => b.briefing);
+    assert.match(maren.at(-1)!, /You have the floor first: a companion spoke to you, and you haven't answered yet\./);
   } finally {
     t.close();
   }
 });
 
-test("a line to a raised hand that the floor bound reaches first is carried, not lapsed", async () => {
+test("a line to a raised hand after the round's hand-off is answered on that hand's own floor in the same round (decision 0049)", async () => {
   const { report } = await play({
     seed: 27,
     seat: seatThen([{ kind: "text", text: "Torva, Maren, what now?" }]),
@@ -1368,8 +1369,8 @@ test("a line to a raised hand that the floor bound reaches first is carried, not
     },
   });
   const [round] = report.talkRounds;
-  // Two named wakes and Torva's hand-off fill the round; Ilsa's hand was up, and Torva spoke to her.
-  assert.deepEqual([round.named, round.handed_to, round.floor_wakes, round.carried, round.lapsed], [["torva", "maren"], "torva", 3, ["ilsa"], []]);
+  // Two named wakes and Torva's hand-off, then Ilsa, whose hand was up and whom Torva spoke to.
+  assert.deepEqual([round.named, round.handed_to, round.floor_wakes, round.carried, round.lapsed], [["torva", "maren"], "torva", 4, [], []]);
 });
 
 test("a fight drops a line to a companion left pending outside a floor wake", async () => {
@@ -1441,7 +1442,7 @@ test("narrations wait for the next talk round out of combat, and a fight drops t
   }
 });
 
-test("raised hands past the round's floor bound lapse, and the next round turns the seat order by one", async () => {
+test("every raised hand has the floor in its round, and the next round turns the seat order by one (decision 0049)", async () => {
   const say = (line: string) => async (tools: Parameters<NonNullable<ScriptedPlayerPolicy["declare"]>>[0]) => void (await tools.say(line));
   const t = await testTable({
     seed: 27,
@@ -1453,15 +1454,37 @@ test("raised hands past the round's floor bound lapse, and the next round turns 
   });
   const players = [new ScriptedPlayer("torva", { declare: say("Torva here.") }), new ScriptedPlayer("maren", { declare: say("Maren here.") }), new ScriptedPlayer("ilsa", { declare: say("Ilsa here.") })];
   try {
-    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players, floorBound: 2, maxSteps: 400 });
+    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players, maxSteps: 400 });
     const report = await loop.run("m5_s3_yard");
-    assert.deepEqual(report.talkRounds.map((r) => [r.spoke, r.lapsed]), [
-      [["torva", "maren"], ["ilsa"]],
-      [["maren", "ilsa"], ["torva"]],
+    assert.deepEqual(report.talkRounds.map((r) => [r.spoke, r.floor_wakes, r.lapsed]), [
+      [["torva", "maren", "ilsa"], 3, []],
+      [["torva", "maren", "ilsa"], 3, []],
     ]);
+    // The transcript shows the order: the second round starts one seat on.
     const spoken = t.table.transcript.records.filter((r) => r.kind === "speech").map((r) => r.speaker);
-    assert.deepEqual(spoken, ["torva", "maren", "maren", "ilsa"]);
-    assert.ok(runLines(t, "hand").includes("lapsed: the round's floor is full"));
+    assert.deepEqual(spoken, ["torva", "maren", "ilsa", "maren", "ilsa", "torva"]);
+    assert.ok(!runLines(t, "hand").some((l) => l.startsWith("lapsed")));
+  } finally {
+    t.close();
+  }
+});
+
+test("four raised hands and a hand-off to one who already spoke make five floor wakes, and none lapses (decision 0049)", async () => {
+  // Runs 21-48, 12-54 and 17-35 cut 17 raised hands in 13 of 23 talk rounds at the old bound of
+  // three, 10 of those rounds just before the DM loaded the next scene (hands-and-check spec §2.2).
+  const party = ["bren", "torva", "maren", "ilsa"];
+  const t = await testTable({ seed: 27, noHuman: true, players: party });
+  const players = party.map(
+    (handle) => new ScriptedPlayer(handle, { declare: async (tools) => void (handle === "ilsa" ? await tools.say("Bren, lead on?", "bren") : await tools.say(`${handle} here.`)) }),
+  );
+  try {
+    const dm = new ScriptedDm({ table_turn: async (tools) => void (await tools.endAdventure("The party heads out.")) });
+    const report = await new TableLoop({ table: t.table, dm, players, maxSteps: 400 }).run("m5_s3_yard");
+    const [round] = report.talkRounds;
+    assert.deepEqual([round.floor_wakes, round.handed_to, round.lapsed, round.carried], [5, "bren", [], []]);
+    const spoken = t.table.transcript.records.filter((r) => r.kind === "speech").map((r) => r.speaker);
+    assert.deepEqual(spoken, ["bren", "torva", "maren", "ilsa", "bren"]);
+    assert.ok(!runLines(t, "hand").some((l) => l.startsWith("lapsed")));
   } finally {
     t.close();
   }
