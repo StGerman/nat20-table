@@ -59,7 +59,7 @@ The whole adventure, Scene 1 to Scene 6, in one run (M7 spec §4.1). Before each
 | Run | Command | You play? |
 |---|---|---|
 | The cheap setup (DM Sonnet 5.5 medium, AI players Haiku 5.5 high, Russian), all four characters AI players: discovery and iteration runs | `npm run play:cheap` | No |
-| The unattended setup (DM Opus 5.5 low, AI players Haiku 5.5 high, Russian), all four characters AI players: Milestone 7's unattended run (decision 0046) | `npm run play:unattended` | No |
+| The unattended setup (DM Opus 5.5 low, AI players Sonnet 5.5 medium, Russian), all four characters AI players: Milestone 7's unattended run (decisions 0046, 0047) | `npm run play:unattended` | No |
 | The demo setup (DM Opus 5.5 medium, AI players Sonnet 5.5 low, Russian): your acceptance run. It starts with the party list: pick who you play by number, or Enter for Bren; the other three become AI players | `npm run play:demo` | **Yes**, in a terminal |
 | Rehearsal with no model, a minute or two | `npm run play:full -- --dm scripted --players scripted` | No |
 
