@@ -248,6 +248,24 @@ export function fightLines(run: Pick<RunReport, "reactions" | "fight">, usage: U
   ];
 }
 
+/**
+ * The report's lines on fallen allies (hands-and-check spec A3-M): the AI combat turns that began
+ * with a fallen ally the player could lift, how many lifted one, and one line per turn that didn't.
+ * An observation, like latency, not an acceptance row.
+ */
+export function fallenLines(run: Pick<RunReport, "liftChances" | "fight">): string[] {
+  if (run.fight.rounds === 0) return [];
+  const lifted = run.liftChances.filter((c) => c.lifted.length > 0).length;
+  const missed = run.liftChances.filter((c) => c.lifted.length === 0);
+  return [
+    `- Fallen allies: ${run.liftChances.length} chances, ${lifted} lifted, ${missed.length} missed`,
+    ...missed.map((c) => {
+      const lifts = c.lifts.map((l) => `${l.option_id} on ${l.ally} at ${l.distance_ft} ft`).join(", ");
+      return `  - missed: ${c.at} ${c.scene} ${c.handle}: ${c.fallen.join(", ")} down; could ${lifts}; did ${c.did.length > 0 ? c.did.join("; ") : "nothing"}`;
+    }),
+  ];
+}
+
 /** How often the AI players spoke to one companion with `say`'s `to` (party talk §4.4, goal 6). */
 export function addressLines(transcript: TranscriptRecord[]): string[] {
   const addresses = transcript.filter((r) => r.kind === "speech" && r.to !== undefined && !r.human);
@@ -303,6 +321,7 @@ export function reportSections(options: {
       : []),
     ...talkLines(run?.talkRounds ?? [], run?.sceneTimes),
     ...(run ? fightLines(run, usage) : []),
+    ...(run ? fallenLines(run) : []),
     ...addressLines(transcript),
     "",
     // Per model wake, whether it ended with its result or not: a combat turn can take two.
