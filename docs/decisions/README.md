@@ -47,7 +47,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0036](0036-demo-runs-on-stas-subscription.md) | The demo runs on Stas's Claude subscription; an API key only when others play | Accepted | 2026-10-23 | Stas (Milestone 6 spec thread, D12) |
 | [0037](0037-fork-keeps-progress-md.md) | Core PRs into the fork's `demo` keep `docs/PROGRESS.md` current | Accepted | 2026-10-27 | Stas (project chat) |
 | [0038](0038-agents-write-the-run-language.md) | The agents write the table's prose in the run's language (`--lang ru`); the engine and the UI stay English | Accepted | 2026-10-27 | Stas (decision card, Milestone 6 implementation thread) |
-| [0039](0039-party-talk-hand-raise-floor.md) | Party talk: each AI player raises its hand, and speakers take the floor in turn | Accepted | 2026-10-27 | Stas (decision cards, party-talk design thread) |
+| [0039](0039-party-talk-hand-raise-floor.md) | Party talk: each AI player raises its hand, and speakers take the floor in turn | Accepted, bound superseded by 0049 | 2026-10-27 | Stas (decision cards, party-talk design thread) |
 | [0040](0040-every-address-hands-off.md) | Every address to a companion hands it the floor | Accepted | 2026-10-27 | Stas (decision card, party-talk thread) |
 | [0041](0041-engine-lines-wait-for-narration.md) | On the table screen, engine lines wait for the DM's narration of them (`--verbose` folds them under it) | Accepted | 2026-10-27 | Stas (decision card, chat transcript thread) |
 | [0042](0042-fight-reactions-first-line-wins.md) | In a fight, every AI player who may react is woken, and the first line shows at once | Accepted | 2026-10-27 | Stas (R1 spec D1 and D2, party-talk thread) |
@@ -57,6 +57,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0046](0046-unattended-run-opus-low-dm.md) | The unattended Milestone 7 run's DM is Opus 5.5 at low effort; iteration runs keep the Sonnet DM | Accepted, amended by 0047 | 2026-10-30 | Stas (M7 implementation thread) |
 | [0047](0047-unattended-run-sonnet-players.md) | The unattended Milestone 7 run's AI players are Sonnet 5.5 at medium effort | Accepted | 2026-10-30 | Stas (M7 implementation thread) |
 | [0048](0048-ai-players-table-knowledge.md) | AI players get a rules primer and teamwork guidance in their prompt, and nothing about what lies ahead | Accepted | 2026-10-30 | Stas (M7 implementation thread) |
+| [0049](0049-every-hand-speaks.md) | Every named player and every raised hand speaks in its talk round; the bound of three floor wakes goes | Accepted | 2026-10-30 | Stas (decision card, cellar thread) |
 
 ## Open questions to watch
 

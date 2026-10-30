@@ -160,7 +160,7 @@ test("the report counts talk rounds: lines, silence, hands, named players who an
       { ...round, hands: { torva: "pass", maren: "pass", ilsa: "unread" }, silent: ["torva", "maren", "ilsa"], wall_ms: 3000 },
     ]),
     [
-      "- Talk rounds: 3; lines per round 1.3; silent share 44% (target at least 30%); floor wakes 4, hands lapsed 0",
+      "- Talk rounds: 3; lines per round 1.3; silent share 44% (target at least 30%); floor wakes 4 (p50 1, max 3 a round), hands lapsed 0 (must be 0)",
       "- Hands: speak 1, both 1, act 1, pass 4, unread 1; named players who answered first: 1 of 1; hand-offs 1, addresses carried to the next round 1",
       "- Talk round time: first line p50 4000 ms (target 7000 ms), round p50 6000 ms, p95 12000 ms (target 20000 ms)",
     ],
