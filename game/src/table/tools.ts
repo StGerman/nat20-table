@@ -56,14 +56,24 @@ export function movedText(r: Response): string {
   return `moved ${Math.round(r.result.moved_ft)} ft${short}${r.result.provoked.length ? `; provoked ${r.result.provoked.join(", ")}` : ""}`;
 }
 
-export function send(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
+export function send(
+  table: TableState,
+  viewer: Viewer,
+  command: Command,
+  okText: (r: Response) => string,
+  /** Runs in the seat's turn, just before the command: an outcome it gives is answered instead. */
+  guard?: () => Promise<ToolOutcome | undefined>,
+): Promise<ToolOutcome> {
   if (!CHANGES.has(command.cmd)) return sendNow(table, viewer, command, okText);
   // An open surrender offer holds every change until the human answers it (AGT-30). The DM's
   // `end_combat` is the one way through, and `DmTools.endCombat` says when it may take it.
   if (table.surrender && !(viewer === "dm" && command.cmd === "end_combat")) {
     return Promise.resolve(notNow(`the surrender offer waits on ${table.human}'s answer; nothing happens before it`));
   }
-  return table.oneAtATime(viewer, () => (table.exhausted(viewer) ? Promise.resolve(table.spent()) : sendNow(table, viewer, command, okText)));
+  return table.oneAtATime(viewer, async () => {
+    if (table.exhausted(viewer)) return table.spent();
+    return (await guard?.()) ?? sendNow(table, viewer, command, okText);
+  });
 }
 
 async function sendNow(table: TableState, viewer: Viewer, command: Command, okText: (r: Response) => string): Promise<ToolOutcome> {
@@ -463,11 +473,14 @@ export class DmTools {
    * run plays loads in its place with the same party, and the DM is told so.
    */
   async loadScene(scene_id: string, party?: string[]): Promise<ToolOutcome> {
-    const reminder = await this.restReminder();
-    if (reminder) return reminder;
     const instead = this.passes?.insteadOf(scene_id);
-    const loaded = await send(this.table, "dm", { cmd: "load_scene", scene_id: instead ?? scene_id, ...(party ? { party: [...party] } : {}) }, (r) =>
-      r.result?.cmd === "load_scene" ? formatDmState(r.result.state) : "loaded",
+    // The reminder is read in the DM's turn, so a start_combat sent in parallel still follows the load.
+    const loaded = await send(
+      this.table,
+      "dm",
+      { cmd: "load_scene", scene_id: instead ?? scene_id, ...(party ? { party: [...party] } : {}) },
+      (r) => (r.result?.cmd === "load_scene" ? formatDmState(r.result.state) : "loaded"),
+      () => this.restReminder(),
     );
     if (loaded.ok) this.loaded = instead ?? scene_id;
     if (!instead || !loaded.ok) return loaded;
