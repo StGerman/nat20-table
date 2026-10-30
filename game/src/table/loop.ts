@@ -75,6 +75,8 @@ export interface SceneTime {
   ended_at?: string;
   /** Combat rounds fought in it. */
   rounds: number;
+  /** The AI players still waiting for the floor when the party left it for the next scene (decision 0050). */
+  left_waiting?: Handle[];
 }
 
 /** One trigger in a fight and the reactions it woke, for the report (party talk §5 R1, AGT-34). */
@@ -167,6 +169,16 @@ const QUIET = new Set<Event["kind"]>(["turn_start", "turn_end", "round"]);
 /** A wake that ended in a model error or timeout: the decision falls back (spec §6). */
 const FAILED = Symbol("failed");
 
+/**
+ * What a `table_turn` wake adds while someone still waits for the floor: who, and who spoke to
+ * each. The DM decides whether the scene may end before they are heard (decision 0050).
+ */
+function waitingLine(carried: ReadonlyMap<Handle, readonly Handle[]>): string[] {
+  if (carried.size === 0) return [];
+  const who = [...carried].map(([handle, from]) => `${handle} (spoken to by ${from.join(", ")})`);
+  return [`Still waiting for the floor: ${who.join("; ")}. They speak first in the next round.`];
+}
+
 /** A plan limit, a lost network or a dead engine stops the run; nothing falls back (spec §6). */
 function stopsTheRun(error: unknown): error is Error {
   return error instanceof UsageLimitReached || error instanceof EngineStopped || error instanceof ModelOffline;
@@ -208,8 +220,11 @@ export class TableLoop {
   private readonly playerTurns: RunReport["playerTurns"] = [];
   /** Talk rounds so far, for the report; their count shifts the speakers' seat order (party talk §4.2.6). */
   private readonly talkRounds: TalkRound[] = [];
-  /** AI players spoken to who didn't get the floor in the last talk round: they go first in the next one. */
-  private carried: Handle[] = [];
+  /**
+   * AI players spoken to who didn't get the floor in the last talk round, each with who spoke to it:
+   * they go first in the next one, and the DM's `table_turn` wake names them (decision 0050).
+   */
+  private carried = new Map<Handle, Handle[]>();
   /** The AI players with a wake in flight that the loop waits on: never woken to react meanwhile. */
   private readonly busy = new Set<Handle>();
   /** Each AI player's reaction in flight (R1): `done` settles once it is over, `cut` cancels it. */
@@ -348,7 +363,7 @@ export class TableLoop {
     const awaiting = this.table.awaiting;
     // A fight drops the requests the talk before it carried or left pending (party talk §4.4).
     if (this.table.inCombat) {
-      this.carried = [];
+      this.carried.clear();
       this.table.takeAddresses();
     }
     switch (awaiting.kind) {
@@ -381,6 +396,12 @@ export class TableLoop {
       return;
     }
     const first = this.scenes.length === 0;
+    // The scene is left with someone still waiting for the floor: the report counts it (decision 0050).
+    const left = this.sceneTimes.at(-1);
+    if (left && !left.ended_at && this.carried.size > 0) {
+      left.left_waiting = [...this.carried.keys()];
+      for (const handle of left.left_waiting) this.table.log("hand", `left ${left.id} still waiting for the floor`, handle);
+    }
     this.endScene();
     this.scenes.push(sceneId);
     this.sceneTimes.push({ id: sceneId, started_at: new Date().toISOString(), rounds: 0 });
@@ -866,6 +887,7 @@ export class TableLoop {
       "table_turn",
       undefined,
       "The table has spoken (above). Resolve it: call checks and moves, grant AI players their own options, or answer in fiction. Then narrate.",
+      ...waitingLine(this.carried),
     );
     await this.grantedActions();
     await this.settle();
@@ -906,6 +928,7 @@ export class TableLoop {
       "table_turn",
       undefined,
       "The table has spoken (above). Resolve it: call checks and moves, grant AI players their own options, answer in fiction, or ask the human a question. Then narrate.",
+      ...waitingLine(this.carried),
     );
     await this.grantedActions();
     await this.settle();
@@ -934,8 +957,8 @@ export class TableLoop {
     // its addressee the floor first, after the players the human and the DM named. Every one of
     // them has it, however many there are (decision 0049).
     const byName = namedIn([{ text: humanLine }, ...narrations], handles, this.names);
-    const named = [...new Set([...byName, ...this.carried, ...handOff(this.table.takeAddresses(), [], handles, true).carried])];
-    this.carried = [];
+    const named = [...new Set([...byName, ...this.carried.keys(), ...handOff(this.table.takeAddresses(), [], handles, true).carried])];
+    this.carried = new Map();
     const raising = handles.filter((h) => !named.includes(h));
     let floorWakes = 0;
     const hadFloor = new Set<Handle>();
@@ -972,7 +995,7 @@ export class TableLoop {
     for (const [handle, hand] of hands) {
       if (hand.kind === "act" && !this.table.ended) await this.declareFor(handle, hand.intent);
     }
-    const carried: Handle[] = [];
+    const carried = new Map<Handle, Handle[]>();
     // Lines spoken to a companion on the floor may hand it the floor next (party talk §4.4).
     let queue = speakingOrder(hands, handles, this.talkRounds.length);
     let used = false;
@@ -985,7 +1008,10 @@ export class TableLoop {
         used = true;
         pending = after.handedTo;
       }
-      for (const handle of after.carried) if (!carried.includes(handle)) carried.push(handle);
+      for (const handle of after.carried) {
+        const from = addresses.filter((a) => a.to === handle).map((a) => a.from);
+        carried.set(handle, [...new Set([...(carried.get(handle) ?? []), ...from])]);
+      }
     };
     heard([...namedAddresses, ...this.table.takeAddresses()]);
     while (queue.length > 0 && !this.table.ended) {
@@ -1010,7 +1036,7 @@ export class TableLoop {
       floor_wakes: floorWakes,
       lapsed,
       ...(handedWake ? { handed_to: handedWake } : {}),
-      carried,
+      carried: [...carried.keys()],
       spoke,
       declared,
       silent: handles.filter((h) => !spoke.includes(h) && !declared.includes(h)),

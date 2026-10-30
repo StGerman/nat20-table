@@ -1262,7 +1262,7 @@ test("a narration that speaks to a player still gives it the floor when a later 
 
 test("a line to a companion hands it the floor next, once a round; one made in the hand-off opens the next round", async () => {
   const say = (line: string, to?: string) => async (tools: PlayerTools) => void (await tools.say(line, to));
-  const { t, players, seat, report } = await play({
+  const { t, players, seat, report, dm } = await play({
     seed: 27,
     seat: seatThen([
       { kind: "text", text: "Torva, what now?" },
@@ -1295,6 +1295,14 @@ test("a line to a companion hands it the floor next, once a round; one made in t
   assert.match(maren, /You have the floor first: a companion spoke to you, and you haven't answered yet\./);
   // Everyone else hears whom it was said to; so does the human, and the transcript keeps it.
   assert.match(maren, /torva says to ilsa: Ilsa, read the sign for us\./);
+  // The DM resolves each round knowing who still waits for the floor, and who spoke to them (decision 0050).
+  assert.deepEqual(
+    dm.briefings.filter((b) => b.wake === "table_turn").map((b) => b.briefing.split("\n").filter((line) => line.startsWith("Still waiting"))),
+    [
+      ["Still waiting for the floor: maren (spoken to by ilsa). They speak first in the next round."],
+      ["Still waiting for the floor: maren (spoken to by ilsa); ilsa (spoken to by torva). They speak first in the next round."],
+    ],
+  );
   assert.ok(seat.shown.some((e) => e.kind === "speech" && e.speaker === "torva" && e.to === "ilsa"));
   assert.deepEqual(
     t.table.transcript.records.filter((r) => r.kind === "speech").map((r) => [r.speaker, r.to]),
@@ -1303,7 +1311,7 @@ test("a line to a companion hands it the floor next, once a round; one made in t
 });
 
 test("a line between two named players is answered on the second one's own floor, with no hand-off", async () => {
-  const { report, players } = await play({
+  const { report, players, dm } = await play({
     seed: 27,
     seat: seatThen([{ kind: "text", text: "Torva, Ilsa, what now?" }]),
     dm: {},
@@ -1315,6 +1323,8 @@ test("a line between two named players is answered on the second one's own floor
   });
   const [round] = report.talkRounds;
   assert.deepEqual([round.named, round.handed_to, round.carried, round.floor_wakes], [["torva", "ilsa"], undefined, [], 2]);
+  // Nobody waits for the floor, so the DM's wake doesn't say anyone does (decision 0050).
+  assert.doesNotMatch(dm.briefings.find((b) => b.wake === "table_turn")!.briefing, /Still waiting/);
   assert.match(players.get("ilsa")!.briefings.find((b) => b.wake === "declare")!.briefing, /torva says to you: Ilsa, the sign\?[\s\S]*You have the floor first: you were named\./);
 });
 
@@ -1355,6 +1365,24 @@ test("a player spoken to after the round's hand-off has the floor first next rou
   } finally {
     t.close();
   }
+});
+
+test("a scene left while someone still waits for the floor is counted for the report (decision 0050)", async () => {
+  const say = (line: string, to: string) => async (tools: PlayerTools) => void (await tools.say(line, to));
+  const { t, report, dm } = await play({
+    seed: 27,
+    seat: seatThen([{ kind: "text", text: "Torva, what now?" }]),
+    players: {
+      torva: { declare: say("Ilsa, the sign?", "ilsa") },
+      maren: { hand: async () => "PASS" },
+      ilsa: { hand: async () => "PASS", declare: say("Maren, a light?", "maren") },
+    },
+    dm: { table_turn: async (tools) => void (await tools.loadScene("m5_s5_cellar", ["bren", "torva", "maren", "ilsa"])) },
+  });
+  assert.match(dm.briefings.find((b) => b.wake === "table_turn")!.briefing, /\nStill waiting for the floor: maren \(spoken to by ilsa\)\. They speak first in the next round\.$/);
+  assert.deepEqual(report.scenes, ["m5_s3_yard", "m5_s5_cellar"]);
+  assert.deepEqual(report.sceneTimes.map((s) => s.left_waiting), [["maren"], undefined]);
+  assert.ok(t.table.transcript.records.some((r) => r.kind === "hand" && r.speaker === "maren" && r.text === "left m5_s3_yard still waiting for the floor"));
 });
 
 test("a line to a raised hand after the round's hand-off is answered on that hand's own floor in the same round (decision 0049)", async () => {

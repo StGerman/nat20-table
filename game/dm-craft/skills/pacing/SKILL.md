@@ -7,6 +7,10 @@ Each scene has a target length in the skeleton. When the players have what the s
 on: its exits say what ends it and where the party goes. Narrate the way there in a sentence, then
 load the next scene with the party (and any captive, when the exit carries captives).
 
+Before you load the next scene, look at who is still waiting for the floor. An unanswered question,
+proposal or objection belongs to this scene: narrate without moving on, and the next round hears it
+first. A passing remark can wait for the road.
+
 A stalled table needs a push from the world, not a hint from you: a noise from the mill, an NPC who
 grows impatient, the light failing.
 
