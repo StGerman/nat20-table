@@ -3,15 +3,16 @@
 // real seeded engine and the real loop. Needs `cargo build -p nat20-api-server`.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { declaration, ModelPlayer, PLAYER_LONG_WAKE_TIMEOUT_MS, PLAYER_TURN_TIMEOUT_MS, playerPrompt } from "../src/agents/player.ts";
+import { declaration, ModelPlayer, PLAYER_LONG_WAKE_TIMEOUT_MS, PLAYER_TURN_TIMEOUT_MS, playerPrompt, rulesPrimer } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnCancelled, TurnTimeout } from "../src/errors.ts";
 import { addressLines, castParty, talkLines } from "../src/play/run.ts";
+import { packIds } from "../src/table/guards.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedSeat } from "../src/table/scripted.ts";
 import { HandTools, PlayerTools } from "../src/table/tools.ts";
@@ -27,10 +28,11 @@ type Script = PlayerScript<PlayerWake>;
 /** A model player whose sessions are stand-ins playing `script`; `sessions` lists them as they open. */
 function standInPlayer(handle: string, script: Script): { player: ModelPlayer; sessions: StandIn<PlayerWake>[] } {
   const sessions: StandIn<PlayerWake>[] = [];
-  const card = castParty(MILL).cards.get(handle)!;
+  const party = castParty(MILL);
   const player = new ModelPlayer({
     handle,
-    card,
+    card: party.cards.get(handle)!,
+    characterClass: party.classes.get(handle)!,
     choice: CHOICE,
     open: (config) => {
       const session = new StandIn<PlayerWake>(config, script);
@@ -47,10 +49,10 @@ function inputs(runDir: string): Array<{ seat: string; text: string }> {
 
 test("a player's combat turns and granted actions get the long limit; a set limit applies to every wake", () => {
   const card = castParty(MILL).cards.get("torva")!;
-  const config = new ModelPlayer({ handle: "torva", card, choice: CHOICE }).sessionConfig();
+  const config = new ModelPlayer({ handle: "torva", card, characterClass: "barbarian", choice: CHOICE }).sessionConfig();
   assert.equal(config.turnTimeoutMs, PLAYER_TURN_TIMEOUT_MS);
   assert.deepEqual(config.turnTimeoutsMs, { combat_turn: PLAYER_LONG_WAKE_TIMEOUT_MS, granted: PLAYER_LONG_WAKE_TIMEOUT_MS });
-  const flat = new ModelPlayer({ handle: "torva", card, choice: CHOICE, turnTimeoutMs: 5_000 }).sessionConfig();
+  const flat = new ModelPlayer({ handle: "torva", card, characterClass: "barbarian", choice: CHOICE, turnTimeoutMs: 5_000 }).sessionConfig();
   assert.equal(flat.turnTimeoutMs, 5_000);
   assert.equal(flat.turnTimeoutsMs, undefined);
 });
@@ -58,7 +60,7 @@ test("a player's combat turns and granted actions get the long limit; a set limi
 test("a model player's session has its own prompt with its card, its nine seat tools and nothing built in", () => {
   const { player } = standInPlayer("maren", async () => "");
   const card = castParty(MILL).cards.get("maren")!;
-  assert.equal(player.systemPrompt, playerPrompt("maren", card));
+  assert.equal(player.systemPrompt, playerPrompt("maren", card, "cleric"));
   assert.ok(player.systemPrompt.includes(card.trim()), "the card is in the prompt as written");
   assert.match(player.systemPrompt, /You play one character, Maren \(handle maren\)/);
   const options = sessionOptions({ agent: "maren", choice: CHOICE, systemPrompt: player.systemPrompt, tools: player.seatTools }, "/empty");
@@ -77,7 +79,7 @@ test("a model player's session has its own prompt with its card, its nine seat t
 test("a model player passes as a normal answer, plays from its card's Talk and silence, and may speak on its own combat turn", () => {
   const card = castParty(MILL).cards.get("maren")!;
   assert.match(card, /## Talk and silence\n\n- Speaks when/);
-  const prompt = playerPrompt("maren", card);
+  const prompt = playerPrompt("maren", card, "cleric");
   assert.match(prompt, /If not, just PASS: that is a normal answer/);
   assert.match(prompt, /your card's "Talk and silence" and "With the party", and your notes/);
   assert.match(prompt, /Don't repeat what someone else already said/);
@@ -167,8 +169,8 @@ test("the report counts talk rounds: lines, silence, hands, named players who an
 
 test("with --lang ru a model player speaks, declares, notes and summarises in Russian, and still passes with PASS", () => {
   const card = castParty(MILL).cards.get("maren")!;
-  const english = playerPrompt("maren", card);
-  const russian = playerPrompt("maren", card, "ru");
+  const english = playerPrompt("maren", card, "cleric");
+  const russian = playerPrompt("maren", card, "cleric", "ru");
   assert.doesNotMatch(english, /Russian/);
   assert.ok(russian.startsWith(english), "the language rule is added at the end, after the same English prompt");
   assert.match(russian, /write in Russian everything you say, declare, note or summarise/);
@@ -179,15 +181,98 @@ test("with --lang ru a model player speaks, declares, notes and summarises in Ru
 test("with no human at the table, a player hears that only AI players play the others, Bren too (AGT-40)", () => {
   const all = castParty(MILL, "none");
   const card = all.cards.get("bren")!;
-  const alone = playerPrompt("bren", card, "en", false);
+  const alone = playerPrompt("bren", card, "fighter", "en", false);
   assert.match(alone, /You play one character, Bren \(handle bren\), and only Bren\./);
   assert.match(alone, /Other AI players play the other characters\./);
   assert.match(alone, /out of combat, after the DM narrated, before anyone has the floor/);
   // Bren's card says a human may sit in Bren's seat; the table's rules say nothing of a human.
   assert.doesNotMatch(alone.replace(card.trim(), ""), /human/);
   // With a human, the prompt is as it was.
-  assert.match(playerPrompt("maren", all.cards.get("maren")!), /A human and other AI players play the other characters\./);
-  assert.equal(new ModelPlayer({ handle: "bren", card, choice: CHOICE, withHuman: false }).systemPrompt, alone);
+  assert.match(playerPrompt("maren", all.cards.get("maren")!, "cleric"), /A human and other AI players play the other characters\./);
+  assert.equal(new ModelPlayer({ handle: "bren", card, characterClass: "fighter", choice: CHOICE, withHuman: false }).systemPrompt, alone);
+});
+
+test("each party member's class comes from its pregen, for its block of the rules primer (AGT-52)", () => {
+  assert.deepEqual(Object.fromEntries(castParty(MILL).classes), { bren: "fighter", torva: "barbarian", maren: "cleric", ilsa: "wizard" });
+  const fighter = rulesPrimer("fighter");
+  assert.match(fighter, /^## The rules you know\n/);
+  assert.match(fighter, /\n\n## Your class: Fighter\n/);
+  assert.throws(() => rulesPrimer("bard"), /no rules primer block for class "bard"/, "a class with no block stops the run before play");
+  assert.throws(() => rulesPrimer("../fighter"), /no rules primer block for class "\.\.\/fighter"/, "a class is a bare name, never a path");
+});
+
+test("an AI seat with no pregen in the first scene has no class, and casting the party fails (AGT-52)", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "no-class-"));
+  try {
+    const pack = path.join(root, "the_silent_mill");
+    cpSync(MILL, pack, { recursive: true });
+    const first = path.join(pack, "scenes/s1_village_green.json");
+    const scene = JSON.parse(readFileSync(first, "utf8")) as { creatures: Array<{ handle: string; pregen?: string; monster?: string }> };
+    const ilsa = scene.creatures.find((c) => c.handle === "ilsa")!;
+    delete ilsa.pregen;
+    ilsa.monster = "goblin_warrior";
+    writeFileSync(first, JSON.stringify(scene));
+    assert.throws(() => castParty(pack, "none"), /party ilsa has an AI seat and no pregen in the first scene, so no class/);
+    assert.deepEqual([...castParty(pack, { play: "ilsa" }).classes.keys()], ["bren", "torva", "maren"], "the human's seat needs no class");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a player's prompt follows the table's four rules: at the table, the rules, the character, the team (AGT-52)", () => {
+  const all = castParty(MILL, "none");
+  const blocks = { bren: "Fighter", torva: "Barbarian", maren: "Cleric", ilsa: "Wizard" } as const;
+  for (const [handle, block] of Object.entries(blocks)) {
+    const card = all.cards.get(handle)!;
+    for (const prompt of [playerPrompt(handle, card, all.classes.get(handle)!, "en", true), playerPrompt(handle, card, all.classes.get(handle)!, "ru", false)]) {
+      const sections = ["## At the table", "## The rules you know", `## Your class: ${block}`, "## Your character", "## Play as a team", "## How this table works", "## Why you are woken", "## Speaking and notes"];
+      const at = sections.map((heading) => prompt.indexOf(`\n${heading}\n`));
+      assert.ok(at.every((i) => i > 0), `${handle}: every section is there`);
+      assert.deepEqual([...at].sort((a, b) => a - b), at, `${handle}: the sections come in order`);
+      for (const other of Object.values(blocks).filter((b) => b !== block)) assert.doesNotMatch(prompt, new RegExp(`## Your class: ${other}`), `${handle} gets only its own class block`);
+      assert.doesNotMatch(prompt, /undefined/);
+    }
+  }
+  const maren = playerPrompt("maren", all.cards.get("maren")!, "cleric", "en", false);
+  // Role-play first; the party's decisions are noted as plans, followed, and summed up at a scene's end.
+  assert.match(maren, /never throw Maren's life, or a companion's, away for a moment of drama/);
+  // Personality first: a cold or selfish character goes along in its own way and for its own reasons (AGT-52).
+  assert.match(maren, /Personality first, and the party still holds\./);
+  assert.match(maren, /find Maren's own reason to stick with the party \(their own skin, a share, a debt, pride, a grudge against the foe\)/);
+  assert.doesNotMatch(maren, /always matters|whatever Maren's temperament/);
+  assert.match(maren, /write it down with note as a plan, and follow it later, also in a new scene\. If it goes against what Maren believes or would never do, Maren comes first: say so aloud/);
+  assert.match(maren, /a decision the party made is a plan\./);
+  assert.match(maren, /what happened, who you met, what the party decided, what you promised or suspect/);
+  // A plan, a rest or a companion in danger is usually worth a raised hand; idle talk can still pass.
+  assert.match(maren, /A plan, a rest or a companion in danger usually is, for Maren's own reasons\. If not, just PASS/);
+  // A short check before a combat action replaces "Be quick"; there is no Dodge in the engine.
+  assert.match(maren, /Before you act in a fight, check three things/);
+  assert.doesNotMatch(maren, /Be quick|Decide quickly|Dodge/);
+});
+
+test("a player's prompt says nothing of what lies ahead: no scenario id, foe or count of fights (Rule 3, AGT-52)", () => {
+  const all = castParty(MILL, "none");
+  const { dmOnly, shown } = packIds(MILL);
+  const adventure = JSON.parse(readFileSync(path.join(MILL, "adventure.json"), "utf8")) as { npcs: Array<{ id: string; name: string }> };
+  const party = new Set(all.ai);
+  const ids = [...dmOnly, ...[...shown].filter((id) => !party.has(id))];
+  const names = [...adventure.npcs.flatMap((n) => [n.id, n.name.split(/[ ,]/)[0]]), "Goblin", "Wolf", "Rat", "Gritch"];
+  for (const handle of all.ai) {
+    const card = all.cards.get(handle)!;
+    const rules = playerPrompt(handle, card, all.classes.get(handle)!, "en", false).replace(card.trim(), "");
+    for (const id of ids) assert.ok(!new RegExp(`\\b${id}\\b`).test(rules), `${handle}'s prompt names the pack's ${id}`);
+    for (const name of names) assert.ok(!new RegExp(`\\b${name}\\b`, "i").test(rules), `${handle}'s prompt names ${name}`);
+    assert.doesNotMatch(rules, /\b(one|two|three|four|five|six|\d+)\s+(more\s+)?(fights?|scenes?|encounters?|battles?)\b/i);
+    // The audit's leak scan reads this prompt among the player's inputs; nothing in our text may look
+    // like a creature's current Hit Points or an AC or DC number to it (shows_current_hp and
+    // names_a_target_number in crates/nat20-duel/src/leak_scan.rs and nat20-api-server's leaks.rs).
+    for (const line of rules.split("\n")) {
+      assert.doesNotMatch(line, /\b(has|at|to|with)\s+\d+\s+(HP|hit\b)/i, `${handle}: reads as current Hit Points: ${line}`);
+      assert.doesNotMatch(line, /\d\/\d+ (HP|Hit Points)/, `${handle}: reads as current Hit Points: ${line}`);
+      assert.doesNotMatch(line, /(^|[^\p{L}\p{N}])(AC|DC) \d/u, `${handle}: reads as an AC or DC number: ${line}`);
+    }
+    assert.match(rules, /You don't know what lies ahead: not how many fights, places or foes the adventure holds\./);
+  }
 });
 
 test("a declaration is its one line, and PASS or nothing is a pass", () => {

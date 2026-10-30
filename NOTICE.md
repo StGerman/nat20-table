@@ -9,7 +9,7 @@
 
 This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
 
-The game rules this code implements, the monster stat blocks, the pregenerated characters' numbers and the rule names in fixtures and registries come from the SRD 5.2.1, restated in our own words. Where the SRD 5.2.1 leaves a field out, SRD 5.1 (also CC-BY-4.0, Wizards of the Coast LLC) fills it.
+The game rules this code implements, the monster stat blocks, the pregenerated characters' numbers, the rule names in fixtures and registries, and the AI players' rules primer (`game/src/agents/primer/`) come from the SRD 5.2.1, restated in our own words. Where the SRD 5.2.1 leaves a field out, SRD 5.1 (also CC-BY-4.0, Wizards of the Coast LLC) fills it.
 
 ## Trademarks
 

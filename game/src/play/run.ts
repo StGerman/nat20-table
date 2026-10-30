@@ -32,6 +32,25 @@ export interface PackParty {
    * and the pack's `names`. A line that names an AI player gives it the floor first (party talk §4.2).
    */
   names: Map<Handle, string[]>;
+  /** Each party member's class from its pregen (`fighter`), for its block of the players' rules primer (AGT-52); every AI seat has one. */
+  classes: Map<Handle, string>;
+}
+
+interface PregenSheet {
+  species: string;
+  class: string;
+  level: number;
+}
+
+/** Each party member's pregen sheet, from the pack's first scene; a member with no pregen there has none. */
+function pregenSheets(pack: string, adventure: Adventure, pregens = process.env.NAT20_PREGENS_DIR ?? path.join(REPO, "pregens")): Map<Handle, PregenSheet> {
+  const first = JSON.parse(readFileSync(path.join(pack, "scenes", `${adventure.scenes[0].id}.json`), "utf8")) as { creatures: Array<{ handle: string; pregen?: string }> };
+  const sheets = new Map<Handle, PregenSheet>();
+  for (const p of adventure.party) {
+    const pregen = first.creatures.find((c) => c.handle === p.handle)?.pregen;
+    if (pregen) sheets.set(p.handle, JSON.parse(readFileSync(path.join(pregens, `${pregen}.json`), "utf8")) as PregenSheet);
+  }
+  return sheets;
 }
 
 /**
@@ -64,7 +83,10 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
       return [p.handle, [...new Set([p.handle, cardName(p.handle, card), ...(p.names ?? [])])]];
     }),
   );
-  return { ...(human ? { human } : {}), ai: ai.map((p) => p.handle), cards, names };
+  // "nat20_core::class.fighter" is "fighter".
+  const classes = new Map([...pregenSheets(pack, adventure)].map(([handle, sheet]) => [handle, sheet.class.split(".").at(-1) ?? sheet.class] as const));
+  for (const p of ai) if (!classes.has(p.handle)) throw new Error(`${pack}: party ${p.handle} has an AI seat and no pregen in the first scene, so no class`);
+  return { ...(human ? { human } : {}), ai: ai.map((p) => p.handle), cards, names, classes };
 }
 
 /** One line of the pick list (AGT-35): a party member as a player picking a pregen sees it. */
@@ -84,13 +106,12 @@ export interface RosterEntry {
  */
 export function partyRoster(pack: string, pregens = process.env.NAT20_PREGENS_DIR ?? path.join(REPO, "pregens")): RosterEntry[] {
   const adventure = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8")));
-  const first = JSON.parse(readFileSync(path.join(pack, "scenes", `${adventure.scenes[0].id}.json`), "utf8")) as { creatures: Array<{ handle: string; pregen?: string }> };
+  const sheets = pregenSheets(pack, adventure, pregens);
   // "nat20_core::class.fighter" reads "Fighter".
   const named = (id: string) => (id.split(".").at(-1) ?? id).replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
   return adventure.party.map((p) => {
     const card = p.card ? readFileSync(path.resolve(pack, p.card), "utf8") : "";
-    const pregen = first.creatures.find((c) => c.handle === p.handle)?.pregen;
-    const sheet = pregen ? (JSON.parse(readFileSync(path.join(pregens, `${pregen}.json`), "utf8")) as { species: string; class: string; level: number }) : undefined;
+    const sheet = sheets.get(p.handle);
     const goal = /^## Goal\s*\n+([^\n]+)/m.exec(card)?.[1].trim() ?? "";
     return { handle: p.handle, name: cardName(p.handle, card), species: sheet ? named(sheet.species) : "", class: sheet ? named(sheet.class) : "", level: sheet?.level ?? 0, goal };
   });
