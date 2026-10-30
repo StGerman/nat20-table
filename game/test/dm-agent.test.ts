@@ -144,7 +144,7 @@ test("the DM runs the yard through its tools; its memory and a refused narration
     return "";
   };
   const players = PARTY.ai.map(
-    (handle) => new ModelPlayer({ handle, card: PARTY.cards.get(handle)!, choice: { model: "claude-sonnet-5-5", effort: "low" }, open: (c) => new StandIn(c, fight) }),
+    (handle) => new ModelPlayer({ handle, card: PARTY.cards.get(handle)!, characterClass: PARTY.classes.get(handle)!, choice: { model: "claude-sonnet-5-5", effort: "low" }, open: (c) => new StandIn(c, fight) }),
   );
   const t = await testTable({ seed: 23, pack: MILL, seat: new ScriptedSeat(PARTY.human, [], ScriptedSeat.fight), guards: (engine) => guards(MILL, engine) });
   try {

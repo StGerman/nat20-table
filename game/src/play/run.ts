@@ -32,7 +32,7 @@ export interface PackParty {
    * and the pack's `names`. A line that names an AI player gives it the floor first (party talk §4.2).
    */
   names: Map<Handle, string[]>;
-  /** Each party member's class from its pregen (`fighter`), for its block of the players' rules primer (AGT-52). */
+  /** Each party member's class from its pregen (`fighter`), for its block of the players' rules primer (AGT-52); every AI seat has one. */
   classes: Map<Handle, string>;
 }
 
@@ -85,6 +85,7 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
   );
   // "nat20_core::class.fighter" is "fighter".
   const classes = new Map([...pregenSheets(pack, adventure)].map(([handle, sheet]) => [handle, sheet.class.split(".").at(-1) ?? sheet.class] as const));
+  for (const p of ai) if (!classes.has(p.handle)) throw new Error(`${pack}: party ${p.handle} has an AI seat and no pregen in the first scene, so no class`);
   return { ...(human ? { human } : {}), ai: ai.map((p) => p.handle), cards, names, classes };
 }
 

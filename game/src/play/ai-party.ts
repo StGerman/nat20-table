@@ -66,7 +66,7 @@ const party = { ...cast, human: cast.human };
 
 if (flags["dry-run"]) {
   for (const handle of party.ai) {
-    const player = new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle), choice, language });
+    const player = new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle)!, choice, language });
     const { mcpServers, systemPrompt, env, ...options } = sessionOptions(
       { agent: handle, choice, systemPrompt: player.systemPrompt, tools: player.seatTools },
       "<empty temp dir>",
@@ -92,7 +92,7 @@ const table = new TableState({
   ...guards(flags.scenes!, engine),
 });
 const players: PlayerAgent[] = party.ai.map((handle) =>
-  scripted ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle), choice, language, usage }),
+  scripted ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle)!, choice, language, usage }),
 );
 const loop = new TableLoop({ table, dm: yardDm(flags.encounter), players, maxSteps: Number(flags["max-steps"]), names: party.names });
 

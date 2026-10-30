@@ -33,11 +33,16 @@ const PLAYER_LONG_WAKES: PlayerWake[] = ["combat_turn", "granted"];
  */
 const PRIMER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "primer");
 
-/** The rules primer for a character of `characterClass` (`fighter`): the common rules, then its class block if there is one. */
-export function rulesPrimer(characterClass?: string): string {
-  const common = readFileSync(path.join(PRIMER, "rules.md"), "utf8").trim();
-  const block = characterClass && /^[a-z_]+$/.test(characterClass) ? path.join(PRIMER, `${characterClass}.md`) : undefined;
-  return block && existsSync(block) ? `${common}\n\n${readFileSync(block, "utf8").trim()}` : common;
+/**
+ * The rules primer for a character of `characterClass` (`fighter`): the common rules, then its class
+ * block. A class with no block throws, so no player sits down without its class's rules.
+ */
+export function rulesPrimer(characterClass: string): string {
+  const block = path.join(PRIMER, `${characterClass}.md`);
+  if (!/^[a-z_]+$/.test(characterClass) || !existsSync(block)) {
+    throw new Error(`no rules primer block for class ${JSON.stringify(characterClass)}: add game/src/agents/primer/<class>.md`);
+  }
+  return `${readFileSync(path.join(PRIMER, "rules.md"), "utf8").trim()}\n\n${readFileSync(block, "utf8").trim()}`;
 }
 
 /** How much of its notes a new session is seeded with; older notes live on in the summaries. */
@@ -52,8 +57,8 @@ export interface ModelPlayerConfig {
   language?: Language;
   /** Whether a human plays one of the other characters; default true. False for a table with no human (AGT-40). */
   withHuman?: boolean;
-  /** The character's class (`fighter`), for its block of the rules primer; without one the prompt has only the common rules. */
-  characterClass?: string;
+  /** The character's class from its pregen (`fighter`), for its block of the rules primer. */
+  characterClass: string;
   usage?: UsageLog;
   /** Every wake's limit. Default `PLAYER_TURN_TIMEOUT_MS`, and `PLAYER_LONG_WAKE_TIMEOUT_MS` for the long wakes. */
   turnTimeoutMs?: number;
@@ -67,7 +72,7 @@ export function cardName(handle: Handle, card: string): string {
 }
 
 /** The player's system prompt: the same for every session of the run, so it stays cached. */
-export function playerPrompt(handle: Handle, card: string, language: Language = "en", human = true, characterClass?: string): string {
+export function playerPrompt(handle: Handle, card: string, characterClass: string, language: Language = "en", human = true): string {
   const name = cardName(handle, card);
   // A table with no human has only AI players, and a round starts from the DM (M7 spec §4.2, AGT-40).
   const others = human ? "A human and other AI players play the other characters." : "Other AI players play the other characters.";
@@ -155,7 +160,7 @@ export class ModelPlayer implements PlayerAgent {
   constructor(config: ModelPlayerConfig) {
     this.config = config;
     this.handle = config.handle;
-    this.systemPrompt = playerPrompt(config.handle, config.card, config.language, config.withHuman ?? true, config.characterClass);
+    this.systemPrompt = playerPrompt(config.handle, config.card, config.characterClass, config.language, config.withHuman ?? true);
     this.seatTools = this.defineTools();
   }
 
