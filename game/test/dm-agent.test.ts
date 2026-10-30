@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { CRAFT_PLUGIN, craftSkills, dmPrompt, ModelDm, type CraftMode } from "../src/agents/dm.ts";
+import { CRAFT_PLUGIN, craftSkills, DM_LONG_WAKE_TIMEOUT_MS, DM_TURN_TIMEOUT_MS, dmPrompt, ModelDm, type CraftMode } from "../src/agents/dm.ts";
 import { ModelPlayer } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
@@ -320,6 +320,15 @@ test("with no human at the table, the DM's prompt and tools leave the human out 
   // The human's table is unchanged.
   assert.equal(dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt"), new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).systemPrompt);
   assert.doesNotMatch(dmPrompt(PACK, undefined, all.ai, "prompt", "ru"), /questions to the human|The human may write/);
+});
+
+test("the DM's scene openings, table turns and summaries get the long limit; --dm-timeout-ms sets every wake's", () => {
+  const config = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).sessionConfig();
+  assert.equal(config.turnTimeoutMs, DM_TURN_TIMEOUT_MS);
+  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS });
+  const flat = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE, turnTimeoutMs: 20_000 }).sessionConfig();
+  assert.equal(flat.turnTimeoutMs, 20_000);
+  assert.equal(flat.turnTimeoutsMs, undefined);
 });
 
 test("with --lang ru the DM writes what the table hears in Russian; an English run's prompt has no language section", () => {
