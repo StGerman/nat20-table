@@ -330,6 +330,36 @@ test("the human may play any of the four, and the bindings, the leak scan and th
 
 // --- Combat order --------------------------------------------------------------------------------
 
+test("a turn stopped at a reaction window is narrated only once it goes on, with what it set out to do (AGT-53)", async () => {
+  // Run full-2026-10-30T17-35-35-676Z (n82-1): Torva's attack walked her past Ilsa's reach, the
+  // engine stopped the walk for Ilsa's Opportunity Attack window, and the DM, woken on the half
+  // walk, put Torva face to face with the wrong foe.
+  let table: TestTable | undefined;
+  let duringWindows = 0;
+  const halfDone: string[] = [];
+  const dm = new ScriptedDm({
+    scene_open: async (tools) => void (await tools.startCombat("yard_fight")),
+    narrate: async (tools, briefing) => {
+      const a = table!.table.awaiting;
+      if (a.kind === "reaction") {
+        // Turns that ended before the window may be narrated; nothing after the last turn's end.
+        duringWindows += 1;
+        const happened = briefing.split("\n");
+        const last = happened[happened.indexOf("Narrate these events for the table in one to three sentences.") - 1];
+        if (!/'s turn ends\.$/.test(last)) halfDone.push(`${a.trigger.summary}: ${last}`);
+      }
+      await offerAnySurrender(tools);
+      await tools.narrate("Steel and teeth flash in the yard.");
+    },
+    combat_over: async (tools) => void (await tools.endAdventure("The yard falls quiet.")),
+  });
+  const { t, report } = await play({ seed: 23, dm, onTable: (x) => (table = x) });
+  assert.equal(report.ended, "the adventure is over");
+  assert.ok(t.requests().some((r) => r.cmd === "react"), "reaction windows opened in this fight");
+  assert.ok(duringWindows > 0, "turns that ended before a window were narrated while it was open");
+  assert.deepEqual(halfDone, [], "no narration stopped in the middle of a turn");
+});
+
 test("each part of a turn shows its engine lines, then its narration, before the next part", async () => {
   const { seat } = await play({ seed: 23, dm: yardDm() });
   const shown = seat.shown.filter((e): e is Extract<TableEvent, { kind: "engine" | "narration" }> => e.kind === "engine" || e.kind === "narration");
@@ -344,7 +374,8 @@ test("each part of a turn shows its engine lines, then its narration, before the
     while (start > 0 && shown[start].text !== `${pc}'s turn.`) start -= 1;
     if (!shown.slice(start, i).some((x) => x.text.startsWith(`${pc} uses `) || x.text === `${pc} moves.`)) continue;
     played += 1;
-    // A turn whose last lines were narrated already (inside a reaction window) has only its end left.
+    // A turn narrated in parts (a walk stopped at a reaction window is narrated when the player is
+    // woken again, AGT-53) may have only its end left.
     const narrated = shown.slice(start, i).map((x) => x.kind).lastIndexOf("narration");
     if (narrated >= 0 && !shown.slice(start + narrated + 1, i).some((x) => x.kind === "engine")) continue;
     const next = shown.slice(i + 1).find((x) => x.kind === "narration" || /'s turn\.$/.test(x.text));

@@ -807,6 +807,14 @@ export class TableLoop {
       this.dmBacklog = events.slice(over);
       events = events.slice(0, over);
     }
+    // A turn stopped at a reaction window (a walk passing an ally's reach) hasn't done what it set
+    // out to do yet, so its lines so far can't be narrated without guessing (AGT-53). They wait
+    // for the window to close; the turns that ended before it are narrated now.
+    if (this.table.awaiting.kind === "reaction") {
+      const ended = events.map((e) => e.kind).lastIndexOf("turn_end") + 1;
+      this.dmBacklog = [...events.slice(ended), ...this.dmBacklog];
+      events = events.slice(0, ended);
+    }
     const cut = pc ? events.findIndex((e) => e.kind === "turn_end" && e.actor === pc) : -1;
     const parts = cut >= 0 ? [events.slice(0, cut + 1), events.slice(cut + 1)] : [events];
     for (const part of parts) {

@@ -292,7 +292,6 @@
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":265}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":265}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":266}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":266}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":267}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":267}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on wolf_2.","rolls":[],"log_head":276}
@@ -321,7 +320,6 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 5 begins.","rolls":[],"log_head":296}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":296}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":297}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":297}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":298}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":298}
 {"at":"t","speaker":"torva","channel":"run","kind":"retry","text":"torva: move refused: rejected (insufficient_resource): torva has no movement left this turn to get any closer.","rolls":[],"log_head":298}
@@ -361,7 +359,6 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":336}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":336}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":336}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":336}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":337}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":337}
 {"at":"t","speaker":"bren","channel":"run","kind":"retry","text":"bren: submit refused: unknown_option: dash is not one of bren's options right now; see legal_actions.","rolls":[],"log_head":338}
@@ -491,7 +488,6 @@
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":443}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":443}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":444}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":444}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":445}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":445}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_4.","rolls":[],"log_head":455}
@@ -785,7 +781,6 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":747}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":747}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":748}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":748}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":749}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":749}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Potion of Healing on bren.","rolls":[],"log_head":760}
@@ -804,7 +799,6 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Dash.","rolls":[],"log_head":764}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is under Dash.","rolls":[],"log_head":764}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":764}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":764}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":765}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":765}
 {"at":"t","speaker":"ilsa","channel":"run","kind":"retry","text":"ilsa: submit refused: unknown_option: dash is not one of ilsa's options right now; see legal_actions.","rolls":[],"log_head":773}
@@ -828,7 +822,6 @@
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":782}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":782}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":783}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":783}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":784}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":784}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on boss.","rolls":[],"log_head":813}
@@ -863,7 +856,6 @@
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":820}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":820}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":821}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":821}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":822}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":822}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on boss.","rolls":[],"log_head":827}
@@ -920,6 +912,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":894}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r880] torva rolls a death saving throw: 1d20 (5) = 5 vs DC 10, failure.","rolls":["r880"],"log_head":894}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":894}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":894}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn.","rolls":[],"log_head":894}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Monster Nimble Escape.","rolls":[],"log_head":894}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is under Disengage.","rolls":[],"log_head":894}
@@ -927,7 +920,6 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on ilsa.","rolls":[],"log_head":894}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r893] boss rolls an attack roll vs ilsa: 1d20 (3) +4 = 7 vs AC 11, miss.","rolls":["r893"],"log_head":894}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on ilsa.","rolls":[],"log_head":894}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":894}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Shield.","rolls":[],"log_head":899}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r896] boss rolls an attack roll vs ilsa: 1d20 (10) +4 = 14 vs AC 16, miss.","rolls":["r896"],"log_head":899}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is under Shield.","rolls":[],"log_head":899}
@@ -954,6 +946,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":934}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r919] torva rolls a death saving throw: 1d20 (4) = 4 vs DC 10, failure.","rolls":["r919"],"log_head":934}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":934}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":934}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn.","rolls":[],"log_head":934}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is no longer under Disengage.","rolls":[],"log_head":934}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Monster Nimble Escape.","rolls":[],"log_head":934}
@@ -962,7 +955,6 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on ilsa.","rolls":[],"log_head":934}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r933] boss rolls an attack roll vs ilsa: 1d20 (5) +4 = 9 vs AC 11, miss.","rolls":["r933"],"log_head":934}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on ilsa.","rolls":[],"log_head":934}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":934}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Shield.","rolls":[],"log_head":942}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r936] boss rolls an attack roll vs ilsa: 1d20 (14) +4 = 18 vs AC 16, hit.","rolls":["r936"],"log_head":942}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r937] boss rolls piercing damage: 1d6 (6) +2 = 8.","rolls":["r937"],"log_head":942}

@@ -359,7 +359,6 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":194}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":195}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":195}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":195}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":196}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":196}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":196}
@@ -593,7 +592,6 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":334}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2 moves.","rolls":[],"log_head":334}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"wolf_2 uses Wolf Bite attack on ilsa.","rolls":[],"log_head":334}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":334}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Shield.","rolls":[],"log_head":345}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r336] wolf_2 rolls an attack roll vs ilsa: 1d20 (19) +4 = 23 vs AC 16, hit.","rolls":["r336"],"log_head":345}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r337] wolf_2 rolls piercing damage: 1d6 (1) +2 = 3.","rolls":["r337"],"log_head":345}
@@ -685,7 +683,6 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":386}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Dash.","rolls":[],"log_head":386}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":386}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":386}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":387}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":387}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":387}
@@ -726,7 +723,6 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":411}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":412}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":412}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":412}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":414}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":414}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":414}
@@ -758,7 +754,6 @@
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":430}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":431}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":431}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":431}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":432}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":432}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":432}
@@ -773,7 +768,6 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn.","rolls":[],"log_head":442}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":443}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":443}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":443}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":444}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":444}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":444}
@@ -783,7 +777,6 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":447}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren uses Dash.","rolls":[],"log_head":447}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":447}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":447}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":448}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren moves.","rolls":[],"log_head":448}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":448}
@@ -810,7 +803,6 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":459}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":460}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":460}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":460}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":461}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":461}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":461}
@@ -852,7 +844,6 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":483}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":484}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":484}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":484}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":485}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":485}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":485}
