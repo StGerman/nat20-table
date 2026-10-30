@@ -236,11 +236,15 @@ test("a player's prompt follows the table's four rules: at the table, the rules,
   const maren = playerPrompt("maren", all.cards.get("maren")!, "cleric", "en", false);
   // Role-play first; the party's decisions are noted as plans, followed, and summed up at a scene's end.
   assert.match(maren, /never throw Maren's life, or a companion's, away for a moment of drama/);
+  // Personality first: a cold or selfish character goes along in its own way and for its own reasons (AGT-52).
+  assert.match(maren, /Personality first, and the party still holds\./);
+  assert.match(maren, /find Maren's own reason to stick with the party \(their own skin, a share, a debt, pride, a grudge against the foe\)/);
+  assert.doesNotMatch(maren, /always matters|whatever Maren's temperament/);
   assert.match(maren, /write it down with note as a plan, and follow it later, also in a new scene\. If it goes against what Maren believes or would never do, Maren comes first: say so aloud/);
   assert.match(maren, /a decision the party made is a plan\./);
   assert.match(maren, /what happened, who you met, what the party decided, what you promised or suspect/);
-  // A plan, a rest or a companion in danger is worth a raised hand; idle talk can still pass.
-  assert.match(maren, /A plan, a rest or a companion in danger always is\. If not, just PASS/);
+  // A plan, a rest or a companion in danger is usually worth a raised hand; idle talk can still pass.
+  assert.match(maren, /A plan, a rest or a companion in danger usually is, for Maren's own reasons\. If not, just PASS/);
   // A short check before a combat action replaces "Be quick"; there is no Dodge in the engine.
   assert.match(maren, /Before you act in a fight, check three things/);
   assert.doesNotMatch(maren, /Be quick|Decide quickly|Dodge/);
