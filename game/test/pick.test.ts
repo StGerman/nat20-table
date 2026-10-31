@@ -1,45 +1,123 @@
-// The pick list and the casting it sets (M7 spec §4.2, TASKS.md AGT-35).
+// The pick screen and the casting it sets (M7 spec §4.2, TASKS.md AGT-35; full screen, AGT-69 step 3).
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { PassThrough } from "node:stream";
+import { EventEmitter } from "node:events";
 import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
-import { castParty, partyRoster, rosterLines } from "../src/play/run.ts";
-import { pickCharacter } from "../src/ui/pick.ts";
+import { castParty, partyRoster } from "../src/play/run.ts";
+import { InkSeat } from "../src/ui/ink-seat.ts";
+import { paletteFor } from "../src/ui/palette.ts";
+import { cardRows, pickKey, pickOnScreen, pickRows } from "../src/ui/pick.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 
-/** Answers the pick list with `lines`, then ends the input; returns the pick and what was printed. */
-async function answer(lines: string[]): Promise<{ picked: string; printed: string }> {
-  const input = new PassThrough();
-  const output = new PassThrough();
-  let printed = "";
-  output.on("data", (chunk: Buffer) => (printed += chunk.toString()));
-  input.end(lines.map((l) => `${l}\n`).join(""));
-  const picked = await pickCharacter(partyRoster(MILL), "bren", { input, output });
-  return { picked, printed };
+class FakeStdout extends EventEmitter {
+  readonly frames: string[] = [];
+  readonly columns: number;
+  readonly rows: number;
+  constructor(columns: number, rows: number) {
+    super();
+    this.columns = columns;
+    this.rows = rows;
+  }
+  write = (frame: string): boolean => {
+    this.frames.push(frame);
+    return true;
+  };
+  get last(): string {
+    return this.frames.at(-1) ?? "";
+  }
 }
 
-test("the pick list shows each character's name, species, class, level and goal, the default marked", () => {
-  assert.deepEqual(rosterLines(partyRoster(MILL), "bren"), [
-    "1. Bren: Human Fighter, level 2 (the default). Keep the four of you together, fed and paid until something better than guard work comes along.",
-    "2. Torva: Human Barbarian, level 2. Earn enough to buy back her family's farm, lost to debt while she was at war.",
-    "3. Maren: Human Cleric, level 2. To feed the hungry and mend the hurt she meets, and to make up for the things the company did in the war.",
-    "4. Ilsa: Dragonborn Wizard, level 2. To learn the magic and the stories of every place she passes through, and one day to write them into a proper book.",
+class FakeStdin extends EventEmitter {
+  readonly isTTY = true;
+  private data: string | null = null;
+  press(keys: string): void {
+    this.data = keys;
+    this.emit("readable");
+    this.emit("data", keys);
+  }
+  read = (): string | null => {
+    const data = this.data;
+    this.data = null;
+    return data;
+  };
+  setEncoding(): void {}
+  setRawMode(): void {}
+  resume(): void {}
+  pause(): void {}
+  ref(): void {}
+  unref(): void {}
+}
+
+async function until(what: string, ready: () => boolean, ms = 3000): Promise<void> {
+  const end = Date.now() + ms;
+  while (!ready()) {
+    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
+test("the pick list shows each character's name, species, class and level, the default marked; the card adds who they are and the goal", () => {
+  const roster = partyRoster(MILL);
+  assert.deepEqual(pickRows(roster, 0, "bren"), [
+    "❯ 1. Bren  Human Fighter 2 · default",
+    "  2. Torva  Human Barbarian 2",
+    "  3. Maren  Human Cleric 2",
+    "  4. Ilsa  Dragonborn Wizard 2",
   ]);
+  const bren = cardRows(roster[0], 72);
+  assert.deepEqual(bren.slice(0, 3), ["Bren", "Human Fighter, level 2", ""]);
+  // Only the opening sentence: the rest of the paragraph speaks to an AI player.
+  assert.ok(bren.join(" ").includes("The company's sergeant"), bren.join("\n"));
+  assert.ok(!bren.join(" ").includes("This card is for an AI"), bren.join("\n"));
+  assert.deepEqual(bren.slice(-3), ["Goal", "Keep the four of you together, fed and paid until something better than", "guard work comes along."]);
+  // No sheet numbers on the card.
+  assert.ok(!/\bHP\b|\bAC\b/.test(bren.join(" ")));
 });
 
-test("a number picks its character, a wrong one asks again, and Enter or no input keeps the default", async () => {
-  const maren = await answer(["9", "two", "3"]);
-  assert.equal(maren.picked, "maren");
-  assert.match(maren.printed, /^Who do you play\?\n1\. Bren/);
-  assert.match(maren.printed, /There is no 9 on the list\.\n/);
-  assert.match(maren.printed, /There is no two on the list\.\n/);
-  assert.equal((await answer([""])).picked, "bren");
-  assert.equal((await answer([])).picked, "bren");
+test("arrows move the highlight round the list, a number jumps to its character, one past the list is ignored, and Enter picks", () => {
+  const roster = partyRoster(MILL);
+  let state = { at: 0 };
+  state = pickKey(roster, state, { kind: "up" }).state;
+  assert.equal(state.at, 3);
+  state = pickKey(roster, state, { kind: "down" }).state;
+  assert.equal(state.at, 0);
+  state = pickKey(roster, state, { kind: "digit", digit: 3 }).state;
+  assert.equal(state.at, 2);
+  assert.equal(pickKey(roster, state, { kind: "digit", digit: 9 }).state.at, 2);
+  assert.equal(pickKey(roster, state, { kind: "enter" }).picked, "maren");
+});
+
+test("on a terminal the pick screen picks with keys, Enter at once keeps the default, and the table takes over the same screen with the keyboard (AGT-54)", async () => {
+  for (const [keys, want] of [[["\r"], "bren"], [["\u001b[B", "\u001b[B", "\r"], "maren"], [["4", "\r"], "ilsa"]] as const) {
+    const stdin = new FakeStdin();
+    const stdout = new FakeStdout(120, 30);
+    const render = { stdin: stdin as unknown as NodeJS.ReadStream, stdout: stdout as unknown as NodeJS.WriteStream, stderr: new FakeStdout(120, 30) as unknown as NodeJS.WriteStream, debug: true, patchConsole: false };
+    const picking = pickOnScreen(partyRoster(MILL), "bren", { title: "The Silent Mill", palette: paletteFor({ NO_COLOR: "1" }), render });
+    await until("the pick screen", () => stdout.last.includes("The Silent Mill · Who do you play?") && stdout.last.includes("❯ 1. Bren"));
+    assert.ok(stdout.last.includes("Keep the four of you together"), "the default's card shows first");
+    for (const key of keys) {
+      stdin.press(key);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    const { handle, instance } = await picking;
+    assert.equal(handle, want);
+    // The table adopts the screen: no second render, and its prompt takes the keyboard.
+    const seat = new InkSeat(handle, { palette: paletteFor({ NO_COLOR: "1" }) });
+    seat.adopt(instance);
+    try {
+      const asked = seat.ask({ kind: "explore" });
+      await until("the table", () => stdout.last.includes("What does") && !stdout.last.includes("Who do you play?"));
+      stdin.press("look\r");
+      assert.deepEqual(await asked, { kind: "text", text: "look" });
+    } finally {
+      seat.stop();
+    }
+  }
 });
 
 test("casting the human on a character makes the other three AI players, in the pack's order", () => {
@@ -75,16 +153,4 @@ test("--play puts the human's seat on that character, in run.json and the transc
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
-});
-
-test("the pick list hands the keyboard on: its input is flowing again once the pick is made (AGT-54)", async () => {
-  // Stas's `play:demo`, 2026-10-30: after the pick, the table screen's first prompt took no key,
-  // Ctrl+C included, because closing the pick list had paused the terminal's input.
-  const input = new PassThrough();
-  const output = new PassThrough();
-  output.resume();
-  input.write("2\n");
-  assert.equal(await pickCharacter(partyRoster(MILL), "bren", { input, output }), "torva");
-  assert.equal(input.isPaused(), false, "the input is no longer paused");
-  input.end();
 });

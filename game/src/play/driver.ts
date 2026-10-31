@@ -35,9 +35,10 @@ import { chainDm, chainScenes, ScriptedPlayer, ScriptedSeat, walkOnDm } from "..
 import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat } from "../table/types.ts";
+import type { Instance } from "ink";
 import { InkSeat } from "../ui/ink-seat.ts";
 import { glyphsFor } from "../ui/panel.ts";
-import { pickCharacter } from "../ui/pick.ts";
+import { pickOnScreen } from "../ui/pick.ts";
 import { usageBlock, UsageLog } from "../usage.ts";
 import { ModelJudge, ScriptedJudge } from "../check/judge.ts";
 import { narrationCheck } from "../check/narration.ts";
@@ -138,9 +139,12 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     console.error("--seat ink needs your keyboard and screen: run it in a terminal, not through a pipe or Remote Control.");
     process.exit(2);
   }
+  // The pick screen opens the alternate screen the table then takes over (AGT-69); --play skips it.
+  let screen: Instance | undefined;
   if (flags.seat === "ink" && !flags.play && party.human) {
-    const picked = await pickCharacter(partyRoster(flags.pack), party.human);
-    if (picked !== party.human) party = castParty(flags.pack, { play: picked });
+    const picked = await pickOnScreen(partyRoster(flags.pack), party.human, { title: pack.adventure.title });
+    screen = picked.instance;
+    if (picked.handle !== party.human) party = castParty(flags.pack, { play: picked.handle });
   }
   const everyone = [...(party.human ? [party.human] : []), ...party.ai];
 
@@ -155,7 +159,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame. The
   // seat owns the alternate screen (AGT-69, decision 0054): the terminal comes back as it was when
   // it stops, and everything printed after that lands on the normal screen.
-  ink?.start({ interactive: true, alternateScreen: true });
+  if (ink && screen) ink.adopt(screen);
+  else ink?.start({ interactive: true, alternateScreen: true });
   ink?.busy("The engine is starting");
 
   const runDir = runFolder(flags.out, play.folder);

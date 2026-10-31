@@ -170,11 +170,23 @@ export class InkSeat implements Seat {
    */
   start(options: RenderOptions = {}): Instance {
     this.instance = render(h(TableScreen, { seat: this }), { exitOnCtrlC: false, incrementalRendering: true, ...options });
-    if (options.alternateScreen) {
-      process.on("uncaughtException", this.crash);
-      process.on("unhandledRejection", this.crash);
-    }
+    if (options.alternateScreen) this.guardCrash();
     return this.instance;
+  }
+
+  /**
+   * Takes over a screen already drawing in the alternate screen (the pick screen, AGT-69 step 3):
+   * the table replaces it in the same frame, with no flash of the normal terminal between them.
+   */
+  adopt(instance: Instance): void {
+    this.instance = instance;
+    instance.rerender(h(TableScreen, { seat: this }));
+    this.guardCrash();
+  }
+
+  private guardCrash(): void {
+    process.on("uncaughtException", this.crash);
+    process.on("unhandledRejection", this.crash);
   }
 
   /** Stops drawing; in the alternate screen, the terminal returns to what it showed before. */
