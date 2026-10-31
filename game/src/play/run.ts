@@ -11,7 +11,7 @@ import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
 import type { FightReaction, RunReport, SceneChoice, SceneTime, TalkRound } from "../table/loop.ts";
 import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
-import { percentile, summarize, type UsageRecord } from "../usage.ts";
+import { percentile, phases, summarize, type UsageRecord } from "../usage.ts";
 import type { RunRecord } from "./record.ts";
 
 /** p95 latency targets (scope §6.4): an AI player's turn, a DM narration. */
@@ -294,6 +294,24 @@ export function timingLines(record: Pick<RunRecord, "scenes" | "ended_at">): str
   return ["Scene times:", "", "| Scene | Minutes | Target | Combat rounds |", "|---|---|---|---|", ...rows, `| All | ${total} | ${target} | |`];
 }
 
+/**
+ * Where the wakes spent their time, per agent and purpose (M10 S1): p50 / p95 in ms of the first
+ * API call, of time inside our tools, and of the closing call; empty for a run before Milestone 10.
+ */
+export function phaseTable(usage: UsageRecord[]): string[] {
+  const rows = phases(usage);
+  if (rows.length === 0) return [];
+  const pair = ([p50, p95]: [number, number]) => (Number.isNaN(p50) ? "n/a" : `${p50} / ${p95}`);
+  return [
+    "",
+    "Wake phases, p50 / p95 (ms; calls per wake):",
+    "",
+    "| Agent | Purpose | Wakes | First token | In tools | Calls | Closing call (wakes) |",
+    "|---|---|---|---|---|---|---|",
+    ...rows.map((r) => `| ${r.agent} | ${r.purpose} | ${r.wakes} | ${pair(r.first_token)} | ${pair(r.tool)} | ${pair(r.calls)} | ${pair(r.closing)} (${r.closings}) |`),
+  ];
+}
+
 /** The report's Markdown sections on the run, the usage and the audit. */
 export function reportSections(options: {
   run: RunReport | undefined;
@@ -331,6 +349,7 @@ export function reportSections(options: {
       (s) =>
         `| ${s.agent} | ${s.turns} | ${s.p50_ms} | ${s.p95_ms} | ${s.input_tokens} | ${s.cache_read_tokens} | ${s.cache_write_tokens} | ${s.output_tokens} | ${s.api_equivalent_usd} |`,
     ),
+    ...phaseTable(usage),
     "",
     "End state (DM view):",
     ...options.endState.map((line) => `- ${line}`),

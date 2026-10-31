@@ -36,7 +36,45 @@ export interface UsageRecord {
   api_equivalent_usd: number;
   /** MCP tools the agent called during the turn, in order (names without the server prefix). */
   tools: string[];
+  /**
+   * Each API call of the turn, in order (M10 S1): offsets in ms from sending the message. A call
+   * starts when the message went out or the previous call's last tool answered, and ends with its
+   * last content block. Absent in runs before Milestone 10.
+   */
+  calls?: ApiCallTiming[];
+  /** Time spent inside our tool handlers in the turn (engine round trips, guards). */
+  tool_ms?: number;
   at: string;
+}
+
+/** One API call of a turn (M10 S1). */
+export interface ApiCallTiming {
+  /** 1 for the turn's first call. */
+  n: number;
+  started_ms: number;
+  /** The first call's time to first token, when the SDK reports it. */
+  first_token_ms?: number;
+  ended_ms: number;
+  /** The tools this call used; none for a closing call. */
+  tools: string[];
+  tool_ms: number;
+}
+
+/** Where one agent's wakes spent their time (M10 S1), p50 and p95 of each phase. */
+export interface PhaseSummary {
+  agent: string;
+  purpose: string;
+  wakes: number;
+  /** The first API call's time to first token; for a record without it, to the call's last block. */
+  first_token: [number, number];
+  /** Time inside our tool handlers per wake. */
+  tool: [number, number];
+  /** API calls per wake. */
+  calls: [number, number];
+  /** The closing call (the last one, when it used no tool), over the wakes that had one. */
+  closing: [number, number];
+  /** Wakes with a closing call. */
+  closings: number;
 }
 
 /** API list prices per million tokens, 2026-10-23 (M6 spec §7). Cache writes at 1.25× input. */
@@ -124,6 +162,34 @@ export function summarize(records: UsageRecord[]): Array<{
       cache_write_tokens: sum((r) => r.cache_write_tokens),
       output_tokens: sum((r) => r.output_tokens),
       api_equivalent_usd: Math.round(sum((r) => r.api_equivalent_usd) * 10_000) / 10_000,
+    };
+  });
+}
+
+/**
+ * The split of each agent's wakes by phase, per wake purpose (M10 S1): the numbers a latency lever
+ * is judged by. Only records with `calls` (runs from Milestone 10 on) count.
+ */
+export function phases(records: UsageRecord[]): PhaseSummary[] {
+  const timed = records.filter((r) => r.calls && r.calls.length > 0);
+  const keys = [...new Set(timed.map((r) => `${r.agent}\u0000${r.purpose}`))];
+  return keys.map((key) => {
+    const [agent, purpose] = key.split("\u0000");
+    const mine = timed.filter((r) => r.agent === agent && r.purpose === purpose);
+    const pair = (values: number[]): [number, number] => [percentile(values, 50), percentile(values, 95)];
+    const closing = mine.flatMap((r) => {
+      const last = r.calls!.at(-1)!;
+      return r.calls!.length > 1 && last.tools.length === 0 ? [last.ended_ms - last.started_ms] : [];
+    });
+    return {
+      agent,
+      purpose,
+      wakes: mine.length,
+      first_token: pair(mine.map((r) => r.calls![0].first_token_ms ?? r.calls![0].ended_ms)),
+      tool: pair(mine.map((r) => r.tool_ms ?? 0)),
+      calls: pair(mine.map((r) => r.calls!.length)),
+      closing: pair(closing),
+      closings: closing.length,
     };
   });
 }
