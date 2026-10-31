@@ -153,11 +153,12 @@ interface Reach {
 function reachOf(result: LegalActionsResult, state: State): Reach | undefined {
   const budget = result.budget;
   if (!budget || state.view !== "player") return undefined;
-  // A Dash adds the creature's speed again (SRD 5.2.1, Dash). Core's Dash doubles speed as an
-  // effect that a second Dash only renews, so once Dashed this turn (Action Surge gives the action
-  // back) a Dash adds nothing, and `me.speed_ft` is already the doubled speed.
-  const dash = result.options.some((o) => o.option_id === "dash") && !state.me.effects.some((e) => e.id === "dash");
-  return { movement_ft: budget.movement_ft, ...(dash ? { dash_ft: state.me.speed_ft } : {}) };
+  // A Dash adds the creature's Speed again (SRD 5.2.1, Dash), and each Dash this turn adds it once
+  // more (core counts every Dash instance), so `me.speed_ft` is the Speed times one plus the Dashes.
+  const dashes = state.me.effects.filter((e) => e.id === "dash").length;
+  const dash = result.options.some((o) => o.option_id === "dash");
+  const speed = Math.round(state.me.speed_ft / (1 + dashes));
+  return { movement_ft: budget.movement_ft, ...(dash ? { dash_ft: speed } : {}) };
 }
 
 /**
