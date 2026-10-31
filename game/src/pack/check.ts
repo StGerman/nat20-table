@@ -121,6 +121,11 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     for (const section of CARD_SECTIONS) if (!headings.has(section)) problem(`${member.card} has no "## ${section}" section`);
   }
 
+  // A Russian run's one name for a character is one the table's name matcher knows (AGT-38).
+  for (const member of adventure.party) {
+    if (member.name_ru && !(member.names ?? []).includes(member.name_ru)) problem(`party ${member.handle}: name_ru ${member.name_ru} is not among its names`);
+  }
+
   // Every id it names.
   const sceneIdList = adventure.scenes.map((s) => s.id);
   for (const [what, list] of [

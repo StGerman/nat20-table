@@ -94,6 +94,11 @@
             "description": "How the table refers to the character, such as she/her (M7 design §3.4): the DM's prompt names it, and the narration check holds the DM to it.",
             "type": "string",
             "minLength": 1
+          },
+          "name_ru": {
+            "description": "The one Russian form the agents write in a Russian run (AGT-38), such as «Ильза»; it must be among `names`.",
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
@@ -123,6 +128,11 @@
             "type": "string",
             "minLength": 1,
             "description": "What the characters call them."
+          },
+          "name_ru": {
+            "description": "What a Russian run calls them (AGT-38), such as «староста Осрик Хейл».",
+            "type": "string",
+            "minLength": 1
           },
           "prose": {
             "type": "string",

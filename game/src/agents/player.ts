@@ -65,6 +65,8 @@ export interface ModelPlayerConfig {
   withHuman?: boolean;
   /** The character's class from its pregen (`fighter`), for its block of the rules primer. */
   characterClass: string;
+  /** The pack's one Russian name per party member (`PackParty.russianNames`), for a Russian prompt (AGT-38); never the NPCs'. */
+  russianNames?: readonly string[];
   usage?: UsageLog;
   /** Every wake's limit. Default `PLAYER_TURN_TIMEOUT_MS`, and `PLAYER_LONG_WAKE_TIMEOUT_MS` for the long wakes. */
   turnTimeoutMs?: number;
@@ -89,7 +91,7 @@ export function cardName(handle: Handle, card: string): string {
 }
 
 /** The player's system prompt: the same for every session of the run, so it stays cached. */
-export function playerPrompt(handle: Handle, fullCard: string, characterClass: string, language: Language = "en", human = true): string {
+export function playerPrompt(handle: Handle, fullCard: string, characterClass: string, language: Language = "en", human = true, names: readonly string[] = []): string {
   const name = cardName(handle, fullCard);
   const russianVoice = RUSSIAN_VOICE.exec(fullCard)?.[1].trim();
   const card = promptCard(fullCard);
@@ -149,7 +151,7 @@ Each message says why:
 - When ${name} turns to one companion (a remark, an opinion, a request, a proposal), give their handle as to; a line for the whole party needs no to. Choose whom and how from your card's "With the party" and your bond notes, never from anyone's sheet. Out of combat the one you speak to has the floor next, in a fight they hear it on their own turn.${waits} A line spoken to ${name} ("<speaker> says to you") asks nothing of your tools: help, answer, argue, refuse or let it pass, as ${name} would. Help with a deed is something you declare, and the DM resolves it.
 - note keeps a private note that nobody else reads: a fact, promise, suspicion, plan or bond that will matter later in the adventure; a decision the party made is a plan. Write fiction, never numbers: Hit Points, positions and results are always read fresh from the engine. Note only what matters to ${name}; one or two notes a scene is plenty, besides the party's decisions.
 
-Before you act in a fight, check three things in a line or two: is a companion down within your reach or range, which foe your companions are hitting, and whether you stand where many foes can reach you. Then act. Elsewhere, keep your reasoning to a sentence between tool calls. Text you write outside say, and outside your final answer to a hand, a declaration or a summary, reaches nobody.${playerLanguage(language, russianVoice)}`;
+Before you act in a fight, check three things in a line or two: is a companion down within your reach or range, which foe your companions are hitting, and whether you stand where many foes can reach you. Then act. Elsewhere, keep your reasoning to a sentence between tool calls. Text you write outside say, and outside your final answer to a hand, a declaration or a summary, reaches nobody.${playerLanguage(language, russianVoice, names)}`;
 }
 
 /** A declaration as the loop takes it: one line, or undefined for a pass. */
@@ -179,7 +181,7 @@ export class ModelPlayer implements PlayerAgent {
   constructor(config: ModelPlayerConfig) {
     this.config = config;
     this.handle = config.handle;
-    this.systemPrompt = playerPrompt(config.handle, config.card, config.characterClass, config.language, config.withHuman ?? true);
+    this.systemPrompt = playerPrompt(config.handle, config.card, config.characterClass, config.language, config.withHuman ?? true, config.russianNames);
     this.seatTools = this.defineTools();
   }
 

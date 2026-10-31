@@ -44,6 +44,11 @@ const PartyMember = z
       .min(1)
       .optional()
       .describe("How the table refers to the character, such as she/her (M7 design §3.4): the DM's prompt names it, and the narration check holds the DM to it."),
+    name_ru: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("The one Russian form the agents write in a Russian run (AGT-38), such as «Ильза»; it must be among `names`."),
   })
   .describe("One party member.");
 
@@ -52,6 +57,7 @@ const Npc = z
     _comment: comment,
     id,
     name: z.string().min(1).describe("What the characters call them."),
+    name_ru: z.string().min(1).optional().describe("What a Russian run calls them (AGT-38), such as «староста Осрик Хейл»."),
     prose: packPath.describe("Who they are, voice, wants, what they know and tell, what they hide."),
     creatures: z
       .array(z.strictObject({ scene: id.describe("A scene id of this skeleton."), handle: id.describe("A creature in that scene's file, its spawns included.") }))
@@ -141,4 +147,18 @@ export function adventureSchema(): Record<string, unknown> {
 /** The schema file's text: what `pack:schema` writes and the freshness test compares. */
 export function schemaText(): string {
   return `${JSON.stringify(adventureSchema(), null, 2)}\n`;
+}
+
+/**
+ * The pack's canonical Russian names (AGT-38): party members by handle, and NPCs by id for the DM
+ * only. The NPCs are scenario data, so a player's prompt gets the party's names alone (Rule 3).
+ */
+export function russianNames(
+  adventure: { party: Array<{ handle: string; name_ru?: string }>; npcs?: Array<{ id: string; name_ru?: string }> },
+  options: { npcs: boolean } = { npcs: true },
+): string[] {
+  return [
+    ...adventure.party.flatMap((p) => (p.name_ru ? [`${p.handle}: ${p.name_ru}`] : [])),
+    ...(options.npcs ? (adventure.npcs ?? []) : []).flatMap((n) => (n.name_ru ? [`${n.id}: ${n.name_ru}`] : [])),
+  ];
 }
