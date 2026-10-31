@@ -69,6 +69,8 @@ export interface InkSeatOptions {
    * scrollback, and `/log` prints them (AGT-37).
    */
   verbose?: boolean;
+  /** Glyphs for the panel's turn-order line, by handle or creature kind (AGT-67); none by default. */
+  glyphs?: Record<string, string>;
 }
 
 export class InkSeat implements Seat {
@@ -104,6 +106,9 @@ export class InkSeat implements Seat {
 
   readonly animate: boolean;
   readonly now: () => number;
+  get glyphs(): Record<string, string> | undefined {
+    return this.options.glyphs;
+  }
 
   busy(on: string | undefined): void {
     if (on === this.view.busy?.on) return;
@@ -427,7 +432,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const layout = screenLayout(size);
   const textSize: PanelSize = { columns: layout.text, rows: size.rows };
   const situation = view.situation
-    ? block(situationRows(view.situation, layout.side ? { columns: layout.side, rows: size.rows } : size, { folded: view.folded, stale: view.stale }), "situation")
+    ? block(situationRows(view.situation, layout.side ? { columns: layout.side, rows: size.rows } : size, { folded: view.folded, stale: view.stale, glyphs: seat.glyphs }), "situation")
     : undefined;
   const live = [
     ...(view.options ? [block(turnRows(view.options.lines, textSize, view.options.budget, view.options.title, picked?.number), "turn")] : []),

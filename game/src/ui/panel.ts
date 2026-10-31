@@ -44,6 +44,16 @@ export function screenLayout(size: PanelSize): ScreenLayout {
   return { text, side: size.columns - text - PANE_GAP };
 }
 
+/**
+ * The turn-order glyphs to draw (M10 P7, AGT-67): the pack's, unless NO_COLOR asks for plain text
+ * or the locale doesn't say UTF-8, where an emoji could come out as a box or a wrong width.
+ */
+export function glyphsFor(env: NodeJS.ProcessEnv, glyphs: Record<string, string> | undefined): Record<string, string> | undefined {
+  if (!glyphs || Object.keys(glyphs).length === 0 || env.NO_COLOR) return undefined;
+  const locale = env.LC_ALL || env.LC_CTYPE || env.LANG || "";
+  return /utf-?8/i.test(locale) ? glyphs : undefined;
+}
+
 /** Below this many columns, creature rows drop the display name. */
 const NARROW_COLUMNS = 70;
 
@@ -58,8 +68,8 @@ const words = (id: string) => titled(id.replace(/[_.]/g, " "));
  * The situation block: a bar, then (in a fight, room permitting) your line, the creatures you
  * perceive grouped by side, and the fallen. It takes at most a third of the terminal's rows.
  */
-export function situationRows(situation: Situation, size: PanelSize, options: { folded?: boolean; stale?: boolean } = {}): Row[] {
-  const rows = [bar(situation, options.stale)];
+export function situationRows(situation: Situation, size: PanelSize, options: { folded?: boolean; stale?: boolean; glyphs?: Record<string, string> } = {}): Row[] {
+  const rows = [bar(situation, options.stale, options.glyphs)];
   const fold = options.folded || size.rows < FOLD_ROWS || size.columns < FOLD_COLUMNS || situation.mode === "explore";
   if (fold) return rows;
   rows.push(meRow(situation));
@@ -89,18 +99,26 @@ const SIDE_LABEL: Record<SituationCreature["side"], string> = { hostile: "Foes",
 /** A party member's name is its handle; a monster's is its kind ("Goblin Warrior"). */
 const hasOwnName = (c: SituationCreature) => c.name.toLowerCase() !== c.handle.toLowerCase();
 
-function bar(s: Situation, stale = false): Row {
+function bar(s: Situation, stale = false, glyphs?: Record<string, string>): Row {
   const row: Row = [];
+  // A creature's glyph, by its handle or else its kind, in front of the handle on the turn-order line only (AGT-67).
+  const kindOf = (handle: string) => (handle === s.me.handle ? s.me.name : s.creatures.find((c) => c.handle === handle)?.name);
+  const marked = (handle: string) => {
+    const kind = kindOf(handle);
+    const glyph = glyphs?.[handle] ?? (kind ? glyphs?.[kind] : undefined);
+    return glyph ? `${glyph} ${handle}` : handle;
+  };
   if (s.mode === "explore") {
     const party = s.creatures.filter((c) => c.side === "party");
     row.push({ text: "Explore" });
     if (party.length > 0) row.push({ text: " · party: " }, ...join(party.map((c) => [{ text: `${c.handle} ` }, health(c.health)])));
   } else {
     row.push({ text: `Round ${s.round ?? 1}` });
-    if (s.turn === s.me.handle) row.push({ text: " · " }, { text: "▶ your turn", style: { accent: "rust", bold: true } });
-    else if (s.turn) row.push({ text: ` · ${s.turn}'s turn` });
+    const mine = glyphs?.[s.me.handle] ?? glyphs?.[s.me.name];
+    if (s.turn === s.me.handle) row.push({ text: " · " }, { text: `▶ ${mine ? `${mine} ` : ""}your turn`, style: { accent: "rust", bold: true } });
+    else if (s.turn) row.push({ text: ` · ${marked(s.turn)}'s turn` });
     if (s.up_in !== undefined) row.push({ text: ` · you are up in ${s.up_in}` });
-    else if (s.next.length > 0) row.push({ text: ` · next ${s.next.slice(0, 3).join(", ")}`, style: muted });
+    else if (s.next.length > 0) row.push({ text: ` · next ${s.next.slice(0, 3).map(marked).join(", ")}`, style: muted });
   }
   if (stale) row.push({ text: " · stale", style: muted });
   return row;
