@@ -11,7 +11,7 @@ import { REPO, SESSION_LOG, type GameEngine } from "../src/engine.ts";
 import { readPack } from "../src/pack/read.ts";
 import { guards, castParty, scenePlan } from "../src/play/run.ts";
 import { ConnectionLost, TurnTimeout, UsageLimitReached } from "../src/errors.ts";
-import { TableLoop, type LoopOptions } from "../src/table/loop.ts";
+import { adjacencyLine, movedLine, TableLoop, type LoopOptions } from "../src/table/loop.ts";
 import { attackNearest, chainDm, offerAnySurrender, chainScenes, rescueThenAttack, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
 import { BarkTools, ReactionFloor, type DmTools, type PlayerTools } from "../src/table/tools.ts";
@@ -370,6 +370,71 @@ test("a turn stopped at a reaction window is narrated only once it goes on, with
   assert.ok(t.requests().some((r) => r.cmd === "react"), "reaction windows opened in this fight");
   assert.ok(duringWindows > 0, "turns that ended before a window were narrated while it was open");
   assert.deepEqual(halfDone, [], "no narration stopped in the middle of a turn");
+});
+
+test("each narrate wake names who moved in its lines, and says nobody else changed place", async () => {
+  // Runs 17-35 (n80-1) and 18-45-48: a foe that was hit or missed "backs away" or "darts behind
+  // the bin" with no move in the engine; the rule in the DM's prompt alone didn't stop it.
+  const told: { moves: string[]; said: string }[] = [];
+  const dm = new ScriptedDm({
+    scene_open: async (tools) => void (await tools.startCombat("yard_fight")),
+    narrate: async (tools, briefing) => {
+      const lines = briefing.split("\n");
+      told.push({ moves: [...new Set(lines.flatMap((l) => /^(\w+) moves(?: to \w+)?\.$/.exec(l)?.[1] ?? []))], said: lines.at(-1)! });
+      await offerAnySurrender(tools);
+      await tools.narrate("Steel and teeth flash in the yard.");
+    },
+    combat_over: async (tools) => void (await tools.endAdventure("The yard falls quiet.")),
+  });
+  const { report } = await play({ seed: 23, dm });
+  assert.equal(report.ended, "the adventure is over");
+  for (const { moves, said } of told) {
+    const named = /^Moved in these lines: (.+)\. Nobody else changed place: no one else backs away, flees, ducks behind something or closes in\.$/.exec(said)?.[1].split(", ") ?? [];
+    if (moves.length === 0) assert.equal(said, "Nobody moved in these lines: no one backs away, flees, ducks behind something or closes in.");
+    else assert.deepEqual(named, moves, said);
+  }
+  assert.ok(told.some((t) => t.moves.length > 0), "some part had a move");
+  assert.ok(told.some((t) => t.moves.length === 0), "some part had none");
+});
+
+test("the adjacency line names the pairs within reach and leaves out the dead (M10 P3)", () => {
+  const at = (handle: string, x: number, y: number, life_state = "conscious") => ({ handle, position_ft: { x_ft: x, y_ft: y }, life_state });
+  const state = (creatures: object[]) => ({ view: "dm", creatures }) as unknown as State;
+  assert.equal(
+    adjacencyLine(state([at("bren", 0, 0), at("goblin_1", 5, 0), at("torva", 30, 0), at("wolf_1", 35, 5), at("goblin_2", 3, 3, "dead")])),
+    "Within reach of each other: bren and goblin_1; torva and wolf_1. Everyone else is apart.",
+  );
+  assert.equal(adjacencyLine(state([at("bren", 0, 0), at("goblin_1", 20, 0)])), "Nobody stands within reach of anyone else.");
+  // One creature left standing still gets the fact: every narrate briefing carries it.
+  assert.equal(adjacencyLine(state([at("bren", 0, 0)])), "Nobody stands within reach of anyone else.");
+  assert.equal(adjacencyLine(undefined), undefined);
+});
+
+test("every narrate and combat_over briefing ends with the reach line, then who moved", async () => {
+  const ends: Array<{ wake: string; reach: string; moved: string }> = [];
+  const keep = (wake: string, briefing: string) => {
+    const lines = briefing.split("\n");
+    ends.push({ wake, reach: lines.at(-2)!, moved: lines.at(-1)! });
+  };
+  const dm = new ScriptedDm({
+    scene_open: async (tools) => void (await tools.startCombat("yard_fight")),
+    narrate: async (tools, briefing) => {
+      keep("narrate", briefing);
+      await offerAnySurrender(tools);
+      await tools.narrate("Steel and teeth flash in the yard.");
+    },
+    combat_over: async (tools, briefing) => {
+      keep("combat_over", briefing);
+      await tools.endAdventure("The yard falls quiet.");
+    },
+  });
+  await play({ seed: 23, dm });
+  assert.ok(ends.some((e) => e.wake === "combat_over"));
+  for (const e of ends) {
+    assert.match(e.reach, /^(Within reach of each other: .+\. Everyone else is apart\.|Nobody stands within reach of anyone else\.)$/, e.wake);
+    assert.match(e.moved, /^(Moved in these lines|Nobody moved in these lines)/, e.wake);
+  }
+  assert.match(movedLine([]), /^Nobody moved/);
 });
 
 test("each part of a turn shows its engine lines, then its narration, before the next part", async () => {

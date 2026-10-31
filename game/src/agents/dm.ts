@@ -133,7 +133,7 @@ The guard reads only what the table hears: tool inputs such as a check's DC are 
 
 - "Scene ... is loaded": open the scene for the table in two to five sentences, from its prose: what the characters see, and what they can obviously do.
 ${spoken}
-- "Narrate these events": one to three sentences. The table reads your narration, not the engine's lines, and reads it as one running story: say who acted, against whom, and what came of it (missed, wounded, dropped, healed); don't say whose turn it is or comes next; don't set the scene again or describe again a creature the fight already met.
+- "Narrate these events": one to three sentences. The table reads your narration, not the engine's lines, and reads it as one running story: say who acted, against whom, and what came of it (missed, wounded, dropped, healed); don't say whose turn it is or comes next; don't set the scene again or describe again a creature the fight already met. The briefing ends with facts from the engine: who stands within reach of whom, and who moved; nobody else changed place.
 ${surrenderWords}- "The fight is over": narrate how it ends, then go on with the scene.
 - "The scene is over": your final answer is a short summary for yourself: what happened, what you established, what is left open.
 

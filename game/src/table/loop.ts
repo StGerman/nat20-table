@@ -192,6 +192,40 @@ function stopOf(error: Error): StopKind {
   return error instanceof UsageLimitReached ? "usage_limit" : error instanceof ModelOffline ? "offline" : "crash";
 }
 
+/**
+ * Who changed place in the lines a narrate wake tells, said as a fact next to them: the rule in the
+ * DM's prompt alone didn't stop a hit foe "backing away" with no move (runs 17-35 n80-1 and 18-45-48).
+ */
+export function movedLine(events: readonly Event[]): string {
+  const movers = [...new Set(events.flatMap((e) => (e.kind === "moved" ? [e.actor] : e.kind === "fled" ? e.handles : [])))];
+  return movers.length > 0
+    ? `Moved in these lines: ${movers.join(", ")}. Nobody else changed place: no one else backs away, flees, ducks behind something or closes in.`
+    : "Nobody moved in these lines: no one backs away, flees, ducks behind something or closes in.";
+}
+
+/** Two creatures whose centres are this close stand within reach of a blow (5 ft between them, M10 P3). */
+export const REACH_CENTRES_FT = 7.5;
+
+/**
+ * Who stands within reach of whom, said as a fact in a narrate briefing (M10 P3): run 21-48 had
+ * a goblin "at Torva's side" and a blow "from across the yard" that the positions contradict. From
+ * the DM's state; the dead are left out.
+ */
+export function adjacencyLine(state: State | undefined): string | undefined {
+  if (state?.view !== "dm") return undefined;
+  const standing = state.creatures.filter((c) => c.life_state !== "dead");
+  const pairs: string[] = [];
+  for (const [i, a] of standing.entries()) {
+    for (const b of standing.slice(i + 1)) {
+      const d = Math.hypot(a.position_ft.x_ft - b.position_ft.x_ft, a.position_ft.y_ft - b.position_ft.y_ft);
+      if (d <= REACH_CENTRES_FT) pairs.push(`${a.handle} and ${b.handle}`);
+    }
+  }
+  return pairs.length > 0
+    ? `Within reach of each other: ${pairs.join("; ")}. Everyone else is apart.`
+    : "Nobody stands within reach of anyone else.";
+}
+
 export class TableLoop {
   private readonly table: TableState;
   private readonly dm: DmAgent;
@@ -1435,10 +1469,13 @@ export class TableLoop {
       told = [...this.dmBacklog, ...tellable(await this.table.engine.newEvents("dm", "brief"), this.table.deaths)];
       this.dmBacklog = [];
     }
+    // A narration's facts (M10 P2, P3): who stands within reach of whom, and who moved in its lines.
+    const facts = wake === "narrate" || wake === "combat_over" ? [...(await this.reachLine()), movedLine(told)] : [];
     const briefing = [
       ...(heard.length > 0 ? ["What the table said:", ...heard] : []),
       ...(told.length > 0 ? ["What happened:", ...told.map(eventLine)] : []),
       ...lines,
+      ...facts,
     ].join("\n");
     const done = this.waitFor("The DM is thinking");
     try {
@@ -1462,6 +1499,21 @@ export class TableLoop {
     } finally {
       done();
     }
+  }
+
+  /**
+   * The adjacency line from the DM's state now; none when the state can't be read, so a failed
+   * request for this extra fact never skips the wake's own fallback and cleanup.
+   */
+  private async reachLine(): Promise<string[]> {
+    let r;
+    try {
+      r = await this.table.engine.request("dm", { cmd: "get_state" });
+    } catch {
+      return [];
+    }
+    const line = adjacencyLine(r.result?.cmd === "get_state" ? r.result.state : undefined);
+    return line ? [line] : [];
   }
 
   /** A model wake came back: the connection is there. */

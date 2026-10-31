@@ -40,6 +40,19 @@ export interface Flag {
   row: string;
   text: string;
   answer?: "confirmed" | "dismissed";
+  /** `hand` for a flag Stas added in `confirmations.json` (`added[]`) that the judge missed (M10 P2); absent for the judge's and the retry count's. */
+  source?: "hand";
+}
+
+/** A narration flag Stas adds by hand in `confirmations.json` under `added` (M10 P2, AGT-60). */
+export interface HandFlag {
+  /** Its own id, such as `h45-1`; never one of the judge's. */
+  id: string;
+  /** The transcript line it is about. */
+  line?: number;
+  claim: string;
+  /** `confirmed` by default: Stas adds a flag because the line contradicts the engine. */
+  answer?: "confirmed" | "dismissed";
 }
 
 export interface Verdict {
@@ -195,12 +208,23 @@ export function computeVerdict(dir: string): Verdict {
   const transcript = readLines<TranscriptRecord>(path.join(dir, "transcript.jsonl"));
   const log = readLines<Event>(path.join(dir, SESSION_LOG));
   const usage = readLines<UsageRecord>(path.join(dir, "usage.jsonl"));
-  const answers = readJson<Record<string, { answer: string }>>(path.join(dir, CONFIRMATIONS_JSON)) ?? {};
+  const confirmations = readJson<Record<string, unknown>>(path.join(dir, CONFIRMATIONS_JSON)) ?? {};
+  const { added, ...answered } = confirmations;
+  const answers = answered as Record<string, { answer: string }>;
   // An untracked prop is listed, not flagged (spec §4.3): Stas has nothing to answer for it.
   const narrationFlags: Flag[] = readLines<{ id: string; line?: number; claim?: string; kind?: string; untracked?: boolean }>(path.join(dir, NARRATION_CHECK)).filter((f) => !f.untracked).map((f) => {
     const answer = answers[f.id]?.answer;
     return { id: f.id, row: "3", text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
   });
+  // Lines Stas ruled himself, which the judge missed (M10 P2): flags of row 3 like the judge's.
+  const handFlags: Flag[] = (Array.isArray(added) ? (added as HandFlag[]) : []).map((f) => ({
+    id: f.id,
+    row: "3",
+    text: `hand: ${f.claim}${f.line !== undefined ? ` (line ${f.line})` : ""}`,
+    answer: f.answer === "dismissed" ? "dismissed" : "confirmed",
+    source: "hand",
+  }));
+  narrationFlags.push(...handFlags);
   const retries = retryRows(run, transcript, answers);
   const rows = [timeRow(run), partyRow(run, log), ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
   const flags = [...narrationFlags, ...retries.flags];
