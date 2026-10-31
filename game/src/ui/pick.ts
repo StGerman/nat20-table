@@ -101,11 +101,19 @@ export function pickOnScreen(
   options: { title?: string; palette?: Palette; render?: RenderOptions } = {},
 ): Promise<{ handle: Handle; instance: Instance }> {
   return new Promise((resolve) => {
+    // A crash before the pick gives the terminal back before its trace prints, as the table does.
+    const crash = (error: unknown) => {
+      instance.unmount();
+      console.error(error);
+      process.exit(1);
+    };
     const onPick = (handle: Handle) => {
       if (!handle) {
         instance.unmount();
         process.exit(130);
       }
+      process.off("uncaughtException", crash);
+      process.off("unhandledRejection", crash);
       resolve({ handle, instance });
     };
     const instance = render(h(PickScreen, { roster, fallback, title: options.title, palette: options.palette ?? paletteFor(), onPick }), {
@@ -114,5 +122,7 @@ export function pickOnScreen(
       alternateScreen: true,
       ...options.render,
     });
+    process.on("uncaughtException", crash);
+    process.on("unhandledRejection", crash);
   });
 }
