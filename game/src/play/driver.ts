@@ -148,9 +148,14 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // (before the table is set, it exits). The keyboard seat draws from here, so the engine's start
   // shows its loading indicator too.
   let quit: () => void = () => process.exit(130);
-  const ink = flags.seat === "ink" && party.human ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs) }) : undefined;
-  // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame.
-  ink?.start({ interactive: true });
+  const ink =
+    flags.seat === "ink" && party.human
+      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: pack.adventure.title })
+      : undefined;
+  // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame. The
+  // seat owns the alternate screen (AGT-69, decision 0054): the terminal comes back as it was when
+  // it stops, and everything printed after that lands on the normal screen.
+  ink?.start({ interactive: true, alternateScreen: true });
   ink?.busy("The engine is starting");
 
   const runDir = runFolder(flags.out, play.folder);
@@ -244,8 +249,11 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
       };
       if (limit > 0) deadline = setTimeout(stop, limit * 60_000);
     }
-    // The terminal shows the progress only when nobody plays in it.
-    if (ink) return;
+    // A seat shows the scene's number in its header; the terminal prints progress only when nobody plays in it.
+    if (ink) {
+      if (p.kind === "scene_start") ink.scene(pack.adventure.scenes.findIndex((s) => s.id === p.scene) + 1, pack.adventure.scenes.length);
+      return;
+    }
     const runLines = transcript.records.filter((r) => r.channel === "run");
     const counts = `retries ${runLines.filter((r) => r.kind === "retry").length}, fallbacks ${runLines.filter((r) => r.kind === "fallback").length}`;
     const at = `[${((Date.now() - firstLoad) / 60_000).toFixed(1).padStart(5)} min]`;
@@ -272,7 +280,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   });
 
   const who = (kind: string | undefined, choice: { model: string; effort: string }) => (kind === "scripted" ? "scripted" : `${choice.model} (${choice.effort})`);
-  console.log(
+  const playing = (text: string) => (ink ? ink.note(text) : console.log(text));
+  playing(
     `Playing ${played.join(", ")} of ${pack.adventure.title} (seed ${engine.seed}${settings.profile ? `, profile ${settings.profile.name}` : ""}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human ? `${party.human} ${ink ? "played by you" : "scripted"}` : "no human"}. Run folder ${path.relative(process.cwd(), runDir)}/.`,
   );
   ink?.busy(undefined);

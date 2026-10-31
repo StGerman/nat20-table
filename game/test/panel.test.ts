@@ -15,7 +15,8 @@ import type { TableEvent } from "../src/table/types.ts";
 import { InkSeat, SPINNER, waitText } from "../src/ui/ink-seat.ts";
 import { TONE_STYLE } from "../src/ui/lines.ts";
 import { loadTheme, paletteFor, THEME_FILE, themeProblems } from "../src/ui/palette.ts";
-import { glyphsFor, rowText, screenLayout, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
+import { frameLayout, RULE_COLUMNS } from "../src/ui/frame.ts";
+import { glyphsFor, rowText, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
 import type { LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
 
@@ -137,16 +138,29 @@ test("at 60 columns the display names go; under 16 rows, with /panel, or out of 
   assert.deepEqual(situationRows(calm, { columns: 80, rows: 40 }).map(rowText), ["Explore · party: torva unhurt · maren down · ilsa unhurt"]);
 });
 
-test("the turn block heads the numbered options with what is left of the turn", () => {
+test("the turn block heads the numbered options, one to a row, with what is left of the turn", () => {
   const lines = ["1. Longsword attack → goblin_3", "2. Second Wind", "3. Move…", "4. End turn"];
-  const rows = turnRows(lines, { columns: 80, rows: 24 }, listing.budget!).map(rowText);
-  assert.deepEqual(rows, [
-    "Action used · Bonus Action free · Reaction free · 4 of 60 ft left",
-    "1. Longsword attack → goblin_3         3. Move…",
-    "2. Second Wind                         4. End turn",
+  const rows = turnRows(lines, listing.budget!).map(rowText);
+  assert.deepEqual(rows, ["Action used · Bonus Action free · Reaction free · 4 of 60 ft left", ...lines]);
+  // A follow-up pick: under its title.
+  assert.deepEqual(turnRows(lines, undefined, "Longsword attack").map(rowText), ["Longsword attack:", ...lines]);
+});
+
+test("the full-screen side pane has the whole height: no third-of-the-rows cap, and you and the party out of a fight", () => {
+  const crowded = situationOf({ ...yard(), others: [...yard().others, other("wolf_9", "Wolf", "hostile", "unhurt", 50)] } as State, "bren", listing)!;
+  const rows = situationRows(crowded, { columns: 52, rows: 23 }, { pane: true }).map(rowText);
+  assert.ok(!rows.some((r) => r.includes("more · /where")), rows.join("\n"));
+  assert.ok(rows.includes("Down   goblin_1, goblin_2, wolf_3"));
+  const s = situationOf(yard(), "goblin_4")!;
+  const calm: Situation = { ...s, mode: "explore", turn: undefined, up_in: undefined, next: [], creatures: s.creatures.filter((c) => c.side === "party") };
+  // Out of a fight the feet go: nobody measures a walk between scenes.
+  assert.deepEqual(situationRows(calm, { columns: 52, rows: 23 }, { pane: true }).map(rowText), [
+    "Explore · party: torva unhurt · maren down · ilsa unhurt",
+    "Bren 12/20 HP · prone · Bless",
+    "Party  torva  unhurt",
+    "       maren  down",
+    "       ilsa   unhurt",
   ]);
-  // Narrow, or a follow-up pick: one column, under its title.
-  assert.deepEqual(turnRows(lines, { columns: 50, rows: 24 }, undefined, "Longsword attack").map(rowText), ["Longsword attack:", ...lines]);
 });
 
 test("colour follows the Mill Table accent code: the terminal's own colours, Mill's hex in truecolour, none under NO_COLOR", () => {
@@ -212,7 +226,8 @@ test("on an 80x24 terminal the seat draws the panel and the turn block above the
     void seat.ask({ kind: "combat_turn" });
     await until("the turn block", () => stdout.last.includes("Action used · Bonus Action free"));
     const frame = stdout.last;
-    const order = ["[r7] goblin_3 attacks", "Round 5 · ▶ your turn", "Foes   goblin_3", "Action used", "1. Longsword attack", "Your turn: an option number"];
+    // Narrow (AGT-69): the story, the panel folded to its bar and your line, the turn block, the input row.
+    const order = ["[r7] goblin_3 attacks", "Round 5 · ▶ your turn", "Bren 12/20 HP", "Action used", "1. Longsword attack", "Your turn: an option number"];
     const places = order.map((text) => frame.indexOf(text));
     assert.ok(places.every((p, i) => p >= 0 && (i === 0 || p > places[i - 1])), `in order:\n${frame}`);
     // The options are on screen, not in the log.
@@ -228,7 +243,7 @@ test("on an 80x24 terminal the seat draws the panel and the turn block above the
     seat.show({ kind: "narration", speaker: "dm", text: "The goblin snarls." });
     await until("stale", () => stdout.last.includes("you are up in 5 · stale"));
     seat.type("/panel\r");
-    await until("folded", () => !stdout.last.includes("Foes   goblin_3"));
+    await until("folded", () => !stdout.last.includes("Bren 12/20 HP"));
     assert.ok(stdout.last.includes("Round 5 · goblin_4's turn"));
   } finally {
     seat.stop();
@@ -364,12 +379,14 @@ test("a theme file missing a tone or a state, or naming an unknown one, is inval
   ]);
 });
 
-test("text keeps to a 72-column measure, and the situation pane moves to the right from 124 columns (M10 P5)", () => {
-  assert.deepEqual(screenLayout({ columns: 60, rows: 24 }), { text: 60 });
-  assert.deepEqual(screenLayout({ columns: 80, rows: 24 }), { text: TEXT_COLUMNS });
-  assert.deepEqual(screenLayout({ columns: SIDE_PANE_COLUMNS - 1, rows: 40 }), { text: TEXT_COLUMNS });
-  assert.deepEqual(screenLayout({ columns: SIDE_PANE_COLUMNS, rows: 40 }), { text: TEXT_COLUMNS, side: SIDE_PANE_COLUMNS - TEXT_COLUMNS - 4 });
-  assert.deepEqual(screenLayout({ columns: 160, rows: 50 }), { text: TEXT_COLUMNS, side: 84 });
+test("the story keeps to a 72-column measure; from 124 columns the side panel takes the rest, and under 40x16 the frame is too small (AGT-69)", () => {
+  assert.deepEqual(frameLayout({ columns: 60, rows: 24 }), { mode: "narrow", story: 60 });
+  assert.deepEqual(frameLayout({ columns: 80, rows: 24 }), { mode: "narrow", story: TEXT_COLUMNS });
+  assert.deepEqual(frameLayout({ columns: SIDE_PANE_COLUMNS - 1, rows: 40 }), { mode: "narrow", story: TEXT_COLUMNS });
+  assert.deepEqual(frameLayout({ columns: SIDE_PANE_COLUMNS, rows: 40 }), { mode: "wide", story: TEXT_COLUMNS, side: SIDE_PANE_COLUMNS - TEXT_COLUMNS - RULE_COLUMNS });
+  assert.deepEqual(frameLayout({ columns: 160, rows: 50 }), { mode: "wide", story: TEXT_COLUMNS, side: 85 });
+  assert.equal(frameLayout({ columns: 39, rows: 30 }).mode, "tiny");
+  assert.equal(frameLayout({ columns: 80, rows: 15 }).mode, "tiny");
 });
 
 async function frameAt(columns: number, rows: number, options = ["1. Longsword attack → goblin_3", "2. End turn"]): Promise<{ seat: InkSeat; stdout: FakeStdout }> {
@@ -391,20 +408,37 @@ async function frameAt(columns: number, rows: number, options = ["1. Longsword a
   return { seat, stdout };
 }
 
-test("at 160 columns the narration wraps at 72 and the situation pane stands beside the turn block", async () => {
+test("at 160 columns the narration wraps at 72 and the side panel stands right of it at full height, past a thin rule", async () => {
   const { seat, stdout } = await frameAt(160, 50);
   try {
     const rows = stdout.last.split("\n");
     const narration = rows.filter((r) => /yard smells|goblins circle|waiting for someone/.test(r));
-    assert.ok(narration.length >= 2 && narration.every((r) => r.trimEnd().length <= TEXT_COLUMNS), narration.join("\n"));
-    // The bar shares a row with the text column, starting right of the measure and the gap.
+    assert.ok(narration.length >= 2 && narration.every((r) => r.slice(0, TEXT_COLUMNS + 1).trimEnd().length <= TEXT_COLUMNS), narration.join("\n"));
+    // The panel's rows start right of the measure and the rule; the whole roster fits, Down line too.
     const bar = rows.find((r) => r.includes("Round 5 · ▶ your turn"))!;
-    assert.ok(bar.indexOf("Round 5") >= TEXT_COLUMNS + 4, bar);
-    // The turn block stays in the text column, and some row carries both columns.
+    assert.equal(bar.indexOf("Round 5"), TEXT_COLUMNS + RULE_COLUMNS, bar);
+    assert.ok(rows.some((r) => r.includes("Down   goblin_1, goblin_2, wolf_3")), stdout.last);
+    // The rule runs the body's height, one row under the header to the foot.
+    assert.ok(rows.slice(1).every((r) => r.charAt(TEXT_COLUMNS + 1) === "│"), stdout.last);
+    // The turn block stays in the story column.
     assert.ok(rows.find((r) => r.includes("Action used"))!.indexOf("Action used") < TEXT_COLUMNS, stdout.last);
-    assert.ok(rows.some((r) => r.slice(0, TEXT_COLUMNS).trim() !== "" && r.slice(TEXT_COLUMNS + 4).trim() !== ""), stdout.last);
   } finally {
     seat.stop();
+  }
+});
+
+test("the frame fills the terminal exactly, at 160x48, 124x40 and 80x24, with the input row at the foot (AGT-69)", async () => {
+  for (const [columns, rows] of [[160, 48], [124, 40], [80, 24]] as const) {
+    const { seat, stdout } = await frameAt(columns, rows);
+    try {
+      const frame = stdout.last.split("\n");
+      assert.equal(frame.length, rows, `${columns}x${rows}:\n${stdout.last}`);
+      assert.ok(frame.every((r) => [...r].length <= columns), `${columns}x${rows}:\n${stdout.last}`);
+      assert.ok(frame.at(-1)!.startsWith(">"), `${columns}x${rows}: ${frame.at(-1)}`);
+      assert.ok(frame[0].includes("Round 5") && frame[0].includes("/help"), frame[0]);
+    } finally {
+      seat.stop();
+    }
   }
 });
 
