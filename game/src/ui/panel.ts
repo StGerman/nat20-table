@@ -211,7 +211,6 @@ function budgetRow(b: TurnBudget): Row {
   ];
 }
 
-/** A row as plain text, for tests and the screen-reader view. */
 /**
  * The action card (AGT-70): the lit option's name and what it costs, then what it does wrapped to
  * `width`. Only words: no odds, no numbers the engine hasn't shown (Rule 4).
@@ -221,6 +220,7 @@ export function cardRows(label: string, cost: string | undefined, text: string, 
   return [head, ...wrapText(text, width, 0).split("\n").map((row) => [{ text: row }])];
 }
 
+/** A row as plain text, for tests and the screen-reader view. */
 export function rowText(row: Row): string {
   return row.map((span) => span.text).join("").trimEnd();
 }
