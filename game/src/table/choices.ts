@@ -67,8 +67,12 @@ function byDistance(targets: TargetCandidate[]): TargetCandidate[] {
   return [...targets].sort((a, b) => a.distance_ft - b.distance_ft || a.handle.localeCompare(b.handle));
 }
 
+/**
+ * A target as an option names it (AGT-47 C3): its handle, and `(walk)` when the human walks to it
+ * first. The side and the feet are the panel's, said once there.
+ */
 function targetLabel(t: TargetCandidate): string {
-  return `${t.handle} (${t.side}, ${Math.round(t.distance_ft)} ft${t.in_range ? "" : ", walks first"})`;
+  return `${t.handle}${t.in_range ? "" : " (walk)"}`;
 }
 
 function targetItems(option: ActionOption, targets: TargetCandidate[], variant?: string): Item[] {

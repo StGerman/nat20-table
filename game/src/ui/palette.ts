@@ -1,6 +1,6 @@
 // Colour for the terminal seat, from the Mill Table design tokens in `game/theme/mill-table.json`
 // (M10 U2, AGT-65): each accent owns one meaning, and the base stays the terminal's own ink. rust
-// is action and danger (your turn, bloodied, down), teal recovery, violet magic and conditions,
+// is action and danger (your turn, down), teal recovery, violet magic and conditions,
 // gold the sacred and the found; hint is secondary text. With 16 colours (the default) the accents
 // are the terminal's own red, cyan, magenta and yellow, so the user's theme decides the shade; a
 // truecolour terminal gets Mill's hex values for a dark ground (Night) or, with NAT20_THEME=day, a
@@ -55,7 +55,7 @@ const FALLBACK: Theme = {
   },
   states: {
     unhurt: { word_en: "unhurt", word_ru: "цел" },
-    bloodied: { accent: "rust", word_en: "bloodied", word_ru: "ранен" },
+    bloodied: { word_en: "bloodied", word_ru: "ранен" },
     down: { accent: "rust", word_en: "down", word_ru: "выбыл" },
   },
 };
