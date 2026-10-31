@@ -189,6 +189,7 @@ The resolver refuses an unknown key, a value outside its allowed set, and a mode
 | `time_limit` | A 120-minute timer calls `table.end()`. The loop checks between decisions, so a wake in flight finishes or times out first (at most 45 s over, a player's combat turn) | FAIL, criterion 1 |
 | `stalled` | 12 explore rounds in a row with no engine event besides turn and round bookkeeping (no check, move, scene load or fight). `--stall-rounds` overrides it | FAIL, criterion 1 ("a stuck scene") |
 | `usage_limit` | `UsageLimitReached` (exists) | VOID |
+| `login` | `LoginExpired`: a model turn's result says the Claude login is missing or expired. The message names the fix (run `claude` to sign in) | VOID |
 | `offline` | A new error class, raised when 3 model wakes in a row fail with a connection error. It stops the run the way `UsageLimitReached` does | VOID |
 | `operator` | Ctrl+C | VOID |
 | `crash` | The engine stopped, or the loop threw | FAIL |

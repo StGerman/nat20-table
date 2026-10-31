@@ -3,7 +3,7 @@
 // decides who is woken next. Agents act only through their bound tools and the human only through
 // the seat; every number the human picks becomes a complete command with no model call (D5).
 import { EngineStopped, type Event, type Handle, type State } from "@nat20-table/engine-client";
-import { ConnectionLost, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
+import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
@@ -185,14 +185,16 @@ function waitingLine(carried: ReadonlyMap<Handle, readonly Handle[]>): string[] 
   return [`Still waiting for the floor: ${who.join("; ")}. They speak first in the next round.`];
 }
 
-/** A plan limit, a lost network or a dead engine stops the run; nothing falls back (spec §6). */
+/** A plan limit, an expired login, a lost network or a dead engine stops the run; nothing falls back (spec §6). */
 function stopsTheRun(error: unknown): error is Error {
-  return error instanceof UsageLimitReached || error instanceof EngineStopped || error instanceof ModelOffline;
+  return error instanceof UsageLimitReached || error instanceof LoginExpired || error instanceof EngineStopped || error instanceof ModelOffline;
 }
 
 /** Which stop an error that stops the run is (M7 design §3.1). */
 function stopOf(error: Error): StopKind {
-  return error instanceof UsageLimitReached ? "usage_limit" : error instanceof ModelOffline ? "offline" : "crash";
+  if (error instanceof UsageLimitReached) return "usage_limit";
+  if (error instanceof LoginExpired) return "login";
+  return error instanceof ModelOffline ? "offline" : "crash";
 }
 
 /**
