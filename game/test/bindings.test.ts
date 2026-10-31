@@ -234,3 +234,23 @@ test("the DM's load of a scene the run passes over loads the next played scene, 
     t.close();
   }
 });
+
+test("a narration after load_scene in the same wake is refused, not counted as a retry; the next wake narrates (M10 P1)", async () => {
+  const t = await testTable({ seed: 27 });
+  try {
+    const dm = new DmTools(t.table);
+    assert.equal((await dm.loadScene("m5_s3_yard")).ok, true);
+    dm.startWake();
+    assert.equal((await dm.narrate("You walk down to the mill.")).ok, true);
+    assert.equal(dm.lastLine, "You walk down to the mill.");
+    assert.equal((await dm.loadScene("m5_s3_yard")).ok, true);
+    const twice = await dm.narrate("The yard opens before you.");
+    assert.equal(twice.ok, false);
+    assert.equal(twice.text, "not now: the next scene is loaded; its opening comes with your next wake");
+    assert.equal(t.table.retries("dm"), 0);
+    dm.startWake();
+    assert.equal((await dm.narrate("The yard opens before you.")).ok, true);
+  } finally {
+    t.close();
+  }
+});

@@ -435,6 +435,10 @@ export class DmTools {
   private readonly restedIn = new Set<string>();
   /** Scenes whose missed rest the DM has been reminded of: once each. */
   private readonly reminded = new Set<string>();
+  /** A scene loaded in the wake running: its opening is the next wake's, so no narration follows it (M10 P1). */
+  private loadedThisWake = false;
+  /** The DM's last line to the whole table, for the next scene's opening to continue from (M10 P1). */
+  lastLine: string | undefined;
 
   constructor(table: TableState, passes?: ScenePasses) {
     this.table = table;
@@ -444,6 +448,11 @@ export class DmTools {
   /** The human's character, or undefined at a table with no human (AGT-40): who decides a surrender. */
   get human(): Handle | undefined {
     return this.table.human;
+  }
+
+  /** A DM wake begins: what the wake before it loaded no longer holds its narration back. */
+  startWake(): void {
+    this.loadedThisWake = false;
   }
 
   private async sceneHandles(): Promise<Handle[]> {
@@ -482,7 +491,10 @@ export class DmTools {
       (r) => (r.result?.cmd === "load_scene" ? formatDmState(r.result.state) : "loaded"),
       () => this.restReminder(),
     );
-    if (loaded.ok) this.loaded = instead ?? scene_id;
+    if (loaded.ok) {
+      this.loaded = instead ?? scene_id;
+      this.loadedThisWake = true;
+    }
     if (!instead || !loaded.ok) return loaded;
     this.passes!.passedOver(scene_id, instead);
     return {
@@ -681,8 +693,12 @@ export class DmTools {
     return { ok: true, text: `${actor} may take one action now` };
   }
 
-  narrate(text: string, to?: string): Promise<ToolOutcome> {
-    return this.table.narrate(text, to);
+  async narrate(text: string, to?: string): Promise<ToolOutcome> {
+    // Runs 18-45 and 17-35 opened 4 of 5 scenes twice: once after load_scene, once on scene_open.
+    if (this.loadedThisWake) return notNow("the next scene is loaded; its opening comes with your next wake");
+    const said = await this.table.narrate(text, to);
+    if (said.ok && !to) this.lastLine = text;
+    return said;
   }
 
   askHuman(question: string): Promise<ToolOutcome> {
