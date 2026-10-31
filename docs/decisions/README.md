@@ -62,6 +62,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0051](0051-m7-closed-for-now.md) | Milestone 7 closes for now on the accepted all-AI run and Stas's recorded run, one build apart; the same-build pair of 0043 waits for friends-and-family testing | Accepted | 2026-10-30 | Stas (Milestone 7 implementation thread) |
 | [0053](0053-wake-settles-on-tool.md) | A model wake ends for the table at its settling tool (`narrate` for the DM's narrations), and the SDK turn drains in the background | Accepted | 2026-10-31 | Stas (Milestone 10 system design, /goal) |
 | [0052](0052-one-repo.md) | nat20-table stays one repo, the Rust engine and the TypeScript game together; a Rust/TypeScript split is rejected | Accepted | 2026-10-31 | Stas (Milestone 10 spec thread) |
+| [0054](0054-full-screen-seat.md) | The human's terminal seat runs full screen: the alternate screen, one frame of five zones, the story with its own scroll; supersedes the inline model (panel proposal C10, table #189) | Accepted | 2026-10-31 | Stas (decision card on the screens doc, TUI design thread) |
 
 ## Open questions to watch
 

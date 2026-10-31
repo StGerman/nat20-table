@@ -19,7 +19,7 @@ export interface PanelSize {
   rows: number;
 }
 
-/** Below this many terminal rows, or this many columns, the panel is its bar alone. */
+/** Below this many terminal rows, or this many columns, the panel is its bar alone, and the full-screen frame is too small (frame.ts). */
 export const FOLD_ROWS = 16;
 export const FOLD_COLUMNS = 40;
 /**
@@ -27,23 +27,8 @@ export const FOLD_COLUMNS = 40;
  * input line keep to a reading measure of at most this many columns however wide the terminal is.
  */
 export const TEXT_COLUMNS = 72;
-/** From this many columns the situation pane stands right of the text column instead of above it. */
+/** From this many columns the side panel stands right of the story instead of folding above the action zone (frame.ts). */
 export const SIDE_PANE_COLUMNS = 124;
-/** Columns between the text column and the side pane. */
-const PANE_GAP = 4;
-
-/** Where the screen puts things for a terminal size: the text column's width, and the side pane's when there is one. */
-export interface ScreenLayout {
-  text: number;
-  side?: number;
-}
-
-export function screenLayout(size: PanelSize): ScreenLayout {
-  const text = Math.min(size.columns, TEXT_COLUMNS);
-  if (size.columns < SIDE_PANE_COLUMNS) return { text };
-  return { text, side: size.columns - text - PANE_GAP };
-}
-
 /**
  * The turn-order glyphs to draw (M10 P7, AGT-67): the pack's, unless NO_COLOR asks for plain text
  * or the locale doesn't say UTF-8, where an emoji could come out as a box or a wrong width.
@@ -68,13 +53,21 @@ const words = (id: string) => titled(id.replace(/[_.]/g, " "));
  * The situation block: a bar, then (in a fight, room permitting) your line, the creatures you
  * perceive grouped by side, and the fallen. It takes at most a third of the terminal's rows.
  */
-export function situationRows(situation: Situation, size: PanelSize, options: { folded?: boolean; stale?: boolean; glyphs?: Record<string, string> } = {}): Row[] {
+export function situationRows(
+  situation: Situation,
+  size: PanelSize,
+  options: { folded?: boolean; stale?: boolean; glyphs?: Record<string, string>; pane?: boolean } = {},
+): Row[] {
   const rows = [bar(situation, options.stale, options.glyphs)];
-  const fold = options.folded || size.rows < FOLD_ROWS || size.columns < FOLD_COLUMNS || situation.mode === "explore";
+  // The full-screen side pane (AGT-69) has the whole height: out of a fight it shows you and the
+  // party too, and nothing caps it at a third of the rows.
+  const pane = options.pane === true;
+  const fold = options.folded || size.rows < FOLD_ROWS || size.columns < FOLD_COLUMNS || (situation.mode === "explore" && !pane);
   if (fold) return rows;
   rows.push(meRow(situation));
-  const cap = Math.max(3, Math.floor(size.rows / 3));
-  const downRow = situation.down.length > 0 ? 1 : 0;
+  const cap = pane ? size.rows : Math.max(3, Math.floor(size.rows / 3));
+  // Out of a fight the fallen foes aren't news (the doc's «Конец боя»): only a fight lists them.
+  const downRow = situation.down.length > 0 && situation.mode === "combat" ? 1 : 0;
   const room = cap - rows.length - downRow;
   const narrow = size.columns < NARROW_COLUMNS;
   const shown = situation.creatures.length > room ? situation.creatures.slice(0, Math.max(0, room - 1)) : situation.creatures;
@@ -86,7 +79,7 @@ export function situationRows(situation: Situation, size: PanelSize, options: { 
   for (const creature of shown) {
     const label = creature.side === side ? "" : SIDE_LABEL[creature.side];
     side = creature.side;
-    rows.push(creatureRow(creature, label, widths));
+    rows.push(creatureRow(creature, label, widths, situation.mode === "combat"));
   }
   const hidden = situation.creatures.length - shown.length;
   if (hidden > 0) rows.push([{ text: `       +${hidden} more · /where`, style: muted }]);
@@ -141,13 +134,13 @@ function meRow(s: Situation): Row {
   return row;
 }
 
-function creatureRow(c: SituationCreature, label: string, widths: { handle: number; name: number }): Row {
+function creatureRow(c: SituationCreature, label: string, widths: { handle: number; name: number }, fight = true): Row {
   const row: Row = [{ text: label.padEnd(7), style: muted }, { text: c.handle.padEnd(widths.handle + 2) }];
   if (widths.name > 0) row.push({ text: (hasOwnName(c) ? c.name : "").padEnd(widths.name + 2), style: muted });
-  row.push(health(c.health, 9));
-  // Distance keeps its column; conditions go last, where a narrow terminal cuts them first. `down`
-  // already says unconscious.
-  row.push({ text: `${String(c.distance_ft).padStart(3)} ft` });
+  row.push(health(c.health, fight ? 9 : 0));
+  // Distance keeps its column, in a fight only; conditions go last, where a narrow terminal cuts
+  // them first. `down` already says unconscious.
+  if (fight) row.push({ text: `${String(c.distance_ft).padStart(3)} ft` });
   if (c.in_reach) row.push({ text: "  in reach", style: { bold: true } });
   const conditions = c.health === "down" ? c.conditions.filter((condition) => condition !== "unconscious") : c.conditions;
   conditions.forEach((condition, i) => row.push({ text: i === 0 ? "  " : " · " }, { text: condition, style: magic }));
@@ -165,24 +158,16 @@ function join(groups: Span[][]): Span[] {
 }
 
 /**
- * The turn block: what is left of the turn as the header, then the numbered options, in two
- * columns when they fit.
+ * The turn block: what is left of the turn as the header, then the numbered options, one to a
+ * row (the full-screen action zone, AGT-69, scrolls them when they don't fit: frame.ts).
  */
-export function turnRows(lines: string[], size: PanelSize, budget?: TurnBudget, title?: string, lit?: number): Row[] {
+export function turnRows(lines: string[], budget?: TurnBudget, title?: string, lit?: number): Row[] {
   const rows: Row[] = [];
   if (budget) rows.push(budgetRow(budget));
   if (title) rows.push([{ text: `${title}:`, style: { bold: true } }]);
   // The option a typed number names is lit (M10 P6, AGT-48).
-  const span = (text: string, line: string): Span => (lit !== undefined && line.startsWith(`${lit}. `) ? { text, style: { accent: "rust", bold: true } } : { text });
-  const half = Math.floor((size.columns - 2) / 2);
-  const twoColumns = lines.length > 3 && lines.every((line) => line.length < half - 1);
-  if (!twoColumns) return [...rows, ...lines.map((text) => [span(text, text)])];
-  const down = Math.ceil(lines.length / 2);
-  for (let i = 0; i < down; i++) {
-    const right = lines[i + down];
-    rows.push([span(right ? lines[i].padEnd(half) : lines[i], lines[i]), ...(right ? [span(right, right)] : [])]);
-  }
-  return rows;
+  const span = (text: string): Span => (lit !== undefined && text.startsWith(`${lit}. `) ? { text, style: { accent: "rust", bold: true } } : { text });
+  return [...rows, ...lines.map((text) => [span(text)])];
 }
 
 function budgetRow(b: TurnBudget): Row {
