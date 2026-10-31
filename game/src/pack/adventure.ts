@@ -127,6 +127,12 @@ export const Adventure = z
     lore: z.array(packPath).default([]).describe("Setting text the DM reads, possibly shared with other packs (paths may leave the pack)."),
     party: z.array(PartyMember).min(1).describe("The party, in seat order. The first scene's file places them."),
     npcs: z.array(Npc).default([]),
+    glyphs: z
+      .record(z.string().min(1), z.string().min(1))
+      .default({})
+      .describe(
+        "One glyph per creature kind for the turn-order line of the human's panel (M10 P7, AGT-67), keyed by a party handle or by a creature's kind as the panel names it (\"Goblin Warrior\"). Each is one grapheme, such as one emoji. The bar shows it in front of the handle; the roster never does.",
+      ),
     scenes: z.array(Scene).min(1).describe("In play order; the first places the party, every later one carries it in."),
   })
   .describe("A scenario pack's skeleton (M6 spec §4). DM-only, like the prose and scene files.");

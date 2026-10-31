@@ -37,6 +37,11 @@
             "creatures": [{ "scene": "s5_mill_cellar", "handle": "boss" }]
         }
     ],
+    "glyphs": {
+        "_comment": "Turn-order glyphs for the human's panel (AGT-67): party members by handle, monsters by kind.",
+        "bren": "🪖", "torva": "🪓", "maren": "📿", "ilsa": "🔮",
+        "Goblin Warrior": "👺", "Goblin Boss": "👹", "Wolf": "🐺", "Giant Rat": "🐀"
+    },
     "scenes": [
         {
             "id": "s1_village_green",

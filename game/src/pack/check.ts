@@ -126,6 +126,12 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     if (member.name_ru && !(member.names ?? []).includes(member.name_ru)) problem(`party ${member.handle}: name_ru ${member.name_ru} is not among its names`);
   }
 
+  // A turn-order glyph is one grapheme (AGT-67), so it can't push the bar's text around by more than one cell's drift.
+  const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  for (const [key, glyph] of Object.entries(adventure.glyphs).filter(([key]) => key !== "_comment")) {
+    if ([...graphemes.segment(glyph)].length !== 1) problem(`glyphs ${key}: ${JSON.stringify(glyph)} is not one glyph`);
+  }
+
   // Every id it names.
   const sceneIdList = adventure.scenes.map((s) => s.id);
   for (const [what, list] of [

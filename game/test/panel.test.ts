@@ -15,7 +15,7 @@ import type { TableEvent } from "../src/table/types.ts";
 import { InkSeat, SPINNER, waitText } from "../src/ui/ink-seat.ts";
 import { TONE_STYLE } from "../src/ui/lines.ts";
 import { loadTheme, paletteFor, THEME_FILE, themeProblems } from "../src/ui/palette.ts";
-import { rowText, screenLayout, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
+import { glyphsFor, rowText, screenLayout, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
 import type { LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
 
@@ -442,4 +442,19 @@ test("the hint is the input row's placeholder, and a typed number lights its opt
   } finally {
     seat.stop();
   }
+});
+
+test("the turn-order line puts the pack's glyph before each handle, by handle or kind, and only when the terminal can draw it (AGT-67)", () => {
+  const glyphs = { bren: "🪖", ilsa: "🔮", "Goblin Warrior": "👺" };
+  const theirs = situationOf(yard(), "goblin_4")!;
+  assert.equal(rowText(situationRows(theirs, { columns: 80, rows: 24 }, { glyphs })[0]), "Round 5 · 👺 goblin_4's turn · you are up in 5");
+  const mine = situationOf(yard(), "bren", listing)!;
+  const bar = rowText(situationRows(mine, { columns: 80, rows: 24 }, { glyphs })[0]);
+  assert.equal(bar, "Round 5 · ▶ 🪖 your turn · next 👺 goblin_4, 🔮 ilsa, 👺 goblin_3");
+  // The roster rows never carry one.
+  assert.ok(situationRows(mine, { columns: 80, rows: 24 }, { glyphs }).slice(1).every((r) => !/[🪖🔮👺]/u.test(rowText(r))));
+  assert.equal(glyphsFor({ LANG: "en_US.UTF-8" }, glyphs), glyphs);
+  assert.equal(glyphsFor({ LANG: "en_US.UTF-8", NO_COLOR: "1" }, glyphs), undefined);
+  assert.equal(glyphsFor({ LANG: "C" }, glyphs), undefined);
+  assert.equal(glyphsFor({ LC_ALL: "ru_RU.utf8" }, {}), undefined);
 });

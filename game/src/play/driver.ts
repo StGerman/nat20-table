@@ -36,6 +36,7 @@ import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat } from "../table/types.ts";
 import { InkSeat } from "../ui/ink-seat.ts";
+import { glyphsFor } from "../ui/panel.ts";
 import { pickCharacter } from "../ui/pick.ts";
 import { usageBlock, UsageLog } from "../usage.ts";
 import { ModelJudge, ScriptedJudge } from "../check/judge.ts";
@@ -147,7 +148,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // (before the table is set, it exits). The keyboard seat draws from here, so the engine's start
   // shows its loading indicator too.
   let quit: () => void = () => process.exit(130);
-  const ink = flags.seat === "ink" && party.human ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose }) : undefined;
+  const ink = flags.seat === "ink" && party.human ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs) }) : undefined;
   // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame.
   ink?.start({ interactive: true });
   ink?.busy("The engine is starting");
