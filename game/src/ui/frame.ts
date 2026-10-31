@@ -1,7 +1,7 @@
 // The full-screen frame of the human's seat (AGT-69, decision 0054, Claude Doc «Экраны терминала»):
 // after the pick the seat owns the terminal's alternate screen and draws one frame in five zones,
-// a header row, the story at the 72-column measure with its own scroll, the side panel for the
-// rest of the width, the action zone under the story, and the input row. Pure, so the layout is
+// a header row, the story with its own scroll (the 72-column measure, or near the golden share of a
+// wide terminal, decision 0055), the side panel for the rest of the width, the action zone under the story, and the input row. Pure, so the layout is
 // tested without Ink: these functions say what goes on each row; ink-seat.ts only draws the rows.
 import { wrapText, TONE_STYLE, type Line, type Style } from "./lines.ts";
 import { FOLD_COLUMNS, FOLD_ROWS, SIDE_PANE_COLUMNS, TEXT_COLUMNS, type PanelSize, type Row } from "./panel.ts";
@@ -16,12 +16,14 @@ export type FrameMode = "wide" | "narrow" | "tiny";
 
 export interface FrameLayout {
   mode: FrameMode;
-  /** The story's width: the reading measure, or the terminal's width when that is narrower. */
+  /** The story's width: the reading measure (or the terminal's width when narrower); wide, the golden share. */
   story: number;
   /** The side panel's width, in the wide frame only. */
   side?: number;
 }
 
+/** The story's share of the wide frame's width; the side panel takes the rest (decision 0055). */
+export const GOLDEN = 0.618;
 /** Columns between the story and the side panel: a space, the thin rule, a space. */
 export const RULE_COLUMNS = 3;
 /** Rows the narrow frame gives the folded panel: its bar and your own line. */
@@ -31,9 +33,12 @@ export const MIN_STORY_ROWS = 3;
 
 export function frameLayout(size: PanelSize): FrameLayout {
   if (size.columns < FOLD_COLUMNS || size.rows < FOLD_ROWS) return { mode: "tiny", story: size.columns };
-  const story = Math.min(size.columns, TEXT_COLUMNS);
-  if (size.columns < SIDE_PANE_COLUMNS) return { mode: "narrow", story };
-  return { mode: "wide", story, side: size.columns - story - RULE_COLUMNS };
+  if (size.columns < SIDE_PANE_COLUMNS) return { mode: "narrow", story: Math.min(size.columns, TEXT_COLUMNS) };
+  // Wide, the story and the panel split the width near the golden ratio (decision 0055): the story
+  // takes the larger part and never less than the 72-column measure, the panel the rest.
+  const shared = size.columns - RULE_COLUMNS;
+  const story = Math.max(TEXT_COLUMNS, Math.round(shared * GOLDEN));
+  return { mode: "wide", story, side: shared - story };
 }
 
 /** One row of the story as drawn: its text, its look, and the line it belongs to (`-1` for the preview). */

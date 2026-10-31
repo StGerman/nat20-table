@@ -16,7 +16,7 @@ import type { TableEvent } from "../src/table/types.ts";
 import { InkSeat, SPINNER, waitText } from "../src/ui/ink-seat.ts";
 import { TONE_STYLE } from "../src/ui/lines.ts";
 import { loadTheme, paletteFor, THEME, THEME_FILE, themeProblems } from "../src/ui/palette.ts";
-import { frameLayout, RULE_COLUMNS } from "../src/ui/frame.ts";
+import { frameLayout, GOLDEN, RULE_COLUMNS } from "../src/ui/frame.ts";
 import { foldedRows, glyphsFor, rowText, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
 import type { LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
@@ -392,8 +392,15 @@ test("the story keeps to a 72-column measure; from 124 columns the side panel ta
   assert.deepEqual(frameLayout({ columns: 60, rows: 24 }), { mode: "narrow", story: 60 });
   assert.deepEqual(frameLayout({ columns: 80, rows: 24 }), { mode: "narrow", story: TEXT_COLUMNS });
   assert.deepEqual(frameLayout({ columns: SIDE_PANE_COLUMNS - 1, rows: 40 }), { mode: "narrow", story: TEXT_COLUMNS });
-  assert.deepEqual(frameLayout({ columns: SIDE_PANE_COLUMNS, rows: 40 }), { mode: "wide", story: TEXT_COLUMNS, side: SIDE_PANE_COLUMNS - TEXT_COLUMNS - RULE_COLUMNS });
-  assert.deepEqual(frameLayout({ columns: 160, rows: 50 }), { mode: "wide", story: TEXT_COLUMNS, side: 85 });
+  // Wide, the story takes near the golden share of the width, never under the measure (decision 0055).
+  assert.deepEqual(frameLayout({ columns: SIDE_PANE_COLUMNS, rows: 40 }), { mode: "wide", story: 75, side: 46 });
+  assert.deepEqual(frameLayout({ columns: 160, rows: 50 }), { mode: "wide", story: 97, side: 60 });
+  assert.deepEqual(frameLayout({ columns: 200, rows: 50 }), { mode: "wide", story: 122, side: 75 });
+  for (const columns of [124, 160, 200, 240]) {
+    const { story, side } = frameLayout({ columns, rows: 40 });
+    assert.equal(story + side! + RULE_COLUMNS, columns);
+    assert.ok(story >= TEXT_COLUMNS && Math.abs(story / (story + side!) - GOLDEN) < 0.01, `${columns}: ${story}/${side}`);
+  }
   assert.equal(frameLayout({ columns: 39, rows: 30 }).mode, "tiny");
   assert.equal(frameLayout({ columns: 80, rows: 15 }).mode, "tiny");
 });
@@ -417,20 +424,21 @@ async function frameAt(columns: number, rows: number, options = ["1. Longsword a
   return { seat, stdout };
 }
 
-test("at 160 columns the narration wraps at 72 and the side panel stands right of it at full height, past a thin rule", async () => {
+test("at 160 columns the narration takes the golden share and the side panel stands right of it at full height, past a thin rule", async () => {
   const { seat, stdout } = await frameAt(160, 50);
   try {
+    const story = frameLayout({ columns: 160, rows: 50 }).story;
     const rows = stdout.last.split("\n");
     const narration = rows.filter((r) => /yard smells|goblins circle|waiting for someone/.test(r));
-    assert.ok(narration.length >= 2 && narration.every((r) => r.slice(0, TEXT_COLUMNS + 1).trimEnd().length <= TEXT_COLUMNS), narration.join("\n"));
-    // The panel's rows start right of the measure and the rule; the whole roster fits, Down line too.
+    assert.ok(narration.length >= 2 && narration.every((r) => r.slice(0, story + 1).trimEnd().length <= story), narration.join("\n"));
+    // The panel's rows start right of the story and the rule; the whole roster fits, Fallen line too.
     const bar = rows.find((r) => r.includes("Round 5 · ▶ your turn"))!;
-    assert.equal(bar.indexOf("Round 5"), TEXT_COLUMNS + RULE_COLUMNS, bar);
+    assert.equal(bar.indexOf("Round 5"), story + RULE_COLUMNS, bar);
     assert.ok(rows.some((r) => r.includes("Fallen goblin_1, goblin_2, wolf_3")), stdout.last);
     // The rule runs the body's height, one row under the header to the foot.
-    assert.ok(rows.slice(1).every((r) => r.charAt(TEXT_COLUMNS + 1) === "│"), stdout.last);
+    assert.ok(rows.slice(1).every((r) => r.charAt(story + 1) === "│"), stdout.last);
     // The turn block stays in the story column.
-    assert.ok(rows.find((r) => r.includes("Action used"))!.indexOf("Action used") < TEXT_COLUMNS, stdout.last);
+    assert.ok(rows.find((r) => r.includes("Action used"))!.indexOf("Action used") < story, stdout.last);
   } finally {
     seat.stop();
   }
