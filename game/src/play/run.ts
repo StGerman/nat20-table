@@ -102,6 +102,8 @@ export interface RosterEntry {
   level: number;
   /** The first line of the card's Goal. */
   goal: string;
+  /** The first sentence of the card's opening paragraph: who they are, without numbers (the pick screen's card). */
+  about: string;
 }
 
 /**
@@ -117,13 +119,11 @@ export function partyRoster(pack: string, pregens = process.env.NAT20_PREGENS_DI
     const card = p.card ? readFileSync(path.resolve(pack, p.card), "utf8") : "";
     const sheet = sheets.get(p.handle);
     const goal = /^## Goal\s*\n+([^\n]+)/m.exec(card)?.[1].trim() ?? "";
-    return { handle: p.handle, name: cardName(p.handle, card), species: sheet ? named(sheet.species) : "", class: sheet ? named(sheet.class) : "", level: sheet?.level ?? 0, goal };
+    // The opening paragraph's first sentence: the rest of it speaks to an AI player, not to the human picking.
+    const opening = /^# [^\n]*\n+([^#\n][^\n]*)/m.exec(card)?.[1].trim() ?? "";
+    const about = /^.*?[.!?](?=\s|$)/.exec(opening)?.[0] ?? opening;
+    return { handle: p.handle, name: cardName(p.handle, card), species: sheet ? named(sheet.species) : "", class: sheet ? named(sheet.class) : "", level: sheet?.level ?? 0, goal, about };
   });
-}
-
-/** The pick list as the terminal prints it: one numbered line per character. */
-export function rosterLines(roster: RosterEntry[], fallback?: Handle): string[] {
-  return roster.map((r, i) => `${i + 1}. ${r.name}: ${[r.species, r.class].filter(Boolean).join(" ")}, level ${r.level}${r.handle === fallback ? " (the default)" : ""}. ${r.goal}`);
 }
 
 /** The guards every live run puts on free text (spec §3.5): the DM's against the pack's ids. */
