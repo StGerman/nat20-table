@@ -453,6 +453,8 @@ export class TableLoop {
     this.passedSince = [];
     // The opening continues from the DM's last words on the way here (M10 P1), not from scratch.
     const last = first ? undefined : this.dmTools.lastLine;
+    // Read once: a scene loaded with no line on the way must not carry an older scene's words.
+    this.dmTools.lastLine = undefined;
     await this.wakeDm(
       "scene_open",
       undefined,
