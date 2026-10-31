@@ -14,8 +14,8 @@ import { rowText, turnRows } from "../src/ui/panel.ts";
 
 class FakeStdout extends EventEmitter {
   readonly frames: string[] = [];
-  readonly columns: number;
-  readonly rows: number;
+  columns: number;
+  rows: number;
   constructor(columns: number, rows: number) {
     super();
     this.columns = columns;
@@ -203,6 +203,29 @@ test("/sheet and the other commands' answers stand over the story: Esc closes, P
     stdin.press("\u001b");
     await until("closed", () => stdout.last.includes("mill wheel") && stdout.last.includes("Look at the sluice."));
     assert.equal(seat.getView().draft, "x", "Esc closed the overlay and left the line");
+  } finally {
+    seat.stop();
+  }
+});
+
+test("an overlay read to its foot and then given a bigger window fills it, instead of sliding past its last row", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    void seat.ask({ kind: "explore" });
+    seat.show({ kind: "info", title: "Sheet", text: Array.from({ length: 40 }, (_, i) => `row ${i}`).join("\n") });
+    await until("the overlay", () => /^row 0$/m.test(stdout.last));
+    const shown = () => (stdout.last.match(/^row \d+$/gm) ?? []).length;
+    const small = shown();
+    for (let i = 0; i < 3 && !/^row 39$/m.test(stdout.last); i++) {
+      const before = stdout.frames.length;
+      stdin.press("\u001b[6~");
+      await until("a page", () => stdout.frames.length > before);
+    }
+    await until("the foot", () => /^row 39$/m.test(stdout.last));
+    stdout.rows = 40;
+    stdout.emit("resize");
+    await until("the bigger window", () => shown() > small && /^row 39$/m.test(stdout.last));
   } finally {
     seat.stop();
   }

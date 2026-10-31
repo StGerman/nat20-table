@@ -249,6 +249,11 @@ test("on an 80x24 terminal the seat draws the panel and the turn block above the
     seat.closeOverlay(true);
     await until("closed", () => !stdout.last.includes("Foes   goblin_3"));
     assert.ok(stdout.last.includes("Round 5 · goblin_4's turn"));
+    // The end of the run closes the /panel overlay too, so the end line is read in the story.
+    seat.type("/panel\r");
+    await until("open again", () => stdout.last.includes("Panel · Esc closes"));
+    seat.show({ kind: "end", text: "The run is over." });
+    await until("the end line", () => !stdout.last.includes("Panel · Esc closes") && stdout.last.includes("The run is over."));
   } finally {
     seat.stop();
   }
