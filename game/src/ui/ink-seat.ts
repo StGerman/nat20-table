@@ -268,7 +268,8 @@ export class InkSeat implements Seat {
       case "end":
         // The end of the run is read in the story, whatever was open over it.
         this.release();
-        this.update({ overlay: undefined, reaction: undefined, question: undefined });
+        // The narrow frame's /panel overlay is `folded`, so it closes too; a wide frame's folded pane opens again.
+        this.update({ overlay: undefined, folded: false, reaction: undefined, question: undefined });
         break;
     }
     if (speakerOf(event) !== undefined) this.message(event);
@@ -416,6 +417,9 @@ export class InkSeat implements Seat {
       overlay: undefined,
       busy: undefined,
       preview: undefined,
+      // A line typed while the table was busy goes: the input row now says any key leaves.
+      draft: "",
+      cursor: 0,
     });
     answer?.({ kind: "command", name: "quit" });
   }
@@ -637,7 +641,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const size: PanelSize = useWindowSize();
   const [scroll, setScroll] = useState<Scroll | undefined>(undefined);
   // How far down the open overlay is read, from its top; a new overlay starts at its top.
-  const [overlayTop, setOverlayTop] = useState(0);
+  const [overlayRead, setOverlayTop] = useState(0);
   useEffect(() => setOverlayTop(0), [view.overlay, view.folded]);
   const [cache] = useState(() => new Map<number, { width: number; rows: string[] }>());
   // The header's minutes move on their own while nothing else draws.
@@ -698,6 +702,9 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
       : undefined;
   const overlayRoom = Math.max(1, storyH - 1);
   const overlayMax = overlayRows ? Math.max(0, overlayRows.length - overlayRoom) : 0;
+  // A bigger window shows more of the overlay at once: the offset read near the foot of a small one
+  // is clamped, so the overlay never slides past its last row.
+  const overlayTop = Math.min(overlayRead, overlayMax);
 
   useInput((input, key) => {
     // The end screen: any key, Ctrl+C too, gives the terminal back; the checks go on.

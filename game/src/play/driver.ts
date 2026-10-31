@@ -310,10 +310,11 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const checks = [...(flags["no-audit"] ? [] : [CHECK_AUDIT, CHECK_NARRATION]), CHECK_REPORT, ...(flags["no-upload"] && !flags.zip ? [] : [CHECK_UPLOAD])];
   ink?.finish(endScreen(endedText, stop), checks);
   void ink?.left.then(() => ink.stop());
+  // A breath for the screen to draw a step before work that blocks the event loop (the audit, the report, the upload).
+  const breath = () => (ink ? new Promise((resolve) => setTimeout(resolve, 30)) : Promise.resolve());
   const checking = async <T>(name: string, work: () => T | Promise<T>): Promise<T> => {
     ink?.check(name, "running");
-    // A breath for the screen to draw the step: the audit and the upload block the event loop.
-    if (ink) await new Promise((resolve) => setTimeout(resolve, 30));
+    await breath();
     try {
       const result = await work();
       ink?.check(name, "done");
@@ -339,6 +340,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // The narration check (AGT-9): a run with a scripted DM has nothing a model judge should read.
   const narration = flags["no-audit"] ? undefined : await checking(CHECK_NARRATION, () => narrationCheck(flags.pack, runDir, flags.dm === "model" ? new ModelJudge() : new ScriptedJudge()));
   ink?.check(CHECK_REPORT, "running");
+  await breath();
 
   const report = [
     `# ${play.command} run, ${new Date().toISOString()}`,

@@ -14,8 +14,8 @@ import { rowText, turnRows } from "../src/ui/panel.ts";
 
 class FakeStdout extends EventEmitter {
   readonly frames: string[] = [];
-  readonly columns: number;
-  readonly rows: number;
+  columns: number;
+  rows: number;
   constructor(columns: number, rows: number) {
     super();
     this.columns = columns;
@@ -208,6 +208,29 @@ test("/sheet and the other commands' answers stand over the story: Esc closes, P
   }
 });
 
+test("an overlay read to its foot and then given a bigger window fills it, instead of sliding past its last row", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    void seat.ask({ kind: "explore" });
+    seat.show({ kind: "info", title: "Sheet", text: Array.from({ length: 40 }, (_, i) => `row ${i}`).join("\n") });
+    await until("the overlay", () => /^row 0$/m.test(stdout.last));
+    const shown = () => (stdout.last.match(/^row \d+$/gm) ?? []).length;
+    const small = shown();
+    for (let i = 0; i < 3 && !/^row 39$/m.test(stdout.last); i++) {
+      const before = stdout.frames.length;
+      stdin.press("\u001b[6~");
+      await until("a page", () => stdout.frames.length > before);
+    }
+    await until("the foot", () => /^row 39$/m.test(stdout.last));
+    stdout.rows = 40;
+    stdout.emit("resize");
+    await until("the bigger window", () => shown() > small && /^row 39$/m.test(stdout.last));
+  } finally {
+    seat.stop();
+  }
+});
+
 test("a reaction, the DM's question, a refusal and the pause stand in the action zone until they are settled", async () => {
   const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
   const { stdout } = startAt(seat, 80, 24);
@@ -273,7 +296,10 @@ test("at the end the table stays with the checks ticking in the action zone, and
     seat.show({ kind: "narration", speaker: "dm", text: "The mill falls quiet." });
     seat.show({ kind: "options", lines: ["1. Longsword attack → goblin_3", "2. End turn"], choices: [], budget: { action: 1, bonus_action: 1, reaction: 1, movement_ft: 30, speed_ft: 30 } });
     const open = seat.ask({ kind: "combat_turn" });
+    // A line half typed when the run ends goes, so the input row says any key leaves.
+    seat.type("attack the");
     seat.finish(endScreen("the party reached the end", undefined), ["Audit", "Report and verdict"]);
+    assert.equal(seat.getView().draft, "", "the half-typed line goes");
     assert.deepEqual(await open, { kind: "command", name: "quit" }, "a prompt still open is let go");
     seat.check("Audit", "running");
     await until("the end screen", () => stdout.last.includes("The run is over: the party reached the end") && stdout.last.includes("… Audit") && stdout.last.includes("Any key leaves"));
