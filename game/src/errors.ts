@@ -23,7 +23,7 @@ export class LoginExpired extends Error {
 }
 
 /** What the SDK says when no call can be made for want of a login. */
-export const LOGIN_FAILURE = /authenticat|oauth|not logged in|\/login|401|invalid api key/i;
+export const LOGIN_FAILURE = /authenticat|oauth|not logged in|\/login|\b401\b|invalid api key/i;
 
 /** A turn ran past its timeout and was interrupted. */
 export class TurnTimeout extends Error {}
