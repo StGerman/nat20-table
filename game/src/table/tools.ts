@@ -695,10 +695,13 @@ export class DmTools {
 
   async narrate(text: string, to?: string): Promise<ToolOutcome> {
     // Runs 18-45 and 17-35 opened 4 of 5 scenes twice: once after load_scene, once on scene_open.
-    if (this.loadedThisWake) return notNow("the next scene is loaded; its opening comes with your next wake");
-    const said = await this.table.narrate(text, to);
-    if (said.ok && !to) this.lastLine = text;
-    return said;
+    // In the DM's turn, after every change it started: a load_scene sent in parallel lands first.
+    return this.table.oneAtATime("dm", async () => {
+      if (this.loadedThisWake) return notNow("the next scene is loaded; its opening comes with your next wake");
+      const said = await this.table.narrate(text, to);
+      if (said.ok && !to) this.lastLine = text;
+      return said;
+    });
   }
 
   askHuman(question: string): Promise<ToolOutcome> {

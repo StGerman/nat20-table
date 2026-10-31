@@ -250,6 +250,10 @@ test("a narration after load_scene in the same wake is refused, not counted as a
     assert.equal(t.table.retries("dm"), 0);
     dm.startWake();
     assert.equal((await dm.narrate("The yard opens before you.")).ok, true);
+    // Sent in parallel, load_scene first: the narration waits for the load and is refused.
+    dm.startWake();
+    const [, parallel] = await Promise.all([dm.loadScene("m5_s3_yard"), dm.narrate("The yard opens again.")]);
+    assert.equal(parallel.ok, false, parallel.text);
   } finally {
     t.close();
   }
