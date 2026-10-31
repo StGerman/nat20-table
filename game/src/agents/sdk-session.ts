@@ -50,8 +50,12 @@ export function seatTool<Shape extends ZodRawShape>(
   return tool(name, description, input, handler as never) as unknown as SeatTool;
 }
 
-/** A tool's answer: text for the model, flagged as an error when the call was refused. */
-export type CallToolResult = { content: Array<{ type: "text"; text: string }>; isError?: boolean };
+/**
+ * A tool's answer: text for the model, flagged as an error when the call was refused. `_meta.settles_as`
+ * names the tool a call counts as for `settleOn` (M10 S3: a `submit_decision` that also ended the turn
+ * settles as `end_turn`).
+ */
+export type CallToolResult = { content: Array<{ type: "text"; text: string }>; isError?: boolean; _meta?: { settles_as?: string } };
 
 /** A text answer for a tool call. */
 export function reply(text: string, isError = false): CallToolResult {
@@ -337,7 +341,7 @@ export class AgentSession {
         const started = performance.now();
         try {
           const result = (await handler(args as never, extra as never)) as CallToolResult;
-          if (turn && !result.isError && this.config.settleOn?.[turn.purpose]?.includes(tool.name)) this.settleEarly(turn);
+          if (turn && !result.isError && this.config.settleOn?.[turn.purpose]?.includes(result._meta?.settles_as ?? tool.name)) this.settleEarly(turn);
           return result;
         } finally {
           const call = turn && (turn === this.pending || turn === this.draining) ? turn.timeline.at(-1) : undefined;
