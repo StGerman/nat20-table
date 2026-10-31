@@ -454,7 +454,10 @@ export class AgentSession {
         // Results come in order, so any timed-out turn before this one has finished by now.
         this.stale = 0;
         if (message.subtype !== "success" || message.is_error) {
-          this.settle(new Error(`${this.config.agent}: turn failed (${message.subtype})`));
+          // A failed turn says why: the SDK's own text for an errored success (a usage limit, a
+          // login), or its error list for any other result.
+          const why = (message.subtype === "success" ? message.result : message.errors.join("; ")).trim();
+          this.settle(new Error(`${this.config.agent}: turn failed (${message.subtype}${why ? `: ${why}` : ""})`));
           return;
         }
         const usage = this.record(turn, "ok", message.ttft_ms ?? null);

@@ -144,6 +144,15 @@ test("a turn that ends with its result is recorded as ok", async () => {
   await s.close();
 });
 
+test("a failed turn says why: the SDK's text for an errored success, its error list otherwise", async () => {
+  const { session: a } = session((m) => [{ type: "result", subtype: "success", is_error: true, result: "Not logged in · Please run /login", user_message_uuid: m.uuid }]);
+  await assert.rejects(a.turn("go", "combat_turn"), /maren: turn failed \(success: Not logged in · Please run \/login\)/);
+  await a.close();
+  const { session: b } = session((m) => [{ type: "result", subtype: "error_during_execution", is_error: true, errors: ["overloaded"], user_message_uuid: m.uuid }]);
+  await assert.rejects(b.turn("go", "combat_turn"), /maren: turn failed \(error_during_execution: overloaded\)/);
+  await b.close();
+});
+
 test("a turn stopped at the plan's limit is recorded with the tokens it spent", async () => {
   const { session: s, usage } = session(() => [call("a1", 100, 5), { type: "rate_limit_event", rate_limit_info: { status: "rejected" } }]);
   await assert.rejects(s.turn("go", "combat_turn"), UsageLimitReached);
