@@ -33,9 +33,12 @@ export function pickKey(roster: RosterEntry[], state: PickState, key: PickKey): 
   }
 }
 
-/** The list's rows: a cursor on the highlighted one, the default marked. */
+/** The list's rows: a cursor on the highlighted one, the names padded so what they are lines up, the default marked. */
 export function pickRows(roster: RosterEntry[], at: number, fallback: Handle): string[] {
-  return roster.map((r, i) => `${i === at ? "❯" : " "} ${i + 1}. ${r.name}  ${[r.species, r.class].filter(Boolean).join(" ")} ${r.level}${r.handle === fallback ? " · default" : ""}`);
+  const names = Math.max(...roster.map((r) => [...r.name].length));
+  return roster.map(
+    (r, i) => `${i === at ? "❯" : " "} ${i + 1}. ${r.name.padEnd(names)}  ${[r.species, r.class].filter(Boolean).join(" ")} ${r.level}${r.handle === fallback ? " · default" : ""}`,
+  );
 }
 
 /** The card's rows at `width`: name, what they are, the card's opening line, and the goal. No sheet numbers. */
@@ -48,7 +51,10 @@ export function cardRows(entry: RosterEntry, width: number): string[] {
 
 /** Below this many columns the card goes under the list instead of beside it. */
 const SIDE_BY_SIDE = 80;
-const LIST_COLUMNS = 34;
+/** The card beside the list keeps at least this many columns. */
+const CARD_MIN = 36;
+/** The list is as wide as its longest row, so nothing is cut, as long as the card keeps its room. */
+const listColumns = (rows: string[], columns: number) => Math.min(Math.max(...rows.map((row) => [...row].length)), columns - 3 - CARD_MIN);
 
 export function PickScreen({ roster, fallback, title, palette, onPick }: { roster: RosterEntry[]; fallback: Handle; title?: string; palette: Palette; onPick: (handle: Handle) => void }) {
   const size: PanelSize = useWindowSize();
@@ -68,8 +74,10 @@ export function PickScreen({ roster, fallback, title, palette, onPick }: { roste
   });
   const hint = textProps({ accent: "hint" }, palette);
   const wide = size.columns >= SIDE_BY_SIDE;
-  const cardWidth = Math.min(72, wide ? size.columns - LIST_COLUMNS - 3 : size.columns);
-  const list = pickRows(roster, state.at, fallback).map((row, i) =>
+  const rows = pickRows(roster, state.at, fallback);
+  const listWidth = listColumns(rows, size.columns);
+  const cardWidth = Math.min(72, wide ? size.columns - listWidth - 3 : size.columns);
+  const list = rows.map((row, i) =>
     h(Text, { key: `l${i}`, wrap: "truncate-end", ...(i === state.at ? textProps({ accent: "rust", bold: true }, palette) : {}) }, row),
   );
   const card = cardRows(roster[state.at], cardWidth).map((row, i) => h(Text, { key: `c${i}`, wrap: "truncate-end", ...(i === 0 ? { bold: true } : row === "Goal" ? hint : {}) }, row || " "));
@@ -82,7 +90,7 @@ export function PickScreen({ roster, fallback, title, palette, onPick }: { roste
       ? h(
           Box,
           { key: "body", flexDirection: "row", flexGrow: 1 },
-          h(Box, { key: "list", flexDirection: "column", width: LIST_COLUMNS, flexShrink: 0 }, ...list),
+          h(Box, { key: "list", flexDirection: "column", width: listWidth, flexShrink: 0 }, ...list),
           h(Box, { key: "rule", width: 3, flexShrink: 0 }),
           h(Box, { key: "card", flexDirection: "column", width: cardWidth, flexShrink: 0 }, ...card),
         )

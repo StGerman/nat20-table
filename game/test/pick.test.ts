@@ -64,10 +64,10 @@ async function until(what: string, ready: () => boolean, ms = 3000): Promise<voi
 test("the pick list shows each character's name, species, class and level, the default marked; the card adds who they are and the goal", () => {
   const roster = partyRoster(MILL);
   assert.deepEqual(pickRows(roster, 0, "bren"), [
-    "❯ 1. Bren  Human Fighter 2 · default",
+    "❯ 1. Bren   Human Fighter 2 · default",
     "  2. Torva  Human Barbarian 2",
     "  3. Maren  Human Cleric 2",
-    "  4. Ilsa  Dragonborn Wizard 2",
+    "  4. Ilsa   Dragonborn Wizard 2",
   ]);
   const bren = cardRows(roster[0], 72);
   assert.deepEqual(bren.slice(0, 3), ["Bren", "Human Fighter, level 2", ""]);
@@ -118,6 +118,20 @@ test("on a terminal the pick screen picks with keys, Enter at once keeps the def
       seat.stop();
     }
   }
+});
+
+test("at 80 columns the list beside the card shows every row whole, its columns lined up", async () => {
+  const stdin = new FakeStdin();
+  const stdout = new FakeStdout(80, 24);
+  const render = { stdin: stdin as unknown as NodeJS.ReadStream, stdout: stdout as unknown as NodeJS.WriteStream, stderr: new FakeStdout(80, 24) as unknown as NodeJS.WriteStream, debug: true, patchConsole: false };
+  const picking = pickOnScreen(partyRoster(MILL), "bren", { palette: paletteFor({ NO_COLOR: "1" }), render });
+  await until("the pick screen", () => stdout.last.includes("Who do you play?"));
+  assert.ok(stdout.last.includes("❯ 1. Bren   Human Fighter 2 · default"), stdout.last);
+  assert.ok(stdout.last.includes("  4. Ilsa   Dragonborn Wizard 2"), stdout.last);
+  assert.ok(!stdout.last.includes("…"), stdout.last);
+  stdin.press("\r");
+  const { instance } = await picking;
+  instance.unmount();
 });
 
 test("casting the human on a character makes the other three AI players, in the pack's order", () => {
