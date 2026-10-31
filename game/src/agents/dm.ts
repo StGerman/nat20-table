@@ -29,6 +29,13 @@ export const DM_TURN_TIMEOUT_MS = 12_000;
 export const DM_LONG_WAKE_TIMEOUT_MS = 30_000;
 const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary"];
 
+/**
+ * The wakes a successful `narrate` ends for the loop (M10 S2, decision 0053): the model's closing
+ * call drains in the background. Not `scene_open`, `table_turn` or `summary`, which go on with
+ * tools after narrating (`load_scene`, `request_check`, `short_rest`).
+ */
+export const DM_SETTLE_ON: Partial<Record<DmWake, readonly string[]>> = { narrate: ["narrate"], combat_over: ["narrate"] };
+
 /** The DM's craft guidance (D10): our own text, one skill per file, for the DM session only. */
 export const CRAFT_PLUGIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../dm-craft");
 
@@ -228,6 +235,7 @@ export class ModelDm implements DmAgent {
       tools: this.seatTools,
       ...(craft === "skills" ? { plugins: [CRAFT_PLUGIN], skills: craftSkills().map((s) => `${CRAFT_NAME}:${s.name}`) } : {}),
       usage: this.config.usage,
+      settleOn: DM_SETTLE_ON,
       turnTimeoutMs: this.config.turnTimeoutMs ?? DM_TURN_TIMEOUT_MS,
       ...(this.config.turnTimeoutMs === undefined ? { turnTimeoutsMs: Object.fromEntries(DM_LONG_WAKES.map((w) => [w, DM_LONG_WAKE_TIMEOUT_MS])) } : {}),
     };
@@ -251,6 +259,8 @@ export class ModelDm implements DmAgent {
   private async bound(use: (tools: DmTools) => ToolOutcome | Promise<ToolOutcome>): Promise<CallToolResult> {
     const tools = this.current;
     if (!tools) return reply("not now: nothing is waiting on you", true);
+    // A call from a turn that timed out, or that its narration already ended (M10 S2), must not act in the wake after it.
+    if (this.session?.settling) return reply("not now: that wake is over", true);
     const outcome = await use(tools);
     return reply(outcome.text, !outcome.ok);
   }

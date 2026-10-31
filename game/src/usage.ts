@@ -21,15 +21,22 @@ export interface UsageRecord {
    * Tokens are what the turn's API calls reported until then; calls that answer after a timeout
    * are not counted.
    */
-  outcome: "ok" | "timeout" | "cancelled" | "failed" | "limit";
+  outcome: "ok" | "timeout" | "cancelled" | "failed" | "limit" | "drained";
   input_tokens: number;
   cache_read_tokens: number;
   cache_write_tokens: number;
   output_tokens: number;
   /** API calls the turn made (each tool round trip is one). */
   api_calls: number;
-  /** Time from sending the message to the turn's result. */
+  /** Time from sending the message to the turn's result (for a settled-early turn, to the end of its drain). */
   wall_ms: number;
+  /**
+   * A settling tool ended the turn for the caller before the SDK's result (M10 S2, decision 0053);
+   * `outcome` `drained` when the drain was cut at the turn's limit instead of ending.
+   */
+  settled_early?: boolean;
+  /** For a settled-early turn: how long the table waited, from sending the message to the settling tool. */
+  waited_ms?: number;
   /** Time to the first token of the first API call, when the SDK reports it. */
   ttft_ms: number | null;
   /** API list price of the tokens above, in US dollars (reference only, decision 0036). */
@@ -128,6 +135,11 @@ export class UsageLog {
   }
 }
 
+/** How long the table waited on a turn: to its settling tool when it settled early, else to its end (M10 S2). */
+export function waitedMs(record: UsageRecord): number {
+  return record.waited_ms ?? record.wall_ms;
+}
+
 /** The nearest-rank percentile of a list of numbers; NaN for an empty list. */
 export function percentile(values: number[], p: number): number {
   if (values.length === 0) return Number.NaN;
@@ -155,8 +167,8 @@ export function summarize(records: UsageRecord[]): Array<{
     return {
       agent,
       turns: mine.length,
-      p50_ms: percentile(mine.map((r) => r.wall_ms), 50),
-      p95_ms: percentile(mine.map((r) => r.wall_ms), 95),
+      p50_ms: percentile(mine.map(waitedMs), 50),
+      p95_ms: percentile(mine.map(waitedMs), 95),
       input_tokens: sum((r) => r.input_tokens),
       cache_read_tokens: sum((r) => r.cache_read_tokens),
       cache_write_tokens: sum((r) => r.cache_write_tokens),

@@ -76,6 +76,13 @@ export interface SessionConfig {
   turnTimeoutMs?: number;
   /** A longer or shorter limit for turns of some purposes, in place of `turnTimeoutMs`. */
   turnTimeoutsMs?: Partial<Record<string, number>>;
+  /**
+   * Per wake purpose, the tools whose successful call ends the turn for the caller (M10 S2,
+   * decision 0053): `turn()` resolves at once, and the SDK turn drains in the background, its
+   * closing call never counted as a timeout. The usage record is written when the drain ends,
+   * with every token.
+   */
+  settleOn?: Partial<Record<string, readonly string[]>>;
   /** The SDK's `query`; a test passes a scripted stand-in, so no model is called. */
   query?: typeof query;
 }
@@ -147,6 +154,8 @@ interface PendingTurn {
   resolve: (result: TurnResult) => void;
   reject: (error: Error) => void;
   timer: NodeJS.Timeout | undefined;
+  /** When a settling tool ended the turn for the caller (M10 S2); the SDK turn drains after it. */
+  settledAt?: number;
 }
 
 /** One API call of a turn as the session saw it (M10 S1). Times are `performance.now()`. */
@@ -207,6 +216,8 @@ export class AgentSession {
   private failure: Error | undefined;
   /** Results still to come for turns that timed out; they belong to no turn. */
   private stale = 0;
+  /** A turn a settling tool ended for the caller, whose SDK turn still runs (M10 S2). */
+  private draining: PendingTurn | undefined;
   /** The SDK's `init` message: the tools, skills and credential source the session really got. */
   init: SDKSystemMessage | undefined;
   /** The seat's tools as the SDK runs them: each timed toward the turn that called it (M10 S1). */
@@ -218,7 +229,7 @@ export class AgentSession {
    * calls come only after that result, which the session reads first.
    */
   get settling(): boolean {
-    return this.stale > 0;
+    return this.stale > 0 || this.draining !== undefined;
   }
 
   constructor(config: SessionConfig) {
@@ -233,6 +244,7 @@ export class AgentSession {
   turn(message: string, purpose: string): Promise<TurnResult> {
     if (this.failure) return Promise.reject(this.failure);
     if (this.pending) return Promise.reject(new Error(`${this.config.agent}: a turn is already running`));
+    // A turn still draining (M10 S2) runs on in the SDK before this one; the new turn's clock starts now.
     this.turns += 1;
     return new Promise<TurnResult>((resolve, reject) => {
       const pending: PendingTurn = {
@@ -252,7 +264,7 @@ export class AgentSession {
       };
       const limit = this.config.turnTimeoutsMs?.[purpose] ?? this.config.turnTimeoutMs;
       if (limit) {
-        pending.timer = setTimeout(() => this.interrupt(new TurnTimeout(`${this.config.agent}: turn timed out after ${limit} ms`)), limit);
+        pending.timer = setTimeout(() => this.timeOut(pending, limit), limit);
       }
       this.pending = pending;
       this.inbox.push({
@@ -272,6 +284,38 @@ export class AgentSession {
     if (this.pending) this.interrupt(new TurnCancelled(`${this.config.agent}: turn cancelled`));
   }
 
+  /**
+   * A turn's limit passed. A turn in flight times out; a draining one (already settled for the
+   * caller, M10 S2) is cut and recorded as drained: the caller never waited on it.
+   */
+  private timeOut(turn: PendingTurn, limit: number): void {
+    if (turn === this.pending) this.interrupt(new TurnTimeout(`${this.config.agent}: turn timed out after ${limit} ms`));
+    else if (turn === this.draining) {
+      this.stale += 1;
+      void this.query.interrupt().catch(() => undefined);
+      this.drained("drained", null);
+    }
+  }
+
+  /** A settling tool succeeded in the turn in flight (M10 S2): the caller has its answer now. */
+  private settleEarly(turn: PendingTurn): void {
+    if (turn !== this.pending) return;
+    this.pending = undefined;
+    this.draining = turn;
+    turn.settledAt = performance.now();
+    const text = turn.texts.join("\n").trim();
+    turn.resolve({ text, final: turn.texts.at(-1)?.trim() ?? "", usage: this.recordOf(turn, "ok", null) });
+  }
+
+  /** The draining turn's SDK turn ended (or was cut): its usage record, with every token. */
+  private drained(outcome: UsageRecord["outcome"], ttft: number | null): void {
+    const turn = this.draining;
+    if (!turn) return;
+    this.draining = undefined;
+    if (turn.timer) clearTimeout(turn.timer);
+    this.config.usage?.add(this.recordOf(turn, outcome, ttft));
+  }
+
   /** Ends the turn in flight with `error`; its result, still to come, belongs to no turn. */
   private interrupt(error: TurnTimeout): void {
     this.stale += 1;
@@ -289,12 +333,14 @@ export class AgentSession {
       ...tool,
       handler: async (args: unknown, extra: unknown) => {
         // A tool call of a turn that timed out belongs to no turn's timing.
-        const turn = this.stale === 0 ? this.pending : undefined;
+        const turn = this.stale === 0 ? (this.draining ?? this.pending) : undefined;
         const started = performance.now();
         try {
-          return await handler(args as never, extra as never);
+          const result = (await handler(args as never, extra as never)) as CallToolResult;
+          if (turn && !result.isError && this.config.settleOn?.[turn.purpose]?.includes(tool.name)) this.settleEarly(turn);
+          return result;
         } finally {
-          const call = turn && turn === this.pending ? turn.timeline.at(-1) : undefined;
+          const call = turn && (turn === this.pending || turn === this.draining) ? turn.timeline.at(-1) : undefined;
           if (call) {
             const now = performance.now();
             call.toolMs += now - started;
@@ -321,7 +367,8 @@ export class AgentSession {
   }
 
   private handle(message: SDKMessage): void {
-    const turn = this.pending;
+    // Claude Code runs one turn at a time: until a draining turn's result, every message is its.
+    const turn = this.draining ?? this.pending;
     switch (message.type) {
       case "system":
         if (message.subtype === "init") this.init = message;
@@ -367,6 +414,10 @@ export class AgentSession {
         // A result for a turn that timed out belongs to no turn. The SDK names the message a
         // result answers when it can; otherwise the count of timed-out turns decides.
         const echoed = message.user_message_uuid;
+        if (this.draining && (echoed ? echoed === this.draining.uuid : this.stale === 0)) {
+          this.drained(message.subtype === "success" && !message.is_error ? "ok" : "failed", message.subtype === "success" ? (message.ttft_ms ?? null) : null);
+          return;
+        }
         if (echoed ? echoed !== turn?.uuid : this.stale > 0) {
           if (this.stale > 0) this.stale -= 1;
           return;
@@ -393,6 +444,13 @@ export class AgentSession {
    * token and every slow turn.
    */
   private record(turn: PendingTurn, outcome: UsageRecord["outcome"], ttft: number | null): UsageRecord {
+    const usage = this.recordOf(turn, outcome, ttft);
+    this.config.usage?.add(usage);
+    return usage;
+  }
+
+  /** The turn's usage record as it stands, not yet written. */
+  private recordOf(turn: PendingTurn, outcome: UsageRecord["outcome"], ttft: number | null): UsageRecord {
     const tokens = [...turn.calls.values()].reduce(
       (sum, call) => ({
         input: sum.input + call.input,
@@ -429,9 +487,9 @@ export class AgentSession {
       tools: turn.tools,
       calls,
       tool_ms: Math.round(turn.timeline.reduce((sum, call) => sum + call.toolMs, 0)),
+      ...(turn.settledAt !== undefined ? { settled_early: true, waited_ms: Math.round(turn.settledAt - turn.sentAt) } : {}),
       at: new Date().toISOString(),
     };
-    this.config.usage?.add(usage);
     return usage;
   }
 
@@ -451,6 +509,7 @@ export class AgentSession {
 
   private fail(error: Error): void {
     this.failure ??= error;
+    this.drained("drained", null);
     this.settle(error);
   }
 }
