@@ -1,6 +1,7 @@
 // The full-screen frame (AGT-69, decision 0054): the story's own scroll and its «↓ N new» marker,
 // the action zone's scrolling options, the header, and the seat drawn on fake terminals: PgUp and
-// End, a scene's divider and number, the run's own line in the story, and a window too small.
+// End, a scene's divider and number, the run's own line in the story, a window too small, the
+// overlays (/sheet, /help), and what stands in the action zone (reaction, question, refusal, pause).
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
@@ -175,6 +176,79 @@ test("under 40 columns or 16 rows the frame is one line asking for a bigger wind
     assert.ok(!stdout.last.includes("mill wheel"), stdout.last);
     stdin.press("look\r");
     assert.deepEqual(await asked, { kind: "text", text: "look" });
+  } finally {
+    seat.stop();
+  }
+});
+
+test("/sheet and the other commands' answers stand over the story: Esc closes, PgDn reads on, lines under it are counted", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    seat.show({ kind: "narration", speaker: "dm", text: "The mill wheel turns." });
+    void seat.ask({ kind: "explore" });
+    const sheet = Array.from({ length: 40 }, (_, i) => `row ${i}`).join("\n");
+    seat.show({ kind: "info", title: "Sheet", text: sheet });
+    await until("the overlay", () => stdout.last.includes("Sheet · Esc closes · PgUp/PgDn") && /^row 0$/m.test(stdout.last));
+    assert.ok(!stdout.last.includes("mill wheel"), "the overlay covers the story");
+    assert.ok(!seat.getView().lines.some((l) => l.text.includes("row 0")), "and the story doesn't keep it");
+    stdin.press("\u001b[6~");
+    await until("read on", () => !/^row 0$/m.test(stdout.last) && /^row 19$/m.test(stdout.last));
+    seat.show({ kind: "speech", speaker: "ilsa", text: "Look at the sluice." });
+    await until("the count", () => stdout.last.includes("↓ 1 new"));
+    // Typing still goes to the input row with the overlay open.
+    stdin.press("x");
+    await until("the typed key", () => stdout.last.includes("> x"));
+    stdin.press("\u001b");
+    await until("closed", () => stdout.last.includes("mill wheel") && stdout.last.includes("Look at the sluice."));
+    assert.equal(seat.getView().draft, "x", "Esc closed the overlay and left the line");
+  } finally {
+    seat.stop();
+  }
+});
+
+test("a reaction, the DM's question, a refusal and the pause stand in the action zone until they are settled", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
+  const { stdout } = startAt(seat, 80, 24);
+  const zone = () => stdout.last.split("\n").slice(-6).join("\n");
+  try {
+    seat.show({ kind: "reaction", summary: "goblin_1 leaves your reach.", options: ["Opportunity Attack"] });
+    const reacted = seat.ask({ kind: "reaction" });
+    await until("the reaction", () => zone().includes("Reaction: goblin_1 leaves your reach.") && zone().includes("1. Opportunity Attack"));
+    seat.type("y\r");
+    assert.deepEqual(await reacted, { kind: "reaction", take: true });
+    await until("the reaction gone", () => !stdout.last.includes("leaves your reach"));
+
+    seat.show({ kind: "question", text: "Who do you trust here?" });
+    const answered = seat.ask({ kind: "answer" });
+    await until("the question", () => zone().includes("DM asks you: Who do you trust here?"));
+    seat.type("Wenna\r");
+    assert.deepEqual(await answered, { kind: "text", text: "Wenna" });
+    await until("the question settled", () => seat.getView().question === undefined && stdout.last.split("\n").filter((r) => r.includes("DM asks you")).length === 1);
+    // It stays in the story, where it was asked.
+    assert.ok(seat.getView().lines.some((l) => l.text === "DM asks you: Who do you trust here?"));
+
+    seat.show({ kind: "info", title: "Not accepted", text: "goblin_3 is out of reach." });
+    const again = seat.ask({ kind: "combat_turn" });
+    await until("the refusal", () => zone().includes("Not accepted: goblin_3 is out of reach."));
+    assert.ok(!seat.getView().lines.some((l) => l.text.includes("out of reach")), "the refusal is not in the story");
+    seat.type("2\r");
+    await again;
+    await until("the refusal gone", () => !stdout.last.includes("Not accepted"));
+
+    void seat.ask({ kind: "paused" });
+    await until("the pause", () => zone().includes("Paused: the AI players wait. /pause to go on.") && stdout.last.split("\n")[0].includes("Paused"));
+  } finally {
+    seat.stop();
+  }
+});
+
+test("/help lists the commands and the keys over the story", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
+  const { stdout } = startAt(seat, 124, 40);
+  try {
+    seat.type("/help\r");
+    await until("help", () => stdout.last.includes("Help · Esc closes") && stdout.last.includes("PgUp/PgDn  scroll the story, or this") && stdout.last.includes("/sheet  your character sheet"));
   } finally {
     seat.stop();
   }

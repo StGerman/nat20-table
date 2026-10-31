@@ -215,7 +215,9 @@ test("the human's own lines, and any no narration covered before a decision, sho
   // So does a decision.
   goblinTurn(seat);
   seat.show({ kind: "reaction", summary: "goblin_1 leaves your reach.", options: ["Opportunity Attack"] });
-  assert.deepEqual(texts().slice(-4), ["  goblin_1's turn.", "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss.", "Reaction: goblin_1 leaves your reach.", "  1. Opportunity Attack"]);
+  assert.deepEqual(texts().slice(-2), ["  goblin_1's turn.", "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss."]);
+  // The reaction itself stands in the action zone until it is answered (AGT-69), not in the story.
+  assert.equal(seat.getView().reaction?.summary, "goblin_1 leaves your reach.");
   goblinTurn(seat);
   void seat.ask({ kind: "explore" });
   assert.equal(texts().at(-1), "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss.");
@@ -248,7 +250,8 @@ test("the seat answers a prompt with what was typed, queues commands typed while
   // /help is answered here and doesn't answer the prompt.
   const reaction = seat.ask({ kind: "reaction" });
   seat.type("/help\r");
-  assert.ok(seat.getView().lines.some((l) => l.text === "  /pause  AI players wait until you type /pause again"));
+  assert.ok(seat.getView().overlay?.text.split("\n").includes("  /pause  AI players wait until you type /pause again"));
+  assert.ok(!seat.getView().lines.some((l) => l.text.includes("/pause  AI players wait")), "help stands over the story, not in it");
   seat.type("да\r");
   assert.deepEqual(await reaction, { kind: "reaction", take: true });
   // Ctrl+C: the table is told to end, the open prompt gets /quit, and so does every later one.
@@ -287,7 +290,11 @@ test("on the real loop, the terminal seat plays Bren's commands, and its engine 
   const typed = ["/sheet", "/where", "/log", "1", "/quit"];
   // One answer per open prompt: the loop asks again (with the same prompt) after each command.
   let answering = false;
+  // The commands' answers stand over the story (AGT-69): keep each one shown.
+  const overlays: Array<{ title: string; text: string }> = [];
   const unsubscribe = seat.subscribe(() => {
+    const overlay = seat.getView().overlay;
+    if (overlay && overlays.at(-1) !== overlay) overlays.push(overlay);
     const prompt = seat.getView().prompt;
     if (!prompt) answering = false;
     if (!prompt || answering || typed.length === 0) return;
@@ -301,14 +308,16 @@ test("on the real loop, the terminal seat plays Bren's commands, and its engine 
     const report = await new TableLoop({ table: t.table, dm: yardDm(), players, maxSteps: 500 }).run("m5_s3_yard");
     assert.equal(report.ended, "the human quit");
     const lines = seat.getView().lines.map((l) => l.text);
-    for (const title of ["Sheet:", "Where:", "Log:"]) assert.ok(lines.includes(title), `${title} is shown`);
+    assert.deepEqual(overlays.map((o) => o.title), ["Sheet", "Where", "Log"]);
     assert.ok(lines.includes("> 1"), "an option number was played");
-    assert.ok(lines.some((l) => /^ {2}\[r\d+\] /.test(l)), "rolls are inline with their ids");
+    assert.match(overlays.find((o) => o.title === "Log")!.text, /\[r\d+\] /, "rolls are inline with their ids");
     assert.ok(lines.includes("The run is over: the human quit"));
     // Engine lines are the human's projection: no other creature's AC, no DC, no roll target.
     for (const line of seat.getView().lines.filter((l) => l.tone === "engine")) {
       assert.doesNotMatch(line.text, /\bAC\b|\bDC\b|\bagainst\b/, line.text);
     }
+    // So is the log the /log overlay showed.
+    assert.doesNotMatch(overlays.find((o) => o.title === "Log")!.text, /\bDC\b|\bagainst\b/);
     await until("the last frame", () => stdout.last.includes("The run is over: the human quit"));
   } finally {
     unsubscribe();

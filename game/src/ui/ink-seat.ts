@@ -11,7 +11,9 @@
 // on the row, not in the story. The situation panel stands right of the story from 124 columns,
 // and folds to two rows above the action zone below that. The loop answers the slash commands
 // (`/sheet`, `/where`, `/options`, `/log`, `/usage`, `/pause`, `/quit`); `/help` and `/panel` are
-// answered here. Written with `createElement`, not JSX, so the game still runs as plain `.ts`
+// answered here. The answers to /sheet, /where, /log, /usage and /help stand over the story as
+// overlays, and a reaction, the DM's question, a refusal and the pause stand in the action zone
+// until they are settled (AGT-69 step 2). Written with `createElement`, not JSX, so the game still runs as plain `.ts`
 // with no build step.
 import type { Handle } from "@nat20-table/engine-client";
 import { Box, render, Text, useInput, useWindowSize, type Instance, type RenderOptions } from "ink";
@@ -22,7 +24,7 @@ import { edit, editFor, EMPTY, type Edit } from "./editor.ts";
 import { COMMAND_HELP, promptHint, readLine } from "./input.ts";
 import { actionRows, frameLayout, freshText, headerText, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, storyRows, storyWindow, type Scroll } from "./frame.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
-import { paletteFor, type Palette } from "./palette.ts";
+import { paletteFor, type Palette, type Style } from "./palette.ts";
 import { endsTurn, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
 
 /** The numbered options held above the prompt while they are the human's to pick from. */
@@ -44,8 +46,23 @@ export interface SeatView {
   /** The last situation the loop sent; `stale` once a refresh failed. */
   situation?: Situation;
   stale?: boolean;
-  /** `/panel` folds the situation block to its bar. */
+  /**
+   * `/panel`: on a wide frame it folds the side panel to its bar; on a narrow one it opens the
+   * whole panel as an overlay over the story (AGT-69), which Esc closes.
+   */
   folded?: boolean;
+  /**
+   * A command's answer (/sheet, /where, /log, /usage, /help) laid over the story instead of
+   * printed into it (AGT-69); `at` is how many story lines there were when it opened, so lines
+   * that arrive under it are counted. Esc closes it.
+   */
+  overlay?: { title: string; text: string; at: number };
+  /** A reaction the engine offers, in the action zone until it is answered (screen 7). */
+  reaction?: Extract<TableEvent, { kind: "reaction" }>;
+  /** The DM's question, kept above the input until it is answered (screen 8). */
+  question?: string;
+  /** Why the engine refused the last decision, above the options until the next one (AGT-69). */
+  refusal?: string;
   options?: PinnedOptions;
   /** Who the table waits on while it isn't asking the human, and since when (ms). */
   busy?: { on: string; since: number };
@@ -209,10 +226,30 @@ export class InkSeat implements Seat {
         this.release();
         return;
       }
-      case "question":
+      case "info":
+        // A command's answer stands over the story; a refusal stands over the options.
+        if (OVERLAYS.has(event.title)) {
+          this.update({ overlay: { title: event.title, text: event.text, at: this.view.lines.length } });
+          return;
+        }
+        if (event.title === "Not accepted") {
+          this.update({ refusal: event.text });
+          return;
+        }
+        break;
       case "reaction":
-      case "end":
+        // The fight stands still until the human answers: the action zone holds it, not the story.
         this.release();
+        this.update({ reaction: event });
+        return;
+      case "question":
+        this.release();
+        this.update({ question: event.text });
+        break;
+      case "end":
+        // The end of the run is read in the story, whatever was open over it.
+        this.release();
+        this.update({ overlay: undefined, reaction: undefined, question: undefined });
         break;
     }
     if (speakerOf(event) !== undefined) this.message(event);
@@ -315,21 +352,19 @@ export class InkSeat implements Seat {
     this.update({ ...EMPTY_ROW, notice: undefined });
     switch (typed.kind) {
       case "panel":
-        this.update({ folded: !this.view.folded });
-        this.add([{ tone: "status", text: this.view.folded ? "— panel folded; /panel opens it" : "— panel open" }]);
+        this.update({ folded: !this.view.folded, overlay: undefined });
         return;
       case "help":
-        this.add([
-          { tone: "prompt", text: `> ${draft.trim()}` },
-          { tone: "info", text: "Commands:" },
-          ...Object.entries(COMMAND_HELP).map(([name, what]) => ({ tone: "info" as const, text: `  /${name}  ${what}` })),
-        ]);
+        this.update({ overlay: { title: "Help", text: helpText(), at: this.view.lines.length } });
         return;
       case "intent": {
         this.add([{ tone: "prompt", text: `> ${draft.trim()}` }]);
         const answer = this.answer;
         if (answer) {
           this.answer = undefined;
+          // What the answer settles leaves the action zone; a command leaves it standing.
+          // A move or words also close an overlay, so the story shows what they lead to.
+          if (typed.intent.kind !== "command") this.update({ reaction: undefined, question: undefined, refusal: undefined, overlay: undefined });
           // Out of combat a pick or words answer the options; in a fight they stay until the turn ends.
           const done = this.view.options && !this.view.options.budget && this.view.prompt?.kind !== "pick" && (typed.intent.kind === "option" || typed.intent.kind === "text");
           this.update({ prompt: undefined, ...(done ? { options: undefined } : {}) });
@@ -340,6 +375,19 @@ export class InkSeat implements Seat {
         }
       }
     }
+  }
+
+  /** Esc: closes an overlay (a command's answer, or the narrow frame's whole panel); false when none was open. */
+  closeOverlay(narrow: boolean): boolean {
+    if (this.view.overlay) {
+      this.update({ overlay: undefined });
+      return true;
+    }
+    if (narrow && this.view.folded) {
+      this.update({ folded: false });
+      return true;
+    }
+    return false;
   }
 
   /** Ctrl+C: the first ends the run between decisions, the second exits at once. */
@@ -397,6 +445,26 @@ export class InkSeat implements Seat {
 
 const EMPTY_ROW = { draft: EMPTY.text, cursor: EMPTY.cursor };
 
+/** The loop's answers to /sheet, /where, /log and /usage, by their info titles: shown as overlays. */
+export const OVERLAYS = new Set(["Sheet", "Where", "Log", "Usage"]);
+
+/** The /help overlay: the commands, then the keys. */
+export function helpText(): string {
+  return [
+    "Commands:",
+    ...Object.entries(COMMAND_HELP).map(([name, what]) => `  /${name}  ${what}`),
+    "",
+    "Keys:",
+    "  Enter      send the line",
+    "  Tab        complete a /command",
+    "  Esc        close this, or clear the line",
+    "  PgUp/PgDn  scroll the story, or this",
+    "  End        back to the newest lines",
+    "  Ctrl+P/N   lines you sent before",
+    "  Ctrl+C     stop after this decision; twice, at once",
+  ].join("\n");
+}
+
 /** The braille dots spinner (6/braille-pattern-cli-loading-indicator), one frame per 80 ms. */
 export const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -441,6 +509,9 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const view = useSyncExternalStore(seat.subscribe, seat.getView);
   const size: PanelSize = useWindowSize();
   const [scroll, setScroll] = useState<Scroll | undefined>(undefined);
+  // How far down the open overlay is read, from its top; a new overlay starts at its top.
+  const [overlayTop, setOverlayTop] = useState(0);
+  useEffect(() => setOverlayTop(0), [view.overlay, view.folded]);
   const [cache] = useState(() => new Map<number, { width: number; rows: string[] }>());
   // The header's minutes move on their own while nothing else draws.
   const [, tick] = useState(0);
@@ -457,23 +528,52 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const picked = view.prompt ? previewOption(view.draft, view.options?.lines) : undefined;
   const inputH = view.draft ? rowsFor(`> ${view.draft} ${picked ? `  ${picked.line}` : ""}`, width, 3) : 1;
   const notice = view.notice ? wrapText(view.notice.text, width, 0).split("\n").slice(0, 2) : [];
+  // Paused, the panel is a frame of the last moment: marked stale until the game goes on (screen 10).
+  const paused = view.prompt?.kind === "paused";
+  const stale = view.stale || paused;
+  // On the narrow frame /panel opens the whole panel over the story instead of folding it.
+  const panelOverlay = layout.mode === "narrow" && view.folded && view.situation !== undefined;
   const panel =
     view.situation && layout.mode === "narrow"
       ? // The pane's rows, cut to the bar and your own line: out of a fight too, where the inline panel was the bar alone.
-        situationRows(view.situation, size, { folded: view.folded, stale: view.stale, glyphs: seat.glyphs, pane: true }).slice(0, NARROW_PANEL_ROWS)
+        situationRows(view.situation, size, { stale, glyphs: seat.glyphs, pane: true }).slice(0, NARROW_PANEL_ROWS)
       : [];
   const below = 1 + (panel.length > 0 ? panel.length + 1 : 0) + notice.length + inputH;
-  const block = view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number) : [];
+  // The action zone: what is asked of the human now, above the turn block (screens 4, 5, 7 to 10).
+  const said = (text: string, style: Style): Row[] => wrapText(text, width, 0).split("\n").map((row) => [{ text: row, style }]);
+  const reaction = view.reaction;
+  const block: Row[] = [
+    ...(view.refusal ? said(`Not accepted: ${view.refusal}`, TONE_STYLE.error) : []),
+    ...(reaction ? [...said(`Reaction: ${reaction.summary}`, { accent: "rust", bold: true }), ...reaction.options.map((o, i) => [{ text: `${i + 1}. ${o}` }])] : []),
+    ...(view.question && view.prompt?.kind === "answer" ? said(`DM asks you: ${view.question}`, TONE_STYLE.dm) : []),
+    ...(paused ? said("Paused: the AI players wait. /pause to go on.", { accent: "hint" }) : []),
+    ...(view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number) : []),
+  ];
   const actionRoom = Math.min(Math.floor(size.rows / 2), size.rows - below - MIN_STORY_ROWS - 2);
   const action = actionRows(block, width, actionRoom, picked?.number);
   const storyH = Math.max(1, size.rows - below - action.length - (action.length > 0 ? 2 : 1));
   const story = [...storyRows(view.lines, width, cache), ...(view.preview && !view.prompt && !scroll ? previewRows(view.preview, width) : [])];
   const shown = storyWindow(story, storyH, view.lines.length, scroll);
+  // An overlay over the story: its name row, then its text read from the top (AGT-69, screen 11).
+  const overlayRows: Row[] | undefined = view.overlay
+    ? view.overlay.text
+        .split("\n")
+        // A row that fits keeps its spacing (the sheet's and /help's columns); a longer one wraps.
+        .flatMap((text) => ([...text].length <= width ? [text] : wrapText(text, width, 2).split("\n")).map((row) => [{ text: row, style: TONE_STYLE.info }]))
+    : panelOverlay
+      ? situationRows(view.situation!, { columns: width, rows: size.rows }, { stale, glyphs: seat.glyphs, pane: true })
+      : undefined;
+  const overlayRoom = Math.max(1, storyH - 1);
+  const overlayMax = overlayRows ? Math.max(0, overlayRows.length - overlayRoom) : 0;
 
   useInput((input, key) => {
     if (key.ctrl && input === "c") return seat.interrupt();
+    // PgUp/PgDn read the overlay while one is open, the story otherwise; Esc closes the overlay first.
+    if (overlayRows && key.pageUp) return setOverlayTop(Math.max(0, overlayTop - Math.max(1, overlayRoom - 1)));
+    if (overlayRows && key.pageDown) return setOverlayTop(Math.min(overlayMax, overlayTop + Math.max(1, overlayRoom - 1)));
     if (key.pageUp) return setScroll(page(scroll, -1, story, storyH, view.lines.length));
     if (key.pageDown) return setScroll(page(scroll, 1, story, storyH, view.lines.length));
+    if (key.escape && seat.closeOverlay(layout.mode === "narrow")) return;
     if (key.return) {
       // Anything sent brings the story back to its foot.
       setScroll(undefined);
@@ -520,6 +620,16 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     );
   };
 
+  // The overlay in the story's rows: a dim name row with its keys, and the text from `overlayTop`.
+  function overlayLines() {
+    const name = view.overlay?.title ?? "Panel";
+    const fresh = view.overlay ? new Set(view.lines.slice(view.overlay.at).filter((l) => l.text.trim() !== "").map((l) => l.id)).size : 0;
+    const more = overlayMax > 0 ? " · PgUp/PgDn" : "";
+    const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, `${name} · Esc closes${more}${fresh > 0 ? ` · ↓ ${fresh} new` : ""}`);
+    const rows = overlayRows!.slice(overlayTop, overlayTop + overlayRoom);
+    return [nameRow, ...rows.map((row, i) => line(row, `o${i}`)), ...Array.from({ length: overlayRoom - rows.length }, (_, i) => blank(`ob${i}`))];
+  }
+
   if (layout.mode === "tiny") {
     return h(Box, { flexDirection: "column", width: size.columns }, h(Text, { wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, TOO_SMALL), inputRow());
   }
@@ -531,11 +641,13 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     mode,
     minutes: view.started === undefined ? undefined : Math.floor((seat.now() - view.started) / 60_000),
   });
-  const storyLines = shown.rows.map((row, i) => {
-    const key = `s${i}`;
-    if (scroll && i === shown.rows.length - 1) return h(Text, { key, wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, freshText(shown.fresh));
-    return row ? h(Text, { key, wrap: "truncate-end", ...textProps(row.style, palette) }, row.text || " ") : blank(key);
-  });
+  const storyLines = overlayRows
+    ? overlayLines()
+    : shown.rows.map((row, i) => {
+        const key = `s${i}`;
+        if (scroll && i === shown.rows.length - 1) return h(Text, { key, wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, freshText(shown.fresh));
+        return row ? h(Text, { key, wrap: "truncate-end", ...textProps(row.style, palette) }, row.text || " ") : blank(key);
+      });
   const left = [
     ...storyLines,
     ...(panel.length > 0 ? [blank("pgap"), ...panel.map((row, i) => line(row, `p${i}`))] : []),
@@ -549,7 +661,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   if (layout.mode === "narrow") {
     return h(Box, { flexDirection: "column", width: size.columns, height: size.rows }, headerRow, h(Box, { key: "story", flexDirection: "column", width, height: body }, ...left));
   }
-  const side = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale: view.stale, glyphs: seat.glyphs, pane: true }) : [];
+  const side = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true }) : [];
   return h(
     Box,
     { flexDirection: "column", width: size.columns, height: size.rows },

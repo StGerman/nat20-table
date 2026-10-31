@@ -242,8 +242,11 @@ test("on an 80x24 terminal the seat draws the panel and the turn block above the
     seat.show({ kind: "situation" });
     seat.show({ kind: "narration", speaker: "dm", text: "The goblin snarls." });
     await until("stale", () => stdout.last.includes("you are up in 5 · stale"));
+    // Narrow: /panel opens the whole panel over the story, and Esc closes it (AGT-69).
     seat.type("/panel\r");
-    await until("folded", () => !stdout.last.includes("Bren 12/20 HP"));
+    await until("the panel overlay", () => stdout.last.includes("Panel · Esc closes") && stdout.last.includes("Foes   goblin_3"));
+    seat.closeOverlay(true);
+    await until("closed", () => !stdout.last.includes("Foes   goblin_3"));
     assert.ok(stdout.last.includes("Round 5 · goblin_4's turn"));
   } finally {
     seat.stop();
