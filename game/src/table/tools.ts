@@ -177,6 +177,15 @@ export class PlayerTools {
     ));
   }
 
+  /**
+   * Where its fight turn stands (M10 S3): still its own to end, held by a reaction window, or
+   * already over (the engine moved on, or no fight).
+   */
+  turnState(): "open" | "reaction" | "over" {
+    if (this.myAction()) return "open";
+    return this.table.awaiting.kind === "reaction" ? "reaction" : "over";
+  }
+
   async submitDecision(input: DecisionInput): Promise<ToolOutcome> {
     const prompt = this.myAction();
     if (prompt) {

@@ -321,3 +321,17 @@ test("a turn whose purpose has no settling tool waits for its result", async () 
   assert.equal(usage.records[0].settled_early, undefined);
   await s.close();
 });
+
+test("a tool whose answer settles as end_turn ends a combat turn that settles on end_turn (M10 S3)", async () => {
+  const usage = new UsageLog();
+  const merged = seatTool("narrate", "a submit_decision stand-in", { text: z.string() }, async () => ({ ...reply("accepted\nturn ended"), _meta: { settles_as: "end_turn" } }));
+  let s: AgentSession;
+  s = new AgentSession({
+    agent: "maren", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [merged], cwd: "/empty", usage,
+    query: draining(80, () => s), settleOn: { combat_turn: ["end_turn"] }, turnTimeoutMs: 5_000,
+  });
+  const started = performance.now();
+  await s.turn("go", "combat_turn");
+  assert.ok(performance.now() - started < 60);
+  await s.close();
+});

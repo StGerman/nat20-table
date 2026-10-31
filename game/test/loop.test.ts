@@ -724,8 +724,8 @@ test("an agent that ends its turn without acting is nudged once, then the turn f
   assert.equal(report.playerTurns.find((turn) => turn.handle === "ilsa")?.wakes, 2);
   const ilsa = players.get("ilsa")!;
   assert.deepEqual(ilsa.briefings.filter((b) => b.wake === "combat_turn").map((b) => b.briefing.split("\n").at(-1)).slice(0, 2), [
-    "Act with your tools, then call end_turn.",
-    "It is still your turn. Act with submit_decision or move, and call end_turn when you are done.",
+    "Act with your tools: usually one submit_decision with end_turn: true.",
+    "It is still your turn. Act with submit_decision or move, and end the turn (end_turn, or end_turn: true on submit_decision) when you are done.",
   ]);
   assert.ok(runLines(t, "retry").includes("ilsa didn't end its turn; nudged"));
   assert.ok(runLines(t, "fallback").includes("ilsa's turn ends"));

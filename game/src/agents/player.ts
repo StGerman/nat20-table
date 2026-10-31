@@ -28,6 +28,12 @@ export const PLAYER_LONG_WAKE_TIMEOUT_MS = 45_000;
 const PLAYER_LONG_WAKES: PlayerWake[] = ["combat_turn", "granted"];
 
 /**
+ * A combat turn ends for the loop once the player ended it (M10 S2, S3; decision 0053): with
+ * `end_turn`, or a `submit_decision` that ended it too. The closing call drains in the background.
+ */
+export const PLAYER_SETTLE_ON: Partial<Record<PlayerWake, readonly string[]>> = { combat_turn: ["end_turn"] };
+
+/**
  * The players' rules primer (AGT-52): the 2024 rules a player needs at this table, and one block per
  * class, in our own words from SRD 5.2.1 and kept to what the engine does.
  */
@@ -129,7 +135,7 @@ The party survives together or not at all. Decide together, in the table talk yo
 ## Why you are woken
 
 Each message says why:
-- "It is your turn in the fight": your options are listed with their ids and targets. Make the short check below, then usually: move if you must, take one option with submit_decision (an attack, a spell, a heal, Help), add a bonus action if one helps, then call end_turn. Name targets by handle. If the engine refuses something, read why and pick another option. Always finish with end_turn. You may also say one short line with say, reacting to what happened since your last turn (an ally falling, a kill, words aimed at you), when ${name} would; often ${name} says nothing.
+- "It is your turn in the fight": your options are listed with their ids and targets. Make the short check below, then usually one call: submit_decision with the option (an attack, a spell, a heal, Help), a line in say if ${name} would speak, and end_turn: true. Move first if you must, and leave end_turn out only when a bonus action after the option helps; then take it and call end_turn. Name targets by handle. If the engine refuses something, read why and pick another option. Always end the turn. The line reacts to what happened since your last turn (an ally falling, a kill, words aimed at you); often ${name} says nothing.
 - "You may react now": call react with the choice number to take it, or with null to let it pass.
 - "Do you raise your hand?": out of combat, ${after}, before anyone has the floor. First decide as ${name}: is any of this important to ${name} now, given ${name}'s goal, character and view of the others (your card's "Talk and silence" and "With the party", and your notes)? A plan, a rest or a companion in danger usually is, for ${name}'s own reasons. If not, just PASS: that is a normal answer, and in most rounds someone at the table stays quiet. If it is, ${name} may speak, act without a word, or both. Call no tool: your final answer starts with SPEAK (a line to say), BOTH (a line and a deed), ACT: and one sentence on what ${name} does without a word ("ACT: ${name} kneels to look at the tracks."), or PASS, and if you like, on the next line, half a sentence of why that nobody hears. Those who raise a hand then get the floor one at a time, each hearing what was said before.
 - "You have the floor": you raised your hand, someone named ${name}, or a companion spoke to ${name}. Read what was said since; if it has been said, a word of agreement or PASS. When you were named or asked, answer, in words, deeds or both, or refuse in character. To speak, say one short line in character with say. Then your final answer is one sentence on what ${name} sets out to do ("${name} kneels to look at the tracks."), or PASS when ${name} only spoke or does nothing new. Don't take an option here: the DM decides what happens, and may let you act. "Declare again" asks the same after a refusal.
@@ -229,6 +235,7 @@ export class ModelPlayer implements PlayerAgent {
       systemPrompt: this.systemPrompt,
       tools: this.seatTools,
       usage: this.config.usage,
+      settleOn: PLAYER_SETTLE_ON,
       turnTimeoutMs: this.config.turnTimeoutMs ?? PLAYER_TURN_TIMEOUT_MS,
       ...(this.config.turnTimeoutMs === undefined ? { turnTimeoutsMs: Object.fromEntries(PLAYER_LONG_WAKES.map((w) => [w, PLAYER_LONG_WAKE_TIMEOUT_MS])) } : {}),
     };
@@ -259,13 +266,42 @@ export class ModelPlayer implements PlayerAgent {
   }
 
   /** Runs a tool call through the wake's bound tools; outside a wake it does nothing. */
-  private async bound(use: (tools: PlayerTools) => Promise<ToolOutcome>): Promise<CallToolResult> {
+  private async bound(use: (tools: PlayerTools) => Promise<ToolOutcome & { ended?: boolean }>): Promise<CallToolResult> {
     const tools = this.current;
     if (!tools) return reply("not now: the table isn't waiting on you", true);
-    // A call from a turn that timed out must not act in the wake that came after it.
+    // A call from a turn that timed out, or one the player already ended, must not act in the wake after it.
     if (this.session?.settling) return reply("not now: that turn is over", true);
     const outcome = await use(tools);
-    return reply(outcome.text, !outcome.ok);
+    const answer = reply(outcome.text, !outcome.ok);
+    return outcome.ended ? { ...answer, _meta: { settles_as: "end_turn" } } : answer;
+  }
+
+  /**
+   * One option, then a line and the turn's end if asked (M10 S3): one model call for a plain attack.
+   * A refused option stops there, so nothing is said and the turn stays open for a retry.
+   */
+  private async decide(t: PlayerTools, decision: Parameters<PlayerTools["submitDecision"]>[0], then: { say?: string; say_to?: Handle; end_turn?: boolean }): Promise<ToolOutcome & { ended?: boolean }> {
+    const submitted = await t.submitDecision(decision);
+    if (!submitted.ok || (!then.say && !then.end_turn)) return submitted;
+    const parts = [submitted.text];
+    if (then.say) {
+      const said = await t.say(then.say, then.say_to);
+      parts.push(said.ok ? `said: ${said.text}` : `your line was not said: ${said.text}`);
+    }
+    let ended = false;
+    if (then.end_turn) {
+      const state = t.turnState();
+      if (state === "open") {
+        const end = await t.endTurn();
+        ended = end.ok;
+        parts.push(end.ok ? end.text : `the turn goes on: ${end.text}`);
+      } else if (state === "reaction") parts.push("the turn waits on a reaction; end it once you are woken again");
+      else {
+        ended = true;
+        parts.push("turn ended");
+      }
+    }
+    return { ok: true, text: parts.join("\n"), ended };
   }
 
   /**
@@ -290,17 +326,20 @@ export class ModelPlayer implements PlayerAgent {
       ),
       seatTool(
         "submit_decision",
-        "Take one option from legal_actions. Name its targets by handle; a target marked (walks first) is out of reach and you walk to it first. Give a variant when the option lists them, and an aim (a creature or a place) for an area.",
+        "Take one option from legal_actions. Name its targets by handle; a target marked (walks first) is out of reach and you walk to it first. Give a variant when the option lists them, and an aim (a creature or a place) for an area. In a fight you may add a line to say and end_turn: true, so one call takes the option, speaks and ends the turn; if the option is refused, nothing is said and the turn goes on.",
         {
           option_id: z.string().describe("The option's id, such as melee_attack/mace."),
           targets: z.array(handle).optional(),
           variant: z.string().optional(),
           aim_creature: handle.optional().describe("For an area: the creature to centre it on."),
           aim_place: z.string().optional().describe("For an area: the place (anchor id) to centre it on."),
+          say: z.string().optional().describe("A short line to say aloud after the option, in character; as with say."),
+          say_to: handle.optional().describe("The companion the line is meant for, by handle."),
+          end_turn: z.boolean().optional().describe("true to end your turn after the option (and the line)."),
         },
         (input) =>
           this.bound((t) =>
-            t.submitDecision({
+            this.decide(t, {
               option_id: input.option_id,
               ...(input.targets ? { targets: input.targets } : {}),
               ...(input.variant ? { variant: input.variant } : {}),
@@ -309,7 +348,7 @@ export class ModelPlayer implements PlayerAgent {
                 : input.aim_place
                   ? { aim: { kind: "anchor", anchor: input.aim_place } }
                   : {}),
-            }),
+            }, { ...(input.say ? { say: input.say } : {}), ...(input.say_to ? { say_to: input.say_to } : {}), ...(input.end_turn ? { end_turn: true } : {}) }),
           ),
       ),
       seatTool(

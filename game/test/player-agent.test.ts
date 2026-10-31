@@ -83,7 +83,8 @@ test("a model player passes as a normal answer, plays from its card's Talk and s
   assert.match(prompt, /If not, just PASS: that is a normal answer/);
   assert.match(prompt, /your card's "Talk and silence" and "With the party", and your notes/);
   assert.match(prompt, /Don't repeat what someone else already said/);
-  assert.match(prompt, /You may also say one short line with say, reacting to what happened since your last turn/);
+  assert.match(prompt, /usually one call: submit_decision with the option .*, a line in say if Maren would speak, and end_turn: true/);
+  assert.match(prompt, /The line reacts to what happened since your last turn/);
   assert.match(prompt, /"Do you raise your hand\?": .*Call no tool: your final answer starts with SPEAK \(a line to say\), BOTH \(a line and a deed\), ACT: and one sentence/);
   assert.match(prompt, /"You have the floor": you raised your hand, someone named Maren, or a companion spoke to Maren\./);
   // Addressing a companion (party talk §4.4): whom and how from the card and bond notes, never sheets.
@@ -336,7 +337,7 @@ test("in a fight, model players act through their bound tools, and what they wer
       assert.equal(sessions.length, 1, "one session for the scene");
       // The session's first turn carries the seed, whether it is a turn or a reaction between turns.
       assert.match(sessions[0].turns[0].message, /^Your character sheet \(only you see it\):\n\{/);
-      assert.match(turns[0].message, /Act with your tools, then call end_turn\.$/);
+      assert.match(turns[0].message, /Act with your tools: usually one submit_decision with end_turn: true\.$/);
       // Every command it caused was sent as itself, for itself.
       const mine = requests.filter((r) => r.viewer === me);
       assert.ok(mine.some((r) => r.cmd === "end_turn" && r.actor === me));
@@ -351,6 +352,45 @@ test("in a fight, model players act through their bound tools, and what they wer
       assert.deepEqual(late, { text: "not now: the table isn't waiting on you", isError: true });
     }
     assert.ok(played >= 2, `only ${played} players had a turn`);
+  } finally {
+    t.close();
+  }
+});
+
+test("one submit_decision takes the option, says the line and ends the turn; a refused one says nothing and keeps the turn (M10 S3)", async () => {
+  const answers: Array<{ text: string; isError: boolean }> = [];
+  const oneCall: Script = async (wake, call) => {
+    if (wake === "reaction") await call("react", { choice: null });
+    if (wake === "combat_turn" && answers.length === 0) {
+      const options = (await call("legal_actions")).text;
+      const id = /\b((?:melee|ranged)_attack\/\S+?):?\s/.exec(options)?.[1];
+      const target = /\b((?:goblin|wolf)_\d+)\b/.exec(options)?.[1];
+      answers.push(await call("submit_decision", { option_id: "no_such_option", say: "For the mill!", end_turn: true }));
+      answers.push(await call("submit_decision", { option_id: id, targets: [target], say: "For the mill!", end_turn: true }));
+    } else if (wake === "combat_turn") await call("end_turn");
+    return "";
+  };
+  const party = ["torva", "maren", "ilsa"].map((h) => standInPlayer(h, oneCall));
+  const t = await testTable({
+    seed: 27,
+    seat: new ScriptedSeat("bren", [], (prompt, seat) =>
+      seat.shown.filter((e) => e.kind === "status").length > 1 ? { kind: "command", name: "quit" } : ScriptedSeat.pass(prompt, seat),
+    ),
+  });
+  const dm = new ScriptedDm({
+    scene_open: async (tools) => void (await tools.startCombat("yard_fight")),
+    narrate: async (tools) => void (await tools.narrate("The fight goes on.")),
+  });
+  try {
+    await new TableLoop({ table: t.table, dm, players: party.map((p) => p.player), maxSteps: 200 }).run("m5_s3_yard");
+    const [refused, taken] = answers;
+    assert.equal(refused.isError, true, refused.text);
+    assert.doesNotMatch(refused.text, /said|turn ended/);
+    assert.equal(taken.isError, false, taken.text);
+    // Seed 27: the attack opens a reaction window, so the turn's end waits for the next wake.
+    assert.match(taken.text, /\nsaid: .*\n(turn ended|the turn waits on a reaction; end it once you are woken again)$/s);
+    const lines = t.table.transcript.records.filter((r) => r.kind === "speech" && r.text.includes("For the mill!"));
+    assert.equal(lines.length, 1, "the line is said once, by the accepted call only");
   } finally {
     t.close();
   }

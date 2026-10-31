@@ -164,7 +164,7 @@ export const BARK_TIMEOUT_MS = 8_000;
 const BARK_ASK = "Something just happened in the fight, and it isn't your turn. If you react aloud, say one short line with say; otherwise answer PASS. Call no other tool.";
 
 /** What the nudge says when an AI player's turn is still open after its wake (spec §6). */
-const NUDGE = "It is still your turn. Act with submit_decision or move, and call end_turn when you are done.";
+const NUDGE = "It is still your turn. Act with submit_decision or move, and end the turn (end_turn, or end_turn: true on submit_decision) when you are done.";
 
 /** Event kinds that are only bookkeeping: a part made of nothing else isn't narrated. */
 const QUIET = new Set<Event["kind"]>(["turn_start", "turn_end", "round"]);
@@ -699,7 +699,7 @@ export class TableLoop {
     const tools = this.tools.get(handle)!;
     this.table.resetRetries(handle);
     const options = await tools.legalActions();
-    const briefing = await this.playerBriefing(handle, "It is your turn in the fight. Your options:", options.text, "Act with your tools, then call end_turn.");
+    const briefing = await this.playerBriefing(handle, "It is your turn in the fight. Your options:", options.text, "Act with your tools: usually one submit_decision with end_turn: true.");
     const since = this.table.engine.logHead;
     const chance = await this.liftsAtStart(handle, options);
     const started = performance.now();
