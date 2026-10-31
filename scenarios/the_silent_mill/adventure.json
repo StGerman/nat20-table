@@ -9,18 +9,18 @@
     "prose": ["prose/adventure.md"],
     "lore": ["../../lore/the_wend_valley.md"],
     "party": [
-        { "handle": "bren", "seat": "human", "card": "cards/bren.md", "names": ["Bren", "Брен", "Брена", "Брену", "Бреном", "Брене"], "_comment": "The human's seat by default; the card is for runs where an AI plays Bren." },
-        { "handle": "torva", "seat": "ai", "card": "cards/torva.md", "pronouns": "she/her", "names": ["Torva", "Торва", "Торвы", "Торве", "Торву", "Торвой"], "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped." },
-        { "handle": "maren", "seat": "ai", "card": "cards/maren.md", "pronouns": "she/her", "names": ["Maren", "Марен"] },
-        { "handle": "ilsa", "seat": "ai", "card": "cards/ilsa.md", "pronouns": "she/her", "names": ["Ilsa", "Ильса", "Ильсы", "Ильсе", "Ильсу", "Ильсой"] }
+        { "handle": "bren", "seat": "human", "card": "cards/bren.md", "names": ["Bren", "Брен", "Брена", "Брену", "Бреном", "Брене"], "name_ru": "Брен", "_comment": "The human's seat by default; the card is for runs where an AI plays Bren." },
+        { "handle": "torva", "seat": "ai", "card": "cards/torva.md", "pronouns": "she/her", "names": ["Torva", "Торва", "Торвы", "Торве", "Торву", "Торвой"], "name_ru": "Торва", "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped." },
+        { "handle": "maren", "seat": "ai", "card": "cards/maren.md", "pronouns": "she/her", "names": ["Maren", "Марен", "Мэрен", "Марена", "Марене", "Марену", "Мареной"], "name_ru": "Марен" },
+        { "handle": "ilsa", "seat": "ai", "card": "cards/ilsa.md", "pronouns": "she/her", "names": ["Ilsa", "Ильса", "Ильсы", "Ильсе", "Ильсу", "Ильсой", "Ильза", "Ильзы", "Ильзе", "Ильзу", "Ильзой"], "name_ru": "Ильза" }
     ],
     "npcs": [
-        { "id": "osric_hale", "name": "Osric Hale, the reeve", "prose": "prose/npcs/osric_hale.md" },
-        { "id": "bertil_pell", "name": "Bertil Pell, the miller", "prose": "prose/npcs/bertil_pell.md" },
-        { "id": "wenna_thorne", "name": "Wenna Thorne, the apprentice", "prose": "prose/npcs/wenna_thorne.md" },
+        { "id": "osric_hale", "name": "Osric Hale, the reeve", "name_ru": "староста Осрик Хейл", "prose": "prose/npcs/osric_hale.md" },
+        { "id": "bertil_pell", "name": "Bertil Pell, the miller", "name_ru": "мельник Бертил Пелл", "prose": "prose/npcs/bertil_pell.md" },
+        { "id": "wenna_thorne", "name": "Wenna Thorne, the apprentice", "name_ru": "подмастерье Венна Торн", "prose": "prose/npcs/wenna_thorne.md" },
         {
             "id": "snitt",
-            "name": "Snitt",
+            "name": "Snitt", "name_ru": "Снитт",
             "prose": "prose/npcs/snitt.md",
             "_comment": "Whichever yard goblin surrenders becomes Snitt and is carried into Scene 4.",
             "creatures": [
@@ -32,7 +32,7 @@
         },
         {
             "id": "gritch",
-            "name": "Gritch, boss of the Nettle Tooth",
+            "name": "Gritch, boss of the Nettle Tooth", "name_ru": "Гритч, вожак Крапивного Зуба",
             "prose": "prose/npcs/gritch.md",
             "creatures": [{ "scene": "s5_mill_cellar", "handle": "boss" }]
         }

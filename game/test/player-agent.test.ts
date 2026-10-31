@@ -8,6 +8,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { declaration, ModelPlayer, PLAYER_LONG_WAKE_TIMEOUT_MS, PLAYER_TURN_TIMEOUT_MS, playerPrompt, promptCard, rulesPrimer } from "../src/agents/player.ts";
+import { dmPrompt } from "../src/agents/dm.ts";
+import { readPack } from "../src/pack/read.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnCancelled, TurnTimeout } from "../src/errors.ts";
@@ -100,7 +102,9 @@ test("a model player passes as a normal answer, plays from its card's Talk and s
 test("every party member has its names, whichever seat plays it: handle, card name and the pack's forms", () => {
   const { names } = castParty(MILL);
   assert.deepEqual(names.get("torva"), ["torva", "Torva", "Торва", "Торвы", "Торве", "Торву", "Торвой"]);
-  assert.deepEqual(names.get("maren"), ["maren", "Maren", "Марен"]);
+  assert.deepEqual(names.get("maren"), ["maren", "Maren", "Марен", "Мэрен", "Марена", "Марене", "Марену", "Мареной"]);
+  // The human wrote «Ильза» in the Russian party-talk run of 2026-10-27 (AGT-38): both spellings count.
+  for (const form of ["Ильса", "Ильза", "Ильзе", "Ильзой"]) assert.ok(names.get("ilsa")!.includes(form), form);
   assert.ok(names.get("bren")!.includes("Брену"), "the human's character too, for a run where an AI plays it");
 });
 
@@ -180,6 +184,19 @@ test("with --lang ru a model player speaks, declares, notes and summarises in Ru
   assert.match(russian, /write in Russian everything you say, declare, note or summarise/);
   assert.match(russian, /just PASS, in Latin letters/);
   assert.equal(declaration("PASS"), undefined);
+});
+
+test("a Russian run gives every agent the pack's one Russian name per character and NPC (AGT-38)", () => {
+  const party = castParty(MILL);
+  assert.deepEqual(party.russianNames.slice(0, 4), ["bren: Брен", "torva: Торва", "maren: Марен", "ilsa: Ильза"]);
+  assert.ok(party.russianNames.includes("osric_hale: староста Осрик Хейл"));
+  const line = `Names in Russian: write each as given here, declined as Russian declines it: ${party.russianNames.join("; ")}.`;
+  const card = party.cards.get("maren")!;
+  assert.ok(playerPrompt("maren", card, "cleric", "ru", true, party.russianNames).includes(line));
+  assert.ok(!playerPrompt("maren", card, "cleric", "en", true, party.russianNames).includes("Names in Russian"), "an English prompt has no Russian names");
+  const pack = readPack(MILL);
+  assert.ok(dmPrompt(pack, "bren", party.ai, "prompt", "ru").includes(line));
+  assert.ok(!dmPrompt(pack, "bren", party.ai, "prompt", "en").includes("Names in Russian"));
 });
 
 test("a card's Voice in Russian reaches only a Russian prompt, after the rule to carry the voice by meaning", () => {

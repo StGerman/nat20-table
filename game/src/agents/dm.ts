@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import type { Ability, Handle, Skill } from "@nat20-table/engine-client";
 import { z } from "zod";
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
+import { russianNames } from "../pack/adventure.ts";
 import type { PackText } from "../pack/read.ts";
 import type { DmTools } from "../table/tools.ts";
 import type { DmAgent, DmWake, ToolOutcome } from "../table/types.ts";
@@ -155,7 +156,7 @@ ${surrender}
 
 Be quick: decide, call the tools, narrate once. Most wakes need one to three tool calls.
 
-${[...guidance, ...dmLanguage(language, Boolean(human))].join("\n")}
+${[...guidance, ...dmLanguage(language, Boolean(human), russianNames(pack.adventure))].join("\n")}
 ## The adventure (only you see it)
 
 ${pack.text}`;
