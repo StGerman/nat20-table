@@ -65,8 +65,8 @@ export interface PhaseSummary {
   agent: string;
   purpose: string;
   wakes: number;
-  /** The first API call, from the message sent to its last block. */
-  first_call: [number, number];
+  /** The first API call's time to first token; for a record without it, to the call's last block. */
+  first_token: [number, number];
   /** Time inside our tool handlers per wake. */
   tool: [number, number];
   /** API calls per wake. */
@@ -185,7 +185,7 @@ export function phases(records: UsageRecord[]): PhaseSummary[] {
       agent,
       purpose,
       wakes: mine.length,
-      first_call: pair(mine.map((r) => r.calls![0].ended_ms)),
+      first_token: pair(mine.map((r) => r.calls![0].first_token_ms ?? r.calls![0].ended_ms)),
       tool: pair(mine.map((r) => r.tool_ms ?? 0)),
       calls: pair(mine.map((r) => r.calls!.length)),
       closing: pair(closing),

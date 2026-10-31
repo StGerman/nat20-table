@@ -213,17 +213,18 @@ test("a turn records each API call's start, end and tools, and the time spent in
   await s.close();
 });
 
-test("the phase summary splits each agent's wakes into first call, tool time and closing call", () => {
+test("the phase summary splits each agent's wakes into first token, tool time and closing call", () => {
   const base = { agent: "dm", model: "m", effort: "low", purpose: "narrate", session_turn: 1, outcome: "ok" as const, input_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, output_tokens: 0, api_calls: 2, wall_ms: 0, ttft_ms: null, api_equivalent_usd: 0, tools: [], at: "" };
-  const wake = (first: number, tool: number, closing: number) => ({
+  const wake = (first: number, tool: number, closing: number, token?: number) => ({
     ...base,
     tool_ms: tool,
     calls: [
-      { n: 1, started_ms: 0, ended_ms: first, tools: ["narrate"], tool_ms: tool },
+      { n: 1, started_ms: 0, ...(token === undefined ? {} : { first_token_ms: token }), ended_ms: first, tools: ["narrate"], tool_ms: tool },
       { n: 2, started_ms: first + tool, ended_ms: first + tool + closing, tools: [], tool_ms: 0 },
     ],
   });
-  const [row] = phases([wake(3000, 10, 2500), wake(4000, 20, 3500), { ...base, purpose: "old" }]);
-  assert.deepEqual(row, { agent: "dm", purpose: "narrate", wakes: 2, first_call: [3000, 4000], tool: [10, 20], calls: [2, 2], closing: [2500, 3500], closings: 2 });
+  const [row] = phases([wake(3000, 10, 2500, 1200), wake(4000, 20, 3500), { ...base, purpose: "old" }]);
+  // First token where the SDK reported it; the first call's end where it didn't.
+  assert.deepEqual(row, { agent: "dm", purpose: "narrate", wakes: 2, first_token: [1200, 4000], tool: [10, 20], calls: [2, 2], closing: [2500, 3500], closings: 2 });
   assert.equal(phases([{ ...base }]).length, 0, "a record without calls (an old run) has no phases");
 });

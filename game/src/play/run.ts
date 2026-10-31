@@ -306,9 +306,9 @@ export function phaseTable(usage: UsageRecord[]): string[] {
     "",
     "Wake phases, p50 / p95 (ms; calls per wake):",
     "",
-    "| Agent | Purpose | Wakes | First call | In tools | Calls | Closing call (wakes) |",
+    "| Agent | Purpose | Wakes | First token | In tools | Calls | Closing call (wakes) |",
     "|---|---|---|---|---|---|---|",
-    ...rows.map((r) => `| ${r.agent} | ${r.purpose} | ${r.wakes} | ${pair(r.first_call)} | ${pair(r.tool)} | ${pair(r.calls)} | ${pair(r.closing)} (${r.closings}) |`),
+    ...rows.map((r) => `| ${r.agent} | ${r.purpose} | ${r.wakes} | ${pair(r.first_token)} | ${pair(r.tool)} | ${pair(r.calls)} | ${pair(r.closing)} (${r.closings}) |`),
   ];
 }
 
