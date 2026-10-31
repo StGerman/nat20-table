@@ -205,3 +205,31 @@ export function phases(records: UsageRecord[]): PhaseSummary[] {
     };
   });
 }
+
+/**
+ * Tokens and the API-equivalent cost so far, one line per agent and a total (M10 U1): `/usage` at
+ * the table, and once at the run's end. Tokens lead; the dollars are the list price, a reference
+ * while runs use the subscription (decision 0036).
+ */
+export function usageBlock(records: UsageRecord[]): string[] {
+  if (records.length === 0) return ["No model calls yet."];
+  const rows = summarize(records);
+  const k = (n: number) => (n >= 10_000 ? `${Math.round(n / 1000)}k` : String(n));
+  const line = (who: string, r: { input_tokens: number; cache_read_tokens: number; cache_write_tokens: number; output_tokens: number; api_equivalent_usd: number }, wakes: number) =>
+    `${who}: ${wakes} wakes, input ${k(r.input_tokens + r.cache_write_tokens)}, cache read ${k(r.cache_read_tokens)}, output ${k(r.output_tokens)}, $${r.api_equivalent_usd.toFixed(2)}`;
+  const total = rows.reduce(
+    (sum, r) => ({
+      input_tokens: sum.input_tokens + r.input_tokens,
+      cache_read_tokens: sum.cache_read_tokens + r.cache_read_tokens,
+      cache_write_tokens: sum.cache_write_tokens + r.cache_write_tokens,
+      output_tokens: sum.output_tokens + r.output_tokens,
+      api_equivalent_usd: sum.api_equivalent_usd + r.api_equivalent_usd,
+    }),
+    { input_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, output_tokens: 0, api_equivalent_usd: 0 },
+  );
+  return [
+    ...rows.map((r) => line(r.agent, r, r.turns)),
+    line("total", total, records.length),
+    "Dollars are the API list price, for reference: this table runs on the subscription.",
+  ];
+}

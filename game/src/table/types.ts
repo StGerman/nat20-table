@@ -60,7 +60,7 @@ export type PlayerIntent =
   | { kind: "text"; text: string }
   | { kind: "option"; number: number }
   | { kind: "reaction"; take: boolean }
-  | { kind: "command"; name: "sheet" | "where" | "options" | "log" | "pause" | "quit" };
+  | { kind: "command"; name: "sheet" | "where" | "options" | "log" | "usage" | "pause" | "quit" };
 
 /** Why the loop needs the human. */
 export type HumanPrompt =
