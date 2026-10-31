@@ -101,10 +101,11 @@ export function foldedRows(situation: Situation, options: { stale?: boolean; gly
   const me = meRow(situation);
   // Your name, Hit Points, temporary ones and life state stay first; conditions and effects go last.
   const core = 2 + (situation.me.temp_hp > 0 ? 1 : 0) + (situation.me.life_state !== "conscious" ? 2 : 0);
-  // Out of a fight the bar already names the party with its health, a fallen ally too.
-  const fallen = situation.mode === "combat" ? situation.creatures.filter((c) => c.side === "party" && c.health === "down") : [];
-  const near = situation.creatures.filter((c) => c.side === "hostile" && c.in_reach);
-  const target = situation.creatures.filter((c) => c.handle === options.lit && !fallen.includes(c) && !near.includes(c));
+  // Out of a fight the fold is the bar and your line: the bar already names the party with its health.
+  const fight = situation.mode === "combat" ? situation.creatures : [];
+  const fallen = fight.filter((c) => c.side === "party" && c.health === "down");
+  const near = fight.filter((c) => c.side === "hostile" && c.in_reach);
+  const target = fight.filter((c) => c.handle === options.lit && !fallen.includes(c) && !near.includes(c));
   const urgent: Row = [];
   for (const c of [...fallen, ...near, ...target]) {
     const lit = c.handle === options.lit ? { accent: "rust" as const, bold: true } : undefined;
