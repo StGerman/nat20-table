@@ -558,6 +558,10 @@ export class TableLoop {
     while (!this.table.ended && (await this.sameTurn(human, since))) {
       const intent = await this.ask(this.shown === this.top ? { kind: "combat_turn" } : { kind: "pick" });
       if (!intent) break;
+      if (intent.kind === "back") {
+        this.back(true);
+        continue;
+      }
       if (intent.kind === "option") {
         const picked = await this.pick(intent.number);
         if (picked === undefined) continue;
@@ -590,6 +594,17 @@ export class TableLoop {
     }
     this.shown = this.top;
     return choice.act ? { act: choice.act, label: choice.label } : undefined;
+  }
+
+  /**
+   * Leaves a follow-up pick for the options it came from (AGT-48 Q5): shown again as they were,
+   * with the turn's budget in a fight. No engine call: the list on screen is still the turn's.
+   */
+  private back(combat: boolean): void {
+    if (this.shown === this.top) return;
+    this.shown = this.top;
+    const budget = combat ? (this.lastOptions?.budget ?? undefined) : undefined;
+    this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top, ...(budget ? { budget } : {}) });
   }
 
   /** Sends what a number stands for, as the human's own viewer: its refusal is projected for them. */
@@ -983,6 +998,10 @@ export class TableLoop {
         await this.table.declare(human, intent.text);
         line = intent.text;
         break;
+      }
+      if (intent.kind === "back") {
+        this.back(false);
+        continue;
       }
       if (intent.kind === "option") {
         if (this.top.length === 0) await this.offerChoices(false);

@@ -64,7 +64,7 @@ export function promptHint(prompt: HumanPrompt, handle: string): string {
     case "answer":
       return "The DM asks you: answer in words.";
     case "pick":
-      return "Pick a number from this list, or say what you do instead.";
+      return "Pick a number from this list, Esc to go back, or say what you do instead.";
     case "paused":
       return "Paused. Commands only; /pause goes on.";
     case "surrender":

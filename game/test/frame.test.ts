@@ -293,3 +293,24 @@ test("at the end the table stays with the checks ticking in the action zone, and
     seat.stop();
   }
 });
+
+test("on a terminal, ↓ lights an option and Enter plays it, and Esc on an empty line leaves a sub-list (AGT-48)", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    seat.show({ kind: "options", lines: ["1. Longsword attack → goblin_3", "2. Longsword attack, another target…", "3. End turn"], choices: [] });
+    const turn = seat.ask({ kind: "combat_turn" });
+    stdin.press("\u001b[B");
+    stdin.press("\u001b[B");
+    await until("the lit option", () => stdout.last.includes("Enter plays 2. Longsword attack, another target…"));
+    stdin.press("\r");
+    assert.deepEqual(await turn, { kind: "option", number: 2 });
+    seat.show({ kind: "options", title: "Longsword attack", lines: ["1. goblin_4", "2. wolf_1"], choices: [] });
+    const pick = seat.ask({ kind: "pick" });
+    await until("the pick", () => stdout.last.includes("Esc to go back"));
+    stdin.press("\u001b");
+    assert.deepEqual(await pick, { kind: "back" });
+  } finally {
+    seat.stop();
+  }
+});

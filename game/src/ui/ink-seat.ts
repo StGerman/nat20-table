@@ -63,6 +63,8 @@ export interface SeatView {
   question?: string;
   /** Why the engine refused the last decision, above the options until the next one (AGT-69). */
   refusal?: string;
+  /** The option ↑/↓ have lit (AGT-48 Q1): Enter on an empty line plays it. */
+  highlight?: number;
   /**
    * The run is over (screens 12 and 13): how it ended, and for a stop what to do about it, with the
    * post-run checks as they go. The table stays on screen until they finish or a key is pressed.
@@ -224,7 +226,7 @@ export class InkSeat implements Seat {
       case "options":
         // Numbered options stay above the prompt instead of scrolling away; `/options` prints them again.
         this.release();
-        this.update({ options: event });
+        this.update({ options: event, highlight: undefined });
         return;
       case "engine": {
         // The human's own line shows at once; others' lines before it still wait for their narration.
@@ -356,6 +358,8 @@ export class InkSeat implements Seat {
   }
 
   enter(): void {
+    // Enter on an empty line plays the option ↑/↓ lit, as if its number were typed.
+    if (!this.view.draft.trim() && this.view.highlight !== undefined && this.view.prompt) this.update({ draft: String(this.view.highlight) });
     const draft = this.view.draft;
     const typed = readLine(draft, this.view.prompt);
     if (typed.kind === "empty") return;
@@ -384,7 +388,7 @@ export class InkSeat implements Seat {
           if (typed.intent.kind !== "command") this.update({ reaction: undefined, question: undefined, refusal: undefined, overlay: undefined });
           // Out of combat a pick or words answer the options; in a fight they stay until the turn ends.
           const done = this.view.options && !this.view.options.budget && this.view.prompt?.kind !== "pick" && (typed.intent.kind === "option" || typed.intent.kind === "text");
-          this.update({ prompt: undefined, ...(done ? { options: undefined } : {}) });
+          this.update({ prompt: undefined, highlight: undefined, ...(done ? { options: undefined } : {}) });
           answer(typed.intent);
         } else {
           this.queued.push(typed.intent);
@@ -433,6 +437,31 @@ export class InkSeat implements Seat {
   /** A key on the end screen. */
   keyAtEnd(): void {
     this.leave();
+  }
+
+  /**
+   * ↑ (-1) and ↓ (+1): move the highlight over the options on screen while the table waits on the
+   * human (AGT-48 Q1). The first press lights the first (↓) or the last (↑) option; it wraps round.
+   */
+  move(step: -1 | 1): void {
+    const numbers = (this.view.options?.lines ?? []).map((line) => Number(/^(\d+)\. /.exec(line)?.[1])).filter((n) => Number.isInteger(n) && n > 0);
+    if (!this.view.prompt || numbers.length === 0) return;
+    const at = this.view.highlight === undefined ? -1 : numbers.indexOf(this.view.highlight);
+    const next = at < 0 ? (step === 1 ? 0 : numbers.length - 1) : (at + step + numbers.length) % numbers.length;
+    this.update({ highlight: numbers[next] });
+  }
+
+  /**
+   * Esc on an empty line inside a follow-up pick: back to the turn's own options (AGT-48 Q5). The
+   * loop shows them again; false when there is no pick to leave.
+   */
+  back(): boolean {
+    if (this.view.draft || this.view.prompt?.kind !== "pick" || !this.answer) return false;
+    const answer = this.answer;
+    this.answer = undefined;
+    this.update({ prompt: undefined, highlight: undefined });
+    answer({ kind: "back" });
+    return true;
   }
 
   /** Esc: closes an overlay (a command's answer, or the narrow frame's whole panel); false when none was open. */
@@ -546,7 +575,8 @@ export function helpText(): string {
     "Keys:",
     "  Enter      send the line",
     "  Tab        complete a /command",
-    "  Esc        close this, or clear the line",
+    "  ↑/↓        light an option; Enter plays it",
+    "  Esc        close this, go back from a sub-list, or clear the line",
     "  PgUp/PgDn  scroll the story, or this",
     "  End        back to the newest lines",
     "  Ctrl+P/N   lines you sent before",
@@ -614,7 +644,10 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const width = layout.story;
 
   // A typed number names an option: it is lit in the turn block and named after the cursor.
-  const picked = view.prompt ? previewOption(view.draft, view.options?.lines) : undefined;
+  // ↑/↓ light one too (AGT-48 Q1), while nothing is typed.
+  const picked = view.prompt
+    ? (previewOption(view.draft, view.options?.lines) ?? (view.draft ? undefined : previewOption(String(view.highlight ?? ""), view.options?.lines)))
+    : undefined;
   const inputH = view.draft ? rowsFor(`> ${view.draft} ${picked ? `  ${picked.line}` : ""}`, width, 3) : 1;
   const notice = view.notice ? wrapText(view.notice.text, width, 0).split("\n").slice(0, 2) : [];
   // Paused, the panel is a frame of the last moment: marked stale until the game goes on (screen 10).
@@ -666,6 +699,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     if (key.pageUp) return setScroll(page(scroll, -1, story, storyH, view.lines.length));
     if (key.pageDown) return setScroll(page(scroll, 1, story, storyH, view.lines.length));
     if (key.escape && seat.closeOverlay(layout.mode === "narrow")) return;
+    if (key.escape && seat.back()) return;
     if (key.return) {
       // Anything sent brings the story back to its foot.
       setScroll(undefined);
@@ -674,7 +708,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     if (key.end) setScroll(undefined);
     if (key.ctrl && input === "p") return seat.recall(-1);
     if (key.ctrl && input === "n") return seat.recall(1);
-    if (key.upArrow || key.downArrow) return;
+    if (key.upArrow) return seat.move(-1);
+    if (key.downArrow) return seat.move(1);
     const change = editFor(input, key);
     if (!change) return;
     // A paste arrives as one chunk and can hold line breaks.
@@ -692,9 +727,11 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     if (!view.draft) {
       const placeholder = view.finale
         ? h(Text, { key: "hint", ...textProps({ accent: "hint" }, palette) }, "Any key leaves; the checks go on after it.")
-        : view.prompt
-          ? h(Text, { key: "hint", ...textProps(TONE_STYLE.prompt, palette) }, promptHint(view.prompt, seat.handle))
-          : h(Waiting, { key: "wait", seat, busy: view.busy });
+        : view.prompt && picked
+          ? h(Text, { key: "hint", ...textProps(TONE_STYLE.prompt, palette) }, `Enter plays ${picked.line}`)
+          : view.prompt
+            ? h(Text, { key: "hint", ...textProps(TONE_STYLE.prompt, palette) }, promptHint(view.prompt, seat.handle))
+            : h(Waiting, { key: "wait", seat, busy: view.busy });
       return h(Box, { key: "input", width, height: 1, overflow: "hidden" }, h(Text, { wrap: "truncate-end" }, mark, h(Text, { key: "cursor", inverse: true }, " "), placeholder));
     }
     const at = view.cursor;
