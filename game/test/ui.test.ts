@@ -227,13 +227,16 @@ test("the human's own lines, and any no narration covered before a decision, sho
 test("the seat answers a prompt with what was typed, queues commands typed while busy, and stops on Ctrl+C", async () => {
   let quit = 0;
   const seat = new InkSeat("bren", { onQuit: () => (quit += 1) });
-  // Busy: words are refused on screen, a command waits for the next prompt.
+  // Busy: words stay on the row with why, a command waits for the next prompt; neither reaches the scrollback (AGT-48).
   seat.type("I run\r");
+  assert.equal(seat.getView().draft, "I run");
+  assert.deepEqual(seat.getView().notice, { text: "The table is busy: wait for your prompt. A command typed now is answered when it comes.", error: true });
+  seat.edit({ kind: "clear" });
+  assert.equal(seat.getView().notice, undefined);
   seat.type("/where\r");
+  assert.deepEqual(seat.getView().notice, { text: "answered at your next prompt", error: false });
   assert.deepEqual(await seat.ask({ kind: "explore" }), { kind: "command", name: "where" });
-  const lines = seat.getView().lines.map((l) => l.text);
-  assert.ok(lines.includes("The table is busy: wait for your prompt. A command typed now is answered when it comes."));
-  assert.ok(lines.includes("— answered at your next prompt"));
+  assert.ok(!seat.getView().lines.some((l) => /table is busy|answered at your next prompt/.test(l.text)));
   // A prompt: the typed number, with backspace, answers it.
   const asked = seat.ask({ kind: "combat_turn" });
   assert.equal(seat.getView().prompt?.kind, "combat_turn");
@@ -246,7 +249,7 @@ test("the seat answers a prompt with what was typed, queues commands typed while
   const reaction = seat.ask({ kind: "reaction" });
   seat.type("/help\r");
   assert.ok(seat.getView().lines.some((l) => l.text === "  /pause  AI players wait until you type /pause again"));
-  seat.type("y\r");
+  seat.type("да\r");
   assert.deepEqual(await reaction, { kind: "reaction", take: true });
   // Ctrl+C: the table is told to end, the open prompt gets /quit, and so does every later one.
   const open = seat.ask({ kind: "explore" });

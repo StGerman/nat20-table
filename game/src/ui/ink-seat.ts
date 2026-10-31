@@ -3,8 +3,9 @@
 // other characters' engine lines wait for the DM's narration of them and are left out of the
 // scrollback, or folded under it with `verbose`; the human's own, and any before a decision, show
 // at once. Under it the situation panel and, while the table waits on the human, the turn block (the budget
-// and the numbered options, AGT-36), then what the table waits for (while no prompt is open, a
-// braille spinner with who is thinking) and the line being typed. The loop answers the slash
+// and the numbered options, AGT-36), then the input row: a line editor (editor.ts, AGT-48) whose
+// placeholder is the prompt's hint, or while no prompt is open a braille spinner with who is
+// thinking; mistakes show on the row, not in the scrollback. The loop answers the slash
 // commands (`/sheet`, `/where`, `/options`, `/log`, `/usage`, `/pause`, `/quit`); `/help` and `/panel` are
 // answered here. Text keeps to a 72-column measure, and from 124 columns the situation panel
 // stands right of it (M10 P5, panel.ts `screenLayout`). Written with `createElement`, not JSX, so the game still
@@ -14,6 +15,7 @@ import { Box, render, Static, Text, useInput, useWindowSize, type Instance, type
 import { createElement as h, useEffect, useState, useSyncExternalStore } from "react";
 import type { Situation } from "../table/situation.ts";
 import type { HumanPrompt, PlayerIntent, Seat, TableEvent } from "../table/types.ts";
+import { edit, editFor, EMPTY, type Edit } from "./editor.ts";
 import { COMMAND_HELP, promptHint, readLine } from "./input.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette } from "./palette.ts";
@@ -26,7 +28,15 @@ export type PinnedOptions = Extract<TableEvent, { kind: "options" }>;
 export interface SeatView {
   lines: Array<Line & { id: number }>;
   prompt: HumanPrompt | undefined;
+  /** The line being typed. */
   draft: string;
+  /** Where the cursor stands in `draft` (M10 P6). */
+  cursor: number;
+  /**
+   * A mistake, or what happened to a line typed while the table was busy: shown on the input row
+   * until the next key, never in the scrollback (AGT-48).
+   */
+  notice?: { text: string; error: boolean };
   /** The last situation the loop sent; `stale` once a refresh failed. */
   situation?: Situation;
   stale?: boolean;
@@ -64,7 +74,10 @@ export interface InkSeatOptions {
 export class InkSeat implements Seat {
   readonly handle: Handle;
   private readonly options: InkSeatOptions;
-  private view: SeatView = { lines: [], prompt: undefined, draft: "" };
+  private view: SeatView = { lines: [], prompt: undefined, draft: "", cursor: 0 };
+  /** Lines entered so far, oldest first, for Ctrl+P and Ctrl+N; `recalled` is the one on the row. */
+  private readonly history: string[] = [];
+  private recalled: number | undefined;
   private nextId = 0;
   private answer: ((intent: PlayerIntent) => void) | undefined;
   /** Commands typed while the table was busy, answered at the next prompt. */
@@ -213,22 +226,43 @@ export class InkSeat implements Seat {
     const parts = input.split(/\r\n|\r|\n/);
     parts.forEach((part, i) => {
       if (i > 0) this.enter();
-      const printable = part.replace(/[\u0000-\u001f\u007f]/g, "");
-      if (printable) this.update({ draft: this.view.draft + printable });
+      if (part) this.edit({ kind: "insert", text: part });
     });
   }
 
   erase(): void {
-    if (this.view.draft) this.update({ draft: this.view.draft.slice(0, -1) });
+    this.edit({ kind: "backspace" });
+  }
+
+  /** One edit to the input row (editor.ts); any key clears the notice on the row. */
+  edit(change: Edit): void {
+    const next = edit({ text: this.view.draft, cursor: this.view.cursor }, change);
+    this.update({ draft: next.text, cursor: next.cursor, notice: undefined });
+  }
+
+  /** Ctrl+P (-1) and Ctrl+N (+1): an earlier or later line entered, onto the row. */
+  recall(step: -1 | 1): void {
+    if (this.history.length === 0) return;
+    const from = this.recalled ?? this.history.length;
+    const to = Math.max(0, Math.min(this.history.length, from + step));
+    this.recalled = to === this.history.length ? undefined : to;
+    const text = this.recalled === undefined ? "" : this.history[to];
+    this.update({ draft: text, cursor: text.length, notice: undefined });
   }
 
   enter(): void {
     const draft = this.view.draft;
     const typed = readLine(draft, this.view.prompt);
-    this.update({ draft: "" });
+    if (typed.kind === "empty") return;
+    if (typed.kind === "error") {
+      // The line stays on the row to fix or send later, with what was wrong under the cursor.
+      this.update({ notice: { text: typed.text, error: true } });
+      return;
+    }
+    if (this.history.at(-1) !== draft.trim()) this.history.push(draft.trim());
+    this.recalled = undefined;
+    this.update({ ...EMPTY_ROW, notice: undefined });
     switch (typed.kind) {
-      case "empty":
-        return;
       case "panel":
         this.update({ folded: !this.view.folded });
         this.add([{ tone: "status", text: this.view.folded ? "— panel folded; /panel opens it" : "— panel open" }]);
@@ -238,12 +272,6 @@ export class InkSeat implements Seat {
           { tone: "prompt", text: `> ${draft.trim()}` },
           { tone: "info", text: "Commands:" },
           ...Object.entries(COMMAND_HELP).map(([name, what]) => ({ tone: "info" as const, text: `  /${name}  ${what}` })),
-        ]);
-        return;
-      case "error":
-        this.add([
-          { tone: "prompt", text: `> ${draft.trim()}` },
-          { tone: "error", text: typed.text },
         ]);
         return;
       case "intent": {
@@ -257,7 +285,7 @@ export class InkSeat implements Seat {
           answer(typed.intent);
         } else {
           this.queued.push(typed.intent);
-          this.add([{ tone: "status", text: "— answered at your next prompt" }]);
+          this.update({ notice: { text: "answered at your next prompt", error: false } });
         }
       }
     }
@@ -316,6 +344,8 @@ export class InkSeat implements Seat {
   }
 }
 
+const EMPTY_ROW = { draft: EMPTY.text, cursor: EMPTY.cursor };
+
 /** The braille dots spinner (6/braille-pattern-cli-loading-indicator), one frame per 80 ms. */
 export const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -326,7 +356,7 @@ export function waitText(on: string | undefined, seconds: number, frame: number 
   return `${SPINNER[frame % SPINNER.length]} ${who}${seconds >= 1 ? ` · ${seconds}s` : ""} (/help for commands)`;
 }
 
-/** The wait line under the panel while no prompt is open; it re-draws itself only while spinning. */
+/** The wait as the input row's placeholder while no prompt is open; it re-draws itself only while spinning. */
 function Waiting({ seat, busy }: { seat: InkSeat; busy: SeatView["busy"] }) {
   const [frame, setFrame] = useState(0);
   useEffect(() => {
@@ -338,6 +368,14 @@ function Waiting({ seat, busy }: { seat: InkSeat; busy: SeatView["busy"] }) {
   return h(Text, textProps(TONE_STYLE.status, seat.palette), waitText(busy?.on, seconds, seat.animate ? frame : undefined));
 }
 
+/** The option a typed number names, from the numbered lines on screen ("2. End turn" for "2"). */
+export function previewOption(draft: string, lines: string[] | undefined): { number: number; line: string } | undefined {
+  if (!lines || !/^\d+$/.test(draft.trim())) return undefined;
+  const number = Number(draft.trim());
+  const line = lines.find((l) => l.startsWith(`${number}. `));
+  return line ? { number, line } : undefined;
+}
+
 /** The screen: the lines so far (each drawn once, then left in the terminal's scrollback), the panel, the prompt and the input line. */
 export function TableScreen({ seat }: { seat: InkSeat }) {
   const view = useSyncExternalStore(seat.subscribe, seat.getView);
@@ -345,9 +383,14 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   useInput((input, key) => {
     if (key.ctrl && input === "c") return seat.interrupt();
     if (key.return) return seat.enter();
-    if (key.backspace || key.delete) return seat.erase();
-    if (key.ctrl || key.meta || key.escape || key.tab || key.upArrow || key.downArrow || key.leftArrow || key.rightArrow) return;
-    seat.type(input);
+    if (key.ctrl && input === "p") return seat.recall(-1);
+    if (key.ctrl && input === "n") return seat.recall(1);
+    if (key.upArrow || key.downArrow) return;
+    const change = editFor(input, key);
+    if (!change) return;
+    // A paste arrives as one chunk and can hold line breaks.
+    if (change.kind === "insert") return seat.type(input);
+    seat.edit(change);
   });
   const palette = seat.palette;
   const block = (rows: Row[], key: string) =>
@@ -359,6 +402,27 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
       ),
     );
   const prompt = TONE_STYLE.prompt;
+  // A typed number names an option: it is lit in the turn block and named after the cursor.
+  const picked = view.prompt ? previewOption(view.draft, view.options?.lines) : undefined;
+  // The row: "> " and the line with its cursor, or, while nothing is typed, the hint or the wait as its placeholder (AGT-48).
+  const inputRow = () => {
+    const mark = h(Text, { key: "mark", ...textProps({ accent: "rust" }, palette) }, "> ");
+    if (!view.draft) {
+      const placeholder = view.prompt ? h(Text, { key: "hint", ...textProps(prompt, palette) }, promptHint(view.prompt, seat.handle)) : h(Waiting, { key: "wait", seat, busy: view.busy });
+      return h(Box, { key: "row" }, mark, h(Text, { key: "cursor", inverse: true }, " "), placeholder);
+    }
+    const at = view.cursor;
+    const under = view.draft.slice(at, at + 1) || " ";
+    return h(
+      Text,
+      { key: "row" },
+      mark,
+      view.draft.slice(0, at),
+      h(Text, { inverse: true }, under),
+      view.draft.slice(at + 1),
+      ...(picked ? [h(Text, { key: "preview", ...textProps({ accent: "hint" }, palette) }, `  ${picked.line.slice(String(picked.number).length + 2)}`)] : []),
+    );
+  };
   // Text keeps to the reading measure; from 124 columns the situation pane stands to its right (M10 P5).
   const layout = screenLayout(size);
   const textSize: PanelSize = { columns: layout.text, rows: size.rows };
@@ -366,13 +430,13 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     ? block(situationRows(view.situation, layout.side ? { columns: layout.side, rows: size.rows } : size, { folded: view.folded, stale: view.stale }), "situation")
     : undefined;
   const live = [
-    ...(view.options ? [block(turnRows(view.options.lines, textSize, view.options.budget, view.options.title), "turn")] : []),
+    ...(view.options ? [block(turnRows(view.options.lines, textSize, view.options.budget, view.options.title, picked?.number), "turn")] : []),
     ...(view.preview && !view.prompt ? [h(Box, { key: "preview", marginTop: 1 }, h(Text, { dimColor: true, italic: true }, wrapText(view.preview, layout.text, 0)))] : []),
     h(
       Box,
       { key: "input", flexDirection: "column", marginTop: 1 },
-      view.prompt ? h(Text, textProps(prompt, palette), promptHint(view.prompt, seat.handle)) : h(Waiting, { seat, busy: view.busy }),
-      h(Text, null, h(Text, textProps({ accent: "rust" }, palette), "> "), view.draft, h(Text, { inverse: true }, " ")),
+      ...(view.notice ? [h(Text, { key: "notice", ...textProps(view.notice.error ? TONE_STYLE.error : TONE_STYLE.status, palette) }, wrapText(view.notice.text, layout.text, 0))] : []),
+      inputRow(),
     ),
   ];
   return h(
