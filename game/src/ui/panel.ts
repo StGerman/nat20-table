@@ -6,6 +6,7 @@
 import type { Handle, TurnBudget } from "@nat20-table/engine-client";
 import type { Situation, SituationCreature } from "../table/situation.ts";
 import type { Style } from "./lines.ts";
+import { THEME } from "./palette.ts";
 
 export interface Span {
   text: string;
@@ -114,7 +115,9 @@ function creatureRow(c: SituationCreature, label: string, widths: { handle: numb
 }
 
 function health(band: SituationCreature["health"], width = 0): Span {
-  return { text: band.padEnd(width), ...(band === "unhurt" ? {} : { style: danger }) };
+  // The band's accent from the theme's states (M10 U2); a band the theme doesn't list is danger.
+  const accent = band in THEME.states ? THEME.states[band].accent : "rust";
+  return { text: band.padEnd(width), ...(accent ? { style: { accent } } : {}) };
 }
 
 function join(groups: Span[][]): Span[] {
