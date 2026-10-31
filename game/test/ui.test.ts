@@ -412,3 +412,71 @@ test("a dead creature's empty turns are told to nobody, and its turns before it 
   assert.deepEqual(tellable(later, deaths).map((e) => e.seq), [7, 8, 9]);
   assert.deepEqual(tellable(log.slice(3, 5), deaths).map((e) => e.seq), [], "a reader behind still drops the first goblin_2's empty turns");
 });
+
+test("↑/↓ light the options round the list and Enter on an empty line plays the lit one; a typed number still wins (AGT-48 Q1)", async () => {
+  const seat = new InkSeat("bren");
+  seat.show({ kind: "options", lines: ["1. Longsword: goblin_1", "2. Second Wind", "3. End turn"], choices: [] });
+  const asked = seat.ask({ kind: "combat_turn" });
+  seat.move(-1);
+  assert.equal(seat.getView().highlight, 3, "the first ↑ lights the last");
+  seat.move(1);
+  assert.equal(seat.getView().highlight, 1, "and wraps round");
+  seat.move(1);
+  seat.enter();
+  assert.deepEqual(await asked, { kind: "option", number: 2 });
+  assert.equal(seat.getView().highlight, undefined);
+  assert.ok(seat.getView().lines.some((l) => l.text === "> 2"), "the pick is echoed as its number");
+  const again = seat.ask({ kind: "combat_turn" });
+  seat.move(1);
+  seat.type("3\r");
+  assert.deepEqual(await again, { kind: "option", number: 3 });
+  // The DM's question takes words: a lit option would be sent as a number for the DM, so the arrows do nothing.
+  const answer = seat.ask({ kind: "answer" });
+  seat.move(1);
+  assert.equal(seat.getView().highlight, undefined);
+  seat.type("Wenna\r");
+  assert.deepEqual(await answer, { kind: "text", text: "Wenna" });
+  // No options on screen, or no prompt: the arrows do nothing.
+  seat.show({ kind: "options", lines: ["1. Longsword: goblin_1"], choices: [] });
+  seat.move(1);
+  assert.equal(seat.getView().highlight, undefined);
+});
+
+test("on the real loop, Esc in a follow-up pick goes back to the turn's options, with its budget (AGT-48 Q5)", async () => {
+  const seat = new InkSeat("bren");
+  const seen: Array<{ title?: string; budget: boolean }> = [];
+  let step = 0;
+  const unsubscribe = seat.subscribe(() => {
+    const view = seat.getView();
+    if (view.options && seen.at(-1) !== undefined && view.options.title === seen.at(-1)!.title && Boolean(view.options.budget) === seen.at(-1)!.budget) {
+      // unchanged
+    } else if (view.options) seen.push({ title: view.options.title, budget: Boolean(view.options.budget) });
+    if (!view.prompt) return;
+    const prompt = view.prompt.kind;
+    if (step === 0 && prompt === "combat_turn") {
+      const more = view.options?.lines.find((l) => l.endsWith("another target…"));
+      if (!more) return;
+      step = 1;
+      setImmediate(() => seat.type(`${/^(\d+)\./.exec(more)![1]}\r`));
+    } else if (step === 1 && prompt === "pick") {
+      step = 2;
+      setImmediate(() => assert.equal(seat.back(), true));
+    } else if (step === 2 && prompt === "combat_turn") {
+      step = 3;
+      setImmediate(() => seat.type("/quit\r"));
+    }
+  });
+  const t = await testTable({ seed: 23, seat });
+  try {
+    const players = ["torva", "maren", "ilsa"].map((h) => new ScriptedPlayer(h));
+    const report = await new TableLoop({ table: t.table, dm: yardDm(), players, maxSteps: 500 }).run("m5_s3_yard");
+    assert.equal(report.ended, "the human quit");
+    assert.equal(step, 3, "the pick opened, Esc went back, and the turn's prompt came again");
+    const titled = seen.findIndex((s) => s.title !== undefined);
+    assert.ok(titled > 0, JSON.stringify(seen));
+    assert.deepEqual(seen[titled + 1], { title: undefined, budget: true }, "back to the turn's options, budget and all");
+  } finally {
+    unsubscribe();
+    t.close();
+  }
+});

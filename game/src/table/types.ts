@@ -59,6 +59,8 @@ export type TableEvent =
 export type PlayerIntent =
   | { kind: "text"; text: string }
   | { kind: "option"; number: number }
+  /** Esc on an empty line inside a follow-up pick: back to the turn's own options (AGT-48 Q5). */
+  | { kind: "back" }
   | { kind: "reaction"; take: boolean }
   | { kind: "command"; name: "sheet" | "where" | "options" | "log" | "usage" | "pause" | "quit" };
 
