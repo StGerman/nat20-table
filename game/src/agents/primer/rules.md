@@ -4,18 +4,9 @@ You know the 2024 rules of Dungeons & Dragons as an experienced player does. The
 
 **Your turn.** You move up to your Speed, and you can split the move around what you do. You take one action. You take a bonus action only when a feature, spell or item gives you one. You also have one reaction a round, which you can use on anyone's turn, such as an opportunity attack.
 
-**Actions everyone has:**
-- **Attack.**
-- **Dash:** you gain extra movement equal to your Speed this turn; a second Dash in the same turn adds it again.
-- **Disengage:** your movement this turn provokes no opportunity attacks.
-- **Dodge:** until the start of your next turn, attacks against you have Disadvantage and you have Advantage on Dexterity saving throws; you lose this while you are Incapacitated or your Speed is 0.
-- **Help:**
-  - give a companion Advantage on their next attack against a foe within 5 feet of you;
-  - help with a check;
-  - or try to stabilize a dying creature with a Medicine check.
-- **Cast a spell, or use an item.**
+**Actions everyone has:** Attack, Dash, Disengage, Dodge, Help (an attack, a check, or a dying creature), cast a spell, or use an item. Your class and your spells add more.
 
-Your class and your spells add more. Your options list everything you can do right now.
+Your options list everything you can do right now. The first time an option shows up, a line under it says what it does.
 
 **Moving near foes.** Leaving a foe's reach lets it make an opportunity attack against you, unless you took Disengage.
 

@@ -26,7 +26,7 @@ import { actionRows, frameLayout, freshText, headerText, MIN_STORY_ROWS, NARROW_
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette, type Style } from "./palette.ts";
 import { cardRows, endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
-import { costText, guideFor } from "../table/guide.ts";
+import { cardText, costText } from "../table/guide.ts";
 
 /** The numbered options held above the prompt while they are the human's to pick from. */
 export type PinnedOptions = Extract<TableEvent, { kind: "options" }>;
@@ -665,8 +665,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const choice = picked ? view.options?.choices.find((c) => c.number === picked.number) : undefined;
   const lit = choice?.target?.handle;
   // What the lit option does (AGT-70): a card under the roster in the wide frame, one line above the input in the narrow one.
-  const guide = choice?.about ? guideFor(choice.about.id) : undefined;
-  const card = guide && choice ? { label: choice.label.replace(/…$/, ""), cost: costText(choice.about?.cost), text: guide.text } : undefined;
+  const text = choice?.about ? cardText(choice.about) : undefined;
+  const card = text && choice ? { label: choice.label.replace(/…$/, ""), cost: costText(choice.about?.cost), text } : undefined;
   const cardLine = card && layout.mode === "narrow" ? wrapText(`${card.label}: ${card.text}`, width, 0).split("\n")[0] : undefined;
   const inputH = view.draft ? rowsFor(`> ${view.draft} ${picked ? `  ${picked.line}` : ""}`, width, 3) : 1;
   const notice = view.notice ? wrapText(view.notice.text, width, 0).split("\n").slice(0, 2) : [];

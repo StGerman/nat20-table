@@ -1,55 +1,38 @@
-// The action card's text (AGT-70): an entry for every option the pregens get, the same words as
-// the AI players' rules primer, no numbers the engine hasn't shown, and the choices carry the id.
+// The action card (AGT-70) and the agents' option text read the rule's own summary from the engine
+// (contract 1.0.0-dev.38): the choices carry it, the seat's own two lines have ours, and an agent
+// reads each summary once a session.
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
-import path from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
 import { buildChoices } from "../src/table/choices.ts";
-import { costText, guideFor, GUIDE_IDS } from "../src/table/guide.ts";
+import { cardText, costText, SEAT_LINE_IDS } from "../src/table/guide.ts";
 import { cardRows, rowText } from "../src/ui/panel.ts";
-import type { LegalActionsResult } from "../src/view.ts";
+import { formatOptions, type LegalActionsResult } from "../src/view.ts";
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(HERE, "../..");
-
-/** Every option id the recorded games and the contract fixtures offered. */
-function recordedIds(): string[] {
-  const files = [
-    ...readdirSync(path.join(HERE, "fixtures")).map((f) => path.join(HERE, "fixtures", f)),
-    ...readdirSync(path.join(ROOT, "contract/fixtures")).map((f) => path.join(ROOT, "contract/fixtures", f)),
-  ].filter((f) => f.endsWith(".jsonl"));
-  const ids = new Set<string>();
-  for (const file of files) for (const m of readFileSync(file, "utf8").matchAll(/"option_id":"([^"]+)"/g)) ids.add(m[1]);
-  return [...ids].sort();
-}
-
-test("every option the party has been offered has a card; only the monsters' own go without", () => {
-  const missing = recordedIds().filter((id) => !guideFor(id) && !id.startsWith("monster/") && !/^melee_attack\/(wolf_bite|giant_rat_bite)$/.test(id));
-  assert.deepEqual(missing, []);
-  // A spell's slot level and a weapon's name share one entry.
-  assert.equal(guideFor("cast/bless/1")?.text, guideFor("cast/bless")?.text);
-  assert.equal(guideFor("melee_attack/greataxe")?.text, guideFor("melee_attack/longsword")?.text);
-  assert.equal(guideFor("barbarian/reckless_attack_reaction")?.text, guideFor("barbarian/reckless_attack")?.text);
-  assert.equal(guideFor("nothing/we_know"), undefined);
-});
-
-test("the card describes and never computes: no DCs, odds or averages (Rule 4)", () => {
-  for (const id of GUIDE_IDS) {
-    const text = guideFor(id)!.text;
-    assert.ok(!/\bDC\b|%|\baverage\b|\bchance\b/i.test(text), `${id}: ${text}`);
-    assert.ok(text.length <= 240, `${id}: keep it to a few lines of the pane`);
+test("the card shows the engine's summary, ours only for Move and End turn", () => {
+  assert.equal(cardText({ id: "dodge", summary: "Until the start of your next turn…" }), "Until the start of your next turn…");
+  assert.equal(cardText({ id: "monster/nimble_escape" }), undefined, "no summary, no card: no fallback text");
+  assert.deepEqual(SEAT_LINE_IDS.sort(), ["end_turn", "move"]);
+  for (const id of SEAT_LINE_IDS) {
+    const text = cardText({ id })!;
+    assert.ok(text.length <= 240 && !/\bDC\b|%|\baverage\b|\bchance\b/i.test(text), text);
   }
 });
 
-test("Dash, Disengage and Dodge say what the AI players' primer says", () => {
-  const primer = readFileSync(path.join(HERE, "../src/agents/primer/rules.md"), "utf8");
-  for (const [id, name] of [["dash", "Dash"], ["disengage", "Disengage"], ["dodge", "Dodge"]]) {
-    const line = primer.split("\n").find((l) => l.startsWith(`- **${name}:**`))!;
-    const said = line.replace(`- **${name}:** `, "");
-    const text = guideFor(id)!.text;
-    assert.equal(text.charAt(0).toLowerCase() + text.slice(1), said);
-  }
+test("an agent reads each option's summary once a session", () => {
+  const result = {
+    cmd: "legal_actions",
+    prompt_id: "p1",
+    options: [
+      { option_id: "dodge", action: "nat20_core::action.dodge", name: "Dodge", summary: "Until the start of your next turn…", cost: { action: 1, bonus_action: 0, reaction: 0, movement_ft: 0 }, targeting: "self", max_targets: 0, targets: [], variants: [] },
+    ],
+    unavailable: [],
+    can_end_turn: false,
+  } as unknown as LegalActionsResult;
+  assert.ok(!formatOptions(result).includes("Until the start"), "no set, no summaries (the DM's briefing)");
+  const described = new Set<string>();
+  assert.match(formatOptions(result, described), /- dodge: Dodge \(action\)\n {2}Until the start of your next turn…/);
+  assert.ok(!formatOptions(result, described).includes("Until the start"), "the second listing stays short");
+  assert.deepEqual([...described], ["nat20_core::action.dodge"]);
 });
 
 test("a choice carries the option it plays and its cost; Move and End turn carry their own", () => {
@@ -60,6 +43,7 @@ test("a choice carries the option it plays and its cost; Move and End turn carry
     options: [
       {
         name: "Longsword attack",
+        summary: "Attack a creature within the weapon's reach. A hit deals the weapon's damage.",
         option_id: "melee_attack/longsword",
         action: "attack",
         cost,
@@ -76,13 +60,14 @@ test("a choice carries the option it plays and its cost; Move and End turn carry
     can_end_turn: true,
   } as unknown as LegalActionsResult;
   const choices = buildChoices(result, undefined, true);
-  assert.deepEqual(choices[0].about, { id: "melee_attack/longsword", cost });
-  assert.deepEqual(choices.find((c) => c.next)?.next?.[0].about, { id: "melee_attack/longsword", cost }, "the follow-up pick too");
+  const summary = "Attack a creature within the weapon's reach. A hit deals the weapon's damage.";
+  assert.deepEqual(choices[0].about, { id: "melee_attack/longsword", cost, summary });
+  assert.deepEqual(choices.find((c) => c.next)?.next?.[0].about, { id: "melee_attack/longsword", cost, summary }, "the follow-up pick too");
   assert.deepEqual(choices.at(-1)?.about, { id: "end_turn" });
   assert.equal(costText(cost), "Action");
   assert.equal(costText({ action: 0, bonus_action: 1, reaction: 0, movement_ft: 0, spell_slot: 1 }), "Bonus Action · level 1 slot");
   assert.equal(costText({ action: 0, bonus_action: 0, reaction: 0, movement_ft: 0 }), undefined);
-  const card = cardRows("Longsword attack → goblin_3", "Action", guideFor("melee_attack/longsword")!.text, 40).map(rowText);
+  const card = cardRows("Longsword attack → goblin_3", "Action", summary, 40).map(rowText);
   assert.equal(card[0], "Longsword attack → goblin_3 · Action");
   assert.ok(card.slice(1).every((r) => r.length <= 40), card.join("\n"));
 });

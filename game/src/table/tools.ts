@@ -168,12 +168,12 @@ export class PlayerTools {
   }
 
   /** In a fight on its own turn, or out of combat once the DM granted it an action. */
-  legalActions(): Promise<ToolOutcome> {
+  legalActions(described?: Set<string>): Promise<ToolOutcome> {
     if (!this.myAction() && !(this.table.grants.has(this.me) && !this.table.inCombat)) {
       return this.answer(notNow("it is not your turn"));
     }
     return this.answer(send(this.table, this.me, { cmd: "legal_actions", actor: this.me }, (r) =>
-      r.result?.cmd === "legal_actions" ? formatOptions(r.result as LegalActionsResult) : "",
+      r.result?.cmd === "legal_actions" ? formatOptions(r.result as LegalActionsResult, described) : "",
     ));
   }
 
@@ -658,7 +658,7 @@ export class DmTools {
   }
 
   /** The human's character's options (any time out of combat; on its turn in a fight). */
-  legalActions(): Promise<ToolOutcome> {
+  legalActions(described?: Set<string>): Promise<ToolOutcome> {
     const human = this.table.human;
     if (!human) return Promise.resolve(noHuman);
     const a = this.table.awaiting;
@@ -666,7 +666,7 @@ export class DmTools {
       return Promise.resolve(notNow(`it is not ${human}'s turn`));
     }
     return send(this.table, "dm", { cmd: "legal_actions", actor: human }, (r) =>
-      r.result?.cmd === "legal_actions" ? formatOptions(r.result as LegalActionsResult) : "",
+      r.result?.cmd === "legal_actions" ? formatOptions(r.result as LegalActionsResult, described) : "",
     );
   }
 

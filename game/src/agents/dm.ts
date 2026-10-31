@@ -191,6 +191,8 @@ export class ModelDm implements DmAgent {
   readonly seatTools: SeatTool[];
   private readonly config: ModelDmConfig;
   private session: TurnSession | undefined;
+  /** The actions whose summary this session has read, so `legal_actions` gives each once. */
+  private described = new Set<string>();
   /** The bound tools while a wake runs; a call outside a wake (after a timeout) does nothing. */
   private current: DmTools | undefined;
   /** What it established in fiction (spec §3.6), in order. */
@@ -271,6 +273,8 @@ export class ModelDm implements DmAgent {
   }
 
   private openSession(): TurnSession {
+    // A new session hasn't read any option's summary yet (formatOptions).
+    this.described = new Set();
     return (this.config.open ?? ((c) => new AgentSession(c)))(this.sessionConfig());
   }
 
@@ -388,7 +392,7 @@ export class ModelDm implements DmAgent {
         "legal_actions",
         `${human}'s options now: any time out of combat, on ${human}'s turn in a fight.`,
         {},
-        () => this.bound((t) => t.legalActions()),
+        () => this.bound((t) => t.legalActions(this.described)),
       ),
       seatTool(
         "submit",

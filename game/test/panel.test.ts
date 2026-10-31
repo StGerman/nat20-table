@@ -596,7 +596,7 @@ test("an option names its target by handle, with `(walk)` only when the human wa
 test("the lit option's card stands under the roster on a wide frame, and as one line over the input on a narrow one (AGT-70)", async () => {
   const cost = { action: 1, bonus_action: 0, reaction: 0, movement_ft: 0 };
   const choices: Choice[] = [
-    { number: 1, label: "Longsword attack → goblin_3", about: { id: "melee_attack/longsword", cost }, target: { handle: "goblin_3", side: "hostile", in_range: true } },
+    { number: 1, label: "Longsword attack → goblin_3", about: { id: "melee_attack/longsword", cost, summary: "Attack a creature within the weapon's reach. A hit deals the weapon's damage." }, target: { handle: "goblin_3", side: "hostile", in_range: true } },
     { number: 2, label: "End turn", about: { id: "end_turn" } },
   ];
   for (const [columns, rows] of [[160, 40], [80, 24]] as const) {

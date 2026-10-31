@@ -8,8 +8,18 @@ export type LegalActionsResult = Extract<CommandResult, { cmd: "legal_actions" }
 type Option = ActionOption;
 
 /** One line per option: id, name, cost, and its targets with distance and reach; in a fight, what is left of the turn first. */
-export function formatOptions(result: LegalActionsResult): string {
-  const lines = result.options.map((option) => formatOption(option));
+/**
+ * The options as an agent reads them. With `described`, an option's `summary` (the rule's own text
+ * from the engine) follows its line the first time its action shows up, and the action joins the
+ * set: the agent's session keeps what it read, so later listings stay short. Without it, no summaries.
+ */
+export function formatOptions(result: LegalActionsResult, described?: Set<string>): string {
+  const lines = result.options.map((option) => {
+    const line = formatOption(option);
+    if (!described || !option.summary || described.has(option.action)) return line;
+    described.add(option.action);
+    return `${line}\n  ${option.summary}`;
+  });
   if (result.budget) lines.unshift(`Left this turn: ${formatBudget(result.budget)}`);
   if (result.can_end_turn) lines.push("- end_turn: end your turn");
   return lines.join("\n");
