@@ -15,7 +15,8 @@ const model = process.argv.includes("--sonnet") ? "claude-sonnet-5-5" : "claude-
 let sent = 0;
 let fragments: Array<{ ms: number; json: string }> = [];
 let finished = 0;
-const narrate = seatTool("narrate", "Say this to the table, or to one character only (to, given first).", { to: z.string().optional(), text: z.string() }, async () => {
+// The DM's own narrate shape: `to` required and first, "table" for everyone.
+const narrate = seatTool("narrate", 'Say this to the table, or to one character only. Give `to` first: "table" for everyone, or one character\'s handle.', { to: z.string().describe('"table" for everyone, or one character\'s handle for that character only.'), text: z.string() }, async () => {
   finished = performance.now() - sent;
   return reply("said");
 });
