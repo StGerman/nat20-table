@@ -5,7 +5,8 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
-import { InkSeat } from "../src/ui/ink-seat.ts";
+import { endScreen } from "../src/play/driver.ts";
+import { finaleRows, InkSeat } from "../src/ui/ink-seat.ts";
 import { actionRows, freshText, headerText, maxOffset, page, storyRows, storyWindow, type StoryRow } from "../src/ui/frame.ts";
 import type { Line } from "../src/ui/lines.ts";
 import { paletteFor } from "../src/ui/palette.ts";
@@ -249,6 +250,45 @@ test("/help lists the commands and the keys over the story", async () => {
   try {
     seat.type("/help\r");
     await until("help", () => stdout.last.includes("Help · Esc closes") && stdout.last.includes("PgUp/PgDn  scroll the story, or this") && stdout.last.includes("/sheet  your character sheet"));
+  } finally {
+    seat.stop();
+  }
+});
+
+test("the end screen says how the run ended, and a stop what to do, with the checks; never the verdict or the report", () => {
+  assert.deepEqual(endScreen("the human quit", "operator"), { text: "The run is over: the human quit" });
+  assert.deepEqual(endScreen("the 120-minute time limit", "time_limit"), { text: "The run is over: the 120-minute time limit" });
+  const crash = endScreen("the run failed: boom", "crash");
+  assert.equal(crash.text, "Stopped: the run failed: boom");
+  assert.match(crash.todo!, /engine-stderr\.log/);
+  assert.match(endScreen("Claude is out of reach", "offline").todo!, /network/);
+  const rows = finaleRows({ ...crash, checks: [{ name: "Audit", state: "done" }, { name: "Narration check", state: "running" }, { name: "Upload", state: "waiting" }] }, 72).map(rowText);
+  assert.deepEqual(rows.slice(-4), ["", "✓ Audit", "… Narration check", "  Upload"]);
+});
+
+test("at the end the table stays with the checks ticking in the action zone, and any key leaves", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    seat.show({ kind: "narration", speaker: "dm", text: "The mill falls quiet." });
+    seat.show({ kind: "options", lines: ["1. Longsword attack → goblin_3", "2. End turn"], choices: [], budget: { action: 1, bonus_action: 1, reaction: 1, movement_ft: 30, speed_ft: 30 } });
+    const open = seat.ask({ kind: "combat_turn" });
+    seat.finish(endScreen("the party reached the end", undefined), ["Audit", "Report and verdict"]);
+    assert.deepEqual(await open, { kind: "command", name: "quit" }, "a prompt still open is let go");
+    seat.check("Audit", "running");
+    await until("the end screen", () => stdout.last.includes("The run is over: the party reached the end") && stdout.last.includes("… Audit") && stdout.last.includes("Any key leaves"));
+    assert.ok(stdout.last.includes("The mill falls quiet."), "the DM's last lines stay in the story");
+    assert.ok(!stdout.last.includes("Longsword attack"), "the options go");
+    // Said once: after the loop's own end line, the zone doesn't repeat it.
+    seat.show({ kind: "end", text: "the party reached the end" });
+    await until("one end line", () => stdout.last.split("The run is over: the party reached the end").length === 2);
+    seat.check("Audit", "done");
+    await until("the tick", () => stdout.last.includes("✓ Audit"));
+    let left = false;
+    void seat.left.then(() => (left = true));
+    stdin.press("q");
+    await until("left", () => left);
+    assert.equal(seat.getView().draft, "", "the key isn't typed");
   } finally {
     seat.stop();
   }
