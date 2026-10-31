@@ -23,7 +23,7 @@ Milestone 10 makes the Demo Run feel fast and finished for the human at the tabl
 
 ## Where time goes today
 
-Both targets are missed in every recent `play:unattended` run: players by 4 to 9 s at p95, the DM on and off. The tail is timeouts, not slow thinking.
+The player target is missed in every recent `play:unattended` run, by 4 to 9 s at p95. The DM target is missed in two of the three runs below and met by 0.1 s in the third. The tail is timeouts, not slow thinking.
 
 | Run (profile unattended, RU) | Players | Player combat p95 (target 10 s) | DM narration p95 (target 6 s) | DM timeouts | Cost, API-equivalent |
 | --- | --- | --- | --- | --- | --- |
