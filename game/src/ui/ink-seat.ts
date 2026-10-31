@@ -6,7 +6,8 @@
 // and the numbered options, AGT-36), then what the table waits for (while no prompt is open, a
 // braille spinner with who is thinking) and the line being typed. The loop answers the slash
 // commands (`/sheet`, `/where`, `/options`, `/log`, `/usage`, `/pause`, `/quit`); `/help` and `/panel` are
-// answered here. Written with `createElement`, not JSX, so the game still
+// answered here. Text keeps to a 72-column measure, and from 124 columns the situation panel
+// stands right of it (M10 P5, panel.ts `screenLayout`). Written with `createElement`, not JSX, so the game still
 // runs as plain `.ts` with no build step.
 import type { Handle } from "@nat20-table/engine-client";
 import { Box, render, Static, Text, useInput, useWindowSize, type Instance, type RenderOptions } from "ink";
@@ -16,7 +17,7 @@ import type { HumanPrompt, PlayerIntent, Seat, TableEvent } from "../table/types
 import { COMMAND_HELP, promptHint, readLine } from "./input.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette } from "./palette.ts";
-import { endsTurn, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
+import { endsTurn, screenLayout, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
 
 /** The numbered options held above the prompt while they are the human's to pick from. */
 export type PinnedOptions = Extract<TableEvent, { kind: "options" }>;
@@ -358,6 +359,22 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
       ),
     );
   const prompt = TONE_STYLE.prompt;
+  // Text keeps to the reading measure; from 124 columns the situation pane stands to its right (M10 P5).
+  const layout = screenLayout(size);
+  const textSize: PanelSize = { columns: layout.text, rows: size.rows };
+  const situation = view.situation
+    ? block(situationRows(view.situation, layout.side ? { columns: layout.side, rows: size.rows } : size, { folded: view.folded, stale: view.stale }), "situation")
+    : undefined;
+  const live = [
+    ...(view.options ? [block(turnRows(view.options.lines, textSize, view.options.budget, view.options.title), "turn")] : []),
+    ...(view.preview && !view.prompt ? [h(Box, { key: "preview", marginTop: 1 }, h(Text, { dimColor: true, italic: true }, wrapText(view.preview, layout.text, 0)))] : []),
+    h(
+      Box,
+      { key: "input", flexDirection: "column", marginTop: 1 },
+      view.prompt ? h(Text, textProps(prompt, palette), promptHint(view.prompt, seat.handle)) : h(Waiting, { seat, busy: view.busy }),
+      h(Text, null, h(Text, textProps({ accent: "rust" }, palette), "> "), view.draft, h(Text, { inverse: true }, " ")),
+    ),
+  ];
   return h(
     Box,
     { flexDirection: "column" },
@@ -365,18 +382,19 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
       items: view.lines,
       children: (item: unknown) => {
         const line = item as SeatView["lines"][number];
-        // Wrapped here, at the width it is drawn at: a blank line still takes a row.
-        return h(Text, { key: line.id, ...textProps(TONE_STYLE[line.tone], palette) }, wrapText(line.text, size.columns, line.tone === "engine" ? 2 : 0) || " ");
+        // Wrapped here, at the text column's width: a blank line still takes a row.
+        return h(Text, { key: line.id, ...textProps(TONE_STYLE[line.tone], palette) }, wrapText(line.text, layout.text, line.tone === "engine" ? 2 : 0) || " ");
       },
     }),
-    ...(view.situation ? [block(situationRows(view.situation, size, { folded: view.folded, stale: view.stale }), "situation")] : []),
-    ...(view.options ? [block(turnRows(view.options.lines, size, view.options.budget, view.options.title), "turn")] : []),
-    ...(view.preview && !view.prompt ? [h(Box, { key: "preview", marginTop: 1 }, h(Text, { dimColor: true, italic: true }, wrapText(view.preview, size.columns, 0)))] : []),
-    h(
-      Box,
-      { flexDirection: "column", marginTop: 1 },
-      view.prompt ? h(Text, textProps(prompt, palette), promptHint(view.prompt, seat.handle)) : h(Waiting, { seat, busy: view.busy }),
-      h(Text, null, h(Text, textProps({ accent: "rust" }, palette), "> "), view.draft, h(Text, { inverse: true }, " ")),
-    ),
+    ...(layout.side
+      ? [
+          h(
+            Box,
+            { key: "frame", flexDirection: "row", columnGap: size.columns - layout.text - layout.side },
+            h(Box, { key: "text", flexDirection: "column", width: layout.text, flexShrink: 0 }, ...live),
+            h(Box, { key: "side", flexDirection: "column", width: layout.side, flexShrink: 0 }, ...(situation ? [situation] : [])),
+          ),
+        ]
+      : [...(situation ? [situation] : []), ...live]),
   );
 }
