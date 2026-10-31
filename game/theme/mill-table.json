@@ -1,0 +1,27 @@
+{
+  "_comment": "Mill Table design tokens (M10 U2, AGT-65): one place for the table's colours, the look of each kind of line, and the word each state carries, so NO_COLOR loses nothing. The Ink seat reads it (game/src/ui/palette.ts); the SwiftUI design system (demo/swiftui-design-system) names the same accents as its *-text tokens. Night is a dark ground, Day a light one; ansi is the 16-colour name, so the user's terminal theme decides the shade.",
+  "accents": {
+    "rust": { "meaning": "action and danger: your turn, bloodied, down", "ansi": "red", "night": "#f07a4a", "day": "#a8401c" },
+    "teal": { "meaning": "recovery: healing, a rest, an ally back up", "ansi": "cyan", "night": "#5fb3a6", "day": "#276b60" },
+    "violet": { "meaning": "magic and conditions", "ansi": "magenta", "night": "#b48ad0", "day": "#6e4590" },
+    "gold": { "meaning": "the sacred and the found", "ansi": "yellow", "night": "#c9a33a", "day": "#7a5e12" },
+    "hint": { "meaning": "secondary text: engine lines, status, labels", "ansi": "gray", "night": "#9a9488", "day": "#6c665d" }
+  },
+  "tones": {
+    "dm": {},
+    "speech": { "italic": true },
+    "intent": { "italic": true, "accent": "hint" },
+    "engine": { "accent": "hint" },
+    "options": {},
+    "prompt": { "accent": "rust", "bold": true },
+    "info": {},
+    "status": { "accent": "hint" },
+    "end": { "accent": "rust", "bold": true },
+    "error": { "accent": "rust" }
+  },
+  "states": {
+    "unhurt": { "word_en": "unhurt", "word_ru": "цел" },
+    "bloodied": { "accent": "rust", "word_en": "bloodied", "word_ru": "ранен" },
+    "down": { "accent": "rust", "word_en": "down", "word_ru": "выбыл" }
+  }
+}

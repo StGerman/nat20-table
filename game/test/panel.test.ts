@@ -3,7 +3,8 @@
 // the loop sending situations on the real engine, and the loading indicator while the table waits. Needs `cargo build -p nat20-api-server`.
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import type { State } from "@nat20-table/engine-client";
@@ -12,7 +13,8 @@ import { ScriptedPlayer, ScriptedSeat, yardDm } from "../src/table/scripted.ts";
 import { situationOf, type Situation } from "../src/table/situation.ts";
 import type { TableEvent } from "../src/table/types.ts";
 import { InkSeat, SPINNER, waitText } from "../src/ui/ink-seat.ts";
-import { paletteFor } from "../src/ui/palette.ts";
+import { TONE_STYLE } from "../src/ui/lines.ts";
+import { loadTheme, paletteFor, THEME_FILE, themeProblems } from "../src/ui/palette.ts";
 import { rowText, situationRows, turnRows } from "../src/ui/panel.ts";
 import type { LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
@@ -327,4 +329,26 @@ test("with the panel on, the loop sends the human a situation before each decisi
   } finally {
     t.close();
   }
+});
+
+test("the theme file holds every accent, tone and state the seat uses, and the seat reads it (M10 U2)", () => {
+  const theme = JSON.parse(readFileSync(THEME_FILE, "utf8"));
+  assert.deepEqual(themeProblems(theme), []);
+  assert.deepEqual(Object.keys(theme.tones).sort(), Object.keys(TONE_STYLE).sort());
+  assert.deepEqual(TONE_STYLE.prompt, { accent: "rust", bold: true });
+  for (const band of ["unhurt", "bloodied", "down"]) assert.ok(theme.states[band], band);
+  // A changed hex reaches the palette.
+  const day = paletteFor({ COLORTERM: "truecolor", NAT20_THEME: "day" }, { ...theme, accents: { ...theme.accents, rust: { ...theme.accents.rust, day: "#000001" } } });
+  assert.equal(day.rust, "#000001");
+});
+
+test("a missing or invalid theme file falls back to the built-in colours with one warning", () => {
+  const warned: string[] = [];
+  const dir = mkdtempSync(path.join(tmpdir(), "theme-"));
+  const bad = path.join(dir, "bad.json");
+  writeFileSync(bad, JSON.stringify({ accents: { rust: { ansi: "red", night: "red", day: "#000000" } } }));
+  assert.equal(loadTheme(bad, (w) => warned.push(w)).accents.rust.night, "#f07a4a");
+  assert.equal(loadTheme(path.join(dir, "none.json"), (w) => warned.push(w)).accents.teal.ansi, "cyan");
+  assert.equal(warned.length, 2);
+  assert.match(warned[0], /^bad\.json: accent rust: needs ansi, and night and day as #rrggbb/);
 });

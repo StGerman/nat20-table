@@ -3,7 +3,9 @@
 // rendered them for the human's viewer, with their roll id (dice, total and outcome; no AC or DC).
 import type { Handle } from "@nat20-table/engine-client";
 import type { TableEvent } from "../table/types.ts";
-import type { Accent, Palette } from "./palette.ts";
+import { THEME, type Palette, type Style } from "./palette.ts";
+
+export type { Style };
 
 /** What a line means on screen; `TONE_STYLE` says how that looks. */
 export type Tone = "dm" | "speech" | "intent" | "engine" | "options" | "prompt" | "info" | "status" | "end" | "error";
@@ -13,30 +15,13 @@ export interface Line {
   tone: Tone;
 }
 
-/** How a span looks: an accent from the palette, and type styles that survive NO_COLOR. */
-export interface Style {
-  accent?: Accent;
-  bold?: boolean;
-  italic?: boolean;
-  dim?: boolean;
-}
+const TONES: readonly Tone[] = ["dm", "speech", "intent", "engine", "options", "prompt", "info", "status", "end", "error"];
 
 /**
- * Each tone in the Mill Table accent code (palette.ts): narration and plain values carry no accent,
- * engine lines are secondary text, your turn and the run's end are rust.
+ * Each tone in the Mill Table accent code, from the theme file's `tones` (M10 U2): narration and
+ * plain values carry no accent, engine lines are secondary text, your turn and the run's end are rust.
  */
-export const TONE_STYLE: Record<Tone, Style> = {
-  dm: {},
-  speech: { italic: true },
-  intent: { italic: true, accent: "hint" },
-  engine: { accent: "hint" },
-  options: {},
-  prompt: { accent: "rust", bold: true },
-  info: {},
-  status: { accent: "hint" },
-  end: { accent: "rust", bold: true },
-  error: { accent: "rust" },
-};
+export const TONE_STYLE: Record<Tone, Style> = Object.fromEntries(TONES.map((tone) => [tone, THEME.tones[tone] ?? {}])) as Record<Tone, Style>;
 
 /** Ink `Text` props for a style in a palette. */
 export function textProps(style: Style, palette: Palette): { color?: string; bold?: boolean; italic?: boolean; dimColor?: boolean } {
