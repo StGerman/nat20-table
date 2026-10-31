@@ -150,17 +150,19 @@ function join(groups: Span[][]): Span[] {
  * The turn block: what is left of the turn as the header, then the numbered options, in two
  * columns when they fit.
  */
-export function turnRows(lines: string[], size: PanelSize, budget?: TurnBudget, title?: string): Row[] {
+export function turnRows(lines: string[], size: PanelSize, budget?: TurnBudget, title?: string, lit?: number): Row[] {
   const rows: Row[] = [];
   if (budget) rows.push(budgetRow(budget));
   if (title) rows.push([{ text: `${title}:`, style: { bold: true } }]);
+  // The option a typed number names is lit (M10 P6, AGT-48).
+  const span = (text: string, line: string): Span => (lit !== undefined && line.startsWith(`${lit}. `) ? { text, style: { accent: "rust", bold: true } } : { text });
   const half = Math.floor((size.columns - 2) / 2);
   const twoColumns = lines.length > 3 && lines.every((line) => line.length < half - 1);
-  if (!twoColumns) return [...rows, ...lines.map((text) => [{ text }])];
+  if (!twoColumns) return [...rows, ...lines.map((text) => [span(text, text)])];
   const down = Math.ceil(lines.length / 2);
   for (let i = 0; i < down; i++) {
     const right = lines[i + down];
-    rows.push([{ text: right ? lines[i].padEnd(half) : lines[i] }, ...(right ? [{ text: right }] : [])]);
+    rows.push([span(right ? lines[i].padEnd(half) : lines[i], lines[i]), ...(right ? [span(right, right)] : [])]);
   }
   return rows;
 }

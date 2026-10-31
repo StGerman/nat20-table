@@ -41,10 +41,11 @@ export function readLine(line: string, prompt: HumanPrompt | undefined): Typed {
   if (!prompt) return { kind: "error", text: "The table is busy: wait for your prompt. A command typed now is answered when it comes." };
   if (prompt.kind === "paused") return { kind: "error", text: "Paused: only commands until /pause again." };
   if (prompt.kind === "reaction") {
-    if (/^(y|yes)$/i.test(text)) return { kind: "intent", intent: { kind: "reaction", take: true } };
-    if (/^(n|no)$/i.test(text)) return { kind: "intent", intent: { kind: "reaction", take: false } };
+    // да and нет too, for a table played in Russian (AGT-48).
+    if (/^(y|yes|д|да)$/i.test(text)) return { kind: "intent", intent: { kind: "reaction", take: true } };
+    if (/^(n|no|н|нет)$/i.test(text)) return { kind: "intent", intent: { kind: "reaction", take: false } };
     if (/^\d+$/.test(text)) return { kind: "intent", intent: { kind: "option", number: Number(text) } };
-    return { kind: "error", text: "Answer y or n, or the number of a reaction." };
+    return { kind: "error", text: "Answer y or n (да or нет), or the number of a reaction." };
   }
   if (prompt.kind !== "answer" && /^\d+$/.test(text)) return { kind: "intent", intent: { kind: "option", number: Number(text) } };
   return { kind: "intent", intent: { kind: "text", text } };

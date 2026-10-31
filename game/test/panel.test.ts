@@ -431,3 +431,15 @@ test("between 73 and 123 columns a long option row still wraps at the 72-column 
     seat.stop();
   }
 });
+
+test("the hint is the input row's placeholder, and a typed number lights its option and names it on the row (AGT-48)", async () => {
+  const { seat, stdout } = await frameAt(80, 24);
+  try {
+    assert.ok(stdout.last.split("\n").some((r) => r.startsWith(">") && r.includes("Your turn: an option number")), stdout.last);
+    seat.type("1");
+    await until("the preview", () => stdout.last.includes("> 1   Longsword attack → goblin_3"));
+    assert.ok(!stdout.last.includes("Your turn: an option number"), "the hint goes once something is typed");
+  } finally {
+    seat.stop();
+  }
+});
