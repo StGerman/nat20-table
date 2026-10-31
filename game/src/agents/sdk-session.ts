@@ -509,7 +509,8 @@ export class AgentSession {
 
   private fail(error: Error): void {
     this.failure ??= error;
-    this.drained("drained", null);
+    // A plan limit that cuts a draining turn short keeps its own outcome, as a turn in flight does.
+    this.drained(error instanceof UsageLimitReached ? "limit" : "drained", null);
     this.settle(error);
   }
 }

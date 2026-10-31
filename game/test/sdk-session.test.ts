@@ -283,6 +283,31 @@ test("a drain that outlasts the turn's limit is cut and recorded as drained, nev
   await s.close();
 });
 
+test("a plan limit that cuts a drain short is recorded as limit, not drained", async () => {
+  const usage = new UsageLog();
+  let s: AgentSession;
+  const query = (({ prompt }: { prompt: AsyncIterable<SDKUserMessage> }) => {
+    async function* run(): AsyncGenerator<SDKMessage> {
+      for await (const message of prompt) {
+        const id = `a-${message.uuid}`;
+        yield { ...call(id, 10, 2), message: { ...call(id, 10, 2).message, content: [{ type: "tool_use", name: "mcp__table__narrate" }] } } as never;
+        await s.tools[0].handler({ text: "x" }, {} as never);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        yield { type: "rate_limit_event", rate_limit_info: { status: "rejected" } } as never;
+      }
+    }
+    return Object.assign(run(), { interrupt: async () => undefined });
+  }) as never;
+  s = new AgentSession({
+    agent: "dm", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [narrate], cwd: "/empty", usage,
+    query, settleOn: { narrate: ["narrate"] }, turnTimeoutMs: 5_000,
+  });
+  await s.turn("go", "narrate");
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  assert.deepEqual(usage.records.map((r) => [r.outcome, r.settled_early]), [["limit", true]]);
+  await s.close().catch(() => undefined);
+});
+
 test("a turn whose purpose has no settling tool waits for its result", async () => {
   const usage = new UsageLog();
   let s: AgentSession;
