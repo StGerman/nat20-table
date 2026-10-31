@@ -214,7 +214,6 @@ export const REACH_CENTRES_FT = 7.5;
 export function adjacencyLine(state: State | undefined): string | undefined {
   if (state?.view !== "dm") return undefined;
   const standing = state.creatures.filter((c) => c.life_state !== "dead");
-  if (standing.length < 2) return undefined;
   const pairs: string[] = [];
   for (const [i, a] of standing.entries()) {
     for (const b of standing.slice(i + 1)) {
@@ -1502,9 +1501,17 @@ export class TableLoop {
     }
   }
 
-  /** The adjacency line from the DM's state now; none when the state can't be read. */
+  /**
+   * The adjacency line from the DM's state now; none when the state can't be read, so a failed
+   * request for this extra fact never skips the wake's own fallback and cleanup.
+   */
   private async reachLine(): Promise<string[]> {
-    const r = await this.table.engine.request("dm", { cmd: "get_state" });
+    let r;
+    try {
+      r = await this.table.engine.request("dm", { cmd: "get_state" });
+    } catch {
+      return [];
+    }
     const line = adjacencyLine(r.result?.cmd === "get_state" ? r.result.state : undefined);
     return line ? [line] : [];
   }

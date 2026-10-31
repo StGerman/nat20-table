@@ -405,7 +405,8 @@ test("the adjacency line names the pairs within reach and leaves out the dead (M
     "Within reach of each other: bren and goblin_1; torva and wolf_1. Everyone else is apart.",
   );
   assert.equal(adjacencyLine(state([at("bren", 0, 0), at("goblin_1", 20, 0)])), "Nobody stands within reach of anyone else.");
-  assert.equal(adjacencyLine(state([at("bren", 0, 0)])), undefined);
+  // One creature left standing still gets the fact: every narrate briefing carries it.
+  assert.equal(adjacencyLine(state([at("bren", 0, 0)])), "Nobody stands within reach of anyone else.");
   assert.equal(adjacencyLine(undefined), undefined);
 });
 
