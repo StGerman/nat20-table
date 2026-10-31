@@ -63,6 +63,11 @@ export interface SeatView {
   question?: string;
   /** Why the engine refused the last decision, above the options until the next one (AGT-69). */
   refusal?: string;
+  /**
+   * The run is over (screens 12 and 13): how it ended, and for a stop what to do about it, with the
+   * post-run checks as they go. The table stays on screen until they finish or a key is pressed.
+   */
+  finale?: Finale;
   options?: PinnedOptions;
   /** Who the table waits on while it isn't asking the human, and since when (ms). */
   busy?: { on: string; since: number };
@@ -389,6 +394,47 @@ export class InkSeat implements Seat {
     }
   }
 
+  /**
+   * The run is over (AGT-69 step 4): the action zone says how, and lists the post-run checks,
+   * which the run marks with `check` as they go. Nothing more is asked of the human; any key
+   * leaves (`left`).
+   */
+  finish(finale: Omit<Finale, "checks">, checks: string[]): void {
+    const answer = this.answer;
+    this.answer = undefined;
+    this.update({
+      finale: { ...finale, checks: checks.map((name) => ({ name, state: "waiting" })) },
+      prompt: undefined,
+      options: undefined,
+      reaction: undefined,
+      question: undefined,
+      refusal: undefined,
+      overlay: undefined,
+      busy: undefined,
+      preview: undefined,
+    });
+    answer?.({ kind: "command", name: "quit" });
+  }
+
+  /** A post-run check starts, passes or fails. */
+  check(name: string, state: CheckState): void {
+    const finale = this.view.finale;
+    if (!finale) return;
+    this.update({ finale: { ...finale, checks: finale.checks.map((c) => (c.name === name ? { ...c, state } : c)) } });
+  }
+
+  // Declared before `left`, whose initializer sets it.
+  private leave!: () => void;
+  /** Resolves when a key is pressed on the end screen. */
+  readonly left: Promise<void> = new Promise((resolve) => {
+    this.leave = resolve;
+  });
+
+  /** A key on the end screen. */
+  keyAtEnd(): void {
+    this.leave();
+  }
+
   /** Esc: closes an overlay (a command's answer, or the narrow frame's whole panel); false when none was open. */
   closeOverlay(narrow: boolean): boolean {
     if (this.view.overlay) {
@@ -456,6 +502,37 @@ export class InkSeat implements Seat {
 }
 
 const EMPTY_ROW = { draft: EMPTY.text, cursor: EMPTY.cursor };
+
+export type CheckState = "waiting" | "running" | "done" | "failed";
+
+/** What the end screen shows: how the run ended, what to do after a stop, and the checks. */
+export interface Finale {
+  /** "The run is over: the party reached the end", or "Stopped: the run failed: ...". */
+  text: string;
+  /** For a stop (screen 13): one line on what to do now. */
+  todo?: string;
+  checks: Array<{ name: string; state: CheckState }>;
+}
+
+/** The story's last line with text, without copying the story. */
+function lastText(lines: Line[]): string | undefined {
+  for (let i = lines.length - 1; i >= 0; i--) if (lines[i].text.trim() !== "") return lines[i].text;
+  return undefined;
+}
+
+const CHECK_MARK: Record<CheckState, string> = { waiting: " ", running: "…", done: "✓", failed: "✗" };
+
+/** The end screen's rows (screens 12 and 13): no verdict and no report, which are the DM's view (Rule 3). */
+export function finaleRows(finale: Finale, width: number, told = false): Row[] {
+  const said = (text: string, style: Style): Row[] => wrapText(text, width, 0).split("\n").map((row) => [{ text: row, style }]);
+  return [
+    // Said once: when the story's last line already ends the run in these words, the zone doesn't repeat it.
+    ...(told ? [] : said(finale.text, { accent: "rust", bold: true })),
+    ...(finale.todo ? said(finale.todo, {}) : []),
+    [],
+    ...finale.checks.map((c): Row => [{ text: `${CHECK_MARK[c.state]} ${c.name}`, style: c.state === "failed" ? { accent: "rust" } : c.state === "done" ? {} : { accent: "hint" } }]),
+  ];
+}
 
 /** The loop's answers to /sheet, /where, /log and /usage, by their info titles: shown as overlays. */
 export const OVERLAYS = new Set(["Sheet", "Where", "Log", "Usage"]);
@@ -560,6 +637,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     ...(view.question && view.prompt?.kind === "answer" ? said(`DM asks you: ${view.question}`, TONE_STYLE.dm) : []),
     ...(paused ? said("Paused: the AI players wait. /pause to go on.", { accent: "hint" }) : []),
     ...(view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number) : []),
+    ...(view.finale ? finaleRows(view.finale, width, lastText(view.lines) === view.finale.text) : []),
   ];
   const actionRoom = Math.min(Math.floor(size.rows / 2), size.rows - below - MIN_STORY_ROWS - 2);
   const action = actionRows(block, width, actionRoom, picked?.number);
@@ -579,6 +657,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const overlayMax = overlayRows ? Math.max(0, overlayRows.length - overlayRoom) : 0;
 
   useInput((input, key) => {
+    // The end screen: any key, Ctrl+C too, gives the terminal back; the checks go on.
+    if (view.finale) return seat.keyAtEnd();
     if (key.ctrl && input === "c") return seat.interrupt();
     // PgUp/PgDn read the overlay while one is open, the story otherwise; Esc closes the overlay first.
     if (overlayRows && key.pageUp) return setOverlayTop(Math.max(0, overlayTop - Math.max(1, overlayRoom - 1)));
@@ -610,9 +690,11 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const inputRow = () => {
     const mark = h(Text, { key: "mark", ...textProps({ accent: "rust" }, palette) }, "> ");
     if (!view.draft) {
-      const placeholder = view.prompt
-        ? h(Text, { key: "hint", ...textProps(TONE_STYLE.prompt, palette) }, promptHint(view.prompt, seat.handle))
-        : h(Waiting, { key: "wait", seat, busy: view.busy });
+      const placeholder = view.finale
+        ? h(Text, { key: "hint", ...textProps({ accent: "hint" }, palette) }, "Any key leaves; the checks go on after it.")
+        : view.prompt
+          ? h(Text, { key: "hint", ...textProps(TONE_STYLE.prompt, palette) }, promptHint(view.prompt, seat.handle))
+          : h(Waiting, { key: "wait", seat, busy: view.busy });
       return h(Box, { key: "input", width, height: 1, overflow: "hidden" }, h(Text, { wrap: "truncate-end" }, mark, h(Text, { key: "cursor", inverse: true }, " "), placeholder));
     }
     const at = view.cursor;

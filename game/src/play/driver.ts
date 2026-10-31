@@ -34,7 +34,7 @@ import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
 import { chainDm, chainScenes, ScriptedPlayer, ScriptedSeat, walkOnDm } from "../table/scripted.ts";
 import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
-import type { DmAgent, PlayerAgent, Seat } from "../table/types.ts";
+import type { DmAgent, PlayerAgent, Seat, StopKind } from "../table/types.ts";
 import type { Instance } from "ink";
 import { InkSeat } from "../ui/ink-seat.ts";
 import { glyphsFor } from "../ui/panel.ts";
@@ -300,9 +300,29 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   clearTimeout(deadline);
   caffeinate?.kill();
   process.off("SIGINT", interrupted);
-  ink?.stop();
-  // What the run cost, once at its end (M10 U1).
-  console.log(["Usage:", ...usageBlock(usage.records).map((l) => `  ${l}`)].join("\n"));
+  // What the run cost, once at its end (M10 U1): printed once the terminal is back.
+  const usageLines = ["Usage:", ...usageBlock(usage.records).map((l) => `  ${l}`)].join("\n");
+  if (!ink) console.log(usageLines);
+  const stop = run?.stop ?? table.stop ?? (failure ? "crash" : undefined);
+  const endedText = run?.ended ?? (failure instanceof Error ? `the run failed: ${failure.message}` : String(failure));
+  // The end screen (AGT-69 step 4): the table stays up while the post-run checks run, until they
+  // finish or a key is pressed; the run's output then prints on the normal screen as before.
+  const checks = [...(flags["no-audit"] ? [] : [CHECK_AUDIT, CHECK_NARRATION]), CHECK_REPORT, ...(flags["no-upload"] && !flags.zip ? [] : [CHECK_UPLOAD])];
+  ink?.finish(endScreen(endedText, stop), checks);
+  void ink?.left.then(() => ink.stop());
+  const checking = async <T>(name: string, work: () => T | Promise<T>): Promise<T> => {
+    ink?.check(name, "running");
+    // A breath for the screen to draw the step: the audit and the upload block the event loop.
+    if (ink) await new Promise((resolve) => setTimeout(resolve, 30));
+    try {
+      const result = await work();
+      ink?.check(name, "done");
+      return result;
+    } catch (error) {
+      ink?.check(name, "failed");
+      throw error;
+    }
+  };
   const end = await endState(engine).catch(() => []);
   engine.close();
 
@@ -313,10 +333,12 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   writeRunRecord(runDir, record);
 
   // The post-run stages (design §3.3): each reads the folder and writes its own file.
-  const checked = flags["no-audit"] ? undefined : audit(flags.pack, runDir);
+  const checked = flags["no-audit"] ? undefined : await checking(CHECK_AUDIT, () => audit(flags.pack, runDir));
+  if (checked && !checked.passed) ink?.check(CHECK_AUDIT, "failed");
   if (checked) writeFileSync(path.join(runDir, AUDIT_JSON), JSON.stringify(checked, null, 2) + "\n");
   // The narration check (AGT-9): a run with a scripted DM has nothing a model judge should read.
-  const narration = flags["no-audit"] ? undefined : await narrationCheck(flags.pack, runDir, flags.dm === "model" ? new ModelJudge() : new ScriptedJudge());
+  const narration = flags["no-audit"] ? undefined : await checking(CHECK_NARRATION, () => narrationCheck(flags.pack, runDir, flags.dm === "model" ? new ModelJudge() : new ScriptedJudge()));
+  ink?.check(CHECK_REPORT, "running");
 
   const report = [
     `# ${play.command} run, ${new Date().toISOString()}`,
@@ -342,12 +364,43 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const name = path.basename(runDir);
   const written = `Written to ${folder}/. Send report.md back to the thread, or the whole folder zipped: (cd ${JSON.stringify(path.dirname(folder))} && zip -qr ${name}.zip ${name})`;
   const verdictLine = `Verdict: ${verdict.verdict}: ${verdict.why}`;
+  ink?.check(CHECK_REPORT, "done");
+  // Last, so a slow or failed push never holds back the record or the verdict.
+  const uploaded = flags["no-upload"] && !flags.zip ? [] : await checking(CHECK_UPLOAD, () => uploadStage(runDir, flags));
+  if (ink) {
+    ink.stop();
+    console.log(usageLines);
+  }
   // The report is the DM's view (monster Hit Points, lines said to AI players only), so the terminal
   // you just played in shows only how the run ended; the rest stays in the run folder.
   console.log(ink ? `\nThe run is over: ${record.ended}. ${verdictLine}\n${written}` : `\n${[...verdictBlock(verdict).slice(1, -1), "", report].join("\n")}\n\n${written}`);
-  // Last, so a slow or failed push never holds back the record or the verdict.
-  for (const line of uploadStage(runDir, flags)) console.log(line);
+  for (const line of uploaded) console.log(line);
   process.exitCode = failure || (checked && !checked.passed) ? 1 : 0;
+}
+
+const CHECK_AUDIT = "Audit: every roll against the engine log";
+const CHECK_NARRATION = "Narration check";
+const CHECK_REPORT = "Report and verdict";
+const CHECK_UPLOAD = "Upload";
+
+/**
+ * How the end screen says the run ended (screens 12 and 13): the end of the adventure, a quit and
+ * the time limit read as an end; a crash, a stall, the subscription's limit and going offline as
+ * a stop, with one line on what to do.
+ */
+export function endScreen(ended: string, stop: StopKind | null | undefined): { text: string; todo?: string } {
+  switch (stop) {
+    case "crash":
+      return { text: `Stopped: ${ended}`, todo: "The run folder keeps everything so far: send engine-stderr.log and report.md back to the thread." };
+    case "stalled":
+      return { text: `Stopped: ${ended}`, todo: "The table stopped moving. The run folder keeps everything so far: send report.md back to the thread." };
+    case "usage_limit":
+      return { text: `Stopped: ${ended}`, todo: "The Claude subscription's limit is spent: run again after it resets." };
+    case "offline":
+      return { text: `Stopped: ${ended}`, todo: "Claude couldn't be reached: check the network and run again." };
+    default:
+      return { text: `The run is over: ${ended}` };
+  }
 }
 
 /** On macOS, keeps the Mac awake for exactly the run's life (`caffeinate -i -w <pid>`). */
