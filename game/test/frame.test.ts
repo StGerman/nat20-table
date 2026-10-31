@@ -296,7 +296,10 @@ test("at the end the table stays with the checks ticking in the action zone, and
     seat.show({ kind: "narration", speaker: "dm", text: "The mill falls quiet." });
     seat.show({ kind: "options", lines: ["1. Longsword attack → goblin_3", "2. End turn"], choices: [], budget: { action: 1, bonus_action: 1, reaction: 1, movement_ft: 30, speed_ft: 30 } });
     const open = seat.ask({ kind: "combat_turn" });
+    // A line half typed when the run ends goes, so the input row says any key leaves.
+    seat.type("attack the");
     seat.finish(endScreen("the party reached the end", undefined), ["Audit", "Report and verdict"]);
+    assert.equal(seat.getView().draft, "", "the half-typed line goes");
     assert.deepEqual(await open, { kind: "command", name: "quit" }, "a prompt still open is let go");
     seat.check("Audit", "running");
     await until("the end screen", () => stdout.last.includes("The run is over: the party reached the end") && stdout.last.includes("… Audit") && stdout.last.includes("Any key leaves"));

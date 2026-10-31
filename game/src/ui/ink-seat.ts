@@ -417,6 +417,9 @@ export class InkSeat implements Seat {
       overlay: undefined,
       busy: undefined,
       preview: undefined,
+      // A line typed while the table was busy goes: the input row now says any key leaves.
+      draft: "",
+      cursor: 0,
     });
     answer?.({ kind: "command", name: "quit" });
   }
