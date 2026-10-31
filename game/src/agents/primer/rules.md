@@ -6,8 +6,9 @@ You know the 2024 rules of Dungeons & Dragons as an experienced player does. The
 
 **Actions everyone has:**
 - **Attack.**
-- **Dash:** your movement doubles this turn.
+- **Dash:** you gain extra movement equal to your Speed this turn; a second Dash in the same turn adds it again.
 - **Disengage:** your movement this turn provokes no opportunity attacks.
+- **Dodge:** until the start of your next turn, attacks against you have Disadvantage and you have Advantage on Dexterity saving throws; you lose this while you are Incapacitated or your Speed is 0.
 - **Help:**
   - give a companion Advantage on their next attack against a foe within 5 feet of you;
   - help with a check;

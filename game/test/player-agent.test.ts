@@ -236,6 +236,9 @@ test("each party member's class comes from its pregen, for its block of the rule
   const fighter = rulesPrimer("fighter");
   assert.match(fighter, /^## The rules you know\n/);
   assert.match(fighter, /\n\n## Your class: Fighter\n/);
+  // Core has Dodge, and each Dash adds the Speed again (ENG-19, ENG-26).
+  assert.match(fighter, /\*\*Dodge:\*\* until the start of your next turn, attacks against you have Disadvantage/);
+  assert.match(fighter, /a second Dash in the same turn adds it again/);
   assert.throws(() => rulesPrimer("bard"), /no rules primer block for class "bard"/, "a class with no block stops the run before play");
   assert.throws(() => rulesPrimer("../fighter"), /no rules primer block for class "\.\.\/fighter"/, "a class is a bare name, never a path");
 });
@@ -284,9 +287,9 @@ test("a player's prompt follows the table's four rules: at the table, the rules,
   assert.match(maren, /what happened, who you met, what the party decided, what you promised or suspect/);
   // A plan, a rest or a companion in danger is usually worth a raised hand; idle talk can still pass.
   assert.match(maren, /A plan, a rest or a companion in danger usually is, for Maren's own reasons\. If not, just PASS/);
-  // A short check before a combat action replaces "Be quick"; there is no Dodge in the engine.
+  // A short check before a combat action replaces "Be quick".
   assert.match(maren, /Before you act in a fight, check three things/);
-  assert.doesNotMatch(maren, /Be quick|Decide quickly|Dodge/);
+  assert.doesNotMatch(maren, /Be quick|Decide quickly/);
 });
 
 test("a player's prompt says nothing of what lies ahead: no scenario id, foe or count of fights (Rule 3, AGT-52)", () => {

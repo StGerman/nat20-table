@@ -547,7 +547,7 @@ fn a_sheet_lists_class_features_granted_as_actions() {
     assert!(
         !ids.iter().any(|id| id.ends_with("_attack")
             || id.starts_with("help")
-            || ["dash", "disengage"].contains(id)),
+            || ["dash", "disengage", "dodge"].contains(id)),
         "{ids:?}"
     );
 }

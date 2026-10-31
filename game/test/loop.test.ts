@@ -1073,9 +1073,9 @@ test("a foe beyond the human's movement says the walk stops short, and one numbe
   assert.ok(runLines(t, "retry").length === 0);
 });
 
-test("once the human has Dashed this turn, Action Surge's action brings no Dash line: a second Dash adds no movement", async () => {
-  // Core's Dash doubles speed as an effect that a second Dash only renews, and `me.speed_ft` is
-  // then already doubled, so a "Dash, then move" line would spend the action and go nowhere.
+test("once the human has Dashed this turn, Action Surge's action brings a Dash line again: a second Dash adds the Speed once more (ENG-26)", async () => {
+  // Each Dash adds the base Speed, and `me.speed_ft` already counts the first one, so the second
+  // Dash line offers 30 ft, not the 60 ft `me.speed_ft` shows.
   const steps = ["Dash", "Move…", "far", "Fighter Action Surge", "Move…", "look"];
   let menu: string[] = [];
   const { report, seat } = await play({
@@ -1102,7 +1102,10 @@ test("once the human has Dashed this turn, Action Surge's action brings no Dash 
   assert.ok(seat.shown.some((e) => e.kind === "engine" && e.text === "bren is under Dash."));
   assert.equal(report.humanRejections, 0);
   assert.ok(menu.some((l) => l.includes("stops short")), menu.join("; "));
-  assert.ok(!menu.some((l) => l.startsWith("Dash, then")), menu.join("; "));
+  assert.ok(menu.some((l) => l.startsWith("Dash, then")), menu.join("; "));
+  // 13 ft left plus one more Speed (30 ft) reaches goblin_3 at 38 ft but not goblin_2 at 56 ft.
+  assert.ok(menu.includes("Dash, then move next to goblin_3 (hostile, 38 ft)"), menu.join("; "));
+  assert.ok(!menu.some((l) => l.startsWith("Dash, then move next to goblin_2")), menu.join("; "));
 });
 
 test("the human's words in a fight go to the DM, and back to the human when the DM can't map them", async () => {
