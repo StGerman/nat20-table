@@ -80,6 +80,8 @@ const PLANTS: [string, (skeleton: Adventure, pack: string) => void, string][] = 
   ["an exit to an unlisted scene", (s) => (s.scenes[0].exits[0].to = "s9_nowhere"), "exits to s9_nowhere"],
   ["a scene with no exit before the last", (s) => (s.scenes[1].exits = []), "scene s2_mill_road has no exit"],
   ["an NPC linked to a creature the scene doesn't place", (s) => (s.npcs[3].creatures![0].handle = "goblin_9"), "names goblin_9, which scene s3_mill_yard doesn't place"],
+  ["a glyph for a kind no scene places", (s) => (s.glyphs = { ...s.glyphs, "Goblin Warior": "👺" }), "glyphs Goblin Warior: no party handle, and no creature kind a scene places"],
+  ["a glyph that is two glyphs", (s) => (s.glyphs = { ...s.glyphs, bren: "🪖🪓" }), "glyphs bren: \"🪖🪓\" is not one glyph"],
   ["a scene listing an unknown NPC", (s) => s.scenes[0].npcs.push("abel"), "lists npc abel"],
   ["an NPC listed twice", (s) => s.npcs.push(s.npcs[0]), "npc osric_hale is listed twice"],
   [

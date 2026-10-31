@@ -30,19 +30,24 @@ interface SceneIds {
   encounters: Set<string>;
   /** Its creatures and its spawns' creatures. */
   creatures: Map<string, string>;
+  /** The stat block id of each creature it places or spawns, by handle. */
+  monsters: Map<string, string>;
   partyStarts: number;
 }
 
 function sceneIds(file: string): SceneIds {
   const scene = JSON.parse(readFileSync(file, "utf8"));
   const creatures = new Map<string, string>();
+  const monsters = new Map<string, string>();
   for (const c of [...(scene.creatures ?? []), ...(scene.spawns ?? []).flatMap((s: { creatures?: unknown[] }) => s.creatures ?? [])]) {
     creatures.set(c.handle, c.side);
+    if (typeof c.monster === "string") monsters.set(c.handle, c.monster);
   }
   return {
     checks: new Set((scene.checks ?? []).map((c: { id: string }) => c.id)),
     encounters: new Set((scene.encounters ?? []).map((e: { id: string }) => e.id)),
     creatures,
+    monsters,
     partyStarts: (scene.party_start ?? []).length,
   };
 }
@@ -197,6 +202,20 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   try {
     engine = await GameEngine.start({ pack: dir, runDir, seed: 1, binary: options.binary, pregens: options.pregens });
     const party = adventure.party.map((p) => p.handle);
+    // The creature kinds the scenes place, as the seat names them: what a glyph key may be. A kind
+    // the engine shows on a scene's load is read from it; one that only ever arrives later (a spawn)
+    // is named from its stat block id, goblin_warrior as Goblin Warrior.
+    const kinds = new Set<string>();
+    const named = new Set<string>();
+    const look = async (monsters: Map<string, string>) => {
+      const r = await engine!.request("dm", { cmd: "get_state" });
+      if (!(r.ok && r.result?.cmd === "get_state" && r.result.state.view === "dm")) return;
+      for (const c of r.result.state.creatures) {
+        kinds.add(c.name);
+        const monster = monsters.get(c.handle);
+        if (monster) named.add(monster);
+      }
+    };
     for (const [index, scene] of adventure.scenes.entries()) {
       const loaded = await engine.request("dm", { cmd: "load_scene", scene_id: scene.id, party: index === 0 ? undefined : party });
       if (!loaded.ok) {
@@ -204,6 +223,17 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
         break;
       }
       report.loaded.push(scene.id);
+      await look(ids.get(scene.id)?.monsters ?? new Map());
+    }
+    for (const monster of new Set([...ids.values()].flatMap((d) => [...d.monsters.values()]))) {
+      if (named.has(monster)) continue;
+      kinds.add((monster.split(/[.:]/).at(-1) ?? monster).split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "));
+    }
+    // A glyph key that is no party handle and no kind any scene places would never be drawn (AGT-67).
+    if (report.loaded.length === adventure.scenes.length) {
+      for (const key of Object.keys(adventure.glyphs).filter((key) => key !== "_comment")) {
+        if (!party.includes(key) && !kinds.has(key)) problem(`glyphs ${key}: no party handle, and no creature kind a scene places (${[...kinds].sort().join(", ")})`);
+      }
     }
   } catch (error) {
     problem(`the engine didn't start on the pack: ${(error as Error).message}`);
