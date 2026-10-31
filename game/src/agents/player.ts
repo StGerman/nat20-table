@@ -168,8 +168,8 @@ export class ModelPlayer implements PlayerAgent {
   /** The seat tools the model sees; each acts through the tools of the wake that is running. */
   readonly seatTools: SeatTool[];
   private session: TurnSession | undefined;
-  /** The actions whose summary this session has read, so `legal_actions` gives each once. */
-  private described = new Set<string>();
+  /** The actions whose summary this session has read, so each option listing gives each once. */
+  described = new Set<string>();
   /** The bound tools while a wake runs; a call outside a wake (after a timeout) does nothing. */
   private current: PlayerTools | undefined;
   /** The wake running, and the wakes cancelled before their turn was sent (AGT-34). */
@@ -228,6 +228,8 @@ export class ModelPlayer implements PlayerAgent {
   async close(): Promise<void> {
     const session = this.session;
     this.session = undefined;
+    // The next session hasn't read any option's summary yet (formatOptions).
+    this.described = new Set();
     await session?.close();
   }
 
@@ -246,8 +248,6 @@ export class ModelPlayer implements PlayerAgent {
   }
 
   private openSession(): TurnSession {
-    // A new session hasn't read any option's summary yet (formatOptions).
-    this.described = new Set();
     return (this.config.open ?? ((c) => new AgentSession(c)))(this.sessionConfig());
   }
 

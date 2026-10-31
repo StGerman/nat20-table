@@ -144,6 +144,12 @@ export interface PlayerAgent {
   readonly handle: Handle;
   /** Whether it takes `bark` wakes in a fight (AGT-34): a model player does; a scripted one only with a `bark` policy. */
   readonly reacts?: boolean;
+  /**
+   * The actions whose summary its current session has read (AGT-70), for every option listing it
+   * gets, its own `legal_actions` and the loop's briefings alike; emptied when the session closes.
+   * A scripted player has none, and its listings carry no summaries.
+   */
+  readonly described?: Set<string>;
   wake(wake: PlayerWake, briefing: string, tools: PlayerTools): Promise<string | void>;
   /** Ends the wake in flight, if any: its answer is no longer wanted (a `bark` whose moment passed). */
   cancel?(): void;
