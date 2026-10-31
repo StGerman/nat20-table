@@ -17,6 +17,7 @@ import type { DmTools } from "../table/tools.ts";
 import type { DmAgent, DmWake, ToolOutcome } from "../table/types.ts";
 import type { UsageLog } from "../usage.ts";
 import { dmLanguage, type Language } from "./language.ts";
+import { previewFor } from "./preview.ts";
 import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, type SeatTool, type SessionConfig, type TurnSession } from "./sdk-session.ts";
 
 /** A DM turn that runs longer falls back to the engine lines alone (spec §6). */
@@ -178,6 +179,11 @@ export interface ModelDmConfig {
   turnTimeoutMs?: number;
   /** Opens a session; `AgentSession` by default. Tests pass one that calls the tools as a model would. */
   open?: (config: SessionConfig) => TurnSession;
+  /**
+   * Shows the human's seat the narration as it is written (M10 S4, AGT-66): complete sentences of
+   * a `narrate` call for the whole table or the human, `undefined` to clear. Off when absent.
+   */
+  preview?: (text: string | undefined) => void;
 }
 
 export class ModelDm implements DmAgent {
@@ -200,6 +206,7 @@ export class ModelDm implements DmAgent {
 
   async wake(wake: DmWake, briefing: string, tools: DmTools): Promise<string | void> {
     this.current = tools;
+    this.previewed = undefined;
     try {
       const seed = this.session ? undefined : this.seed(await tools.getState());
       this.session ??= this.openSession();
@@ -212,6 +219,9 @@ export class ModelDm implements DmAgent {
       throw error;
     } finally {
       this.current = undefined;
+      // A preview never outlives its wake: the finished line, if any, is on screen by now.
+      if (this.previewed !== undefined) this.config.preview?.(undefined);
+      this.previewed = undefined;
     }
   }
 
@@ -237,10 +247,23 @@ export class ModelDm implements DmAgent {
       ...(craft === "skills" ? { plugins: [CRAFT_PLUGIN], skills: craftSkills().map((s) => `${CRAFT_NAME}:${s.name}`) } : {}),
       usage: this.config.usage,
       settleOn: DM_SETTLE_ON,
+      ...(this.config.preview ? { onPartial: (tool: string, json: string) => this.partial(tool, json) } : {}),
       turnTimeoutMs: this.config.turnTimeoutMs ?? DM_TURN_TIMEOUT_MS,
       ...(this.config.turnTimeoutMs === undefined ? { turnTimeoutsMs: Object.fromEntries(DM_LONG_WAKES.map((w) => [w, DM_LONG_WAKE_TIMEOUT_MS])) } : {}),
     };
   }
+
+  /** A growing `narrate` call: its readable part to the human's seat, when that changed. */
+  private partial(tool: string, json: string): void {
+    if (tool !== "narrate") return;
+    const text = previewFor(json, this.config.human);
+    if (text === this.previewed) return;
+    this.previewed = text;
+    this.config.preview?.(text);
+  }
+
+  /** What the preview shows now. */
+  private previewed: string | undefined;
 
   private openSession(): TurnSession {
     return (this.config.open ?? ((c) => new AgentSession(c)))(this.sessionConfig());
@@ -395,8 +418,9 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "narrate",
-        "Say this to the table, or to one character only (to). Fiction only: the guard refuses numbers, game statistics and ids.",
-        { text: z.string(), to: handle.optional() },
+        "Say this to the table, or to one character only (to, given first). Fiction only: the guard refuses numbers, game statistics and ids.",
+        // `to` first: a streamed preview (M10 S4) learns whom a line is for before its text.
+        { to: handle.optional().describe("One character only; leave out for the whole table."), text: z.string() },
         (i) => this.bound((t) => t.narrate(i.text, i.to)),
       ),
       seatTool(

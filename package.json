@@ -15,6 +15,7 @@
     "check:ts": "tsc -p packages/engine-client && tsc -p game && node --experimental-strip-types --no-warnings --test packages/engine-client/test/*.test.ts game/test/*.test.ts",
     "spike": "node --experimental-strip-types --no-warnings game/spike/spike.ts",
     "spike:record": "node --experimental-strip-types --no-warnings game/spike/record.ts",
+    "spike:partial": "node --experimental-strip-types --no-warnings game/spike/partial.ts",
     "preflight": "node --experimental-strip-types --no-warnings game/src/play/preflight.ts",
     "pack:check": "node --experimental-strip-types --no-warnings game/src/pack/cli.ts check",
     "pack:schema": "node --experimental-strip-types --no-warnings game/src/pack/cli.ts schema",
