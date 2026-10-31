@@ -19,11 +19,11 @@ import {
   type SdkMcpToolDefinition,
 } from "@anthropic-ai/claude-agent-sdk";
 import type { z, ZodRawShape } from "zod";
-import { ConnectionLost, TurnCancelled, TurnTimeout, UsageLimitReached } from "../errors.ts";
+import { ConnectionLost, LOGIN_FAILURE, LoginExpired, TurnCancelled, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { agentEnv } from "./env.ts";
 import { apiEquivalentUsd, type UsageLog, type UsageRecord } from "../usage.ts";
 
-export { ConnectionLost, TurnCancelled, TurnTimeout, UsageLimitReached };
+export { ConnectionLost, LoginExpired, TurnCancelled, TurnTimeout, UsageLimitReached };
 
 /** The MCP server name every seat's tools live under; the model sees `mcp__table__<tool>`. */
 export const TOOL_SERVER = "table";
@@ -457,7 +457,9 @@ export class AgentSession {
           // A failed turn says why: the SDK's own text for an errored success (a usage limit, a
           // login), or its error list for any other result.
           const why = (message.subtype === "success" ? message.result : message.errors.join("; ")).trim();
-          this.settle(new Error(`${this.config.agent}: turn failed (${message.subtype}${why ? `: ${why}` : ""})`));
+          this.settle(
+            LOGIN_FAILURE.test(why) ? new LoginExpired(why) : new Error(`${this.config.agent}: turn failed (${message.subtype}${why ? `: ${why}` : ""})`),
+          );
           return;
         }
         const usage = this.record(turn, "ok", message.ttft_ms ?? null);
@@ -531,7 +533,7 @@ export class AgentSession {
     if (turn.timer) clearTimeout(turn.timer);
     if (outcome instanceof Error) {
       // A turn that ended without its answer while the connection was gone failed for that reason.
-      if (turn.offline && !(outcome instanceof TurnCancelled) && !(outcome instanceof UsageLimitReached)) outcome = new ConnectionLost(`${this.config.agent}: no connection to the API (${outcome.message})`);
+      if (turn.offline && !(outcome instanceof TurnCancelled) && !(outcome instanceof UsageLimitReached) && !(outcome instanceof LoginExpired)) outcome = new ConnectionLost(`${this.config.agent}: no connection to the API (${outcome.message})`);
       const how = outcome instanceof TurnCancelled ? "cancelled" : outcome instanceof TurnTimeout ? "timeout" : outcome instanceof UsageLimitReached ? "limit" : "failed";
       this.record(turn, how, null);
       turn.reject(outcome);

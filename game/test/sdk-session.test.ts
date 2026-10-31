@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { z } from "zod";
 import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { agentEnv } from "../src/agents/env.ts";
-import { AgentSession, reply, seatTool, sessionOptions, TurnTimeout, UsageLimitReached, type SessionConfig } from "../src/agents/sdk-session.ts";
+import { AgentSession, LoginExpired, reply, seatTool, sessionOptions, TurnTimeout, UsageLimitReached, type SessionConfig } from "../src/agents/sdk-session.ts";
 import { apiEquivalentUsd, percentile, phases, summarize, usageBlock, UsageLog, type UsageRecord } from "../src/usage.ts";
 
 const narrate = seatTool("narrate", "Say this to the table.", { text: z.string() }, async () => reply("said"));
@@ -144,9 +144,15 @@ test("a turn that ends with its result is recorded as ok", async () => {
   await s.close();
 });
 
+test("a turn refused for want of a login is LoginExpired, which names the fix", async () => {
+  const { session: s } = session((m) => [{ type: "result", subtype: "success", is_error: true, result: "Failed to authenticate: OAuth session expired and could not be refreshed", user_message_uuid: m.uuid }]);
+  await assert.rejects(s.turn("go", "combat_turn"), (e: Error) => e instanceof LoginExpired && /OAuth session expired.*Run `claude`/.test(e.message));
+  await s.close();
+});
+
 test("a failed turn says why: the SDK's text for an errored success, its error list otherwise", async () => {
-  const { session: a } = session((m) => [{ type: "result", subtype: "success", is_error: true, result: "Not logged in · Please run /login", user_message_uuid: m.uuid }]);
-  await assert.rejects(a.turn("go", "combat_turn"), /maren: turn failed \(success: Not logged in · Please run \/login\)/);
+  const { session: a } = session((m) => [{ type: "result", subtype: "success", is_error: true, result: "API Error: 529 Overloaded", user_message_uuid: m.uuid }]);
+  await assert.rejects(a.turn("go", "combat_turn"), /maren: turn failed \(success: API Error: 529 Overloaded\)/);
   await a.close();
   const { session: b } = session((m) => [{ type: "result", subtype: "error_during_execution", is_error: true, errors: ["overloaded"], user_message_uuid: m.uuid }]);
   await assert.rejects(b.turn("go", "combat_turn"), /maren: turn failed \(error_during_execution: overloaded\)/);

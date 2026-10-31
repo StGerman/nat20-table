@@ -215,7 +215,7 @@ export interface TranscriptRecord {
 export type FallbackCause = "retries" | "timeout" | "error" | "unmapped" | "unanswered";
 
 /**
- * Which stop ended a run early (M7 design §3.1): the time limit, a stall, the plan's usage limit, the
- * network, the operator's Ctrl+C or `/quit`, or a crash of the engine or the loop.
+ * Which stop ended a run early (M7 design §3.1): the time limit, a stall, the plan's usage limit, an
+ * expired login, the network, the operator's Ctrl+C or `/quit`, or a crash of the engine or the loop.
  */
-export type StopKind = "time_limit" | "stalled" | "usage_limit" | "offline" | "operator" | "crash";
+export type StopKind = "time_limit" | "stalled" | "usage_limit" | "login" | "offline" | "operator" | "crash";

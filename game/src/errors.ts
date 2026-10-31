@@ -12,6 +12,19 @@ export class UsageLimitReached extends Error {
   }
 }
 
+/**
+ * The Claude login is missing or expired, so no model call can succeed until the operator signs in
+ * again. Like the usage limit, the run stops cleanly and counts neither way.
+ */
+export class LoginExpired extends Error {
+  constructor(why: string) {
+    super(`The Claude login expired or is missing (${why}). Run \`claude\` in a terminal to sign in again, then start the run again.`);
+  }
+}
+
+/** What the SDK says when no call can be made for want of a login. */
+export const LOGIN_FAILURE = /authenticat|oauth|not logged in|\/login|401|invalid api key/i;
+
 /** A turn ran past its timeout and was interrupted. */
 export class TurnTimeout extends Error {}
 
