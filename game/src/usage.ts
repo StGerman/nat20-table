@@ -216,7 +216,7 @@ export function usageBlock(records: UsageRecord[]): string[] {
   const rows = summarize(records);
   const k = (n: number) => (n >= 10_000 ? `${Math.round(n / 1000)}k` : String(n));
   const line = (who: string, r: { input_tokens: number; cache_read_tokens: number; cache_write_tokens: number; output_tokens: number; api_equivalent_usd: number }, wakes: number) =>
-    `${who}: ${wakes} wakes, input ${k(r.input_tokens + r.cache_write_tokens)}, cache read ${k(r.cache_read_tokens)}, output ${k(r.output_tokens)}, $${r.api_equivalent_usd.toFixed(2)}`;
+    `${who}: ${wakes} wakes, input ${k(r.input_tokens)}, cache write ${k(r.cache_write_tokens)}, cache read ${k(r.cache_read_tokens)}, output ${k(r.output_tokens)}, $${r.api_equivalent_usd.toFixed(2)}`;
   const total = rows.reduce(
     (sum, r) => ({
       input_tokens: sum.input_tokens + r.input_tokens,
