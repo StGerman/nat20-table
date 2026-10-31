@@ -9,7 +9,10 @@
 
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
-use nat20_api_server::{Server, leaks::json_leaks};
+use nat20_api_server::{
+    Server,
+    leaks::{json_leaks, names_a_target_number},
+};
 use serde_json::{Value, json};
 
 fn fixtures() -> Vec<PathBuf> {
@@ -156,4 +159,42 @@ fn the_scan_catches_the_dm_view() {
             .any(|leak| leak.contains("names a target number")),
         "{event_leaks:#?}"
     );
+}
+
+/// Every `summary` on an option, wherever it occurs in a response.
+fn summaries(value: &Value, out: &mut BTreeSet<String>) {
+    match value {
+        Value::Object(map) => {
+            if map.contains_key("option_id")
+                && let Some(summary) = map.get("summary").and_then(Value::as_str)
+            {
+                out.insert(summary.to_string());
+            }
+            map.values().for_each(|value| summaries(value, out));
+        }
+        Value::Array(items) => items.iter().for_each(|value| summaries(value, out)),
+        _ => {}
+    }
+}
+
+/// An option's `summary` is the rule's own text and reaches players as it is (protocol.md §5), so
+/// it may carry no DC, no odds and no target number (Rule 3): checked on every summary the
+/// fixtures make the engine send.
+#[test]
+fn option_summaries_name_no_dc_odds_or_target_number() {
+    let mut found = BTreeSet::new();
+    for path in fixtures() {
+        let mut server = Server::new();
+        for request in requests(&path) {
+            let response: Value = serde_json::from_str(&server.handle_line(&request)).unwrap();
+            summaries(&response, &mut found);
+        }
+    }
+    assert!(found.len() >= 30, "summaries sent: {}", found.len());
+    for summary in &found {
+        assert!(!names_a_target_number(summary), "{summary}");
+        for banned in ["DC", "%", "average", "chance"] {
+            assert!(!summary.contains(banned), "{banned} in {summary}");
+        }
+    }
 }

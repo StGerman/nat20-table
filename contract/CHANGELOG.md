@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.38 (2026-10-31)
+- New optional field `summary` on `Option` (from `legal_actions`), additive (protocol.md §4.4 and the §5 visibility table): one to three plain sentences on what the option does, the rule's own short text from core's registry, the same for every viewer, never with a DC, odds or a computed number. Absent when the rule has none (monster attacks such as Nimble Escape). The human's action card and the AI players' option text read it from here, so the table keeps no copy of rule text (design "Option descriptions: one source in core", 2026-10-31).
+- The core pin moves to core #64's head (30c63fb: fork `demo` plus `summary` on actions and spells, filled for every action and spell the four pregens take) until it merges.
+- Every fixture that lists options gains `summary` on each option whose rule has one, at the same seeds; nothing else changes (`area`, `carry`, `cleric_combat`, `duel`, `encounter`, `explore_actions`, `fled`, `help_combat`, `m3_trail`, `m4_party`, `m5_fights`, `move_partial`, `potion`, `rest`, `session`, `turn_budget`). Nimble Escape in `cleric_combat` shows the field absent.
+- The visibility job scans every summary the fixtures make the engine send: no DC, odds or target number.
+
 ## 1.0.0-dev.37 (2026-10-27)
 - No wire change: the core pin moves to core #62's head (57fd39e: fork `demo` plus core #61, a Dash that stacks, ENG-26, and core #62, Dodge, ENG-19) until that stack merges. Dodge is a core action, so it is listed among the generic actions wherever a fixture shows the actions on offer. The fixtures that show them re-record at their seeds; each changed response differs only by the Dodge entry and the option numbers after it, and no roll or outcome changes. The game fixtures re-record for the same reason and for the engine rev.
 - New optional field `partial` on `move` (API-35; protocol.md §4.1), additive: a route longer than the movement left is walked as far as it goes, to the last free spot along it, instead of being refused with `insufficient_resource`. Core already paths partially (`allow_partial`); the adapter used to pass `false`. In the live runs so far nearly every retry, and the one AI fallback, was this refusal (M7 spec §4.5).

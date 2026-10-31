@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.37"
+    "version": "1.0.0-dev.38"
   },
   "$defs": {
     "Ability": {
@@ -212,6 +212,13 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "summary": {
+          "description": "What the option does, in one to three plain sentences: the rule's own short text from the\nengine, the same for every viewer. It never carries a DC, odds or a computed number. Absent\nwhen the rule has none (a monster's own attacks).",
+          "type": [
+            "string",
+            "null"
           ]
         },
         "targeting": {
