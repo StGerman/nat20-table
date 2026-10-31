@@ -70,15 +70,23 @@ export function themeProblems(theme: unknown): string[] {
     const a = t?.accents?.[accent];
     if (!a || typeof a.ansi !== "string" || !HEX.test(a.night ?? "") || !HEX.test(a.day ?? "")) problems.push(`accent ${accent}: needs ansi, and night and day as #rrggbb`);
   }
-  for (const [name, style] of Object.entries(t?.tones ?? {})) {
-    if (style.accent && !ACCENTS.includes(style.accent)) problems.push(`tone ${name}: unknown accent ${style.accent}`);
+  // Every tone and every state the seat draws, and no others: a missing one would drop its accent
+  // or paint the healthy in the danger colour, and a misspelt one would be ignored.
+  const tones = t?.tones ?? {};
+  for (const name of Object.keys(FALLBACK.tones)) if (!(name in tones)) problems.push(`tone ${name}: missing`);
+  for (const [name, style] of Object.entries(tones)) {
+    if (!(name in FALLBACK.tones)) problems.push(`tone ${name}: unknown`);
+    else if (style?.accent && !ACCENTS.includes(style.accent)) problems.push(`tone ${name}: unknown accent ${style.accent}`);
   }
-  for (const [name, state] of Object.entries(t?.states ?? {})) {
-    if (state.accent && !ACCENTS.includes(state.accent)) problems.push(`state ${name}: unknown accent ${state.accent}`);
-    if (!state.word_en || !state.word_ru) problems.push(`state ${name}: needs word_en and word_ru`);
+  const states = t?.states ?? {};
+  for (const name of Object.keys(FALLBACK.states)) if (!(name in states)) problems.push(`state ${name}: missing`);
+  for (const [name, state] of Object.entries(states)) {
+    if (!(name in FALLBACK.states)) problems.push(`state ${name}: unknown`);
+    else {
+      if (state?.accent && !ACCENTS.includes(state.accent)) problems.push(`state ${name}: unknown accent ${state.accent}`);
+      if (!state?.word_en || !state?.word_ru) problems.push(`state ${name}: needs word_en and word_ru`);
+    }
   }
-  if (!t?.tones) problems.push("no tones");
-  if (!t?.states) problems.push("no states");
   return problems;
 }
 

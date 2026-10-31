@@ -352,3 +352,14 @@ test("a missing or invalid theme file falls back to the built-in colours with on
   assert.equal(warned.length, 2);
   assert.match(warned[0], /^bad\.json: accent rust: needs ansi, and night and day as #rrggbb/);
 });
+
+test("a theme file missing a tone or a state, or naming an unknown one, is invalid", () => {
+  const theme = JSON.parse(readFileSync(THEME_FILE, "utf8"));
+  const { engine: _engine, ...tones } = theme.tones;
+  const { unhurt: _unhurt, ...states } = theme.states;
+  assert.deepEqual(themeProblems({ ...theme, tones: { ...tones, enigne: { accent: "hint" } }, states }), [
+    "tone engine: missing",
+    "tone enigne: unknown",
+    "state unhurt: missing",
+  ]);
+});
