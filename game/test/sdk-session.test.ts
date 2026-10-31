@@ -8,7 +8,7 @@ import { z } from "zod";
 import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { agentEnv } from "../src/agents/env.ts";
 import { AgentSession, reply, seatTool, sessionOptions, TurnTimeout, UsageLimitReached, type SessionConfig } from "../src/agents/sdk-session.ts";
-import { apiEquivalentUsd, percentile, phases, summarize, UsageLog, type UsageRecord } from "../src/usage.ts";
+import { apiEquivalentUsd, percentile, phases, summarize, usageBlock, UsageLog, type UsageRecord } from "../src/usage.ts";
 
 const narrate = seatTool("narrate", "Say this to the table.", { text: z.string() }, async () => reply("said"));
 
@@ -334,4 +334,19 @@ test("a tool whose answer settles as end_turn ends a combat turn that settles on
   await s.turn("go", "combat_turn");
   assert.ok(performance.now() - started < 60);
   await s.close();
+});
+
+test("the usage block gives tokens and the API-equivalent cost per agent and in total (M10 U1)", () => {
+  const record = (agent: string, input: number, output: number, usd: number, write = 0): UsageRecord => ({
+    agent, model: "m", effort: "low", purpose: "t", session_turn: 1, outcome: "ok", input_tokens: input, cache_read_tokens: 20_000,
+    cache_write_tokens: write, output_tokens: output, api_calls: 1, wall_ms: 1, ttft_ms: null, api_equivalent_usd: usd, tools: [], at: "",
+  });
+  assert.deepEqual(usageBlock([]), ["No model calls yet."]);
+  assert.deepEqual(usageBlock([record("dm", 100, 50, 0.5, 3000), record("dm", 100, 50, 0.25), record("maren", 10, 5, 0.01)]), [
+    // Cache writes have their own figure, so input means input_tokens, as in the run report.
+    "dm: 2 wakes, input 200, cache write 3000, cache read 40k, output 100, $0.75",
+    "maren: 1 wakes, input 10, cache write 0, cache read 20k, output 5, $0.01",
+    "total: 3 wakes, input 210, cache write 3000, cache read 60k, output 105, $0.76",
+    "Dollars are the API list price, for reference: this table runs on the subscription.",
+  ]);
 });

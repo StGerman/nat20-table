@@ -36,7 +36,7 @@ import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat } from "../table/types.ts";
 import { InkSeat } from "../ui/ink-seat.ts";
 import { pickCharacter } from "../ui/pick.ts";
-import { UsageLog } from "../usage.ts";
+import { usageBlock, UsageLog } from "../usage.ts";
 import { ModelJudge, ScriptedJudge } from "../check/judge.ts";
 import { narrationCheck } from "../check/narration.ts";
 import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
@@ -264,6 +264,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     names: party.names,
     stallRounds: flags["stall-rounds"],
     onProgress: progress,
+    usage,
   });
 
   const who = (kind: string | undefined, choice: { model: string; effort: string }) => (kind === "scripted" ? "scripted" : `${choice.model} (${choice.effort})`);
@@ -282,6 +283,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   caffeinate?.kill();
   process.off("SIGINT", interrupted);
   ink?.stop();
+  // What the run cost, once at its end (M10 U1).
+  console.log(["Usage:", ...usageBlock(usage.records).map((l) => `  ${l}`)].join("\n"));
   const end = await endState(engine).catch(() => []);
   engine.close();
 

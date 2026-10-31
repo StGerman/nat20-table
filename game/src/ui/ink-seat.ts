@@ -5,7 +5,7 @@
 // at once. Under it the situation panel and, while the table waits on the human, the turn block (the budget
 // and the numbered options, AGT-36), then what the table waits for (while no prompt is open, a
 // braille spinner with who is thinking) and the line being typed. The loop answers the slash
-// commands (`/sheet`, `/where`, `/options`, `/log`, `/pause`, `/quit`); `/help` and `/panel` are
+// commands (`/sheet`, `/where`, `/options`, `/log`, `/usage`, `/pause`, `/quit`); `/help` and `/panel` are
 // answered here. Written with `createElement`, not JSX, so the game still
 // runs as plain `.ts` with no build step.
 import type { Handle } from "@nat20-table/engine-client";

@@ -12,6 +12,7 @@ import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
 import { BarkTools, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
+import { usageBlock, type UsageLog } from "../usage.ts";
 import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, ToolOutcome } from "./types.ts";
 
 /**
@@ -60,6 +61,8 @@ export interface LoopOptions {
   stallRounds?: number;
   /** Told each time a scene starts or ends and each time a fight ends: the unattended run's progress lines. */
   onProgress?: (progress: Progress) => void;
+  /** The run's usage records, for `/usage` (M10 U1). */
+  usage?: UsageLog;
 }
 
 /** A moment the unattended run prints a line for (M7 design §3.1). */
@@ -293,6 +296,7 @@ export class TableLoop {
   private dmWakeFailed = false;
   private readonly onProgress: (progress: Progress) => void;
   private readonly sceneTimes: SceneTime[] = [];
+  private readonly usage: UsageLog | undefined;
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -320,6 +324,7 @@ export class TableLoop {
     this.situation = options.situation ?? false;
     this.stallRounds = options.stallRounds ?? 0;
     this.onProgress = options.onProgress ?? (() => undefined);
+    this.usage = options.usage;
   }
 
   /** Plays from `firstScene` until the adventure ends, the human quits, or the run is stopped. */
@@ -1204,7 +1209,7 @@ export class TableLoop {
     }
   }
 
-  private async command(name: "sheet" | "where" | "options" | "log" | "pause" | "quit"): Promise<void> {
+  private async command(name: "sheet" | "where" | "options" | "log" | "usage" | "pause" | "quit"): Promise<void> {
     const human = this.human;
     switch (name) {
       case "sheet": {
@@ -1230,6 +1235,10 @@ export class TableLoop {
         return;
       case "log":
         this.table.show({ kind: "info", title: "Log", text: this.table.recent.join("\n") });
+        return;
+      case "usage":
+        // Usage isn't game state, and no player view: it reaches the human's screen alone (M10 U1).
+        this.table.show({ kind: "info", title: "Usage", text: usageBlock(this.usage?.records ?? []).join("\n") });
         return;
       case "pause":
         this.paused = !this.paused;
