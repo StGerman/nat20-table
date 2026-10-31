@@ -228,3 +228,96 @@ test("the phase summary splits each agent's wakes into first token, tool time an
   assert.deepEqual(row, { agent: "dm", purpose: "narrate", wakes: 2, first_token: [1200, 4000], tool: [10, 20], calls: [2, 2], closing: [2500, 3500], closings: 2 });
   assert.equal(phases([{ ...base }]).length, 0, "a record without calls (an old run) has no phases");
 });
+
+/** A stand-in whose every turn calls `narrate`, then waits `closingMs` before its closing call and result (M10 S2). */
+function draining(closingMs: number, tools: () => AgentSession) {
+  return (({ prompt }: { prompt: AsyncIterable<SDKUserMessage> }) => {
+    async function* run(): AsyncGenerator<SDKMessage> {
+      for await (const message of prompt) {
+        const id = `a-${message.uuid}`;
+        yield { ...call(id, 10, 2), message: { ...call(id, 10, 2).message, content: [{ type: "tool_use", name: "mcp__table__narrate" }] } } as never;
+        await tools().tools[0].handler({ text: "x" }, {} as never);
+        await new Promise((resolve) => setTimeout(resolve, closingMs));
+        yield call(`${id}-close`, 12, 30) as never;
+        yield { type: "result", subtype: "success", is_error: false, result: "done", user_message_uuid: message.uuid } as never;
+      }
+    }
+    return Object.assign(run(), { interrupt: async () => undefined });
+  }) as never;
+}
+
+test("a turn settles at its settling tool; the drain's record keeps every token and the wait (M10 S2)", async () => {
+  const usage = new UsageLog();
+  let s: AgentSession;
+  s = new AgentSession({
+    agent: "dm", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [narrate], cwd: "/empty", usage,
+    query: draining(80, () => s), settleOn: { narrate: ["narrate"] }, turnTimeoutMs: 5_000,
+  });
+  const started = performance.now();
+  await s.turn("go", "narrate");
+  assert.ok(performance.now() - started < 60, "the caller doesn't wait for the closing call");
+  assert.equal(usage.records.length, 0, "the record waits for the drain");
+  assert.equal(s.settling, true);
+  // The next turn queues behind the drain, as Claude Code runs one turn at a time.
+  await s.turn("again", "narrate");
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const [first] = usage.records;
+  assert.equal(first.outcome, "ok");
+  assert.equal(first.settled_early, true);
+  assert.deepEqual([first.input_tokens, first.output_tokens, first.api_calls], [22, 32, 2]);
+  assert.ok(first.waited_ms! < first.wall_ms - 60, `${first.waited_ms} ms waited of ${first.wall_ms}`);
+  assert.equal(usage.records.length, 2);
+  await s.close();
+});
+
+test("a drain that outlasts the turn's limit is cut and recorded as drained, never as a timeout", async () => {
+  const usage = new UsageLog();
+  let s: AgentSession;
+  s = new AgentSession({
+    agent: "dm", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [narrate], cwd: "/empty", usage,
+    query: draining(400, () => s), settleOn: { narrate: ["narrate"] }, turnTimeoutMs: 100,
+  });
+  await s.turn("go", "narrate");
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.deepEqual(usage.records.map((r) => [r.outcome, r.settled_early]), [["drained", true]]);
+  await s.close();
+});
+
+test("a plan limit that cuts a drain short is recorded as limit, not drained", async () => {
+  const usage = new UsageLog();
+  let s: AgentSession;
+  const query = (({ prompt }: { prompt: AsyncIterable<SDKUserMessage> }) => {
+    async function* run(): AsyncGenerator<SDKMessage> {
+      for await (const message of prompt) {
+        const id = `a-${message.uuid}`;
+        yield { ...call(id, 10, 2), message: { ...call(id, 10, 2).message, content: [{ type: "tool_use", name: "mcp__table__narrate" }] } } as never;
+        await s.tools[0].handler({ text: "x" }, {} as never);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        yield { type: "rate_limit_event", rate_limit_info: { status: "rejected" } } as never;
+      }
+    }
+    return Object.assign(run(), { interrupt: async () => undefined });
+  }) as never;
+  s = new AgentSession({
+    agent: "dm", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [narrate], cwd: "/empty", usage,
+    query, settleOn: { narrate: ["narrate"] }, turnTimeoutMs: 5_000,
+  });
+  await s.turn("go", "narrate");
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  assert.deepEqual(usage.records.map((r) => [r.outcome, r.settled_early]), [["limit", true]]);
+  await s.close().catch(() => undefined);
+});
+
+test("a turn whose purpose has no settling tool waits for its result", async () => {
+  const usage = new UsageLog();
+  let s: AgentSession;
+  s = new AgentSession({
+    agent: "dm", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [narrate], cwd: "/empty", usage,
+    query: draining(60, () => s), settleOn: { narrate: ["narrate"] }, turnTimeoutMs: 5_000,
+  });
+  const started = performance.now();
+  await s.turn("go", "scene_open");
+  assert.ok(performance.now() - started >= 55);
+  assert.equal(usage.records[0].settled_early, undefined);
+  await s.close();
+});

@@ -11,7 +11,7 @@ import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
 import type { FightReaction, RunReport, SceneChoice, SceneTime, TalkRound } from "../table/loop.ts";
 import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
-import { percentile, phases, summarize, type UsageRecord } from "../usage.ts";
+import { percentile, phases, summarize, waitedMs, type UsageRecord } from "../usage.ts";
 import type { RunRecord } from "./record.ts";
 
 /** p95 latency targets (scope §6.4): an AI player's turn, a DM narration. */
@@ -328,7 +328,8 @@ export function reportSections(options: {
   // wake counts at its timeout.
   const turns = run?.playerTurns.map((t) => t.wall_ms) ?? [];
   const wakes = run?.playerTurns.reduce((sum, t) => sum + t.wakes, 0) ?? 0;
-  const narrations = usage.filter((r) => r.agent === "dm" && r.purpose === "narrate").map((r) => r.wall_ms);
+  // What the table waited for, which a settled-early wake (M10 S2) ends at its narration.
+  const narrations = usage.filter((r) => r.agent === "dm" && r.purpose === "narrate").map(waitedMs);
   const out = [
     `- Ended: ${run?.ended ?? `the run failed: ${options.failure instanceof Error ? options.failure.message : String(options.failure)}`}`,
     ...(outcome.length > 0 ? [`- Fights: ${outcome.join(" ")}`] : []),

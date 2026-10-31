@@ -8,7 +8,7 @@ import path from "node:path";
 import type { Event, Handle } from "@nat20-table/engine-client";
 import { SESSION_LOG } from "../engine.ts";
 import type { TranscriptRecord } from "../table/types.ts";
-import { percentile, type UsageRecord } from "../usage.ts";
+import { percentile, waitedMs, type UsageRecord } from "../usage.ts";
 import { readRunRecord, RUN_JSON, type RunRecord } from "./record.ts";
 import { TARGET_P95_MS } from "./run.ts";
 
@@ -188,7 +188,7 @@ function retryRows(run: RunRecord, transcript: TranscriptRecord[], answers: Reco
 
 /** Row 4: latency, measured and reported only (D1). */
 function latencyRow(usage: UsageRecord[]): VerdictRow {
-  const p95 = (agent: (u: UsageRecord) => boolean) => percentile(usage.filter(agent).map((u) => u.wall_ms), 95);
+  const p95 = (agent: (u: UsageRecord) => boolean) => percentile(usage.filter(agent).map(waitedMs), 95);
   const dm = p95((u) => u.agent === "dm" && u.purpose === "narrate");
   const players = p95((u) => u.agent !== "dm" && u.purpose === "combat_turn");
   return {
