@@ -451,9 +451,14 @@ export class TableLoop {
     if (this.table.ended) return;
     const passed = this.passedSince;
     this.passedSince = [];
+    // The opening continues from the DM's last words on the way here (M10 P1), not from scratch.
+    const last = first ? undefined : this.dmTools.lastLine;
+    // Read once: a scene loaded with no line on the way must not carry an older scene's words.
+    this.dmTools.lastLine = undefined;
     await this.wakeDm(
       "scene_open",
       undefined,
+      ...(last ? [`Your last words to the table, on the way here: "${last}" Continue from them; don't tell the way here again.`] : []),
       ...(passed.length > 0
         ? [
             `This run passes over ${passed.join(", ")}: the party went through on the way here, and nothing in it happened at the table. Bridge it in a sentence at most, without its checks or what they would find.`,
@@ -1462,6 +1467,7 @@ export class TableLoop {
 
   private async wakeDmOnce(wake: DmWake, events: Event[] | undefined, ...lines: string[]): Promise<string | void> {
     this.table.resetRetries("dm");
+    this.dmTools.startWake();
     this.dmWakeFailed = false;
     const heard = this.table.drainDmInbox();
     let told = events;
