@@ -535,11 +535,19 @@ test("the panel checklist (AGT-47): only `down` is rust, the foes out of the fig
   // C1 on the narrow frame: two rows, nothing urgent out of sight.
   assert.deepEqual(foldedRows(mine).map(rowText), [
     "Round 5 · ▶ your turn · next goblin_4, ilsa, goblin_3",
-    "Bren 12/20 HP · prone · Bless · maren down · goblin_3 in reach",
+    "Bren 12/20 HP · maren down · goblin_3 in reach · prone · Bless",
   ]);
-  // The fallen ally comes first, so a narrow terminal cuts the foe before it.
-  const cut = foldedRows(mine)[1].map((span) => span.text).join("").slice(0, 50);
+  // The fallen ally comes first, then the foe, then your own effects, so a 40-column cut keeps the ally.
+  const cut = foldedRows(mine)[1].map((span) => span.text).join("").slice(0, 40);
   assert.ok(cut.includes("maren down"), cut);
+  // A fallen ally a heal can reach is still `down`; an ally merely in reach isn't listed; a target to walk to is, lit.
+  const healer = { ...mine, creatures: mine.creatures.map((c) => (c.handle === "maren" || c.side === "party" ? { ...c, in_reach: true } : c.handle === "goblin_3" ? { ...c, in_reach: false } : c)) };
+  const far = healer.creatures.find((c) => c.side === "hostile")!.handle;
+  const folded = foldedRows(healer, { lit: far })[1];
+  const text = folded.map((span) => span.text).join("");
+  assert.ok(text.includes("maren down") && !text.includes("maren in reach"), text);
+  assert.ok(!healer.creatures.some((c) => c.side === "party" && c.health !== "down" && text.includes(`${c.handle} `)), text);
+  assert.deepEqual(folded.find((span) => span.text === far)?.style, { accent: "rust", bold: true }, text);
   // The option under the cursor lights its target's handle (screen 5).
   const lit = situationRows(mine, { columns: 80, rows: 24 }, { lit: "goblin_3" })[2];
   assert.deepEqual(lit[1].style, { accent: "rust", bold: true });

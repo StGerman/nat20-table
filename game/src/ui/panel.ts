@@ -92,18 +92,27 @@ const SIDE_LABEL: Record<SituationCreature["side"], string> = { hostile: "Foes",
 
 /**
  * The narrow frame's folded panel (AGT-47 C1, AGT-69): the bar and your own line, where a fallen
- * ally and a foe in reach, which must not go out of sight, sit at the end of your line. A fallen ally
- * goes first, so a narrow terminal cuts a foe before it; an ally in reach of a heal is not urgent.
+ * ally, a foe in reach and the lit option's target, which must not go out of sight, follow your Hit
+ * Points. They come before your own conditions and effects, and a fallen ally comes first, so a
+ * narrow terminal cuts your effects, then a foe, before it cuts a dying ally. An ally in reach of a
+ * heal is not urgent.
  */
 export function foldedRows(situation: Situation, options: { stale?: boolean; glyphs?: Record<string, string>; lit?: Handle } = {}): Row[] {
   const me = meRow(situation);
-  const fallen = situation.creatures.filter((c) => c.side === "party" && c.health === "down");
-  const urgent = [...fallen, ...situation.creatures.filter((c) => c.side === "hostile" && c.in_reach)];
-  for (const c of urgent) {
+  // Your name, Hit Points, temporary ones and life state stay first; conditions and effects go last.
+  const core = 2 + (situation.me.temp_hp > 0 ? 1 : 0) + (situation.me.life_state !== "conscious" ? 2 : 0);
+  // Out of a fight the bar already names the party with its health, a fallen ally too.
+  const fallen = situation.mode === "combat" ? situation.creatures.filter((c) => c.side === "party" && c.health === "down") : [];
+  const near = situation.creatures.filter((c) => c.side === "hostile" && c.in_reach);
+  const target = situation.creatures.filter((c) => c.handle === options.lit && !fallen.includes(c) && !near.includes(c));
+  const urgent: Row = [];
+  for (const c of [...fallen, ...near, ...target]) {
     const lit = c.handle === options.lit ? { accent: "rust" as const, bold: true } : undefined;
-    me.push({ text: " · " }, { text: c.handle, ...(lit ? { style: lit } : {}) }, c.in_reach ? { text: " in reach", style: { bold: true } } : { ...health(c.health), text: ` ${c.health}` });
+    urgent.push({ text: " · " }, { text: c.handle, ...(lit ? { style: lit } : {}) });
+    if (c.side === "party") urgent.push({ ...health(c.health), text: ` ${c.health}` });
+    else if (c.in_reach) urgent.push({ text: " in reach", style: { bold: true } });
   }
-  return [bar(situation, options.stale, options.glyphs), me];
+  return [bar(situation, options.stale, options.glyphs), [...me.slice(0, core), ...urgent, ...me.slice(core)]];
 }
 
 /** A party member's name is its handle; a monster's is its kind ("Goblin Warrior"). */
