@@ -36,7 +36,7 @@ const GUIDE: Record<string, string> = {
 
   // Barbarian (Torva).
   "barbarian/rage":
-    "Resistance to bludgeoning, piercing and slashing damage, extra damage on Strength attacks, Advantage on Strength checks and saves; no spells. Attack a foe or spend a Bonus Action each turn to keep it, up to 10 minutes.",
+    "Resistance to bludgeoning, piercing and slashing damage, extra damage on Strength attacks, Advantage on Strength checks and saves; no spells. Attack a foe, force a save or spend a Bonus Action each turn to keep it, up to 10 minutes.",
   "barbarian/extend_rage": "Keep your Rage going until the end of your next turn.",
   "barbarian/reckless_attack": "Attack with Advantage on Strength attack rolls this turn; until your next turn, attack rolls against you have Advantage too.",
   "dragonborn/breath_weapon":
@@ -62,7 +62,7 @@ const GUIDE: Record<string, string> = {
   "cast/thunderwave": "A 15-foot cube of thunder from you: each creature in it makes a Constitution saving throw, taking thunder damage and pushed 10 feet on a failure, half damage on a success.",
   "cast/ice_knife": "A spell attack with a shard of ice: a hit deals piercing damage. Hit or miss, it bursts, and creatures within 5 feet of the target make a Dexterity saving throw or take cold damage.",
   "cast/shield": "An attack would hit you: gain +5 AC until the start of your next turn, against that attack too.",
-  "cast/fireball": "A burst of fire 20 feet across at a point you choose: each creature in it makes a Dexterity saving throw, full fire damage on a failure, half on a success.",
+  "cast/fireball": "A burst of fire with a 20-foot radius at a point you choose: each creature in it makes a Dexterity saving throw, full fire damage on a failure, half on a success.",
 };
 
 /** Ids that share one entry by their stem: every weapon attack, every breath weapon, the reckless attack's variants. */
