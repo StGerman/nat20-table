@@ -3,8 +3,8 @@
 // SDK's partial messages on; it asks for three narrations and prints, per turn, each growing
 // fragment of the tool's input with its time, what the seat's preview would show, and a verdict:
 // whether fragments arrived for the MCP tool at all, in order (each extends the last), and how much
-// sooner the first readable sentence came than the finished call. The preview stays off by default
-// (`--preview`) until this prints PASS.
+// sooner the first readable sentence came than the finished call. It printed PASS on the Mac on
+// 2026-10-31, so the preview is on by default (`--no-preview` turns it off).
 import { z } from "zod";
 import { AgentSession, reply, seatTool } from "../src/agents/sdk-session.ts";
 import { previewFor } from "../src/agents/preview.ts";
