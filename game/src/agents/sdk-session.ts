@@ -293,8 +293,9 @@ export class AgentSession {
         parent_tool_use_id: null,
         uuid: pending.uuid as `${string}-${string}-${string}-${string}-${string}`,
       };
-      // The turn's clock runs while it waits for the drain: the table waits that long too.
-      if (this.draining) this.held = user;
+      // The turn's clock runs while it waits for the drain, or for a cut turn's result: the table
+      // waits that long too. Sent before either, Claude Code would fold it into that turn.
+      if (this.draining || this.stale > 0) this.held = user;
       else this.inbox.push(user);
     });
   }
@@ -392,6 +393,8 @@ export class AgentSession {
 
   /** Ends the session and waits for the SDK to shut down. */
   async close(): Promise<void> {
+    // A turn still held is never sent: the pump's end rejects it.
+    this.held = undefined;
     this.inbox.close();
     await this.pump.catch(() => undefined);
   }
