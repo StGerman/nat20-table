@@ -186,16 +186,19 @@ test("with --lang ru a model player speaks, declares, notes and summarises in Ru
   assert.equal(declaration("PASS"), undefined);
 });
 
-test("a Russian run gives every agent the pack's one Russian name per character and NPC (AGT-38)", () => {
+test("a Russian run gives every agent the party's Russian names, and the DM the NPCs' too (AGT-38)", () => {
   const party = castParty(MILL);
-  assert.deepEqual(party.russianNames.slice(0, 4), ["bren: Брен", "torva: Торва", "maren: Марен", "ilsa: Ильза"]);
-  assert.ok(party.russianNames.includes("osric_hale: староста Осрик Хейл"));
+  assert.deepEqual(party.russianNames, ["bren: Брен", "torva: Торва", "maren: Марен", "ilsa: Ильза"]);
   const line = `Names in Russian: write each as given here, declined as Russian declines it: ${party.russianNames.join("; ")}.`;
   const card = party.cards.get("maren")!;
-  assert.ok(playerPrompt("maren", card, "cleric", "ru", true, party.russianNames).includes(line));
+  const russian = playerPrompt("maren", card, "cleric", "ru", true, party.russianNames);
+  assert.ok(russian.includes(line));
+  // The NPCs are scenario data (Rule 3): a player never learns a name the table hasn't heard.
+  for (const npc of ["Осрик", "Гритч", "Крапивного", "Снитт", "Венна"]) assert.ok(!russian.includes(npc), npc);
   assert.ok(!playerPrompt("maren", card, "cleric", "en", true, party.russianNames).includes("Names in Russian"), "an English prompt has no Russian names");
   const pack = readPack(MILL);
-  assert.ok(dmPrompt(pack, "bren", party.ai, "prompt", "ru").includes(line));
+  const dm = dmPrompt(pack, "bren", party.ai, "prompt", "ru");
+  assert.match(dm, /Names in Russian: write each as given here, declined as Russian declines it: bren: Брен; torva: Торва; maren: Марен; ilsa: Ильза; osric_hale: староста Осрик Хейл;/);
   assert.ok(!dmPrompt(pack, "bren", party.ai, "prompt", "en").includes("Names in Russian"));
 });
 

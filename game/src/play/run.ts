@@ -34,7 +34,7 @@ export interface PackParty {
   names: Map<Handle, string[]>;
   /** Each party member's class from its pregen (`fighter`), for its block of the players' rules primer (AGT-52); every AI seat has one. */
   classes: Map<Handle, string>;
-  /** In a Russian run, the one Russian name of each party member and NPC the pack gives one (AGT-38): `bren: Брен`. */
+  /** In a Russian run, the one Russian name of each party member the pack gives one (AGT-38): `bren: Брен`. Players' prompts take it; NPC names are the DM's alone. */
   russianNames: string[];
 }
 
@@ -88,7 +88,7 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
   // "nat20_core::class.fighter" is "fighter".
   const classes = new Map([...pregenSheets(pack, adventure)].map(([handle, sheet]) => [handle, sheet.class.split(".").at(-1) ?? sheet.class] as const));
   for (const p of ai) if (!classes.has(p.handle)) throw new Error(`${pack}: party ${p.handle} has an AI seat and no pregen in the first scene, so no class`);
-  return { ...(human ? { human } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: russianNames(adventure) };
+  return { ...(human ? { human } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: russianNames(adventure, { npcs: false }) };
 }
 
 /** One line of the pick list (AGT-35): a party member as a player picking a pregen sees it. */

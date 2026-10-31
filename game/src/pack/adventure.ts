@@ -149,10 +149,16 @@ export function schemaText(): string {
   return `${JSON.stringify(adventureSchema(), null, 2)}\n`;
 }
 
-/** The pack's canonical Russian names (AGT-38): party members by handle, NPCs by id. */
-export function russianNames(adventure: { party: Array<{ handle: string; name_ru?: string }>; npcs?: Array<{ id: string; name_ru?: string }> }): string[] {
+/**
+ * The pack's canonical Russian names (AGT-38): party members by handle, and NPCs by id for the DM
+ * only. The NPCs are scenario data, so a player's prompt gets the party's names alone (Rule 3).
+ */
+export function russianNames(
+  adventure: { party: Array<{ handle: string; name_ru?: string }>; npcs?: Array<{ id: string; name_ru?: string }> },
+  options: { npcs: boolean } = { npcs: true },
+): string[] {
   return [
     ...adventure.party.flatMap((p) => (p.name_ru ? [`${p.handle}: ${p.name_ru}`] : [])),
-    ...(adventure.npcs ?? []).flatMap((n) => (n.name_ru ? [`${n.id}: ${n.name_ru}`] : [])),
+    ...(options.npcs ? (adventure.npcs ?? []) : []).flatMap((n) => (n.name_ru ? [`${n.id}: ${n.name_ru}`] : [])),
   ];
 }
