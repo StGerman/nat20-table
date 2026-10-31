@@ -92,11 +92,13 @@ const SIDE_LABEL: Record<SituationCreature["side"], string> = { hostile: "Foes",
 
 /**
  * The narrow frame's folded panel (AGT-47 C1, AGT-69): the bar and your own line, where a fallen
- * ally and a foe in reach, which must not go out of sight, sit at the end of your line.
+ * ally and a foe in reach, which must not go out of sight, sit at the end of your line. A fallen ally
+ * goes first, so a narrow terminal cuts a foe before it; an ally in reach of a heal is not urgent.
  */
 export function foldedRows(situation: Situation, options: { stale?: boolean; glyphs?: Record<string, string>; lit?: Handle } = {}): Row[] {
   const me = meRow(situation);
-  const urgent = situation.creatures.filter((c) => (c.side === "party" && c.health === "down") || c.in_reach);
+  const fallen = situation.creatures.filter((c) => c.side === "party" && c.health === "down");
+  const urgent = [...fallen, ...situation.creatures.filter((c) => c.side === "hostile" && c.in_reach)];
   for (const c of urgent) {
     const lit = c.handle === options.lit ? { accent: "rust" as const, bold: true } : undefined;
     me.push({ text: " · " }, { text: c.handle, ...(lit ? { style: lit } : {}) }, c.in_reach ? { text: " in reach", style: { bold: true } } : { ...health(c.health), text: ` ${c.health}` });

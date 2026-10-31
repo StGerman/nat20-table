@@ -530,8 +530,11 @@ test("the panel checklist (AGT-47): only `down` is rust, the foes out of the fig
   // C1 on the narrow frame: two rows, nothing urgent out of sight.
   assert.deepEqual(foldedRows(mine).map(rowText), [
     "Round 5 · ▶ your turn · next goblin_4, ilsa, goblin_3",
-    "Bren 12/20 HP · prone · Bless · goblin_3 in reach · maren down",
+    "Bren 12/20 HP · prone · Bless · maren down · goblin_3 in reach",
   ]);
+  // The fallen ally comes first, so a narrow terminal cuts the foe before it.
+  const cut = foldedRows(mine)[1].map((span) => span.text).join("").slice(0, 50);
+  assert.ok(cut.includes("maren down"), cut);
   // The option under the cursor lights its target's handle (screen 5).
   const lit = situationRows(mine, { columns: 80, rows: 24 }, { lit: "goblin_3" })[2];
   assert.deepEqual(lit[1].style, { accent: "rust", bold: true });
