@@ -70,15 +70,15 @@ export function completeSentences(text: string, done: boolean): string {
 }
 
 /**
- * What the human's seat may show of a partial narration: its complete sentences, only when the line
- * is for the whole table or for `human`. A `to` naming someone else, or one still streaming, shows
- * nothing; a `to` that comes after the text (against the schema's order) clears what was shown.
+ * What the human's seat may show of a partial narration: its complete sentences, only once `to` has
+ * streamed in full, first, and is "table" or `human`. Anything else shows nothing: a `to` naming
+ * someone else or still streaming, and a line whose text comes first, since its `to` (required by
+ * the tool) could still name another character (Rule 3).
  */
 export function previewFor(json: string, human: Handle | undefined): string | undefined {
   const p = partialNarration(json);
-  if (p.hasTo) {
-    if (p.to === undefined || p.to !== human) return undefined;
-  } else if (p.first !== "text") return undefined;
+  if (p.first !== "to" || p.to === undefined) return undefined;
+  if (p.to !== "table" && p.to !== human) return undefined;
   const shown = p.text === undefined ? "" : completeSentences(p.text, p.textDone);
   return shown || undefined;
 }

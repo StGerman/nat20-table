@@ -13,10 +13,12 @@ import { InkSeat } from "../src/ui/ink-seat.ts";
 import { AgentSession, reply, seatTool, sessionOptions } from "../src/agents/sdk-session.ts";
 
 test("a partial narrate input shows its complete sentences, for the table or the human only", () => {
-  assert.equal(previewFor('{"text":"The gate creaks. A goblin', "bren"), "The gate creaks.");
-  assert.equal(previewFor('{"text":"The gate creaks', "bren"), undefined);
-  assert.equal(previewFor('{"text":"The gate creaks open."}', "bren"), "The gate creaks open.");
-  assert.equal(previewFor('{"text":"He says \\"Run!\\" and runs. Then', "bren"), 'He says "Run!" and runs.');
+  assert.equal(previewFor('{"to":"table","text":"The gate creaks. A goblin', "bren"), "The gate creaks.");
+  assert.equal(previewFor('{"to":"table","text":"The gate creaks', "bren"), undefined);
+  assert.equal(previewFor('{"to":"table","text":"The gate creaks open."}', "bren"), "The gate creaks open.");
+  assert.equal(previewFor('{"to":"table","text":"He says \\"Run!\\" and runs. Then', "bren"), 'He says "Run!" and runs.');
+  // Text before `to`: its `to` could still name another character, so nothing shows (Rule 3).
+  assert.equal(previewFor('{"text":"The gate creaks. A goblin', "bren"), undefined);
   // A line to one character: nothing until its `to` is known, and only for the human.
   assert.equal(previewFor('{"to":"mar', "bren"), undefined);
   assert.equal(previewFor('{"to":"maren","text":"You hear a child. She', "bren"), undefined);
@@ -62,10 +64,10 @@ test("the DM shows the seat only a narrate call's readable part, once per change
   const shown: Array<string | undefined> = [];
   const dm = new ModelDm({ pack, human: "bren", players: ["maren"], choice: { model: "claude-sonnet-5-5", effort: "low" }, preview: (t) => shown.push(t) });
   const onPartial = dm.sessionConfig().onPartial!;
-  onPartial("narrate", '{"text":"Dusk falls. The');
-  onPartial("narrate", '{"text":"Dusk falls. The gate');
+  onPartial("narrate", '{"to":"table","text":"Dusk falls. The');
+  onPartial("narrate", '{"to":"table","text":"Dusk falls. The gate');
   onPartial("request_check", '{"actor":"bren"');
-  onPartial("narrate", '{"text":"Dusk falls. The gate creaks. ');
+  onPartial("narrate", '{"to":"table","text":"Dusk falls. The gate creaks. ');
   assert.deepEqual(shown, ["Dusk falls.", "Dusk falls. The gate creaks."]);
   const plain = new ModelDm({ pack, human: "bren", players: ["maren"], choice: { model: "claude-sonnet-5-5", effort: "low" } });
   assert.equal(plain.sessionConfig().onPartial, undefined, "off without a preview");
