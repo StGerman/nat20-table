@@ -459,7 +459,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const notice = view.notice ? wrapText(view.notice.text, width, 0).split("\n").slice(0, 2) : [];
   const panel =
     view.situation && layout.mode === "narrow"
-      ? situationRows(view.situation, size, { folded: view.folded, stale: view.stale, glyphs: seat.glyphs }).slice(0, NARROW_PANEL_ROWS)
+      ? // The pane's rows, cut to the bar and your own line: out of a fight too, where the inline panel was the bar alone.
+        situationRows(view.situation, size, { folded: view.folded, stale: view.stale, glyphs: seat.glyphs, pane: true }).slice(0, NARROW_PANEL_ROWS)
       : [];
   const below = 1 + (panel.length > 0 ? panel.length + 1 : 0) + notice.length + inputH;
   const block = view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number) : [];

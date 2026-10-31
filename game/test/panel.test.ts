@@ -442,6 +442,29 @@ test("the frame fills the terminal exactly, at 160x48, 124x40 and 80x24, with th
   }
 });
 
+test("on the narrow frame the folded panel is the bar and your own line, out of a fight too", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
+  const stdout = new FakeStdout(80, 24);
+  seat.start({
+    stdin: new FakeStdin() as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream,
+    stderr: new FakeStdout(80, 24) as unknown as NodeJS.WriteStream,
+    debug: true,
+    interactive: true,
+    patchConsole: false,
+  });
+  try {
+    const s = situationOf(yard(), "goblin_4")!;
+    const calm: Situation = { ...s, mode: "explore", turn: undefined, up_in: undefined, next: [], creatures: s.creatures.filter((c) => c.side === "party") };
+    seat.show({ kind: "situation", situation: calm });
+    void seat.ask({ kind: "explore" });
+    await until("the explore panel", () => stdout.last.includes("Explore · party: torva unhurt") && stdout.last.includes("Bren 12/20 HP · prone · Bless"));
+    assert.ok(!stdout.last.includes("Party  torva"), "two rows only");
+  } finally {
+    seat.stop();
+  }
+});
+
 test("at 80x24 and at 60 columns the panel stays above the turn block, inside the terminal's width", async () => {
   for (const [columns, rows] of [[80, 24], [60, 30]] as const) {
     const { seat, stdout } = await frameAt(columns, rows);
