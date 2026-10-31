@@ -548,6 +548,9 @@ test("the panel checklist (AGT-47): only `down` is rust, the foes out of the fig
   assert.ok(text.includes("maren down") && !text.includes("maren in reach"), text);
   assert.ok(!healer.creatures.some((c) => c.side === "party" && c.health !== "down" && text.includes(`${c.handle} `)), text);
   assert.deepEqual(folded.find((span) => span.text === far)?.style, { accent: "rust", bold: true }, text);
+  // Out of a fight the fold adds nobody, not even a lit target or a foe in reach.
+  const calm = foldedRows({ ...healer, mode: "explore" }, { lit: far })[1].map((span) => span.text).join("");
+  assert.equal(calm, "Bren 12/20 HP · prone · Bless", calm);
   // The option under the cursor lights its target's handle (screen 5).
   const lit = situationRows(mine, { columns: 80, rows: 24 }, { lit: "goblin_3" })[2];
   assert.deepEqual(lit[1].style, { accent: "rust", bold: true });
