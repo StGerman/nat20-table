@@ -87,6 +87,12 @@ export interface SessionConfig {
    * with every token.
    */
   settleOn?: Partial<Record<string, readonly string[]>>;
+  /**
+   * Told each growing fragment of a seat tool's input while the model writes it (M10 S4): the
+   * tool's name and its input JSON so far, not yet valid. Turns on the SDK's partial messages;
+   * nothing it hears is recorded.
+   */
+  onPartial?: (tool: string, json: string) => void;
   /** The SDK's `query`; a test passes a scripted stand-in, so no model is called. */
   query?: typeof query;
 }
@@ -118,6 +124,7 @@ export function sessionOptions(config: SessionConfig, cwd: string): Options {
     // Sessions are not written to ~/.claude: a run's record is our own transcript.
     persistSession: false,
     env: agentEnv(process.env),
+    ...(config.onPartial ? { includePartialMessages: true } : {}),
   };
 }
 
@@ -222,6 +229,8 @@ export class AgentSession {
   private stale = 0;
   /** A turn a settling tool ended for the caller, whose SDK turn still runs (M10 S2). */
   private draining: PendingTurn | undefined;
+  /** The tool uses streaming in the current API response, by content block index (M10 S4). */
+  private readonly streaming = new Map<number, { name: string; json: string }>();
   /** The SDK's `init` message: the tools, skills and credential source the session really got. */
   init: SDKSystemMessage | undefined;
   /** The seat's tools as the SDK runs them: each timed toward the turn that called it (M10 S1). */
@@ -379,6 +388,21 @@ export class AgentSession {
         // A retry with no HTTP status never reached the API; one with a status, or any answer, did.
         if (message.subtype === "api_retry" && turn && this.stale === 0) turn.offline = message.error_status === null;
         return;
+      case "stream_event": {
+        // Only the turn in flight streams to the listener: a draining or timed-out turn's words are over.
+        if (!this.config.onPartial || !this.pending || this.draining || this.stale > 0 || message.parent_tool_use_id !== null) return;
+        const event = message.event;
+        if (event.type === "message_start") this.streaming.clear();
+        else if (event.type === "content_block_start" && event.content_block.type === "tool_use") {
+          this.streaming.set(event.index, { name: event.content_block.name.replace(`mcp__${TOOL_SERVER}__`, ""), json: "" });
+        } else if (event.type === "content_block_delta" && event.delta.type === "input_json_delta") {
+          const block = this.streaming.get(event.index);
+          if (!block) return;
+          block.json += event.delta.partial_json;
+          this.config.onPartial(block.name, block.json);
+        }
+        return;
+      }
       case "rate_limit_event":
         if (message.rate_limit_info.status === "rejected") {
           this.fail(new UsageLimitReached(message.rate_limit_info.resetsAt));

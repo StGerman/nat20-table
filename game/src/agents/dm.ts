@@ -17,6 +17,7 @@ import type { DmTools } from "../table/tools.ts";
 import type { DmAgent, DmWake, ToolOutcome } from "../table/types.ts";
 import type { UsageLog } from "../usage.ts";
 import { dmLanguage, type Language } from "./language.ts";
+import { previewFor } from "./preview.ts";
 import { AgentSession, reply, seatTool, type CallToolResult, type ModelChoice, type SeatTool, type SessionConfig, type TurnSession } from "./sdk-session.ts";
 
 /** A DM turn that runs longer falls back to the engine lines alone (spec §6). */
@@ -100,7 +101,7 @@ export function dmPrompt(pack: PackText, human: Handle | undefined, players: Han
   const named = pack.adventure.party.filter((p) => p.pronouns).map((p) => `${p.handle} ${p.pronouns}`);
   const pronouns = named.length > 0 ? ` Pronouns: ${named.join(", ")}; keep to them in every language.` : "";
   const fightMoves = human ? ` (in a fight only ${human} moves, on ${human}'s turn)` : "";
-  const hears = human ? "narrate (to everyone, or to one character with `to`) and ask_human" : "narrate (to everyone, or to one character with `to`)";
+  const hears = human ? "narrate (`to` \"table\" for everyone, or one character's handle) and ask_human" : "narrate (`to` \"table\" for everyone, or one character's handle)";
   const spoken = human
     ? `- "The table has spoken": ${human} acted or spoke, then the AI players declared. Resolve it: ask for a check (request_check, with the character who tries as actor), move characters (move), have one help another (help), rest (short_rest), start the scene's fight (start_combat), or answer in fiction. When an AI player declares one of its own options, such as a spell or a potion, don't take it for them: grant_action, and they take it. ${human}'s own options go through submit. If ${human}'s intent is unclear, ask_human. Then narrate the outcome in one to three sentences.
 - "It is ${human}'s turn, and the human playing ${human} said": map the words to ${human}'s options (legal_actions, submit, move, end_turn), then narrate only what the engine did. If it can't be done, or a move is refused, say so in narration.`
@@ -178,6 +179,11 @@ export interface ModelDmConfig {
   turnTimeoutMs?: number;
   /** Opens a session; `AgentSession` by default. Tests pass one that calls the tools as a model would. */
   open?: (config: SessionConfig) => TurnSession;
+  /**
+   * Shows the human's seat the narration as it is written (M10 S4, AGT-66): complete sentences of
+   * a `narrate` call for the whole table or the human, `undefined` to clear. Off when absent.
+   */
+  preview?: (text: string | undefined) => void;
 }
 
 export class ModelDm implements DmAgent {
@@ -200,6 +206,7 @@ export class ModelDm implements DmAgent {
 
   async wake(wake: DmWake, briefing: string, tools: DmTools): Promise<string | void> {
     this.current = tools;
+    this.previewed = undefined;
     try {
       const seed = this.session ? undefined : this.seed(await tools.getState());
       this.session ??= this.openSession();
@@ -212,6 +219,8 @@ export class ModelDm implements DmAgent {
       throw error;
     } finally {
       this.current = undefined;
+      // A preview never outlives its wake: the finished line, if any, is on screen by now.
+      this.clearPreview();
     }
   }
 
@@ -237,9 +246,28 @@ export class ModelDm implements DmAgent {
       ...(craft === "skills" ? { plugins: [CRAFT_PLUGIN], skills: craftSkills().map((s) => `${CRAFT_NAME}:${s.name}`) } : {}),
       usage: this.config.usage,
       settleOn: DM_SETTLE_ON,
+      ...(this.config.preview ? { onPartial: (tool: string, json: string) => this.partial(tool, json) } : {}),
       turnTimeoutMs: this.config.turnTimeoutMs ?? DM_TURN_TIMEOUT_MS,
       ...(this.config.turnTimeoutMs === undefined ? { turnTimeoutsMs: Object.fromEntries(DM_LONG_WAKES.map((w) => [w, DM_LONG_WAKE_TIMEOUT_MS])) } : {}),
     };
+  }
+
+  /** A growing `narrate` call: its readable part to the human's seat, when that changed. */
+  private partial(tool: string, json: string): void {
+    if (tool !== "narrate") return;
+    const text = previewFor(json, this.config.human);
+    if (text === this.previewed) return;
+    this.previewed = text;
+    this.config.preview?.(text);
+  }
+
+  /** What the preview shows now. */
+  private previewed: string | undefined;
+
+  /** Takes the preview off the seat, if one is showing. */
+  private clearPreview(): void {
+    if (this.previewed !== undefined) this.config.preview?.(undefined);
+    this.previewed = undefined;
   }
 
   private openSession(): TurnSession {
@@ -395,9 +423,17 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "narrate",
-        "Say this to the table, or to one character only (to). Fiction only: the guard refuses numbers, game statistics and ids.",
-        { text: z.string(), to: handle.optional() },
-        (i) => this.bound((t) => t.narrate(i.text, i.to)),
+        "Say this to the table, or to one character only. Give `to` first: \"table\" for everyone, or one character's handle. Fiction only: the guard refuses numbers, game statistics and ids.",
+        // `to` is required and first: a streamed preview (M10 S4) learns whom a line is for before
+        // any of its text, so a line to another character never reaches the human's seat early.
+        { to: z.string().describe('"table" for everyone, or one character\'s handle for that character only.'), text: z.string() },
+        (i) =>
+          this.bound(async (t) => {
+            const said = await t.narrate(i.text, i.to === "table" ? undefined : i.to);
+            // A refused line never reaches the seat as narration, so nothing else would clear its preview.
+            if (!said.ok) this.clearPreview();
+            return said;
+          }),
       ),
       seatTool(
         "ask_human",

@@ -94,6 +94,11 @@ export interface Seat {
    */
   busy?(on: string | undefined): void;
   /**
+   * The DM's narration as it is being written (M10 S4): complete sentences so far, `undefined` to
+   * clear. Replaced by the finished narration event; never recorded, and only the human's seat has it.
+   */
+  preview?(text: string | undefined): void;
+  /**
    * The DM's narration of the engine lines the seat was shown failed (a fallback): a seat that
    * holds lines for their narration shows them now, as they are (AGT-37). Not recorded.
    */

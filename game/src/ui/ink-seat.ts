@@ -34,6 +34,8 @@ export interface SeatView {
   options?: PinnedOptions;
   /** Who the table waits on while it isn't asking the human, and since when (ms). */
   busy?: { on: string; since: number };
+  /** The DM's narration as it is written (M10 S4), dim under the wait line until the finished line comes. */
+  preview?: string;
 }
 
 export interface InkSeatOptions {
@@ -94,6 +96,11 @@ export class InkSeat implements Seat {
     this.update({ busy: on ? { on, since: this.now() } : undefined });
   }
 
+  preview(text: string | undefined): void {
+    if (text === this.view.preview) return;
+    this.update({ preview: text });
+  }
+
   /** Starts drawing; tests pass their own streams. */
   start(options: RenderOptions = {}): Instance {
     this.instance = render(h(TableScreen, { seat: this }), { exitOnCtrlC: false, incrementalRendering: true, ...options });
@@ -128,6 +135,7 @@ export class InkSeat implements Seat {
         return;
       }
       case "narration": {
+        if (this.view.preview !== undefined) this.update({ preview: undefined });
         // The lines it narrates go under it, or nowhere: the narration tells them.
         const covered = this.held.map((line) => ({ ...line, text: `    ${line.text.trimStart()}` }));
         this.held = [];
@@ -363,6 +371,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     }),
     ...(view.situation ? [block(situationRows(view.situation, size, { folded: view.folded, stale: view.stale }), "situation")] : []),
     ...(view.options ? [block(turnRows(view.options.lines, size, view.options.budget, view.options.title), "turn")] : []),
+    ...(view.preview && !view.prompt ? [h(Box, { key: "preview", marginTop: 1 }, h(Text, { dimColor: true, italic: true }, wrapText(view.preview, size.columns, 0)))] : []),
     h(
       Box,
       { flexDirection: "column", marginTop: 1 },

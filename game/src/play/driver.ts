@@ -18,7 +18,8 @@
 // --dry-run (prints the DM's prompt and session settings, starts nothing), --no-audit (no audit and
 // no narration check), --out DIR,
 // --max-steps N, --lang en|ru (decision 0038), --verbose (with --seat ink: AGT-37), --time-limit-min N,
-// --stall-rounds N, --upload REPO, --no-upload, --zip (AGT-41).
+// --stall-rounds N, --upload REPO, --no-upload, --zip (AGT-41), --preview (with --seat ink: the DM's
+// narration as it is written, AGT-66; off until `npm run spike:partial` passes on the Mac).
 import { spawn, type ChildProcess } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
@@ -109,8 +110,9 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const playerChoice = { model: flags["player-model"], effort: flags.effort as EffortLevel };
   const craft = flags.craft as CraftMode;
   const language = flags.lang as Language;
-  const modelDm = (usage?: UsageLog) =>
+  const modelDm = (usage?: UsageLog, preview?: (text: string | undefined) => void) =>
     new ModelDm({
+      ...(preview ? { preview } : {}),
       pack,
       human: party.human,
       players: party.ai,
@@ -223,7 +225,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     play.allScenes
       ? chainDm(chainScenes(pack.adventure.scenes), everyone, everyone[0])
       : walkOnDm(pack.adventure.scenes.map((s) => s.id), fights, everyone);
-  const dm: DmAgent = flags.dm === "scripted" ? scripted() : modelDm(usage);
+  // The narration preview (M10 S4) reaches the terminal seat only, and only with --preview.
+  const dm: DmAgent = flags.dm === "scripted" ? scripted() : modelDm(usage, ink && flags.preview ? (text) => ink.preview(text) : undefined);
 
   // The time limit runs from the first scene's load; the loop stops between decisions, so a wake in
   // flight finishes or times out first.
