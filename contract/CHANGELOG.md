@@ -5,7 +5,7 @@ Within major 1, changes are additive only. Nothing is released yet, so versions 
 
 ## 1.0.0-dev.38 (2026-10-31)
 - New optional field `summary` on `Option` (from `legal_actions`), additive (protocol.md §4.4 and the §5 visibility table): one to three plain sentences on what the option does, the rule's own short text from core's registry, the same for every viewer, never with a DC, odds or a computed number. Absent when the rule has none (monster attacks such as Nimble Escape). The human's action card and the AI players' option text read it from here, so the table keeps no copy of rule text (design "Option descriptions: one source in core", 2026-10-31).
-- The core pin moves to core #64's head (0e09c60: fork `demo` plus `summary` on actions and spells, filled for every action and spell the four pregens take) until it merges.
+- The core pin moves to core #64's head (a7c2ee7: fork `demo` plus `summary` on actions and spells, filled for every action and spell the four pregens take) until it merges.
 - Every fixture that lists options gains `summary` on each option whose rule has one, at the same seeds; nothing else changes (`area`, `carry`, `cleric_combat`, `duel`, `encounter`, `explore_actions`, `fled`, `help_combat`, `m3_trail`, `m4_party`, `m5_fights`, `move_partial`, `potion`, `rest`, `session`, `turn_budget`). Nimble Escape in `cleric_combat` shows the field absent.
 - The visibility job scans every summary the fixtures make the engine send: no DC, odds or target number.
 
