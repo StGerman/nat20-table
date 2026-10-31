@@ -49,8 +49,8 @@ export const SETTINGS = {
   out: { kind: "string", default: path.join(REPO, "runs") },
   "max-steps": { kind: "int", default: 2000 },
   verbose: { kind: "bool", default: false },
-  /** Show the DM's narration as it is written (M10 S4, AGT-66); off until the spike on the Mac passes. */
-  preview: { kind: "bool", default: false },
+  /** Don't show the DM's narration as it is written (M10 S4, AGT-66). The preview is on since the spike passed on the Mac (2026-10-31). */
+  "no-preview": { kind: "bool", default: false },
   "no-audit": { kind: "bool", default: false },
   /** Minutes from the first scene's load until the run stops as a fail (`time_limit`); 0 for none. */
   "time-limit-min": { kind: "int", default: 0 },

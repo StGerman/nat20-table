@@ -176,7 +176,7 @@ Both on fork `demo`, each its own `core/<topic>` PR with a test in `core/tests/`
 | --- | --- | --- |
 | A settled-early DM turn keeps calling tools | "not now" refusals, logged | existing `bound` guard; count in the usage record |
 | A draining turn still runs when the next DM wake comes | the next wake waits for it, up to its own timeout | `interrupt()` on the draining turn first, as timeouts do today |
-| Partial messages arrive out of order or not for MCP tools | preview shows garbage or nothing | spike first; preview is best-effort and never recorded; off by default until the spike passes |
+| Partial messages arrive out of order or not for MCP tools | preview shows garbage or nothing | spike first; preview is best-effort and never recorded; off by default until the spike passes (it passed on the Mac 2026-10-31; now on, `--no-preview` turns it off) |
 | Merged `submit_decision` refused mid-chain | nothing said, turn open | the handler stops at the first refusal and returns it |
 | `theme.json` missing or invalid | no colours | loader falls back to the built-in ANSI table and warns once |
 | Terminal narrower than 72 or resized mid-run | re-layout | pure layout from `PanelSize` per render; fold rule unchanged |
