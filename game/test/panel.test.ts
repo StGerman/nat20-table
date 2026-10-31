@@ -8,15 +8,16 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import type { State } from "@nat20-table/engine-client";
+import { buildChoices, choiceLines } from "../src/table/choices.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedPlayer, ScriptedSeat, yardDm } from "../src/table/scripted.ts";
 import { situationOf, type Situation } from "../src/table/situation.ts";
 import type { TableEvent } from "../src/table/types.ts";
 import { InkSeat, SPINNER, waitText } from "../src/ui/ink-seat.ts";
 import { TONE_STYLE } from "../src/ui/lines.ts";
-import { loadTheme, paletteFor, THEME_FILE, themeProblems } from "../src/ui/palette.ts";
+import { loadTheme, paletteFor, THEME, THEME_FILE, themeProblems } from "../src/ui/palette.ts";
 import { frameLayout, RULE_COLUMNS } from "../src/ui/frame.ts";
-import { glyphsFor, rowText, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
+import { foldedRows, glyphsFor, rowText, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
 import type { LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
 
@@ -111,7 +112,7 @@ test("at 80x24 the panel is the bar, your line, the creatures by side and the fa
     "Party  torva                     unhurt    10 ft",
     "       maren                     down      20 ft",
     "       ilsa                      unhurt    30 ft",
-    "Down   goblin_1, goblin_2, wolf_3",
+    "Fallen goblin_1, goblin_2, wolf_3",
   ]);
   assert.ok(rows.length <= Math.floor(24 / 3));
   // Conditions come after the distance, so the feet stay in their column.
@@ -150,7 +151,7 @@ test("the full-screen side pane has the whole height: no third-of-the-rows cap, 
   const crowded = situationOf({ ...yard(), others: [...yard().others, other("wolf_9", "Wolf", "hostile", "unhurt", 50)] } as State, "bren", listing)!;
   const rows = situationRows(crowded, { columns: 52, rows: 23 }, { pane: true }).map(rowText);
   assert.ok(!rows.some((r) => r.includes("more · /where")), rows.join("\n"));
-  assert.ok(rows.includes("Down   goblin_1, goblin_2, wolf_3"));
+  assert.ok(rows.includes("Fallen goblin_1, goblin_2, wolf_3"));
   const s = situationOf(yard(), "goblin_4")!;
   const calm: Situation = { ...s, mode: "explore", turn: undefined, up_in: undefined, next: [], creatures: s.creatures.filter((c) => c.side === "party") };
   // Out of a fight the feet go: nobody measures a walk between scenes.
@@ -420,7 +421,7 @@ test("at 160 columns the narration wraps at 72 and the side panel stands right o
     // The panel's rows start right of the measure and the rule; the whole roster fits, Down line too.
     const bar = rows.find((r) => r.includes("Round 5 · ▶ your turn"))!;
     assert.equal(bar.indexOf("Round 5"), TEXT_COLUMNS + RULE_COLUMNS, bar);
-    assert.ok(rows.some((r) => r.includes("Down   goblin_1, goblin_2, wolf_3")), stdout.last);
+    assert.ok(rows.some((r) => r.includes("Fallen goblin_1, goblin_2, wolf_3")), stdout.last);
     // The rule runs the body's height, one row under the header to the foot.
     assert.ok(rows.slice(1).every((r) => r.charAt(TEXT_COLUMNS + 1) === "│"), stdout.last);
     // The turn block stays in the story column.
@@ -517,4 +518,53 @@ test("the turn-order line puts the pack's glyph before each handle, by handle or
   assert.equal(glyphsFor({ LANG: "en_US.UTF-8", NO_COLOR: "1" }, glyphs), undefined);
   assert.equal(glyphsFor({ LANG: "C" }, glyphs), undefined);
   assert.equal(glyphsFor({ LC_ALL: "ru_RU.utf8" }, {}), undefined);
+});
+
+test("the panel checklist (AGT-47): only `down` is rust, the foes out of the fight are `Fallen`, and the narrow fold keeps a fallen ally and a foe in reach on your line", () => {
+  // C4: one urgent state stands out.
+  assert.equal(THEME.states.bloodied.accent, undefined);
+  assert.equal(THEME.states.down.accent, "rust");
+  const mine = situationOf(yard(), "bren", listing)!;
+  const goblin = situationRows(mine, { columns: 80, rows: 24 })[2];
+  assert.ok(goblin.some((span) => span.text.startsWith("bloodied") && span.style === undefined), JSON.stringify(goblin));
+  // C1 on the narrow frame: two rows, nothing urgent out of sight.
+  assert.deepEqual(foldedRows(mine).map(rowText), [
+    "Round 5 · ▶ your turn · next goblin_4, ilsa, goblin_3",
+    "Bren 12/20 HP · prone · Bless · maren down · goblin_3 in reach",
+  ]);
+  // The fallen ally comes first, so a narrow terminal cuts the foe before it.
+  const cut = foldedRows(mine)[1].map((span) => span.text).join("").slice(0, 50);
+  assert.ok(cut.includes("maren down"), cut);
+  // The option under the cursor lights its target's handle (screen 5).
+  const lit = situationRows(mine, { columns: 80, rows: 24 }, { lit: "goblin_3" })[2];
+  assert.deepEqual(lit[1].style, { accent: "rust", bold: true });
+});
+
+test("an option names its target by handle, with `(walk)` only when the human walks to it first (AGT-47 C3)", () => {
+  const result = {
+    cmd: "legal_actions",
+    prompt_id: "p1",
+    options: [
+      {
+        name: "Longsword attack",
+        option_id: "attack/longsword",
+        action: "attack",
+        targeting: "single",
+        max_targets: 1,
+        targets: [
+          { handle: "goblin_3", side: "hostile", distance_ft: 5, in_range: true },
+          { handle: "goblin_4", side: "hostile", distance_ft: 24, in_range: false },
+        ],
+        variants: [],
+      },
+    ],
+    unavailable: [],
+    can_end_turn: true,
+  } as unknown as LegalActionsResult;
+  const lines = choiceLines(buildChoices(result, undefined, false));
+  assert.ok(lines.includes("1. Longsword attack → goblin_3"), lines.join("; "));
+  const more = buildChoices(result, undefined, false).find((c) => c.next);
+  const all = choiceLines(more?.next ?? buildChoices(result, undefined, false));
+  assert.ok(all.some((l) => l.endsWith("→ goblin_4 (walk)")), all.join("; "));
+  assert.ok(!all.some((l) => /hostile|\d+ ft/.test(l)), all.join("; "));
 });

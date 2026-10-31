@@ -25,7 +25,7 @@ import { COMMAND_HELP, promptHint, readLine } from "./input.ts";
 import { actionRows, frameLayout, freshText, headerText, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, storyRows, storyWindow, type Scroll } from "./frame.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette, type Style } from "./palette.ts";
-import { endsTurn, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
+import { endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
 
 /** The numbered options held above the prompt while they are the human's to pick from. */
 export type PinnedOptions = Extract<TableEvent, { kind: "options" }>;
@@ -656,6 +656,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const picked = view.prompt
     ? (previewOption(view.draft, view.options?.lines) ?? (view.draft ? undefined : previewOption(String(view.highlight ?? ""), view.options?.lines)))
     : undefined;
+  // The creature the option under the cursor aims at is lit in the panel too (screen 5).
+  const lit = picked ? view.options?.choices.find((c) => c.number === picked.number)?.target?.handle : undefined;
   const inputH = view.draft ? rowsFor(`> ${view.draft} ${picked ? `  ${picked.line}` : ""}`, width, 3) : 1;
   const notice = view.notice ? wrapText(view.notice.text, width, 0).split("\n").slice(0, 2) : [];
   // Paused, the panel is a frame of the last moment: marked stale until the game goes on (screen 10).
@@ -665,8 +667,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const panelOverlay = layout.mode === "narrow" && view.folded && view.situation !== undefined;
   const panel =
     view.situation && layout.mode === "narrow"
-      ? // The pane's rows, cut to the bar and your own line: out of a fight too, where the inline panel was the bar alone.
-        situationRows(view.situation, size, { stale, glyphs: seat.glyphs, pane: true }).slice(0, NARROW_PANEL_ROWS)
+      ? // The bar and your own line, with a fallen ally and a foe in reach on it (AGT-47 C1).
+        foldedRows(view.situation, { stale, glyphs: seat.glyphs, lit }).slice(0, NARROW_PANEL_ROWS)
       : [];
   const below = 1 + (panel.length > 0 ? panel.length + 1 : 0) + notice.length + inputH;
   // The action zone: what is asked of the human now, above the turn block (screens 4, 5, 7 to 10).
@@ -692,7 +694,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
         // A row that fits keeps its spacing (the sheet's and /help's columns); a longer one wraps.
         .flatMap((text) => ([...text].length <= width ? [text] : wrapText(text, width, 2).split("\n")).map((row) => [{ text: row, style: TONE_STYLE.info }]))
     : panelOverlay
-      ? situationRows(view.situation!, { columns: width, rows: size.rows }, { stale, glyphs: seat.glyphs, pane: true })
+      ? situationRows(view.situation!, { columns: width, rows: size.rows }, { stale, glyphs: seat.glyphs, pane: true, lit })
       : undefined;
   const overlayRoom = Math.max(1, storyH - 1);
   const overlayMax = overlayRows ? Math.max(0, overlayRows.length - overlayRoom) : 0;
@@ -800,7 +802,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   if (layout.mode === "narrow") {
     return h(Box, { flexDirection: "column", width: size.columns, height: size.rows }, headerRow, h(Box, { key: "story", flexDirection: "column", width, height: body }, ...left));
   }
-  const side = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true }) : [];
+  const side = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true, lit }) : [];
   return h(
     Box,
     { flexDirection: "column", width: size.columns, height: size.rows },

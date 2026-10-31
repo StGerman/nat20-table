@@ -56,7 +56,7 @@ const words = (id: string) => titled(id.replace(/[_.]/g, " "));
 export function situationRows(
   situation: Situation,
   size: PanelSize,
-  options: { folded?: boolean; stale?: boolean; glyphs?: Record<string, string>; pane?: boolean } = {},
+  options: { folded?: boolean; stale?: boolean; glyphs?: Record<string, string>; pane?: boolean; lit?: Handle } = {},
 ): Row[] {
   const rows = [bar(situation, options.stale, options.glyphs)];
   // The full-screen side pane (AGT-69) has the whole height: out of a fight it shows you and the
@@ -79,15 +79,32 @@ export function situationRows(
   for (const creature of shown) {
     const label = creature.side === side ? "" : SIDE_LABEL[creature.side];
     side = creature.side;
-    rows.push(creatureRow(creature, label, widths, situation.mode === "combat"));
+    rows.push(creatureRow(creature, label, widths, situation.mode === "combat", creature.handle === options.lit));
   }
   const hidden = situation.creatures.length - shown.length;
   if (hidden > 0) rows.push([{ text: `       +${hidden} more · /where`, style: muted }]);
-  if (downRow) rows.push([{ text: `Down   ${situation.down.join(", ")}`, style: muted }]);
+  // The foes out of the fight (AGT-47 C5): `Fallen`, so `down` keeps one meaning, a dying ally.
+  if (downRow) rows.push([{ text: `Fallen ${situation.down.join(", ")}`, style: muted }]);
   return rows;
 }
 
 const SIDE_LABEL: Record<SituationCreature["side"], string> = { hostile: "Foes", party: "Party", neutral: "Others" };
+
+/**
+ * The narrow frame's folded panel (AGT-47 C1, AGT-69): the bar and your own line, where a fallen
+ * ally and a foe in reach, which must not go out of sight, sit at the end of your line. A fallen ally
+ * goes first, so a narrow terminal cuts a foe before it; an ally in reach of a heal is not urgent.
+ */
+export function foldedRows(situation: Situation, options: { stale?: boolean; glyphs?: Record<string, string>; lit?: Handle } = {}): Row[] {
+  const me = meRow(situation);
+  const fallen = situation.creatures.filter((c) => c.side === "party" && c.health === "down");
+  const urgent = [...fallen, ...situation.creatures.filter((c) => c.side === "hostile" && c.in_reach)];
+  for (const c of urgent) {
+    const lit = c.handle === options.lit ? { accent: "rust" as const, bold: true } : undefined;
+    me.push({ text: " · " }, { text: c.handle, ...(lit ? { style: lit } : {}) }, c.in_reach ? { text: " in reach", style: { bold: true } } : { ...health(c.health), text: ` ${c.health}` });
+  }
+  return [bar(situation, options.stale, options.glyphs), me];
+}
 
 /** A party member's name is its handle; a monster's is its kind ("Goblin Warrior"). */
 const hasOwnName = (c: SituationCreature) => c.name.toLowerCase() !== c.handle.toLowerCase();
@@ -134,8 +151,9 @@ function meRow(s: Situation): Row {
   return row;
 }
 
-function creatureRow(c: SituationCreature, label: string, widths: { handle: number; name: number }, fight = true): Row {
-  const row: Row = [{ text: label.padEnd(7), style: muted }, { text: c.handle.padEnd(widths.handle + 2) }];
+function creatureRow(c: SituationCreature, label: string, widths: { handle: number; name: number }, fight = true, lit = false): Row {
+  // The target of the option under the cursor is lit in the panel too (screen 5).
+  const row: Row = [{ text: label.padEnd(7), style: muted }, { text: c.handle.padEnd(widths.handle + 2), ...(lit ? { style: { accent: "rust", bold: true } } : {}) }];
   if (widths.name > 0) row.push({ text: (hasOwnName(c) ? c.name : "").padEnd(widths.name + 2), style: muted });
   row.push(health(c.health, fight ? 9 : 0));
   // Distance keeps its column, in a fight only; conditions go last, where a narrow terminal cuts
