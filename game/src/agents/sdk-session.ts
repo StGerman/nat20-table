@@ -139,12 +139,28 @@ interface PendingTurn {
   texts: string[];
   tools: string[];
   calls: Map<string, { input: number; cacheRead: number; cacheWrite: number; output: number }>;
+  /** Each API call in order, for the record's phases (M10 S1): when it started and ended, its tools, time in them. */
+  timeline: ApiCall[];
   model: string;
   /** The SDK retried an API call that got no HTTP response during this turn: a lost connection. */
   offline: boolean;
   resolve: (result: TurnResult) => void;
   reject: (error: Error) => void;
   timer: NodeJS.Timeout | undefined;
+}
+
+/** One API call of a turn as the session saw it (M10 S1). Times are `performance.now()`. */
+interface ApiCall {
+  id: string;
+  /** When the request went out: the message sent, or the previous call's last tool answer. */
+  started: number;
+  /** When its last content block arrived. */
+  ended: number;
+  tools: string[];
+  /** Time spent inside our tool handlers for this call's tool uses. */
+  toolMs: number;
+  /** When its last tool handler returned. */
+  toolsDone: number | undefined;
 }
 
 /** A queue the SDK reads user messages from, one per turn. */
@@ -193,6 +209,8 @@ export class AgentSession {
   private stale = 0;
   /** The SDK's `init` message: the tools, skills and credential source the session really got. */
   init: SDKSystemMessage | undefined;
+  /** The seat's tools as the SDK runs them: each timed toward the turn that called it (M10 S1). */
+  readonly tools: SeatTool[];
 
   /**
    * Whether a timed-out turn's result is still to come. Its tool calls can arrive until then, and
@@ -206,7 +224,8 @@ export class AgentSession {
   constructor(config: SessionConfig) {
     this.config = config;
     const cwd = config.cwd ?? mkdtempSync(path.join(tmpdir(), `nat20-${config.agent}-`));
-    this.query = (config.query ?? query)({ prompt: this.inbox, options: sessionOptions(config, cwd) });
+    this.tools = config.tools.map((tool) => this.timed(tool));
+    this.query = (config.query ?? query)({ prompt: this.inbox, options: sessionOptions({ ...config, tools: this.tools }, cwd) });
     this.pump = this.read();
   }
 
@@ -224,6 +243,7 @@ export class AgentSession {
         texts: [],
         tools: [],
         calls: new Map(),
+        timeline: [],
         model: this.config.choice.model,
         offline: false,
         resolve,
@@ -257,6 +277,32 @@ export class AgentSession {
     this.stale += 1;
     void this.query.interrupt().catch(() => undefined);
     this.settle(error);
+  }
+
+  /**
+   * A seat tool whose handler time counts toward the turn's call that used it (M10 S1): the time
+   * a tool round trip spends in our code (the engine, the guards), not in the model.
+   */
+  private timed(tool: SeatTool): SeatTool {
+    const handler = tool.handler;
+    return {
+      ...tool,
+      handler: async (args: unknown, extra: unknown) => {
+        // A tool call of a turn that timed out belongs to no turn's timing.
+        const turn = this.stale === 0 ? this.pending : undefined;
+        const started = performance.now();
+        try {
+          return await handler(args as never, extra as never);
+        } finally {
+          const call = turn && turn === this.pending ? turn.timeline.at(-1) : undefined;
+          if (call) {
+            const now = performance.now();
+            call.toolMs += now - started;
+            call.toolsDone = now;
+          }
+        }
+      },
+    } as SeatTool;
   }
 
   /** Ends the session and waits for the SDK to shut down. */
@@ -300,9 +346,20 @@ export class AgentSession {
           cacheWrite: usage?.cache_creation_input_tokens ?? 0,
           output: usage?.output_tokens ?? 0,
         });
+        const now = performance.now();
+        let call = turn.timeline.at(-1);
+        if (call?.id !== api.id) {
+          call = { id: api.id, started: call ? (call.toolsDone ?? call.ended) : turn.sentAt, ended: now, tools: [], toolMs: 0, toolsDone: undefined };
+          turn.timeline.push(call);
+        }
+        call.ended = now;
         for (const block of api.content) {
           if (block.type === "text") turn.texts.push(block.text);
-          if (block.type === "tool_use") turn.tools.push(block.name.replace(`mcp__${TOOL_SERVER}__`, ""));
+          if (block.type === "tool_use") {
+            const name = block.name.replace(`mcp__${TOOL_SERVER}__`, "");
+            turn.tools.push(name);
+            call.tools.push(name);
+          }
         }
         return;
       }
@@ -345,6 +402,15 @@ export class AgentSession {
       }),
       { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 },
     );
+    const at = (t: number) => Math.round(t - turn.sentAt);
+    const calls = turn.timeline.map((call, i) => ({
+      n: i + 1,
+      started_ms: at(call.started),
+      ...(i === 0 && ttft !== null ? { first_token_ms: ttft } : {}),
+      ended_ms: at(call.ended),
+      tools: call.tools,
+      tool_ms: Math.round(call.toolMs),
+    }));
     const usage: UsageRecord = {
       agent: this.config.agent,
       model: turn.model,
@@ -361,6 +427,8 @@ export class AgentSession {
       ttft_ms: ttft,
       api_equivalent_usd: apiEquivalentUsd(turn.model, tokens),
       tools: turn.tools,
+      calls,
+      tool_ms: Math.round(turn.timeline.reduce((sum, call) => sum + call.toolMs, 0)),
       at: new Date().toISOString(),
     };
     this.config.usage?.add(usage);

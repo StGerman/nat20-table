@@ -8,7 +8,7 @@ import { z } from "zod";
 import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { agentEnv } from "../src/agents/env.ts";
 import { AgentSession, reply, seatTool, sessionOptions, TurnTimeout, UsageLimitReached, type SessionConfig } from "../src/agents/sdk-session.ts";
-import { apiEquivalentUsd, percentile, summarize, UsageLog, type UsageRecord } from "../src/usage.ts";
+import { apiEquivalentUsd, percentile, phases, summarize, UsageLog, type UsageRecord } from "../src/usage.ts";
 
 const narrate = seatTool("narrate", "Say this to the table.", { text: z.string() }, async () => reply("said"));
 
@@ -179,4 +179,51 @@ test("a turn that times out is recorded with its time and the tokens it spent", 
   assert.deepEqual([record.outcome, record.input_tokens, record.api_calls], ["timeout", 40, 1]);
   assert.ok(record.wall_ms >= 300, `${record.wall_ms} ms`);
   await s.close();
+});
+
+test("a turn records each API call's start, end and tools, and the time spent in tools (M10 S1)", async () => {
+  const usage = new UsageLog();
+  const slow = seatTool("look", "l", {}, async () => {
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    return reply("ok");
+  });
+  let s: AgentSession;
+  const query = (({ prompt }: { prompt: AsyncIterable<SDKUserMessage> }) => {
+    async function* run(): AsyncGenerator<SDKMessage> {
+      for await (const message of prompt) {
+        yield { ...call("a1", 10, 2), message: { ...call("a1", 10, 2).message, content: [{ type: "tool_use", name: "mcp__table__look" }] } } as never;
+        await s.tools[0].handler({}, {} as never);
+        yield call("a2", 12, 3) as never;
+        yield { type: "result", subtype: "success", is_error: false, result: "done", ttft_ms: 7, user_message_uuid: message.uuid } as never;
+      }
+    }
+    return Object.assign(run(), { interrupt: async () => undefined });
+  }) as never;
+  s = new AgentSession({ agent: "dm", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [slow], cwd: "/empty", usage, query });
+  await s.turn("go", "narrate");
+  const [record] = usage.records;
+  assert.equal(record.calls?.length, 2);
+  const [first, closing] = record.calls!;
+  assert.deepEqual([first.n, first.tools, first.first_token_ms], [1, ["look"], 7]);
+  assert.deepEqual([closing.n, closing.tools, closing.first_token_ms], [2, [], undefined]);
+  assert.ok(first.tool_ms >= 35, `${first.tool_ms} ms in the tool`);
+  assert.equal(record.tool_ms, first.tool_ms);
+  assert.ok(closing.started_ms >= first.ended_ms + 35, "the closing call starts once the tool answered");
+  assert.ok(closing.ended_ms >= closing.started_ms);
+  await s.close();
+});
+
+test("the phase summary splits each agent's wakes into first call, tool time and closing call", () => {
+  const base = { agent: "dm", model: "m", effort: "low", purpose: "narrate", session_turn: 1, outcome: "ok" as const, input_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, output_tokens: 0, api_calls: 2, wall_ms: 0, ttft_ms: null, api_equivalent_usd: 0, tools: [], at: "" };
+  const wake = (first: number, tool: number, closing: number) => ({
+    ...base,
+    tool_ms: tool,
+    calls: [
+      { n: 1, started_ms: 0, ended_ms: first, tools: ["narrate"], tool_ms: tool },
+      { n: 2, started_ms: first + tool, ended_ms: first + tool + closing, tools: [], tool_ms: 0 },
+    ],
+  });
+  const [row] = phases([wake(3000, 10, 2500), wake(4000, 20, 3500), { ...base, purpose: "old" }]);
+  assert.deepEqual(row, { agent: "dm", purpose: "narrate", wakes: 2, first_call: [3000, 4000], tool: [10, 20], calls: [2, 2], closing: [2500, 3500], closings: 2 });
+  assert.equal(phases([{ ...base }]).length, 0, "a record without calls (an old run) has no phases");
 });
