@@ -109,6 +109,8 @@ No contract, no prompt change. Lands first so S2 and S3 have before and after on
 
 **Interaction with the SDK.** Claude Code runs one turn per session at a time, so the next wake's message queues in `Inbox` until the draining turn ends; the loop does not wait for it, but the next DM wake does. Measured cost of that: the closing call, about 3 s, now overlaps with the players' turns instead of blocking them. If a draining turn runs past 12 s, `turn()` for the next wake sends `interrupt()` first, as a timeout does today.
 
+**Correction after the first run (2026-10-31, run 12-05-14).** Claude Code does not simply queue a message that arrives mid-turn: at the turn's next tool result it folds that message into the running turn, and the folded message gets no `result` of its own. In that run, every drain with a second tool round trip swallowed the next narration wake, which then timed out at 12 s with no API call (22 of 80 narrations, the whole DM p95 miss). `AgentSession` now holds the next wake's message until the drain's `result` arrives, and the wake's clock runs during the hold. A held wake that reaches its own limit times out without cutting the drain.
+
 **Risk.** A narration that the guard refuses does not settle the turn: the DM rewrites, and the normal timeout applies. A DM that narrates twice in one wake: the second call is "not now", and the first line stands. Tested with `ScriptedDm` in `loop.test.ts` (narrate then an extra tool call: the wake is over, the call is refused, the usage record shows both calls).
 
 ### 3.3 One-call player turn (S3)

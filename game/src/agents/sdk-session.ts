@@ -229,6 +229,13 @@ export class AgentSession {
   private stale = 0;
   /** A turn a settling tool ended for the caller, whose SDK turn still runs (M10 S2). */
   private draining: PendingTurn | undefined;
+  /**
+   * The next turn's message, held while a turn drains (M10 S2). Claude Code folds a user message
+   * that arrives mid-turn into that turn at its next tool result, so the folded turn never gets a
+   * result of its own and times out (run 2026-10-31T12-05-14: 22 DM narrations). It goes out when
+   * the drain's result has come.
+   */
+  private held: SDKUserMessage | undefined;
   /** The tool uses streaming in the current API response, by content block index (M10 S4). */
   private readonly streaming = new Map<number, { name: string; json: string }>();
   /** The SDK's `init` message: the tools, skills and credential source the session really got. */
@@ -280,12 +287,15 @@ export class AgentSession {
         pending.timer = setTimeout(() => this.timeOut(pending, limit), limit);
       }
       this.pending = pending;
-      this.inbox.push({
+      const user: SDKUserMessage = {
         type: "user",
         message: { role: "user", content: message },
         parent_tool_use_id: null,
         uuid: pending.uuid as `${string}-${string}-${string}-${string}-${string}`,
-      });
+      };
+      // The turn's clock runs while it waits for the drain: the table waits that long too.
+      if (this.draining) this.held = user;
+      else this.inbox.push(user);
     });
   }
 
@@ -294,7 +304,8 @@ export class AgentSession {
    * reaction whose moment passed, AGT-34). Without a turn in flight it does nothing.
    */
   cancel(): void {
-    if (this.pending) this.interrupt(new TurnCancelled(`${this.config.agent}: turn cancelled`));
+    if (this.pending && this.held) this.settle(new TurnCancelled(`${this.config.agent}: turn cancelled`));
+    else if (this.pending) this.interrupt(new TurnCancelled(`${this.config.agent}: turn cancelled`));
   }
 
   /**
@@ -302,7 +313,9 @@ export class AgentSession {
    * caller, M10 S2) is cut and recorded as drained: the caller never waited on it.
    */
   private timeOut(turn: PendingTurn, limit: number): void {
-    if (turn === this.pending) this.interrupt(new TurnTimeout(`${this.config.agent}: turn timed out after ${limit} ms`));
+    // A turn still held behind a drain was never sent: it ends here, and the drain runs on.
+    if (turn === this.pending && this.held) this.settle(new TurnTimeout(`${this.config.agent}: turn timed out after ${limit} ms, waiting for the turn before it`));
+    else if (turn === this.pending) this.interrupt(new TurnTimeout(`${this.config.agent}: turn timed out after ${limit} ms`));
     else if (turn === this.draining) {
       this.stale += 1;
       void this.query.interrupt().catch(() => undefined);
@@ -327,6 +340,10 @@ export class AgentSession {
     this.draining = undefined;
     if (turn.timer) clearTimeout(turn.timer);
     this.config.usage?.add(this.recordOf(turn, outcome, ttft));
+    // The drain is over: the turn held behind it goes out now.
+    const held = this.held;
+    this.held = undefined;
+    if (held && this.pending && !this.failure) this.inbox.push(held);
   }
 
   /** Ends the turn in flight with `error`; its result, still to come, belongs to no turn. */
@@ -525,6 +542,7 @@ export class AgentSession {
     const turn = this.pending;
     if (!turn) return;
     this.pending = undefined;
+    this.held = undefined;
     if (turn.timer) clearTimeout(turn.timer);
     if (outcome instanceof Error) {
       // A turn that ended without its answer while the connection was gone failed for that reason.

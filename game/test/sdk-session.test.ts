@@ -258,7 +258,7 @@ test("a turn settles at its settling tool; the drain's record keeps every token 
   assert.ok(performance.now() - started < 60, "the caller doesn't wait for the closing call");
   assert.equal(usage.records.length, 0, "the record waits for the drain");
   assert.equal(s.settling, true);
-  // The next turn queues behind the drain, as Claude Code runs one turn at a time.
+  // The next turn is held until the drain's result, so Claude Code never folds it into the drain.
   await s.turn("again", "narrate");
   await new Promise((resolve) => setTimeout(resolve, 150));
   const [first] = usage.records;
@@ -267,6 +267,65 @@ test("a turn settles at its settling tool; the drain's record keeps every token 
   assert.deepEqual([first.input_tokens, first.output_tokens, first.api_calls], [22, 32, 2]);
   assert.ok(first.waited_ms! < first.wall_ms - 60, `${first.waited_ms} ms waited of ${first.wall_ms}`);
   assert.equal(usage.records.length, 2);
+  await s.close();
+});
+
+/**
+ * A stand-in that, like Claude Code, folds a user message that arrives mid-turn into that turn at
+ * its next tool result: the folded message gets no result of its own.
+ */
+function folding(tools: () => AgentSession) {
+  return (({ prompt }: { prompt: AsyncIterable<SDKUserMessage> }) => {
+    async function* run(): AsyncGenerator<SDKMessage> {
+      const it = prompt[Symbol.asyncIterator]();
+      let next = it.next();
+      for (;;) {
+        const { value: message, done } = await next;
+        if (done) return;
+        let arrived = false;
+        next = it.next();
+        void next.then(() => (arrived = true));
+        const id = `a-${message.uuid}`;
+        yield { ...call(id, 10, 2), message: { ...call(id, 10, 2).message, content: [{ type: "tool_use", name: "mcp__table__narrate" }] } } as never;
+        await tools().tools[0].handler({ text: "x" }, {} as never);
+        // A second tool round trip: a message queued by now is folded into this turn.
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        yield { ...call(`${id}-2`, 10, 2), message: { ...call(`${id}-2`, 10, 2).message, content: [{ type: "tool_use", name: "mcp__table__narrate" }] } } as never;
+        if (arrived) next = it.next();
+        yield call(`${id}-close`, 12, 30) as never;
+        yield { type: "result", subtype: "success", is_error: false, result: "done", user_message_uuid: message.uuid } as never;
+      }
+    }
+    return Object.assign(run(), { interrupt: async () => undefined });
+  }) as never;
+}
+
+test("the next turn waits for a draining turn's result, so Claude Code can't fold it in (M10 S2)", async () => {
+  const usage = new UsageLog();
+  let s: AgentSession;
+  s = new AgentSession({
+    agent: "dm", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [narrate], cwd: "/empty", usage,
+    query: folding(() => s), settleOn: { narrate: ["narrate"] }, turnTimeoutMs: 1_000,
+  });
+  await s.turn("go", "narrate");
+  // Sent at once, this turn would be folded into the drain and time out.
+  await s.turn("again", "narrate");
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.deepEqual(usage.records.map((r) => [r.outcome, r.settled_early, r.api_calls]), [["ok", true, 3], ["ok", true, 3]]);
+  await s.close();
+});
+
+test("a turn held behind a drain that outlasts its own limit times out without cutting the drain", async () => {
+  const usage = new UsageLog();
+  let s: AgentSession;
+  s = new AgentSession({
+    agent: "dm", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [narrate], cwd: "/empty", usage,
+    query: draining(300, () => s), settleOn: { narrate: ["narrate"] }, turnTimeoutsMs: { narrate: 5_000, short: 50 },
+  });
+  await s.turn("go", "narrate");
+  await assert.rejects(s.turn("quick", "short"), (e: Error) => e instanceof TurnTimeout && /waiting for the turn before it/.test(e.message));
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  assert.deepEqual(usage.records.map((r) => [r.purpose, r.outcome]), [["short", "timeout"], ["narrate", "ok"]]);
   await s.close();
 });
 
