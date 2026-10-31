@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { REPO, SESSION_LOG, type GameEngine } from "../src/engine.ts";
 import { readPack } from "../src/pack/read.ts";
 import { guards, castParty, scenePlan } from "../src/play/run.ts";
-import { ConnectionLost, TurnTimeout, UsageLimitReached } from "../src/errors.ts";
+import { ConnectionLost, LoginExpired, TurnTimeout, UsageLimitReached } from "../src/errors.ts";
 import { adjacencyLine, movedLine, TableLoop, type LoopOptions } from "../src/table/loop.ts";
 import { attackNearest, chainDm, offerAnySurrender, chainScenes, rescueThenAttack, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type DmScript, type ScriptedPlayerPolicy } from "../src/table/scripted.ts";
 import type { TextGuard } from "../src/table/state.ts";
@@ -959,6 +959,17 @@ test("the plan's usage limit stops the run cleanly and says so", async () => {
   // The fight the stop cut short keeps no end time, and counts the rounds it got to.
   assert.equal(report.sceneTimes[0].ended_at, undefined);
   assert.ok(report.sceneTimes[0].rounds >= 1);
+});
+
+test("an expired Claude login stops the run cleanly, names the fix, and counts neither way", async () => {
+  const { report, seat } = await play({
+    seed: 27,
+    players: { torva: {}, maren: {}, ilsa: { combat: async () => Promise.reject(new LoginExpired("OAuth session expired")) } },
+    dm: fightAtOnce,
+  });
+  assert.equal(report.stop, "login");
+  assert.match(report.ended, /login expired or is missing \(OAuth session expired\)\. Run `claude`/);
+  assert.deepEqual(seat.shown.at(-1), { kind: "end", text: report.ended });
 });
 
 test("the engine dying stops the run, with the transcript written", async () => {

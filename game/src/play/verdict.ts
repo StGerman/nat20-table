@@ -70,7 +70,7 @@ export interface Verdict {
   flags: Flag[];
 }
 
-const VOIDS = new Set(["usage_limit", "offline", "operator"]);
+const VOIDS = new Set(["usage_limit", "login", "offline", "operator"]);
 
 function readLines<T>(file: string): T[] {
   if (!existsSync(file)) return [];

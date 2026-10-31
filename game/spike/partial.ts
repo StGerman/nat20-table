@@ -35,7 +35,14 @@ for (const ask of ["The party reaches the mill gate at dusk.", "A goblin shrieks
   fragments = [];
   finished = 0;
   sent = performance.now();
-  await session.turn(ask, "narrate");
+  try {
+    await session.turn(ask, "narrate");
+  } catch (error) {
+    // A failed turn (an expired login, a usage limit) prints its reason, not a stack.
+    console.error(`\n${error instanceof Error ? error.message : String(error)}`);
+    await session.close();
+    process.exit(2);
+  }
   const ordered = fragments.every((f, i) => i === 0 || f.json.startsWith(fragments[i - 1].json));
   const readable = fragments.find((f) => previewFor(f.json, "bren"));
   console.log(`\n> ${ask}`);
