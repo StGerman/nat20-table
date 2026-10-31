@@ -359,7 +359,7 @@ export class InkSeat implements Seat {
 
   enter(): void {
     // Enter on an empty line plays the option ↑/↓ lit, as if its number were typed.
-    if (!this.view.draft.trim() && this.view.highlight !== undefined && this.view.prompt) this.update({ draft: String(this.view.highlight) });
+    if (!this.view.draft.trim() && this.view.highlight !== undefined && picksOptions(this.view.prompt)) this.update({ draft: String(this.view.highlight) });
     const draft = this.view.draft;
     const typed = readLine(draft, this.view.prompt);
     if (typed.kind === "empty") return;
@@ -445,7 +445,7 @@ export class InkSeat implements Seat {
    */
   move(step: -1 | 1): void {
     const numbers = (this.view.options?.lines ?? []).map((line) => Number(/^(\d+)\. /.exec(line)?.[1])).filter((n) => Number.isInteger(n) && n > 0);
-    if (!this.view.prompt || numbers.length === 0) return;
+    if (!picksOptions(this.view.prompt) || numbers.length === 0) return;
     const at = this.view.highlight === undefined ? -1 : numbers.indexOf(this.view.highlight);
     const next = at < 0 ? (step === 1 ? 0 : numbers.length - 1) : (at + step + numbers.length) % numbers.length;
     this.update({ highlight: numbers[next] });
@@ -531,6 +531,14 @@ export class InkSeat implements Seat {
 }
 
 const EMPTY_ROW = { draft: EMPTY.text, cursor: EMPTY.cursor };
+
+/**
+ * Whether a number typed now picks from the options on screen: not for the DM's question, where a
+ * number is words, nor for a reaction, whose numbers are its own (input.ts `readLine`).
+ */
+function picksOptions(prompt: HumanPrompt | undefined): boolean {
+  return prompt !== undefined && prompt.kind !== "answer" && prompt.kind !== "reaction" && prompt.kind !== "paused";
+}
 
 export type CheckState = "waiting" | "running" | "done" | "failed";
 

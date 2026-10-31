@@ -430,6 +430,12 @@ test("↑/↓ light the options round the list and Enter on an empty line plays 
   seat.move(1);
   seat.type("3\r");
   assert.deepEqual(await again, { kind: "option", number: 3 });
+  // The DM's question takes words: a lit option would be sent as a number for the DM, so the arrows do nothing.
+  const answer = seat.ask({ kind: "answer" });
+  seat.move(1);
+  assert.equal(seat.getView().highlight, undefined);
+  seat.type("Wenna\r");
+  assert.deepEqual(await answer, { kind: "text", text: "Wenna" });
   // No options on screen, or no prompt: the arrows do nothing.
   seat.show({ kind: "options", lines: ["1. Longsword: goblin_1"], choices: [] });
   seat.move(1);
