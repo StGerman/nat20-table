@@ -395,6 +395,10 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
             h(Box, { key: "side", flexDirection: "column", width: layout.side, flexShrink: 0 }, ...(situation ? [situation] : [])),
           ),
         ]
-      : [...(situation ? [situation] : []), ...live]),
+      : [
+          ...(situation ? [situation] : []),
+          // The same measure as the wide frame: a long draft or option row wraps at the text column.
+          h(Box, { key: "text", flexDirection: "column", width: layout.text, flexShrink: 0 }, ...live),
+        ]),
   );
 }

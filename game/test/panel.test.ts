@@ -372,7 +372,7 @@ test("text keeps to a 72-column measure, and the situation pane moves to the rig
   assert.deepEqual(screenLayout({ columns: 160, rows: 50 }), { text: TEXT_COLUMNS, side: 84 });
 });
 
-async function frameAt(columns: number, rows: number): Promise<{ seat: InkSeat; stdout: FakeStdout }> {
+async function frameAt(columns: number, rows: number, options = ["1. Longsword attack → goblin_3", "2. End turn"]): Promise<{ seat: InkSeat; stdout: FakeStdout }> {
   const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
   const stdout = new FakeStdout(columns, rows);
   seat.start({
@@ -385,7 +385,7 @@ async function frameAt(columns: number, rows: number): Promise<{ seat: InkSeat; 
   });
   seat.show({ kind: "narration", speaker: "dm", text: "The yard smells of wet straw and old flour, and the goblins circle the woodpile with their blades low, waiting for someone to move first." });
   seat.show({ kind: "situation", situation: situationOf(yard(), "bren", listing)! });
-  seat.show({ kind: "options", lines: ["1. Longsword attack → goblin_3", "2. End turn"], choices: [], budget: listing.budget! });
+  seat.show({ kind: "options", lines: options, choices: [], budget: listing.budget! });
   void seat.ask({ kind: "combat_turn" });
   await until("the prompt", () => stdout.last.includes("Your turn: an option number"));
   return { seat, stdout };
@@ -418,5 +418,16 @@ test("at 80x24 and at 60 columns the panel stays above the turn block, inside th
     } finally {
       seat.stop();
     }
+  }
+});
+
+test("between 73 and 123 columns a long option row still wraps at the 72-column measure", async () => {
+  const long = "1. Dash, then move next to goblin_3 (hostile, 38 ft) behind the woodpile and the broken cart by the kennel";
+  const { seat, stdout } = await frameAt(100, 40, [long, "2. End turn"]);
+  try {
+    const rows = stdout.last.split("\n").filter((r) => /Dash, then|woodpile|kennel/.test(r));
+    assert.ok(rows.length >= 2 && rows.every((r) => r.trimEnd().length <= TEXT_COLUMNS), rows.join("\n"));
+  } finally {
+    seat.stop();
   }
 });
