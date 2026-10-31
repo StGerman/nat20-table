@@ -220,8 +220,7 @@ export class ModelDm implements DmAgent {
     } finally {
       this.current = undefined;
       // A preview never outlives its wake: the finished line, if any, is on screen by now.
-      if (this.previewed !== undefined) this.config.preview?.(undefined);
-      this.previewed = undefined;
+      this.clearPreview();
     }
   }
 
@@ -264,6 +263,12 @@ export class ModelDm implements DmAgent {
 
   /** What the preview shows now. */
   private previewed: string | undefined;
+
+  /** Takes the preview off the seat, if one is showing. */
+  private clearPreview(): void {
+    if (this.previewed !== undefined) this.config.preview?.(undefined);
+    this.previewed = undefined;
+  }
 
   private openSession(): TurnSession {
     return (this.config.open ?? ((c) => new AgentSession(c)))(this.sessionConfig());
@@ -422,7 +427,13 @@ export class ModelDm implements DmAgent {
         // `to` is required and first: a streamed preview (M10 S4) learns whom a line is for before
         // any of its text, so a line to another character never reaches the human's seat early.
         { to: z.string().describe('"table" for everyone, or one character\'s handle for that character only.'), text: z.string() },
-        (i) => this.bound((t) => t.narrate(i.text, i.to === "table" ? undefined : i.to)),
+        (i) =>
+          this.bound(async (t) => {
+            const said = await t.narrate(i.text, i.to === "table" ? undefined : i.to);
+            // A refused line never reaches the seat as narration, so nothing else would clear its preview.
+            if (!said.ok) this.clearPreview();
+            return said;
+          }),
       ),
       seatTool(
         "ask_human",

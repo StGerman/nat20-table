@@ -361,3 +361,32 @@ test("the scene run command's dry run prints the DM's session settings and promp
   assert.match(run.stdout, /You are the Dungeon Master of "The Silent Mill"/);
   assert.doesNotMatch(run.stdout, /ANTHROPIC_API_KEY=|sk-ant-/);
 });
+
+test("a refused narration takes its preview off the seat at once, not at the wake's end (M10 S4)", async () => {
+  const shown: Array<string | undefined> = [];
+  const seen: Array<string | undefined> = [];
+  const dm = new ModelDm({
+    pack: PACK,
+    human: PARTY.human,
+    players: PARTY.ai,
+    choice: CHOICE,
+    preview: (text) => shown.push(text),
+    open: (config) =>
+      new StandIn<DmWake>(config, async (_wake, call) => {
+        config.onPartial!("narrate", '{"to":"table","text":"The goblins look tough. AC');
+        const refused = await call("narrate", { to: "table", text: "The goblins look tough, AC fifteen or so." });
+        assert.equal(refused.isError, true, refused.text);
+        seen.push(shown.at(-1));
+        return "";
+      }),
+  });
+  const t = await testTable({ seed: 1, pack: MILL, guards: (engine) => guards(MILL, engine) });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "s1_village_green" }));
+    await dm.wake("narrate", "Narrate these events.", new DmTools(t.table));
+    assert.deepEqual(seen, [undefined], "cleared while the wake still ran");
+    assert.deepEqual(shown, ["The goblins look tough.", undefined]);
+  } finally {
+    t.close();
+  }
+});
