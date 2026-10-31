@@ -340,10 +340,19 @@ export class AgentSession {
     this.draining = undefined;
     if (turn.timer) clearTimeout(turn.timer);
     this.config.usage?.add(this.recordOf(turn, outcome, ttft));
-    // The drain is over: the turn held behind it goes out now.
+    this.release();
+  }
+
+  /**
+   * Sends the turn held behind a drain once the SDK has finished every earlier turn: the drain's
+   * result has come, and so has the result of a drain cut at its limit (stale), which would
+   * otherwise fold the held message in as well.
+   */
+  private release(): void {
+    if (!this.held || this.draining || this.stale > 0) return;
     const held = this.held;
     this.held = undefined;
-    if (held && this.pending && !this.failure) this.inbox.push(held);
+    if (this.pending && !this.failure) this.inbox.push(held);
   }
 
   /** Ends the turn in flight with `error`; its result, still to come, belongs to no turn. */
@@ -465,6 +474,7 @@ export class AgentSession {
         }
         if (echoed ? echoed !== turn?.uuid : this.stale > 0) {
           if (this.stale > 0) this.stale -= 1;
+          this.release();
           return;
         }
         if (!turn) return;

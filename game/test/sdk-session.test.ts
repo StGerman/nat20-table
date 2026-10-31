@@ -315,6 +315,21 @@ test("the next turn waits for a draining turn's result, so Claude Code can't fol
   await s.close();
 });
 
+test("a turn held behind a drain cut at its limit waits for the cut turn's result too", async () => {
+  const usage = new UsageLog();
+  let s: AgentSession;
+  s = new AgentSession({
+    agent: "dm", choice: { model: "claude-sonnet-5-5", effort: "low" }, systemPrompt: "p", tools: [narrate], cwd: "/empty", usage,
+    query: folding(() => s), settleOn: { narrate: ["narrate"] }, turnTimeoutsMs: { narrate: 15, other: 1_000 },
+  });
+  await s.turn("go", "narrate");
+  // The drain is cut at 15 ms; sent then, this turn would be folded into it and time out.
+  const result = await s.turn("again", "other");
+  assert.equal(result.usage.outcome, "ok");
+  assert.deepEqual(usage.records.map((r) => [r.purpose, r.outcome]), [["narrate", "drained"], ["other", "ok"]]);
+  await s.close();
+});
+
 test("a turn held behind a drain that outlasts its own limit times out without cutting the drain", async () => {
   const usage = new UsageLog();
   let s: AgentSession;
