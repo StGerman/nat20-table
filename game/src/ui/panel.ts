@@ -22,6 +22,28 @@ export interface PanelSize {
 /** Below this many terminal rows, or this many columns, the panel is its bar alone. */
 export const FOLD_ROWS = 16;
 export const FOLD_COLUMNS = 40;
+/**
+ * The width rule («Раскладка терминала», option B; M10 P5, design §3.8): narration, options and the
+ * input line keep to a reading measure of at most this many columns however wide the terminal is.
+ */
+export const TEXT_COLUMNS = 72;
+/** From this many columns the situation pane stands right of the text column instead of above it. */
+export const SIDE_PANE_COLUMNS = 124;
+/** Columns between the text column and the side pane. */
+const PANE_GAP = 4;
+
+/** Where the screen puts things for a terminal size: the text column's width, and the side pane's when there is one. */
+export interface ScreenLayout {
+  text: number;
+  side?: number;
+}
+
+export function screenLayout(size: PanelSize): ScreenLayout {
+  const text = Math.min(size.columns, TEXT_COLUMNS);
+  if (size.columns < SIDE_PANE_COLUMNS) return { text };
+  return { text, side: size.columns - text - PANE_GAP };
+}
+
 /** Below this many columns, creature rows drop the display name. */
 const NARROW_COLUMNS = 70;
 

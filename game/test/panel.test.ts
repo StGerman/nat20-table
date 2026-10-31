@@ -15,7 +15,7 @@ import type { TableEvent } from "../src/table/types.ts";
 import { InkSeat, SPINNER, waitText } from "../src/ui/ink-seat.ts";
 import { TONE_STYLE } from "../src/ui/lines.ts";
 import { loadTheme, paletteFor, THEME_FILE, themeProblems } from "../src/ui/palette.ts";
-import { rowText, situationRows, turnRows } from "../src/ui/panel.ts";
+import { rowText, screenLayout, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
 import type { LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
 
@@ -362,4 +362,72 @@ test("a theme file missing a tone or a state, or naming an unknown one, is inval
     "tone enigne: unknown",
     "state unhurt: missing",
   ]);
+});
+
+test("text keeps to a 72-column measure, and the situation pane moves to the right from 124 columns (M10 P5)", () => {
+  assert.deepEqual(screenLayout({ columns: 60, rows: 24 }), { text: 60 });
+  assert.deepEqual(screenLayout({ columns: 80, rows: 24 }), { text: TEXT_COLUMNS });
+  assert.deepEqual(screenLayout({ columns: SIDE_PANE_COLUMNS - 1, rows: 40 }), { text: TEXT_COLUMNS });
+  assert.deepEqual(screenLayout({ columns: SIDE_PANE_COLUMNS, rows: 40 }), { text: TEXT_COLUMNS, side: SIDE_PANE_COLUMNS - TEXT_COLUMNS - 4 });
+  assert.deepEqual(screenLayout({ columns: 160, rows: 50 }), { text: TEXT_COLUMNS, side: 84 });
+});
+
+async function frameAt(columns: number, rows: number, options = ["1. Longsword attack → goblin_3", "2. End turn"]): Promise<{ seat: InkSeat; stdout: FakeStdout }> {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
+  const stdout = new FakeStdout(columns, rows);
+  seat.start({
+    stdin: new FakeStdin() as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream,
+    stderr: new FakeStdout(columns, rows) as unknown as NodeJS.WriteStream,
+    debug: true,
+    interactive: true,
+    patchConsole: false,
+  });
+  seat.show({ kind: "narration", speaker: "dm", text: "The yard smells of wet straw and old flour, and the goblins circle the woodpile with their blades low, waiting for someone to move first." });
+  seat.show({ kind: "situation", situation: situationOf(yard(), "bren", listing)! });
+  seat.show({ kind: "options", lines: options, choices: [], budget: listing.budget! });
+  void seat.ask({ kind: "combat_turn" });
+  await until("the prompt", () => stdout.last.includes("Your turn: an option number"));
+  return { seat, stdout };
+}
+
+test("at 160 columns the narration wraps at 72 and the situation pane stands beside the turn block", async () => {
+  const { seat, stdout } = await frameAt(160, 50);
+  try {
+    const rows = stdout.last.split("\n");
+    const narration = rows.filter((r) => /yard smells|goblins circle|waiting for someone/.test(r));
+    assert.ok(narration.length >= 2 && narration.every((r) => r.trimEnd().length <= TEXT_COLUMNS), narration.join("\n"));
+    // The bar shares a row with the text column, starting right of the measure and the gap.
+    const bar = rows.find((r) => r.includes("Round 5 · ▶ your turn"))!;
+    assert.ok(bar.indexOf("Round 5") >= TEXT_COLUMNS + 4, bar);
+    // The turn block stays in the text column, and some row carries both columns.
+    assert.ok(rows.find((r) => r.includes("Action used"))!.indexOf("Action used") < TEXT_COLUMNS, stdout.last);
+    assert.ok(rows.some((r) => r.slice(0, TEXT_COLUMNS).trim() !== "" && r.slice(TEXT_COLUMNS + 4).trim() !== ""), stdout.last);
+  } finally {
+    seat.stop();
+  }
+});
+
+test("at 80x24 and at 60 columns the panel stays above the turn block, inside the terminal's width", async () => {
+  for (const [columns, rows] of [[80, 24], [60, 30]] as const) {
+    const { seat, stdout } = await frameAt(columns, rows);
+    try {
+      const frame = stdout.last;
+      assert.ok(frame.indexOf("Round 5") < frame.indexOf("Action used"), frame);
+      assert.ok(frame.split("\n").every((r) => r.length <= columns), `${columns} columns:\n${frame}`);
+    } finally {
+      seat.stop();
+    }
+  }
+});
+
+test("between 73 and 123 columns a long option row still wraps at the 72-column measure", async () => {
+  const long = "1. Dash, then move next to goblin_3 (hostile, 38 ft) behind the woodpile and the broken cart by the kennel";
+  const { seat, stdout } = await frameAt(100, 40, [long, "2. End turn"]);
+  try {
+    const rows = stdout.last.split("\n").filter((r) => /Dash, then|woodpile|kennel/.test(r));
+    assert.ok(rows.length >= 2 && rows.every((r) => r.trimEnd().length <= TEXT_COLUMNS), rows.join("\n"));
+  } finally {
+    seat.stop();
+  }
 });
