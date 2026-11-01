@@ -13,7 +13,7 @@ import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedPlayer, ScriptedSeat, yardDm } from "../src/table/scripted.ts";
 import { situationOf, type Situation } from "../src/table/situation.ts";
 import type { TableEvent } from "../src/table/types.ts";
-import { InkSeat, SPINNER, waitText } from "../src/ui/ink-seat.ts";
+import { INPUT_HINT, INPUT_MARK, InkSeat, SPINNER, waitText } from "../src/ui/ink-seat.ts";
 import { TONE_STYLE } from "../src/ui/lines.ts";
 import { loadTheme, paletteFor, THEME, THEME_FILE, themeProblems } from "../src/ui/palette.ts";
 import { frameLayout, GOLDEN, RULE_COLUMNS } from "../src/ui/frame.ts";
@@ -353,6 +353,12 @@ test("with the panel on, the loop sends the human a situation before each decisi
   } finally {
     t.close();
   }
+});
+
+test("the input row's mark carries the accent and its hint is as dim as the status lines (Stas 2026-11-01)", () => {
+  assert.equal(INPUT_MARK.accent, "rust");
+  assert.deepEqual(INPUT_HINT, TONE_STYLE.status);
+  assert.notEqual(INPUT_HINT.accent, "rust");
 });
 
 test("the theme file holds every accent, tone and state the seat uses, and the seat reads it (M10 U2)", () => {
