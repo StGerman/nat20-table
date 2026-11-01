@@ -29,6 +29,10 @@ This file holds the rules and points to everything else. When it disagrees with 
   5. Every rejected decision recovers within 2 retries.
   6. A first-time player finishes using only `/options` and `/sheet`: checked in friends-and-family testing after Milestone 7.
 
+## Litmus persona: Vera (Friends and Family)
+
+Vera Sokolova, 54, is a literary translator with a MacBook Air (Apple Silicon) and her own Claude Pro subscription. She has never used Terminal, never played D&D, and reads novels in Russian and English for pleasure. She tolerates long prose and short explanations she asked for; she quits at install steps that mention Terminal or developer tools, at unexplained jargon and numbers, at being told she typed it wrong, and at losing progress. For any decision that touches install, onboarding, the table's words or the play experience, ask "would Vera get through this alone?" and say the answer. It is a litmus test, not a verdict: Stas decides.
+
 ## Milestones
 
 Status, exit criteria and task ids for each milestone are in `TASKS.md` § Milestones. Work one milestone at a time, in order, unless the task list says a row is independent.
