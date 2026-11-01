@@ -132,3 +132,13 @@ test("an engine that doesn't answer in time is stopped", async () => {
 test("a binary that doesn't exist fails to start", async () => {
   await assert.rejects(EngineClient.start(path.join(here, "no-such-engine")), /could not run/);
 });
+
+test("an engine built from another contract is refused, and the error says to rebuild it", async () => {
+  await assert.rejects(EngineClient.start(fake, { env: { FAKE_ENGINE_SCHEMA: "stale" } }), (error: Error) => {
+    assert.match(error.message, /engine schema stale \(contract fake\) does not match client schema/);
+    assert.ok(error.message.includes(fake), "names the binary to rebuild");
+    assert.match(error.message, /cargo build --release -p nat20-api-server/);
+    assert.match(error.message, /npm run gen/);
+    return true;
+  });
+});

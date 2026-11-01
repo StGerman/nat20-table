@@ -94,7 +94,14 @@ export class EngineClient {
     const result = hello.ok && hello.result?.cmd === "hello" ? hello.result : undefined;
     if (!result || result.schema_sha256 !== SCHEMA_SHA256) {
       client.close();
-      throw new Error(`engine schema ${result?.schema_sha256 ?? "unknown"} does not match client schema ${SCHEMA_SHA256}; regenerate with \`npm run gen\``);
+      // After a pull the usual cause is an engine binary older than the checkout: the game prefers
+      // the release build and never rebuilds it. A client generated from an older contract is the other.
+      const version = result ? ` (contract ${result.version})` : "";
+      throw new Error(
+        `engine schema ${result?.schema_sha256 ?? "unknown"}${version} does not match client schema ${SCHEMA_SHA256}. ` +
+          `If you just pulled, rebuild the engine ${binary} (\`cargo build --release -p nat20-api-server\`, or without --release for the debug build); ` +
+          `if you changed the contract, run \`npm run gen\``,
+      );
     }
     client.hello = { version: result.version, engine_rev: result.engine_rev, schema_sha256: result.schema_sha256 };
     return client;

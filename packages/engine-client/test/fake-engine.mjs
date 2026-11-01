@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // A stand-in engine for client tests that a real engine can't stage: it answers `hello` with the
-// checked-in schema hash, answers `get_state` never (to test timeouts), and exits on `new_session`
+// checked-in schema hash (or `FAKE_ENGINE_SCHEMA`, to stand in for a stale build), answers `get_state` never (to test timeouts), and exits on `new_session`
 // (to test a crash mid-request).
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
-const sha = readFileSync(new URL("../../../generated/nat20-api.schema.sha256", import.meta.url), "utf8").trim();
+const sha =
+  process.env.FAKE_ENGINE_SCHEMA ?? readFileSync(new URL("../../../generated/nat20-api.schema.sha256", import.meta.url), "utf8").trim();
 createInterface({ input: process.stdin }).on("line", (line) => {
   const request = JSON.parse(line);
   if (request.cmd === "hello") {
