@@ -160,19 +160,24 @@ Each message says why:
 Before you act in a fight, check three things in a line or two: is a companion down within your reach or range, which foe your companions are hitting, and whether you stand where many foes can reach you. Then act. Elsewhere, keep your reasoning to a sentence between tool calls. Text you write outside say, and outside your final answer to a hand, a declaration or a summary, reaches nobody.${playerLanguage(language, russianVoice, names)}`;
 }
 
-/** A declaration as the loop takes it: one line, or undefined for a pass. */
 /** The hand question's answer words; a declaration that borrows them must not show them (AGT-72). */
-const HAND_WORD = /(^|[\n.!?…»"”]\s*)(?:SPEAK|BOTH|ACT)\b(?:\s*:|\s*\n|\s+(?=\p{Lu}))\s*/gu;
+const HAND_WORD = /(^|[\n.!?…»"”]\s*)["“*]*(?:SPEAK|BOTH|ACT)\b["”*]*(?:\s*[:.,\-–—]|\s*\n|\s*$|\s+(?=\p{Lu}))\s*/gu;
+/** The same word before a colon in any case, as the hand parser reads it (`act: …`); other delimiters stay upper-case only, so prose such as "Both sides…" is left alone. */
+const HAND_WORD_COLON = /(^|[\n.!?…»"”]\s*)["“*]*(?:speak|both|act)["”*]*\s*:\s*/giu;
 /** A label the model put in front of an answer word ("Ilsa's answer as the floor:", "Sentence on what Ilsa does:"). */
 const LABEL = /(^|\n)\s*[A-Za-z][A-Za-z' ]{2,48}:\s*(?=(?:SPEAK|BOTH|ACT|PASS)\b)/g;
 
+/** A declaration as the loop takes it: one line, or undefined for a pass. */
 export function declaration(answer: string): string | undefined {
   const line = answer
+    .trim()
     .replace(LABEL, "$1")
     .replace(HAND_WORD, "$1")
+    .replace(HAND_WORD_COLON, "$1")
     .replace(/\s*\n\s*/g, " ")
     .trim()
     .replace(/^["“](.*)["”]$/s, "$1")
+    .replace(/^([^"“]*)["”]$/s, "$1")
     .trim();
   return line === "" || /^pass\b/i.test(line) ? undefined : line;
 }
