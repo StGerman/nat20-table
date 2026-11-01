@@ -43,6 +43,8 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 
 Milestone 8 (upstream proposal) was dropped on 2026-10-18: upstream declines AI-authored contributions (`docs/decisions/0023-long-lived-fork.md`).
 
+After Milestone 7 the order is 10, then 9. Milestone 10, Speed and polish, was done on 2026-11-01, closed on a `play:cheap` run with Stas at the table (`docs/decisions/0056-m10-closed-on-cheap-run.md`). Milestone 9, Improvised play, is next.
+
 ## Design in brief
 
 - **Core** (`nat20_core`) owns the rules. It lives in our fork: `main` mirrors upstream, and `demo` is upstream `main` merged in regularly plus our own core changes (Rule 6).
