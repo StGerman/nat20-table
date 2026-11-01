@@ -331,6 +331,16 @@ test("a declaration is its one line, and PASS or nothing is a pass", () => {
   assert.equal(declaration("Pass. Maren waits."), undefined);
   assert.equal(declaration(""), undefined);
   assert.equal(declaration("Passing the well, Torva looks around."), "Passing the well, Torva looks around.");
+  // The hand question's words and the model's own labels never reach the table (AGT-72, run 19-50-27).
+  assert.equal(declaration("ACT: Марен остаётся у ворот рядом с Торвой."), "Марен остаётся у ворот рядом с Торвой.");
+  assert.equal(declaration("BOTH: Ильза захлопывает книжку. «Идём, Торва.» ACT: Ильза становится в строй."), "Ильза захлопывает книжку. «Идём, Торва.» Ильза становится в строй.");
+  assert.equal(declaration("SPEAK: Согласна.\n\nACT: Ильза спускается за Торвой."), "Согласна. Ильза спускается за Торвой.");
+  assert.equal(declaration("SPEAK\nИльза: «Лампа моя.»"), "Ильза: «Лампа моя.»");
+  assert.equal(declaration("SPEAK: Две строки.\n\nSentence on what Ilsa does: ACT: Ильза убирает блокнот."), "Две строки. Ильза убирает блокнот.");
+  assert.equal(declaration("SPEAK: «Один вопрос.»\n\nIlsa's answer as the floor: BOTH: Ильза ждёт."), "«Один вопрос.» Ильза ждёт.");
+  assert.equal(declaration("PASS"), undefined);
+  // An ordinary word that only starts like one is left alone.
+  assert.equal(declaration("Actually, Torva acts first and bothers nobody."), "Actually, Torva acts first and bothers nobody.");
 });
 
 test("in a fight, model players act through their bound tools, and what they were given is recorded", async () => {

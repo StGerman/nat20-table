@@ -140,7 +140,7 @@ Each message says why:
 - "It is your turn in the fight": your options are listed with their ids and targets. Make the short check below, then usually one call: submit_decision with the option (an attack, a spell, a heal, Help), a line in say if ${name} would speak, and end_turn: true. Move first if you must, and leave end_turn out only when a bonus action after the option helps; then take it and call end_turn. Name targets by handle. If the engine refuses something, read why and pick another option. Always end the turn. The line reacts to what happened since your last turn (an ally falling, a kill, words aimed at you); often ${name} says nothing.
 - "You may react now": call react with the choice number to take it, or with null to let it pass.
 - "Do you raise your hand?": out of combat, ${after}, before anyone has the floor. First decide as ${name}: is any of this important to ${name} now, given ${name}'s goal, character and view of the others (your card's "Talk and silence" and "With the party", and your notes)? A plan, a rest or a companion in danger usually is, for ${name}'s own reasons. If not, just PASS: that is a normal answer, and in most rounds someone at the table stays quiet. If it is, ${name} may speak, act without a word, or both. Call no tool: your final answer starts with SPEAK (a line to say), BOTH (a line and a deed), ACT: and one sentence on what ${name} does without a word ("ACT: ${name} kneels to look at the tracks."), or PASS, and if you like, on the next line, half a sentence of why that nobody hears. Those who raise a hand then get the floor one at a time, each hearing what was said before.
-- "You have the floor": you raised your hand, someone named ${name}, or a companion spoke to ${name}. Read what was said since; if it has been said, a word of agreement or PASS. When you were named or asked, answer, in words, deeds or both, or refuse in character. To speak, say one short line in character with say. Then your final answer is one sentence on what ${name} sets out to do ("${name} kneels to look at the tracks."), or PASS when ${name} only spoke or does nothing new. Don't take an option here: the DM decides what happens, and may let you act. "Declare again" asks the same after a refusal.
+- "You have the floor": you raised your hand, someone named ${name}, or a companion spoke to ${name}. Read what was said since; if it has been said, a word of agreement or PASS. When you were named or asked, answer, in words, deeds or both, or refuse in character. To speak, say one short line in character with say. Then your final answer is one sentence on what ${name} sets out to do ("${name} kneels to look at the tracks."), or PASS when ${name} only spoke or does nothing new. No SPEAK, BOTH or ACT here: those words answer only "Do you raise your hand?", and a line in the final answer is never heard. Don't take an option here: the DM decides what happens, and may let you act. "Declare again" asks the same after a refusal.
 - "Something just happened in the fight": it isn't your turn, and the fight goes on without waiting. If ${name} would react aloud to it (an ally falling or back up, a foe down or yielding, a great blow, a hit on ${name}), say one short line with say; otherwise just answer PASS. Call no other tool. Only the first companion to speak is heard, so a line that comes too late reaches nobody.
 - "The DM lets you act now": take one of your options with submit_decision.
 - "The scene is over": your final answer is a summary in a few sentences of fiction, for your own memory: what happened, who you met, what the party decided, what you promised or suspect.
@@ -155,8 +155,19 @@ Before you act in a fight, check three things in a line or two: is a companion d
 }
 
 /** A declaration as the loop takes it: one line, or undefined for a pass. */
+/** The hand question's answer words; a declaration that borrows them must not show them (AGT-72). */
+const HAND_WORD = /(^|[\n.!?…»"”]\s*)(?:SPEAK|BOTH|ACT)\b(?:\s*:|\s*\n|\s+(?=\p{Lu}))\s*/gu;
+/** A label the model put in front of an answer word ("Ilsa's answer as the floor:", "Sentence on what Ilsa does:"). */
+const LABEL = /(^|\n)\s*[A-Za-z][A-Za-z' ]{2,48}:\s*(?=(?:SPEAK|BOTH|ACT|PASS)\b)/g;
+
 export function declaration(answer: string): string | undefined {
-  const line = answer.trim().replace(/^["“](.*)["”]$/s, "$1").trim();
+  const line = answer
+    .replace(LABEL, "$1")
+    .replace(HAND_WORD, "$1")
+    .replace(/\s*\n\s*/g, " ")
+    .trim()
+    .replace(/^["“](.*)["”]$/s, "$1")
+    .trim();
   return line === "" || /^pass\b/i.test(line) ? undefined : line;
 }
 
