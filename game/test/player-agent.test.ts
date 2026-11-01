@@ -65,6 +65,9 @@ test("a model player's session has its own prompt with its card, its nine seat t
   assert.equal(player.systemPrompt, playerPrompt("maren", card, "cleric"));
   assert.ok(player.systemPrompt.includes(promptCard(card)), "the card is in the prompt as written, but for its Russian voice");
   assert.match(player.systemPrompt, /You play one character, Maren \(handle maren\)/);
+  // Out of a fight the mood is calm: danger talk waits for a fight or a real sign of one (AGT-71).
+  assert.match(player.systemPrompt, /Read the moment, and let Maren's mood follow it/);
+  assert.match(player.systemPrompt, /don't set off for the next place until the party has decided to go/);
   const options = sessionOptions({ agent: "maren", choice: CHOICE, systemPrompt: player.systemPrompt, tools: player.seatTools }, "/empty");
   assert.deepEqual(options.tools, []);
   assert.deepEqual(options.settingSources, []);
