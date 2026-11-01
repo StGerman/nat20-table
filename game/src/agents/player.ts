@@ -154,12 +154,12 @@ Each message says why:
 Before you act in a fight, check three things in a line or two: is a companion down within your reach or range, which foe your companions are hitting, and whether you stand where many foes can reach you. Then act. Elsewhere, keep your reasoning to a sentence between tool calls. Text you write outside say, and outside your final answer to a hand, a declaration or a summary, reaches nobody.${playerLanguage(language, russianVoice, names)}`;
 }
 
-/** A declaration as the loop takes it: one line, or undefined for a pass. */
 /** The hand question's answer words; a declaration that borrows them must not show them (AGT-72). */
 const HAND_WORD = /(^|[\n.!?…»"”]\s*)["“*]*(?:SPEAK|BOTH|ACT)\b["”*]*(?:\s*[:.,\-–—]|\s*\n|\s*$|\s+(?=\p{Lu}))\s*/gu;
 /** A label the model put in front of an answer word ("Ilsa's answer as the floor:", "Sentence on what Ilsa does:"). */
 const LABEL = /(^|\n)\s*[A-Za-z][A-Za-z' ]{2,48}:\s*(?=(?:SPEAK|BOTH|ACT|PASS)\b)/g;
 
+/** A declaration as the loop takes it: one line, or undefined for a pass. */
 export function declaration(answer: string): string | undefined {
   const line = answer
     .trim()
