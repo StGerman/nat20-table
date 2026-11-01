@@ -64,6 +64,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0052](0052-one-repo.md) | nat20-table stays one repo, the Rust engine and the TypeScript game together; a Rust/TypeScript split is rejected | Accepted | 2026-10-31 | Stas (Milestone 10 spec thread) |
 | [0054](0054-full-screen-seat.md) | The human's terminal seat runs full screen: the alternate screen, one frame of five zones, the story with its own scroll; supersedes the inline model (panel proposal C10, table #189) | Accepted | 2026-10-31 | Stas (decision card on the screens doc, TUI design thread) |
 | [0055](0055-golden-split.md) | The wide frame splits story and panel near the golden ratio: the story takes about 61.8% of the width, never under 72 columns; supersedes the wide frame's 72 measure (0054, table #189) | Accepted | 2026-10-31 | Stas (TUI implementation thread) |
+| [0056](0056-m10-closed-on-cheap-run.md) | Milestone 10 closes on a `play:cheap` run with Stas at the table (p95 6.5 s players, 4.9 s DM); the latency check on the demo models becomes AGT-77 | Accepted | 2026-11-01 | Stas (Milestone 10 implementation thread) |
 
 ## Open questions to watch
 
