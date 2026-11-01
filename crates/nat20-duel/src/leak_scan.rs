@@ -280,13 +280,27 @@ fn shows_roll_modifiers(line: &str) -> bool {
 
 /// A creature's current Hit Points: `7/10 HP` or `7/10 Hit Points`, or a single value stated as
 /// what it has (`has 3 HP`, `at 3 Hit Points`). Damage taken and Hit Points regained are public.
+/// A rule's wording about any creature (`A creature at 0 Hit Points …`, from an option's summary)
+/// names nobody's Hit Points, so a value right after `a creature`, `each creature` and the like is
+/// not one. `The creature at 3 Hit Points` names a particular creature and still leaks.
 fn shows_current_hp(line: &str) -> bool {
     let words: Vec<&str> = line.split_whitespace().collect();
-    let stated = words.windows(3).any(|w| {
-        matches!(
-            w[0].to_ascii_lowercase().as_str(),
-            "has" | "at" | "to" | "with"
-        ) && w[1].chars().all(|c| c.is_ascii_digit())
+    let stated = words.windows(3).enumerate().any(|(at, w)| {
+        let generic = at > 1
+            && matches!(
+                words[at - 1].to_ascii_lowercase().as_str(),
+                "creature" | "creatures"
+            )
+            && matches!(
+                words[at - 2].to_ascii_lowercase().as_str(),
+                "a" | "an" | "any" | "each" | "every" | "one"
+            );
+        !generic
+            && matches!(
+                w[0].to_ascii_lowercase().as_str(),
+                "has" | "at" | "to" | "with"
+            )
+            && w[1].chars().all(|c| c.is_ascii_digit())
             && (w[2].starts_with("HP") || w[2].eq_ignore_ascii_case("hit"))
     });
     stated
@@ -337,6 +351,7 @@ mod tests {
             "[r4] goblin_4 rolls initiative: 1d20 (19) = 21.",
             "[r9] goblin_1 rolls damage: 1d6 (4) + 1d4 (2) = 8.",
             "maren has 12 HP left, she thinks.",
+            "- cast/spare_the_dying: Spare the Dying (action); targets ilsa 14 ft\n  A creature at 0 Hit Points within 15 feet becomes Stable: no more death saving throws.",
             r#"{"kind":"engine","text":"maren has 12/17 Hit Points.","seq":40}"#,
             r#"{"handle":"maren","hp":12,"hp_max":17,"ac":18,"spellcasting":[{"save_dc":13}]}"#,
         ] {
@@ -356,6 +371,9 @@ mod tests {
             "[r5] goblin_4 rolls a check: +3 = 3.",
             "goblin_1 has 3 HP.",
             "The wolf is down to 2 Hit Points.",
+            "The creature's ally, goblin_2, is at 3 Hit Points.",
+            "The wounded creature at 3 Hit Points staggers.",
+            "The creature at 3 Hit Points staggers.",
             "You: Bren (bren), 12/20 HP, conscious.",
             "The check:reeve_insight succeeds.",
             "Flag gate_open is set.",
