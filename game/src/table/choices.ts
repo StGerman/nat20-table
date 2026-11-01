@@ -3,7 +3,7 @@
 // follow-up pick for the rest; variants, multi-target and area options open a follow-up pick from
 // the option's own list. Built only from the human's own `legal_actions` and state, both already
 // projected for the human's viewer.
-import type { ActionOption, Aim, Handle, MoveTarget, Side, State, TargetCandidate } from "@nat20-table/engine-client";
+import type { ActionCost, ActionOption, Aim, Handle, MoveTarget, Side, State, TargetCandidate } from "@nat20-table/engine-client";
 import type { LegalActionsResult } from "../view.ts";
 import type { DecisionInput } from "./tools.ts";
 
@@ -24,6 +24,11 @@ export interface Choice {
   next?: Choice[];
   /** The creature it is aimed at, for a seat that picks by rule (the scripted seats). */
   target?: { handle: Handle; side: Side; in_range: boolean };
+  /**
+   * The option it plays, for the seat's action card (AGT-70): its id, or `move` and `end_turn`,
+   * what it costs, and the rule's own `summary` from the engine when it has one.
+   */
+  about?: { id: string; cost?: ActionCost; summary?: string };
 }
 
 type Item = Omit<Choice, "number">;
@@ -33,13 +38,24 @@ type Item = Omit<Choice, "number">;
  * creatures the human can see) and End turn; out of combat moving is the DM's call, made in words.
  */
 export function buildChoices(result: LegalActionsResult, state: State | undefined, combat: boolean): Choice[] {
-  const items = result.options.flatMap(optionItems);
+  const items = result.options.flatMap((option) => optionItems(option).map((item) => tagged(item, aboutOf(option))));
   if (combat && state) {
     const moves = moveItems(state, reachOf(result, state));
-    if (moves.length > 0) items.push({ label: "Move…", next: numbered(moves) });
+    const dash = result.options.find((o) => o.option_id === "dash");
+    if (moves.length > 0) items.push(tagged({ label: "Move…", next: numbered(moves) }, { id: "move" }, dash ? aboutOf(dash) : { id: "dash" }));
   }
-  if (combat && result.can_end_turn) items.push({ label: "End turn", act: { kind: "end_turn" } });
+  if (combat && result.can_end_turn) items.push({ label: "End turn", act: { kind: "end_turn" }, about: { id: "end_turn" } });
   return numbered(items);
+}
+
+function aboutOf(option: ActionOption): NonNullable<Choice["about"]> {
+  return { id: option.option_id, cost: option.cost, ...(option.summary ? { summary: option.summary } : {}) };
+}
+
+/** An item and the follow-up picks under it, marked with the option they play. A Dash-and-move line plays Dash. */
+function tagged<T extends Item | Choice>(item: T, about: NonNullable<Choice["about"]>, dash: NonNullable<Choice["about"]> = { id: "dash" }): T {
+  const own = item.act?.kind === "dash_move" ? dash : about;
+  return { ...item, about: own, ...(item.next ? { next: item.next.map((c) => tagged(c, about, dash)) } : {}) };
 }
 
 /** One line per choice, as the human reads them. */

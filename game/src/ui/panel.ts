@@ -5,7 +5,7 @@
 // it holds, and a fixed fold at small sizes.
 import type { Handle, TurnBudget } from "@nat20-table/engine-client";
 import type { Situation, SituationCreature } from "../table/situation.ts";
-import type { Style } from "./lines.ts";
+import { wrapText, type Style } from "./lines.ts";
 import { THEME } from "./palette.ts";
 
 export interface Span {
@@ -209,6 +209,15 @@ function budgetRow(b: TurnBudget): Row {
     { text: " · " },
     { text: `${b.movement_ft} of ${b.speed_ft} ft left`, ...(b.movement_ft === 0 ? { style: muted } : {}) },
   ];
+}
+
+/**
+ * The action card (AGT-70): the lit option's name and what it costs, then what it does wrapped to
+ * `width`. Only words: no odds, no numbers the engine hasn't shown (Rule 4).
+ */
+export function cardRows(label: string, cost: string | undefined, text: string, width: number): Row[] {
+  const head: Row = [{ text: label, style: { bold: true } }, ...(cost ? [{ text: ` · ${cost}`, style: muted }] : [])];
+  return [head, ...wrapText(text, width, 0).split("\n").map((row) => [{ text: row }])];
 }
 
 /** A row as plain text, for tests and the screen-reader view. */

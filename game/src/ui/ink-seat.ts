@@ -25,7 +25,8 @@ import { COMMAND_HELP, promptHint, readLine } from "./input.ts";
 import { actionRows, frameLayout, freshText, headerText, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, storyRows, storyWindow, type Scroll } from "./frame.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette, type Style } from "./palette.ts";
-import { endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
+import { cardRows, endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
+import { cardText, costText } from "../table/guide.ts";
 
 /** The numbered options held above the prompt while they are the human's to pick from. */
 export type PinnedOptions = Extract<TableEvent, { kind: "options" }>;
@@ -661,7 +662,12 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     ? (previewOption(view.draft, view.options?.lines) ?? (view.draft ? undefined : previewOption(String(view.highlight ?? ""), view.options?.lines)))
     : undefined;
   // The creature the option under the cursor aims at is lit in the panel too (screen 5).
-  const lit = picked ? view.options?.choices.find((c) => c.number === picked.number)?.target?.handle : undefined;
+  const choice = picked ? view.options?.choices.find((c) => c.number === picked.number) : undefined;
+  const lit = choice?.target?.handle;
+  // What the lit option does (AGT-70): a card under the roster in the wide frame, one line above the input in the narrow one.
+  const text = choice?.about ? cardText(choice.about) : undefined;
+  const card = text && choice ? { label: choice.label.replace(/…$/, ""), cost: costText(choice.about?.cost), text } : undefined;
+  const cardLine = card && layout.mode === "narrow" ? wrapText(`${card.label}: ${card.text}`, width, 0).split("\n")[0] : undefined;
   const inputH = view.draft ? rowsFor(`> ${view.draft} ${picked ? `  ${picked.line}` : ""}`, width, 3) : 1;
   const notice = view.notice ? wrapText(view.notice.text, width, 0).split("\n").slice(0, 2) : [];
   // Paused, the panel is a frame of the last moment: marked stale until the game goes on (screen 10).
@@ -674,7 +680,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
       ? // The bar and your own line, with a fallen ally and a foe in reach on it (AGT-47 C1).
         foldedRows(view.situation, { stale, glyphs: seat.glyphs, lit }).slice(0, NARROW_PANEL_ROWS)
       : [];
-  const below = 1 + (panel.length > 0 ? panel.length + 1 : 0) + notice.length + inputH;
+  const below = 1 + (panel.length > 0 ? panel.length + 1 : 0) + notice.length + (cardLine ? 1 : 0) + inputH;
   // The action zone: what is asked of the human now, above the turn block (screens 4, 5, 7 to 10).
   const said = (text: string, style: Style): Row[] => wrapText(text, width, 0).split("\n").map((row) => [{ text: row, style }]);
   const reaction = view.reaction;
@@ -802,6 +808,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     blank("agap"),
     ...(action.length > 0 ? [...action.map((row, i) => line(row, `a${i}`)), blank("igap")] : []),
     ...notice.map((text, i) => h(Text, { key: `n${i}`, wrap: "truncate-end", ...textProps(view.notice!.error ? TONE_STYLE.error : TONE_STYLE.status, palette) }, text)),
+    ...(cardLine ? [h(Text, { key: "card", wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, cardLine)] : []),
     inputRow(),
   ];
   const headerRow = h(Text, { key: "header", wrap: "truncate-end", dimColor: true }, header);
@@ -809,7 +816,11 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   if (layout.mode === "narrow") {
     return h(Box, { flexDirection: "column", width: size.columns, height: size.rows }, headerRow, h(Box, { key: "story", flexDirection: "column", width, height: body }, ...left));
   }
-  const side = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true, lit }) : [];
+  const roster = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true, lit }) : [];
+  // The action card stands under the roster, past a blank row, cut to the rows left.
+  const cardRoom = body - roster.length - (roster.length > 0 ? 1 : 0);
+  const cardShown = card && cardRoom > 1 ? cardRows(card.label, card.cost, card.text, layout.side!).slice(0, cardRoom) : [];
+  const side = cardShown.length > 0 ? [...roster, ...(roster.length > 0 ? [[] as Row] : []), ...cardShown] : roster;
   return h(
     Box,
     { flexDirection: "column", width: size.columns, height: size.rows },

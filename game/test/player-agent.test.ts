@@ -231,14 +231,22 @@ test("with no human at the table, a player hears that only AI players play the o
   assert.equal(new ModelPlayer({ handle: "bren", card, characterClass: "fighter", choice: CHOICE, withHuman: false }).systemPrompt, alone);
 });
 
+test("a player's read summaries last its session: emptied when the session closes (AGT-70)", async () => {
+  const card = castParty(MILL).cards.get("maren")!;
+  const player = new ModelPlayer({ handle: "maren", card, characterClass: "cleric", choice: CHOICE, withHuman: true });
+  player.described.add("nat20_core::action.dodge");
+  await player.close();
+  assert.equal(player.described.size, 0, "the next session reads each summary again");
+});
+
 test("each party member's class comes from its pregen, for its block of the rules primer (AGT-52)", () => {
   assert.deepEqual(Object.fromEntries(castParty(MILL).classes), { bren: "fighter", torva: "barbarian", maren: "cleric", ilsa: "wizard" });
   const fighter = rulesPrimer("fighter");
   assert.match(fighter, /^## The rules you know\n/);
   assert.match(fighter, /\n\n## Your class: Fighter\n/);
-  // Core has Dodge, and each Dash adds the Speed again (ENG-19, ENG-26).
-  assert.match(fighter, /\*\*Dodge:\*\* until the start of your next turn, attacks against you have Disadvantage/);
-  assert.match(fighter, /a second Dash in the same turn adds it again/);
+  // What an action does comes with the option, from the engine (AGT-70): the primer only names them.
+  assert.match(fighter, /\*\*Actions everyone has:\*\* Attack, Dash, Disengage, Dodge, Help/);
+  assert.ok(!fighter.includes("a second Dash in the same turn"), "no copy of an option's summary");
   assert.throws(() => rulesPrimer("bard"), /no rules primer block for class "bard"/, "a class with no block stops the run before play");
   assert.throws(() => rulesPrimer("../fighter"), /no rules primer block for class "\.\.\/fighter"/, "a class is a bare name, never a path");
 });

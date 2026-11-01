@@ -720,7 +720,7 @@ export class TableLoop {
     const agent = this.agents.get(handle)!;
     const tools = this.tools.get(handle)!;
     this.table.resetRetries(handle);
-    const options = await tools.legalActions();
+    const options = await tools.legalActions(agent.described);
     const briefing = await this.playerBriefing(handle, "It is your turn in the fight. Your options:", options.text, "Act with your tools: usually one submit_decision with end_turn: true.");
     const since = this.table.engine.logHead;
     const chance = await this.liftsAtStart(handle, options);
@@ -1182,7 +1182,7 @@ export class TableLoop {
       if (this.paused) await this.waitWhilePaused();
       if (this.table.ended) return;
       this.table.resetRetries(handle);
-      const options = await this.tools.get(handle)!.legalActions();
+      const options = await this.tools.get(handle)!.legalActions(agent.described);
       const before = this.table.acted;
       const briefing = await this.playerBriefing(handle, "The DM lets you act now. Your options:", options.text, "Take one with submit_decision.");
       await this.wakePlayer(agent, "granted", briefing);

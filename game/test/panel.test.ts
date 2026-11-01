@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import type { State } from "@nat20-table/engine-client";
-import { buildChoices, choiceLines } from "../src/table/choices.ts";
+import { buildChoices, choiceLines, type Choice } from "../src/table/choices.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedPlayer, ScriptedSeat, yardDm } from "../src/table/scripted.ts";
 import { situationOf, type Situation } from "../src/table/situation.ts";
@@ -405,7 +405,7 @@ test("the story keeps to a 72-column measure; from 124 columns the side panel ta
   assert.equal(frameLayout({ columns: 80, rows: 15 }).mode, "tiny");
 });
 
-async function frameAt(columns: number, rows: number, options = ["1. Longsword attack → goblin_3", "2. End turn"]): Promise<{ seat: InkSeat; stdout: FakeStdout }> {
+async function frameAt(columns: number, rows: number, options = ["1. Longsword attack → goblin_3", "2. End turn"], choices: Choice[] = []): Promise<{ seat: InkSeat; stdout: FakeStdout }> {
   const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
   const stdout = new FakeStdout(columns, rows);
   seat.start({
@@ -418,9 +418,9 @@ async function frameAt(columns: number, rows: number, options = ["1. Longsword a
   });
   seat.show({ kind: "narration", speaker: "dm", text: "The yard smells of wet straw and old flour, and the goblins circle the woodpile with their blades low, waiting for someone to move first." });
   seat.show({ kind: "situation", situation: situationOf(yard(), "bren", listing)! });
-  seat.show({ kind: "options", lines: options, choices: [], budget: listing.budget! });
+  seat.show({ kind: "options", lines: options, choices, budget: listing.budget! });
   void seat.ask({ kind: "combat_turn" });
-  await until("the prompt", () => stdout.last.includes("Your turn: an option number"));
+  await until("the prompt", () => stdout.last.includes("Your turn: an option number") || stdout.last.includes("Enter plays"));
   return { seat, stdout };
 }
 
@@ -591,4 +591,32 @@ test("an option names its target by handle, with `(walk)` only when the human wa
   const all = choiceLines(more?.next ?? buildChoices(result, undefined, false));
   assert.ok(all.some((l) => l.endsWith("→ goblin_4 (walk)")), all.join("; "));
   assert.ok(!all.some((l) => /hostile|\d+ ft/.test(l)), all.join("; "));
+});
+
+test("the lit option's card stands under the roster on a wide frame, and as one line over the input on a narrow one (AGT-70)", async () => {
+  const cost = { action: 1, bonus_action: 0, reaction: 0, movement_ft: 0 };
+  const choices: Choice[] = [
+    { number: 1, label: "Longsword attack → goblin_3", about: { id: "melee_attack/longsword", cost, summary: "Attack a creature within the weapon's reach. A hit deals the weapon's damage." }, target: { handle: "goblin_3", side: "hostile", in_range: true } },
+    { number: 2, label: "End turn", about: { id: "end_turn" } },
+  ];
+  for (const [columns, rows] of [[160, 40], [80, 24]] as const) {
+    const { seat, stdout } = await frameAt(columns, rows, undefined, choices);
+    try {
+      seat.type("1");
+      await until("the card", () => stdout.last.includes("Attack a creature within"));
+      const frame = stdout.last.split("\n");
+      if (columns === 160) {
+        const story = frameLayout({ columns, rows }).story;
+        const head = frame.findIndex((r) => r.includes("Longsword attack → goblin_3 · Action"));
+        assert.ok(head > frame.findIndex((r) => r.includes("Fallen goblin_1")), stdout.last);
+        assert.equal(frame[head].indexOf("Longsword attack"), story + RULE_COLUMNS, frame[head]);
+      } else {
+        const card = frame.find((r) => r.startsWith("Longsword attack → goblin_3: Attack a creature"));
+        assert.ok(card, stdout.last);
+        assert.equal(frame.length, rows, "the frame still fills the terminal exactly");
+      }
+    } finally {
+      seat.stop();
+    }
+  }
 });
