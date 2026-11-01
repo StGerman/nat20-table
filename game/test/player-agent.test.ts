@@ -344,6 +344,12 @@ test("a declaration is its one line, and PASS or nothing is a pass", () => {
   assert.equal(declaration("  ACT: Ilsa waits."), "Ilsa waits.");
   assert.equal(declaration("**ACT**: Ilsa waits."), "Ilsa waits.");
   assert.equal(declaration("SPEAK"), undefined);
+  // The parser reads the word in any case before a colon, and a quote opened before the word closes after the line.
+  assert.equal(declaration("act: Ilsa waits."), "Ilsa waits.");
+  assert.equal(declaration("Both: Ilsa waits."), "Ilsa waits.");
+  assert.equal(declaration('"ACT: Ilsa waits."'), "Ilsa waits.");
+  assert.equal(declaration('ACT: Ilsa says "wait".'), 'Ilsa says "wait".');
+  assert.equal(declaration("Both sides back away. Ilsa waits."), "Both sides back away. Ilsa waits.");
   // An ordinary word that only starts like one is left alone.
   assert.equal(declaration("Actually, Torva acts first and bothers nobody."), "Actually, Torva acts first and bothers nobody.");
 });

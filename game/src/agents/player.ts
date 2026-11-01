@@ -156,6 +156,8 @@ Before you act in a fight, check three things in a line or two: is a companion d
 
 /** The hand question's answer words; a declaration that borrows them must not show them (AGT-72). */
 const HAND_WORD = /(^|[\n.!?…»"”]\s*)["“*]*(?:SPEAK|BOTH|ACT)\b["”*]*(?:\s*[:.,\-–—]|\s*\n|\s*$|\s+(?=\p{Lu}))\s*/gu;
+/** The same word before a colon in any case, as the hand parser reads it (`act: …`); other delimiters stay upper-case only, so prose such as "Both sides…" is left alone. */
+const HAND_WORD_COLON = /(^|[\n.!?…»"”]\s*)["“*]*(?:speak|both|act)["”*]*\s*:\s*/giu;
 /** A label the model put in front of an answer word ("Ilsa's answer as the floor:", "Sentence on what Ilsa does:"). */
 const LABEL = /(^|\n)\s*[A-Za-z][A-Za-z' ]{2,48}:\s*(?=(?:SPEAK|BOTH|ACT|PASS)\b)/g;
 
@@ -165,9 +167,11 @@ export function declaration(answer: string): string | undefined {
     .trim()
     .replace(LABEL, "$1")
     .replace(HAND_WORD, "$1")
+    .replace(HAND_WORD_COLON, "$1")
     .replace(/\s*\n\s*/g, " ")
     .trim()
     .replace(/^["“](.*)["”]$/s, "$1")
+    .replace(/^([^"“]*)["”]$/s, "$1")
     .trim();
   return line === "" || /^pass\b/i.test(line) ? undefined : line;
 }
