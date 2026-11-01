@@ -597,6 +597,14 @@ export function helpText(): string {
   ].join("\n");
 }
 
+/**
+ * The input row's own colours (Stas 2026-11-01): the `>` mark is the accent as a background, so
+ * the row reads as the place to type; the hint in it is secondary text, as dim as the status lines
+ * ("Playing …", the wait), never the accent. The mark draws inverse, so NO_COLOR still marks it.
+ */
+export const INPUT_MARK: Style = { accent: "rust", bold: true };
+export const INPUT_HINT: Style = TONE_STYLE.status;
+
 /** The braille dots spinner (6/braille-pattern-cli-loading-indicator), one frame per 80 ms. */
 export const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -746,14 +754,14 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const blank = (key: string) => h(Text, { key }, " ");
   // The row: "> " and the line with its cursor, or, while nothing is typed, the hint or the wait as its placeholder (AGT-48).
   const inputRow = () => {
-    const mark = h(Text, { key: "mark", ...textProps({ accent: "rust" }, palette) }, "> ");
+    const mark = h(Text, { key: "mark" }, h(Text, { ...textProps(INPUT_MARK, palette), inverse: true }, ">"), " ");
     if (!view.draft) {
       const placeholder = view.finale
         ? h(Text, { key: "hint", ...textProps({ accent: "hint" }, palette) }, "Any key leaves; the checks go on after it.")
         : view.prompt && picked
-          ? h(Text, { key: "hint", ...textProps(TONE_STYLE.prompt, palette) }, `Enter plays ${picked.line}`)
+          ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, `Enter plays ${picked.line}`)
           : view.prompt
-            ? h(Text, { key: "hint", ...textProps(TONE_STYLE.prompt, palette) }, promptHint(view.prompt, seat.handle))
+            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, promptHint(view.prompt, seat.handle))
             : h(Waiting, { key: "wait", seat, busy: view.busy });
       return h(Box, { key: "input", width, height: 1, overflow: "hidden" }, h(Text, { wrap: "truncate-end" }, mark, h(Text, { key: "cursor", inverse: true }, " "), placeholder));
     }
