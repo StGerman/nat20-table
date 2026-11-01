@@ -2957,6 +2957,7 @@ impl Game {
                         option_id: OptionId(option_id),
                         action: action_id.to_string(),
                         name,
+                        summary: names::option_summary(action_id, context),
                         cost: action_cost(&cost.map),
                         targeting,
                         max_targets,

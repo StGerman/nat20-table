@@ -1,4 +1,4 @@
-{"seq":1,"visibility":{"scope":"dm"},"text":"Session started (protocol 1.0.0-dev.37, seed 5).","kind":"session_started","seed":5,"protocol_version":"1.0.0-dev.37"}
+{"seq":1,"visibility":{"scope":"dm"},"text":"Session started (protocol 1.0.0-dev.38, seed 5).","kind":"session_started","seed":5,"protocol_version":"1.0.0-dev.38"}
 {"seq":2,"scene":"s1_village_green","visibility":{"scope":"public"},"text":"Scene s1_village_green loaded in explore mode.","kind":"scene_loaded","scene_id":"s1_village_green","mode":"explore"}
 {"seq":3,"scene":"s3_mill_yard","visibility":{"scope":"public"},"text":"Scene s3_mill_yard loaded in explore mode.","kind":"scene_loaded","scene_id":"s3_mill_yard","mode":"explore"}
 {"seq":4,"round":1,"scene":"s3_mill_yard","visibility":{"scope":"public"},"text":"Combat begins: goblin_3, wolf_2, goblin_4, goblin_1, wolf_3, goblin_2, torva, wolf_1, bren, maren, ilsa.","kind":"combat_started","participants":["goblin_3","wolf_2","goblin_4","goblin_1","wolf_3","goblin_2","torva","wolf_1","bren","maren","ilsa"]}

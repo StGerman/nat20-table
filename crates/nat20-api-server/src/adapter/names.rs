@@ -11,7 +11,7 @@ use nat20_core::{
         spells::{concentration::ConcentrationInstance, spell::SpellFlag},
     },
     engine::engine_state::EngineState,
-    registry::registry::{ItemsRegistry, SpellsRegistry},
+    registry::registry::{ActionsRegistry, ItemsRegistry, SpellsRegistry},
     systems,
 };
 
@@ -150,6 +150,16 @@ pub fn option_item(
 }
 
 /// The spell a context casts, for an option's `spell`.
+/// The rule's own short text for an option: the spell's for a cast, the action's otherwise (a
+/// potion's is its drinking action's). `None` when core has no summary; never the long
+/// `description`, which carries DCs and dice (Rule 3).
+pub fn option_summary(action_id: &ActionId, context: &ActionContext) -> Option<String> {
+    match &context.spell {
+        Some(spell) => SpellsRegistry::get(&spell.id)?.action().summary.clone(),
+        None => ActionsRegistry::get(action_id)?.summary.clone(),
+    }
+}
+
 pub fn option_spell(context: &ActionContext) -> Option<OptionSpell> {
     let spell = context.spell.as_ref()?;
     let id = spell.id.id();

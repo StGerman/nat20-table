@@ -427,6 +427,11 @@ pub struct ActionOption {
     pub action: String,
     /// Display name, e.g. "Longsword attack".
     pub name: String,
+    /// What the option does, in one to three plain sentences: the rule's own short text from the
+    /// engine, the same for every viewer. It never carries a DC, odds or a computed number. Absent
+    /// when the rule has none (a monster's own attacks).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
     /// What taking it spends.
     pub cost: ActionCost,
     /// What `submit` must name as targets.
