@@ -11,6 +11,7 @@ import type {
   Handle,
   HelpSpec,
   HitDiceSpend,
+  Goods,
   MoveTarget,
   Placement,
   Response,
@@ -42,7 +43,7 @@ function refusal(response: Response): string {
 /** Commands that change the session. The rest only read it. */
 const CHANGES = new Set<Command["cmd"]>([
   "submit", "move", "end_turn", "react", "request_check", "help", "short_rest", "start_combat", "end_combat", "spawn", "load_scene",
-  "place_creature", "start_fight",
+  "place_creature", "start_fight", "give", "steal", "loot",
 ]);
 
 /**
@@ -654,6 +655,32 @@ export class DmTools {
       },
       () => (this.table.inCombat ? `${handle} is here and joins the fight; initiative rolled` : `${handle} is here`),
     );
+  }
+
+  /** Out of combat: one creature hands another, within 5 feet, coin or one carried item (ITM-6). */
+  async give(actor: string, to: string, what: Goods): Promise<ToolOutcome> {
+    return (await this.inScene(actor)) ?? send(this.table, "dm", { cmd: "give", actor, to, what }, () => `handed over; the ledger entry is in the events`);
+  }
+
+  /**
+   * Out of combat: the engine rolls the thief's Sleight of Hand against the target's passive
+   * Perception (ITM-6). The answer says whether it went unseen; only the thief and the DM see a
+   * theft that succeeds, so the DM tells it to the thief alone.
+   */
+  async steal(actor: string, target: string, what: Goods): Promise<ToolOutcome> {
+    return (await this.inScene(actor)) ??
+      send(this.table, "dm", { cmd: "steal", actor, target, what }, (r) =>
+        r.result?.cmd === "steal"
+          ? r.result.success
+            ? `[${r.result.roll_id}] unseen: tell ${actor} alone (narrate to ${actor}); ${target} and the others never hear of it`
+            : `[${r.result.roll_id}] noticed: ${target} catches ${actor} at it, and the whole table sees`
+          : "rolled",
+      );
+  }
+
+  /** Out of combat: takes everything a fallen or surrendered creature within 5 feet carries (ITM-6). */
+  async loot(actor: string, from: string): Promise<ToolOutcome> {
+    return (await this.inScene(actor)) ?? send(this.table, "dm", { cmd: "loot", actor, from }, () => "taken; what moved is in the events");
   }
 
   /** A fight among creatures present that no scene encounter fits (API-34): no surprise, no early end. */
