@@ -32,7 +32,7 @@ This scope sits beside `docs/scope/demo-run-scope.md`; it does not edit it (D0).
 - Place NPCs persist as records between visits; they act only while the party is in their place.
 
 ### 2.4 The escort contract
-- The merchant hires the party. Each Hired Blade is paid the SRD skilled-hireling wage, 2 GP a day, from the merchant's purse, one ledger entry per Blade. The terms (an advance, the rest on arrival) are in the sandbox's `campaign.json`. A fallen Blade is paid for the days served.
+- The merchant hires the party. Pay (proposed, awaits Stas's confirmation before API-47): each Hired Blade is paid the SRD skilled-hireling wage, 2 GP a day, from the merchant's purse, one ledger entry per Blade. The terms (an advance, the rest on arrival) are in the sandbox's `campaign.json`. A fallen Blade is paid for the days served.
 - `campaign.json.caravan_owner` names who leads the caravan: a player or `npc:<id>` (S2). With an NPC owner the engine follows the sandbox's route, any Hired Blade says "we move on", and the DM never calls travel, rest or card commands.
 
 ## 3. Rules sources
