@@ -275,6 +275,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     finale: played.at(-1),
     // Leaving a scene that offers a Short Rest, unrested and hurt, reminds the DM once (AGT-46).
     rests: pack.adventure.scenes.filter((s) => s.rest).map((s) => s.id),
+    // The creatures the DM may bring in beyond the scene files (AGT-24).
+    statBlocks: pack.adventure.stat_blocks,
     maxSteps: flags["max-steps"],
     // The situation panel (AGT-36) is drawn only at the terminal.
     situation: ink !== undefined,
