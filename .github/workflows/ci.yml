@@ -2,7 +2,7 @@
 # why the jobs are shaped this way is in docs/decisions/0022-ci-shape.md.
 #
 #   changes ─┬─ contract-fresh                      contract-compat (PR only)
-#            ├─ rust-lint                           contract-pure
+#            ├─ rust-lint                           contract-pure, world-pure
 #            ├─ rust-test ─┬─ visibility            deny
 #            │             └─ ts                    advisories (not gating)
 #            └─ rust-test-arm64
@@ -119,6 +119,35 @@ jobs:
             echo "::error::nat20-api-contract has extra dependencies: $extra"
             exit 1
           fi
+
+  world-pure:
+    name: world-pure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust release pinned in rust-toolchain.toml
+        run: rustup toolchain install
+      - name: World and ledger crates depend only on serde, and the ledger never on the world (decision 0057)
+        run: |
+          status=0
+          # nat20-world may depend on nat20-ledger (the world returns ledger entries); nothing else.
+          for crate in nat20-ledger nat20-world; do
+            [ -d "crates/$crate" ] || continue
+            allowed='serde'
+            [ "$crate" = nat20-world ] && allowed='serde|nat20-ledger'
+            extra=$(cargo tree --locked -p "$crate" --edges normal,build --depth 1 --prefix none \
+              | tail -n +2 | awk '{print $1}' | sort -u | grep -vxE "$allowed" || true)
+            if [ -n "$extra" ]; then
+              echo "::error::$crate has extra dependencies: $extra"
+              status=1
+            fi
+          done
+          if cargo tree --locked -p nat20-ledger --edges normal,build --prefix none | awk '{print $1}' | grep -qx nat20-world; then
+            echo "::error::nat20-ledger depends on nat20-world; the link points one way only"
+            status=1
+          fi
+          exit $status
 
   # Check-only build (no codegen): fmt, clippy, then docs reuse clippy's dependency metadata.
   rust-lint:
@@ -275,7 +304,7 @@ jobs:
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [changes, contract-fresh, contract-compat, contract-pure, rust-lint, rust-test, rust-test-arm64, visibility, ts, deny]
+    needs: [changes, contract-fresh, contract-compat, contract-pure, world-pure, rust-lint, rust-test, rust-test-arm64, visibility, ts, deny]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

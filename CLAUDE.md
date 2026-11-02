@@ -84,6 +84,7 @@ Run `check:contract`, the cargo checks above (fmt, clippy, test, doc, deny) and 
 | Path | What | Edit by hand? |
 |---|---|---|
 | `crates/nat20-api-contract/` | Engine API contract: wire types only (serde + schemars). **Source of truth for the wire** | Yes, under Rule 1 |
+| `crates/nat20-ledger/` | Ledger for the living world: holders, entries, journal, trial balance against the owners' numbers. serde only, never the world (CI job `world-pure`, decision 0057) | Yes |
 | `contract/protocol.md` | What a schema can't say: ordering, idempotency, lifecycle, the visibility table | Yes |
 | `contract/fixtures/*.jsonl` | Seeded conformance transcripts: request line → exact response line | Yes |
 | `contract/CHANGELOG.md` | Every contract change with its version | Yes |
@@ -211,7 +212,7 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 - Name PRs after their repo. A PR title is a lowercase repo prefix, a colon and plain English: `table:` for this repo, `core:` for the fork `StGerman/nat20` (`table: Character sheets (get_sheet)`). Branches are `<component>/<milestone>-<task-id>-<short-description>` in lowercase kebab-case, in both repos (Stas, 2026-11-02). The component is the part of the system the change is about: `core` (the fork), `ledger` (`crates/nat20-ledger`), `world` (`crates/nat20-world`), `table` (everything else in this repo: server, contract, game, content, docs, CI). Examples: `core/m9-eng-32-passive-checks`, `ledger/m9-con-17-ledger-crate`, `table/m9-con-16-living-world-scope`. Leave out the milestone or task id when the work has none (`table/branch-naming-rule`). Never the auto-generated `claude/...` session branch names. Closed milestone specs and accepted decision records that show `core/<topic>` or `table/<topic>` branches without a milestone and task id predate this rule and stay as written; this rule wins. Refer to PRs as `table #N` or `core #N`, never by a bare number; `upstream #N` names the closed upstream PRs and issue. Dependabot PRs and branches keep their own names.
 - A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.
 - Never skip, disable or quarantine a test to get green. Never push an empty commit to retrigger CI.
-- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `rust-lint`, `rust-test`, `rust-test-arm64`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
+- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `world-pure`, `rust-lint`, `rust-test`, `rust-test-arm64`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
 
 ## Rule 9: dependencies
 
