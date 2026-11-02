@@ -1297,6 +1297,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "nat20-ledger"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nat20_core"
 version = "0.1.0"
 source = "git+https://github.com/StGerman/nat20?rev=52fddc3fdee0cf565badbb387499b15b5e85de26#52fddc3fdee0cf565badbb387499b15b5e85de26"
