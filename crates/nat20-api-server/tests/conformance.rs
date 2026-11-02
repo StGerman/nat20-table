@@ -65,6 +65,13 @@ fn fixtures_replay_exactly() {
                 "{name}:{}: response differs for request {request}",
                 index + 1
             );
+            // The coin trial balance holds after every step (AGT-78).
+            assert_eq!(
+                server.ledger_mismatches(),
+                Vec::<String>::new(),
+                "{name}:{}: the ledger and the purses disagree",
+                index + 1
+            );
         }
         ran += 1;
     }

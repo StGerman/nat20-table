@@ -25,14 +25,21 @@ pub const HIDDEN_KEYS: &[&str] = &[
     "spawns",
     "known_ids",
     "advantage_sources",
+    // What a creature carries before it is looted (AGT-78): scene and placement data only.
+    "carries",
 ];
 
 /// Keys a player view carries only for the viewer's own creature.
 pub const OWNER_KEYS: &[&str] = &["hp", "hp_max", "temp_hp", "ac"];
 
 /// Event kinds that are scenario bookkeeping, never shown to a player whatever their visibility.
-pub const SCENARIO_EVENT_KINDS: &[&str] =
-    &["check_resolved", "flag_set", "hazard_triggered", "spawned"];
+pub const SCENARIO_EVENT_KINDS: &[&str] = &[
+    "check_resolved",
+    "flag_set",
+    "hazard_triggered",
+    "spawned",
+    "creature_placed",
+];
 
 /// Every leak of hidden data in `value` as seen by the player of creature `viewer`; empty when
 /// clean. Each entry names the JSON path and what leaked.

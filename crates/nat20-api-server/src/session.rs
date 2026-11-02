@@ -6,7 +6,7 @@
 
 use std::{collections::HashMap, path::PathBuf};
 
-use nat20_ledger::{Asset, Entry, Holder, Journal, Reason};
+use nat20_ledger::{Asset, Entry, Holder, Holdings, Journal, Reason};
 
 use nat20_api_contract::{
     Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
@@ -46,6 +46,9 @@ pub struct Session {
     roll_keys: HashMap<String, RollId>,
     /// Every movement of coin and items this session, as the `ledger` entries log it.
     ledger: Journal,
+    /// Every time the coin trial balance failed: a creature whose purse in core differs from what
+    /// the journal says it holds (AGT-78). Each is also logged on stderr. Empty in a sound run.
+    ledger_mismatches: Vec<String>,
 }
 
 impl Session {
@@ -59,6 +62,7 @@ impl Session {
             decided: false,
             roll_keys: HashMap::new(),
             ledger: Journal::default(),
+            ledger_mismatches: Vec::new(),
         };
         session.push(Pending {
             round: None,
@@ -732,9 +736,12 @@ impl Session {
                 {
                     *key = real.clone();
                 }
+                let entry = ledger_entry(from, to, what, *reason, roll_id.as_ref());
+                self.open_accounts(&entry);
                 self.ledger
-                    .post(ledger_entry(from, to, what, *reason, roll_id.as_ref()))
+                    .post(entry)
                     .expect("the engine logs ledger entries only for goods that moved");
+                self.check_coin();
             }
             _ => {}
         }
@@ -746,6 +753,63 @@ impl Session {
             text: render::text(&kind),
             kind,
         });
+    }
+}
+
+impl Session {
+    /// Opens the journal account of a creature it meets for the first time, from its purse in
+    /// core before this entry: core has already moved the coin, so the giver had `copper` more
+    /// and the receiver `copper` less. Each command logs at most one coin entry per creature, so
+    /// the purse read now is the one this entry left.
+    fn open_accounts(&mut self, entry: &Entry) {
+        let copper = match entry.what {
+            Asset::Coin { copper } => i64::from(copper),
+            Asset::Item { .. } => 0,
+        };
+        for (holder, before) in [(&entry.from, copper), (&entry.to, -copper)] {
+            let Holder::Creature(handle) = holder else {
+                continue;
+            };
+            let Some(now) = self.game.as_ref().and_then(|g| g.purse_copper(handle)) else {
+                continue;
+            };
+            self.ledger.open_account(
+                holder.clone(),
+                Holdings {
+                    copper: now + before,
+                    ..Holdings::default()
+                },
+            );
+        }
+    }
+
+    /// The coin trial balance (AGT-78): every creature the journal knows holds, in core, the
+    /// copper the journal says. Items are left out: a potion drunk leaves the pack with no
+    /// ledger entry. A creature no longer in the scene isn't compared.
+    fn check_coin(&mut self) {
+        let Some(game) = self.game.as_ref() else {
+            return;
+        };
+        for (holder, holdings) in self.ledger.balances() {
+            let Holder::Creature(handle) = &holder else {
+                continue;
+            };
+            if let Some(core) = game.purse_copper(handle)
+                && core != holdings.copper
+            {
+                let line = format!(
+                    "ledger: {handle} holds {core} cp in core but {} cp in the journal",
+                    holdings.copper
+                );
+                eprintln!("{line}");
+                self.ledger_mismatches.push(line);
+            }
+        }
+    }
+
+    /// Every failed coin trial balance so far (AGT-78).
+    pub fn ledger_mismatches(&self) -> &[String] {
+        &self.ledger_mismatches
     }
 }
 
