@@ -55,6 +55,14 @@ impl Server {
         }
     }
 
+    /// Every failed coin trial balance of the current session (AGT-78); empty in a sound run.
+    pub fn ledger_mismatches(&self) -> Vec<String> {
+        self.session
+            .as_ref()
+            .map(|s| s.ledger_mismatches().to_vec())
+            .unwrap_or_default()
+    }
+
     /// Handles one request line and returns one response line (no trailing newline).
     pub fn handle_line(&mut self, line: &str) -> String {
         let value: serde_json::Value = match serde_json::from_str(line) {

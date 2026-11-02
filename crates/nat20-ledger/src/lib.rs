@@ -266,6 +266,22 @@ impl Journal {
         }
     }
 
+    /// Opens an account for a holder the journal hasn't met yet, with what it held then (a
+    /// creature that walks into the run partway, its purse read from core). Returns false, and
+    /// changes nothing, for a holder already in the opening or in any entry: its history is the
+    /// journal's own from then on.
+    pub fn open_account(&mut self, holder: Holder, holdings: Holdings) -> bool {
+        let known = self.opening.contains_key(&holder)
+            || self
+                .entries
+                .iter()
+                .any(|e| e.from == holder || e.to == holder);
+        if !known {
+            self.opening.insert(holder, holdings);
+        }
+        !known
+    }
+
     /// Records one entry, or refuses it. The journal does not check that `from`
     /// has enough: the owner of that number already did.
     pub fn post(&mut self, entry: Entry) -> Result<(), PostError> {
@@ -339,4 +355,43 @@ impl Journal {
 fn is_roll_id(id: &str) -> bool {
     id.strip_prefix('r')
         .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+#[cfg(test)]
+mod open_account_tests {
+    use super::*;
+
+    fn coin(copper: u32) -> Asset {
+        Asset::Coin { copper }
+    }
+
+    #[test]
+    fn an_account_opens_once_and_only_for_a_new_holder() {
+        let bren = Holder::Creature("bren".into());
+        let maren = Holder::Creature("maren".into());
+        let mut journal = Journal::default();
+        assert!(journal.open_account(
+            bren.clone(),
+            Holdings {
+                copper: 500,
+                ..Holdings::default()
+            }
+        ));
+        assert!(!journal.open_account(bren.clone(), Holdings::default()));
+        journal
+            .post(Entry {
+                from: bren.clone(),
+                to: maren.clone(),
+                what: coin(200),
+                reason: Reason::Trade,
+                roll: None,
+            })
+            .unwrap();
+        assert!(
+            !journal.open_account(maren.clone(), Holdings::default()),
+            "maren is in an entry already"
+        );
+        assert_eq!(journal.balances()[&bren].copper, 300);
+        assert_eq!(journal.balances()[&maren].copper, 200);
+    }
 }
