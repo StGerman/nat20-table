@@ -121,8 +121,11 @@ impl Wagon {
     /// up to five times its carrying capacity including the vehicle, and a team adds
     /// its capacities together (SRD 5.2.1, Mounts and Cargo).
     pub fn limit_lb(&self) -> u32 {
-        let pull: u32 = self.team.iter().map(|a| a.capacity_lb).sum();
-        (pull * 5).saturating_sub(self.vehicle_lb)
+        let pull = self
+            .team
+            .iter()
+            .fold(0u32, |sum, a| sum.saturating_add(a.capacity_lb));
+        pull.saturating_mul(5).saturating_sub(self.vehicle_lb)
     }
 
     /// The weight of the cargo aboard, in pounds.
@@ -131,7 +134,7 @@ impl Wagon {
             let good = goods
                 .get(id)
                 .ok_or_else(|| CaravanError::UnknownGood(id.clone()))?;
-            Ok(sum + good.weight_lb * quantity)
+            Ok(sum.saturating_add(good.weight_lb.saturating_mul(*quantity)))
         })
     }
 }
@@ -216,7 +219,10 @@ impl Caravan {
 
     /// Units of `good` across all wagons.
     pub fn total(&self, good: &str) -> u32 {
-        self.wagons.iter().filter_map(|w| w.cargo.get(good)).sum()
+        self.wagons
+            .iter()
+            .filter_map(|w| w.cargo.get(good))
+            .fold(0u32, |sum, n| sum.saturating_add(*n))
     }
 
     /// The first wagon over its limit, if any.
@@ -253,7 +259,9 @@ impl Caravan {
             .iter_mut()
             .find(|w| w.n == n)
             .ok_or(CaravanError::UnknownWagon(n))?;
-        let load_lb = wagon.load_lb(goods)? + weight * quantity;
+        let load_lb = wagon
+            .load_lb(goods)?
+            .saturating_add(weight.saturating_mul(quantity));
         let limit_lb = wagon.limit_lb();
         if load_lb > limit_lb {
             return Err(CaravanError::Overloaded {
@@ -341,6 +349,11 @@ pub(crate) mod tests {
             })
         );
         assert_eq!(caravan, before);
+        // A quantity that would overflow is refused the same way.
+        assert!(matches!(
+            caravan.load(1, "rations", u32::MAX, &goods()),
+            Err(CaravanError::Overloaded { .. })
+        ));
         caravan.load(1, "iron", 3960, &goods()).unwrap();
         assert_eq!(caravan.total("iron"), 3960);
         assert_eq!(caravan.overloaded(&goods()), Ok(None));
