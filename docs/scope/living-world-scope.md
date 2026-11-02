@@ -28,7 +28,7 @@ This scope sits beside `docs/scope/demo-run-scope.md`; it does not edit it (D0).
 ### 2.3 Heroes grow
 - Level-up choices come in plain words, one line each, with a recommended pick.
 - The engine awards XP by CR and splits it by the SRD rule.
-- Level-up runs through the engine, with prompts the player answers. Level 3 is complete in core for all four pregens (S3): Life Domain, Evoker, Berserker Frenzy, domain spells and level 2 spells.
+- Level-up runs through the engine, with prompts the player answers. Milestone 9 completes level 3 in core for all four pregens (S3, CHR-12): Life Domain, Evoker, Berserker Frenzy, domain spells and level 2 spells. Today only the Champion is done.
 - A roster file carries the party between runs: XP, choices, purses, gear, exhaustion, the caravan and the day. HP is not stored. A hash chain in `run.json` catches a hand edit. The roster is written on every exit and after every night.
 - Place NPCs persist as records between visits; they act only while the party is in their place.
 
