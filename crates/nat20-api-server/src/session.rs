@@ -6,10 +6,12 @@
 
 use std::{collections::HashMap, path::PathBuf};
 
+use nat20_ledger::{Asset, Entry, Holder, Journal, Reason};
+
 use nat20_api_contract::{
     Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, EndCombatReason,
-    ErrorCode, Event, EventKind, Handle, HelpSpec, HitDiceSpend, Mode, MoveTarget, OptionId,
-    PromptId, ReactionTrigger, RollId, RollView, State, Visibility,
+    ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
+    Mode, MoveTarget, OptionId, PromptId, ReactionTrigger, RollId, RollView, State, Visibility,
 };
 
 use crate::{
@@ -42,6 +44,8 @@ pub struct Session {
     /// The last damage and healing roll ids, for `source_roll`.
     /// The adapter's local roll keys (`#n`) to logged roll ids, for the current scene.
     roll_keys: HashMap<String, RollId>,
+    /// Every movement of coin and items this session, as the `ledger` entries log it.
+    ledger: Journal,
 }
 
 impl Session {
@@ -54,6 +58,7 @@ impl Session {
             prompts_issued: 0,
             decided: false,
             roll_keys: HashMap::new(),
+            ledger: Journal::default(),
         };
         session.push(Pending {
             round: None,
@@ -383,6 +388,42 @@ impl Session {
         Ok(CommandResult::Help {})
     }
 
+    /// `give`: coin or one carried item to a creature within 5 feet; the `ledger` entry is in
+    /// the log.
+    pub fn give(&mut self, actor: &str, to: &str, what: &Goods) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.give(actor, to, what);
+        self.after_decision(result.clone())?;
+        Ok(CommandResult::Give {})
+    }
+
+    /// `steal`: Sleight of Hand against passive Perception; the roll and what moved are in the
+    /// log, seen by the thief and the DM.
+    pub fn steal(
+        &mut self,
+        actor: &str,
+        target: &str,
+        what: &Goods,
+    ) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.steal(actor, target, what);
+        self.after_decision(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
+        let outcome = result.expect("errors returned above");
+        Ok(CommandResult::Steal {
+            roll_id: self
+                .roll_keys
+                .get(&outcome.key)
+                .cloned()
+                .expect("the theft's roll was logged"),
+            success: outcome.success,
+        })
+    }
+
+    /// `loot`: everything a fallen or surrendered creature carries; one `ledger` entry each.
+    pub fn loot(&mut self, actor: &str, from: &str) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.loot(actor, from);
+        self.after_decision(result.clone())?;
+        Ok(CommandResult::Loot {})
+    }
+
     /// Places a `when: dm` spawn's creatures.
     pub fn spawn(&mut self, spawn_id: &str, viewer: &Viewer) -> Result<CommandResult, ApiError> {
         let result = self.game_mut()?.spawn(spawn_id);
@@ -632,6 +673,22 @@ impl Session {
                     *roll_id = real.clone();
                 }
             }
+            EventKind::Ledger {
+                from,
+                to,
+                what,
+                reason,
+                roll_id,
+            } => {
+                if let Some(key) = roll_id.as_mut()
+                    && let Some(real) = self.roll_keys.get(&key.0)
+                {
+                    *key = real.clone();
+                }
+                self.ledger
+                    .post(ledger_entry(from, to, what, *reason, roll_id.as_ref()))
+                    .expect("the engine logs ledger entries only for goods that moved");
+            }
             _ => {}
         }
         self.log.push(Event {
@@ -642,6 +699,38 @@ impl Session {
             text: render::text(&kind),
             kind,
         });
+    }
+}
+
+/// A logged `ledger` event as a journal entry.
+fn ledger_entry(
+    from: &str,
+    to: &str,
+    what: &LedgerGoods,
+    reason: LedgerReason,
+    roll_id: Option<&RollId>,
+) -> Entry {
+    let holder = |h: &str| h.parse().unwrap_or_else(|_| Holder::Creature(h.to_owned()));
+    Entry {
+        from: holder(from),
+        to: holder(to),
+        what: match what {
+            LedgerGoods::Coins { copper } => Asset::Coin { copper: *copper },
+            LedgerGoods::Item { item, quantity } => Asset::Item {
+                item: item.clone(),
+                quantity: *quantity,
+            },
+        },
+        reason: match reason {
+            LedgerReason::Trade => Reason::Trade,
+            LedgerReason::Wage => Reason::Wage,
+            LedgerReason::Loot => Reason::Loot,
+            LedgerReason::Toll => Reason::Toll,
+            LedgerReason::Inn => Reason::Inn,
+            LedgerReason::Theft => Reason::Theft,
+            LedgerReason::Reward => Reason::Reward,
+        },
+        roll: roll_id.map(|r| r.0.clone()),
     }
 }
 

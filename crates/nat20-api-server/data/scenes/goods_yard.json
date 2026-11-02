@@ -1,0 +1,80 @@
+{
+    "id": "goods_yard",
+    "description": "Coin and items changing hands (ITM-6): Bren 5 feet from Maren and from a goblin that carries 7 silver and a Potion of Healing; the goblin's own loft fall drops it.",
+    "creatures": [
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 10.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            },
+            "carries": {
+                "coins": {
+                    "cp": 0,
+                    "sp": 7,
+                    "ep": 0,
+                    "gp": 0,
+                    "pp": 0
+                },
+                "items": [
+                    {
+                        "item": "potion_of_healing",
+                        "quantity": 1
+                    }
+                ]
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "loft_fall",
+            "test": {
+                "kind": "save",
+                "ability": "dexterity"
+            },
+            "dc": 30,
+            "on_failure": [
+                {
+                    "kind": "damage",
+                    "dice": "1d4+19",
+                    "damage_type": "bludgeoning"
+                }
+            ]
+        }
+    ]
+}

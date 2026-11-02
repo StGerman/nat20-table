@@ -4,8 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Ability, ApiError, Awaiting, Event, Handle, OptionId, PointFt, PromptId, RollId, Sheet, Skill,
-    State, V1, Viewer,
+    Ability, ApiError, Awaiting, Coins, Event, Handle, OptionId, PointFt, PromptId, RollId, Sheet,
+    Skill, State, V1, Viewer,
     state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
@@ -195,6 +195,54 @@ pub enum Command {
     Events {
         /// The `seq` to read after; `0` reads from the start.
         since: u64,
+    },
+    /// Hands coin or one carried item to a creature within 5 feet, in explore mode (protocol
+    /// §4.9). The giver pays coin with change, as core makes it; the receiver gets the coins
+    /// named. Logs one public `ledger` entry with reason `trade`.
+    Give {
+        /// The giver.
+        actor: Handle,
+        /// The receiver.
+        to: Handle,
+        /// What is handed over.
+        what: Goods,
+    },
+    /// Tries to take coin or one carried item from a creature within 5 feet without being seen,
+    /// in explore mode (protocol §4.9). The engine rolls the thief's Dexterity (Sleight of Hand)
+    /// against the target's passive Perception. On a success the goods move, with a `ledger`
+    /// entry (reason `theft`) only the thief and the DM see; on a failure nothing moves and the
+    /// public `theft_noticed` says the target caught the thief.
+    Steal {
+        /// The thief.
+        actor: Handle,
+        /// Whom it steals from.
+        target: Handle,
+        /// What it tries to take.
+        what: Goods,
+    },
+    /// Takes everything a fallen or surrendered creature within 5 feet carries, in explore mode
+    /// (protocol §4.9): its coins and items, one public `ledger` entry each, reason `loot`.
+    Loot {
+        /// Who takes.
+        actor: Handle,
+        /// The fallen or surrendered creature.
+        from: Handle,
+    },
+}
+
+/// What `give` and `steal` move.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Goods {
+    /// Coins.
+    Coins {
+        /// How many of each denomination.
+        coins: Coins,
+    },
+    /// One carried item, not one worn or wielded.
+    Item {
+        /// The item's id, as on the sheet (`potion_of_healing`).
+        item: String,
     },
 }
 
@@ -444,6 +492,17 @@ pub enum CommandResult {
     },
     /// The help was given; what it rolled and changed is in `events`.
     Help {},
+    /// The goods changed hands; the `ledger` entry is in `events`.
+    Give {},
+    /// The theft's roll and outcome.
+    Steal {
+        /// The Sleight of Hand roll, also in `events`.
+        roll_id: RollId,
+        /// Whether the goods were taken unseen. The engine decides, never the caller.
+        success: bool,
+    },
+    /// What was taken is in `events`: one `ledger` entry for the coins and one per item.
+    Loot {},
     /// Log entries after `since`.
     Events {
         /// Projected for the request's `viewer`. Entries the viewer may not see are left out.
