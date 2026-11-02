@@ -5,7 +5,7 @@
 // term. Ids every player is shown (scenes, places, creature handles such as goblin_1) are names,
 // not numbers. What a filter can't catch, a secret told in plain prose, is the prompt's job and the
 // leak scan's (crates/nat20-duel/src/leak_scan.rs).
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { TextGuard } from "./state.ts";
 
@@ -58,6 +58,7 @@ const DM_ONLY_KINDS = [
   "flag_set",
   "hazard_triggered",
   "spawned",
+  "creature_placed",
   "hp_fraction_at_most",
   "standing_at_most",
   "leader_down",
@@ -175,6 +176,15 @@ export function packIds(pack: string): PackIds {
       if (spawn.when?.kind === "flag" && spawn.when.flag) hidden.add(spawn.when.flag);
       if (spawn.when?.unless) hidden.add(spawn.when.unless);
       for (const c of spawn.creatures ?? []) creature(c);
+    }
+  }
+  // The adventure's creature list (AGT-24): its entry ids and stat blocks are DM-only too.
+  const skeleton = path.join(pack, "adventure.json");
+  if (existsSync(skeleton)) {
+    const adventure = JSON.parse(readFileSync(skeleton, "utf8")) as { stat_blocks?: Array<{ id: string; monster: string }> };
+    for (const entry of adventure.stat_blocks ?? []) {
+      hidden.add(entry.id);
+      hidden.add(entry.monster.split(/[.:]/).at(-1)!);
     }
   }
   return { dmOnly: new Set([...hidden].filter((id) => !shown.has(id) && /[_:\d]/.test(id))), shown };

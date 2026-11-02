@@ -120,6 +120,10 @@ export function dmPrompt(pack: PackText, human: Handle | undefined, players: Han
           `Your craft skills hold how to run the table well: ${skills.map((s) => `${CRAFT_NAME}:${s.name} (${s.description})`).join("; ")}. Load the one a situation needs, once per scene.`,
           "",
         ];
+  const creatures = pack.adventure.stat_blocks ?? [];
+  const improvised = creatures.length === 0
+    ? "there is no fight with anyone the scene doesn't hold. "
+    : `a fight starts only through the engine. When the story calls for a creature the scene doesn't hold, bring it in with place_creature from this list, never another: ${creatures.map((c) => `${c.id} (${c.name ?? c.monster})`).join(", ")}. When a fight breaks out that none of the scene's encounters holds (a robbery turns to blades, a beast attacks), call start_fight with everyone in it, then narrate. A fight needs a cause in the story: never start one to fill time. What a creature carries is the engine's: never name coin or goods it hasn't shown in an event. `;
   return `You are the Dungeon Master of "${pack.adventure.title}", a game of Dungeons & Dragons (fifth edition, 2024 rules). ${seats}${pronouns}
 
 ## How this table works
@@ -153,7 +157,7 @@ ${surrenderWords}- "The fight is over": narrate how it ends, then go on with the
 ${surrender}
 - Scenes: the skeleton lists the scenes in order with their exits. When an exit's condition holds, narrate the way there, then call load_scene with the next scene's id and the party (${party.join(", ")}), adding the handle of any creature that surrendered when the exit carries captives, and stop: the next scene's opening comes with your next wake, and narration after load_scene is refused. After the last scene, call end_adventure with the closing narration.
 - Memory: remember keeps a fact you established in fiction that the engine doesn't track (a name you improvised, a promise, a door you called locked) for the rest of the adventure. Fiction only: positions, Hit Points and results always come fresh from the engine. Memory can change which check you ask for; it never decides an outcome.
-- Actions the adventure didn't plan for (robbing an NPC, threatening a villager): turn the intent into what the engine can do, usually a ladder check. Nothing changes hands and nobody is hurt unless the engine says so; there is no fight with anyone the scene doesn't hold. A consequence the engine doesn't track is fiction you remember, and the adventure goes on along its exits.
+- Actions the adventure didn't plan for (robbing an NPC, threatening a villager): turn the intent into what the engine can do, usually a ladder check. Nothing changes hands and nobody is hurt unless the engine says so; ${improvised}A consequence the engine doesn't track is fiction you remember, and the adventure goes on along its exits.
 
 Be quick: decide, call the tools, narrate once. Most wakes need one to three tool calls.
 
@@ -338,6 +342,32 @@ export class ModelDm implements DmAgent {
         (i) => this.bound((t) => t.offerSurrender(i.handles)),
       ),
       seatTool("spawn", "Bring in one of the scene's spawns.", { spawn_id: z.string() }, (i) => this.bound((t) => t.spawn(i.spawn_id))),
+      // Only a pack with a creature list (AGT-24) gets the tools for creatures and fights beyond its scenes.
+      ...((this.config.pack.adventure.stat_blocks ?? []).length === 0
+        ? []
+        : [
+          seatTool(
+            "place_creature",
+            "Bring in a creature the scene doesn't hold, from the adventure's list of creatures, when the story needs one (a wolf drawn by blood, a bandit on the road). Give the list entry, a new handle such as bandit_1, and a place or a creature to stand beside. In a fight it joins with its own initiative.",
+            {
+              entry: z.string().describe("An entry of the adventure's creature list."),
+              handle: z.string().describe("A new handle: letters, digits and _, such as bandit_1."),
+              place: z.string().optional().describe("A place in the scene (anchor id)."),
+              beside: handle.optional().describe("A creature to stand beside."),
+            },
+            (i) =>
+              this.bound((t) => {
+                if (Boolean(i.place) === Boolean(i.beside)) return refuse("give either a place or a creature to stand beside");
+                return t.placeCreature(i.entry, i.handle, i.place ? { place: i.place } : { near: i.beside! });
+              }),
+          ),
+          seatTool(
+            "start_fight",
+            "Start a fight the scene's encounters don't hold, among creatures present: at least one on each side, every one standing. The engine rolls Initiative and plays the monsters. It ends only when one side is down.",
+            { participants: z.array(handle).describe("Every creature in the fight.") },
+            (i) => this.bound((t) => t.startFight(i.participants)),
+          ),
+          ]),
       seatTool(
         "request_check",
         "Ask a character for an ability check: one of the scene's checks by its id, or a skill with a DC from the ladder. The engine rolls and decides.",

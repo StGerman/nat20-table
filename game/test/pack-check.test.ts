@@ -45,7 +45,35 @@ test("the published schema is generated from the skeleton's type", () => {
 });
 
 const PLANTS: [string, (skeleton: Adventure, pack: string) => void, string][] = [
-  ["an unread format_version", (s) => (s.format_version = 2), "format_version 2 is not one this game reads"],
+  ["an unread format_version", (s) => (s.format_version = 3), "format_version 3 is not one this game reads"],
+  ["stat_blocks in format 1", (s) => (s.stat_blocks = [{ id: "road_wolf", monster: "wolf", side: "hostile" }]), "stat_blocks needs format_version 2"],
+  [
+    "a stat block the engine doesn't have",
+    (s) => {
+      s.format_version = 2;
+      s.stat_blocks = [{ id: "road_beast", monster: "no_such_beast", side: "hostile" }];
+    },
+    "stat_blocks road_beast: the engine refused it",
+  ],
+  [
+    "an item no creature can carry",
+    (s) => {
+      s.format_version = 2;
+      s.stat_blocks = [{ id: "road_wolf", monster: "wolf", side: "hostile", carries: { items: [{ item: "bag_of_holding", quantity: 1 }] } }];
+    },
+    "stat_blocks road_wolf: the engine refused it",
+  ],
+  [
+    "a stat_blocks entry listed twice",
+    (s) => {
+      s.format_version = 2;
+      s.stat_blocks = [
+        { id: "road_wolf", monster: "wolf", side: "hostile" },
+        { id: "road_wolf", monster: "wolf", side: "hostile" },
+      ];
+    },
+    "stat block entry road_wolf is listed twice",
+  ],
   ["a field the schema doesn't have", (s) => ((s.scenes[0] as Record<string, unknown>).music = "a fiddle"), "adventure.json scenes.0"],
   ["a missing card", (_, pack) => rmSync(path.join(pack, "cards/maren.md")), "cards/maren.md is named but missing"],
   ["an AI seat without a card", (s) => delete s.party[2].card, "party maren has an AI seat and no card"],
@@ -122,13 +150,26 @@ for (const [name, edit, expected] of PLANTS) {
   });
 }
 
+test("a format 2 pack with a creature list passes, and its creatures load beside the party", async () => {
+  const { pack, close } = planted((s) => {
+    s.format_version = 2;
+    s.stat_blocks = [{ id: "road_wolf", monster: "wolf", side: "hostile", name: "Grey wolf", carries: { coins: { sp: 2 } } }];
+  });
+  try {
+    const report = await checkPack(pack);
+    assert.deepEqual(report.problems, []);
+  } finally {
+    close();
+  }
+});
+
 test("the pack:check command prints each problem and exits 1", () => {
-  const { pack, close } = planted((s) => (s.format_version = 2));
+  const { pack, close } = planted((s) => (s.format_version = 3));
   try {
     const cli = path.join(REPO, "game/src/pack/cli.ts");
     const run = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "check", pack], { encoding: "utf8" });
     assert.equal(run.status, 1, run.stderr);
-    assert.match(run.stdout, /1 problem\(s\)\n {2}- format_version 2 is not one this game reads/);
+    assert.match(run.stdout, /1 problem\(s\)\n {2}- format_version 3 is not one this game reads/);
   } finally {
     close();
   }

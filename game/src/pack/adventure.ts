@@ -8,7 +8,10 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 /** The skeleton versions this game reads. A format change adds one and keeps reading the old. */
-export const FORMAT_VERSIONS = [1] as const;
+export const FORMAT_VERSIONS = [1, 2] as const;
+
+/** The first format with `stat_blocks` (API-33, AGT-24): a pack of format 1 may not list them. */
+export const STAT_BLOCKS_SINCE = 2;
 
 /**
  * The sections of a personality card (CHR-5), each a `## ` heading under the card's `# Name`: the
@@ -67,6 +70,33 @@ const Npc = z
       ),
   })
   .describe("A named NPC.");
+
+const coin = z.number().int().nonnegative().optional();
+
+const StatBlock = z
+  .strictObject({
+    _comment: comment,
+    id: id.describe("What the DM names in place_creature, such as road_bandit. DM-only, like the stat block id."),
+    monster: z
+      .string()
+      .min(1)
+      .describe("A stat block id in the engine's registry, as in a scene file's `monster` (`wolf`, or a namespaced id)."),
+    side: z
+      .enum(["hostile", "neutral", "party"])
+      .default("hostile")
+      .describe("Which side of a fight it is on. The engine refuses a side its stat block can't take beside the party."),
+    name: z.string().min(1).max(40).optional().describe("What the table calls the creature instead of the stat block's name, such as Grey wolf."),
+    carries: z
+      .strictObject({
+        coins: z.strictObject({ cp: coin, sp: coin, ep: coin, gp: coin, pp: coin }).optional(),
+        items: z
+          .array(z.strictObject({ item: id.describe("An item id as on a sheet, such as potion_of_healing."), quantity: z.number().int().positive() }))
+          .optional(),
+      })
+      .optional()
+      .describe("Coin and items each such creature carries, taken by loot once it falls or surrenders. Authored here, never by the DM; DM-only until looted."),
+  })
+  .describe("A creature the DM may bring in when a story beat needs one the scene file doesn't hold (API-33, AGT-24).");
 
 const CheckHint = z
   .strictObject({
@@ -133,11 +163,20 @@ export const Adventure = z
       .describe(
         "One glyph per creature kind for the turn-order line of the human's panel (M10 P7, AGT-67), keyed by a party handle or by a creature's kind as the panel names it (\"Goblin Warrior\"). Each is one grapheme, such as one emoji. The bar shows it in front of the handle; the roster never does.",
       ),
+    stat_blocks: z
+      .array(StatBlock)
+      .default([])
+      .describe(
+        `The only creatures the DM may place beyond the scene files (format ${STAT_BLOCKS_SINCE} and later). Empty: the DM improvises no creatures.`,
+      ),
     scenes: z.array(Scene).min(1).describe("In play order; the first places the party, every later one carries it in."),
   })
   .describe("A scenario pack's skeleton (M6 spec §4). DM-only, like the prose and scene files.");
 
 export type Adventure = z.infer<typeof Adventure>;
+
+/** One entry of the pack's `stat_blocks` list. */
+export type StatBlockEntry = z.infer<typeof StatBlock>;
 
 /** Where the skeleton's JSON Schema is published. */
 export const SCHEMA_FILE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../schema/adventure.schema.json");

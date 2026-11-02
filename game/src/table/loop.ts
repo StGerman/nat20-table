@@ -2,6 +2,7 @@
 // deterministic TypeScript, not an agent: after every engine response it reads `awaiting` and
 // decides who is woken next. Agents act only through their bound tools and the human only through
 // the seat; every number the human picks becomes a complete command with no model call (D5).
+import type { StatBlockEntry } from "../pack/adventure.ts";
 import { EngineStopped, type Event, type Handle, type State } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
@@ -38,6 +39,8 @@ export interface LoopOptions {
   finale?: string;
   /** Scenes that offer a Short Rest (the skeleton's `rest`): leaving one unrested reminds the DM once. None by default. */
   rests?: string[];
+  /** The pack's `stat_blocks` list: the creatures the DM may place beyond the scene files (AGT-24). None by default. */
+  statBlocks?: readonly StatBlockEntry[];
   /** Loop steps before the run is stopped: a safety net for scripted runs. Default 5000. */
   maxSteps?: number;
   /**
@@ -320,6 +323,7 @@ export class TableLoop {
       current: () => this.scenes.at(-1),
       ...(options.finale ? { finale: options.finale } : {}),
       ...(options.rests ? { rests: new Set(options.rests) } : {}),
+      ...(options.statBlocks ? { statBlocks: options.statBlocks } : {}),
     });
     this.onScene = options.onScene ?? (() => "continue");
     this.maxSteps = options.maxSteps ?? 5000;
