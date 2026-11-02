@@ -64,6 +64,14 @@ const PLANTS: [string, (skeleton: Adventure, pack: string) => void, string][] = 
     "stat_blocks road_wolf: the engine refused it",
   ],
   [
+    "an NPC naming a stat block entry the list doesn't have",
+    (s) => {
+      s.format_version = 2;
+      s.npcs[0].stat_block = "town_guard";
+    },
+    "npc osric_hale names stat block entry town_guard, which stat_blocks doesn't list",
+  ],
+  [
     "a stat_blocks entry listed twice",
     (s) => {
       s.format_version = 2;
@@ -153,7 +161,11 @@ for (const [name, edit, expected] of PLANTS) {
 test("a format 2 pack with a creature list passes, and its creatures load beside the party", async () => {
   const { pack, close } = planted((s) => {
     s.format_version = 2;
-    s.stat_blocks = [{ id: "road_wolf", monster: "wolf", side: "hostile", name: "Grey wolf", carries: { coins: { sp: 2 } } }];
+    s.stat_blocks = [
+      { id: "road_wolf", monster: "wolf", side: "hostile", name: "Grey wolf", carries: { coins: { sp: 2 } } },
+      { id: "town_guard", monster: "guard", side: "hostile", carries: { coins: { sp: 5 } } },
+    ];
+    s.npcs[0].stat_block = "town_guard";
   });
   try {
     const report = await checkPack(pack);

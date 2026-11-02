@@ -232,7 +232,8 @@ pub enum Command {
     /// (API-33, decision 0035; protocol §4.10). The DM's command: the game's DM tool takes the
     /// stat block and its `carries` from the pack's `stat_blocks` list, never from the DM's own
     /// words. The engine refuses an unknown stat block, a taken handle and an anchor the scene
-    /// doesn't have, and puts the creature on the nearest free spot within 10 feet of `at`.
+    /// doesn't have, and puts the creature on the nearest free spot within 10 feet of `at`. The
+    /// creature takes `side` whatever its faction: the engine sets attitudes to match (MON-11).
     /// During a fight it joins it, as a spawn does. It is gone with the scene, like the scene's
     /// own creatures.
     PlaceCreature {

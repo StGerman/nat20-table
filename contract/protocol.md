@@ -255,10 +255,10 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
   - `name`, when given, is one line of at most 40 characters (`bad_request`).
   - An anchor the scene doesn't have answers `unknown_anchor`, with the scene's anchor ids in the DM's hint.
   - A stat block the registry doesn't have answers `unknown_stat_block`.
-  - A side its stat block can't take beside the scene's creatures (a goblin on the party side) answers `bad_request`.
   - `carries` with an unknown item is `bad_request`.
 - **Where it stands.** On the ground at `at`, or else on the nearest free spot of the 5-foot grid around it, up to 10 feet away, tried in a fixed order: the ring at 5 feet first, then the ring at 10. When every spot is taken, or there is no ground there, it answers `rejected` with `no_room` and nothing is placed.
 - **What follows.**
+  - The creature takes the side it is placed on (MON-11). Where its faction disagrees, such as a townsfolk Guard placed `hostile` or a goblin placed with the party, the engine sets the attitude between it and each creature of the scene, both ways, to match their sides: hostile across party and hostile, friendly on one side, neutral otherwise. A scene file's own creatures and spawns still must agree with their sides (§2.1).
   - The engine runs the creature with its scripted policy, as any scene monster.
   - `name` replaces the stat block's name in every view.
   - The engine logs a DM-only `creature_placed{handle, monster}`; players see the creature in their state like any other, with its health band and visible conditions.
