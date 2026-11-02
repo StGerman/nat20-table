@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.41"
+    "version": "1.0.0-dev.42"
   },
   "$defs": {
     "Ability": {
@@ -1283,6 +1283,24 @@
           },
           "required": [
             "cmd"
+          ]
+        },
+        {
+          "description": "The state after initiative, in combat mode.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "start_fight"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
           ]
         },
         {
@@ -4297,6 +4315,27 @@
             "monster",
             "side",
             "at"
+          ]
+        },
+        {
+          "description": "Starts a fight no authored encounter fits, among creatures present (API-34, decision\n0035; protocol §4.4). The DM's command, and the one exception to \"participants come from\nthe scene file\". Each participant must be in the scene, conscious and on the party or the\nhostile side, listed once; at least one of each side. Initiative is rolled as for an\nauthored fight, with no surprise, no surrender condition and no early end: it ends when\na side is down. The fight is listed in the DM's `encounters` as `fight_<n>`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "start_fight"
+            },
+            "participants": {
+              "description": "Every creature in the fight, in any order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "required": [
+            "cmd",
+            "participants"
           ]
         }
       ],
