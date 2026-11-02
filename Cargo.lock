@@ -1306,6 +1306,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "nat20-world"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nat20_core"
 version = "0.1.0"
 source = "git+https://github.com/StGerman/nat20?rev=38ed11f729fc1958043b6ccc15ff761e52cd05aa#38ed11f729fc1958043b6ccc15ff761e52cd05aa"
