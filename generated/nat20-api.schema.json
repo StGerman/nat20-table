@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.42"
+    "version": "1.0.0-dev.43"
   },
   "$defs": {
     "Ability": {
@@ -4267,7 +4267,7 @@
           ]
         },
         {
-          "description": "Places one monster the scene file doesn't list, for a story beat no authored spawn fits\n(API-33, decision 0035; protocol §4.10). The DM's command: the game's DM tool takes the\nstat block and its `carries` from the pack's `stat_blocks` list, never from the DM's own\nwords. The engine refuses an unknown stat block, a taken handle and an anchor the scene\ndoesn't have, and puts the creature on the nearest free spot within 10 feet of `at`.\nDuring a fight it joins it, as a spawn does. It is gone with the scene, like the scene's\nown creatures.",
+          "description": "Places one monster the scene file doesn't list, for a story beat no authored spawn fits\n(API-33, decision 0035; protocol §4.10). The DM's command: the game's DM tool takes the\nstat block and its `carries` from the pack's `stat_blocks` list, never from the DM's own\nwords. The engine refuses an unknown stat block, a taken handle and an anchor the scene\ndoesn't have, and puts the creature on the nearest free spot within 10 feet of `at`. The\ncreature takes `side` whatever its faction: the engine sets attitudes to match (MON-11).\nDuring a fight it joins it, as a spawn does. It is gone with the scene, like the scene's\nown creatures.",
           "type": "object",
           "properties": {
             "at": {

@@ -2011,6 +2011,17 @@ impl Game {
                     control: c.control,
                 })
                 .collect();
+            if find_room {
+                // A creature the DM places takes the side it is placed on: a townsfolk Guard
+                // placed hostile is hostile to the party (MON-11), whatever its faction says.
+                for c in &new {
+                    for other in &all {
+                        if other.entity != c.entity {
+                            self.align_attitudes(c, other);
+                        }
+                    }
+                }
+            }
             failed = check_sides(&self.engine, &all).err();
         }
         if failed.is_none() {
@@ -2458,6 +2469,35 @@ impl Game {
             .filter_map(|h| self.entity(&h.0).ok())
             .filter(|e| life_state_name(&self.engine, *e) == "normal")
             .collect()
+    }
+
+    /// Makes `a` and `b` hostile to each other when their sides oppose, and not hostile when they
+    /// don't, by overriding both creatures' attitudes towards each other. Leaves a pair whose
+    /// factions already agree with their sides as it is.
+    fn align_attitudes(&mut self, a: &SceneCreature, b: &SceneCreature) {
+        let hostile = systems::factions::mutual_attitude(&self.engine.world, a.entity, b.entity)
+            == Attitude::Hostile;
+        let should_be = matches!(
+            (a.side, b.side),
+            (Side::Party, Side::Hostile) | (Side::Hostile, Side::Party)
+        );
+        if hostile == should_be {
+            return;
+        }
+        let attitude = if should_be {
+            Attitude::Hostile
+        } else if a.side == b.side {
+            Attitude::Friendly
+        } else {
+            Attitude::Neutral
+        };
+        let (ea, eb) = (a.entity, b.entity);
+        self.attitude_overrides(ea, |o| {
+            o.entities.insert(eb, attitude);
+        });
+        self.attitude_overrides(eb, |o| {
+            o.entities.insert(ea, attitude);
+        });
     }
 
     /// Changes `entity`'s attitude overrides in core, adding the component the first time.
