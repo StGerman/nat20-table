@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Decided by:** Stas, on the Milestone 9 system design ("S1 - A / S2 - A / S3 - A / S4 - A Guards/Blades", Milestone 9 implementation thread, 21:12Z). The pay split is Claude's answer to his question "how do we split the contract pay?" in the same thread and is **proposed**: Stas has not confirmed it
+- **Decided by:** Stas, on the Milestone 9 system design ("S1 - A / S2 - A / S3 - A / S4 - A Guards/Blades", Milestone 9 implementation thread, 21:12Z). The pay split was Claude's answer to his question "how do we split the contract pay?" in the same thread; Stas accepted it at 21:33Z ("2 sounds like a good start")
 
 ## Context
 
@@ -32,7 +32,7 @@ For who leads the caravan (S2):
 S4 option A and S2 option A.
 
 - `campaign.json.caravan_owner` is a player handle or `npc:<id>`. When the owner is an NPC, as in the first session, the engine follows `route` from `campaign.json`: any Hired Blade may call `travel` without `to` ("we move on"), `rest_night` and `choose_card`. The DM never calls these commands; it narrates.
-- **Pay (proposed, awaits Stas; settled before API-47).** Each Hired Blade is paid the SRD 5.2.1 skilled-hireling wage, 2 GP a day per person; there is no shared pot. The merchant pays from their own purse (`npc:<id>`), and the engine writes one `wage` ledger entry per Blade. The terms (an advance, the rest on arrival) are in `campaign.json`. A fallen Blade is paid for the days served. If the merchant dies, the unpaid wages stay in their purse and can be looted; that is the party's choice, not arithmetic.
+- **Pay.** Each Hired Blade is paid the SRD 5.2.1 skilled-hireling wage, 2 GP a day per person; there is no shared pot. The merchant pays from their own purse (`npc:<id>`), and the engine writes one `wage` ledger entry per Blade. The terms (an advance, the rest on arrival) are in `campaign.json`. A fallen Blade is paid for the days served. If the merchant dies, the unpaid wages stay in their purse and can be looted; that is the party's choice, not arithmetic.
 
 ## Consequences
 
