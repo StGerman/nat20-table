@@ -14,6 +14,12 @@ export const FORMAT_VERSIONS = [1, 2] as const;
 export const STAT_BLOCKS_SINCE = 2;
 
 /**
+ * The first format whose coin and items change hands at the table (ITM-6): its DM gets `give`,
+ * `steal` and `loot`. *The Silent Mill* (format 1) keeps the Demo Run's scope, where loot is out.
+ */
+export const GOODS_SINCE = 2;
+
+/**
  * The sections of a personality card (CHR-5), each a `## ` heading under the card's `# Name`: the
  * player prompt names some of them, so `pack:check` refuses a card without all of them.
  */

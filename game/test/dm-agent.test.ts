@@ -396,8 +396,19 @@ test("a pack with a creature list gives the DM place_creature and start_fight, a
   const dm = new ModelDm({ pack, human: PARTY.human, players: PARTY.ai, choice: CHOICE });
   const names = dm.seatTools.map((t) => t.name);
   assert.deepEqual(names, [...DM_TOOLS.slice(0, DM_TOOLS.indexOf("spawn") + 1), "place_creature", "start_fight", ...DM_TOOLS.slice(DM_TOOLS.indexOf("spawn") + 1)]);
+  assert.doesNotMatch(dm.systemPrompt, /- Coin and items:/, "format 1 has no goods tools");
   assert.match(dm.systemPrompt, /place_creature from this list, never another: road_wolf \(Grey wolf\)/);
   assert.doesNotMatch(dm.systemPrompt, /there is no fight with anyone the scene doesn't hold/);
   // The Silent Mill lists none, so its DM keeps the old rule and tools.
   assert.match(new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).systemPrompt, /there is no fight with anyone the scene doesn't hold/);
+});
+
+test("a format 2 pack gives the DM give, steal and loot, and the rule that an unseen theft is the thief's alone (ITM-6)", async () => {
+  const pack = { ...PACK, adventure: { ...PACK.adventure, format_version: 2 } };
+  const dm = new ModelDm({ pack, human: PARTY.human, players: PARTY.ai, choice: CHOICE });
+  const names = dm.seatTools.map((t) => t.name);
+  for (const tool of ["give", "steal", "loot"]) assert.ok(names.includes(tool), tool);
+  assert.ok(!names.includes("place_creature"), "no creature list, no place_creature");
+  assert.match(dm.systemPrompt, /A theft that goes unseen you tell to the thief alone/);
+  assert.ok(!new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).seatTools.some((t) => t.name === "steal"), "The Silent Mill has none");
 });
