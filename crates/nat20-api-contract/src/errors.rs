@@ -62,6 +62,8 @@ pub enum ErrorCode {
     UnknownSpawn,
     /// The encounter id is not declared by the scene.
     UnknownEncounter,
+    /// `place_creature` names a stat block the registry doesn't have.
+    UnknownStatBlock,
     /// The actor is not the one the engine is waiting on.
     NotYourTurn,
     /// The prompt id does not match the pending prompt.
@@ -136,4 +138,6 @@ pub enum RejectReason {
     NotFallen,
     /// `loot` of a creature that carries nothing.
     NothingCarried,
+    /// `place_creature` finds no free spot within 10 feet of where it was asked to place.
+    NoRoom,
 }

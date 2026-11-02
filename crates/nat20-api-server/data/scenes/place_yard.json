@@ -1,0 +1,55 @@
+{
+    "id": "place_yard",
+    "description": "Creatures the scene file doesn't list (API-33): Bren at the gate, a goblin standing on the roadside anchor, so a wolf placed there takes the nearest free spot.",
+    "anchors": [
+        {
+            "id": "gate",
+            "name": "The gate",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "roadside",
+            "name": "The roadside",
+            "position_ft": {
+                "x_ft": 30.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "anchor",
+                "anchor": "gate"
+            }
+        },
+        {
+            "handle": "goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "anchor",
+                "anchor": "roadside"
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "roadside_fight",
+            "participants": [
+                "bren",
+                "goblin"
+            ]
+        }
+    ]
+}

@@ -206,6 +206,7 @@ pub fn text(kind: &EventKind) -> String {
                 "appear"
             }
         ),
+        EventKind::CreaturePlaced { handle, .. } => format!("{} appears.", handle.0),
         EventKind::FlagSet { flag } => format!("Flag {flag} is set."),
         EventKind::HazardTriggered { hazard_id, actor } => {
             format!("{} sets off {hazard_id}.", actor.0)
