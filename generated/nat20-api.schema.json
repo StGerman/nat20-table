@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.38"
+    "version": "1.0.0-dev.39"
   },
   "$defs": {
     "Ability": {
@@ -4213,7 +4213,7 @@
           "type": "string"
         },
         "passive_perception": {
-          "description": "Passive Perception: 10 plus the Perception bonus.",
+          "description": "Passive Perception, as core computes it (SRD 5.2.1): 10 plus the Perception bonus, plus 5\nwith Advantage on Perception checks or minus 5 with Disadvantage.",
           "type": "integer",
           "format": "uint8",
           "maximum": 255,

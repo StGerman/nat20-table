@@ -3,6 +3,9 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.39 (2026-11-02)
+- `Sheet.passive_perception` comes from core's `passive_score` (ENG-32, core #69) instead of the adapter's own sum, and now counts Advantage (+5) or Disadvantage (−5) on Perception checks, as SRD 5.2.1 says. No creature in the fixtures has either, so every fixture value stays; only the version line changes. Rule 5: the adapter no longer computes a rule.
+
 ## 1.0.0-dev.38 (2026-10-31)
 - New optional field `summary` on `Option` (from `legal_actions`), additive (protocol.md §4.4 and the §5 visibility table): one to three plain sentences on what the option does, the rule's own short text from core's registry, the same for every viewer, never with a DC, odds or a computed number. Absent when the rule has none (monster attacks such as Nimble Escape). The human's action card and the AI players' option text read it from here, so the table keeps no copy of rule text (design "Option descriptions: one source in core", 2026-10-31).
 - The core pin moves to core #64's head (a7c2ee7: fork `demo` plus `summary` on actions and spells, filled for every action and spell the four pregens take) until it merges.
