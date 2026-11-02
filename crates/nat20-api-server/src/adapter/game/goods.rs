@@ -28,10 +28,11 @@ impl Game {
                 format!("{to} is dead and cannot take anything."),
             ));
         }
-        self.close_finished_fight();
         ensure_inventory(&mut self.engine, giver);
         ensure_inventory(&mut self.engine, receiver);
         let goods = self.move_goods(giver, receiver, what)?;
+        // Only a gift that happens closes a fight that ended by itself; a refused one changes nothing.
+        self.close_finished_fight();
         self.post(
             actor,
             to,
