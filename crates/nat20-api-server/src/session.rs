@@ -9,7 +9,7 @@ use std::{collections::HashMap, path::PathBuf};
 use nat20_ledger::{Asset, Entry, Holder, Journal, Reason};
 
 use nat20_api_contract::{
-    Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, CommandResult, EndCombatReason,
+    Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
     ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
     Mode, MoveTarget, OptionId, PromptId, ReactionTrigger, RollId, RollView, State, Visibility,
 };
@@ -422,6 +422,40 @@ impl Session {
         let result = self.game_mut()?.loot(actor, from);
         self.after_decision(result.clone())?;
         Ok(CommandResult::Loot {})
+    }
+
+    /// Places one monster the scene file doesn't list (`place_creature`, API-33).
+    pub fn place_creature(
+        &mut self,
+        command: &Command,
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
+        let Command::PlaceCreature {
+            handle,
+            monster,
+            side,
+            at,
+            name,
+            carries,
+        } = command
+        else {
+            unreachable!("the server dispatches place_creature here");
+        };
+        let result = self.game_mut()?.place_creature(
+            handle,
+            monster,
+            *side,
+            at,
+            name.as_deref(),
+            carries.as_ref(),
+        );
+        // Like a spawn, placing is not a decision: a pending prompt keeps its id.
+        self.push_entries();
+        result?;
+        Ok(CommandResult::PlaceCreature {
+            state: self.state_for(viewer)?,
+            handle: handle.clone(),
+        })
     }
 
     /// Places a `when: dm` spawn's creatures.

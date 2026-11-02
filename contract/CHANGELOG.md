@@ -3,6 +3,16 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.41 (2026-11-02)
+- New command `place_creature{handle, monster, side, at, name?, carries?}` (API-33, decision 0035; protocol.md §4.10), additive: the DM places one monster the scene file doesn't list, on the nearest free spot within 10 feet of an anchor or a point. During a fight it joins with its own initiative. `carries` comes from the pack's `stat_blocks` list through the game's DM tool, never from the DM's words.
+- New event kind `creature_placed{handle, monster}` (DM only), new error code `unknown_stat_block`, new reject reason `no_room`. `errors.jsonl` lists the new command.
+- New fixture `place_creature.jsonl` (scene `place_yard`, seed 1). It covers:
+  - a named wolf placed beside the goblin that stands on its anchor;
+  - Bren's view of it;
+  - a taken handle, `dm` as a handle, an unknown stat block, an unknown anchor, no ground, and a wolf on the party side;
+  - a wolf placed during a fight, which rolls initiative;
+  - Bren's events, without `creature_placed`.
+
 ## 1.0.0-dev.40 (2026-11-02)
 - New commands `give`, `steal` and `loot` (ITM-6; protocol.md §4.9), additive. Out of combat and within 5 feet: `give` hands coin or one carried item to another creature; `steal` rolls Sleight of Hand against the target's passive Perception (core's `passive_score`, ENG-32) and moves the goods unseen on a success; `loot` takes every coin and pack item of a fallen or surrendered creature. Core moves the coin with change, all or nothing (ENG-28, core #68). Worn and wielded gear never changes hands.
 - New event kinds `ledger` (`from`, `to`, `what`, `reason`, `roll_id?`) and `theft_noticed` (`thief`, `target`), additive. Every movement of coin or items is one `ledger` event and one entry in the session's journal (`nat20-ledger`). A theft entry and its roll are the thief's and the DM's only (§5).

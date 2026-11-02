@@ -34,7 +34,8 @@ use nat20_core::{
         faction::{Attitude, AttitudeOverride, FactionSet},
         health::{hit_point_dice::HitPointDice, hit_points::HitPoints, life_state::LifeState},
         id::{
-            ActionId, ActionVariantId, EffectId, EntityIdentifier, FactionId, ItemId, ResourceId,
+            ActionId, ActionVariantId, EffectId, EntityIdentifier, FactionId, ItemId, Name,
+            ResourceId,
         },
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
         resource::{RechargeRule, ResourceAmount, ResourceBudgetKind, ResourceMap},
@@ -1891,9 +1892,37 @@ impl Game {
     /// returns the new creatures. During a fight they join it, each rolling initiative. On any
     /// failure nothing is placed.
     fn place(&mut self, spawns: &[Spawn]) -> Result<Vec<Entity>, ApiError> {
+        let defs: Vec<nat20_api_contract::SceneCreature> = spawns
+            .iter()
+            .flat_map(|s| s.creatures.iter().cloned())
+            .collect();
+        let entities = self.place_defs(&defs, false)?;
+        for spawn in spawns {
+            self.scene.placed.insert(spawn.id.clone());
+            self.pending.push(Pending {
+                round: self.round(),
+                visibility: Visibility::Dm,
+                kind: EventKind::Spawned {
+                    spawn_id: spawn.id.clone(),
+                    handles: spawn.creatures.iter().map(|c| c.handle.clone()).collect(),
+                },
+            });
+        }
+        self.join_running_fight(&entities);
+        Ok(entities)
+    }
+
+    /// Spawns `defs` and puts each at its placement; with `find_room`, on the nearest free
+    /// spot within 10 feet of it (`no_room` when there is none). Logs nothing and joins no
+    /// fight. On any failure nothing is placed.
+    fn place_defs(
+        &mut self,
+        defs: &[nat20_api_contract::SceneCreature],
+        find_room: bool,
+    ) -> Result<Vec<Entity>, ApiError> {
         let mut new: Vec<SceneCreature> = Vec::new();
         let mut failed = None;
-        for def in spawns.iter().flat_map(|s| &s.creatures) {
+        for def in defs {
             match spawn_creature(&mut self.engine, def, &self.scene.pregens) {
                 Ok(entity) => new.push(SceneCreature {
                     handle: def.handle.0.clone(),
@@ -1922,6 +1951,38 @@ impl Game {
                 .collect();
             failed = check_sides(&self.engine, &all).err();
         }
+        if failed.is_none() {
+            for (def, c) in defs.iter().zip(&new) {
+                let at = match &def.at {
+                    Placement::Point { point } => *point,
+                    Placement::Anchor { anchor } => {
+                        self.scene
+                            .anchors
+                            .iter()
+                            .find(|a| a.id == *anchor)
+                            .expect("anchors are checked before placing")
+                            .position_ft
+                    }
+                };
+                if !find_room {
+                    systems::geometry::teleport_to_ground(
+                        &mut self.engine.world,
+                        &self.engine.geometry,
+                        c.entity,
+                        &to_core_point(at),
+                    );
+                } else if !self.put_on_free_spot(c.entity, at) {
+                    failed = Some(rejected(
+                        RejectReason::NoRoom,
+                        format!(
+                            "There is no free spot within 10 feet of where {} was to stand.",
+                            c.handle
+                        ),
+                    ));
+                    break;
+                }
+            }
+        }
         if let Some(e) = failed {
             for c in &new {
                 let _ = self.engine.despawn(c.entity);
@@ -1929,53 +1990,153 @@ impl Game {
             self.global_seen = self.engine.event_log.events.len();
             return Err(e);
         }
-        for def in spawns.iter().flat_map(|s| &s.creatures) {
-            let c = new
-                .iter()
-                .find(|c| c.handle == def.handle.0)
-                .expect("every spawn creature was placed");
-            let at = match &def.at {
-                Placement::Point { point } => *point,
-                Placement::Anchor { anchor } => {
-                    self.scene
-                        .anchors
-                        .iter()
-                        .find(|a| a.id == *anchor)
-                        .expect("anchors are checked when the scene is read")
-                        .position_ft
-                }
-            };
-            systems::geometry::teleport_to_ground(
-                &mut self.engine.world,
-                &self.engine.geometry,
-                c.entity,
-                &to_core_point(at),
-            );
+        for c in &new {
             self.hp.insert(c.entity, hit_points(&self.engine, c.entity));
             self.scene.handles.insert(c.entity, c.handle.clone());
         }
         // Spawning writes nothing the log shows; skip it.
         self.global_seen = self.engine.event_log.events.len();
-        for spawn in spawns {
-            self.scene.placed.insert(spawn.id.clone());
-            self.pending.push(Pending {
-                round: self.round(),
-                visibility: Visibility::Dm,
-                kind: EventKind::Spawned {
-                    spawn_id: spawn.id.clone(),
-                    handles: spawn.creatures.iter().map(|c| c.handle.clone()).collect(),
-                },
-            });
-        }
         let entities: Vec<Entity> = new.iter().map(|c| c.entity).collect();
         self.scene.creatures.extend(new);
+        Ok(entities)
+    }
+
+    /// New creatures join the running fight, if there is one, each rolling initiative.
+    fn join_running_fight(&mut self, entities: &[Entity]) {
         if let Some(encounter) = self.running_encounter() {
-            for entity in &entities {
+            for entity in entities {
                 self.engine.join_encounter(&encounter, *entity);
             }
-            self.log_joined_initiative(&entities);
+            self.log_joined_initiative(entities);
         }
-        Ok(entities)
+    }
+
+    /// Puts `entity` on the ground at `at`, or on the nearest free spot on the 5-foot grid
+    /// around it, up to 10 feet away, in a fixed order. False when every spot is taken.
+    fn put_on_free_spot(&mut self, entity: Entity, at: PointFt) -> bool {
+        let mut offsets: Vec<(f32, f32)> = vec![(0.0, 0.0)];
+        for ring in [1i32, 2] {
+            for dx in -ring..=ring {
+                for dy in -ring..=ring {
+                    if dx.abs().max(dy.abs()) == ring {
+                        offsets.push((dx as f32 * 5.0, dy as f32 * 5.0));
+                    }
+                }
+            }
+        }
+        for (dx, dy) in offsets {
+            let spot = PointFt {
+                x_ft: at.x_ft + dx,
+                y_ft: at.y_ft + dy,
+                z_ft: at.z_ft,
+            };
+            systems::geometry::teleport_to_ground(
+                &mut self.engine.world,
+                &self.engine.geometry,
+                entity,
+                &to_core_point(spot),
+            );
+            let Some(feet) = systems::geometry::get_foot_position(&self.engine.world, entity)
+            else {
+                continue;
+            };
+            if systems::movement::is_free_spot(&self.engine, entity, &feet) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// `place_creature`: places one monster the scene file doesn't list (API-33).
+    pub fn place_creature(
+        &mut self,
+        handle: &Handle,
+        monster: &str,
+        side: Side,
+        at: &Placement,
+        name: Option<&str>,
+        carries: Option<&nat20_api_contract::Carries>,
+    ) -> Result<(), ApiError> {
+        let taken = self.scene.creatures.iter().any(|c| c.handle == handle.0)
+            || self
+                .scene
+                .spawns
+                .iter()
+                .any(|s| s.creatures.iter().any(|c| c.handle == *handle));
+        if handle.0 == "dm" || !scene::is_plain_name(&handle.0) || taken {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!(
+                    "{} can't be a new creature's handle: it must be a plain name no creature or spawn of this scene uses, and not dm.",
+                    handle.0
+                ),
+            ));
+        }
+        if let Some(name) = name
+            && (name.trim().is_empty() || name.chars().count() > 40 || name.contains('\n'))
+        {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "A display name is one line of at most 40 characters.",
+            ));
+        }
+        if let Placement::Anchor { anchor } = at
+            && !self.scene.anchors.iter().any(|a| a.id == *anchor)
+        {
+            let mut e = error(
+                ErrorCode::UnknownAnchor,
+                format!("Scene {} has no anchor {anchor}.", self.scene.id),
+            );
+            e.hint = Some(ErrorHint {
+                legal_option_ids: Vec::new(),
+                awaiting: None,
+                known_ids: self.scene.anchors.iter().map(|a| a.id.clone()).collect(),
+            });
+            return Err(e);
+        }
+        if monster::check(monster).is_err() {
+            return Err(error(
+                ErrorCode::UnknownStatBlock,
+                format!("There is no stat block {monster}."),
+            ));
+        }
+        let def = nat20_api_contract::SceneCreature {
+            handle: handle.clone(),
+            pregen: None,
+            monster: Some(monster.to_owned()),
+            side,
+            control: Control::Scripted,
+            at: at.clone(),
+            carries: carries.cloned(),
+        };
+        // A fight that ended by itself is closed before anything new is placed.
+        self.drain();
+        self.close_finished_fight();
+        // A creature the scene file doesn't list is the caller's request, not a bad scene.
+        let placed = self
+            .place_defs(std::slice::from_ref(&def), true)
+            .map_err(|mut e| {
+                if e.code == ErrorCode::BadScene {
+                    e.code = ErrorCode::BadRequest;
+                }
+                e
+            })?;
+        if let Some(name) = name {
+            let _ = self
+                .engine
+                .world
+                .insert_one(placed[0], Name::new(name.trim()));
+        }
+        self.pending.push(Pending {
+            round: self.round(),
+            visibility: Visibility::Dm,
+            kind: EventKind::CreaturePlaced {
+                handle: handle.clone(),
+                monster: monster.to_owned(),
+            },
+        });
+        self.join_running_fight(&placed);
+        Ok(())
     }
 
     /// Places the round spawns due since the last look, unless their `unless` holds then.

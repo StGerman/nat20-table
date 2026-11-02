@@ -4,8 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Ability, ApiError, Awaiting, Coins, Event, Handle, OptionId, PointFt, PromptId, RollId, Sheet,
-    Skill, State, V1, Viewer,
+    Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, OptionId, Placement, PointFt,
+    PromptId, RollId, Sheet, Side, Skill, State, V1, Viewer,
     state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
@@ -227,6 +227,29 @@ pub enum Command {
         actor: Handle,
         /// The fallen or surrendered creature.
         from: Handle,
+    },
+    /// Places one monster the scene file doesn't list, for a story beat no authored spawn fits
+    /// (API-33, decision 0035; protocol §4.10). The DM's command: the game's DM tool takes the
+    /// stat block and its `carries` from the pack's `stat_blocks` list, never from the DM's own
+    /// words. The engine refuses an unknown stat block, a taken handle and an anchor the scene
+    /// doesn't have, and puts the creature on the nearest free spot within 10 feet of `at`.
+    /// During a fight it joins it, as a spawn does. It is gone with the scene, like the scene's
+    /// own creatures.
+    PlaceCreature {
+        /// A new handle, unique in the session and the scene's spawns: a plain name, not `dm`.
+        handle: Handle,
+        /// A stat block id, as in a scene file's `monster` (`bandit`, or a namespaced id).
+        monster: String,
+        /// Which side of a fight it is on.
+        side: Side,
+        /// Where it is placed: an anchor of this scene or a point.
+        at: Placement,
+        /// A display name instead of the stat block's, such as `Grey-coated bandit`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+        /// Coin and items it carries, from the pack's `stat_blocks` entry. DM-only until looted.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        carries: Option<Carries>,
     },
 }
 
@@ -503,6 +526,13 @@ pub enum CommandResult {
     },
     /// What was taken is in `events`: one `ledger` entry for the coins and one per item.
     Loot {},
+    /// The state after the creature is placed.
+    PlaceCreature {
+        /// Projected for the request's `viewer`.
+        state: State,
+        /// The new creature's handle.
+        handle: Handle,
+    },
     /// Log entries after `since`.
     Events {
         /// Projected for the request's `viewer`. Entries the viewer may not see are left out.

@@ -324,6 +324,15 @@ pub enum EventKind {
         /// The creatures placed.
         handles: Vec<Handle>,
     },
+    /// The DM placed a creature the scene file doesn't list (`place_creature`). DM only, like
+    /// `spawned`; players see the creature in their state. In a running fight its `initiative`
+    /// roll follows.
+    CreaturePlaced {
+        /// The new creature.
+        handle: Handle,
+        /// Its stat block id.
+        monster: String,
+    },
 }
 
 /// Which rest.
