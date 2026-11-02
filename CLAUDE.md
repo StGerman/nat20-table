@@ -10,7 +10,7 @@ This file holds the rules and points to everything else. When it disagrees with 
 
 | Need | Read |
 |---|---|
-| What we are building and what "done" means | `docs/scope/demo-run-scope.md` |
+| What we are building and what "done" means | `docs/scope/demo-run-scope.md` (the Demo Run, frozen); `docs/scope/living-world-scope.md` (Milestone 9 on) |
 | How the system is split and why | `docs/design/system-design.md` |
 | What to do next: task list and milestone status | `TASKS.md`; until it moves here (CON-1), the project copy at `/mnt/project-files/engine/TASKS.md` is the only live one |
 | Contract v1 behaviour (commands, events, errors, visibility) | `contract/protocol.md` |
@@ -47,7 +47,7 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 
 Milestone 8 (upstream proposal) was dropped on 2026-10-18: upstream declines AI-authored contributions (`docs/decisions/0023-long-lived-fork.md`).
 
-After Milestone 7 the order is 10, then 9. Milestone 10, Speed and polish, was done on 2026-11-01, closed on a `play:cheap` run with Stas at the table (`docs/decisions/0056-m10-closed-on-cheap-run.md`). Milestone 9, Improvised play, is next.
+After Milestone 7 the order is 10, then 9. Milestone 10, Speed and polish, was done on 2026-11-01, closed on a `play:cheap` run with Stas at the table (`docs/decisions/0056-m10-closed-on-cheap-run.md`). Milestone 9, Living world (was Improvised play), is next: `docs/scope/living-world-scope.md`, design `docs/design/m9-system-design.md`.
 
 ## Design in brief
 
@@ -162,6 +162,7 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 
 - `nat20_core` is a git dependency pinned by `rev` to `StGerman/nat20`. Bump the rev only in its own PR, with the full suite green.
 - Only `crates/nat20-api-server/src/adapter/` may `use nat20_core`. Core churn stays inside that module.
+- The world crates `nat20-world` and `nat20-ledger` depend on serde only and never repeat a rule core has; a rule on a creature goes into core (decision 0057).
 - Never work around a core rule in our code. If core is wrong or missing something, fix it in the fork (Rule 6) and pin to it.
 - To develop against a local fork checkout, add `[patch."https://github.com/StGerman/nat20"] nat20_core = { path = "../nat20/core" }` to `.cargo/config.toml`. Never commit it.
 
