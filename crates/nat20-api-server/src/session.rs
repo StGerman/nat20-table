@@ -11,7 +11,8 @@ use nat20_ledger::{Asset, Entry, Holder, Holdings, Journal, Reason};
 use nat20_api_contract::{
     Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
     ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
-    Mode, MoveTarget, OptionId, PromptId, ReactionTrigger, RollId, RollView, State, Visibility,
+    Mode, MoveTarget, OptionId, Pace, PromptId, ReactionTrigger, RejectReason, RollId, RollView,
+    SceneFile, State, Visibility,
 };
 
 use crate::{
@@ -19,8 +20,9 @@ use crate::{
         events::Pending,
         game::{Game, TriggerCause, Wait},
     },
-    errors::{error, with_awaiting},
-    projection::{self, FullState, Viewer},
+    campaign::Campaign,
+    errors::{error, rejected, with_awaiting},
+    projection::{self, FullState, Viewer, WorldFull},
     render, scene,
 };
 
@@ -49,6 +51,8 @@ pub struct Session {
     /// Every time the coin trial balance failed: a creature whose purse in core differs from what
     /// the journal says it holds (AGT-78). Each is also logged on stderr. Empty in a sound run.
     ledger_mismatches: Vec<String>,
+    /// The living world, once `start_campaign` ran (API-41).
+    campaign: Option<Campaign>,
 }
 
 impl Session {
@@ -63,6 +67,7 @@ impl Session {
             roll_keys: HashMap::new(),
             ledger: Journal::default(),
             ledger_mismatches: Vec::new(),
+            campaign: None,
         };
         session.push(Pending {
             round: None,
@@ -150,7 +155,16 @@ impl Session {
                 format!("The viewer {handle} is not a creature in scene {scene_id}."),
             ));
         }
-        match Game::load(self.game.take(), &scene, party) {
+        self.enter_scene(&scene, party)?;
+        Ok(CommandResult::LoadScene {
+            state: self.state_for(viewer)?,
+        })
+    }
+
+    /// Loads a scene file already read and checked, carrying `party` in, and logs
+    /// `scene_loaded`. Nothing changes on a refusal.
+    fn enter_scene(&mut self, scene: &SceneFile, party: &[Handle]) -> Result<(), ApiError> {
+        match Game::load(self.game.take(), scene, party) {
             Ok(game) => self.game = Some(game),
             Err((previous, e)) => {
                 self.game = previous;
@@ -166,11 +180,145 @@ impl Session {
         self.push(Pending::public(
             None,
             EventKind::SceneLoaded {
-                scene_id: scene_id.to_owned(),
+                scene_id: scene.id.clone(),
                 mode: Mode::Explore,
             },
         ));
-        Ok(CommandResult::LoadScene {
+        Ok(())
+    }
+
+    /// Starts the living world from the pack's `campaign.json` (API-41). The DM's command, once,
+    /// with the party in the current scene.
+    pub fn start_campaign(
+        &mut self,
+        party: &[Handle],
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
+        if *viewer != Viewer::Dm {
+            return Err(error(
+                ErrorCode::NotVisible,
+                "start_campaign is the game's setup command; send it as dm.",
+            ));
+        }
+        if self.campaign.is_some() {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "A campaign is already running in this session.",
+            ));
+        }
+        let game = self.game_mut()?;
+        if game.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "A fight is running; the campaign starts out of combat.",
+            ));
+        }
+        if party.is_empty() {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "The party needs at least one creature.",
+            ));
+        }
+        let mut seen = std::collections::HashSet::new();
+        for handle in party {
+            if !seen.insert(&handle.0) {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("The party lists {} twice.", handle.0),
+                ));
+            }
+            if !game.has_creature(&handle.0) {
+                return Err(error(
+                    ErrorCode::UnknownCreature,
+                    format!("There is no creature {} in this scene.", handle.0),
+                ));
+            }
+        }
+        self.campaign = Some(Campaign::read(&self.data_dir, party.to_vec())?);
+        Ok(CommandResult::StartCampaign {
+            state: self.state_for(viewer)?,
+        })
+    }
+
+    /// Travels one leg (API-41): the world moves on, core's time with it, and the scene the
+    /// leg ends in loads with the party.
+    pub fn travel(
+        &mut self,
+        actor: &str,
+        to: Option<&str>,
+        pace: Pace,
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
+        let Some(campaign) = self.campaign.as_ref() else {
+            return Err(error(
+                ErrorCode::NoCampaign,
+                "No campaign is running; the game starts one with start_campaign.",
+            ));
+        };
+        if *viewer != Viewer::Creature(actor.to_owned()) {
+            return Err(rejected(
+                RejectReason::NotDriver,
+                "travel is the caravan's call: its driver sends it as themselves.",
+            ));
+        }
+        if !campaign.drives(actor) {
+            return Err(rejected(
+                RejectReason::NotDriver,
+                format!(
+                    "{actor} does not decide where the caravan goes; the caravan owner {} does.",
+                    campaign.world.state.caravan.owner
+                ),
+            ));
+        }
+        let game = self
+            .game
+            .as_ref()
+            .ok_or_else(|| error(ErrorCode::NoScene, "Load a scene first."))?;
+        if game.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "A fight is running; the caravan moves on once it is over.",
+            ));
+        }
+        if let Some(missing) = campaign.party.iter().find(|h| !game.has_creature(&h.0)) {
+            return Err(error(
+                ErrorCode::UnknownCreature,
+                format!("{} of the party is not in this scene.", missing.0),
+            ));
+        }
+        let (next, leg) = campaign.plan_leg(to, pace)?;
+        let party = campaign.party.clone();
+        let mut moved = campaign.clone();
+        moved.world = next;
+        let scene = scene::read(&self.data_dir, &moved.scene_at(&moved.world.state.at))?;
+        // The scene change's own ten minutes count toward the leg.
+        let on_the_way = leg.minutes.saturating_sub(10);
+        let view = moved.leg_view(actor, &leg);
+        let found = leg
+            .discovered
+            .then(|| moved.world.map.place(&leg.toward).map(|p| p.name.clone()))
+            .flatten();
+        self.campaign = Some(moved);
+        if let Some(game) = self.game.as_mut() {
+            game.pass_minutes(on_the_way);
+        }
+        self.push_entries();
+        self.push(Pending::public(
+            None,
+            EventKind::Traveled { leg: view.clone() },
+        ));
+        if let Some(name) = found {
+            self.push(Pending::public(
+                None,
+                EventKind::PlaceDiscovered {
+                    place: leg.toward.clone(),
+                    name,
+                },
+            ));
+        }
+        self.enter_scene(&scene, &party)?;
+        Ok(CommandResult::Travel {
+            leg: view,
             state: self.state_for(viewer)?,
         })
     }
@@ -690,6 +838,10 @@ impl Session {
             checks: game.checks(),
             encounters: game.encounters(),
             spawns: game.spawns(),
+            world: self.campaign.as_ref().map(|c| WorldFull {
+                view: c.dm_view(),
+                drivers: c.drivers(),
+            }),
         };
         projection::state(viewer, full).ok_or_else(|| {
             error(

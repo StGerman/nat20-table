@@ -4,8 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, OptionId, Placement, PointFt,
-    PromptId, RollId, Sheet, Side, Skill, State, V1, Viewer,
+    Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, LegView, OptionId, Pace, Placement,
+    PointFt, PromptId, RollId, Sheet, Side, Skill, State, V1, Viewer,
     state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
@@ -261,6 +261,30 @@ pub enum Command {
     StartFight {
         /// Every creature in the fight, in any order.
         participants: Vec<Handle>,
+    },
+    /// Starts the living world from the scenario pack's `campaign.json` (API-41; protocol
+    /// §4.11): its map, goods, start place, day and hour, caravan and route. Called once, by the
+    /// game loop as `dm`, after the start place's scene is loaded. The party is carried into
+    /// every scene a journey loads, as `load_scene` carries it.
+    StartCampaign {
+        /// The party: every creature in the current scene that travels with the caravan.
+        party: Vec<Handle>,
+    },
+    /// Travels one leg along one road (API-41; protocol §4.11). Only the caravan's owner, or any
+    /// party member when an NPC owns it, may call it, as themselves: never `dm`. The leg goes as
+    /// far as the day's distance allows and stops on the road when it is spent; the clock moves
+    /// on, core's time with it, and the engine loads the place's scene on arrival or the road
+    /// scene on the road, with the party.
+    Travel {
+        /// Who calls it: the viewer's own creature.
+        actor: Handle,
+        /// A neighbouring place id or a road id. Left out: on along the road, or to the next
+        /// place on the route when an NPC owns the caravan.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        to: Option<String>,
+        /// The pace; no faster than the road allows, and Slow when a party member's Speed is
+        /// halved.
+        pace: Pace,
     },
 }
 
@@ -548,6 +572,18 @@ pub enum CommandResult {
         state: State,
         /// The new creature's handle.
         handle: Handle,
+    },
+    /// The state with the world in it.
+    StartCampaign {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The leg and the state after it, in the scene the leg ended in.
+    Travel {
+        /// The leg, also in the `traveled` event.
+        leg: LegView,
+        /// Projected for the request's `viewer`.
+        state: State,
     },
     /// Log entries after `since`.
     Events {

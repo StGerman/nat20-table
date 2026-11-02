@@ -64,6 +64,8 @@ pub enum ErrorCode {
     UnknownEncounter,
     /// `place_creature` names a stat block the registry doesn't have.
     UnknownStatBlock,
+    /// A world command (`travel`) before `start_campaign`.
+    NoCampaign,
     /// The actor is not the one the engine is waiting on.
     NotYourTurn,
     /// The prompt id does not match the pending prompt.
@@ -140,4 +142,17 @@ pub enum RejectReason {
     NothingCarried,
     /// `place_creature` finds no free spot within 10 feet of where it was asked to place.
     NoRoom,
+    /// `travel` by someone who doesn't drive the caravan: not its owner, or not in the party
+    /// when an NPC owns it.
+    NotDriver,
+    /// `travel` to a place or road no road from here leads to, or, without `to`, an NPC
+    /// owner's route with no next place.
+    NoRoad,
+    /// `travel` at a pace faster than the road or the party allows; the message names the
+    /// fastest.
+    PaceTooFast,
+    /// `travel` after the day's distance is spent; a night's rest starts a new day.
+    DayOver,
+    /// `travel` while a wagon carries more than its limit.
+    Overloaded,
 }

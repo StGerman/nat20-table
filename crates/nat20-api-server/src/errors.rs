@@ -10,6 +10,7 @@ pub fn error(code: ErrorCode, message: impl Into<String>) -> ApiError {
             | ErrorCode::UnsupportedVersion
             | ErrorCode::NoSession
             | ErrorCode::NoScene
+            | ErrorCode::NoCampaign
             | ErrorCode::NotVisible
             | ErrorCode::WrongMode
             | ErrorCode::SurrenderNotAvailable

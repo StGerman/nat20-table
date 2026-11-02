@@ -10,6 +10,7 @@ publish.workspace = true
 [dependencies]
 nat20-api-contract = { workspace = true }
 nat20-ledger = { workspace = true }
+nat20-world = { workspace = true }
 nat20_core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
