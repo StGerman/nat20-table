@@ -23,12 +23,13 @@ This scope sits beside `docs/scope/demo-run-scope.md`; it does not edit it (D0).
 - A graph map of places and roads. Travel time follows SRD pace and the caravan's load. Undiscovered places exist only in the DM view.
 - The caravan is one or more wagons (SRD Cart or Wagon), each with its own cargo and limit; the slowest wagon sets the pace.
 - The night is an inn (a fee) or a camp (rations from the cargo, a watch, a night card). Long Rest follows SRD 5.2.1, including the 16 hours between Long Rests. Going hungry follows the SRD Malnutrition rule and leads to exhaustion.
-- A road event deck: every leg and every night in camp draws a card (a roll with an id); a card offers 2 or 3 choices that the engine resolves; places, NPCs and packs add their own cards. Players see the card's text and choices, never the deck.
+- A road event deck: every leg and every night in camp draws a card (a roll with an id); a card offers 2 or 3 choices that the engine resolves; places, NPCs and packs add their own cards. Players see the card's text and choices, never the deck. A caravan card is the owner's call after asking the party; a Blade card is the Blades' own vote; with a human at the table, no card resolves without them (decision 0058).
 
 ### 2.3 Heroes grow
+- Level-up choices come in plain words, one line each, with a recommended pick.
 - The engine awards XP by CR and splits it by the SRD rule.
 - Level-up runs through the engine, with prompts the player answers. Level 3 is complete in core for all four pregens (S3): Life Domain, Evoker, Berserker Frenzy, domain spells and level 2 spells.
-- A roster file carries the party between runs: XP, choices, purses, gear, exhaustion, the caravan and the day. HP is not stored. A hash chain in `run.json` catches a hand edit.
+- A roster file carries the party between runs: XP, choices, purses, gear, exhaustion, the caravan and the day. HP is not stored. A hash chain in `run.json` catches a hand edit. The roster is written on every exit and after every night.
 - Place NPCs persist as records between visits; they act only while the party is in their place.
 
 ### 2.4 The escort contract

@@ -92,7 +92,7 @@ Every change is additive within v1: the commands and events in the tables below,
 | `start_fight {participants}` | DM | initiative as in an authored fight, default end reasons (API-34) | 1 |
 | `travel {to?, pace}` | caravan owner, or any Hired Blade when the owner is an NPC | checks the edge, hours from SRD pace and load, draws a card, loads the place or road scene | 2 |
 | `rest_night {where: inn \| camp, watch?}` | caravan owner, or a Hired Blade when the owner is an NPC | fee or rations, a night card in camp, Long Rest through core, the Malnutrition save through core when food ran short | 2 |
-| `choose_card {card, choice}` | caravan owner, or a Hired Blade when the owner is an NPC | runs the choice: check, ledger entry, fight, card into the deck | 2 |
+| `choose_card {card, choice}` | by card kind (below): advice or the owner's call on a caravan card, a Blade's vote on a Blade card | runs the choice: check, ledger entry, fight, card into the deck | 2 |
 | `level_up {actor}` | player | at an XP threshold out of combat, opens the `LevelUpSession` prompts as a new `Awaiting::level_up` | 2 |
 | `answer_level_up {prompt_id, choice}` | player | answers one `LevelUpSession` prompt with a structured choice; fixture for a full 2 to 3 | 2 |
 | `save_roster` | game loop | returns the roster file; `new_session{roster?}` reads it | 2 |
@@ -111,10 +111,18 @@ Every change is additive within v1: the commands and events in the tables below,
 | `card_drawn` | card id, zone, deck contents | text and choices | text and choices |
 | `xp_awarded` | yes | yes | no |
 | `place_discovered`, `traveled`, `night` | yes | yes | yes |
+| `card_advice` (a Blade's advice or vote) | yes | yes | yes |
 | `world.npcs` | all, with HP and notes | met NPCs only: name, place, what is visible | met NPCs only: name, place, what is visible |
 | a creature's `carries` | yes | n/a | no until looted; after looting, a `ledger` entry |
 
-Two places where the contract touches the protocol, not only the types. First, §4.4 "fight participants come from the scene file" gets an exception for `start_fight`. Second, the protocol gains the caravan owner: the one viewer whose `travel`, `rest_night` and `choose_card` the engine accepts. `campaign.json.caravan_owner` names it: a player handle or `npc:<id>`. When the owner is an NPC (the first session, S4), the engine follows `route` from `campaign.json`: any Hired Blade calls `travel` without `to` ("we move on"), and a Hired Blade also calls `rest_night` and `choose_card`. The DM never calls these commands; it only narrates.
+Two places where the contract touches the protocol, not only the types. First, §4.4 "fight participants come from the scene file" gets an exception for `start_fight`. Second, the protocol gains the caravan owner: the one viewer whose `travel`, `rest_night` and `choose_card` the engine accepts. `campaign.json.caravan_owner` names it: a player handle or `npc:<id>`. When the owner is an NPC (the first session, S4), the engine follows `route` from `campaign.json`: any Hired Blade calls `travel` without `to` ("we move on"), and a Hired Blade also calls `rest_night`. Who settles a card depends on its kind (below). The DM never calls these commands; it only narrates.
+
+**Card kinds (Stas, 2026-11-02).** Every card names its target: `target: caravan` or `target: blades`.
+
+- **Caravan card** (the road, the wagons, the cargo): the owner decides after asking the party. A Hired Blade's `choose_card` on it is advice, a `card_advice` event every player sees. An AI owner reads the advice, then calls `choose_card`. An NPC owner takes the party's majority, and the card's `owner_pick` on a tie. A card may mark one choice `owner_insists` (the merchant will not risk the cargo): the NPC owner takes it whatever the advice, and the DM narrates why. The owner follows advice most of the time, so `owner_insists` stays rare; the deck linter counts it.
+- **Blade card** (the escort themselves): the Blades decide. Each Blade's `choose_card` is a vote; the majority wins, and the human seat breaks a tie.
+- **The human seat.** While a human is at the table, no card resolves without them. The engine waits for the human seat, which is asked last, after the AI Blades have spoken. The question comes in plain words with the options spelled out, and Enter means "I'll go with the others".
+- **Mix.** A deck for a human run holds about two Blade cards for each caravan card; the deck linter checks the ratio per zone.
 
 ## Core (fork, `demo`)
 
@@ -151,7 +159,8 @@ The game loop gets a second mode: not "Scenes 1 to 6 in order" but "days on the 
 - **Players.** Tools `give`, `steal`, `loot`, `level_up`, `answer_level_up`; the caravan owner (or a Hired Blade when the owner is an NPC) also gets `travel`, `rest_night`, `choose_card`. The viewer stays bound to the agent's own handle. A primer on travel and escort in our own words, with no knowledge of the sandbox. Agents do no arithmetic: they get the finished price, total and balance.
 - **The human in any role (AGT-49 and the TUI).** Haiku suggestions only from what the engine says is available (`legal_actions` plus the `world` block). `/map` (a text sketch of discovered places) in the side panel; `/ledger` moves to the second sandbox with markets. Vera: numbers only where she asked for them; pay at the table sounds like a scene.
 - **Audit.** Beside "every roll cited": the ledger trial balance to the copper against core purses, a leak scan for hidden fields and deck contents in player views, the roster hash chain. The narration judge (AGT-9) gets purses, cargo, the hour and the latest pay in its digest.
-- **Roster.** `rosters/<name>.json` outside the repo (like `runs/`). At start, "new party / continue"; `run.json` records the name and both hashes. Vera must not lose progress: the roster is also written when a run stops on the time limit, not only at the end of the sandbox.
+- **Roster.** `rosters/<name>.json` outside the repo (like `runs/`). At start, "new party / continue"; `run.json` records the name and both hashes. Vera must not lose progress: the roster is written on every exit (the end of the sandbox, the time limit, a quit, a stop screen) and after every night, so a crash loses at most one day.
+- **Level-up in plain words.** Each `answer_level_up` choice carries a one-line summary in plain words and one recommended pick; in the TUI, Enter takes the recommendation. The summaries come from core, like `ActionOption.summary` (rules text lives in core).
 - **DM latency.** The AGT-77 run (22-59-29, `play:unattended`) had DM narration p95 of 9.3 s against a 6 s target. Under decision 0056 that pulls AGT-25 (pipelined narration) and AGT-68 (effort and timeout retune) into Milestone 9. They go in phase 0, before new tool calls: the road adds calls, and the baseline must be clean.
 
 ## Content

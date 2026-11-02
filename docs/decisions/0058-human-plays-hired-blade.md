@@ -32,6 +32,7 @@ For who leads the caravan (S2):
 S4 option A and S2 option A.
 
 - `campaign.json.caravan_owner` is a player handle or `npc:<id>`. When the owner is an NPC, as in the first session, the engine follows `route` from `campaign.json`: any Hired Blade may call `travel` without `to` ("we move on"), `rest_night` and `choose_card`. The DM never calls these commands; it narrates.
+- **Card kinds** (Stas, 2026-11-02, 21:43Z). A caravan card is the owner's call after asking the party: a Blade's choice on it is advice, an NPC owner takes the majority (the card's `owner_pick` on a tie) unless the card marks an `owner_insists` choice, which the DM then explains. A Blade card is the Blades' vote. While a human is at the table no card resolves without them; the human seat is asked last, in plain words, and Enter goes with the others. A deck for a human run holds about two Blade cards per caravan card.
 - **Pay.** Each Hired Blade is paid the SRD 5.2.1 skilled-hireling wage, 2 GP a day per person; there is no shared pot. The merchant pays from their own purse (`npc:<id>`), and the engine writes one `wage` ledger entry per Blade. The terms (an advance, the rest on arrival) are in `campaign.json`. A fallen Blade is paid for the days served. If the merchant dies, the unpaid wages stay in their purse and can be looted; that is the party's choice, not arithmetic.
 
 ## Consequences
