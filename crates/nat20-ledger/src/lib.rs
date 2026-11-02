@@ -12,7 +12,11 @@
 //! and knows nothing of the world or the engine (decision 0057, CI job
 //! `world-pure`).
 
-use std::{collections::BTreeMap, fmt, str::FromStr};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    str::FromStr,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -222,11 +226,34 @@ pub struct Mismatch {
     pub reported: Holdings,
 }
 
-/// Entries in the order they were posted, on top of the opening holdings
+/// Entries in the order they were posted, on top of the opening holdings.
+///
+/// A journal read back from JSON replays every entry through [`Journal::post`],
+/// so a stored journal holds to the same rules as one built in play.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "StoredJournal")]
 pub struct Journal {
     opening: BTreeMap<Holder, Holdings>,
     entries: Vec<Entry>,
+}
+
+/// The journal as stored, before its entries are checked
+#[derive(Deserialize)]
+struct StoredJournal {
+    opening: BTreeMap<Holder, Holdings>,
+    entries: Vec<Entry>,
+}
+
+impl TryFrom<StoredJournal> for Journal {
+    type Error = PostError;
+
+    fn try_from(stored: StoredJournal) -> Result<Self, Self::Error> {
+        let mut journal = Journal::new(stored.opening);
+        for entry in stored.entries {
+            journal.post(entry)?;
+        }
+        Ok(journal)
+    }
 }
 
 impl Journal {
@@ -285,20 +312,24 @@ impl Journal {
     }
 
     /// The trial balance: compares the journal with what the owners of the
-    /// numbers report (core purses and inventories, `nat20-world` wagons) for
-    /// the holders in `reported`. Returns every holder that differs; empty means the books are
-    /// clean. The world account has no owner and is never compared.
+    /// numbers report (core purses and inventories, `nat20-world` wagons).
+    /// Every holder on either side is compared, a missing side counting as
+    /// empty, so a purse the owner forgot to report cannot slip past. Returns
+    /// every holder that differs; empty means the books are clean. The world
+    /// account has no owner and is never compared.
     pub fn check_against(&self, reported: &BTreeMap<Holder, Holdings>) -> Vec<Mismatch> {
         let balances = self.balances();
-        reported
-            .iter()
-            .filter(|(holder, _)| **holder != Holder::World)
-            .filter_map(|(holder, reported)| {
+        let holders: BTreeSet<&Holder> = balances.keys().chain(reported.keys()).collect();
+        holders
+            .into_iter()
+            .filter(|holder| **holder != Holder::World)
+            .filter_map(|holder| {
                 let journal = balances.get(holder).cloned().unwrap_or_default();
-                (journal != *reported).then(|| Mismatch {
+                let reported = reported.get(holder).cloned().unwrap_or_default();
+                (journal != reported).then(|| Mismatch {
                     holder: holder.clone(),
                     journal,
-                    reported: reported.clone(),
+                    reported,
                 })
             })
             .collect()

@@ -142,3 +142,31 @@ fn the_trial_balance_names_every_holder_the_owner_disagrees_with() {
     assert_eq!(mismatches[0].journal, purse(250));
     assert_eq!(mismatches[0].reported, purse(240));
 }
+
+#[test]
+fn the_trial_balance_catches_a_holder_nobody_reported() {
+    let mut journal = Journal::default();
+    journal
+        .post(entry("world", "maren", coin(100), Reason::Loot))
+        .unwrap();
+    let only_bren = BTreeMap::from([(holder("bren"), purse(0))]);
+    let mismatches = journal.check_against(&only_bren);
+    assert_eq!(mismatches.len(), 1);
+    assert_eq!(mismatches[0].holder, holder("maren"));
+    assert_eq!(mismatches[0].reported, Holdings::default());
+}
+
+#[test]
+fn a_stored_journal_replays_its_entries_through_the_rules() {
+    let mut journal = Journal::default();
+    journal
+        .post(entry("world", "bren", coin(100), Reason::Reward))
+        .unwrap();
+    let json = serde_json::to_string(&journal).unwrap();
+    assert_eq!(serde_json::from_str::<Journal>(&json).unwrap(), journal);
+
+    let circular = r#"{"opening":{},"entries":[{"from":"bren","to":"bren","what":{"kind":"coin","copper":5},"reason":"trade"}]}"#;
+    assert!(serde_json::from_str::<Journal>(circular).is_err());
+    let uncited = r#"{"opening":{},"entries":[{"from":"maren","to":"bren","what":{"kind":"coin","copper":5},"reason":"theft"}]}"#;
+    assert!(serde_json::from_str::<Journal>(uncited).is_err());
+}
