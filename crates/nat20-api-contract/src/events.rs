@@ -239,6 +239,28 @@ pub enum EventKind {
         /// Who it was used on: the actor itself when drunk.
         target: Handle,
     },
+    /// Coin or items changed hands: one entry of the ledger (`nat20-ledger`). Public, except a
+    /// theft, which only the thief and the DM see.
+    Ledger {
+        /// Who gave: a creature handle, or `npc:<id>`, `wagon:<n>`, `market:<place>`, `world`.
+        from: String,
+        /// Who received, in the same form.
+        to: String,
+        /// What moved.
+        what: LedgerGoods,
+        /// Why it moved.
+        reason: LedgerReason,
+        /// The roll that decided it, for a theft.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        roll_id: Option<RollId>,
+    },
+    /// A theft failed: the target caught the thief, and nothing moved. Public.
+    TheftNoticed {
+        /// The thief.
+        thief: Handle,
+        /// Who caught them.
+        target: Handle,
+    },
     /// A creature's life state changed.
     LifeState {
         /// Whose.
@@ -462,6 +484,44 @@ pub enum RollOutcome {
     Value,
 }
 
+/// What one ledger entry moves.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum LedgerGoods {
+    /// Coins, as their worth in copper pieces.
+    Coins {
+        /// Worth in copper pieces.
+        copper: u32,
+    },
+    /// Some of one item.
+    Item {
+        /// The item's id, as on the sheet.
+        item: String,
+        /// How many.
+        quantity: u32,
+    },
+}
+
+/// Why something moved in the ledger. A closed set.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LedgerReason {
+    /// Handed over, bought or sold.
+    Trade,
+    /// A Hired Blade's pay.
+    Wage,
+    /// Taken from a fallen or surrendered creature.
+    Loot,
+    /// A toll.
+    Toll,
+    /// An inn's fee.
+    Inn,
+    /// A theft that worked.
+    Theft,
+    /// A reward.
+    Reward,
+}
+
 /// Where a DC came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -478,6 +538,8 @@ pub enum DcSource {
     /// The caster's spell save DC (8 + spellcasting ability modifier + Proficiency Bonus): a
     /// spell's save, or a class feature that uses it, such as Divine Spark.
     SpellSaveDc,
+    /// The target's passive score, as core computes it: passive Perception against a theft.
+    Passive,
 }
 
 /// Why concentration ended (SRD 5.2.1, Concentration).

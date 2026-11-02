@@ -3,7 +3,7 @@
 
 use nat20_api_contract::{
     AgainstKind, CombatOverReason, ConcentrationEndReason, DamageType, DiceRolled, EventKind,
-    Handle, LifeState, Mode, RollKind, RollOutcome, RollView, Side,
+    Handle, LedgerGoods, LedgerReason, LifeState, Mode, RollKind, RollOutcome, RollView, Side,
 };
 
 /// The sentence for one event.
@@ -139,6 +139,30 @@ pub fn text(kind: &EventKind) -> String {
         }
         EventKind::EffectEnded { target, name, .. } => {
             format!("{} is no longer under {}.", target.0, name)
+        }
+        EventKind::Ledger {
+            from,
+            to,
+            what,
+            reason,
+            ..
+        } => {
+            let goods = goods_words(what);
+            match reason {
+                LedgerReason::Trade => format!("{from} gives {to} {goods}."),
+                LedgerReason::Theft => format!("{to} steals {goods} from {from}, unseen."),
+                LedgerReason::Loot => format!("{to} takes {goods} from {from}."),
+                LedgerReason::Wage => format!("{from} pays {to} {goods} in wages."),
+                LedgerReason::Toll => format!("{from} pays {goods} in toll."),
+                LedgerReason::Inn => format!("{from} pays the inn {goods}."),
+                LedgerReason::Reward => format!("{to} is rewarded with {goods}."),
+            }
+        }
+        EventKind::TheftNoticed { thief, target } => {
+            format!(
+                "{} catches {} reaching for their things.",
+                target.0, thief.0
+            )
         }
         EventKind::ItemUsed {
             actor,
@@ -328,4 +352,29 @@ fn list(handles: &[Handle]) -> String {
         .map(|h| h.0.as_str())
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+/// Goods in words: coins as gold, silver and copper pieces (as a shopkeeper counts them), or an
+/// item by name.
+fn goods_words(what: &LedgerGoods) -> String {
+    match what {
+        LedgerGoods::Coins { copper } => {
+            let (gp, sp, cp) = (copper / 100, copper % 100 / 10, copper % 10);
+            let mut parts = Vec::new();
+            for (n, word) in [(gp, "gold"), (sp, "silver"), (cp, "copper")] {
+                if n > 0 {
+                    parts.push(format!("{n} {word}"));
+                }
+            }
+            let pieces = if gp + sp + cp == 1 { "piece" } else { "pieces" };
+            format!("{} {pieces}", parts.join(", "))
+        }
+        LedgerGoods::Item { item, quantity } => {
+            if *quantity == 1 {
+                format!("a {}", item_name(item))
+            } else {
+                format!("{quantity} × {}", item_name(item))
+            }
+        }
+    }
 }

@@ -128,4 +128,12 @@ pub enum RejectReason {
     NoItemLeft,
     /// The area option's aim catches no creature, so nothing is cast and nothing is spent.
     AreaEmpty,
+    /// The creature does not carry that item, or carries it only worn or wielded.
+    NotCarried,
+    /// The purse holds less than the coins asked for, counted in copper with change.
+    InsufficientFunds,
+    /// `loot` of a creature that is neither down nor surrendered.
+    NotFallen,
+    /// `loot` of a creature that carries nothing.
+    NothingCarried,
 }
