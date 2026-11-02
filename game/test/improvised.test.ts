@@ -2,7 +2,12 @@
 // the pack's `stat_blocks` list, with the entry's stat block, side and carries, never the DM's; a
 // fight no encounter holds starts through the engine. Runs the real engine on m5_s3_yard, seeded.
 import assert from "node:assert/strict";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { test } from "node:test";
+import { REPO } from "../src/engine.ts";
+import { packIds } from "../src/table/guards.ts";
 import type { StatBlockEntry } from "../src/pack/adventure.ts";
 import { DmTools, type ScenePasses } from "../src/table/tools.ts";
 import { testTable } from "./helpers.ts";
@@ -64,5 +69,20 @@ test("start_fight puts the table in a fight the scene's encounters don't hold", 
     assert.equal(t.table.inCombat, true);
   } finally {
     t.close();
+  }
+});
+
+test("the leak guard keeps the creature list's entry ids and creature_placed from the players", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "improvised-"));
+  try {
+    const pack = path.join(root, "pack");
+    cpSync(path.join(REPO, "scenarios/the_silent_mill"), pack, { recursive: true });
+    const file = path.join(pack, "adventure.json");
+    const skeleton = JSON.parse(readFileSync(file, "utf8"));
+    writeFileSync(file, JSON.stringify({ ...skeleton, format_version: 2, stat_blocks: [{ ...wolf, monster: "nat20_demo::monster.dire_wolf" }] }));
+    const { dmOnly } = packIds(pack);
+    for (const id of ["road_wolf", "dire_wolf", "creature_placed"]) assert.ok(dmOnly.has(id), id);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });
