@@ -27,6 +27,11 @@ pub const HIDDEN_KEYS: &[&str] = &[
     "advantage_sources",
     // What a creature carries before it is looted (AGT-78): scene and placement data only.
     "carries",
+    // The living world (API-41): a road's deck zone, an NPC owner's route, and whether a place
+    // is discovered are DM data; a player's world holds discovered places only.
+    "zone",
+    "route",
+    "discovered",
 ];
 
 /// Keys a player view carries only for the viewer's own creature.

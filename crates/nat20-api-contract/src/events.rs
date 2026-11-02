@@ -8,8 +8,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AdvantageState, Condition, DamageType, Handle, LifeState, Mode, OptionId, PointFt, RollId,
-    Side, state::CombatOverReason,
+    AdvantageState, Condition, DamageType, Handle, LegView, LifeState, Mode, OptionId, PointFt,
+    RollId, Side, state::CombatOverReason,
 };
 
 /// One log entry.
@@ -332,6 +332,20 @@ pub enum EventKind {
         handle: Handle,
         /// Its stat block id.
         monster: String,
+    },
+    /// The caravan travelled one leg (`travel`). Public. On arrival `place_discovered` may
+    /// follow, then `scene_loaded` for the scene the leg ended in.
+    Traveled {
+        /// The leg.
+        leg: LegView,
+    },
+    /// The party found a place it did not know: it is in every player's `world.places` from
+    /// now on. Public.
+    PlaceDiscovered {
+        /// The place id.
+        place: String,
+        /// Its name.
+        name: String,
     },
 }
 

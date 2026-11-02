@@ -6,6 +6,7 @@
 #![allow(clippy::result_large_err)]
 
 pub mod adapter;
+pub mod campaign;
 pub mod errors;
 pub mod leaks;
 pub mod paths;

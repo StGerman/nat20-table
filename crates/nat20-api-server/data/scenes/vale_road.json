@@ -1,0 +1,46 @@
+{
+    "id": "vale_road",
+    "description": "The test campaign's shared road scene (API-41): the road, and places without a scene of their own.",
+    "anchors": [
+        {
+            "id": "by_the_wagon",
+            "name": "By the wagon",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "ahead",
+            "name": "Up the road",
+            "position_ft": {
+                "x_ft": 30.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "behind",
+            "name": "Back down the road",
+            "position_ft": {
+                "x_ft": -30.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "roadside",
+            "name": "The roadside",
+            "position_ft": {
+                "x_ft": 15.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "by_the_wagon",
+        "ahead"
+    ]
+}

@@ -1,0 +1,26 @@
+{
+    "_comment": "The test campaign the conformance fixtures start (API-41). A scenario pack's campaign.json extends adventure.json; the engine reads only the world block.",
+    "world": {
+        "map": "test_vale",
+        "start": "vale_town",
+        "day": 1,
+        "hour": 8,
+        "road_scene": "vale_road",
+        "route": ["vale_town", "crossing_inn", "old_tower"],
+        "caravan": {
+            "owner": "npc:old_tobin",
+            "wagons": [
+                {
+                    "n": 1,
+                    "vehicle": "wagon",
+                    "vehicle_lb": 400,
+                    "team": [
+                        {"animal": "draft_horse", "capacity_lb": 540},
+                        {"animal": "draft_horse", "capacity_lb": 540}
+                    ],
+                    "cargo": {"wheat": 1000, "rations": 20}
+                }
+            ]
+        }
+    }
+}

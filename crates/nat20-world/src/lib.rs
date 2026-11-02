@@ -10,14 +10,16 @@
 //! that needs a roll takes [`WorldDice`], which the server implements with the
 //! session's dice and logs with an `rN` id.
 
+pub mod campaign;
 pub mod caravan;
 pub mod clock;
 pub mod dice;
 pub mod map;
 pub mod travel;
 
+pub use campaign::{CampaignFile, CampaignWorld};
 pub use caravan::{Caravan, CaravanError, Good, Goods, Owner, Wagon};
 pub use clock::{Clock, Watch};
 pub use dice::{ListDice, WorldDice};
-pub use map::{Place, Position, Road, Terrain, WorldMap};
+pub use map::{MapError, Place, Position, Road, Terrain, WorldMap};
 pub use travel::{Leg, Pace, TravelError, World, WorldState};

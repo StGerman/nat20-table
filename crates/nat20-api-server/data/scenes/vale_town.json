@@ -1,0 +1,46 @@
+{
+    "id": "vale_town",
+    "description": "The test campaign's start (API-41): Bren and Maren by the caravan in the town square.",
+    "anchors": [
+        {
+            "id": "square",
+            "name": "The town square",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "wagon",
+            "name": "By the wagon",
+            "position_ft": {
+                "x_ft": 10.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "anchor",
+                "anchor": "square"
+            }
+        },
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "anchor",
+                "anchor": "wagon"
+            }
+        }
+    ]
+}

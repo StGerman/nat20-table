@@ -12,6 +12,8 @@ pub const DATA_DIR_VAR: &str = "NAT20_DATA_DIR";
 pub const PREGENS_DIR_VAR: &str = "NAT20_PREGENS_DIR";
 /// The directory of terrain meshes, `<map>.obj`.
 pub const MAPS_DIR_VAR: &str = "NAT20_MAPS_DIR";
+/// The directory of shared worlds, `<id>/map.json` and `<id>/goods.json` (API-41).
+pub const WORLDS_DIR_VAR: &str = "NAT20_WORLDS_DIR";
 
 /// The data directory: `$NAT20_DATA_DIR`, else this crate's `data/`.
 pub fn data_dir() -> PathBuf {
@@ -32,6 +34,12 @@ pub fn pregens_dir() -> PathBuf {
 /// The terrain directory: `$NAT20_MAPS_DIR`, else `maps/` at the repository root.
 pub fn maps_dir() -> PathBuf {
     resolve(std::env::var_os(MAPS_DIR_VAR), checkout().join("maps"))
+}
+
+/// The shared worlds directory: `$NAT20_WORLDS_DIR`, else `worlds/` at the repository root. A
+/// scenario pack's own `worlds/<id>/` comes first.
+pub fn worlds_dir() -> PathBuf {
+    resolve(std::env::var_os(WORLDS_DIR_VAR), checkout().join("worlds"))
 }
 
 /// The repository root this binary was built in.

@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.44 (2026-11-02)
+- New commands `start_campaign{party}` and `travel{actor, to?, pace}` (API-41, Milestone 9; protocol.md §4.11), additive. `start_campaign` starts the living world from the pack's `campaign.json` world block and the world's `map.json` and `goods.json`; `travel` moves the caravan one leg along one road under the SRD 5.2.1 Travel Pace, Travel Terrain, Good Roads and Mounts and Cargo rules, moves the clock and core's time, and loads the scene the leg ends in with the party. Only the caravan's owner, or any party member when an NPC owns it, may travel, as itself; never `dm`.
+- New optional `world` in both `State` views (`WorldDm`, `WorldPlayer`; protocol.md §5): clock, position, miles left today, places, roads, caravan. A player sees discovered places only, roads to undiscovered places without where they lead, and no deck zones, route or scene ids.
+- New event kinds `traveled{leg}` and `place_discovered{place, name}` (public). New error code `no_campaign`; new reject reasons `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded`. `errors.jsonl` lists the new commands.
+- New fixture `travel.jsonl` (scene `vale_town`, test world `test_vale`, seed 1). It covers travel before a campaign, `start_campaign` as a player and twice, Bren's world view, `travel` as `dm`, an arrival at a good-road Fast pace, a pace too fast for the hills, Maren following the NPC owner's route until the day is spent, `day_over`, a road that doesn't lead back to town, and both views on the road.
+
 ## 1.0.0-dev.43 (2026-11-02)
 - **Changed meaning:** `place_creature` no longer refuses a side the stat block's faction disagrees with (MON-11; protocol.md §4.10). The creature takes the side it is placed on, and the engine sets the attitude between it and each creature of the scene, both ways, to match. This lets a townsfolk NPC (Guard, Noble, Commoner, Guard Captain, core #70) fight the party. No type changes; the doc comment says so. Scene files are unchanged: their creatures still must agree with their sides.
 - `place_creature.jsonl` pc-10 now places a Guard `hostile` (it used to show a wolf refused on the party side). `start_fight.jsonl` gains sf-3b, a Guard named "Town watchman" placed hostile, who fights beside the wolf in sf-7.

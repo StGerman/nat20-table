@@ -126,6 +126,8 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | `end_combat` | `reason: "surrender"\|"fled"\|"scenario"` | `State` | DM, only when the encounter allows the reason (§4.4) |
 | `spawn` | `spawn_id` (declared in the scene file) | `State` | DM / scenario trigger |
 | `events` | `since`, `viewer` | `{events, next}` | all |
+| `start_campaign` | `party[]` | `State` with `world` | game loop as DM, once (§4.11) |
+| `travel` | `actor`, `to?` (place or road id), `pace: fast\|normal\|slow` | `{leg, state}` | the caravan's driver, as itself (§4.11) |
 
 ### 4.1 Moving
 
@@ -268,6 +270,22 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
   - A pending prompt keeps its id.
 - The result is the state after the placement and the new `handle`.
 
+### 4.11 The living world: campaign and travel
+
+`start_campaign{party}` starts the living world (API-41, Milestone 9). The game loop calls it once as `dm`, out of combat, after loading the start place's scene. The engine reads the scenario pack's `campaign.json`, only its `world` block: `map` (a world id), `start` (a place), `day` (from 1, default 1), `hour`, `caravan` (owner and wagons), `route` and `road_scene`. The world's `map.json` and `goods.json` come from `<pack>/worlds/<id>/`, else from the shared worlds directory (`$NAT20_WORLDS_DIR`, else `worlds/` in the checkout).
+
+- **Checked before anything changes.** A creature viewer gets `not_visible`; a second call `bad_request`; a running fight `wrong_mode`. The party must be non-empty, listed once each, and in the current scene (`unknown_creature`). A missing or invalid campaign, map or goods file, an unknown start or route place, a caravan over its limit, and any place scene or road scene that doesn't read answer `bad_scene`.
+- **The caravan owner.** `caravan.owner` is a player creature's handle (that player plays the Merchant) or `npc:<id>`. The owner is the only creature whose `travel` the engine accepts; when an NPC owns the caravan, any party member may call it, and `travel` without `to` follows `route`. The DM never calls `travel`: the engine refuses it as `dm` with `not_driver`.
+- After `start_campaign` every `State` carries `world`: the DM's `WorldDm`, a player's `WorldPlayer` (§5).
+
+`travel{actor, to?, pace}` travels one leg along one road. `actor` must be the viewer itself and a driver (`rejected`, `not_driver`); before `start_campaign` it answers `no_campaign`, in a fight `wrong_mode`, and with a party member missing from the scene `unknown_creature`.
+
+- **Where.** `to` is a place id at the other end of a road from here, or a road id from here. Without `to` the caravan goes on along the road it stands on, or, when an NPC owns it, to the next place of the route; a player owner without `to` is `bad_request`. On a road, `to` may name the end the caravan heads for or the one it came from (turning back). Anything else is `rejected`, `no_road`, as is an NPC route with no next place.
+- **Pace (SRD 5.2.1).** Fast is 4 miles an hour and 30 a day, Normal 3 and 24, Slow 2 and 18. A road's terrain sets its maximum pace (Travel Terrain), a good road raises it by one step, and a pace faster than that is `rejected`, `pace_too_fast`, with the fastest in the message. A party member at half Speed or less forces Slow (Slower Travelers); nothing halves Speed out of combat until exhaustion (ENG-29).
+- **How far.** A day of travel is one day's distance at the pace. Mixed paces share it: a mile at Fast spends 1/30 of the day, at Normal 1/24, at Slow 1/18, and `world.today` shows the miles left at each pace. A leg goes as far as the day allows and stops on the road when it is spent; once nothing is left, `travel` is `rejected`, `day_over`, until a night's rest (API-42). Extended travel past a day (the Constitution saves) is not offered. A wagon over its limit (five times its team's carrying capacity, including the vehicle; Mounts and Cargo) stops the caravan: `rejected`, `overloaded`.
+- **What follows, in order.** The world clock moves on by the leg's minutes and core's time with it, less the ten minutes the scene change itself passes (§2), so effects that run out end and are logged. `traveled{leg}` is logged (public), then `place_discovered{place, name}` (public) when the leg reached a place the party didn't know. Then the engine loads the scene the leg ended in, carrying the party as `load_scene` does: the place's own scene on arrival, else the campaign's `road_scene`, which also stands for the road. `scene_loaded` follows. If that load fails, the world has still moved and the error says why.
+- The result is the `leg` (also in `traveled`) and the state in the new scene.
+
 ## 5. Visibility (projection per `viewer`)
 
 | Data | `dm` | Owner (viewer = that creature) | Other player viewer |
@@ -295,6 +313,12 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
 | `creature_placed` (the stat block id) | yes | no | no (the creature itself is in state) |
 | `ledger` entries for `trade` and `loot`, and `theft_noticed` | yes | yes | yes (handing over or picking up is seen) |
 | A `steal`'s Sleight of Hand roll and its `theft` ledger entry | yes | the thief only | no (the victim doesn't know) |
+| `world.clock`, `world.at`, `world.today`, `world.caravan` (wagons, limits, loads, cargo) | yes | yes | yes |
+| `world.places`: undiscovered places, and each place's `discovered` and `scene` | yes | no; discovered places only, without `scene` | no; discovered places only |
+| `world.roads`: a road to an undiscovered place, and every road's deck `zone` | yes | no; the road's known end in `unexplored`, never where it leads; no `zone` | no; as the owner |
+| `world.route` (where an NPC owner travels) | yes | no | no |
+| `world.drives` (whether this player may call `travel`) | n/a | yes | yes, for themselves |
+| `traveled`, `place_discovered` | yes | yes | yes |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
 
 The server projects; it doesn't authenticate. The engine trusts its single client. Projection exists so that a bug in the orchestrator's tool layer can't leak numbers, not to stop a hostile client.
@@ -335,6 +359,8 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 - `condition_added`, `condition_removed`, `effect_started` and `effect_ended` are found by comparing each creature with what the log last showed, since core logs none of them. Each comes right after the entry that explains it: Unconscious after the creature's `life_state`; an effect that runs out at a turn boundary after that `turn_start` or `turn_end`; a spell's effect after its caster's `concentration_ended` for that spell. Anything else, such as an effect a spell or Help applies, or a Help's Advantage used up by a roll, comes at the end of the command's entries. Ends come before starts, so a spell cast again shows its old effect ending first. `condition_*` is public with `source` absent for now; `effect_*` goes to the DM and the target's owner.
 | `spawned` | `spawn_id`, `handles[]` (DM only) |
 | `creature_placed` | `handle`, `monster` (DM only): a `place_creature` (§4.10) |
+| `traveled` | `leg: {actor, road, pace, miles, minutes, arrived, at}` (public): one `travel` leg (§4.11) |
+| `place_discovered` | `place`, `name` (public): the party found a place it did not know (§4.11) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
 ```json
@@ -365,11 +391,12 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `no_session` / `no_scene` | Lifecycle order is wrong | false |
 | `unknown_creature` / `unknown_option` / `unknown_check` / `unknown_anchor` / `unknown_spawn` / `unknown_encounter` | The id isn't in this scene | true |
 | `unknown_stat_block` | `place_creature` names a stat block the registry doesn't have | true |
+| `no_campaign` | A world command (`travel`) before `start_campaign` | false |
 | `not_your_turn` | `actor` isn't `awaiting.actor` (also returned by `legal_actions`, not an empty list) | true, after waiting |
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room`, `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded` | true |
 | `surrender_not_available` | `end_combat{surrender}` while the running encounter's surrender condition does not hold, or it declares none; nothing changed | false |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |
