@@ -155,6 +155,12 @@ impl Game {
         picks: &[String],
     ) -> Result<Option<LevelUpChoice>, ApiError> {
         self.entity(handle)?;
+        if self.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "A fight is running; finish the level-up once it is over.",
+            ));
+        }
         let Some(asked) = self
             .level_up
             .as_ref()
@@ -217,8 +223,20 @@ impl Game {
                 )
             }
         };
-        self.advance_level_up(&decision)?;
+        if let Err(e) = self.advance_level_up(&decision) {
+            self.level_up = None;
+            return Err(e);
+        }
         self.next_level_up_choice()
+    }
+
+    /// Asks the next choice; a level-up that cannot go on is closed, so it never blocks the next.
+    fn next_level_up_choice(&mut self) -> Result<Option<LevelUpChoice>, ApiError> {
+        let next = self.continue_level_up();
+        if next.is_err() {
+            self.level_up = None;
+        }
+        next
     }
 
     /// The level-up open now: its character and prompt id, for `awaiting`.
@@ -253,7 +271,7 @@ impl Game {
 
     /// Answers every prompt that needs no player (the class, a choice with one option) and
     /// asks the first that does. When nothing is left, logs `leveled_up` and closes it.
-    fn next_level_up_choice(&mut self) -> Result<Option<LevelUpChoice>, ApiError> {
+    fn continue_level_up(&mut self) -> Result<Option<LevelUpChoice>, ApiError> {
         loop {
             let open = self.level_up.as_ref().expect("a level-up is open");
             let Some(prompt) = open.session.pending_prompts().first().cloned() else {
