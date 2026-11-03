@@ -127,6 +127,8 @@ test("options that don't fit the action zone scroll to keep the lit one in view,
 test("the header names the adventure, the scene by number, the mode, the party's minutes and /help", () => {
   assert.equal(headerText({ title: "The Silent Mill", scene: { number: 4, of: 6 }, mode: "Round 5", minutes: 14 }), "The Silent Mill · Scene 4 of 6 · Round 5 · 14 min · /help");
   assert.equal(headerText({}), "/help");
+  // On the road the header carries the game day, in a fight too (the bar shows the round then).
+  assert.equal(headerText({ title: "Fair in Wend", mode: "Round 2", day: "Day 2, evening", minutes: 31 }), "Fair in Wend · Round 2 · Day 2, evening · 31 min · /help");
 });
 
 test("on a terminal, PgUp scrolls the story and holds it while lines arrive, and End brings it back", async () => {
