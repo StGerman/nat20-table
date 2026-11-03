@@ -6,7 +6,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{caravan::Caravan, escort::EscortTerms};
+use std::collections::BTreeMap;
+
+use crate::{
+    caravan::Caravan,
+    escort::EscortTerms,
+    map::{MapError, WorldMap},
+};
 
 /// A campaign file as the engine reads it: only its `world` block.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -38,6 +44,10 @@ pub struct CampaignWorld {
     pub route: Vec<String>,
     /// The scene for the road and for places without a scene of their own
     pub road_scene: String,
+    /// The pack's own scene for a place, by place id (MAP-7): a shared world map names no scenes,
+    /// so the pack that plays on it says which of its scenes each place loads
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub scenes: BTreeMap<String, String>,
     /// The escort contract the party is hired on, if any (API-47)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub escort: Option<EscortTerms>,
@@ -45,6 +55,26 @@ pub struct CampaignWorld {
 
 fn first_day() -> u32 {
     1
+}
+
+impl CampaignWorld {
+    /// Gives each place the pack names in `scenes` that scene, over any the map sets. A place the
+    /// map doesn't have is an error.
+    pub fn place_scenes(&self, map: &mut WorldMap) -> Result<(), MapError> {
+        for (place, scene) in &self.scenes {
+            let found = map
+                .places
+                .iter_mut()
+                .find(|p| p.id == *place)
+                .ok_or_else(|| {
+                    MapError(format!(
+                        "the campaign gives a scene to unknown place {place}"
+                    ))
+                })?;
+            found.scene = Some(scene.clone());
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -67,5 +97,29 @@ mod tests {
         .unwrap();
         assert_eq!(file.world.day, 1);
         assert_eq!(file.world.route, ["town", "inn"]);
+        assert!(file.world.scenes.is_empty());
+    }
+
+    #[test]
+    fn the_pack_names_each_place_s_scene_over_the_map() {
+        let mut map: WorldMap = serde_json::from_str(
+            r#"{"places": [{"id": "town", "name": "Town", "kind": "town"}, {"id": "inn", "name": "Inn", "kind": "inn", "scene": "map_inn"}], "roads": []}"#,
+        )
+        .unwrap();
+        let world: CampaignWorld = serde_json::from_str(
+            r#"{"map": "vale", "start": "town", "hour": 8, "road_scene": "road", "scenes": {"town": "fair_town", "inn": "fair_inn"}, "caravan": {"owner": "npc:tobin", "wagons": []}}"#,
+        )
+        .unwrap();
+        world.place_scenes(&mut map).unwrap();
+        assert_eq!(
+            map.place("town").unwrap().scene.as_deref(),
+            Some("fair_town")
+        );
+        assert_eq!(map.place("inn").unwrap().scene.as_deref(), Some("fair_inn"));
+        let stray: CampaignWorld = serde_json::from_str(
+            r#"{"map": "vale", "start": "town", "hour": 8, "road_scene": "road", "scenes": {"moon": "x"}, "caravan": {"owner": "npc:tobin", "wagons": []}}"#,
+        )
+        .unwrap();
+        assert!(stray.place_scenes(&mut map).is_err());
     }
 }
