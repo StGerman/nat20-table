@@ -22,6 +22,9 @@ use crate::{caravan::Owner, dice::WorldDice, map::WorldMap};
 /// The die a draw rolls: card `i` of a pile of `n` takes the faces from `i * 100 / n + 1`.
 pub const DRAW_DIE: u32 = 100;
 
+/// The SRD DC ladder: the only DCs a card's check may use.
+pub const DC_LADDER: [u32; 6] = [5, 10, 15, 20, 25, 30];
+
 /// The most cards a zone may hold, so every card of a pile keeps at least one face of the
 /// draw die.
 pub const MAX_PILE: usize = DRAW_DIE as usize;
@@ -135,12 +138,11 @@ pub enum Effect {
     Check {
         /// Who rolls
         who: Who,
-        /// The ability (`strength` .. `charisma`)
+        /// The ability (`strength` .. `charisma`): the skill's own
         ability: String,
-        /// The skill, in snake_case, when the check uses one
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        skill: Option<String>,
-        /// The DC, from the SRD DC ladder (5 to 30)
+        /// The skill, in snake_case
+        skill: String,
+        /// The DC, from the SRD DC ladder: 5, 10, 15, 20, 25 or 30
         dc: u32,
         /// What happens on a success
         #[serde(default)]
@@ -149,7 +151,8 @@ pub enum Effect {
         #[serde(default)]
         failure: Vec<Effect>,
     },
-    /// A fight: these stat blocks are placed hostile on the road and the fight starts
+    /// A fight: these stat blocks are placed hostile on the road and the fight starts. It
+    /// comes last in its list
     Fight {
         /// Stat block ids, one per creature
         monsters: Vec<String>,
@@ -354,7 +357,7 @@ impl Deck {
     /// Checks the deck against the map: unique ids, 2 or 3 choices with unique ids, an
     /// `owner_pick` that names a choice, at most one `owner_insists` and only on caravan
     /// cards, zones that are a road zone or a place, `requires` that names a place, DCs
-    /// from 5 to 30, `add_card` that names a chained card, every chained card added by
+    /// on the ladder, a fight only last in its list, `add_card` that names a chained card, every chained card added by
     /// some choice, and no pile over [`MAX_PILE`] cards. Goods and stat blocks are the
     /// server's to check.
     pub fn validate(&self, map: &WorldMap) -> Result<(), DeckError> {
@@ -408,6 +411,22 @@ impl Deck {
         if let Some(((zone, _), n)) = piles.iter().find(|(_, n)| **n > MAX_PILE) {
             return bad(format!("zone {zone} holds {n} cards, more than {MAX_PILE}"));
         }
+        fn fight_last(effects: &[Effect]) -> bool {
+            effects.iter().enumerate().all(|(i, e)| match e {
+                Effect::Fight { .. } => i + 1 == effects.len(),
+                Effect::Check {
+                    success, failure, ..
+                } => fight_last(success) && fight_last(failure),
+                _ => true,
+            })
+        }
+        if let Some(card) = self
+            .cards
+            .iter()
+            .find(|c| !c.choices.iter().all(|ch| fight_last(&ch.effects)))
+        {
+            return bad(format!("card {}: a fight comes last in its list", card.id));
+        }
         let mut added = BTreeSet::new();
         for card in &self.cards {
             for effect in Deck::effects(card) {
@@ -427,7 +446,7 @@ impl Deck {
                         }
                         added.insert(next.as_str());
                     }
-                    Effect::Check { dc, .. } if !(5..=30).contains(dc) => {
+                    Effect::Check { dc, .. } if !DC_LADDER.contains(dc) => {
                         return bad(format!("card {} has a DC {dc} off the ladder", card.id));
                     }
                     Effect::Fight { monsters } if monsters.is_empty() => {
@@ -656,7 +675,7 @@ mod tests {
                  "owner_pick": "push",
                  "choices": [
                    {"id": "push", "text": "Push it out.", "effects": [
-                     {"do": "check", "who": "blades", "ability": "strength", "skill": "athletics", "dc": 12,
+                     {"do": "check", "who": "blades", "ability": "strength", "skill": "athletics", "dc": 10,
                       "failure": [{"do": "delay", "minutes": 60}]}]},
                    {"id": "unload", "text": "Unload and reload.", "owner_insists": true,
                     "effects": [{"do": "delay", "minutes": 120}]}
@@ -722,6 +741,21 @@ mod tests {
         let mut d = deck();
         d.cards[0].choices.truncate(1);
         assert!(d.validate(&map).unwrap_err().0.contains("2 or 3 choices"));
+
+        let mut d = deck();
+        d.cards[1].choices[1].effects = vec![
+            Effect::Fight {
+                monsters: vec!["wolf".into()],
+            },
+            Effect::Delay { minutes: 10 },
+        ];
+        assert!(d.validate(&map).unwrap_err().0.contains("fight comes last"));
+
+        let mut d = deck();
+        if let Effect::Check { dc, .. } = &mut d.cards[0].choices[0].effects[0] {
+            *dc = 12;
+        }
+        assert!(d.validate(&map).unwrap_err().0.contains("off the ladder"));
     }
 
     #[test]
@@ -838,7 +872,7 @@ mod tests {
             .unwrap();
         // The human seat breaks Blade votes only; the owner's pick breaks this tie.
         assert_eq!((done.choice.as_str(), done.decided), ("push", Decided::Tie));
-        assert!(matches!(done.effects[0], Effect::Check { dc: 12, .. }));
+        assert!(matches!(done.effects[0], Effect::Check { dc: 10, .. }));
     }
 
     #[test]
