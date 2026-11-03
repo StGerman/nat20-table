@@ -39,8 +39,10 @@ nat20-world = { path = "crates/nat20-world" }
 # a7c2ee7 = core #64's head (`summary` on actions and spells). 52fddc3 = demo 0ef2669 (core #64
 # and core #68: paying makes change, give_item, give_money) plus core #69 (passive_score,
 # ENG-32), core #69's head until it merges. 38ed11f = 52fddc3 plus core #70 (townsfolk stat
-# blocks, MON-11), core #70's head until it merges.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "38ed11f729fc1958043b6ccc15ff761e52cd05aa" }
+# blocks, MON-11), core #70's head until it merges. cdc2c32 = 38ed11f plus core #72 (a Long Rest
+# needs 1 Hit Point and waits 16 hours, ENG-30) and core #73 (Exhaustion and malnutrition,
+# ENG-29), core #73's head until the stack merges.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "cdc2c32a0753626b482c0e5ad6aaec7e49af4a4f" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
