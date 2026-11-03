@@ -1,21 +1,14 @@
 //! Experience and level-ups in play (API-44): the XP a won fight earns (ENG-31) and core's
 //! `LevelUpSession`, asked one choice at a time of the levelling character's player.
 
-use nat20_api_contract::{LevelUpChoice, LevelUpOption, PromptId};
+use nat20_api_contract::{LevelUpChoice, PromptId, RosterChoice};
 use nat20_core::{
-    components::{
-        level::CharacterLevels,
-        level_up::{ChoiceItem, LevelUpPrompt},
-        skill::Skill,
-    },
-    registry::registry::SpellsRegistry,
+    components::{level::CharacterLevels, level_up::LevelUpPrompt},
     systems::level_up::{LevelUpDecision, LevelUpSession},
 };
 
 use super::*;
-
-/// The id `level_up` gives a skill prompt, which core asks without one.
-const SKILLS_PROMPT: &str = "choice.skills";
+use crate::adapter::choices::{self, Offer};
 
 /// A level-up in progress: core's session and the choice the player is asked.
 pub(super) struct OpenLevelUp {
@@ -30,14 +23,8 @@ pub(super) struct OpenLevelUp {
 
 struct Asked {
     choice: LevelUpChoice,
-    /// Core's option for each of `choice.options`, in the same order.
-    items: Vec<Item>,
-}
-
-#[derive(Clone)]
-enum Item {
-    Choice(ChoiceItem),
-    Skill(Skill),
+    /// The prompt as offered, with core's options.
+    offer: Offer,
 }
 
 impl Game {
@@ -181,52 +168,28 @@ impl Game {
                 ),
             ));
         }
-        let picks = if picks.is_empty() {
-            asked.choice.recommended.as_slice()
+        let picks: Vec<String> = if picks.is_empty() {
+            asked.choice.recommended.clone()
         } else {
-            picks
+            picks.to_vec()
         };
-        let mut chosen: Vec<Item> = Vec::new();
-        for pick in picks {
-            let index = asked.choice.options.iter().position(|o| o.id == *pick);
-            match index {
-                Some(i) if !chosen.iter().any(|c| same(c, &asked.items[i])) => {
-                    chosen.push(asked.items[i].clone());
-                }
-                _ => return Err(bad_picks(&asked.choice)),
-            }
-        }
-        if chosen.len() != usize::from(asked.choice.picks) {
+        let Some(chosen) = choices::pick(&asked.offer, &picks) else {
             return Err(bad_picks(&asked.choice));
-        }
-        let decision = match chosen.first() {
-            Some(Item::Skill(_)) => LevelUpDecision::SkillProficiency(
-                chosen
-                    .iter()
-                    .filter_map(|c| match c {
-                        Item::Skill(s) => Some(*s),
-                        Item::Choice(_) => None,
-                    })
-                    .collect(),
-            ),
-            _ => {
-                let id = self.level_up_spec_id();
-                LevelUpDecision::from_choice(
-                    id,
-                    chosen
-                        .iter()
-                        .filter_map(|c| match c {
-                            Item::Choice(item) => Some(item.clone()),
-                            Item::Skill(_) => None,
-                        })
-                        .collect(),
-                )
-            }
+        };
+        let decision = choices::decision(&asked.offer, &chosen);
+        let made = RosterChoice {
+            level: asked.choice.level,
+            prompt_id: asked.offer.id.clone(),
+            picks,
         };
         if let Err(e) = self.advance_level_up(&decision) {
             self.level_up = None;
             return Err(e);
         }
+        self.history
+            .entry(handle.to_owned())
+            .or_default()
+            .push(made);
         self.next_level_up_choice()
     }
 
@@ -244,15 +207,6 @@ impl Game {
         let open = self.level_up.as_ref()?;
         let asked = open.asked.as_ref()?;
         Some((open.handle.clone(), asked.choice.prompt_id.0.clone()))
-    }
-
-    /// Core's id of the prompt the open choice answers.
-    fn level_up_spec_id(&self) -> String {
-        let open = self.level_up.as_ref().expect("a level-up is open");
-        match open.session.pending_prompts().first() {
-            Some(LevelUpPrompt::Choice(spec)) => spec.id.clone(),
-            _ => SKILLS_PROMPT.to_owned(),
-        }
     }
 
     fn advance_level_up(&mut self, decision: &LevelUpDecision) -> Result<(), ApiError> {
@@ -300,98 +254,32 @@ impl Game {
     /// The answer to a prompt that has only one, or `None` when the player chooses.
     fn automatic(&self, prompt: &LevelUpPrompt) -> Result<Option<LevelUpDecision>, ApiError> {
         let open = self.level_up.as_ref().expect("a level-up is open");
-        match prompt {
-            LevelUpPrompt::Choice(spec) if spec.id == "choice.class" => {
-                let class = self
-                    .engine
-                    .world
-                    .get::<&CharacterLevels>(open.entity)
-                    .ok()
-                    .and_then(|levels| levels.latest_class().cloned());
-                let item = spec
-                    .options
-                    .iter()
-                    .find(|o| matches!(o, ChoiceItem::Class(id) if Some(id) == class.as_ref()));
-                match item {
-                    Some(item) => Ok(Some(LevelUpDecision::single_choice_with_id(
-                        spec.id.clone(),
-                        item.clone(),
-                    ))),
-                    None => Err(error(
-                        ErrorCode::Internal,
-                        format!("{} has no class to gain a level in.", open.handle),
-                    )),
-                }
-            }
-            LevelUpPrompt::Choice(spec) if spec.options.len() <= usize::from(spec.picks) => {
-                Ok(Some(LevelUpDecision::from_choice(
-                    spec.id.clone(),
-                    spec.options.clone(),
-                )))
-            }
-            LevelUpPrompt::Choice(_) => Ok(None),
-            LevelUpPrompt::SkillProficiency {
-                skills, choices, ..
-            } if skills.len() <= usize::from(*choices) => {
-                Ok(Some(LevelUpDecision::SkillProficiency(skills.clone())))
-            }
-            LevelUpPrompt::SkillProficiency { .. } => Ok(None),
-            LevelUpPrompt::AbilityScores(..)
-            | LevelUpPrompt::AbilityScoreImprovement { .. }
-            | LevelUpPrompt::ReplaceSpells { .. } => Err(error(
+        choices::automatic(&self.engine.world, open.entity, prompt).map_err(|why| {
+            error(
                 ErrorCode::NotImplemented,
-                format!(
-                    "{}'s level-up asks for ability scores or a spell swap, which level_up \
-                     cannot ask yet.",
-                    open.handle
-                ),
-            )),
-        }
+                format!("{}'s level-up cannot go on: {why}.", open.handle),
+            )
+        })
     }
 
     /// The choice the player answers for `prompt`, with its recommended picks.
     fn ask(&mut self, prompt: &LevelUpPrompt) -> Asked {
         self.level_up_prompts += 1;
         let open = self.level_up.as_ref().expect("a level-up is open");
-        let (id, label, picks, mut items): (String, String, u8, Vec<(LevelUpOption, Item)>) =
-            match prompt {
-                LevelUpPrompt::Choice(spec) => (
-                    spec.id.clone(),
-                    spec.label.clone(),
-                    spec.picks,
-                    spec.options
-                        .iter()
-                        .map(|item| (choice_option(item), Item::Choice(item.clone())))
-                        .collect(),
-                ),
-                LevelUpPrompt::SkillProficiency {
-                    skills, choices, ..
-                } => (
-                    SKILLS_PROMPT.to_owned(),
-                    "Skill Proficiency".to_owned(),
-                    *choices,
-                    skills
-                        .iter()
-                        .map(|skill| (skill_option(*skill), Item::Skill(*skill)))
-                        .collect(),
-                ),
-                _ => unreachable!("automatic() answers or refuses every other prompt"),
-            };
-        // Core keeps some options in hash sets: the wire lists them by id.
-        items.sort_by(|a, b| a.0.id.cmp(&b.0.id));
-        let (options, items): (Vec<LevelUpOption>, Vec<Item>) = items.into_iter().unzip();
-        let recommended = self.recommended(open, &id, picks, &options);
+        let offer = choices::offer(prompt);
+        let options: Vec<_> = offer.options.iter().map(|(o, _)| o.clone()).collect();
+        let recommended = self.recommended(open, &offer.id, offer.picks, &options);
         Asked {
             choice: LevelUpChoice {
                 prompt_id: PromptId(format!("l{}", self.level_up_prompts)),
                 actor: Handle(open.handle.clone()),
                 level: open.level,
-                label,
-                picks,
+                label: offer.label.clone(),
+                picks: offer.picks,
                 options,
                 recommended,
             },
-            items,
+            offer,
         }
     }
 
@@ -402,7 +290,7 @@ impl Game {
         open: &OpenLevelUp,
         prompt_id: &str,
         picks: u8,
-        options: &[LevelUpOption],
+        options: &[nat20_api_contract::LevelUpOption],
     ) -> Vec<String> {
         let from_file = self
             .pregen_of(open.entity)
@@ -427,14 +315,6 @@ impl Game {
     }
 }
 
-fn same(a: &Item, b: &Item) -> bool {
-    match (a, b) {
-        (Item::Choice(a), Item::Choice(b)) => a == b,
-        (Item::Skill(a), Item::Skill(b)) => a == b,
-        _ => false,
-    }
-}
-
 fn bad_picks(choice: &LevelUpChoice) -> ApiError {
     let ids: Vec<&str> = choice.options.iter().map(|o| o.id.as_str()).collect();
     rejected(
@@ -447,39 +327,4 @@ fn bad_picks(choice: &LevelUpChoice) -> ApiError {
             ids.join(", ")
         ),
     )
-}
-
-/// A core choice option on the wire: the id's last part, its name, and a spell's summary.
-fn choice_option(item: &ChoiceItem) -> LevelUpOption {
-    let full = item.to_string();
-    let id = full.rsplit(['.', ':']).next().unwrap_or(&full).to_owned();
-    let summary = match item {
-        ChoiceItem::Spell(spell, _) => {
-            SpellsRegistry::get(spell).and_then(|s| s.action().summary.clone())
-        }
-        _ => None,
-    };
-    LevelUpOption {
-        name: names::title(&id.replace('_', " ")),
-        id,
-        summary,
-    }
-}
-
-/// A skill option on the wire: its id as the contract spells it and the ability it uses.
-fn skill_option(skill: Skill) -> LevelUpOption {
-    let name = sheet::core_skill_word(skill);
-    LevelUpOption {
-        id: name.to_lowercase().replace(' ', "_"),
-        summary: Some({
-            let ability = format!("{:?}", skill.ability());
-            let article = if ability.starts_with(['A', 'E', 'I', 'O', 'U']) {
-                "An"
-            } else {
-                "A"
-            };
-            format!("{article} {ability} skill.")
-        }),
-        name,
-    }
 }

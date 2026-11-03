@@ -6,16 +6,18 @@ use std::{
     path::PathBuf,
 };
 
-use nat20_api_contract::{EquipSlot, PregenFile};
+use nat20_api_contract::{EquipSlot, PregenFile, RosterCharacter};
 use nat20_core::hecs::Entity;
 use nat20_core::{
     components::{
         ability::{Ability, AbilityScoreDistribution},
+        exhaustion::{Exhaustion, Hunger},
         id::{
             BackgroundId, ClassId, DEFAULT_NAMESPACE, ItemId, NAMESPACE_SEPARATOR, Name, SpeciesId,
             SubspeciesId,
         },
         items::{equipment::slots::EquipmentSlot, inventory::Inventory, money::MonetaryValue},
+        level::CharacterLevels,
         level_up::{ChoiceItem, ChoiceSpec, LevelUpPrompt},
         modifier::ModifierSource,
         resource::RechargeRule,
@@ -29,7 +31,11 @@ use nat20_core::{
     },
 };
 
-use super::sheet::{core_ability, core_skill};
+use super::{
+    choices,
+    game::goods,
+    sheet::{core_ability, core_skill},
+};
 
 /// Pregens live in `pregens/` at the repository root, with the rest of our adventure content,
 /// unless `NAT20_PREGENS_DIR` names another directory ([`crate::paths`]).
@@ -89,6 +95,104 @@ pub fn spawn(engine: &mut EngineState, file: &PregenFile) -> Result<Entity, Stri
             Err(format!("Pregen {}: {e}.", file.id))
         }
     }
+}
+
+/// Spawns a character the roster saved (API-45): its pregen at the pregen's level, the levels
+/// it gained since with the answers it gave, its XP, gear, coins and Exhaustion, after one Long
+/// Rest by the rule. On failure nothing is left behind.
+pub fn spawn_saved(
+    engine: &mut EngineState,
+    file: &PregenFile,
+    saved: &RosterCharacter,
+) -> Result<Entity, String> {
+    let who = &saved.handle.0;
+    if saved.pregen != file.id {
+        return Err(format!(
+            "{who} is saved as pregen {}, not {}",
+            saved.pregen, file.id
+        ));
+    }
+    if saved.level < file.level || saved.level > 20 {
+        return Err(format!(
+            "{who} is saved at level {}, below the pregen's {} or above 20",
+            saved.level, file.level
+        ));
+    }
+    let mut kit = file.clone();
+    kit.equipment = saved.equipment.clone();
+    kit.money = "0 GP".to_owned();
+    let entity = spawn(engine, &kit).map_err(|e| format!("{who}: {e}"))?;
+    match grow(engine, entity, file.level, saved) {
+        Ok(()) => Ok(entity),
+        Err(e) => {
+            let _ = engine.despawn(entity);
+            Err(format!("{who}: {e}"))
+        }
+    }
+}
+
+fn grow(
+    engine: &mut EngineState,
+    entity: Entity,
+    from: u8,
+    saved: &RosterCharacter,
+) -> Result<(), String> {
+    for level in from + 1..=saved.level {
+        let mut session = LevelUpSession::new(&engine.world, entity);
+        while let Some(prompt) = session.pending_prompts().first().cloned() {
+            let decision = match choices::automatic(&engine.world, entity, &prompt) {
+                Ok(Some(decision)) => decision,
+                Ok(None) => {
+                    let offer = choices::offer(&prompt);
+                    let made = saved
+                        .choices
+                        .iter()
+                        .find(|c| c.level == level && c.prompt_id == offer.id)
+                        .ok_or_else(|| {
+                            format!(
+                                "level {level} asks {} and the roster has no answer",
+                                offer.id
+                            )
+                        })?;
+                    let chosen = choices::pick(&offer, &made.picks).ok_or_else(|| {
+                        format!(
+                            "level {level}: {} are not {} options of {}",
+                            made.picks.join(", "),
+                            offer.picks,
+                            offer.id
+                        )
+                    })?;
+                    choices::decision(&offer, &chosen)
+                }
+                Err(why) => return Err(format!("level {level}: {why}")),
+            };
+            session
+                .advance(engine, &decision)
+                .map_err(|e| refusal(&prompt, level, e))?;
+        }
+    }
+    if let Ok(mut levels) = engine.world.get::<&mut CharacterLevels>(entity) {
+        let have = levels.experience();
+        levels.add_experience(saved.xp.saturating_sub(have));
+    }
+    systems::inventory::add_money(&mut engine.world, entity, goods::monetary(&saved.purse));
+    // The next session starts after a Long Rest (design S2 §4): full Hit Points, uses back,
+    // and one Exhaustion level gone unless malnutrition holds it.
+    let _ = systems::health::heal_full(&mut engine.world, entity);
+    systems::resources::recharge(&mut engine.world, entity, &RechargeRule::Daily);
+    systems::exhaustion::restore(
+        engine,
+        entity,
+        Exhaustion {
+            level: saved.exhaustion,
+            from_malnutrition: saved.malnutrition,
+        },
+        Hunger {
+            days_without_food: saved.days_without_food,
+        },
+    );
+    systems::exhaustion::reduce_after_long_rest(engine, entity);
+    Ok(())
 }
 
 fn build(engine: &mut EngineState, entity: Entity, file: &PregenFile) -> Result<(), String> {

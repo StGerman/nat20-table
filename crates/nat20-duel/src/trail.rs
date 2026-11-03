@@ -44,7 +44,7 @@ pub fn record_fixture(seed: u32) -> String {
 
 fn play(client: &mut Client, seed: Option<u32>) -> (String, Vec<Event>) {
     let mut t = String::new();
-    call(client, &mut t, Command::NewSession { seed });
+    call(client, &mut t, Command::NewSession { seed, roster: None });
     scenes(client, &mut t);
 
     t.push_str("\nFinal state:\n");

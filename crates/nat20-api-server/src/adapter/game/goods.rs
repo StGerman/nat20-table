@@ -338,7 +338,7 @@ fn goods_ok(what: &Goods) -> Result<(), ApiError> {
     }
 }
 
-pub(super) fn monetary(coins: &Coins) -> MonetaryValue {
+pub(crate) fn monetary(coins: &Coins) -> MonetaryValue {
     let mut value = MonetaryValue::new();
     for (currency, amount) in [
         (Currency::Copper, coins.cp),

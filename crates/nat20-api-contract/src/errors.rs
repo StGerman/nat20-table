@@ -84,6 +84,9 @@ pub enum ErrorCode {
     NotImplemented,
     /// The scene file, or a pregen or stat block it names, is missing or invalid. Nothing changed.
     BadScene,
+    /// `new_session` with a roster this engine cannot read (another format, a pregen it has no
+    /// file for), or a scene whose roster character cannot be rebuilt. Nothing changed.
+    BadRoster,
     /// An engine bug. The request did nothing; details go to stderr.
     Internal,
 }

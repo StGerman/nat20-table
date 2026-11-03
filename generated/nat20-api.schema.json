@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.47"
+    "version": "1.0.0-dev.48"
   },
   "$defs": {
     "Ability": {
@@ -1648,6 +1648,24 @@
           ]
         },
         {
+          "description": "The saved party.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "save_roster"
+            },
+            "roster": {
+              "description": "Write it to a file as is; `new_session{roster}` reads it back.",
+              "$ref": "#/$defs/Roster"
+            }
+          },
+          "required": [
+            "cmd",
+            "roster"
+          ]
+        },
+        {
           "description": "The level-up's first open choice, or none when core needed no answer from the player.",
           "type": "object",
           "properties": {
@@ -2277,6 +2295,36 @@
         }
       ]
     },
+    "EquipSlot": {
+      "description": "Where an item is worn or wielded.",
+      "oneOf": [
+        {
+          "description": "Body armour.",
+          "type": "string",
+          "const": "armor"
+        },
+        {
+          "description": "A melee weapon in the main hand; a two-handed weapon takes both hands.",
+          "type": "string",
+          "const": "melee_main_hand"
+        },
+        {
+          "description": "A melee weapon in the off hand.",
+          "type": "string",
+          "const": "melee_off_hand"
+        },
+        {
+          "description": "A ranged weapon in the main hand.",
+          "type": "string",
+          "const": "ranged_main_hand"
+        },
+        {
+          "description": "A ranged weapon in the off hand.",
+          "type": "string",
+          "const": "ranged_off_hand"
+        }
+      ]
+    },
     "ErrorCode": {
       "description": "Machine-readable failure classes.",
       "oneOf": [
@@ -2379,6 +2427,11 @@
           "description": "The scene file, or a pregen or stat block it names, is missing or invalid. Nothing changed.",
           "type": "string",
           "const": "bad_scene"
+        },
+        {
+          "description": "`new_session` with a roster this engine cannot read (another format, a pregen it has no\nfile for), or a scene whose roster character cannot be rebuilt. Nothing changed.",
+          "type": "string",
+          "const": "bad_roster"
         },
         {
           "description": "An engine bug. The request did nothing; details go to stderr.",
@@ -4541,6 +4594,46 @@
         "z_ft"
       ]
     },
+    "PregenItem": {
+      "description": "One item the character carries.",
+      "type": "object",
+      "properties": {
+        "_comment": {
+          "description": "Notes for humans reading the file. The engine ignores it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "equip": {
+          "description": "The slot it is worn or wielded in. Omitted: carried. Only a quantity of 1 can be equipped.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EquipSlot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "item": {
+          "description": "Item registry id, e.g. `nat20_core::item.longsword`.",
+          "type": "string"
+        },
+        "quantity": {
+          "description": "How many, at least 1.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "quantity"
+      ]
+    },
     "ProficiencyLevel": {
       "description": "Proficiency in a skill.",
       "oneOf": [
@@ -4893,6 +4986,17 @@
             "cmd": {
               "type": "string",
               "const": "new_session"
+            },
+            "roster": {
+              "description": "The party saved by an earlier session's `save_roster` (protocol §4.15). Each scene\npregen creature whose handle is in it is rebuilt as saved, after a Long Rest; a\ncampaign on the same map takes up its world.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Roster"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "seed": {
               "description": "Dice seed. The same seed and the same request stream give an identical log. When\nomitted, the engine picks one and logs it in `session_started`; replaying with that\nseed reproduces the session. Every value, 0 included, is a real seed.",
@@ -5553,6 +5657,19 @@
           ]
         },
         {
+          "description": "Saves the party for the next game session (API-45; protocol §4.15): the campaign's\nparty, else every party character built from a pregen, and the world. DM only.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "save_roster"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
           "description": "Opens a level-up (API-44; protocol §4.14) for a character whose sheet says\n`xp.can_level_up`, out of combat. Core applies the new level and answers what has one\nanswer; the result carries the first choice left for the player, if any. Sent again while\nthe level-up is open, it returns the open choice. As the actor itself, never `dm`.",
           "type": "object",
           "properties": {
@@ -6136,6 +6253,166 @@
             "advantage"
           ]
         }
+      ]
+    },
+    "Roster": {
+      "description": "A party saved between game sessions.",
+      "type": "object",
+      "properties": {
+        "characters": {
+          "description": "The party's characters, in party order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RosterCharacter"
+          }
+        },
+        "format": {
+          "description": "Format version, 1. Another is refused.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "world": {
+          "description": "The world as the engine left it: the clock, where the caravan is, its wagons and cargo,\nthe places discovered, the deck. Absent when no campaign ran. Opaque to clients: give it\nback unchanged.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RosterWorld"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "characters"
+      ]
+    },
+    "RosterCharacter": {
+      "description": "One character as it left a game session: a pregen with a history. Hit Points are not kept;\nthe next session starts after a Long Rest.",
+      "type": "object",
+      "properties": {
+        "choices": {
+          "description": "The answers given in play to the level-up choices past the pregen's level.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RosterChoice"
+          }
+        },
+        "days_without_food": {
+          "description": "Days in a row it has eaten nothing.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "equipment": {
+          "description": "What it carries, equipped items with their slot.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PregenItem"
+          }
+        },
+        "exhaustion": {
+          "description": "Exhaustion level, 0 to 6.",
+          "type": "integer",
+          "format": "uint8",
+          "default": 0,
+          "maximum": 255,
+          "minimum": 0
+        },
+        "handle": {
+          "description": "Its handle, which a scene's pregen creature of the same handle takes on.",
+          "$ref": "#/$defs/Handle"
+        },
+        "level": {
+          "description": "Character level.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "malnutrition": {
+          "description": "How many of those levels malnutrition caused: a Long Rest can't remove them until it\neats a full day's food.",
+          "type": "integer",
+          "format": "uint8",
+          "default": 0,
+          "maximum": 255,
+          "minimum": 0
+        },
+        "pregen": {
+          "description": "The pregen file it was built from.",
+          "type": "string"
+        },
+        "purse": {
+          "description": "The coins in its purse.",
+          "$ref": "#/$defs/Coins"
+        },
+        "xp": {
+          "description": "Experience Points.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "handle",
+        "pregen",
+        "level",
+        "xp",
+        "equipment",
+        "purse"
+      ]
+    },
+    "RosterChoice": {
+      "description": "One level-up choice answered in play.",
+      "type": "object",
+      "properties": {
+        "level": {
+          "description": "The level it was made at.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "picks": {
+          "description": "The option ids picked, as `level_up` listed them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "prompt_id": {
+          "description": "The prompt's id, e.g. `choice.spells` or `choice.skills`.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "prompt_id",
+        "picks"
+      ]
+    },
+    "RosterWorld": {
+      "description": "The world part of a roster.",
+      "type": "object",
+      "properties": {
+        "map": {
+          "description": "The world map's id, e.g. `wend`. A campaign on another map starts fresh.",
+          "type": "string"
+        },
+        "state": {
+          "description": "The world's state, as the engine wrote it."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "map",
+        "state"
       ]
     },
     "Sheet": {
