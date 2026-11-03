@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.49"
+    "version": "1.0.0-dev.50"
   },
   "$defs": {
     "Ability": {
@@ -2471,6 +2471,98 @@
         }
       }
     },
+    "EscortBlade": {
+      "description": "One Hired Blade's service and pay.",
+      "type": "object",
+      "properties": {
+        "handle": {
+          "description": "The Blade.",
+          "$ref": "#/$defs/Handle"
+        },
+        "paid_cp": {
+          "description": "Copper paid so far.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "served": {
+          "description": "Days served: one for each night they lived through, and the day of arrival.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "handle",
+        "served",
+        "paid_cp"
+      ]
+    },
+    "EscortDm": {
+      "description": "The escort contract as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "contract": {
+          "description": "The terms and each Blade's service and pay, as the players see them.",
+          "$ref": "#/$defs/EscortView"
+        },
+        "purse_cp": {
+          "description": "What the merchant's purse holds now, in copper pieces.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "contract",
+        "purse_cp"
+      ]
+    },
+    "EscortView": {
+      "description": "The escort contract as the party knows it: the terms, and each Blade's days and pay.",
+      "type": "object",
+      "properties": {
+        "advance_days": {
+          "description": "Days of wages paid ahead when the contract started.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "blades": {
+          "description": "Each Blade, in party order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EscortBlade"
+          }
+        },
+        "destination": {
+          "description": "Where the caravan is escorted to; the rest of the pay is due on arrival.",
+          "type": "string"
+        },
+        "done": {
+          "description": "Whether the caravan reached the destination and the pay was settled.",
+          "type": "boolean"
+        },
+        "merchant": {
+          "description": "Who pays: the caravan's owner, `npc:<id>`.",
+          "type": "string"
+        },
+        "wage_cp": {
+          "description": "The wage per Blade per day, in copper pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "merchant",
+        "destination",
+        "wage_cp",
+        "advance_days",
+        "blades",
+        "done"
+      ]
+    },
     "Event": {
       "description": "One log entry.",
       "type": "object",
@@ -3585,6 +3677,24 @@
           "required": [
             "kind",
             "minutes"
+          ]
+        },
+        {
+          "description": "The caravan reached the escort contract's destination and the Blades' pay was settled\n(API-47), after its `wage` ledger entries. Public.",
+          "type": "object",
+          "properties": {
+            "destination": {
+              "description": "The destination, a place id.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "escort_settled"
+            }
+          },
+          "required": [
+            "kind",
+            "destination"
           ]
         },
         {
@@ -7663,6 +7773,17 @@
           "description": "The time.",
           "$ref": "#/$defs/ClockView"
         },
+        "escort": {
+          "description": "The escort contract, when the party is hired on one (API-47).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EscortDm"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "npcs": {
           "description": "Every place NPC, alive or dead, met or not, in the world file's order (API-48).",
           "type": "array",
@@ -7736,6 +7857,17 @@
         "drives": {
           "description": "Whether this player may call `travel`: the owner, or any party member when an NPC owns\nthe caravan.",
           "type": "boolean"
+        },
+        "escort": {
+          "description": "The escort contract, when the party is hired on one (API-47).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EscortView"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "npcs": {
           "description": "The place NPCs the party has met, in the world file's order (API-48).",

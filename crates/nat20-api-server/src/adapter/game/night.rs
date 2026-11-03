@@ -107,6 +107,18 @@ impl Game {
         copper: u32,
         reason: LedgerReason,
     ) -> Result<(), ApiError> {
+        self.receive("world", handle, copper, reason)
+    }
+
+    /// Pays `copper` into a creature's purse from a holder outside core (`world`, or a world
+    /// NPC's purse as `npc:<id>`) and logs the `ledger` entry (public).
+    pub fn receive(
+        &mut self,
+        from: &str,
+        handle: &str,
+        copper: u32,
+        reason: LedgerReason,
+    ) -> Result<(), ApiError> {
         let entity = self.entity(handle)?;
         goods::ensure_inventory(&mut self.engine, entity);
         let value = goods::monetary(&Coins {
@@ -122,7 +134,7 @@ impl Game {
                 )
             })?;
         self.post(
-            "world",
+            from,
             handle,
             LedgerGoods::Coins { copper },
             reason,

@@ -259,6 +259,9 @@ pub fn text(kind: &EventKind) -> String {
             }
         }
         EventKind::TimeLost { minutes } => format!("The party loses {minutes} minutes."),
+        EventKind::EscortSettled { destination } => {
+            format!("The caravan reaches {destination}; the Blades are paid what they are owed.")
+        }
         EventKind::XpAwarded {
             actor,
             xp,

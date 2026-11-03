@@ -6,6 +6,12 @@
         "day": 1,
         "hour": 8,
         "road_scene": "vale_road",
+        "escort": {
+            "_comment": "The party is hired to see Old Tobin's wagon to the Old Tower (API-47): 2 gp a day each, one day ahead, the rest on arrival, from his 20 gp.",
+            "destination": "old_tower",
+            "advance_days": 1,
+            "purse_cp": 2000
+        },
         "route": ["vale_town", "crossing_inn", "old_tower"],
         "caravan": {
             "owner": "npc:old_tobin",
