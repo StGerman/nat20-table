@@ -11,7 +11,7 @@
 //! 1/24, at Slow 1/18. Extended travel past that (the Constitution saves) is not
 //! offered.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +21,7 @@ use crate::{
     deck::{Deck, DeckError, DeckState, When},
     dice::WorldDice,
     map::{MapError, Position, WorldMap},
+    npcs::{self, NpcDef, NpcFile, NpcState},
 };
 
 /// The hour the party wakes after a night.
@@ -99,6 +100,9 @@ pub struct WorldState {
     /// The road event deck: what is in play, the discard, the card on the table
     #[serde(default)]
     pub deck: DeckState,
+    /// The place NPCs, by id: what each visit left them with (API-48)
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub npcs: BTreeMap<String, NpcState>,
 }
 
 /// The world: the map and goods files, the route an NPC owner follows, and the state.
@@ -112,6 +116,8 @@ pub struct World {
     pub route: Vec<String>,
     /// The road event deck; empty until [`World::with_deck`]
     pub deck: Deck,
+    /// The place NPCs; none until [`World::with_npcs`]
+    pub npcs: Vec<NpcDef>,
     /// What changes
     pub state: WorldState,
 }
@@ -216,8 +222,10 @@ impl World {
                 caravan,
                 traveled_today: 0,
                 deck: DeckState::default(),
+                npcs: BTreeMap::new(),
             },
             deck: Deck::default(),
+            npcs: Vec::new(),
         })
     }
 
@@ -226,6 +234,40 @@ impl World {
         deck.validate(&self.map)?;
         self.deck = deck;
         Ok(self)
+    }
+
+    /// The world with its place NPCs, checked against the map. Call it after the state is
+    /// final (a roster's state included): NPCs the state doesn't know start as the file says.
+    pub fn with_npcs(mut self, file: NpcFile) -> Result<Self, MapError> {
+        file.validate(&self.map)?;
+        npcs::settle(&file.npcs, &mut self.state.npcs);
+        self.npcs = file.npcs;
+        Ok(self)
+    }
+
+    /// The living NPCs of `place`, in file order.
+    pub fn npcs_at<'a>(
+        &'a self,
+        place: &'a str,
+    ) -> impl Iterator<Item = (&'a NpcDef, &'a NpcState)> + 'a {
+        self.npcs
+            .iter()
+            .filter(move |d| d.place == place)
+            .filter_map(|d| {
+                self.state
+                    .npcs
+                    .get(&d.id)
+                    .filter(|s| s.alive)
+                    .map(|s| (d, s))
+            })
+    }
+
+    /// The place the caravan is in, if it is in one.
+    pub fn place_here(&self) -> Option<&str> {
+        match &self.state.at {
+            Position::At { place } => Some(place),
+            Position::OnRoad { .. } => None,
+        }
     }
 
     /// The deck zone where the caravan is: its road's zone on a road, else the place's id

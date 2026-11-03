@@ -9,13 +9,15 @@ use std::path::{Path, PathBuf};
 
 use nat20_api_contract::{
     Ability, CaravanView, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget, CargoView,
-    ClockView, ErrorCode, Handle, LegView, MilesToday, Pace, PlaceDm, RejectReason, RoadDm,
-    RosterWorld, Skill, Terrain, WagonView, Watch, WorldDm, WorldPosition,
+    CarriedItem, Carries, ClockView, Coins, ErrorCode, Handle, LegView, MilesToday, NpcAttitude,
+    NpcDm, Pace, PlaceDm, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain, WagonView,
+    Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
 
 use crate::{
+    adapter::{game::NpcNow, monster},
     errors::{error, rejected},
     paths, scene,
 };
@@ -97,6 +99,16 @@ impl Campaign {
                 })?;
             built.state = state;
         }
+        // The place NPCs (API-48), after the state: a roster's NPCs keep what happened to them.
+        let npcs_file = dir.join("npcs.json");
+        let npcs: world::NpcFile = if npcs_file.exists() {
+            read_json(&npcs_file, "NPC file")?
+        } else {
+            world::NpcFile::default()
+        };
+        let built = built
+            .with_npcs(npcs)
+            .map_err(|e| bad(format!("The world {}'s NPCs: {e}.", setup.map)))?;
         let campaign = Self {
             world: built,
             party,
@@ -115,7 +127,106 @@ impl Campaign {
         for id in scenes {
             scene::read(data_dir, id)?;
         }
+        campaign.check_npcs(data_dir)?;
         Ok(campaign)
+    }
+
+    /// Checks each place NPC against the scene their place loads: their anchor is in it, no
+    /// creature or spawn of it has their id as a handle, and their stat block exists.
+    fn check_npcs(&self, data_dir: &Path) -> Result<(), nat20_api_contract::ApiError> {
+        for npc in &self.world.npcs {
+            let scene_id = self.scene_at(&world::Position::At {
+                place: npc.place.clone(),
+            });
+            let file = scene::read(data_dir, &scene_id)?;
+            if !file.anchors.iter().any(|a| a.id == npc.anchor) {
+                return Err(bad(format!(
+                    "The NPC {} stands at anchor {}, which scene {scene_id} doesn't have.",
+                    npc.id, npc.anchor
+                )));
+            }
+            let taken = file.creatures.iter().any(|c| c.handle.0 == npc.id)
+                || file
+                    .spawns
+                    .iter()
+                    .any(|s| s.creatures.iter().any(|c| c.handle.0 == npc.id));
+            if taken || self.party.iter().any(|h| h.0 == npc.id) {
+                return Err(bad(format!(
+                    "The NPC id {} is already a creature's handle in scene {scene_id}.",
+                    npc.id
+                )));
+            }
+            monster::check(&npc.monster).map_err(|e| bad(format!("The NPC {}: {e}", npc.id)))?;
+        }
+        Ok(())
+    }
+
+    /// The living NPCs of the place the caravan is in, whose scene `scene_id` is, with what each
+    /// is placed with: id, stat block, side, anchor, name, carries and Hit Points (none is full).
+    pub fn npcs_to_place(&self, scene_id: &str) -> Vec<NpcPlacement> {
+        let Some(place) = self.world.place_here() else {
+            return Vec::new();
+        };
+        if self.scene_at(&self.world.state.at) != scene_id {
+            return Vec::new();
+        }
+        self.world
+            .npcs_at(place)
+            .map(|(def, state)| NpcPlacement {
+                id: def.id.clone(),
+                monster: def.monster.clone(),
+                side: match state.attitude {
+                    world::Attitude::Hostile => Side::Hostile,
+                    world::Attitude::Friendly | world::Attitude::Indifferent => Side::Neutral,
+                },
+                anchor: def.anchor.clone(),
+                name: def.name.clone(),
+                carries: carries_wire(&state.carries),
+                hp: state.hp,
+            })
+            .collect()
+    }
+
+    /// Marks an NPC met: the party is in their place with them.
+    pub fn met(&mut self, id: &str) {
+        if let Some(state) = self.world.state.npcs.get_mut(id) {
+            state.met = true;
+        }
+    }
+
+    /// The ids of every place NPC.
+    pub fn npc_ids(&self) -> Vec<String> {
+        self.world.npcs.iter().map(|d| d.id.clone()).collect()
+    }
+
+    /// Writes back what an NPC is like as the party leaves them.
+    pub fn left(&mut self, id: &str, now: NpcNow) {
+        if let Some(state) = self.world.state.npcs.get_mut(id) {
+            world::npcs::left(
+                state,
+                world::NpcLeft {
+                    hp: (now.hp, now.max_hp),
+                    alive: now.alive,
+                    carries: world::NpcCarries {
+                        coins: world::NpcCoins {
+                            cp: now.coins.cp,
+                            sp: now.coins.sp,
+                            ep: now.coins.ep,
+                            gp: now.coins.gp,
+                            pp: now.coins.pp,
+                        },
+                        items: now
+                            .items
+                            .into_iter()
+                            .map(|i| world::NpcItem {
+                                item: i.item,
+                                quantity: i.quantity,
+                            })
+                            .collect(),
+                    },
+                },
+            );
+        }
     }
 
     /// Whether `handle` may call `travel`: the owner, or any party member when an NPC owns the
@@ -304,6 +415,28 @@ impl Campaign {
                 world::Owner::Player(_) => Vec::new(),
             },
             card: self.card_view(&table),
+            npcs: w
+                .npcs
+                .iter()
+                .filter_map(|d| {
+                    let s = state.npcs.get(&d.id)?;
+                    Some(NpcDm {
+                        id: d.id.clone(),
+                        name: d.name.clone(),
+                        place: d.place.clone(),
+                        monster: d.monster.clone(),
+                        attitude: match s.attitude {
+                            world::Attitude::Friendly => NpcAttitude::Friendly,
+                            world::Attitude::Indifferent => NpcAttitude::Indifferent,
+                            world::Attitude::Hostile => NpcAttitude::Hostile,
+                        },
+                        alive: s.alive,
+                        met: s.met,
+                        hp: s.hp,
+                        notes: d.notes.clone(),
+                    })
+                })
+                .collect(),
         }
     }
 
@@ -331,6 +464,45 @@ impl Campaign {
                 }
             }
         }
+    }
+}
+
+/// A place NPC to place on arrival (API-48).
+#[derive(Debug, Clone)]
+pub struct NpcPlacement {
+    /// The id, used as the creature's handle
+    pub id: String,
+    /// The stat block
+    pub monster: String,
+    /// The side of a fight they stand on
+    pub side: Side,
+    /// The anchor they stand at
+    pub anchor: String,
+    /// The name players read
+    pub name: String,
+    /// What they carry now
+    pub carries: Carries,
+    /// Hit Points the party left them with; none is full
+    pub hp: Option<u32>,
+}
+
+fn carries_wire(c: &world::NpcCarries) -> Carries {
+    Carries {
+        coins: Coins {
+            cp: c.coins.cp,
+            sp: c.coins.sp,
+            ep: c.coins.ep,
+            gp: c.coins.gp,
+            pp: c.coins.pp,
+        },
+        items: c
+            .items
+            .iter()
+            .map(|i| CarriedItem {
+                item: i.item.clone(),
+                quantity: i.quantity,
+            })
+            .collect(),
     }
 }
 

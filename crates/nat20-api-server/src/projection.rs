@@ -7,7 +7,7 @@
 
 use nat20_api_contract::{
     Anchor, AnchorObserved, AnchorView, CardPlayer, CheckView, Condition, CreatureFull,
-    CreatureObserved, EncounterView, Event, EventKind, Handle, Mode, PlaceKnown, PointFt,
+    CreatureObserved, EncounterView, Event, EventKind, Handle, Mode, NpcKnown, PlaceKnown, PointFt,
     RoadKnown, RoadUnexplored, RollView, Sheet, SpawnView, State, Visibility, WorldDm, WorldPlayer,
 };
 
@@ -212,6 +212,19 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
             said: c.said,
             waiting_for: c.waiting_for,
         }),
+        // Met NPCs only, and only what the party can see (API-48): never Hit Points, attitude
+        // or notes.
+        npcs: view
+            .npcs
+            .into_iter()
+            .filter(|n| n.met)
+            .map(|n| NpcKnown {
+                id: n.id,
+                name: n.name,
+                place: n.place,
+                alive: n.alive,
+            })
+            .collect(),
     }
 }
 

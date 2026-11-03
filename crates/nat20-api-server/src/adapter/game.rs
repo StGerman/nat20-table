@@ -74,9 +74,11 @@ use crate::{
 pub(super) mod goods;
 mod level_up;
 mod night;
+mod npcs;
 mod roster;
 pub use goods::purse;
 pub use night::DAYS_FOOD_QUARTER_LB;
+pub use npcs::NpcNow;
 
 /// Where a refused variant's message starts listing the valid ids (AGT-50). Only the actor's
 /// owner and the DM may see them, so the server cuts the message here for anyone else.
