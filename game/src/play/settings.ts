@@ -49,7 +49,7 @@ export const SETTINGS = {
   /** The character the human plays (AGT-35), by handle: skips the pick list. The pack's seat when unset. */
   play: { kind: "string" },
   out: { kind: "string", default: path.join(REPO, "runs") },
-  /** The saved party to play and save (API-45), by name: `rosters/<name>.json`. None when unset: the pack's pregens, nothing saved. */
+  /** The saved party to play and save (API-45), by name: `rosters/<name>.json`. None when unset: the pack's pregens, nothing saved. `play:full` and `play:scene` only: `play:ai-party`, the prompt check for an all-AI party, keeps no roster. */
   roster: { kind: "string" },
   /** Where rosters live. */
   rosters: { kind: "string", default: path.join(REPO, "rosters") },
