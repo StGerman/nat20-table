@@ -6,7 +6,7 @@
 
 use std::{fs, path::PathBuf};
 
-use nat20_api_contract::CONTRACT_VERSION;
+use nat20_api_contract::{CONTRACT_VERSION, events::Event};
 use nat20_api_server::{Server, adapter, server::SCHEMA_SHA256};
 use serde_json::Value;
 
@@ -76,6 +76,45 @@ fn fixtures_replay_exactly() {
         ran += 1;
     }
     assert!(ran > 0, "no fixture matched");
+}
+
+/// Every event a fixture expects reads into the contract's `Event`. A variant field that shares a
+/// name with one of `Event`'s own (`seq`, `round`, `scene`, `visibility`, `text`) would be one JSON
+/// key, because `EventKind` is flattened into `Event`: the line would replay, but no client could
+/// read it (`card_drawn` once had a `text` of its own, and the game audit failed on it).
+#[test]
+fn fixture_events_read_into_events() {
+    let mut read = 0;
+    for path in fixtures() {
+        let text = fs::read_to_string(&path).unwrap();
+        for (index, line) in text
+            .lines()
+            .enumerate()
+            .filter(|(_, l)| !l.trim().is_empty())
+        {
+            let fixture: Value = serde_json::from_str(line).unwrap();
+            let Some(events) = fixture
+                .pointer("/response/events")
+                .and_then(Value::as_array)
+            else {
+                continue;
+            };
+            for event in events {
+                let parsed: Event = serde_json::from_value(event.clone()).unwrap_or_else(|error| {
+                    panic!("{} line {}: {error}: {event}", path.display(), index + 1)
+                });
+                assert_eq!(
+                    Some(parsed.text.as_str()),
+                    event.get("text").and_then(Value::as_str),
+                    "{} line {}: the event's text did not survive",
+                    path.display(),
+                    index + 1
+                );
+                read += 1;
+            }
+        }
+    }
+    assert!(read > 0, "no fixture events read");
 }
 
 #[test]
