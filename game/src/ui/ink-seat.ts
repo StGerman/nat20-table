@@ -910,6 +910,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     title: seat.title,
     scene: view.scene,
     mode,
+    ...(view.situation?.road ? { day: view.situation.road.day } : {}),
     minutes: view.started === undefined ? undefined : Math.floor((seat.now() - view.started) / 60_000),
   });
   const storyLines = overlayRows

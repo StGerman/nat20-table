@@ -149,12 +149,14 @@ export function freshText(fresh: number): string {
   return fresh > 0 ? `↓ ${fresh} new · End to follow` : "↓ End to follow";
 }
 
-/** What the header says: the adventure, which scene of how many, the mode, the party's time, and /help. */
+/** What the header says: the adventure, which scene of how many, the mode, the game day and time of day, the party's time, and /help. */
 export interface HeaderInfo {
   title?: string;
   scene?: { number: number; of: number };
   /** "Explore", "Round 5", or "Paused". */
   mode?: string;
+  /** In the living world: the game day and the time of day ("Day 2, morning"), in a fight too. */
+  day?: string;
   minutes?: number;
 }
 
@@ -164,6 +166,7 @@ export function headerText(info: HeaderInfo): string {
     info.title,
     info.scene ? `Scene ${info.scene.number} of ${info.scene.of}` : undefined,
     info.mode,
+    info.day,
     info.minutes !== undefined ? `${info.minutes} min` : undefined,
     "/help",
   ].filter((part): part is string => Boolean(part));
