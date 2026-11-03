@@ -346,6 +346,8 @@ export class TableLoop {
   /** `/suggest` toggles it (S3: on by default). */
   private suggestOn = true;
   private readonly suggestions: SuggestionCounts = { shown: 0, unchanged: 0, edited: 0, own: 0 };
+  /** The last suggestion call, so the next waits for it to end (one session, one turn at a time). */
+  private suggesting: Promise<void> = Promise.resolve();
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -1511,13 +1513,13 @@ export class TableLoop {
         await this.command(intent.name);
         // `/suggest` just turned them off, or on again.
         if (intent.name === "suggest" && offered && !this.suggestOn) {
-          await this.closeSuggestions(offered, undefined);
+          this.closeSuggestions(offered, undefined);
           offered = undefined;
         } else if (intent.name === "suggest" && !offered) offered = this.offerSuggestions(prompt);
         if (prompt.kind === "paused" && !this.paused) return undefined;
       }
     } finally {
-      if (offered) await this.closeSuggestions(offered, intent);
+      if (offered) this.closeSuggestions(offered, intent);
     }
   }
 
@@ -1532,8 +1534,16 @@ export class TableLoop {
     if (!suggester || !seat?.suggest || !this.suggestOn || this.table.inCombat || !SUGGESTED.has(prompt.kind)) return undefined;
     const offered = { done: Promise.resolve(), shown: false, open: true };
     seat.suggest({ kind: "waiting", cancel: () => suggester.cancel() });
+    // One call at a time: the one before, already cancelled, ends first.
+    const before = this.suggesting;
     offered.done = (async () => {
-      const rows = await suggester.suggest(await this.suggestBriefing(prompt));
+      await before;
+      if (!offered.open) return;
+      const briefing = await this.suggestBriefing(prompt);
+      // Answered while the briefing was read: no call at all.
+      if (!offered.open) return;
+      this.table.recordInput(this.human, briefing);
+      const rows = await suggester.suggest(briefing);
       if (!offered.open) return;
       if (rows) {
         offered.shown = true;
@@ -1545,14 +1555,17 @@ export class TableLoop {
       // the table waits on, not while the human is typing.
       if (offered.open) seat.suggest!({ kind: "none" });
     });
+    this.suggesting = offered.done;
     return offered;
   }
 
-  /** The prompt is answered: the call in flight is dropped, and a sent line is counted (S4). */
-  private async closeSuggestions(offered: { done: Promise<void>; shown: boolean; open: boolean }, intent: PlayerIntent | undefined): Promise<void> {
+  /**
+   * The prompt is answered: the call in flight is cancelled, never waited for, and a sent line is
+   * counted (S4).
+   */
+  private closeSuggestions(offered: { done: Promise<void>; shown: boolean; open: boolean }, intent: PlayerIntent | undefined): void {
     offered.open = false;
     this.suggester?.cancel();
-    await offered.done;
     this.table.seat?.suggest?.({ kind: "none" });
     if (!offered.shown || intent?.kind !== "text") return;
     if (!intent.suggestion) this.suggestions.own += 1;
@@ -1563,7 +1576,7 @@ export class TableLoop {
   /**
    * What the suggester reads (AGT-49, Rule 3): the human's own sheet, state and options, projected
    * for the human's viewer as an AI player for the character would get them, and the story lines
-   * the human was shown. It is written to the inputs, where the audit's leak scan reads it.
+   * the human was shown. The call writes it to the inputs, where the audit's leak scan reads it.
    */
   private async suggestBriefing(prompt: HumanPrompt): Promise<string> {
     const human = this.human;
@@ -1587,7 +1600,6 @@ export class TableLoop {
           ? "Your foes offer to surrender: suggest three different things to do or say."
           : "What could your character do or say now? Three different ideas.",
     ].join("\n");
-    this.table.recordInput(human, briefing);
     return briefing;
   }
 
