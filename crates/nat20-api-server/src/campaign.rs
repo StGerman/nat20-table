@@ -515,3 +515,24 @@ fn clock_view(clock: world::Clock) -> ClockView {
         },
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every deck in the repository names abilities with their own skills, stat blocks core
+    /// knows and goods its world lists (MAP-6): what the world crate can't check.
+    #[test]
+    fn every_world_deck_names_known_rules_content() {
+        let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        for root in ["worlds", "crates/nat20-api-server/data/worlds"] {
+            for entry in std::fs::read_dir(repo.join(root)).unwrap() {
+                let dir = entry.unwrap().path();
+                let goods: world::Goods = read_json(&dir.join("goods.json"), "goods file").unwrap();
+                let deck = read_deck(&dir).unwrap();
+                check_effects(&deck, &goods)
+                    .unwrap_or_else(|e| panic!("{}: {}", dir.display(), e.message));
+            }
+        }
+    }
+}
