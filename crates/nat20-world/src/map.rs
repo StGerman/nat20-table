@@ -20,6 +20,35 @@ pub struct WorldMap {
     pub places: Vec<Place>,
     /// Every road; each goes both ways
     pub roads: Vec<Road>,
+    /// Where the map's open edges are: the places a generated road will leave from later.
+    /// Closed to travel in Milestone 9, with no road leading to them; DM data only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub edges: Vec<Edge>,
+}
+
+/// An open edge of the map, where the road generator will attach a road later.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Edge {
+    /// A note for authors; ignored
+    #[serde(default, rename = "_comment", skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
+    /// The id, in snake_case
+    pub id: String,
+    /// The place the edge leaves from
+    pub from: String,
+    /// What lies beyond, for the DM's prose ("the old road west")
+    pub name: String,
+    /// What will be generated there
+    pub generate: Generate,
+}
+
+/// What a generator builds beyond an edge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Generate {
+    /// A long road to a far place, made of generated legs
+    Road,
 }
 
 /// A place on the map: a town, a village, an inn, a ruin.
@@ -44,6 +73,10 @@ pub struct Place {
     /// The scene the engine loads on arrival; none means the shared road scene
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scene: Option<String>,
+    /// The pack slot this place holds: the one link from the map to a scenario pack, which
+    /// names the slot it fills. The map knows nothing of the pack's contents
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pack_slot: Option<String>,
     /// A night's room and board at the place's inn, per person, in copper pieces; none
     /// when the place has no inn
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -172,7 +205,8 @@ impl std::error::Error for MapError {}
 
 impl WorldMap {
     /// Checks the file: unique ids, roads between two different known places, no road
-    /// of 0 miles, and every place reachable from every other.
+    /// of 0 miles, every place reachable from every other, one place per pack slot, and
+    /// edges that leave from a known place.
     pub fn validate(&self) -> Result<(), MapError> {
         let mut places = BTreeSet::new();
         for place in &self.places {
@@ -205,6 +239,29 @@ impl WorldMap {
             }
             links.entry(&road.from).or_default().push(&road.to);
             links.entry(&road.to).or_default().push(&road.from);
+        }
+        let mut slots = BTreeSet::new();
+        for place in &self.places {
+            if let Some(slot) = &place.pack_slot
+                && !slots.insert(slot.as_str())
+            {
+                return Err(MapError(format!("two places hold pack slot {slot}")));
+            }
+        }
+        let mut edges = BTreeSet::new();
+        for edge in &self.edges {
+            if places.contains(edge.id.as_str()) || !edges.insert(edge.id.as_str()) {
+                return Err(MapError(format!(
+                    "edge id {} is used twice or by a place",
+                    edge.id
+                )));
+            }
+            if !places.contains(edge.from.as_str()) {
+                return Err(MapError(format!(
+                    "edge {} leaves from unknown place {}",
+                    edge.id, edge.from
+                )));
+            }
         }
         let start = self.places[0].id.as_str();
         let mut seen = BTreeSet::from([start]);
@@ -302,6 +359,41 @@ pub(crate) mod tests {
         assert_eq!(swamp.max_pace(), Pace::Slow);
         swamp.good_road = true;
         assert_eq!(swamp.max_pace(), Pace::Normal);
+    }
+
+    #[test]
+    fn edges_and_pack_slots_are_checked() {
+        let mut map = small_map();
+        map.places[2].pack_slot = Some("the_silent_mill".into());
+        map.edges.push(Edge {
+            comment: None,
+            id: "road_west".into(),
+            from: "town".into(),
+            name: "the road west".into(),
+            generate: Generate::Road,
+        });
+        map.validate().unwrap();
+
+        let mut twice = map.clone();
+        twice.places[1].pack_slot = Some("the_silent_mill".into());
+        assert_eq!(
+            twice.validate().unwrap_err().0,
+            "two places hold pack slot the_silent_mill"
+        );
+
+        let mut nowhere = map.clone();
+        nowhere.edges[0].from = "castle".into();
+        assert!(
+            nowhere
+                .validate()
+                .unwrap_err()
+                .0
+                .contains("unknown place castle")
+        );
+
+        let mut clash = map;
+        clash.edges[0].id = "inn".into();
+        assert!(clash.validate().unwrap_err().0.contains("edge id inn"));
     }
 
     #[test]

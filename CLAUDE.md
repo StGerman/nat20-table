@@ -95,6 +95,7 @@ Run `check:contract`, the cargo checks above (fmt, clippy, test, doc, deny) and 
 | `content/registries/` | Our registry overlay, namespace `nat20_demo::` (needs U1, in fork `demo`) | Yes |
 | `game/` | Game loop, DM and player agents, per-agent tool bindings, text UI, transcripts, audit | Yes |
 | `scenarios/`, `pregens/`, `maps/` | Our adventure content, CC-BY-4.0 | Yes |
+| `worlds/` | Shared world maps and goods for the living world (`<id>/map.json`, `goods.json`), CC-BY-4.0; a pack fills a `pack_slot` and never redraws the map | Yes |
 | `lore/` | Original setting and lore, kept apart from rules content | Yes |
 | `tools/codegen/` | `gen-ts.mjs`, `check-breaking.mjs` | Yes |
 | `tools/data-pipeline/` | Foundry → registry JSON translator, 5e-bits monster import | Yes |
