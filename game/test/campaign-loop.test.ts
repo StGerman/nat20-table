@@ -178,6 +178,9 @@ test("a saved party takes up the world where it left it: the loop follows the ca
     assert.equal(report.scenes[0], "vale_road", report.scenes.join(", "));
     assert.ok(dm.briefings.some((b) => b.wake === "scene_open" && b.briefing.includes("Scene vale_road is loaded")));
     assert.ok(!dm.briefings.some((b) => b.wake === "scene_open" && b.briefing.includes("Scene vale_town is loaded")));
+    // The DM's tools play the same scene: a Short Rest and its reminder count in vale_road.
+    const dmTools = (loop as unknown as { dmTools: { current(): string | undefined } }).dmTools;
+    assert.equal(dmTools.current(), "vale_road");
     const state = await t.engine.request("dm", { cmd: "get_state" });
     assert.ok(state.result?.cmd === "get_state" && state.result.state.view === "dm");
     assert.deepEqual(state.result.state.world?.at, { kind: "at", place: "crossing_inn" });

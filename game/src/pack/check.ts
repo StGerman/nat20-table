@@ -256,17 +256,28 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
       const near = r.ok && r.result?.cmd === "get_state" && r.result.state.view === "dm"
         ? r.result.state.creatures.find((c) => party.includes(c.handle))?.position_ft
         : undefined;
+      // A spot with no room says nothing about the entry: the next spot around the party is tried,
+      // and an entry that finds room at none of them is a problem too, so every entry is checked.
+      const spots = [[30, 0], [-30, 0], [0, 30], [0, -30], [60, 0], [-60, 0]];
       for (const [i, entry] of adventure.stat_blocks.entries()) {
         if (!near) break;
-        const placed = await engine.request("dm", {
-          cmd: "place_creature",
-          handle: `pack_check_${i + 1}`,
-          monster: entry.monster,
-          side: entry.side,
-          at: { kind: "point", point: { x_ft: near.x_ft + 30, y_ft: near.y_ft, z_ft: near.z_ft } },
-          ...(entry.carries ? { carries: entry.carries } : {}),
-        });
-        if (!placed.ok && placed.error?.reason !== "no_room") problem(`stat_blocks ${entry.id}: the engine refused it: ${placed.error?.message}`);
+        let refused: string | undefined = "no spot near the party had room for it";
+        for (const [dx, dz] of spots) {
+          const placed = await engine.request("dm", {
+            cmd: "place_creature",
+            handle: `pack_check_${i + 1}`,
+            monster: entry.monster,
+            side: entry.side,
+            at: { kind: "point", point: { x_ft: near.x_ft + dx, y_ft: near.y_ft, z_ft: near.z_ft + dz } },
+            // The authored name goes too: the engine checks it as the DM tool will send it.
+            ...(entry.name ? { name: entry.name } : {}),
+            ...(entry.carries ? { carries: entry.carries } : {}),
+          });
+          if (!placed.ok && placed.error?.reason === "no_room") continue;
+          refused = placed.ok ? undefined : placed.error?.message;
+          break;
+        }
+        if (refused !== undefined) problem(`stat_blocks ${entry.id}: the engine refused it: ${refused}`);
       }
     }
     for (const entry of adventure.stat_blocks) {

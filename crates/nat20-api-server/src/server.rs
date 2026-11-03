@@ -294,7 +294,17 @@ impl Server {
                 actor,
                 target,
                 what,
-            } => session.steal(&actor.0, &target.0, what),
+            } => {
+                // The roll and its outcome are the thief's and the DM's only (§4.9, §5), and the
+                // result carries both: another creature's viewer may not send it.
+                if !projection::lists_options(viewer, &actor.0) {
+                    return Err(errors::error(
+                        ErrorCode::NotVisible,
+                        "A steal is sent as the thief or as dm: its roll is theirs only.",
+                    ));
+                }
+                session.steal(&actor.0, &target.0, what)
+            }
             Command::Loot { actor, from } => session.loot(&actor.0, &from.0),
             Command::PlaceCreature { .. } => session.place_creature(command, viewer),
             Command::StartFight { participants } => session.start_fight(participants, viewer),

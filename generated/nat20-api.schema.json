@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.51"
+    "version": "1.0.0-dev.52"
   },
   "$defs": {
     "Ability": {
@@ -5149,7 +5149,7 @@
           "const": "not_enough_xp"
         },
         {
-          "description": "`level_up` while another character's level-up is open; one levels up at a time.",
+          "description": "`level_up` while another character's level-up is open (one levels up at a time), or a\n`load_scene` that leaves the open level-up's character behind.",
           "type": "string",
           "const": "level_up_open"
         },

@@ -14,8 +14,9 @@ use nat20_core::components::{
 use super::*;
 
 /// How far apart a giver and a receiver may stand: 5 feet, counted on the grid as the SRD
-/// counts it (a diagonal square is 5 feet too), with a little slack for placement.
-const REACH_FT: f32 = 5.5;
+/// counts it (a diagonal square is 5 feet too), with the same 5 cm of slack as a melee reach
+/// (`REACH_M`) for a position core rounded.
+const REACH_FT: f32 = 5.0 + 0.05 / METERS_PER_FOOT;
 
 impl Game {
     /// `give`: hands coin or one carried item to a creature within 5 feet.
@@ -56,11 +57,16 @@ impl Game {
         let (thief, victim) = self.hand_to_hand(actor, target, "steal")?;
         self.require_conscious(thief, actor, "steal")?;
         goods_ok(what)?;
+        // An amount no ledger entry can carry is refused before the roll, as `give` refuses it.
+        if let Goods::Coins { coins } = what {
+            copper_u32(monetary(coins).total_in_copper())?;
+        }
         self.close_finished_fight();
         ensure_inventory(&mut self.engine, thief);
         ensure_inventory(&mut self.engine, victim);
-        let passive =
-            systems::d20::passive_score(&self.engine, victim, CoreSkill::Perception).clamp(0, 30);
+        // Passive Perception has no cap of 30: core's score is the DC as it is.
+        let passive = systems::d20::passive_score(&self.engine, victim, CoreSkill::Perception)
+            .clamp(0, i32::from(u8::MAX));
         let (key, total, success) = self.roll_check(
             thief,
             &CheckTest::Skill {
@@ -82,6 +88,8 @@ impl Game {
             roll.visibility = only_thief.clone();
         }
         if success {
+            // The victim not carrying `what` takes nothing and logs nothing (§4.9); the amount
+            // and the item were checked before the roll, so that is the only refusal left.
             if let Ok(goods) = self.move_goods(victim, thief, what) {
                 self.post(
                     target,
