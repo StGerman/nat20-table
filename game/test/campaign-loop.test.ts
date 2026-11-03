@@ -171,9 +171,13 @@ test("a saved party takes up the world where it left it: the loop follows the ca
   }
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"], roster });
   try {
-    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: [new ScriptedPlayer("maren")], maxSteps: 6, campaign: { party: ["bren", "maren"] } });
+    const dm = new ScriptedDm({});
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 6, campaign: { party: ["bren", "maren"] } });
     const report = await loop.run("vale_town");
-    assert.deepEqual(report.scenes.slice(0, 2), ["vale_town", "vale_road"], report.scenes.join(", "));
+    // The DM opens only the scene the caravan stands in, never the first scene it left at once.
+    assert.equal(report.scenes[0], "vale_road", report.scenes.join(", "));
+    assert.ok(dm.briefings.some((b) => b.wake === "scene_open" && b.briefing.includes("Scene vale_road is loaded")));
+    assert.ok(!dm.briefings.some((b) => b.wake === "scene_open" && b.briefing.includes("Scene vale_town is loaded")));
     const state = await t.engine.request("dm", { cmd: "get_state" });
     assert.ok(state.result?.cmd === "get_state" && state.result.state.view === "dm");
     assert.deepEqual(state.result.state.world?.at, { kind: "at", place: "crossing_inn" });
