@@ -4,7 +4,7 @@
 // cursor per viewer so each seat is shown each event once.
 import { writeFileSync } from "node:fs";
 import path from "node:path";
-import { EngineClient, type Command, type Event, type Response, type Viewer } from "@nat20-table/engine-client";
+import { EngineClient, type Command, type Event, type Response, type Roster, type Viewer } from "@nat20-table/engine-client";
 import { engineBinary } from "./paths.ts";
 
 export { engineBinary, REPO } from "./paths.ts";
@@ -18,6 +18,8 @@ export interface EngineStart {
   seed?: number;
   /** A pack's own pregens; the repository's `pregens/` when omitted. */
   pregens?: string;
+  /** The party saved by an earlier run (API-45): each pregen in it is rebuilt as saved when a scene loads it. */
+  roster?: Roster;
   binary?: string;
   timeoutMs?: number;
 }
@@ -56,7 +58,7 @@ export class GameEngine {
       timeoutMs: start.timeoutMs,
     });
     const engine = new GameEngine(client, start.runDir);
-    const session = await engine.request("dm", { cmd: "new_session", seed: start.seed });
+    const session = await engine.request("dm", { cmd: "new_session", seed: start.seed, ...(start.roster ? { roster: start.roster } : {}) });
     if (!session.ok || session.result?.cmd !== "new_session") {
       client.close();
       throw new Error(`the engine refused a new session: ${session.error?.message}`);

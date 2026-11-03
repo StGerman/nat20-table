@@ -4,6 +4,9 @@
 // without a flash of the normal terminal: the same Ink instance is handed to the seat (InkSeat.adopt).
 // ↑/↓ or a number move the highlight, Enter plays it; Enter at once plays the pack's default. The
 // others become AI players. `--play <handle>` skips the screen.
+//
+// With a saved party (API-45, `--roster`), the screen first asks whether to go on with it or start a
+// new one; Enter at once goes on. Going on, the list shows each character at their saved level.
 import type { Handle } from "@nat20-table/engine-client";
 import { Box, render, Text, useInput, useWindowSize, type Instance, type RenderOptions } from "ink";
 import { createElement as h, useState } from "react";
@@ -31,6 +34,11 @@ export function pickKey(roster: RosterEntry[], state: PickState, key: PickKey): 
     case "enter":
       return { state, picked: roster[state.at].handle };
   }
+}
+
+/** The rows of the first question when a party is saved: go on with it, or start a new one. */
+export function partyRows(saved: string, at: number): string[] {
+  return [`Continue with your party: ${saved}`, "Start a new party (it replaces the saved one when this game ends)"].map((row, i) => `${i === at ? "❯" : " "} ${i + 1}. ${row}`);
 }
 
 /** The list's rows: a cursor on the highlighted one, the names padded so what they are lines up, the default marked. */
@@ -63,7 +71,7 @@ export function PickScreen({ roster, fallback, title, palette, onPick }: { roste
   useInput((input, key) => {
     if (done) return;
     if (key.ctrl && input === "c") return onPick("");
-    const press: PickKey | undefined = key.upArrow ? { kind: "up" } : key.downArrow ? { kind: "down" } : key.return ? { kind: "enter" } : /^\d$/.test(input) ? { kind: "digit", digit: Number(input) } : undefined;
+    const press = keyOf(input, key);
     if (!press) return;
     const next = pickKey(roster, state, press);
     setState(next.state);
@@ -99,15 +107,69 @@ export function PickScreen({ roster, fallback, title, palette, onPick }: { roste
   );
 }
 
+/** A key on the party question: the new highlight, and the answer once Enter picks. */
+export function partyKey(state: PickState, key: PickKey): { state: PickState; party?: Party } {
+  switch (key.kind) {
+    case "up":
+    case "down":
+      return { state: { at: 1 - state.at } };
+    case "digit":
+      return key.digit === 1 || key.digit === 2 ? { state: { at: key.digit - 1 } } : { state };
+    case "enter":
+      return { state, party: state.at === 0 ? "continue" : "new" };
+  }
+}
+
+/** Whether the run goes on with the saved party or starts a new one. */
+export type Party = "continue" | "new";
+
+const keyOf = (input: string, key: { upArrow: boolean; downArrow: boolean; return: boolean }): PickKey | undefined =>
+  key.upArrow ? { kind: "up" } : key.downArrow ? { kind: "down" } : key.return ? { kind: "enter" } : /^\d$/.test(input) ? { kind: "digit", digit: Number(input) } : undefined;
+
+function PartyScreen({ saved, title, palette, onParty }: { saved: string; title?: string; palette: Palette; onParty: (party: Party | "") => void }) {
+  const size: PanelSize = useWindowSize();
+  const [state, setState] = useState<PickState>({ at: 0 });
+  useInput((input, key) => {
+    if (key.ctrl && input === "c") return onParty("");
+    const press = keyOf(input, key);
+    if (!press) return;
+    const next = partyKey(state, press);
+    setState(next.state);
+    if (next.party) onParty(next.party);
+  });
+  const hint = textProps({ accent: "hint" }, palette);
+  return h(
+    Box,
+    { flexDirection: "column", width: size.columns, height: size.rows },
+    h(Text, { key: "header", dimColor: true, wrap: "truncate-end" }, [title, "Your party"].filter(Boolean).join(" · ")),
+    h(Text, { key: "gap" }, " "),
+    h(
+      Box,
+      { key: "body", flexDirection: "column", flexGrow: 1 },
+      ...partyRows(saved, state.at).map((row, i) => h(Text, { key: `p${i}`, wrap: "wrap", ...(i === state.at ? textProps({ accent: "rust", bold: true }, palette) : {}) }, row)),
+    ),
+    h(Text, { key: "keys", wrap: "truncate-end", ...hint }, "↑/↓ or a number, Enter to choose · Ctrl+C quits"),
+  );
+}
+
+/** The party question when a party is saved, then the pick list. */
+function StartScreen({ roster, fallback, title, palette, saved, onStart }: { roster: RosterEntry[]; fallback: Handle; title?: string; palette: Palette; saved: { line: string; levels: ReadonlyMap<Handle, number> }; onStart: (party: Party | "", handle: Handle) => void }) {
+  const [party, setParty] = useState<Party | undefined>(undefined);
+  if (!party) return h(PartyScreen, { saved: saved.line, title, palette, onParty: (p: Party | "") => (p ? setParty(p) : onStart("", "")) });
+  const shown = party === "continue" ? roster.map((r) => ({ ...r, level: saved.levels.get(r.handle) ?? r.level })) : roster;
+  return h(PickScreen, { roster: shown, fallback, title, palette, onPick: (handle: Handle) => onStart(party, handle) });
+}
+
 /**
  * Shows the pick screen and waits for a pick. Resolves with the handle and the Ink instance, still
- * drawing, for the table to adopt; Ctrl+C gives the terminal back and exits.
+ * drawing, for the table to adopt; Ctrl+C gives the terminal back and exits. With `saved`, the
+ * screen asks about the saved party first and resolves with the answer too.
  */
 export function pickOnScreen(
   roster: RosterEntry[],
   fallback: Handle,
-  options: { title?: string; palette?: Palette; render?: RenderOptions } = {},
-): Promise<{ handle: Handle; instance: Instance }> {
+  options: { title?: string; palette?: Palette; render?: RenderOptions; saved?: { line: string; levels: ReadonlyMap<Handle, number> } } = {},
+): Promise<{ handle: Handle; instance: Instance; party?: Party }> {
   return new Promise((resolve) => {
     // A crash before the pick gives the terminal back before its trace prints, as the table does.
     const crash = (error: unknown) => {
@@ -115,16 +177,20 @@ export function pickOnScreen(
       console.error(error);
       process.exit(1);
     };
-    const onPick = (handle: Handle) => {
-      if (!handle) {
+    const onStart = (party: Party | "" | undefined, handle: Handle) => {
+      if (!handle || party === "") {
         instance.unmount();
         process.exit(130);
       }
       process.off("uncaughtException", crash);
       process.off("unhandledRejection", crash);
-      resolve({ handle, instance });
+      resolve({ handle, instance, ...(party ? { party } : {}) });
     };
-    const instance = render(h(PickScreen, { roster, fallback, title: options.title, palette: options.palette ?? paletteFor(), onPick }), {
+    const palette = options.palette ?? paletteFor();
+    const screen = options.saved
+      ? h(StartScreen, { roster, fallback, title: options.title, palette, saved: options.saved, onStart })
+      : h(PickScreen, { roster, fallback, title: options.title, palette, onPick: (handle: Handle) => onStart(undefined, handle) });
+    const instance = render(screen, {
       exitOnCtrlC: false,
       interactive: true,
       alternateScreen: true,
