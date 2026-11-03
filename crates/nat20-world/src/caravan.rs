@@ -150,7 +150,7 @@ pub enum CaravanError {
     UnknownWagon(u32),
     /// The wagon holds less of the good than asked
     NotEnough {
-        /// The wagon
+        /// The wagon; 0 when the whole caravan was counted
         wagon: u32,
         /// The good
         good: String,
@@ -215,6 +215,33 @@ impl Caravan {
     /// The wagon with this number.
     pub fn wagon(&self, n: u32) -> Option<&Wagon> {
         self.wagons.iter().find(|w| w.n == n)
+    }
+
+    /// Takes `quantity` units of `good` from the wagons in order, all or nothing.
+    pub fn unload_anywhere(&mut self, good: &str, quantity: u32) -> Result<(), CaravanError> {
+        let held = self.total(good);
+        if held < quantity {
+            return Err(CaravanError::NotEnough {
+                wagon: 0,
+                good: good.to_string(),
+                held,
+            });
+        }
+        let mut left = quantity;
+        for wagon in &mut self.wagons {
+            if left == 0 {
+                break;
+            }
+            let here = wagon.cargo.get(good).copied().unwrap_or(0);
+            let take = here.min(left);
+            if take == here {
+                wagon.cargo.remove(good);
+            } else {
+                wagon.cargo.insert(good.to_string(), here - take);
+            }
+            left -= take;
+        }
+        Ok(())
     }
 
     /// Units of `good` across all wagons.
@@ -373,6 +400,22 @@ pub(crate) mod tests {
         caravan.unload(1, "rations", 20).unwrap();
         assert_eq!(caravan.total("rations"), 0);
         assert!(!caravan.wagon(1).unwrap().cargo.contains_key("rations"));
+    }
+
+    #[test]
+    fn unloading_anywhere_empties_the_wagons_in_order() {
+        let mut caravan = caravan("npc:merchant");
+        let mut second = caravan.wagons[0].clone();
+        second.n = 2;
+        second.cargo = BTreeMap::from([("rations".to_string(), 5)]);
+        caravan.wagons.push(second);
+        assert!(matches!(
+            caravan.unload_anywhere("rations", 26),
+            Err(CaravanError::NotEnough { held: 25, .. })
+        ));
+        caravan.unload_anywhere("rations", 22).unwrap();
+        assert_eq!(caravan.wagon(1).unwrap().cargo.get("rations"), None);
+        assert_eq!(caravan.wagon(2).unwrap().cargo.get("rations"), Some(&3));
     }
 
     #[test]

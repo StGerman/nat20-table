@@ -290,6 +290,7 @@ impl Server {
             Command::PlaceCreature { .. } => session.place_creature(command, viewer),
             Command::StartFight { participants } => session.start_fight(participants, viewer),
             Command::StartCampaign { party } => session.start_campaign(party, viewer),
+            Command::RestNight { actor, lodging } => session.rest_night(&actor.0, *lodging, viewer),
             Command::Travel { actor, to, pace } => {
                 session.travel(&actor.0, to.as_deref(), *pace, viewer)
             }

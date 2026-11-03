@@ -44,6 +44,10 @@ pub struct Place {
     /// The scene the engine loads on arrival; none means the shared road scene
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scene: Option<String>,
+    /// A night's room and board at the place's inn, per person, in copper pieces; none
+    /// when the place has no inn
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inn_cp: Option<u32>,
 }
 
 /// A road between two places. Its terrain sets the maximum travel pace (SRD 5.2.1,

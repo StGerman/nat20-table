@@ -4,8 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, LegView, OptionId, Pace, Placement,
-    PointFt, PromptId, RollId, Sheet, Side, Skill, State, V1, Viewer,
+    Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, LegView, Lodging, NightView,
+    OptionId, Pace, Placement, PointFt, PromptId, RollId, Sheet, Side, Skill, State, V1, Viewer,
     state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
@@ -285,6 +285,17 @@ pub enum Command {
         /// The pace; no faster than the road allows, and Slow when a party member's Speed is
         /// halved.
         pace: Pace,
+    },
+    /// Spends the night (API-42; protocol §4.12): at the inn of the place the caravan is in, or
+    /// in camp. The day ends (food and the Malnutrition save through core), the party takes a
+    /// Long Rest through core, the clock moves to dawn and a new day of travel starts. The same
+    /// callers as `travel`: the caravan's driver, as itself, never `dm`.
+    RestNight {
+        /// Who calls it: the viewer's own creature.
+        actor: Handle,
+        /// Inn or camp.
+        #[serde(rename = "where")]
+        lodging: Lodging,
     },
 }
 
@@ -575,6 +586,13 @@ pub enum CommandResult {
     },
     /// The state with the world in it.
     StartCampaign {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The night and the state at dawn.
+    RestNight {
+        /// The night, also in the `night` event.
+        night: NightView,
         /// Projected for the request's `viewer`.
         state: State,
     },

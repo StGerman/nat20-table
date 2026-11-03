@@ -265,7 +265,7 @@ impl Game {
 
     /// Logs one ledger entry; the session posts it to its journal (`nat20-ledger`) once the
     /// roll a theft cites has its logged id.
-    fn post(
+    pub(super) fn post(
         &mut self,
         from: &str,
         to: &str,
@@ -338,7 +338,7 @@ fn goods_ok(what: &Goods) -> Result<(), ApiError> {
     }
 }
 
-fn monetary(coins: &Coins) -> MonetaryValue {
+pub(super) fn monetary(coins: &Coins) -> MonetaryValue {
     let mut value = MonetaryValue::new();
     for (currency, amount) in [
         (Currency::Copper, coins.cp),

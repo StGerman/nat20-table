@@ -118,6 +118,14 @@ impl Campaign {
         }
     }
 
+    /// The inn's price per person for a night, when the caravan is in a place with an inn.
+    pub fn inn_here(&self) -> Option<u32> {
+        match &self.world.state.at {
+            world::Position::At { place } => self.world.map.place(place).and_then(|p| p.inn_cp),
+            world::Position::OnRoad { .. } => None,
+        }
+    }
+
     /// Plans one leg on a copy of the world: the copy after the leg and the leg, or why not.
     /// Nothing changes until the caller keeps the copy.
     pub fn plan_leg(
@@ -168,6 +176,7 @@ impl Campaign {
                     name: p.name.clone(),
                     kind: p.kind.clone(),
                     market: p.market,
+                    inn_cp: p.inn_cp,
                     discovered: state.discovered.contains(&p.id),
                     scene: p.scene.clone().unwrap_or_else(|| self.road_scene.clone()),
                 })

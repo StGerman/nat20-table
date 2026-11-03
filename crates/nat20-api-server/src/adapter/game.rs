@@ -72,7 +72,9 @@ use crate::{
 };
 
 mod goods;
+mod night;
 pub use goods::purse;
+pub use night::DAYS_FOOD_QUARTER_LB;
 
 /// Where a refused variant's message starts listing the valid ids (AGT-50). Only the actor's
 /// owner and the DM may see them, so the server cuts the message here for anyone else.
@@ -963,8 +965,7 @@ impl Game {
                         .max(0) as u32,
                     speed_ft: (speed_m / METERS_PER_FOOT).round() as u32,
                     conditions: conditions::conditions_of(engine, c.entity),
-                    // The core has no exhaustion model yet.
-                    exhaustion: 0,
+                    exhaustion: systems::exhaustion::level(&engine.world, c.entity),
                     life_state: life_state_of(engine, c.entity),
                     health: health_band(hp, hp_max),
                     effects: conditions::effects_of(engine, c.entity, &self.scene.handles)
