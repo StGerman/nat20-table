@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.53"
+    "version": "1.0.0-dev.54"
   },
   "$defs": {
     "Ability": {
@@ -3496,9 +3496,13 @@
           ]
         },
         {
-          "description": "A road card was drawn after a leg or a night in camp (protocol §4.13). Public: the text\nand choices only; the card id and the draw roll are DM-only.",
+          "description": "A road card was drawn after a leg or a night in camp (protocol §4.13). Public: the text\nand choices only; the card id and the draw roll are DM-only. The card's own words are\n`card_text`: a field named `text` here would clash with the event's own `text`, which the\nvariant is flattened into.",
           "type": "object",
           "properties": {
+            "card_text": {
+              "description": "What the players read: the card's own words.",
+              "type": "string"
+            },
             "choices": {
               "description": "The choices.",
               "type": "array",
@@ -3513,16 +3517,12 @@
             "target": {
               "description": "Who decides it.",
               "$ref": "#/$defs/CardTarget"
-            },
-            "text": {
-              "description": "What the players read.",
-              "type": "string"
             }
           },
           "required": [
             "kind",
             "target",
-            "text",
+            "card_text",
             "choices"
           ]
         },

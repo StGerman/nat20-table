@@ -64,7 +64,7 @@ impl Session {
             None,
             EventKind::CardDrawn {
                 target: campaign::target(card.target),
-                text: card.text.clone(),
+                card_text: card.text.clone(),
                 choices: campaign::choices(&card),
             },
         ));

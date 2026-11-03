@@ -312,7 +312,7 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
 
 A world's deck is `worlds/<id>/deck/*.json` (API-43). Each card belongs to a zone: a road's `zone`, or a place id for a night in camp there; a card drawn after a leg (`when: road`) must be in a road's zone (`bad_scene`). A card joins the deck when the place it `requires` is discovered, or when a choice adds it (a chained card); a drawn card goes to the discard until its zone's pile runs dry, and a `once` card leaves the game.
 
-- **The draw.** After every `travel` leg (on the leg's road zone, once the scene has loaded) and every `rest_night{where: camp}` (on the road zone, or the place), the engine rolls a d100 on the zone's pile in file order. The roll is a `roll` event with an `rN` id, roller `world`, kind `table`, **DM only**: its die face would tell players the pile's size. A zone with no card in play rolls nothing. Then `card_drawn{target, text, choices}` (public). The card id, its zone and the deck appear only in the DM's `world.card`.
+- **The draw.** After every `travel` leg (on the leg's road zone, once the scene has loaded) and every `rest_night{where: camp}` (on the road zone, or the place), the engine rolls a d100 on the zone's pile in file order. The roll is a `roll` event with an `rN` id, roller `world`, kind `table`, **DM only**: its die face would tell players the pile's size. A zone with no card in play rolls nothing. Then `card_drawn{target, card_text, choices}` (public): `card_text` is the card's words, and the event's own `text` the rendered sentence. The card id, its zone and the deck appear only in the DM's `world.card`.
 - **While a card waits,** `travel` and `rest_night` are `rejected`, `card_pending`. `world.card` (both views) shows the text, the choices, what each Blade has `said`, and who the engine is `waiting_for`.
 - **Who speaks** (`choose_card{actor, choice}`, as the actor itself). The Hired Blades are the party members, less a player owner, who are in the scene and up (alive and conscious).
   - *Caravan card* (`target: caravan`): each Blade's word is advice, logged as `card_advice` (public). A player owner decides with their own `choose_card`, and only after every Blade has advised (`rejected`, `waiting_for_advice`). An NPC owner takes the Blades' majority once all have advised; a tie goes to the card's own pick, and a choice the card marks as the owner's insistence wins whatever the advice (the DM narrates why).
@@ -444,7 +444,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `traveled` | `leg: {actor, road, pace, miles, minutes, arrived, at}` (public): one `travel` leg (§4.11) |
 | `place_discovered` | `place`, `name` (public): the party found a place it did not know (§4.11) |
 | `night` | `night: {actor, lodging, minutes, rested, not_rested, hungry}` (public): one `rest_night` (§4.12) |
-| `card_drawn` | `target`, `text`, `choices` (public): a road card was drawn (§4.13) |
+| `card_drawn` | `target`, `card_text`, `choices` (public): a road card was drawn (§4.13) |
 | `card_advice` | `actor`, `choice` (public): a Blade's advice or vote |
 | `card_resolved` | `choice`, `decided: owner\|majority\|tie\|owner_insists\|default` (public) |
 | `cargo_changed` | `good`, `change` (public): a card added or took goods from the caravan |
