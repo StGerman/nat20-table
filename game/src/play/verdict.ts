@@ -86,6 +86,9 @@ function readJson<T>(file: string): T | undefined {
 
 const minutes = (ms: number) => `${(ms / 60_000).toFixed(1)} min`;
 
+/** The engine's request log in a run folder. */
+const ENGINE_LOG = "engine-log.jsonl";
+
 /** Row 1: the planned scenes played to the end within the time limit. */
 function timeRow(run: RunRecord): VerdictRow {
   const title = "Scene 1 to 6 within the time limit";
@@ -186,6 +189,73 @@ function retryRows(run: RunRecord, transcript: TranscriptRecord[], answers: Reco
   return { row: { row: "5", title, status: confirmed > 0 ? "fail" : open > 0 ? "pending" : "pass", detail }, flags };
 }
 
+/** One line of `engine-log.jsonl`: a request and the engine's response to it. */
+interface EngineLogLine {
+  request?: { cmd?: string };
+  response?: { ok?: boolean; events?: Event[] };
+}
+
+/**
+ * The Milestone 9 exit rows for a living-world run (design "Tests and exit", AGT-81), from the
+ * session log and the engine log. They replace row 1's "Scene 1 to 6": a campaign plays days on
+ * the map, not scenes in order. "3 game days" reads as the run's day limit: the contract is done
+ * by the end of the last day the run plays (S4: the exit is "contract done, pay in the ledger").
+ */
+function campaignRows(run: RunRecord, log: Event[], engineLog: EngineLogLine[]): VerdictRow[] {
+  const campaign = run.campaign!;
+  const first = run.scenes[0];
+  const end = run.scenes.at(-1)?.ended_at ?? run.ended_at;
+  const took = first && end ? Date.parse(end) - Date.parse(first.started_at) : undefined;
+  const settled = log.findIndex((e) => e.kind === "escort_settled");
+  // The day the contract was settled on: one more for every night before it.
+  const nights = log.slice(0, settled < 0 ? log.length : settled).filter((e) => e.kind === "night").length;
+  const day = campaign.start_day + nights;
+  const limit = campaign.day_limit;
+  const title1 = `The escort contract done${limit ? ` by the end of day ${limit}` : ""}, within the time limit`;
+  const detail1 = `${settled < 0 ? "not settled" : `settled on day ${day}`}${took === undefined ? "" : ` after ${minutes(took)}`}; ended: ${run.ended ?? "not recorded"}`;
+  const row1: VerdictRow =
+    run.stop === "time_limit" || run.stop === "stalled" || run.stop === "crash"
+      ? { row: "1", title: title1, status: "fail", detail: `stopped: ${run.stop}; ${detail1}` }
+      : settled < 0
+        ? { row: "1", title: title1, status: "fail", detail: detail1 }
+        : limit !== null && day > limit
+          ? { row: "1", title: title1, status: "fail", detail: `after the day limit; ${detail1}` }
+          : run.time_limit_min > 0 && took !== undefined && took > run.time_limit_min * 60_000
+            ? { row: "1", title: title1, status: "fail", detail: `over ${run.time_limit_min} min; ${detail1}` }
+            : { row: "1", title: title1, status: "pass", detail: detail1 };
+
+  // Journeys: legs that arrived in a place, each place once.
+  const arrived = new Set(log.flatMap((e) => (e.kind === "traveled" && e.leg.arrived && e.leg.at.kind === "at" ? [e.leg.at.place] : [])));
+  const journeys: VerdictRow = { row: "m9-journeys", title: "At least 2 journeys", status: arrived.size >= 2 ? "pass" : "fail", detail: `arrived at ${arrived.size > 0 ? [...arrived].join(", ") : "no place"}` };
+
+  // The pay: every Blade paid wages in the ledger, and the contract settled.
+  const blades = [...(run.seats.human ? [run.seats.human] : []), ...run.seats.ai];
+  const paid = new Map<string, number>();
+  for (const e of log) if (e.kind === "ledger" && e.reason === "wage" && e.what.kind === "coins") paid.set(e.to, (paid.get(e.to) ?? 0) + e.what.copper);
+  const unpaid = blades.filter((b) => !paid.has(b));
+  const pay: VerdictRow = {
+    row: "m9-pay",
+    title: "The pay in the ledger",
+    status: settled >= 0 && unpaid.length === 0 ? "pass" : "fail",
+    detail: `${[...paid].map(([b, cp]) => `${b} ${cp / 100} gp`).join(", ") || "no wages"}${unpaid.length > 0 ? `; unpaid: ${unpaid.join(", ")}` : ""}${settled < 0 ? "; the contract never settled" : ""}`,
+  };
+
+  const cards = log.filter((e) => e.kind === "card_resolved").length;
+  const road: VerdictRow = { row: "m9-road", title: "At least 1 road event", status: cards > 0 ? "pass" : "fail", detail: `${cards} road cards settled` };
+
+  // A fight outside a scene: one no authored encounter started (start_fight, or a card's fight).
+  const outside = engineLog.filter((l) => l.request?.cmd !== "start_combat" && l.response?.ok && (l.response.events ?? []).some((e) => e.kind === "combat_started")).length;
+  const fight: VerdictRow = { row: "m9-fight", title: "At least 1 fight outside a scene", status: outside > 0 ? "pass" : "fail", detail: `${outside} fights started by the DM or a road card` };
+
+  // The party arrives with the previous run's roster; the pair's first run may start a new one.
+  const roster = run.roster;
+  const carried: VerdictRow =
+    roster?.party === "continue"
+      ? { row: "m9-roster", title: "The party arrives with the previous run's roster", status: "pass", detail: `${roster.name}, loaded ${roster.loaded_sha256?.slice(0, 12) ?? "?"}` }
+      : { row: "m9-roster", title: "The party arrives with the previous run's roster", status: "reported", detail: roster ? `a new party for ${roster.name}: the next run must continue it` : "no --roster: nothing carried or saved" };
+  return [row1, journeys, pay, road, fight, carried];
+}
+
 /** Row 4: latency, measured and reported only (D1). */
 function latencyRow(usage: UsageRecord[]): VerdictRow {
   const p95 = (agent: (u: UsageRecord) => boolean) => percentile(usage.filter(agent).map(waitedMs), 95);
@@ -226,7 +296,8 @@ export function computeVerdict(dir: string): Verdict {
   }));
   narrationFlags.push(...handFlags);
   const retries = retryRows(run, transcript, answers);
-  const rows = [timeRow(run), partyRow(run, log), ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
+  const progress = run.campaign ? campaignRows(run, log, readLines<EngineLogLine>(path.join(dir, ENGINE_LOG))) : [timeRow(run)];
+  const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
   const flags = [...narrationFlags, ...retries.flags];
   const not_eligible = [
     ...(run.build.dirty ? ["the checkout had changes"] : []),

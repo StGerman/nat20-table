@@ -97,7 +97,7 @@ test("the road's lines join the human's options only when the human may drive an
 });
 
 test("a campaign pack names its start scene and day limit; the DM reads the world and the road's rules", async () => {
-  assert.deepEqual(readCampaign(TEST_PACK), { startScene: "vale_town" });
+  assert.deepEqual(readCampaign(TEST_PACK), { startScene: "vale_town", startDay: 1 });
   assert.match(DM_ROAD_PROMPT, /never name a price, a wage or a sum of coin/);
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
   try {
