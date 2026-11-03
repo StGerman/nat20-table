@@ -57,13 +57,18 @@ export function suggestPrompt(handle: Handle, card: string, language: Language =
   ].join("\n");
 }
 
-/** The model's answer as rows: up to three non-empty lines, stripped of numbers, bullets and outer quotes of a whole row. */
+/**
+ * The model's answer as rows: its non-empty lines, stripped of numbers and bullets. None at all
+ * unless there are exactly three, each at most `SUGGESTION_MAX` characters and none a slash
+ * command, since a picked row goes to the table as the human's own line and must never act.
+ */
 export function suggestionRows(answer: string): string[] {
-  return answer
+  const rows = answer
     .split("\n")
     .map((line) => line.trim().replace(/^(?:\d+[.)]|[-*•])\s*/, "").trim())
-    .filter((line) => line !== "" && line.length <= SUGGESTION_MAX * 2)
-    .slice(0, SUGGESTIONS);
+    .filter((line) => line !== "");
+  const usable = rows.length === SUGGESTIONS && rows.every((row) => row.length <= SUGGESTION_MAX && !row.startsWith("/"));
+  return usable ? rows : [];
 }
 
 /** One suggestion call at a time for the human's character; a new call or `cancel` drops the one in flight. */

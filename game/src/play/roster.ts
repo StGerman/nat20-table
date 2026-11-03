@@ -4,7 +4,7 @@
 //
 // The hash chain: each save appends `{run_id, sha256, at}` to `rosters/<name>.chain.jsonl`, and
 // `run.json` records the roster's sha256 when the run loaded it and when it saved it. A roster whose
-// file no longer has the hash its last save logged was changed by hand: the run says so and plays on.
+// file has neither of the last two logged hashes was changed by hand: the run says so and plays on.
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -59,22 +59,38 @@ export function readRoster(dir: string, name: string): SavedRoster | undefined {
   const text = readFileSync(file, "utf8");
   const hash = sha256(text);
   const log = existsSync(chainFile(dir, name)) ? readFileSync(chainFile(dir, name), "utf8").trim().split("\n").filter(Boolean) : [];
-  const last = log.length > 0 ? (JSON.parse(log[log.length - 1]) as { sha256?: string }).sha256 : undefined;
-  return { roster: JSON.parse(text) as Roster, sha256: hash, chain: last === undefined ? "unlogged" : last === hash ? "held" : "broken" };
+  const logged = log.map((line) => (JSON.parse(line) as { sha256?: string }).sha256);
+  // A save logs its hash before it replaces the file, so a crash in between leaves the file the
+  // save before it wrote: either of the last two logged hashes is a file a save wrote.
+  const chain: Chain = logged.length === 0 ? "unlogged" : logged.slice(-2).includes(hash) ? "held" : "broken";
+  const roster: unknown = JSON.parse(text);
+  if (!isRoster(roster)) throw new Error(`${file} is not a saved party: it needs a characters list, each with a handle, a pregen and a level`);
+  return { roster, sha256: hash, chain };
+}
+
+/** Enough of a roster's shape to show it before the engine checks the rest (`bad_roster`). */
+function isRoster(value: unknown): value is Roster {
+  if (typeof value !== "object" || value === null) return false;
+  const characters = (value as { characters?: unknown }).characters;
+  return (
+    Array.isArray(characters) &&
+    characters.every((c) => typeof c === "object" && c !== null && typeof c.handle === "string" && typeof c.pregen === "string" && Number.isInteger(c.level))
+  );
 }
 
 /**
- * Writes `roster` as `name` and logs its hash for `runId`. The file is written whole and then
- * renamed over the old one, so a crash mid-write leaves the last good roster. Returns the sha256.
+ * Writes `roster` as `name` and logs its hash for `runId`. The file is written whole, its hash
+ * logged, and only then renamed over the old one: a crash at any point leaves a roster a save
+ * wrote, and a failed log leaves the old roster in place. Returns the sha256.
  */
 export function writeRoster(dir: string, name: string, roster: Roster, runId: string): string {
   mkdirSync(dir, { recursive: true });
   const text = JSON.stringify(roster, null, 2) + "\n";
   const file = rosterFile(dir, name);
-  writeFileSync(`${file}.tmp`, text);
-  renameSync(`${file}.tmp`, file);
   const hash = sha256(text);
+  writeFileSync(`${file}.tmp`, text);
   appendFileSync(chainFile(dir, name), JSON.stringify({ run_id: runId, sha256: hash, at: new Date().toISOString() }) + "\n");
+  renameSync(`${file}.tmp`, file);
   return hash;
 }
 

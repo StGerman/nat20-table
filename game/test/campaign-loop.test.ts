@@ -3,6 +3,8 @@
 // the human last (Enter goes with the others), the DM tells the card and the night, the party is
 // saved after the night, and the night past the day limit ends the run.
 import assert from "node:assert/strict";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
@@ -85,6 +87,9 @@ test("the road's lines join the human's options only when the human may drive an
     drives: true,
     at: { kind: "at", place: "inn" },
     places: [{ id: "inn", name: "The Inn", kind: "inn", market: false, inn_cp: 5 }],
+    roads: [],
+    unexplored: [],
+    caravan: { owner: "npc:odda_vell", wagons: [] },
     card: null,
   } as never;
   assert.deepEqual(roadChoices(world, 3).map((c) => [c.number, c.label]), [
@@ -94,6 +99,75 @@ test("the road's lines join the human's options only when the human may drive an
   ]);
   assert.deepEqual(roadChoices({ ...(world as object), drives: false } as never, 1), []);
   assert.deepEqual(roadChoices({ ...(world as object), card: { text: "x" } } as never, 1), []);
+});
+
+test("a human who owns the caravan picks a road out of the place, each line carrying where it goes", () => {
+  const world = {
+    drives: true,
+    at: { kind: "at", place: "inn" },
+    places: [
+      { id: "inn", name: "The Inn", kind: "inn", market: false },
+      { id: "mill", name: "The Mill", kind: "ruin", market: false },
+    ],
+    roads: [{ id: "inn_mill", from: "mill", to: "inn", miles: 6 }],
+    unexplored: [{ id: "inn_hills", from: "inn", miles: 9 }],
+    caravan: { owner: "bren", wagons: [] },
+    card: null,
+  } as never;
+  const choices = roadChoices(world, 1);
+  assert.deepEqual(choices.map((c) => c.label), ["Take the road to The Mill (6 miles)", "Take an unexplored road (9 miles)", "Make camp for the night"]);
+  assert.deepEqual(choices.slice(0, 2).map((c) => c.act), [{ kind: "travel", pace: "normal", to: "inn_mill" }, { kind: "travel", pace: "normal", to: "inn_hills" }]);
+  // On the road, the owner goes on along it: no road to pick.
+  const onRoad = roadChoices({ ...(world as object), at: { kind: "on_road", road: "inn_mill", came_from: "inn", miles_left: 2 } } as never, 1);
+  assert.deepEqual(onRoad.map((c) => c.act), [{ kind: "travel", pace: "normal" }, { kind: "rest_night", where: "camp" }]);
+});
+
+/** The engine's test campaign with the caravan owned by `owner` and no escort or route: a player's own caravan. */
+function ownedPack(owner: string): string {
+  const dir = mkdtempSync(path.join(tmpdir(), "owned-"));
+  cpSync(TEST_PACK, dir, { recursive: true });
+  const file = path.join(dir, "campaign.json");
+  const campaign = JSON.parse(readFileSync(file, "utf8")) as { world: Record<string, unknown> & { caravan: { owner: string } } };
+  delete campaign.world.escort;
+  delete campaign.world.route;
+  campaign.world.caravan.owner = owner;
+  writeFileSync(file, JSON.stringify(campaign));
+  return dir;
+}
+
+test("a human who owns the caravan takes a road by name, and makes the caravan's call on a card after the Blades' advice", async () => {
+  const pack = ownedPack("bren");
+  let moved = false;
+  let listed = false;
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind !== "explore") return ScriptedSeat.pass(prompt, s);
+    if (!listed) {
+      listed = true;
+      return { kind: "command", name: "options" };
+    }
+    listed = false;
+    const choice = moved ? s.choices.find((c) => c.label === "Make camp for the night") : s.choices.find((c) => c.label.startsWith("Take the road to"));
+    if (!choice) return { kind: "text", text: "I wait." };
+    moved = true;
+    return { kind: "option", number: choice.number };
+  });
+  const t = await testTable({ seed: 1, pack, human: "bren", players: ["maren"], seat });
+  try {
+    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    const report = await loop.run("vale_town");
+    assert.equal(report.ended, "the day limit: day 1 is over", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    const sent = t.requests();
+    const travel = sent.find((r) => r.cmd === "travel");
+    assert.ok(travel && typeof travel.to === "string", `the owner named the road: ${JSON.stringify(travel)}`);
+    const words = sent.filter((r) => r.cmd === "choose_card").map((r) => r.actor);
+    assert.ok(words.length > 0, "a card was drawn on the road");
+    // A caravan card waits for its owner after the Blade: bren speaks last and settles it.
+    assert.equal(words.at(-1), "bren", words.join(", "));
+    assert.ok(seat.shown.some((e) => e.kind === "info" && e.text.includes("The caravan is yours: you make the call")), "the human was asked as the owner");
+  } finally {
+    t.close();
+    rmSync(pack, { recursive: true, force: true });
+  }
 });
 
 test("a campaign pack names its start scene and day limit; the DM reads the world and the road's rules", async () => {

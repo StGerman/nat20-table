@@ -212,6 +212,26 @@ export class ScriptedDm implements DmAgent {
 }
 
 /**
+ * A DM for a campaign without a model (`--dm scripted` on a pack with a campaign file, AGT-80): the
+ * journey loads the scenes and the players move the caravan, so it narrates every wake with one
+ * plain line and starts nothing.
+ */
+export function roadDm(): ScriptedDm {
+  const line = (text: string) => async (tools: DmTools) => {
+    await offerAnySurrender(tools);
+    await tools.narrate(text);
+  };
+  return new ScriptedDm({
+    scene_open: line("The caravan comes to a new place."),
+    table_turn: line("The road waits for the party's next move."),
+    narrate: line("The moment passes as the engine says."),
+    combat_over: line("The fight is over."),
+    road: line("The caravan moves on along the road."),
+    summary: async () => "The caravan went on along the road.",
+  });
+}
+
+/**
  * A DM for the Milestone 5 yard fight on its own (the step 9 all-AI run and the yard fixture): it
  * opens the scene, starts the fight, narrates every part with one plain line, and ends the
  * adventure when the fight ends.

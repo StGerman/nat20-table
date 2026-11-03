@@ -622,7 +622,7 @@ export class TableLoop {
           "road",
           undefined,
           `A road card was settled: ${event.text}`,
-          "Narrate what comes of it in one to three sentences. If it brings a fight or a creature, use start_fight or place_creature from the list; never name coin or a price.",
+          "The engine has already applied the card: any fight it brings has started and any creature it brings is placed. Narrate what comes of it in one to three sentences; never start the fight again, never name coin or a price.",
         );
         await this.settle();
         return;
@@ -655,8 +655,13 @@ export class TableLoop {
    * An AI player that gives no word goes with the others. Returns whether a card was asked about.
    */
   private async cardRound(): Promise<boolean> {
-    const card = (await this.dmWorld())?.card;
-    if (!card || card.waiting_for.length === 0) return false;
+    const world = await this.dmWorld();
+    const card = world?.card;
+    if (!card) return false;
+    // A player owner makes the caravan's call after every Blade's advice (S2): the card waits for them
+    // though `waiting_for` names only the Blades.
+    const owner = world && card.target === "caravan" && !world.caravan.owner.includes(":") ? world.caravan.owner : undefined;
+    if (card.waiting_for.length === 0 && owner === undefined) return false;
     // The same card still waiting after a full round of asking and a fallback: the engine refuses
     // every word, so the run can't go on.
     const asked = this.cardAsked.get(card.id);
@@ -688,17 +693,47 @@ export class TableLoop {
         await send(this.table, handle, { cmd: "choose_card", actor: handle, choice }, () => `went with the others: ${choice}`);
       }
     }
+    if (owner !== undefined) await this.ownerCard(card.id, owner);
     this.cardAsked.set(card.id, this.table.engine.logHead);
     return true;
   }
 
+  /**
+   * A player owner's call on a caravan card, once every Blade has advised (S2): the human owner is
+   * asked as on any card, an AI owner is woken; an owner who gives no word goes with the advice.
+   */
+  private async ownerCard(id: string, owner: Handle): Promise<void> {
+    const ready = async () => {
+      const now = (await this.dmWorld())?.card;
+      return now && now.id === id && now.waiting_for.length === 0 && !this.table.ended ? now : undefined;
+    };
+    let now = await ready();
+    if (!now) return;
+    const human = this.table.human;
+    const agent = this.agents.get(owner);
+    if (owner === human) {
+      await this.humanCard(now, true);
+    } else if (agent) {
+      this.table.resetRetries(owner);
+      const briefing = await this.playerBriefing(owner, ...cardLines(now, true), "Make the caravan's call with choose_card, with a choice id. Say why in one line with say, if your character would.");
+      await this.wakePlayer(agent, "card", briefing);
+    }
+    now = await ready();
+    if (!now) return;
+    const { choices, preset } = cardChoices(now);
+    const choice = choices[preset - 1].about!.id;
+    this.table.fallbacks += 1;
+    this.table.log("fallback", `${owner} makes no call on the road card: goes with the Blades' advice (${choice})`, owner, { cause: this.causeOf(owner) });
+    await send(this.table, owner, { cmd: "choose_card", actor: owner, choice }, () => `went with the advice: ${choice}`);
+  }
+
   /** The human's word on a road card, asked last (design: the human seat): a number, or Enter to go with the others. */
-  private async humanCard(card: CardDm): Promise<void> {
+  private async humanCard(card: CardDm, owner = false): Promise<void> {
     const human = this.human;
     const { choices, preset } = cardChoices(card);
     for (;;) {
       if (this.table.ended) return;
-      this.table.show({ kind: "info", title: "On the road", text: [card.text, card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
+      this.table.show({ kind: "info", title: "On the road", text: [card.text, owner ? "The caravan is yours: you make the call, with the Blades' advice." : card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
       this.table.show({ kind: "options", title: "Your word", lines: choiceLines(choices), choices, preset });
       const intent = await this.ask({ kind: "card" });
       if (!intent) return;
@@ -714,7 +749,7 @@ export class TableLoop {
           continue;
         }
         this.table.log("intent", `${human} on the road card: ${picked.label}`, human);
-        this.table.tellDm(`${human} gave their word on the road card: ${picked.label}`);
+        this.table.tellDm(`${human} ${owner ? "made the caravan's call" : "gave their word"} on the road card: ${picked.label}`);
         return;
       }
       if (intent.kind === "text") {
@@ -769,11 +804,18 @@ export class TableLoop {
     }
   }
 
-  /** An AI player left its level-up open (a failed wake): the engine takes the recommended picks for it. */
+  /**
+   * An AI player left its level-up open (a failed wake): the engine takes the recommended picks for
+   * it. Straight to the engine, as the combat fallbacks go: a seat that spent its retries on bad
+   * picks has no budget left for the tools, and the choice must still close.
+   */
   private async recommendedLevelUp(handle: Handle, promptId: string): Promise<void> {
     this.table.fallbacks += 1;
     this.table.log("fallback", `${handle} left a level-up choice open: the recommended pick`, handle, { cause: this.causeOf(handle) });
-    await this.answerLevelUp(handle, promptId, []);
+    const response = await this.table.engine.request(handle, { cmd: "answer_level_up", actor: handle, prompt_id: promptId, picks: [] });
+    this.table.observe(response);
+    if (!response.ok) throw new Error(`${handle}'s level-up won't take its recommended pick: ${response.error?.message}`);
+    await this.settle();
   }
 
   /** Sends one level-up answer as `handle`'s own viewer; empty `picks` takes the recommended. */
@@ -907,7 +949,7 @@ export class TableLoop {
         outcome = await send(this.table, human, { cmd: "end_turn", actor: human, prompt_id: promptId }, () => "turn ended");
         break;
       case "travel":
-        outcome = await send(this.table, human, { cmd: "travel", actor: human, pace: act.pace }, () => "the caravan moves on");
+        outcome = await send(this.table, human, { cmd: "travel", actor: human, pace: act.pace, ...(act.to ? { to: act.to } : {}) }, () => "the caravan moves on");
         break;
       case "rest_night":
         outcome = await send(this.table, human, { cmd: "rest_night", actor: human, where: act.where }, () => "the night passes");
@@ -1512,6 +1554,8 @@ export class TableLoop {
           this.table.recordInput(this.human, JSON.stringify(intent), true);
         }
         if (intent.kind !== "command") return intent;
+        // A level-up shows its own list: `/options` goes back to it, never to the round's options.
+        if (intent.name === "options" && prompt.kind === "level_up") return intent;
         await this.command(intent.name);
         // `/suggest` just turned them off, or on again.
         if (intent.name === "suggest" && offered && !this.suggestOn) {
@@ -1533,7 +1577,9 @@ export class TableLoop {
   private offerSuggestions(prompt: HumanPrompt): { done: Promise<void>; shown: boolean; open: boolean } | undefined {
     const suggester = this.suggester;
     const seat = this.table.seat;
-    if (!suggester || !seat?.suggest || !this.suggestOn || this.table.inCombat || !SUGGESTED.has(prompt.kind)) return undefined;
+    // A surrender offer comes during a fight, out of the turn order: it is the one prompt in combat with suggestions.
+    const fighting = this.table.inCombat && prompt.kind !== "surrender";
+    if (!suggester || !seat?.suggest || !this.suggestOn || fighting || !SUGGESTED.has(prompt.kind)) return undefined;
     const offered = { done: Promise.resolve(), shown: false, open: true };
     seat.suggest({ kind: "waiting", cancel: () => suggester.cancel() });
     // One call at a time: the one before, already cancelled, ends first.
@@ -1545,17 +1591,21 @@ export class TableLoop {
       // Answered while the briefing was read: no call at all.
       if (!offered.open) return;
       this.table.recordInput(this.human, briefing);
-      const rows = await suggester.suggest(briefing);
+      // The rows face the human as their own words: a number or a game term from the sheet in any
+      // row (an AC, a DC) drops them all, as the speech guard drops a player's line.
+      const drafted = await suggester.suggest(briefing);
+      const rows = drafted?.some((row) => this.table.guarded(row) !== undefined) ? undefined : drafted;
       if (!offered.open) return;
       if (rows) {
         offered.shown = true;
         this.suggestions.shown += 1;
         seat.suggest!({ kind: "rows", rows });
       } else seat.suggest!({ kind: "none" });
-    })().catch(() => {
-      // No suggestions, and nothing on screen. A plan limit stops the run at the next model call
-      // the table waits on, not while the human is typing.
+    })().catch((error: unknown) => {
+      // No suggestions, and nothing on screen. A plan limit stops the run as any model call's
+      // does; the table ends once the human's line is in.
       if (offered.open) seat.suggest!({ kind: "none" });
+      if (stopsTheRun(error)) this.table.end(error.message, stopOf(error));
     });
     this.suggesting = offered.done;
     return offered;
@@ -1975,9 +2025,14 @@ export class TableLoop {
 }
 
 /** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said. */
-function cardLines(card: CardDm): string[] {
+function cardLines(card: CardDm, owner = false): string[] {
+  const whose = owner
+    ? "the caravan's, and the caravan is yours: you make the call after the Blades' advice"
+    : card.target === "caravan"
+      ? "the caravan's: the merchant decides, and your word is advice"
+      : "the Blades': you vote, and most votes win";
   return [
-    `A road card waits for your word (${card.target === "caravan" ? "the caravan's: the merchant decides, and your word is advice" : "the Blades': you vote, and most votes win"}): ${card.text}`,
+    `A road card waits for your word (${whose}): ${card.text}`,
     `Choices: ${card.choices.map((c) => `${c.id}: ${c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
   ];

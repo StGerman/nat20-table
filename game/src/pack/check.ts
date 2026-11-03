@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../engine.ts";
 import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS, STAT_BLOCKS_SINCE } from "./adventure.ts";
+import { readCampaign } from "./campaign.ts";
 import { skeletonFile } from "./read.ts";
 
 /** Every pack in the repository: each folder of `scenarios/`. */
@@ -238,10 +239,18 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
       report.loaded.push(scene.id);
       await look(ids.get(scene.id)?.monsters ?? new Map());
     }
-    // A living-world pack's campaign starts on its first scene: the engine checks the world, its
-    // deck, NPCs and every scene a journey can load (MAP-6, MAP-7).
+    // A living-world pack's campaign starts where the run starts it, on its start place's scene:
+    // the engine checks the world, its deck, NPCs and every scene a journey can load (MAP-6, MAP-7).
     if (campaign && report.loaded.length === adventure.scenes.length) {
-      const first = await engine.request("dm", { cmd: "load_scene", scene_id: adventure.scenes[0].id });
+      // A start the table can't resolve still goes to the engine from the first scene, so the
+      // engine says what is wrong with the campaign.
+      let start = adventure.scenes[0].id;
+      try {
+        start = readCampaign(dir)?.startScene ?? start;
+      } catch {
+        // the engine's refusal below names the fault
+      }
+      const first = await engine.request("dm", { cmd: "load_scene", scene_id: start });
       const started = first.ok ? await engine.request("dm", { cmd: "start_campaign", party }) : first;
       if (!started.ok) problem(`the engine refused the campaign: ${started.error?.message}`);
     }
@@ -258,17 +267,18 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
         : undefined;
       // A spot with no room says nothing about the entry: the next spot around the party is tried,
       // and an entry that finds room at none of them is a problem too, so every entry is checked.
+      // Offsets on the ground, east-west and north-south (`z_ft` is up).
       const spots = [[30, 0], [-30, 0], [0, 30], [0, -30], [60, 0], [-60, 0]];
       for (const [i, entry] of adventure.stat_blocks.entries()) {
         if (!near) break;
         let refused: string | undefined = "no spot near the party had room for it";
-        for (const [dx, dz] of spots) {
+        for (const [dx, dy] of spots) {
           const placed = await engine.request("dm", {
             cmd: "place_creature",
             handle: `pack_check_${i + 1}`,
             monster: entry.monster,
             side: entry.side,
-            at: { kind: "point", point: { x_ft: near.x_ft + dx, y_ft: near.y_ft, z_ft: near.z_ft + dz } },
+            at: { kind: "point", point: { x_ft: near.x_ft + dx, y_ft: near.y_ft + dy, z_ft: near.z_ft } },
             // The authored name goes too: the engine checks it as the DM tool will send it.
             ...(entry.name ? { name: entry.name } : {}),
             ...(entry.carries ? { carries: entry.carries } : {}),
