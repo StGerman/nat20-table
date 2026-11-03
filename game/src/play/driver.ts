@@ -24,7 +24,7 @@
 // --seat ink asks "continue or new party" first), --new-party (start the pack's pregens instead),
 // --rosters DIR.
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { ModelDm, type CraftMode } from "../agents/dm.ts";
@@ -32,6 +32,7 @@ import type { Language } from "../agents/language.ts";
 import { ModelPlayer } from "../agents/player.ts";
 import { sessionOptions } from "../agents/sdk-session.ts";
 import { GameEngine, REPO } from "../engine.ts";
+import { readCampaign } from "../pack/campaign.ts";
 import { readPack } from "../pack/read.ts";
 import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
 import { chainDm, chainScenes, ScriptedPlayer, ScriptedSeat, walkOnDm } from "../table/scripted.ts";
@@ -81,6 +82,14 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   }
   const flags = settings.values;
   const pack = readPack(flags.pack);
+  // A pack with a campaign file plays the living world (AGT-80): days on the map, not scenes in order.
+  let campaign: ReturnType<typeof readCampaign>;
+  try {
+    campaign = readCampaign(flags.pack);
+  } catch (error) {
+    console.error(`--pack: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(2);
+  }
   // `--seat ai`: no human at the table, and every character an AI player (AGT-40). `--play` puts
   // the human on another character (AGT-35); with `--seat ink` and no `--play`, the pick list does.
   if (flags.seat === "ai" && flags.play) {
@@ -127,6 +136,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
       language,
       usage,
       ...(flags["dm-timeout-ms"] !== undefined ? { turnTimeoutMs: flags["dm-timeout-ms"] } : {}),
+      livingWorld: campaign !== undefined,
     });
 
   // The saved party (API-45): read before anything starts, so a bad name or file costs nothing.
@@ -201,7 +211,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     let engine: GameEngine | undefined;
     try {
       engine = await GameEngine.start({ pack: flags.pack, runDir, seed: flags.seed, ...(loaded ? { roster: loaded.roster } : {}) });
-      return { engine, carried: await startAt(engine, flags.pack, plan.first, everyone) };
+      // A campaign starts at its start place, with the party fresh in it; the loop starts the campaign.
+      return { engine, carried: campaign ? undefined : await startAt(engine, flags.pack, plan.first, everyone) };
     } catch (error) {
       engine?.close();
       ink?.stop();
@@ -266,7 +277,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   };
   if (!ink) process.on("SIGINT", interrupted);
   // A pack with a campaign file runs the living world: the AI players get the road tools (AGT-80).
-  const livingWorld = existsSync(path.join(flags.pack, "campaign.json"));
+  const livingWorld = campaign !== undefined;
   const players: PlayerAgent[] = party.ai.map((handle) =>
     flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle)!, choice: playerChoice, language, withHuman: Boolean(party.human), russianNames: party.russianNames, usage, livingWorld }),
   );
@@ -310,9 +321,10 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     table,
     dm,
     players,
-    onScene: plan.onScene,
+    // A campaign goes wherever the road takes it, and ends on its own terms (AGT-80).
+    ...(campaign ? {} : { onScene: plan.onScene }),
     // The adventure ends only after the run's last scene has loaded (or with the party down).
-    finale: played.at(-1),
+    ...(campaign ? {} : { finale: played.at(-1) }),
     // Leaving a scene that offers a Short Rest, unrested and hurt, reminds the DM once (AGT-46).
     rests: pack.adventure.scenes.filter((s) => s.rest).map((s) => s.id),
     // The creatures the DM may bring in beyond the scene files (AGT-24).
@@ -324,6 +336,25 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     stallRounds: flags["stall-rounds"],
     onProgress: progress,
     usage,
+    ...(campaign
+      ? {
+          campaign: {
+            party: everyone,
+            ...(campaign.dayLimit !== undefined ? { dayLimit: campaign.dayLimit } : {}),
+            // The party is saved after every night too, so a crash loses at most one day (API-45).
+            ...(record.roster
+              ? {
+                  onNight: async () => {
+                    const r = record.roster!;
+                    const saved = await saveRoster(engine, flags.rosters, r.name, record.run_id);
+                    if ("sha256" in saved) table.log("system", `the party saved as ${r.name} after the night: ${saved.sha256.slice(0, 12)}`);
+                    else table.log("error", `the party was not saved after the night: ${saved.not_saved}`);
+                  },
+                }
+              : {}),
+          },
+        }
+      : {}),
   });
 
   const who = (kind: string | undefined, choice: { model: string; effort: string }) => (kind === "scripted" ? "scripted" : `${choice.model} (${choice.effort})`);
@@ -335,7 +366,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   let run: RunReport | undefined;
   let failure: unknown;
   try {
-    run = await loop.run(plan.first, carried);
+    run = await loop.run(campaign ? campaign.startScene : plan.first, carried);
   } catch (error) {
     failure = error;
   }

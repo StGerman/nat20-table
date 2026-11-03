@@ -124,6 +124,8 @@ export interface ScriptedPlayerPolicy {
    * pass. Without it the player is never woken to react, so scripted runs play as before.
    */
   bark?: (tools: PlayerTools, briefing: string) => Promise<string | void>;
+  /** A road card waits for its word (AGT-80); by default it gives the first choice listed. */
+  card?: (tools: PlayerTools, briefing: string) => Promise<string | void>;
 }
 
 export class ScriptedPlayer implements PlayerAgent {
@@ -177,6 +179,13 @@ export class ScriptedPlayer implements PlayerAgent {
         return this.policy.bark?.(tools, briefing);
       case "summary":
         return `${this.handle} remembers the scene.`;
+      case "card": {
+        // The first choice the briefing lists, unless the policy says otherwise.
+        if (this.policy.card) return this.policy.card(tools, briefing);
+        const first = /^Choices: ([a-z0-9_]+):/m.exec(briefing)?.[1];
+        if (first) await tools.chooseCard(first);
+        return;
+      }
     }
   }
 
@@ -422,6 +431,11 @@ export class ScriptedSeat implements Seat {
       case "surrender":
         // The scripted human accepts every surrender it is offered (decision D4).
         return { kind: "option", number: 1 };
+      case "card": {
+        // The scripted human goes with the others on a road card, as Enter does (AGT-80).
+        const offered = [...seat.shown].reverse().find((e) => e.kind === "options");
+        return { kind: "option", number: (offered?.kind === "options" ? offered.preset : undefined) ?? 1 };
+      }
       default:
         return { kind: "text", text: "I wait." };
     }

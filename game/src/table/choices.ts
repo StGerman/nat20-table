@@ -3,7 +3,7 @@
 // follow-up pick for the rest; variants, multi-target and area options open a follow-up pick from
 // the option's own list. Built only from the human's own `legal_actions` and state, both already
 // projected for the human's viewer.
-import type { ActionCost, ActionOption, Aim, Handle, MoveTarget, Side, State, TargetCandidate } from "@nat20-table/engine-client";
+import type { ActionCost, ActionOption, Aim, Handle, Lodging, MoveTarget, Pace, Side, State, TargetCandidate, WorldPlayer } from "@nat20-table/engine-client";
 import type { LegalActionsResult } from "../view.ts";
 import type { DecisionInput } from "./tools.ts";
 
@@ -13,7 +13,11 @@ export type ChoiceAct =
   | { kind: "move"; to: MoveTarget }
   /** Dash at this prompt, then walk to `to` on the doubled movement, as far as it goes. */
   | { kind: "dash_move"; to: MoveTarget }
-  | { kind: "end_turn" };
+  | { kind: "end_turn" }
+  /** Move the caravan on one stretch along its way (AGT-80): the merchant's route, or on along the road. */
+  | { kind: "travel"; pace: Pace }
+  /** End the day at the inn or in camp (AGT-80). */
+  | { kind: "rest_night"; where: Lodging };
 
 export interface Choice {
   number: number;
@@ -56,6 +60,36 @@ function aboutOf(option: ActionOption): NonNullable<Choice["about"]> {
 function tagged<T extends Item | Choice>(item: T, about: NonNullable<Choice["about"]>, dash: NonNullable<Choice["about"]> = { id: "dash" }): T {
   const own = item.act?.kind === "dash_move" ? dash : about;
   return { ...item, about: own, ...(item.next ? { next: item.next.map((c) => tagged(c, about, dash)) } : {}) };
+}
+
+/**
+ * The road's own lines after the human's options (AGT-80), when the human may drive the caravan
+ * and no card waits: move on, make camp, and take rooms where there is an inn. Numbered from
+ * `first`. Moving on goes the caravan's own way; a road or place to pick is for the merchant's
+ * seat, later.
+ */
+export function roadChoices(world: WorldPlayer, first: number): Choice[] {
+  if (!world.drives || world.card) return [];
+  const here = world.at.kind === "at" ? world.places.find((p) => p.id === (world.at as { place: string }).place) : undefined;
+  const items: Item[] = [
+    { label: "Move on with the caravan", act: { kind: "travel", pace: "normal" }, about: { id: "travel" } },
+    { label: "Make camp for the night", act: { kind: "rest_night", where: "camp" }, about: { id: "rest_night" } },
+    ...(typeof here?.inn_cp === "number" ? [{ label: `Take rooms at the inn for the night`, act: { kind: "rest_night", where: "inn" } as ChoiceAct, about: { id: "rest_night" } }] : []),
+  ];
+  return items.map((item, i) => ({ number: first + i, ...item }));
+}
+
+/**
+ * A road card as the human's numbered choices (AGT-80): one per choice, and `preset` the one Enter
+ * takes, the choice most of the others gave (the first of them on a tie), or the first choice.
+ */
+export function cardChoices(card: { choices: Array<{ id: string; text: string }>; said: Array<{ actor: Handle; choice: string }> }): { choices: Choice[]; preset: number } {
+  const count = new Map<string, number>();
+  for (const s of card.said) count.set(s.choice, (count.get(s.choice) ?? 0) + 1);
+  let top: string | undefined;
+  for (const s of card.said) if (top === undefined || (count.get(s.choice) ?? 0) > (count.get(top) ?? 0)) top = s.choice;
+  const choices = card.choices.map((c, i) => ({ number: i + 1, label: c.id === top ? `${c.text} (the others' choice)` : c.text, about: { id: c.id } }));
+  return { choices, preset: (card.choices.findIndex((c) => c.id === top) + 1) || 1 };
 }
 
 /** One line per choice, as the human reads them. */

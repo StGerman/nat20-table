@@ -37,7 +37,15 @@ export type TableEvent =
    * (`title` names it). `choices` carries the same list as data for a seat that picks by rule.
    * `budget` is what is left of the human's combat turn, from the same `legal_actions`.
    */
-  | { kind: "options"; title?: string; lines: string[]; choices: Choice[]; budget?: TurnBudget }
+  | {
+      kind: "options";
+      title?: string;
+      lines: string[];
+      choices: Choice[];
+      budget?: TurnBudget;
+      /** The number Enter on an empty line takes (a road card: "go with the others", AGT-80). */
+      preset?: number;
+    }
   /** A reaction the human may take: yes or no. */
   | { kind: "reaction"; summary: string; options: string[] }
   /** A question the DM asks the human (guarded). */
@@ -79,7 +87,9 @@ export type HumanPrompt =
   /** `/pause` is on and an AI player is next: only commands until `/pause` again. */
   | { kind: "paused" }
   /** The DM offered a surrender: accept it (1), fight on (2), or say what you do (AGT-30). */
-  | { kind: "surrender" };
+  | { kind: "surrender" }
+  /** A road card waits for the human's word, asked last (AGT-80): a number, or Enter to go with the others. */
+  | { kind: "card" };
 
 /**
  * The human's seat (spec §3.4). The Ink UI implements it (step 11); scripted seats implement it
@@ -133,7 +143,9 @@ export type PlayerWake =
    */
   | "bark"
   /** A scene is ending: summarise it in a few sentences of fiction (AGT-6). */
-  | "summary";
+  | "summary"
+  /** A road card waits for its word (AGT-80): advice to the merchant or a vote, with choose_card. */
+  | "card";
 
 /**
  * An AI player (spec §3.2). It acts only through its tools, which are bound to its own handle.
@@ -172,6 +184,8 @@ export type DmWake =
   | "surrender_words"
   /** A fight ended. */
   | "combat_over"
+  /** The road moved on (AGT-80): a card settled, a night passed, the escort was paid. */
+  | "road"
   | "summary";
 
 export interface DmAgent {
