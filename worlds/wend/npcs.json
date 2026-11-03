@@ -1,0 +1,35 @@
+{
+    "_comment": "The Wend valley's place NPCs (API-48, MAP-7): people who live in one place and are there, as the party left them, when it comes back. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Each stands at the `by_the_wagon` anchor, which every pack's scene for their place must have. Stat blocks from SRD 5.2.1.",
+    "npcs": [
+        {
+            "id": "shepherd_gwyn",
+            "name": "Gwyn the shepherd",
+            "monster": "commoner",
+            "place": "highsteads",
+            "anchor": "by_the_wagon",
+            "attitude": "friendly",
+            "carries": {"coins": {"cp": 14}},
+            "notes": "Keeps the Highsteads' flocks and every rumour off the ridges. Has seen goblin fires on the far ridge three nights running and wants someone to believe her."
+        },
+        {
+            "id": "osric_hale",
+            "name": "Osric Hale, the reeve",
+            "monster": "commoner",
+            "place": "wendford",
+            "anchor": "by_the_wagon",
+            "attitude": "indifferent",
+            "carries": {"coins": {"sp": 8, "gp": 2}},
+            "notes": "Wendford's reeve: careful, proud, worried about money. Sent nobody to take a toll at the Millbeck bridge and is angry that someone does. Knows the Grey Lantern company if they played The Silent Mill."
+        },
+        {
+            "id": "warden_brannock",
+            "name": "Brannock, the fair warden",
+            "monster": "guard",
+            "place": "wendmouth",
+            "anchor": "by_the_wagon",
+            "attitude": "indifferent",
+            "carries": {"coins": {"sp": 5}},
+            "notes": "Walks the Wendmouth fair ground with a staff in fair week. Tired, fair-minded, short with anyone who draws a blade inside the gate."
+        }
+    ]
+}

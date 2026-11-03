@@ -1,0 +1,130 @@
+{
+    "id": "fw_highsteads",
+    "description": "Fair in Wend, the start (MAP-7): the farmyard at the Highsteads where Odda Vell's wagon stands loaded with the hill farms' wheat. The Grey Lantern company has just taken her coin. Every later scene carries the party in.",
+    "anchors": [
+        {
+            "id": "by_the_wagon",
+            "name": "by the wagon",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "fold_gate",
+            "name": "the sheepfold gate",
+            "position_ft": {
+                "x_ft": 20.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "farmhouse_door",
+            "name": "the farmhouse door",
+            "position_ft": {
+                "x_ft": -20.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "track_down",
+            "name": "the head of the track down",
+            "position_ft": {
+                "x_ft": 40.0,
+                "y_ft": -5.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": -5.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "torva",
+            "pregen": "barbarian_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": -5.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -5.0,
+                    "y_ft": -5.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "ilsa",
+            "pregen": "wizard_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 5.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "read_the_sky",
+            "test": {
+                "kind": "skill",
+                "skill": "survival"
+            },
+            "dc": 10,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "knows_the_weather"
+                }
+            ]
+        },
+        {
+            "id": "ridge_smoke",
+            "test": {
+                "kind": "skill",
+                "skill": "perception"
+            },
+            "dc": 13,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "saw_goblin_smoke"
+                }
+            ]
+        }
+    ]
+}

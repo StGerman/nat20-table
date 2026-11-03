@@ -45,6 +45,13 @@ test("every pack in scenarios/ passes the pack check and loads every scene", asy
 function campaignMill(world: Record<string, unknown>, edit: (skeleton: Adventure) => void = () => undefined): { pack: string; close(): void } {
   return planted((skeleton, pack) => {
     edit(skeleton);
+    // The Wend place NPCs stand by the wagon: every scene a place loads has that anchor.
+    for (const scene of ["s1_village_green", "s2_mill_road"]) {
+      const file = path.join(pack, "scenes", `${scene}.json`);
+      const json = readJson(file);
+      json.anchors.push({ id: "by_the_wagon", name: "by the wagon", position_ft: { x_ft: 0, y_ft: 5, z_ft: 0 } });
+      writeFileSync(file, JSON.stringify(json, null, 4));
+    }
     writeFileSync(path.join(pack, "campaign.json"), JSON.stringify({ ...skeleton, day_limit: 3, world }, null, 4));
   });
 }
