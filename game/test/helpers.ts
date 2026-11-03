@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../src/engine.ts";
+import type { Roster } from "@nat20-table/engine-client";
 import { ScriptedSeat } from "../src/table/scripted.ts";
 import { TableState, type TextGuard } from "../src/table/state.ts";
 import type { Seat } from "../src/table/types.ts";
@@ -35,9 +36,11 @@ export async function testTable<S extends Seat = ScriptedSeat>(options: {
   speechGuard?: TextGuard;
   /** Guards built on the started engine (the narration guard reads its roll ids), as the run commands do. */
   guards?: (engine: GameEngine) => { narrationGuard: TextGuard; speechGuard: TextGuard };
+  /** A party an earlier session saved (API-45). */
+  roster?: Roster;
 }): Promise<TestTable<S>> {
   const runDir = mkdtempSync(path.join(tmpdir(), "table-"));
-  const engine = await GameEngine.start({ pack: options.pack ?? TEST_PACK, runDir, seed: options.seed });
+  const engine = await GameEngine.start({ pack: options.pack ?? TEST_PACK, runDir, seed: options.seed, ...(options.roster ? { roster: options.roster } : {}) });
   const human = options.human ?? "bren";
   const seat = options.seat ?? (new ScriptedSeat(human) as Seat as S);
   const table = new TableState({

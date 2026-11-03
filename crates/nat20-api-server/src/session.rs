@@ -365,8 +365,25 @@ impl Session {
             human.map(|h| h.0.clone()),
             self.roster.as_ref().and_then(|r| r.world.as_ref()),
         )?);
-        // The start place's NPCs join the scene the party is in, when it is the place's.
-        self.npcs_arrive()?;
+        // A roster's world may have left the caravan elsewhere (API-45): the party goes to the
+        // scene of where it is. Otherwise the start place's NPCs join the scene the party is in,
+        // when it is the place's.
+        let here = self
+            .campaign
+            .as_ref()
+            .map(|c| c.scene_at(&c.world.state.at))
+            .unwrap_or_default();
+        if self.game.as_ref().is_some_and(|g| g.scene_id() != here) {
+            let scene = scene::read(&self.data_dir, &here)?;
+            let party = party.to_vec();
+            if let Err(e) = self.enter_scene(&scene, &party) {
+                // Nothing starts on a refusal.
+                self.campaign = None;
+                return Err(e);
+            }
+        } else {
+            self.npcs_arrive()?;
+        }
         // The escort's advance (API-47).
         let due = self
             .campaign
