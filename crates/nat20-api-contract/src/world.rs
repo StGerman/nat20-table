@@ -377,6 +377,46 @@ pub struct WorldDm {
     /// Every place NPC, alive or dead, met or not, in the world file's order (API-48).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub npcs: Vec<NpcDm>,
+    /// The escort contract, when the party is hired on one (API-47).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escort: Option<EscortDm>,
+}
+
+/// The escort contract as the DM sees it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct EscortDm {
+    /// The terms and each Blade's service and pay, as the players see them.
+    pub contract: EscortView,
+    /// What the merchant's purse holds now, in copper pieces.
+    pub purse_cp: u64,
+}
+
+/// The escort contract as the party knows it: the terms, and each Blade's days and pay.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct EscortView {
+    /// Who pays: the caravan's owner, `npc:<id>`.
+    pub merchant: String,
+    /// Where the caravan is escorted to; the rest of the pay is due on arrival.
+    pub destination: String,
+    /// The wage per Blade per day, in copper pieces.
+    pub wage_cp: u32,
+    /// Days of wages paid ahead when the contract started.
+    pub advance_days: u32,
+    /// Each Blade, in party order.
+    pub blades: Vec<EscortBlade>,
+    /// Whether the caravan reached the destination and the pay was settled.
+    pub done: bool,
+}
+
+/// One Hired Blade's service and pay.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct EscortBlade {
+    /// The Blade.
+    pub handle: Handle,
+    /// Days served: one for each night they lived through, and the day of arrival.
+    pub served: u32,
+    /// Copper paid so far.
+    pub paid_cp: u64,
 }
 
 /// How a place NPC feels about the party.
@@ -457,6 +497,9 @@ pub struct WorldPlayer {
     /// The place NPCs the party has met, in the world file's order (API-48).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub npcs: Vec<NpcKnown>,
+    /// The escort contract, when the party is hired on one (API-47).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escort: Option<EscortView>,
 }
 
 /// One journey leg, in `travel`'s result and the `traveled` event.

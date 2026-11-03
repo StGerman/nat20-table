@@ -213,6 +213,58 @@ impl Session {
         self.npcs_arrive()
     }
 
+    /// Pays the escort's wages from the merchant's purse (API-47): one `wage` ledger entry per
+    /// Blade, each logged before the next. The world has already taken the coin from the purse.
+    fn pay_wages(&mut self, wages: Vec<nat20_world::Wage>) -> Result<(), ApiError> {
+        let Some((merchant, purse_now)) = self.campaign.as_ref().and_then(|c| c.merchant_purse())
+        else {
+            return Ok(());
+        };
+        if wages.is_empty() {
+            return Ok(());
+        }
+        // The merchant's account opens with what the purse held before this batch.
+        let batch: u64 = wages.iter().map(|w| u64::from(w.copper)).sum();
+        if let Ok(holder) = merchant.parse::<Holder>() {
+            self.ledger.open_account(
+                holder,
+                Holdings {
+                    copper: i64::try_from(purse_now + batch).unwrap_or(i64::MAX),
+                    ..Holdings::default()
+                },
+            );
+        }
+        for wage in wages {
+            self.game_mut()?
+                .receive(&merchant, &wage.blade, wage.copper, LedgerReason::Wage)?;
+            self.push_entries();
+        }
+        self.check_merchant();
+        Ok(())
+    }
+
+    /// The caravan arrived at `place`: at the escort's destination, the Blades are paid what
+    /// they are owed and `escort_settled` is logged.
+    fn escort_arrive(&mut self, place: &str) -> Result<(), ApiError> {
+        let Some(campaign) = self.campaign.as_mut() else {
+            return Ok(());
+        };
+        let settled_before = campaign.world.state.escort.as_ref().is_some_and(|e| e.done);
+        let game = self.game.as_ref();
+        let wages = campaign.escort_arrive(place, |b| game.is_some_and(|g| g.is_dead(b)));
+        let settled = campaign.world.state.escort.as_ref().is_some_and(|e| e.done);
+        self.pay_wages(wages)?;
+        if settled && !settled_before {
+            self.push(Pending::public(
+                None,
+                EventKind::EscortSettled {
+                    destination: place.to_owned(),
+                },
+            ));
+        }
+        Ok(())
+    }
+
     /// Writes back every place NPC placed in the current scene, as core holds them now.
     fn npcs_leave(&mut self) {
         let (Some(campaign), Some(game)) = (self.campaign.as_mut(), self.game.as_ref()) else {
@@ -315,6 +367,13 @@ impl Session {
         )?);
         // The start place's NPCs join the scene the party is in, when it is the place's.
         self.npcs_arrive()?;
+        // The escort's advance (API-47).
+        let due = self
+            .campaign
+            .as_mut()
+            .map(|c| std::mem::take(&mut c.due))
+            .unwrap_or_default();
+        self.pay_wages(due)?;
         Ok(CommandResult::StartCampaign {
             state: self.state_for(viewer)?,
         })
@@ -445,6 +504,8 @@ impl Session {
             }
         }
         let (rested, not_rested) = game.night(&party, minutes)?;
+        // A day of service for each Blade who is not dead (API-47).
+        next.escort_night(|b| game.is_dead(b));
         self.campaign = Some(next);
         self.push_entries();
         let night = NightView {
@@ -511,6 +572,9 @@ impl Session {
             ));
         }
         self.enter_scene(&scene, &party)?;
+        if leg.arrived {
+            self.escort_arrive(&leg.toward)?;
+        }
         let road = leg.road.clone();
         self.draw_card(|world, dice| world.draw_after_leg(&road, dice))?;
         Ok(CommandResult::Travel {
@@ -1202,6 +1266,28 @@ impl Session {
                 eprintln!("{line}");
                 self.ledger_mismatches.push(line);
             }
+        }
+    }
+
+    /// The merchant's trial balance (API-47): the journal's account for the escort's merchant
+    /// holds what the world says their purse holds.
+    fn check_merchant(&mut self) {
+        let Some((merchant, purse)) = self.campaign.as_ref().and_then(|c| c.merchant_purse())
+        else {
+            return;
+        };
+        let Ok(holder) = merchant.parse::<Holder>() else {
+            return;
+        };
+        let Some(held) = self.ledger.balances().get(&holder).map(|h| h.copper) else {
+            return;
+        };
+        if i64::try_from(purse).ok() != Some(held) {
+            let line = format!(
+                "ledger: {merchant} holds {purse} cp in the world but {held} cp in the journal"
+            );
+            eprintln!("{line}");
+            self.ledger_mismatches.push(line);
         }
     }
 

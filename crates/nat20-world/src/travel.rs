@@ -20,6 +20,7 @@ use crate::{
     clock::Clock,
     deck::{Deck, DeckError, DeckState, When},
     dice::WorldDice,
+    escort::{EscortState, EscortTerms, Wage},
     map::{MapError, Position, WorldMap},
     npcs::{self, NpcDef, NpcFile, NpcState},
 };
@@ -103,6 +104,9 @@ pub struct WorldState {
     /// The place NPCs, by id: what each visit left them with (API-48)
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub npcs: BTreeMap<String, NpcState>,
+    /// The escort contract: days served, pay so far, the merchant's purse (API-47)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escort: Option<EscortState>,
 }
 
 /// The world: the map and goods files, the route an NPC owner follows, and the state.
@@ -118,6 +122,8 @@ pub struct World {
     pub deck: Deck,
     /// The place NPCs; none until [`World::with_npcs`]
     pub npcs: Vec<NpcDef>,
+    /// The escort contract's terms; none until [`World::with_escort`]
+    pub escort: Option<EscortTerms>,
     /// What changes
     pub state: WorldState,
 }
@@ -223,9 +229,11 @@ impl World {
                 traveled_today: 0,
                 deck: DeckState::default(),
                 npcs: BTreeMap::new(),
+                escort: None,
             },
             deck: Deck::default(),
             npcs: Vec::new(),
+            escort: None,
         })
     }
 
@@ -243,6 +251,28 @@ impl World {
         npcs::settle(&file.npcs, &mut self.state.npcs);
         self.npcs = file.npcs;
         Ok(self)
+    }
+
+    /// The world with an escort contract, checked against the map. `blades` are the Hired
+    /// Blades in party order. A state that already holds the contract (a roster's) keeps it;
+    /// otherwise it starts now and the advance is due: the payments are returned.
+    pub fn with_escort(
+        mut self,
+        terms: EscortTerms,
+        blades: Vec<String>,
+    ) -> Result<(Self, Vec<Wage>), MapError> {
+        terms.validate(&self.map)?;
+        let advance = match &self.state.escort {
+            Some(_) => Vec::new(),
+            None => {
+                let mut state = EscortState::new(&terms, blades);
+                let advance = state.advance(&terms);
+                self.state.escort = Some(state);
+                advance
+            }
+        };
+        self.escort = Some(terms);
+        Ok((self, advance))
     }
 
     /// The living NPCs of `place`, in file order.

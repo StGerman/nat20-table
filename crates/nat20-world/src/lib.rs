@@ -16,6 +16,7 @@ pub mod caravan;
 pub mod clock;
 pub mod deck;
 pub mod dice;
+pub mod escort;
 pub mod map;
 pub mod npcs;
 pub mod travel;
@@ -28,6 +29,7 @@ pub use deck::{
     Effect, PendingCard, Resolution, Table, Target, When, Who,
 };
 pub use dice::{ListDice, WorldDice};
+pub use escort::{EscortState, EscortTerms, SKILLED_WAGE_CP, Wage};
 pub use map::{Edge, Generate, MapError, Place, Position, Road, Terrain, WorldMap};
 pub use npcs::{Attitude, NpcCarries, NpcCoins, NpcDef, NpcFile, NpcItem, NpcLeft, NpcState};
 pub use travel::{

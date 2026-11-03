@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::caravan::Caravan;
+use crate::{caravan::Caravan, escort::EscortTerms};
 
 /// A campaign file as the engine reads it: only its `world` block.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -38,6 +38,9 @@ pub struct CampaignWorld {
     pub route: Vec<String>,
     /// The scene for the road and for places without a scene of their own
     pub road_scene: String,
+    /// The escort contract the party is hired on, if any (API-47)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escort: Option<EscortTerms>,
 }
 
 fn first_day() -> u32 {
