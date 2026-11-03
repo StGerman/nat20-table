@@ -160,101 +160,105 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":87}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":87}
 {"at":"t","speaker":"bren","channel":"run","kind":"system","text":"bren accepts the surrender of goblin_1, goblin_2","rolls":[],"log_head":87}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Monster Nimble Escape.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is under Disengage.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 moves.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Shortbow attack on bren.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r76] goblin_2 rolls an attack roll vs bren: 1d20 (9) +4 = 13 vs AC 19, miss.","rolls":["r76"],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 4 begins.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 is no longer under Disengage.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 uses Shortbow attack on bren.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r82] goblin_1 rolls an attack roll vs bren: 1d20 (16) +4 = 20 vs AC 19, hit.","rolls":["r82"],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r83] goblin_1 rolls piercing damage: 1d6 (3) +2 = 5.","rolls":["r83"],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren takes 5 piercing damage.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 14/20 Hit Points.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 uses Monster Nimble Escape.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 moves.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 uses Shortbow attack on bren.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r76] goblin_2 rolls an attack roll vs bren: 1d20 (9) = 13, miss.","rolls":["r76"],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 4 begins.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 uses Shortbow attack on bren.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r82] goblin_1 rolls an attack roll vs bren: 1d20 (16) = 20, hit.","rolls":["r82"],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r83] goblin_1 rolls piercing damage: 1d6 (3) = 5.","rolls":["r83"],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren takes 5 piercing damage.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 14/20 Hit Points.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":89}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1, goblin_2 surrender.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1, goblin_2 surrender.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":89}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The yard is yours.","rolls":[],"log_head":89}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is no longer under Disengage.","rolls":[],"log_head":91}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene m3_s4_prisoner loaded in explore mode.","rolls":[],"log_head":91}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene m3_s4_prisoner loaded in explore mode.","rolls":[],"log_head":91}
-{"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene m3_s4_prisoner","rolls":[],"log_head":91}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":91}
-{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":91,"human":true}
-{"at":"t","speaker":"dm","channel":"to:bren","kind":"question","text":"The goblin shakes. What do you ask it?","rolls":[],"log_head":91}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":91}
-{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":91,"human":true}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r92] bren rolls a Charisma (Intimidation) check: 1d20 (15) +3 = 18 vs DC 13, success.","rolls":["r92"],"log_head":93}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's check succeeds.","rolls":[],"log_head":93}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r92] bren rolls a Charisma (Intimidation) check: 1d20 (15) = 18, success.","rolls":["r92"],"log_head":93}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":93}
-{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":93,"human":true}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r94] bren rolls a d10 Hit Point Die: 1d10 (4) +2 = 6.","rolls":["r94"],"log_head":97}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren regains 6 Hit Points.","rolls":[],"log_head":97}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 20/20 Hit Points.","rolls":[],"log_head":97}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren finishes a short rest.","rolls":[],"log_head":97}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r94] bren rolls a d10 Hit Point Die: 1d10 (4) = 6.","rolls":["r94"],"log_head":97}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren regains 6 Hit Points.","rolls":[],"log_head":97}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 20/20 Hit Points.","rolls":[],"log_head":97}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren finishes a short rest.","rolls":[],"log_head":97}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":97}
-{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":97,"human":true}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":97}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene m3_s5_cellar loaded in explore mode.","rolls":[],"log_head":98}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene m3_s5_cellar loaded in explore mode.","rolls":[],"log_head":98}
-{"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene m3_s5_cellar","rolls":[],"log_head":98}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":98}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Monster Nimble Escape.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is under Disengage.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 moves.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Shortbow attack on bren.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r76] goblin_2 rolls an attack roll vs bren: 1d20 (9) +4 = 13 vs AC 19, miss.","rolls":["r76"],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 4 begins.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 is no longer under Disengage.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 uses Shortbow attack on bren.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r82] goblin_1 rolls an attack roll vs bren: 1d20 (16) +4 = 20 vs AC 19, hit.","rolls":["r82"],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r83] goblin_1 rolls piercing damage: 1d6 (3) +2 = 5.","rolls":["r83"],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren takes 5 piercing damage.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 14/20 Hit Points.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 uses Monster Nimble Escape.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 moves.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2 uses Shortbow attack on bren.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r76] goblin_2 rolls an attack roll vs bren: 1d20 (9) = 13, miss.","rolls":["r76"],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 4 begins.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 uses Shortbow attack on bren.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r82] goblin_1 rolls an attack roll vs bren: 1d20 (16) = 20, hit.","rolls":["r82"],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r83] goblin_1 rolls piercing damage: 1d6 (3) = 5.","rolls":["r83"],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren takes 5 piercing damage.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 14/20 Hit Points.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":90}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1, goblin_2 surrender.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren gains 100 XP, 400 in all.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1, goblin_2 surrender.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren gains 100 XP, 400 in all.","rolls":[],"log_head":90}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The yard is yours.","rolls":[],"log_head":90}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is no longer under Disengage.","rolls":[],"log_head":92}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene m3_s4_prisoner loaded in explore mode.","rolls":[],"log_head":92}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene m3_s4_prisoner loaded in explore mode.","rolls":[],"log_head":92}
+{"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene m3_s4_prisoner","rolls":[],"log_head":92}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":92}
+{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":92,"human":true}
+{"at":"t","speaker":"dm","channel":"to:bren","kind":"question","text":"The goblin shakes. What do you ask it?","rolls":[],"log_head":92}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":92}
+{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":92,"human":true}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r93] bren rolls a Charisma (Intimidation) check: 1d20 (15) +3 = 18 vs DC 13, success.","rolls":["r93"],"log_head":94}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's check succeeds.","rolls":[],"log_head":94}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r93] bren rolls a Charisma (Intimidation) check: 1d20 (15) = 18, success.","rolls":["r93"],"log_head":94}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":94}
+{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":94,"human":true}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r95] bren rolls a d10 Hit Point Die: 1d10 (4) +2 = 6.","rolls":["r95"],"log_head":98}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren regains 6 Hit Points.","rolls":[],"log_head":98}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 20/20 Hit Points.","rolls":[],"log_head":98}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren finishes a short rest.","rolls":[],"log_head":98}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r95] bren rolls a d10 Hit Point Die: 1d10 (4) = 6.","rolls":["r95"],"log_head":98}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren regains 6 Hit Points.","rolls":[],"log_head":98}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 20/20 Hit Points.","rolls":[],"log_head":98}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren finishes a short rest.","rolls":[],"log_head":98}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":98}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":98,"human":true}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat begins: bren, boss.","rolls":[],"log_head":103}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r100] bren rolls initiative: 1d20 (18) +2 = 20.","rolls":["r100"],"log_head":103}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r101] boss rolls initiative: 1d20 (7) +2 = 9.","rolls":["r101"],"log_head":103}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 1 begins.","rolls":[],"log_head":103}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":103}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat begins: bren, boss.","rolls":[],"log_head":103}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r100] bren rolls initiative: 1d20 (18) = 20.","rolls":["r100"],"log_head":103}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r101] boss rolls initiative: 1d20 (7) = 9.","rolls":["r101"],"log_head":103}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 1 begins.","rolls":[],"log_head":103}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":103}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":103}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":103}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":104}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":104}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on boss.","rolls":[],"log_head":111}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r106] bren rolls an attack roll vs boss: 1d20 (15) +5 = 20 vs AC 15, hit.","rolls":["r106"],"log_head":111}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r107] bren rolls slashing damage: 1d8 (8) +3 = 11.","rolls":["r107"],"log_head":111}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss takes 11 slashing damage.","rolls":[],"log_head":111}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss has 0/10 Hit Points.","rolls":[],"log_head":111}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is dead.","rolls":[],"log_head":111}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on boss.","rolls":[],"log_head":111}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r106] bren rolls an attack roll vs boss: 1d20 (15) = 20, hit.","rolls":["r106"],"log_head":111}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r107] bren rolls slashing damage: 1d8 (8) = 11.","rolls":["r107"],"log_head":111}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss takes 11 slashing damage.","rolls":[],"log_head":111}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss is dead.","rolls":[],"log_head":111}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":111}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":111}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":111}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The cellar falls silent. The mill is quiet again.","rolls":[],"log_head":111}
-{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":111}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":98}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene m3_s5_cellar loaded in explore mode.","rolls":[],"log_head":99}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene m3_s5_cellar loaded in explore mode.","rolls":[],"log_head":99}
+{"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene m3_s5_cellar","rolls":[],"log_head":99}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":99}
+{"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":99,"human":true}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat begins: bren, boss.","rolls":[],"log_head":104}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r101] bren rolls initiative: 1d20 (18) +2 = 20.","rolls":["r101"],"log_head":104}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r102] boss rolls initiative: 1d20 (7) +2 = 9.","rolls":["r102"],"log_head":104}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 1 begins.","rolls":[],"log_head":104}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":104}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat begins: bren, boss.","rolls":[],"log_head":104}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r101] bren rolls initiative: 1d20 (18) = 20.","rolls":["r101"],"log_head":104}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r102] boss rolls initiative: 1d20 (7) = 9.","rolls":["r102"],"log_head":104}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 1 begins.","rolls":[],"log_head":104}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":104}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":104}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":104}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":105}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":105}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on boss.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r107] bren rolls an attack roll vs boss: 1d20 (15) +5 = 20 vs AC 15, hit.","rolls":["r107"],"log_head":113}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r108] bren rolls slashing damage: 1d8 (8) +3 = 11.","rolls":["r108"],"log_head":113}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss takes 11 slashing damage.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss has 0/10 Hit Points.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is dead.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on boss.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r107] bren rolls an attack roll vs boss: 1d20 (15) = 20, hit.","rolls":["r107"],"log_head":113}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r108] bren rolls slashing damage: 1d8 (8) = 11.","rolls":["r108"],"log_head":113}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss takes 11 slashing damage.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss is dead.","rolls":[],"log_head":113}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren gains 50 XP, 450 in all.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":113}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren gains 50 XP, 450 in all.","rolls":[],"log_head":113}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The cellar falls silent. The mill is quiet again.","rolls":[],"log_head":113}
+{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":113}

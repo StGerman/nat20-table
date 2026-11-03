@@ -45,6 +45,14 @@
     }
   ],
   "skills": ["arcana", "investigation"],
+  "recommended": [
+    {
+      "_comment": "Level 3: Scorching Ray, an evocation for an Evoker.",
+      "level": 3,
+      "prompt_id": "choice.spells",
+      "picks": ["scorching_ray"]
+    }
+  ],
   "equipment": [
     { "item": "nat20_core::item.quarterstaff", "quantity": 1, "equip": "melee_main_hand" },
     { "item": "nat20_core::item.potion_of_healing", "quantity": 1 }

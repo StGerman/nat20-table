@@ -1,4 +1,4 @@
-{"seq":1,"visibility":{"scope":"dm"},"text":"Session started (protocol 1.0.0-dev.46, seed 5).","kind":"session_started","seed":5,"protocol_version":"1.0.0-dev.46"}
+{"seq":1,"visibility":{"scope":"dm"},"text":"Session started (protocol 1.0.0-dev.47, seed 5).","kind":"session_started","seed":5,"protocol_version":"1.0.0-dev.47"}
 {"seq":2,"scene":"s1_village_green","visibility":{"scope":"public"},"text":"Scene s1_village_green loaded in explore mode.","kind":"scene_loaded","scene_id":"s1_village_green","mode":"explore"}
 {"seq":3,"scene":"s3_mill_yard","visibility":{"scope":"public"},"text":"Scene s3_mill_yard loaded in explore mode.","kind":"scene_loaded","scene_id":"s3_mill_yard","mode":"explore"}
 {"seq":4,"round":1,"scene":"s3_mill_yard","visibility":{"scope":"public"},"text":"Combat begins: goblin_3, wolf_2, goblin_4, goblin_1, wolf_3, goblin_2, torva, wolf_1, bren, maren, ilsa.","kind":"combat_started","participants":["goblin_3","wolf_2","goblin_4","goblin_1","wolf_3","goblin_2","torva","wolf_1","bren","maren","ilsa"]}
@@ -209,3 +209,7 @@
 {"seq":209,"round":3,"scene":"s3_mill_yard","visibility":{"scope":"public"},"text":"ilsa's turn.","kind":"turn_start","actor":"ilsa"}
 {"seq":210,"round":3,"scene":"s3_mill_yard","visibility":{"scope":"public"},"text":"goblin_4 surrenders.","kind":"surrendered","handles":["goblin_4"]}
 {"seq":211,"round":3,"scene":"s3_mill_yard","visibility":{"scope":"public"},"text":"Combat is over: the other side surrendered.","kind":"combat_over","winner":"party","reason":"surrender"}
+{"seq":212,"scene":"s3_mill_yard","visibility":{"scope":"owner","handle":"torva"},"text":"torva gains 87 XP, 387 in all.","kind":"xp_awarded","actor":"torva","xp":87,"total":387,"can_level_up":false}
+{"seq":213,"scene":"s3_mill_yard","visibility":{"scope":"owner","handle":"bren"},"text":"bren gains 87 XP, 387 in all.","kind":"xp_awarded","actor":"bren","xp":87,"total":387,"can_level_up":false}
+{"seq":214,"scene":"s3_mill_yard","visibility":{"scope":"owner","handle":"maren"},"text":"maren gains 87 XP, 387 in all.","kind":"xp_awarded","actor":"maren","xp":87,"total":387,"can_level_up":false}
+{"seq":215,"scene":"s3_mill_yard","visibility":{"scope":"owner","handle":"ilsa"},"text":"ilsa gains 87 XP, 387 in all.","kind":"xp_awarded","actor":"ilsa","xp":87,"total":387,"can_level_up":false}

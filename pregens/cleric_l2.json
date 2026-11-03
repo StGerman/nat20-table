@@ -65,6 +65,14 @@
       "skills": ["history", "perception", "religion"]
     }
   ],
+  "recommended": [
+    {
+      "_comment": "Level 3: Hold Person. Aid and Lesser Restoration come prepared with the Life Domain.",
+      "level": 3,
+      "prompt_id": "choice.spells",
+      "picks": ["hold_person"]
+    }
+  ],
   "equipment": [
     { "item": "nat20_core::item.chainmail", "quantity": 1, "equip": "armor" },
     { "item": "nat20_core::item.mace", "quantity": 1, "equip": "melee_main_hand" },

@@ -18,6 +18,7 @@ use nat20_api_contract::{
 };
 
 mod cards;
+mod level_up;
 
 use crate::{
     adapter::{
@@ -802,7 +803,13 @@ impl Session {
             .map(|p| (PromptId(p.id.clone()), p.event_seq))
             .unwrap_or((PromptId(String::new()), 0));
         match wait {
-            Wait::Idle => Awaiting::Idle,
+            Wait::Idle => match self.game.as_ref().and_then(|g| g.open_level_up()) {
+                Some((actor, prompt_id)) => Awaiting::LevelUp {
+                    prompt_id: PromptId(prompt_id),
+                    actor: Handle(actor),
+                },
+                None => Awaiting::Idle,
+            },
             Wait::CombatOver { winner } => Awaiting::CombatOver {
                 winner,
                 reason: CombatOverReason::SideDown,
@@ -1136,5 +1143,6 @@ fn describe(awaiting: &Awaiting) -> String {
         Awaiting::Action { actor, .. } => format!("{}'s action", actor.0),
         Awaiting::Reaction { actor, .. } => format!("{}'s reaction", actor.0),
         Awaiting::CombatOver { .. } => "nothing, because combat is over".into(),
+        Awaiting::LevelUp { actor, .. } => format!("{}'s level-up choice", actor.0),
     }
 }

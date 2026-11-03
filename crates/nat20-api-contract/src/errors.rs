@@ -161,7 +161,8 @@ pub enum RejectReason {
     CardPending,
     /// `choose_card` with no card on the table.
     NoCard,
-    /// `choose_card` by a creature with no say on this card.
+    /// `choose_card` by a creature with no say on this card, or `choose_card`, `level_up` or
+    /// `answer_level_up` not sent as the actor itself.
     NoSay,
     /// `choose_card` by a seat that already spoke on this card.
     AlreadySpoke,
@@ -169,4 +170,13 @@ pub enum RejectReason {
     WaitingForAdvice,
     /// `choose_card` with a choice the card does not have.
     UnknownChoice,
+    /// `level_up` by a character without the Experience Points for its next level.
+    NotEnoughXp,
+    /// `level_up` while another character's level-up is open; one levels up at a time.
+    LevelUpOpen,
+    /// `answer_level_up` with no level-up open for the actor.
+    NoLevelUp,
+    /// `answer_level_up` with picks that are not the choice's options, repeat one, or are not
+    /// as many as it asks; the message lists the options.
+    BadPicks,
 }

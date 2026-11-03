@@ -440,7 +440,10 @@ impl Table {
                     }
                     response = self.turn(&actor.0, &prompt_id);
                 }
-                Awaiting::CombatOver { .. } | Awaiting::Idle | Awaiting::NoSession => {
+                Awaiting::CombatOver { .. }
+                | Awaiting::Idle
+                | Awaiting::LevelUp { .. }
+                | Awaiting::NoSession => {
                     stalemate = false;
                     break;
                 }
