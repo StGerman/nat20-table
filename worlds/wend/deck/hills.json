@@ -1,0 +1,138 @@
+{
+    "_comment": "Road cards for the slopes and the barrows under the Hollin Hills (MAP-6, API-43). Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2). Checks use the SRD DC ladder; fights use SRD 5.2.1 stat blocks.",
+    "cards": [
+        {
+            "id": "sheep_on_track",
+            "zone": "slopes",
+            "target": "blades",
+            "text": "A flock of black-faced sheep fills the track from wall to wall, and their shepherd is nowhere in sight.",
+            "choices": [
+                {
+                    "id": "herd",
+                    "text": "Herd them through the gap in the wall.",
+                    "effects": [
+                        {
+                            "do": "check", "who": "blades", "ability": "wisdom", "skill": "animal_handling", "dc": 10,
+                            "success": [{"do": "delay", "minutes": 15}],
+                            "failure": [{"do": "delay", "minutes": 60}]
+                        }
+                    ]
+                },
+                {
+                    "id": "wait",
+                    "text": "Sit on the wall and wait for them to move.",
+                    "effects": [{"do": "delay", "minutes": 45}]
+                }
+            ]
+        },
+        {
+            "id": "washed_out",
+            "zone": "slopes",
+            "target": "caravan",
+            "text": "Part of the track has slid down the hillside in the night. There is room for the wagon, just, if the horses keep their heads.",
+            "owner_pick": "lead",
+            "choices": [
+                {
+                    "id": "dig",
+                    "text": "Dig the track wider first.",
+                    "effects": [
+                        {
+                            "do": "check", "who": "blades", "ability": "strength", "skill": "athletics", "dc": 15,
+                            "success": [{"do": "delay", "minutes": 60}],
+                            "failure": [{"do": "delay", "minutes": 150}]
+                        }
+                    ]
+                },
+                {
+                    "id": "lead",
+                    "text": "Lead the horses across by the bridle.",
+                    "effects": [
+                        {
+                            "do": "check", "who": "blades", "ability": "wisdom", "skill": "animal_handling", "dc": 10,
+                            "success": [{"do": "delay", "minutes": 20}],
+                            "failure": [{"do": "delay", "minutes": 90}, {"do": "cargo", "good": "rations", "change": -3}]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "goblin_scouts",
+            "zone": "slopes",
+            "target": "blades",
+            "text": "Two goblins sit on the ridge above the track and watch the wagon. They do not run.",
+            "choices": [
+                {
+                    "id": "chase",
+                    "text": "Go up and drive them off.",
+                    "effects": [{"do": "fight", "monsters": ["goblin_warrior", "goblin_warrior"]}]
+                },
+                {
+                    "id": "ignore",
+                    "text": "Keep moving and keep an eye on them.",
+                    "effects": [{"do": "add_card", "card": "goblin_ambush"}]
+                }
+            ]
+        },
+        {
+            "id": "goblin_ambush",
+            "zone": "slopes",
+            "target": "blades",
+            "chained": true,
+            "once": true,
+            "text": "The goblins from the ridge are back, and there are more of them now, spread across the track ahead.",
+            "choices": [
+                {
+                    "id": "fight",
+                    "text": "Close ranks around the wagon and fight.",
+                    "effects": [{"do": "fight", "monsters": ["goblin_warrior", "goblin_warrior", "goblin_warrior"]}]
+                },
+                {
+                    "id": "throw_food",
+                    "text": "Throw them a sack of food and push on while they squabble over it.",
+                    "effects": [{"do": "cargo", "good": "rations", "change": -4}]
+                }
+            ]
+        },
+        {
+            "id": "barrow_lights",
+            "zone": "barrows",
+            "target": "blades",
+            "text": "Pale lights move between the old barrows, and the horses will not look at them.",
+            "choices": [
+                {
+                    "id": "look",
+                    "text": "Go and see what they are.",
+                    "effects": [
+                        {
+                            "do": "check", "who": "blades", "ability": "intelligence", "skill": "religion", "dc": 15,
+                            "failure": [{"do": "exhaustion", "who": "blades", "levels": 1}]
+                        }
+                    ]
+                },
+                {
+                    "id": "pass_by",
+                    "text": "Look straight ahead and keep walking."
+                }
+            ]
+        },
+        {
+            "id": "old_cairn",
+            "zone": "barrows",
+            "target": "caravan",
+            "text": "Copper coins lie green on top of a wayside cairn, left for whoever is buried under it.",
+            "owner_pick": "leave",
+            "choices": [
+                {
+                    "id": "take",
+                    "text": "Take them. The dead don't spend.",
+                    "effects": [{"do": "gain", "who": "party", "copper": 8}]
+                },
+                {
+                    "id": "leave",
+                    "text": "Leave them where they lie."
+                }
+            ]
+        }
+    ]
+}

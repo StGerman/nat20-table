@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use nat20_world::{Caravan, Clock, Goods, Pace, World, WorldMap};
+use nat20_world::{Caravan, Clock, Deck, DeckFile, Goods, Pace, Target, World, WorldMap};
 
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -48,7 +48,42 @@ fn every_world_validates() {
                 road.id
             );
         }
+        deck(&dir)
+            .validate(&map)
+            .unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
     }
+}
+
+/// A world's deck, files in name order, as the server reads it.
+fn deck(dir: &Path) -> Deck {
+    let Ok(entries) = std::fs::read_dir(dir.join("deck")) else {
+        return Deck::default();
+    };
+    let mut paths: Vec<PathBuf> = entries.map(|e| e.unwrap().path()).collect();
+    paths.sort();
+    Deck::from_files(paths.iter().map(|p| read::<DeckFile>(p)))
+}
+
+/// About two Blade cards for each caravan card (design, card kinds): a human Blade gets a say
+/// more often than the merchant's calls.
+#[test]
+fn the_wend_deck_gives_the_blades_most_cards() {
+    let deck = deck(&repo().join("worlds/wend"));
+    let caravan = deck
+        .cards
+        .iter()
+        .filter(|c| c.target == Target::Caravan)
+        .count();
+    let blades = deck
+        .cards
+        .iter()
+        .filter(|c| c.target == Target::Blades)
+        .count();
+    assert!(caravan > 0);
+    assert!(
+        (3 * caravan..=6 * caravan).contains(&(2 * blades)),
+        "{blades} Blade cards to {caravan} caravan cards"
+    );
 }
 
 fn wend() -> World {
@@ -59,6 +94,7 @@ fn wend() -> World {
             "cargo": {"salt": 1000, "rations": 20}}]}"#,
     )
     .unwrap();
+    let deck = deck(&dir);
     World::new(
         read(&dir.join("map.json")),
         read(&dir.join("goods.json")),
@@ -68,6 +104,19 @@ fn wend() -> World {
         Clock::at(1, 8, 0),
     )
     .unwrap()
+    .with_deck(deck)
+    .unwrap()
+}
+
+#[test]
+fn the_river_road_draws_a_lowland_card() {
+    let mut world = wend();
+    world
+        .travel(Some("wendmouth"), Pace::Normal, false)
+        .unwrap();
+    let mut dice = nat20_world::ListDice::new([1]);
+    let card = world.draw_after_leg("river_road", &mut dice).unwrap();
+    assert_eq!(world.deck.card(&card).unwrap().zone, "lowland");
 }
 
 #[test]
