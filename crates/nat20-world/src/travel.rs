@@ -180,6 +180,9 @@ impl World {
         clock: Clock,
     ) -> Result<Self, MapError> {
         map.validate()?;
+        goods
+            .validate()
+            .map_err(|e| MapError(format!("the goods file: {e}")))?;
         if map.place(start).is_none() {
             return Err(MapError(format!("the start {start} is not a place")));
         }

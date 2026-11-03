@@ -83,6 +83,23 @@ pub struct Goods {
 }
 
 impl Goods {
+    /// Checks the file: at least one good, unique ids, and every good with a weight.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.goods.is_empty() {
+            return Err("no goods".into());
+        }
+        let mut ids = std::collections::BTreeSet::new();
+        for good in &self.goods {
+            if !ids.insert(good.id.as_str()) {
+                return Err(format!("two goods with id {}", good.id));
+            }
+            if good.weight_lb == 0 {
+                return Err(format!("good {} weighs nothing", good.id));
+            }
+        }
+        Ok(())
+    }
+
     /// The good with this id.
     pub fn get(&self, id: &str) -> Option<&Good> {
         self.goods.iter().find(|g| g.id == id)

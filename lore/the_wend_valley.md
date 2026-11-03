@@ -8,6 +8,11 @@ A quiet farming valley at the northern edge of a small kingdom whose lord rarely
 - **Wendford** is a village of forty households where the old road crosses the river: a green with a well and an old oak, the reeve's house with its porch on the green, a shrine to Embra, sheep on the slopes. The market town is a day downriver.
 - **Pell's mill** stands a mile upriver at the end of a hedged lane: a stone mill with an undershot wheel and a sluice gate above it, a cobbled yard with a woodpile and an old kennel, a storeroom inside the door, and a cellar under the stones where the grain is kept dry. A back door lets out onto the millrace.
 - **The Hollin Hills** close the valley to the north: heather, bog and old barrows.
+- **Wendmouth** (a draft name) is the fair town at the river's mouth, twenty miles downriver from Wendford: a day with a wagon. It sells salt, iron and cloth, and south of it lie salt pans and an old ferry landing.
+- **The Highsteads** are upland farms eight miles up the slopes from Wendford, under the hills: wool, honey and peat.
+- **The old road** runs west and east through Wendford; the caravans that use it come from far cities the valley rarely sees.
+
+The map of these places, with roads and miles, is `worlds/wend/map.json`.
 
 ## People and customs
 
