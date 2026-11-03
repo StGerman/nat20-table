@@ -233,8 +233,16 @@ export class TableState {
     // A table with no human has no screen (M7 spec §4.2): the transcript has the DM's view.
     if (!this.human || !this.seat) return;
     this.recordInput(this.human, JSON.stringify(event), typedByHuman);
+    const heard = heardLine(event, this.human);
+    if (heard) this.heard = [...this.heard, heard].slice(-HEARD_LINES);
     this.seat.show(event);
   }
+
+  /**
+   * The newest lines of the story the human was shown (AGT-49): what the suggester reads of the
+   * table, so it knows no more than the human does (Rule 3).
+   */
+  heard: string[] = [];
 
   /**
    * Shows the human the engine lines it hasn't seen, projected for the human's viewer, and writes
@@ -518,4 +526,26 @@ export class TableState {
 function take(events: Event[], limit: number): Event[] {
   const cut = events.findIndex((e) => e.seq > limit);
   return events.splice(0, cut < 0 ? events.length : cut);
+}
+
+/** How many of the human's newest story lines the suggester reads (AGT-49). */
+export const HEARD_LINES = 16;
+
+/** A story line the human was shown, as one line of text; undefined for anything else. */
+export function heardLine(event: TableEvent, human: Handle): string | undefined {
+  const to = (who: Handle | undefined) => (who === undefined ? "" : who === human ? " (to you)" : ` (to ${who})`);
+  switch (event.kind) {
+    case "narration":
+      return `${event.speaker}${to(event.to)}: ${event.text}`;
+    case "speech":
+      return `${event.speaker}${to(event.to)}: ${event.text}`;
+    case "intent":
+      return `${event.speaker} sets out to: ${event.text}`;
+    case "question":
+      return `The DM asks you: ${event.text}`;
+    case "engine":
+      return event.text;
+    default:
+      return undefined;
+  }
 }

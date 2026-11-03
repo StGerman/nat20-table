@@ -65,12 +65,16 @@ export type TableEvent =
 
 /** What the human sends. */
 export type PlayerIntent =
-  | { kind: "text"; text: string }
+  /**
+   * Words for the DM. `suggestion`: the line came from the suggestions picker (AGT-49), its row
+   * `n` (from 1), sent as offered or `edited` first; recorded in `inputs.jsonl` and counted in the report.
+   */
+  | { kind: "text"; text: string; suggestion?: { n: number; edited: boolean } }
   | { kind: "option"; number: number }
   /** Esc on an empty line inside a follow-up pick: back to the turn's own options (AGT-48 Q5). */
   | { kind: "back" }
   | { kind: "reaction"; take: boolean }
-  | { kind: "command"; name: "sheet" | "where" | "map" | "options" | "log" | "usage" | "pause" | "quit" };
+  | { kind: "command"; name: "sheet" | "where" | "map" | "options" | "log" | "usage" | "pause" | "suggest" | "quit" };
 
 /** Why the loop needs the human. */
 export type HumanPrompt =
@@ -117,7 +121,16 @@ export interface Seat {
    * holds lines for their narration shows them now, as they are (AGT-37). Not recorded.
    */
   unnarrated?(): void;
+  /**
+   * Response suggestions for the prompt that is open (AGT-49): a call started (`cancel` drops it,
+   * as the human's first key does), its three rows, or none (timed out, failed, or the prompt
+   * closed). Not a TableEvent and not recorded: only a sent line says it came from one.
+   */
+  suggest?(update: SuggestUpdate): void;
 }
+
+/** What the loop tells the seat about suggestions for the open prompt (AGT-49). */
+export type SuggestUpdate = { kind: "waiting"; cancel: () => void } | { kind: "rows"; rows: string[] } | { kind: "none" };
 
 // --- Agents -----------------------------------------------------------------------------------
 

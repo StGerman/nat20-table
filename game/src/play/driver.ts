@@ -22,7 +22,8 @@
 // DM's narration as it is written, AGT-66; on by default since `npm run spike:partial` passed on the Mac),
 // --roster NAME (API-45: play the party saved as `rosters/NAME.json` and save it again on every exit;
 // --seat ink asks "continue or new party" first), --new-party (start the pack's pregens instead),
-// --rosters DIR.
+// --rosters DIR, --suggest-model (AGT-49: the model that suggests the human's moves out of a fight
+// at the terminal, Haiku by default), --no-suggest (no suggestions; `/suggest` toggles them in play).
 import { spawn, type ChildProcess } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
@@ -30,6 +31,7 @@ import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { ModelDm, type CraftMode } from "../agents/dm.ts";
 import type { Language } from "../agents/language.ts";
 import { ModelPlayer } from "../agents/player.ts";
+import { Suggester } from "../agents/suggest.ts";
 import { sessionOptions } from "../agents/sdk-session.ts";
 import { GameEngine, REPO } from "../engine.ts";
 import { readCampaign } from "../pack/campaign.ts";
@@ -48,7 +50,7 @@ import { ModelJudge, ScriptedJudge } from "../check/judge.ts";
 import { narrationCheck } from "../check/narration.ts";
 import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { readRoster, ROSTER_NAME, rosterLine, saveRoster, type SavedRoster } from "./roster.ts";
-import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, timingLines, type Casting, type PackParty } from "./run.ts";
+import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, suggestionLine, timingLines, type Casting, type PackParty } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
 import { uploadStage } from "./upload.ts";
 import { AUDIT_JSON, verdictBlock, writeVerdict } from "./verdict.ts";
@@ -336,6 +338,18 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     stallRounds: flags["stall-rounds"],
     onProgress: progress,
     usage,
+    // Three moves out of a fight for the human at the terminal (AGT-49), from a model only when the players are models.
+    ...(ink && party.human && !flags["no-suggest"] && flags.players === "model"
+      ? {
+          suggester: new Suggester({
+            handle: party.human,
+            card: party.humanCard ?? "",
+            language,
+            choice: { model: flags["suggest-model"], effort: "low" },
+            usage,
+          }),
+        }
+      : {}),
     ...(campaign
       ? {
           campaign: {
@@ -434,6 +448,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...(language === "en" ? [] : [`- Language of the DM's and the AI players' lines: ${language}`]),
     `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human ? `${party.human} ${ink ? "played in the terminal UI" : "on a scripted seat"}` : "no human at the table"}`,
     ...(ink ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
+    ...(run?.suggestions ? [`- ${suggestionLine(run.suggestions)}`] : []),
     ...(record.roster ? [`- ${rosterReport(record.roster)}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
     ...(narration ? ["", ...narration.lines] : []),
