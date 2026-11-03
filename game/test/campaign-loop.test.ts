@@ -1,0 +1,113 @@
+// The loop plays the living world (M9, AGT-80 step 2): it starts the campaign, the human moves the
+// caravan on and makes camp from the numbered options, a road card asks the AI players first and
+// the human last (Enter goes with the others), the DM tells the card and the night, the party is
+// saved after the night, and the night past the day limit ends the run.
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { cardChoices, roadChoices } from "../src/table/choices.ts";
+import { TableLoop } from "../src/table/loop.ts";
+import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
+import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
+import { DM_ROAD_PROMPT } from "../src/agents/dm.ts";
+import { readCampaign } from "../src/pack/campaign.ts";
+import { formatDmState } from "../src/view.ts";
+import { TEST_PACK, testTable } from "./helpers.ts";
+
+/** A human who lists the options, then moves the caravan on once, then makes camp. */
+function traveller(): (prompt: HumanPrompt, seat: ScriptedSeat) => PlayerIntent {
+  let listed = false;
+  let moved = false;
+  return (prompt, seat) => {
+    if (prompt.kind !== "explore") return ScriptedSeat.pass(prompt, seat);
+    if (!listed) {
+      listed = true;
+      return { kind: "command", name: "options" };
+    }
+    listed = false;
+    const want = moved ? "Make camp for the night" : "Move on with the caravan";
+    const choice = seat.choices.find((c) => c.label === want);
+    if (!choice) return { kind: "text", text: "I wait." };
+    if (want.startsWith("Move")) moved = true;
+    return { kind: "option", number: choice.number };
+  };
+}
+
+test("the loop starts the campaign, asks a road card of the AI players first and the human last, tells the night, saves, and stops at the day limit", async () => {
+  const seat = new ScriptedSeat("bren", [], traveller());
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    const dm = new ScriptedDm({});
+    const maren = new ScriptedPlayer("maren");
+    let nights = 0;
+    const loop = new TableLoop({
+      table: t.table,
+      dm,
+      players: [maren],
+      maxSteps: 200,
+      campaign: { party: ["bren", "maren"], dayLimit: 1, onNight: async () => void (nights += 1) },
+    });
+    const report = await loop.run("vale_town");
+    assert.equal(report.ended, "the day limit: day 1 is over", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    assert.equal(nights, 1, "the party is saved after the night");
+    const sent = t.requests().map((r) => [r.cmd, r.viewer]);
+    assert.deepEqual(sent.find(([c]) => c === "start_campaign"), ["start_campaign", "dm"]);
+    assert.ok(sent.some(([c, v]) => c === "travel" && v === "bren"), "the human moved the caravan on");
+    assert.ok(sent.some(([c, v]) => c === "rest_night" && v === "bren"), "the human made camp");
+    // A card was drawn on the road: maren was woken for it before the human gave a word.
+    const cards = t.requests().filter((r) => r.cmd === "choose_card").map((r) => r.viewer);
+    // Seed 1 draws a card on the first leg.
+    assert.deepEqual(cards, ["maren", "bren"], "the AI player speaks first, the human last");
+    assert.ok(maren.briefings.some((b) => b.wake === "card" && /^Choices: /m.test(b.briefing)));
+    assert.ok(dm.briefings.some((b) => b.wake === "road" && b.briefing.includes("A road card was settled")));
+    const word = seat.shown.find((e) => e.kind === "options" && e.title === "Your word");
+    assert.ok(word?.kind === "options" && word.preset === 1, "Enter goes with the others");
+    assert.ok(dm.briefings.some((b) => b.wake === "road" && b.briefing.includes("The night passed")));
+    // The human never reads the card's id or zone, nor the merchant's purse.
+    const shown = JSON.stringify(seat.shown);
+    assert.doesNotMatch(shown, /purse_cp|"zone"/);
+  } finally {
+    t.close();
+  }
+});
+
+test("a road card's choices for the human: Enter takes what most of the others said", () => {
+  const card = { choices: [{ id: "clear", text: "Clear the road" }, { id: "around", text: "Go around" }], said: [{ actor: "maren", choice: "around" }] };
+  const { choices, preset } = cardChoices(card);
+  assert.deepEqual(choices.map((c) => c.label), ["Clear the road", "Go around (the others' choice)"]);
+  assert.equal(preset, 2);
+  assert.equal(cardChoices({ ...card, said: [] }).preset, 1, "nobody spoke: the first choice");
+});
+
+test("the road's lines join the human's options only when the human may drive and no card waits", () => {
+  const world = {
+    drives: true,
+    at: { kind: "at", place: "inn" },
+    places: [{ id: "inn", name: "The Inn", kind: "inn", market: false, inn_cp: 5 }],
+    card: null,
+  } as never;
+  assert.deepEqual(roadChoices(world, 3).map((c) => [c.number, c.label]), [
+    [3, "Move on with the caravan"],
+    [4, "Make camp for the night"],
+    [5, "Take rooms at the inn for the night"],
+  ]);
+  assert.deepEqual(roadChoices({ ...(world as object), drives: false } as never, 1), []);
+  assert.deepEqual(roadChoices({ ...(world as object), card: { text: "x" } } as never, 1), []);
+});
+
+test("a campaign pack names its start scene and day limit; the DM reads the world and the road's rules", async () => {
+  assert.deepEqual(readCampaign(TEST_PACK), { startScene: "vale_town" });
+  assert.match(DM_ROAD_PROMPT, /never name a price, a wage or a sum of coin/);
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
+  try {
+    await t.engine.request("dm", { cmd: "load_scene", scene_id: "vale_town" });
+    await t.engine.request("dm", { cmd: "start_campaign", party: ["bren", "maren"] });
+    const state = await t.engine.request("dm", { cmd: "get_state" });
+    assert.ok(state.result?.cmd === "get_state");
+    const text = formatDmState(state.result.state);
+    assert.match(text, /World: day 1, /);
+    assert.match(text, /The merchant's route: /);
+    assert.match(text, /the merchant's purse holds /);
+  } finally {
+    t.close();
+  }
+});

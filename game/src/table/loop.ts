@@ -3,10 +3,10 @@
 // decides who is woken next. Agents act only through their bound tools and the human only through
 // the seat; every number the human picks becomes a complete command with no model call (D5).
 import type { StatBlockEntry } from "../pack/adventure.ts";
-import { EngineStopped, type Event, type Handle, type State } from "@nat20-table/engine-client";
+import { EngineStopped, type CardDm, type Event, type Handle, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
-import { buildChoices, choiceLines, type Choice, type ChoiceAct } from "./choices.ts";
+import { buildChoices, cardChoices, choiceLines, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
@@ -66,6 +66,18 @@ export interface LoopOptions {
   onProgress?: (progress: Progress) => void;
   /** The run's usage records, for `/usage` (M10 U1). */
   usage?: UsageLog;
+  /** The living world (M9, AGT-80): the run starts a campaign and plays days on the map. Off by default. */
+  campaign?: CampaignLoop;
+}
+
+/** How the loop plays the living world (M9, AGT-80). */
+export interface CampaignLoop {
+  /** The party on the caravan, the human's character included, in seat order. */
+  party: Handle[];
+  /** The last game day the run plays: the night that starts the day after it ends the run. None by default. */
+  dayLimit?: number;
+  /** Called after every night, once the DM has told it: the run saves the party (design: "after every night"). */
+  onNight?: () => Promise<void>;
 }
 
 /** A moment the unattended run prints a line for (M7 design §3.1). */
@@ -302,6 +314,9 @@ export class TableLoop {
   private readonly onProgress: (progress: Progress) => void;
   private readonly sceneTimes: SceneTime[] = [];
   private readonly usage: UsageLog | undefined;
+  private readonly campaign: CampaignLoop | undefined;
+  /** The road cards the run has asked about, by the engine's log head when each was drawn, so a card that won't settle stops the run. */
+  private cardAsked = new Map<string, number>();
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -331,6 +346,7 @@ export class TableLoop {
     this.stallRounds = options.stallRounds ?? 0;
     this.onProgress = options.onProgress ?? (() => undefined);
     this.usage = options.usage;
+    this.campaign = options.campaign;
   }
 
   /** Plays from `firstScene` until the adventure ends, the human quits, or the run is stopped. */
@@ -340,6 +356,12 @@ export class TableLoop {
     try {
       const loaded = await this.dmTools.loadScene(firstScene, party);
       if (!loaded.ok) throw new Error(`the first scene didn't load: ${loaded.text}`);
+      if (this.campaign) {
+        const human = this.table.human;
+        const started = await send(this.table, "dm", { cmd: "start_campaign", party: [...this.campaign.party], ...(human ? { human } : {}) }, () => "the campaign started");
+        if (!started.ok) throw new Error(`the campaign didn't start: ${started.text}`);
+        this.table.log("system", `campaign started: ${this.campaign.party.join(", ")} with the caravan${this.campaign.dayLimit ? `, until the end of day ${this.campaign.dayLimit}` : ""}`);
+      }
       while (!this.table.ended) {
         if (++steps > this.maxSteps) {
           this.table.end(`stopped after ${this.maxSteps} steps`, "stalled");
@@ -407,9 +429,12 @@ export class TableLoop {
         if (this.table.ended) return;
         if (event.kind === "combat_over") await this.combatOver(event);
         if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id);
+        if (this.campaign) await this.roadEvent(event);
       }
     }
     if (this.table.ended) return;
+    // A road card waits for the party's word out of a fight (AGT-80): it is asked before anything else.
+    if (this.campaign && !this.table.inCombat && (await this.cardRound())) return;
     await this.showSituation();
     const awaiting = this.table.awaiting;
     // A fight drops the requests the talk before it carried or left pending (party talk §4.4).
@@ -430,6 +455,8 @@ export class TableLoop {
         throw new Error("the engine has no session");
       case "none":
       case "combat_over":
+      // A level-up left open (AGT-80) holds nobody else: the table plays on while it waits.
+      case "level_up":
         return this.exploreRound();
     }
   }
@@ -529,6 +556,131 @@ export class TableLoop {
       this.table.transcript.add({ speaker: "dm", channel: "memory:dm", kind: "memory", text: `summary: ${dmSummary}` });
     }
     await this.dm.newScene?.(typeof dmSummary === "string" ? dmSummary : "");
+  }
+
+  // --- The road (M9, AGT-80) ------------------------------------------------------------------------
+
+  /** The world as the DM sees it, or undefined before the campaign starts. */
+  private async dmWorld(): Promise<WorldDm | undefined> {
+    const r = await this.table.engine.request("dm", { cmd: "get_state" });
+    return r.result?.cmd === "get_state" && r.result.state.view === "dm" ? (r.result.state.world ?? undefined) : undefined;
+  }
+
+  /**
+   * What the road did since the last look: a card settled, a night passed, the escort was paid.
+   * The DM tells each one; a night saves the party and may end the run at its day limit; the paid
+   * escort ends it, the contract done.
+   */
+  private async roadEvent(event: Event): Promise<void> {
+    const campaign = this.campaign!;
+    switch (event.kind) {
+      case "card_resolved":
+        await this.wakeDm(
+          "road",
+          undefined,
+          `A road card was settled: ${event.text}`,
+          "Narrate what comes of it in one to three sentences. If it brings a fight or a creature, use start_fight or place_creature from the list; never name coin or a price.",
+        );
+        await this.settle();
+        return;
+      case "night": {
+        await this.wakeDm("road", undefined, `The night passed: ${event.text}`, "Narrate the night and the morning in one to three sentences: who slept well, who went hungry, as the engine says. No numbers.");
+        await this.settle();
+        await campaign.onNight?.();
+        const day = (await this.dmWorld())?.clock.day;
+        if (campaign.dayLimit !== undefined && day !== undefined && day > campaign.dayLimit) {
+          this.table.end(`the day limit: day ${campaign.dayLimit} is over`);
+        }
+        return;
+      }
+      case "escort_settled":
+        await this.wakeDm(
+          "road",
+          undefined,
+          `The caravan reached ${event.destination}, and the merchant paid the Blades what they are owed: ${event.text}`,
+          "Narrate the arrival and the pay as a scene, in two to four sentences: the merchant's words, the coin changing hands. No numbers: the table sees the amounts in the engine's lines.",
+        );
+        await this.settle();
+        this.table.end("the escort contract is done");
+        return;
+    }
+  }
+
+  /**
+   * A road card that waits for the party's word (design: card kinds): each AI player it waits for is
+   * asked first, one at a time, each hearing what was said before it; the human is asked last.
+   * An AI player that gives no word goes with the others. Returns whether a card was asked about.
+   */
+  private async cardRound(): Promise<boolean> {
+    const card = (await this.dmWorld())?.card;
+    if (!card || card.waiting_for.length === 0) return false;
+    // The same card still waiting after a full round of asking and a fallback: the engine refuses
+    // every word, so the run can't go on.
+    const asked = this.cardAsked.get(card.id);
+    if (asked !== undefined && asked === this.table.engine.logHead) throw new Error(`the road card ${card.id} won't settle: still waiting for ${card.waiting_for.join(", ")}`);
+    await this.table.flush();
+    for (const handle of card.waiting_for) {
+      const agent = this.agents.get(handle);
+      if (!agent || this.table.ended) continue;
+      const now = (await this.dmWorld())?.card;
+      if (!now || now.id !== card.id || !now.waiting_for.includes(handle)) continue;
+      this.table.resetRetries(handle);
+      const briefing = await this.playerBriefing(handle, ...cardLines(now), "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
+      await this.wakePlayer(agent, "card", briefing);
+    }
+    let now = (await this.dmWorld())?.card;
+    const human = this.table.human;
+    if (now && now.id === card.id && human && now.waiting_for.includes(human) && !this.table.ended) {
+      await this.humanCard(now);
+      now = (await this.dmWorld())?.card;
+    }
+    // Whoever is still silent goes with the others (a failed wake or a refusal).
+    if (now && now.id === card.id && !this.table.ended) {
+      const { choices, preset } = cardChoices(now);
+      const choice = choices[preset - 1].about!.id;
+      for (const handle of now.waiting_for) {
+        if (handle === human) continue;
+        this.table.fallbacks += 1;
+        this.table.log("fallback", `${handle} gives no word on the road card: goes with the others (${choice})`, handle, { cause: this.causeOf(handle) });
+        await send(this.table, handle, { cmd: "choose_card", actor: handle, choice }, () => `went with the others: ${choice}`);
+      }
+    }
+    this.cardAsked.set(card.id, this.table.engine.logHead);
+    return true;
+  }
+
+  /** The human's word on a road card, asked last (design: the human seat): a number, or Enter to go with the others. */
+  private async humanCard(card: CardDm): Promise<void> {
+    const human = this.human;
+    const { choices, preset } = cardChoices(card);
+    for (;;) {
+      if (this.table.ended) return;
+      this.table.show({ kind: "info", title: "On the road", text: [card.text, card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
+      this.table.show({ kind: "options", title: "Your word", lines: choiceLines(choices), choices, preset });
+      const intent = await this.ask({ kind: "card" });
+      if (!intent) return;
+      if (intent.kind === "option") {
+        const picked = choices.find((c) => c.number === intent.number);
+        if (!picked) {
+          this.table.show({ kind: "info", title: "No such number", text: `Pick 1 to ${choices.length}, or press Enter to go with the others.` });
+          continue;
+        }
+        const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
+        if (!outcome.ok) {
+          await this.humanRejected(outcome);
+          continue;
+        }
+        this.table.log("intent", `${human} on the road card: ${picked.label}`, human);
+        this.table.tellDm(`${human} gave their word on the road card: ${picked.label}`);
+        return;
+      }
+      if (intent.kind === "text") {
+        // Words are said at the table; the card still waits for a number.
+        await this.table.declare(human, intent.text);
+        continue;
+      }
+      this.table.show({ kind: "info", title: "On the road", text: "Pick a number, or press Enter to go with the others." });
+    }
   }
 
   // --- Combat -------------------------------------------------------------------------------------
@@ -639,6 +791,12 @@ export class TableLoop {
       case "end_turn":
         if (!promptId) return { ok: false, text: "There is no turn to end." };
         outcome = await send(this.table, human, { cmd: "end_turn", actor: human, prompt_id: promptId }, () => "turn ended");
+        break;
+      case "travel":
+        outcome = await send(this.table, human, { cmd: "travel", actor: human, pace: act.pace }, () => "the caravan moves on");
+        break;
+      case "rest_night":
+        outcome = await send(this.table, human, { cmd: "rest_night", actor: human, where: act.where }, () => "the night passes");
         break;
     }
     // The human sees their own action's lines at once. What follows their turn (the monsters'
@@ -1019,6 +1177,8 @@ export class TableLoop {
         this.table.question = undefined;
         this.table.log("intent", `${human} picked: ${picked.label}`, human);
         this.table.tellDm(`${human} took an option: ${picked.label}`);
+        // The road's own lines move the day on: the scene, the night or the card that follows is told next.
+        if (picked.act.kind === "travel" || picked.act.kind === "rest_night") return;
         line = picked.label;
         break;
       }
@@ -1307,7 +1467,7 @@ export class TableLoop {
   private async offerChoices(combat: boolean): Promise<void> {
     const human = this.human;
     const listed = this.table.observe(await this.table.engine.request(human, { cmd: "legal_actions", actor: human }));
-    const state = combat || this.situation ? await this.humanState() : undefined;
+    const state = combat || this.situation || this.campaign ? await this.humanState() : undefined;
     if (!listed.ok || listed.result?.cmd !== "legal_actions") {
       this.top = this.shown = [];
       this.table.show({ kind: "info", title: "Options", text: listed.error?.message ?? "No options now." });
@@ -1315,6 +1475,8 @@ export class TableLoop {
     }
     this.lastOptions = listed.result as LegalActionsResult;
     this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat);
+    // Out of a fight, whoever may drive the caravan can move it on or end the day (AGT-80).
+    if (!combat && state?.view === "player" && state.world) this.top = this.shown = [...this.top, ...roadChoices(state.world, this.top.length + 1)];
     if (state) await this.showSituation(state, this.lastOptions);
     const budget = this.lastOptions.budget ?? undefined;
     this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top, ...(budget ? { budget } : {}) });
@@ -1580,4 +1742,13 @@ export class TableLoop {
       this.table.seat?.busy?.(this.waitingOn.at(-1));
     };
   }
+}
+
+/** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said. */
+function cardLines(card: CardDm): string[] {
+  return [
+    `A road card waits for your word (${card.target === "caravan" ? "the caravan's: the merchant decides, and your word is advice" : "the Blades': you vote, and most votes win"}): ${card.text}`,
+    `Choices: ${card.choices.map((c) => `${c.id}: ${c.text}`).join(" | ")}`,
+    ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
+  ];
 }

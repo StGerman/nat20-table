@@ -227,7 +227,7 @@ export class InkSeat implements Seat {
       case "options":
         // Numbered options stay above the prompt instead of scrolling away; `/options` prints them again.
         this.release();
-        this.update({ options: event, highlight: undefined });
+        this.update({ options: event, highlight: event.preset });
         return;
       case "engine": {
         // The human's own line shows at once; others' lines before it still wait for their narration.
