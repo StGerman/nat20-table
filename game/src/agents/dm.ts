@@ -223,6 +223,13 @@ export interface ModelDmConfig {
  * How the DM runs the road (M9, AGT-80), added to the prompt in a living-world pack. Generic: no
  * pack's places, cards or contract are named here; get_state shows the world.
  */
+/** The scenes rule of a pack played in order, which a living-world run replaces (AGT-80). */
+const SCENES_LINE = /^- Scenes: the skeleton lists the scenes in order with their exits\..*$/m;
+
+/** The scenes rule on the road: the journey loads them, and the DM has no scene or ending tool. */
+export const ROAD_SCENES_LINE =
+  "- Scenes: the journey loads them. When the caravan arrives somewhere or stops on the road, that place's scene loads with the party, and its opening comes with your next wake. You have no load_scene or end_adventure: the run ends when the escort is paid or the days run out.";
+
 export const DM_ROAD_PROMPT = [
   "## The road",
   "",
@@ -233,6 +240,7 @@ export const DM_ROAD_PROMPT = [
   "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. The amounts are in the engine's lines: never say them yourself.",
   "- Money: never name a price, a wage or a sum of coin except as the engine's events show it. The merchant is a person, not a ledger.",
   "- People of a place are still there when the party comes back, as the party left them; get_state lists them, and whether the party has met them.",
+  "- Where the craft notes above speak of a scene's exits, loading the next scene or end_adventure, read the road instead: the journey moves the party on, and the run ends on its own when the escort is paid or the days run out.",
 ].join("\n");
 
 export class ModelDm implements DmAgent {
@@ -252,7 +260,7 @@ export class ModelDm implements DmAgent {
   constructor(config: ModelDmConfig) {
     this.config = config;
     const prompt = dmPrompt(config.pack, config.human, config.players, config.craft ?? "prompt", config.language);
-    this.systemPrompt = config.livingWorld ? `${prompt}\n\n${DM_ROAD_PROMPT}` : prompt;
+    this.systemPrompt = config.livingWorld ? `${prompt.replace(SCENES_LINE, ROAD_SCENES_LINE)}\n\n${DM_ROAD_PROMPT}` : prompt;
     this.seatTools = this.defineTools();
   }
 
@@ -572,6 +580,9 @@ export class ModelDm implements DmAgent {
     ];
     // With no human at the table, nothing is the human's to take, ask or answer (M7 spec §4.2).
     const humanOnly = new Set(["offer_surrender", "legal_actions", "submit", "end_turn", "ask_human"]);
-    return human ? tools : tools.filter((tool) => !humanOnly.has(tool.name));
+    // On the road the journey loads the scenes and the contract or the days end the run (AGT-80):
+    // a DM that loaded a scene would move the party off the map, and one that ended the adventure would end the run early.
+    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : []);
+    return tools.filter((tool) => (human || !humanOnly.has(tool.name)) && !scenesOnly.has(tool.name));
   }
 }

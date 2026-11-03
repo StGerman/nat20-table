@@ -37,7 +37,7 @@ import { GameEngine, REPO } from "../engine.ts";
 import { readCampaign } from "../pack/campaign.ts";
 import { readPack } from "../pack/read.ts";
 import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
-import { chainDm, chainScenes, ScriptedPlayer, ScriptedSeat, walkOnDm } from "../table/scripted.ts";
+import { chainDm, chainScenes, ScriptedDm, ScriptedPlayer, ScriptedSeat, walkOnDm } from "../table/scripted.ts";
 import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat, StopKind } from "../table/types.ts";
@@ -242,6 +242,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     plan: played,
     adventure: pack.adventure.scenes.map((s) => s.id),
     time_limit_min: flags["time-limit-min"],
+    ...(campaign ? { campaign: { start_day: campaign.startDay, day_limit: campaign.dayLimit ?? null } } : {}),
     scenes: [],
     started_at: new Date().toISOString(),
     ended_at: null,
@@ -286,7 +287,10 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const fights = Object.fromEntries(pack.adventure.scenes.flatMap((s) => (s.encounters[0] ? [[s.id, s.encounters[0].encounter]] : [])));
   // A scripted whole-adventure run walks every scene (AGT-39); a scene run ends after its first fight.
   const scripted = () =>
-    play.allScenes
+    // On the road the journey loads the scenes (AGT-80): the scripted DM only narrates.
+    campaign
+      ? new ScriptedDm({})
+      : play.allScenes
       ? chainDm(chainScenes(pack.adventure.scenes), everyone, everyone[0])
       : walkOnDm(pack.adventure.scenes.map((s) => s.id), fights, everyone);
   // The narration preview (M10 S4) reaches the terminal seat only, unless --no-preview.

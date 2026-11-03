@@ -412,3 +412,18 @@ test("a format 2 pack gives the DM give, steal and loot, and the rule that an un
   assert.match(dm.systemPrompt, /A theft that goes unseen you tell to the thief alone/);
   assert.ok(!new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).seatTools.some((t) => t.name === "steal"), "The Silent Mill has none");
 });
+
+test("on the road the DM has no load_scene or end_adventure, and the scenes rule says the journey loads them (AGT-80, AGT-81)", () => {
+  const wend = readPack(path.join(REPO, "scenarios/fair_in_wend"));
+  const dm = new ModelDm({ pack: wend, human: "bren", players: ["torva", "maren", "ilsa"], choice: CHOICE, livingWorld: true });
+  const names = dm.seatTools.map((t) => t.name);
+  assert.ok(!names.includes("load_scene") && !names.includes("end_adventure"), names.join(", "));
+  assert.ok(names.includes("start_fight") || names.includes("place_creature"), "the road's fights stay");
+  assert.match(dm.systemPrompt, /- Scenes: the journey loads them\./);
+  assert.doesNotMatch(dm.systemPrompt, /lists the scenes in order with their exits/);
+  // The craft notes are shared with packs played in order: the road's own rule overrides them.
+  assert.match(dm.systemPrompt, /read the road instead: the journey moves the party on/);
+  // A pack played in order keeps both.
+  const mill = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).seatTools.map((t) => t.name);
+  assert.ok(mill.includes("load_scene") && mill.includes("end_adventure"));
+});

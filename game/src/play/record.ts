@@ -55,6 +55,8 @@ export interface RunRecord {
   stop: StopKind | null;
   /** The saved party the run played and saved (API-45), with its hash in and out; absent without --roster. */
   roster?: RosterRecord;
+  /** A living-world run (M9): its first game day and its last; absent for scenes in order. The verdict checks the Milestone 9 exit on it (AGT-81). */
+  campaign?: { start_day: number; day_limit: number | null };
 }
 
 /** The checkout a run comes from: its commit, and whether tracked files had changes. */

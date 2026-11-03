@@ -146,3 +146,43 @@ test("a flag Stas adds by hand in confirmations.json counts in row 3 (M10 P2)", 
   writeFileSync(path.join(dir, CONFIRMATIONS_JSON), JSON.stringify({ n1: { answer: "dismissed" }, added: [{ id: "h9-1", claim: "x", answer: "dismissed" }] }));
   assert.equal(computeVerdict(dir).verdict, "PASS", "a hand flag Stas dismisses again passes");
 });
+
+test("a living-world run is judged on the Milestone 9 exit: the contract paid by the day limit, journeys, a road event, a fight outside a scene, the roster (AGT-81)", () => {
+  const fw = ["fw_highsteads", "fw_road", "fw_wendford", "fw_wendmouth"];
+  const run = runRecord({
+    plan: fw,
+    adventure: fw,
+    scenes: fw.map((id, i) => ({ id, started_at: new Date(Date.UTC(2026, 10, 3, 9, i * 20)).toISOString(), ended_at: new Date(Date.UTC(2026, 10, 3, 9, i * 20 + 19)).toISOString(), rounds: 0, target_minutes: 10 })),
+    ended: "the escort contract is done",
+    campaign: { start_day: 1, day_limit: 3 },
+    roster: { name: "wend", party: "continue", loaded_sha256: "a".repeat(64), saved_sha256: "b".repeat(64) } as never,
+  });
+  const leg = (place: string) => ({ kind: "traveled", leg: { arrived: true, at: { kind: "at", place } } });
+  const wage = (to: string) => ({ kind: "ledger", reason: "wage", to, from: "npc:odda_vell", what: { kind: "coins", copper: 200 } });
+  const party = ["bren", "torva", "maren", "ilsa"];
+  const log = [{ kind: "session_started" }, ...party.map(wage), leg("wendford"), { kind: "card_resolved", choice: "clear" }, { kind: "night" }, leg("wendmouth"), ...party.map(wage), { kind: "escort_settled", destination: "wendmouth" }];
+  const dir = folder(run, [], log);
+  const engineLog = [
+    { request: { cmd: "start_combat" }, response: { ok: true, events: [{ kind: "combat_started" }] } },
+    { request: { cmd: "choose_card" }, response: { ok: true, events: [{ kind: "combat_started" }] } },
+  ];
+  writeFileSync(path.join(dir, "engine-log.jsonl"), engineLog.map((l) => JSON.stringify(l)).join("\n") + "\n");
+  const v = computeVerdict(dir);
+  assert.equal(v.verdict, "PASS", v.why);
+  const row = (id: string) => v.rows.find((r) => r.row === id)!;
+  assert.match(row("1").title, /by the end of day 3/);
+  assert.match(row("1").detail, /settled on day 2/);
+  assert.match(row("m9-journeys").detail, /wendford, wendmouth/);
+  assert.match(row("m9-pay").detail, /bren 4 gp/);
+  assert.match(row("m9-fight").detail, /^1 fights/, "the authored encounter doesn't count");
+  assert.equal(row("m9-roster").status, "pass");
+
+  // Settled after the last day, one Blade never paid, no card, no fight off the scene file, a new party.
+  const late = [{ kind: "session_started" }, ...party.slice(1).map(wage), leg("wendford"), { kind: "night" }, { kind: "night" }, { kind: "night" }, { kind: "escort_settled", destination: "wendmouth" }];
+  const bad = folder({ ...run, roster: { ...run.roster!, party: "new" } }, [], late);
+  writeFileSync(path.join(bad, "engine-log.jsonl"), JSON.stringify(engineLog[0]) + "\n");
+  const w = computeVerdict(bad);
+  const status = (id: string) => w.rows.find((r) => r.row === id)!.status;
+  assert.equal(w.verdict, "FAIL");
+  assert.deepEqual(["1", "m9-journeys", "m9-pay", "m9-road", "m9-fight", "m9-roster"].map(status), ["fail", "fail", "fail", "fail", "fail", "reported"]);
+});
