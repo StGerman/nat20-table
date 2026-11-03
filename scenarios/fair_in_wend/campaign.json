@@ -1,0 +1,268 @@
+{
+    "$schema": "../../game/schema/adventure.schema.json",
+    "_comment": "Fair in Wend's skeleton and campaign (MAP-7, Milestone 9): one file, the adventure.json format plus the engine's world block and the run's day limit. The engine reads only `world`; the game and the DM read the rest. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. The escort pays the SRD 5.2.1 skilled-hireling wage, 2 GP a day per Blade (decision 0058).",
+    "format_version": 2,
+    "id": "fair_in_wend",
+    "title": "Fair in Wend",
+    "licence": "CC-BY-4.0",
+    "credit": "nat20-table contributors",
+    "prose": [
+        "prose/adventure.md"
+    ],
+    "lore": [
+        "../../lore/the_wend_valley.md"
+    ],
+    "party": [
+        {
+            "handle": "bren",
+            "seat": "human",
+            "card": "cards/bren.md",
+            "names": [
+                "Bren",
+                "Брен",
+                "Брена",
+                "Брену",
+                "Бреном",
+                "Брене"
+            ],
+            "name_ru": "Брен",
+            "_comment": "The human's seat by default; the card is for runs where an AI plays Bren."
+        },
+        {
+            "handle": "torva",
+            "seat": "ai",
+            "card": "cards/torva.md",
+            "pronouns": "she/her",
+            "names": [
+                "Torva",
+                "Торва",
+                "Торвы",
+                "Торве",
+                "Торву",
+                "Торвой"
+            ],
+            "name_ru": "Торва",
+            "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped."
+        },
+        {
+            "handle": "maren",
+            "seat": "ai",
+            "card": "cards/maren.md",
+            "pronouns": "she/her",
+            "names": [
+                "Maren",
+                "Марен",
+                "Мэрен",
+                "Марена",
+                "Марене",
+                "Марену",
+                "Мареной"
+            ],
+            "name_ru": "Марен"
+        },
+        {
+            "handle": "ilsa",
+            "seat": "ai",
+            "card": "cards/ilsa.md",
+            "pronouns": "she/her",
+            "names": [
+                "Ilsa",
+                "Ильса",
+                "Ильсы",
+                "Ильсе",
+                "Ильсу",
+                "Ильсой",
+                "Ильза",
+                "Ильзы",
+                "Ильзе",
+                "Ильзу",
+                "Ильзой"
+            ],
+            "name_ru": "Ильза"
+        }
+    ],
+    "npcs": [
+        {
+            "id": "odda_vell",
+            "name": "Odda Vell, the grain factor",
+            "name_ru": "торговка зерном Одда Велл",
+            "prose": "prose/npcs/odda_vell.md"
+        }
+    ],
+    "glyphs": {
+        "_comment": "Turn-order glyphs for the human's panel (AGT-67): party members by handle, monsters by kind or by the name the pack gives them.",
+        "bren": "🪖",
+        "torva": "🪓",
+        "maren": "📿",
+        "ilsa": "🔮",
+        "Wolf": "🐺",
+        "Grey wolf": "🐺",
+        "Goblin Warrior": "👺",
+        "Hill goblin": "👺"
+    },
+    "stat_blocks": [
+        {
+            "id": "road_wolf",
+            "monster": "wolf",
+            "side": "hostile",
+            "name": "Grey wolf"
+        },
+        {
+            "id": "hill_goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "name": "Hill goblin"
+        },
+        {
+            "id": "road_bandit",
+            "monster": "bandit",
+            "side": "hostile",
+            "name": "Cudgel man",
+            "carries": {
+                "coins": {
+                    "sp": 6
+                }
+            }
+        },
+        {
+            "id": "fair_tough",
+            "monster": "bandit",
+            "side": "hostile",
+            "name": "Fair-ground bruiser",
+            "carries": {
+                "coins": {
+                    "sp": 9
+                }
+            }
+        },
+        {
+            "id": "fair_guard",
+            "monster": "guard",
+            "side": "neutral",
+            "name": "Fair warden"
+        },
+        {
+            "id": "townsfolk",
+            "monster": "commoner",
+            "side": "neutral",
+            "name": "Townsfolk"
+        }
+    ],
+    "scenes": [
+        {
+            "id": "fw_highsteads",
+            "title": "The Highsteads",
+            "beat": "social",
+            "target_minutes": 10,
+            "prose": "prose/fw_highsteads.md",
+            "npcs": [
+                "odda_vell"
+            ],
+            "checks": [
+                {
+                    "check": "read_the_sky",
+                    "intent": "Reading the weather for the road down, or asking the hill folk about it."
+                },
+                {
+                    "check": "ridge_smoke",
+                    "intent": "Looking over the ridges, watching the hills, keeping an eye out for trouble before the wagon leaves."
+                }
+            ],
+            "exits": []
+        },
+        {
+            "id": "fw_road",
+            "title": "On the road",
+            "beat": "exploration",
+            "target_minutes": 15,
+            "prose": "prose/fw_road.md",
+            "npcs": [
+                "odda_vell"
+            ],
+            "exits": []
+        },
+        {
+            "id": "fw_wendford",
+            "title": "Wendford",
+            "beat": "social",
+            "target_minutes": 10,
+            "prose": "prose/fw_wendford.md",
+            "npcs": [
+                "odda_vell"
+            ],
+            "checks": [
+                {
+                    "check": "alehouse_talk",
+                    "intent": "Asking around the alehouse or the green about the river road and who uses it."
+                }
+            ],
+            "exits": []
+        },
+        {
+            "id": "fw_wendmouth",
+            "title": "The fair at Wendmouth",
+            "beat": "narrative",
+            "target_minutes": 10,
+            "prose": "prose/fw_wendmouth.md",
+            "npcs": [
+                "odda_vell"
+            ],
+            "checks": [
+                {
+                    "check": "spot_the_cutpurse",
+                    "intent": "Watching the crowd around the wagon, keeping hands off the merchant's purse."
+                }
+            ],
+            "exits": []
+        }
+    ],
+    "day_limit": 3,
+    "world": {
+        "_comment": "The engine's world block. Odda Vell owns the wagon (an NPC owner): any Blade moves it on along her route and calls the night. The contract is made on the evening of day 1 at the Highsteads; the route goes down the slope track to Wendford (eight miles of hill, most of a morning with a loaded wagon), then the river road to the fair (twenty miles, a long day). With the night at the Highsteads and one on the way, the wagon reaches the fair on day 3, within the day limit.",
+        "map": "wend",
+        "start": "highsteads",
+        "day": 1,
+        "hour": 16,
+        "road_scene": "fw_road",
+        "scenes": {
+            "highsteads": "fw_highsteads",
+            "wendford": "fw_wendford",
+            "wendmouth": "fw_wendmouth"
+        },
+        "route": [
+            "highsteads",
+            "wendford",
+            "wendmouth"
+        ],
+        "caravan": {
+            "owner": "npc:odda_vell",
+            "wagons": [
+                {
+                    "n": 1,
+                    "vehicle": "wagon",
+                    "vehicle_lb": 400,
+                    "team": [
+                        {
+                            "animal": "draft_horse",
+                            "capacity_lb": 540
+                        },
+                        {
+                            "animal": "draft_horse",
+                            "capacity_lb": 540
+                        }
+                    ],
+                    "cargo": {
+                        "wheat": 900,
+                        "rations": 20
+                    }
+                }
+            ]
+        },
+        "escort": {
+            "_comment": "2 GP a day per Blade, one day paid ahead at the Highsteads, the rest on arrival at the fair, from Odda's purse of 40 GP.",
+            "destination": "wendmouth",
+            "advance_days": 1,
+            "purse_cp": 4000
+        }
+    }
+}
