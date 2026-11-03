@@ -98,8 +98,8 @@ test("out of combat the loop asks the suggester once per prompt, from the human'
     const report = await loop.run("vale_town");
     assert.equal(report.ended, "the human quit");
     // A slash command in between keeps the call: one per prompt, and both prompts got rows.
-    assert.equal(briefings.length, 3, "one call per explore prompt");
-    // The third prompt was answered (quit) before its rows came: they were never shown.
+    // The third prompt was answered (quit) while its briefing was read: no call was made for it.
+    assert.equal(briefings.length, 2, "one call per explore prompt answered after its rows");
     assert.deepEqual(report.suggestions, { shown: 2, unchanged: 1, edited: 0, own: 1 });
     // The briefing is the human's own: their sheet, their state, their options and what they were shown.
     const briefing = briefings[0];
