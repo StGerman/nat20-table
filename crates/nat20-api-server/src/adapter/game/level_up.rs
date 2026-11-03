@@ -26,6 +26,11 @@ impl OpenLevelUp {
     pub(super) fn handle(&self) -> &str {
         &self.handle
     }
+
+    /// The level it reaches.
+    pub(super) fn level(&self) -> u8 {
+        self.level
+    }
 }
 
 struct Asked {

@@ -3,6 +3,16 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.53 (2026-11-03)
+- Copilot review fixes on the Milestone 9 stack, meaning only: no field changes.
+  - `travel` and `rest_night` while a level-up is open are `rejected`, `level_up_open` (§4.11, §4.12, §4.14), before the world or core changes; `LevelUpOpen`'s doc says so.
+  - `save_roster` with a level-up still open saves that character at the level before it, without its picks; a party member not in the scene keeps the entry the roster was loaded with (§4.15). `start_campaign` on a roster whose escort is under way, with another party, is `bad_roster`.
+  - `start_campaign` refuses a player owner who is not in the party, an unreadable deck directory, a road card outside a road's zone, and a place or road scene that doesn't read, all `bad_scene`, and leaves no campaign started (§4.11, §4.13).
+  - `carries` (a scene file's, a world NPC's or `place_creature`'s) is refused with more than 100 of one item or more coin than a purse can hold; a placed creature's `name` may not hold control characters (§4.10). A world NPC named `world`, or with a name of more than one line, is `bad_scene`; one with no free spot is not placed that visit (§4.16).
+  - A refused `load_scene` leaves the place NPCs as they were. A card's payment, gain and Exhaustion take every creature named who is not dead; checks and fights those who are up (§4.13). A wage larger than one ledger entry is paid in parts (§4.17).
+  - The command table lists `help`, `give`, `steal`, `loot`, `place_creature` and `start_fight`; the lifecycle names `start_fight`; a placed creature named in the next `load_scene`'s `party` is carried (§4.10).
+- Fixtures change only by version, and by the core pin's `engine_rev`.
+
 ## 1.0.0-dev.52 (2026-11-03)
 - Review fixes on the Milestone 9 stack, meaning only: no field changes.
   - `steal` answers only the thief's own viewer and `dm` (protocol.md §4.9): its result carries the roll id and the outcome, which are theirs only (§5). Any other creature viewer gets `not_visible` and nothing is rolled. An amount of coin no ledger entry can carry is now `bad_request` before the roll, as `give` refuses it, and the target's passive Perception is the DC as core computes it, with no cap at 30.
