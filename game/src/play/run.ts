@@ -9,7 +9,7 @@ import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
 import { skeletonFile } from "../pack/read.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
-import type { FightReaction, RunReport, SceneChoice, SceneTime, TalkRound } from "../table/loop.ts";
+import type { FightReaction, RunReport, SceneChoice, SceneTime, SuggestionCounts, TalkRound } from "../table/loop.ts";
 import type { TextGuard } from "../table/state.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, phases, summarize, waitedMs, type UsageRecord } from "../usage.ts";
@@ -28,6 +28,8 @@ export interface PackParty {
   ai: Handle[];
   /** Each AI player's personality card (CHR-5). */
   cards: Map<Handle, string>;
+  /** The human's character's card, when the pack gives it one: what the suggester reads (AGT-49). */
+  humanCard?: string;
   /**
    * What the table calls each party member, whichever seat plays it: its handle, its card's name
    * and the pack's `names`. A line that names an AI player gives it the floor first (party talk §4.2).
@@ -91,7 +93,9 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
   // "nat20_core::class.fighter" is "fighter".
   const classes = new Map([...pregenSheets(pack, adventure)].map(([handle, sheet]) => [handle, sheet.class.split(".").at(-1) ?? sheet.class] as const));
   for (const p of ai) if (!classes.has(p.handle)) throw new Error(`${pack}: party ${p.handle} has an AI seat and no pregen in the first scene, so no class`);
-  return { ...(human ? { human } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: russianNames(adventure, { npcs: false }), glyphs: adventure.glyphs };
+  const humanEntry = adventure.party.find((p) => p.handle === human);
+  const humanCard = humanEntry?.card ? readFileSync(path.resolve(pack, humanEntry.card), "utf8") : undefined;
+  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: russianNames(adventure, { npcs: false }), glyphs: adventure.glyphs };
 }
 
 /** One line of the pick list (AGT-35): a party member as a player picking a pregen sees it. */
@@ -366,4 +370,9 @@ export function reportSections(options: {
   }
   if (options.audit) out.push("", `Audit and leak scan: ${options.audit.passed ? "passed" : "FAILED"}`, "", "```", options.audit.output, "```");
   return out;
+}
+
+/** The run report's line on the suggestions picker (AGT-49, S4). */
+export function suggestionLine(counts: SuggestionCounts): string {
+  return `Suggestions: shown ${counts.shown} times; lines sent from one as offered ${counts.unchanged}, edited ${counts.edited}; your own lines while shown ${counts.own}`;
 }
