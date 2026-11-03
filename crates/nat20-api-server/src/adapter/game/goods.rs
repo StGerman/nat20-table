@@ -318,12 +318,32 @@ pub fn purse(engine: &EngineState, entity: Entity) -> Purse {
     }
 }
 
+/// The most of one item a scene, spawn, placement or NPC can give a creature to carry.
+pub(crate) const MAX_CARRIED: u32 = 100;
+
+/// Checks what a creature is to carry, before anything is spawned: every item exists, no more
+/// than [`MAX_CARRIED`] of one item, and the coins fit in a purse.
+pub fn check_carries(carries: &Carries) -> Result<(), String> {
+    for CarriedItem { item, quantity } in &carries.items {
+        core_item_id(item).map_err(|e| e.message)?;
+        if *quantity > MAX_CARRIED {
+            return Err(format!(
+                "carries {quantity} {item}; at most {MAX_CARRIED} of one item"
+            ));
+        }
+    }
+    Inventory::new()
+        .checked_add_money(&monetary(&carries.coins))
+        .map_err(|_| "carries more coins than a purse holds".to_string())
+}
+
 /// Gives a freshly spawned creature what its scene entry says it carries.
 pub fn add_carries(
     engine: &mut EngineState,
     entity: Entity,
     carries: &Carries,
 ) -> Result<(), String> {
+    check_carries(carries)?;
     ensure_inventory(engine, entity);
     for CarriedItem { item, quantity } in &carries.items {
         let id = core_item_id(item).map_err(|e| e.message)?;
