@@ -3,6 +3,15 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.52 (2026-11-03)
+- Review fixes on the Milestone 9 stack, meaning only: no field changes.
+  - `steal` answers only the thief's own viewer and `dm` (protocol.md §4.9): its result carries the roll id and the outcome, which are theirs only (§5). Any other creature viewer gets `not_visible` and nothing is rolled. An amount of coin no ledger entry can carry is now `bad_request` before the roll, as `give` refuses it, and the target's passive Perception is the DC as core computes it, with no cap at 30.
+  - `world` is reserved like `dm`: a scene creature, a carried participant or a `place_creature` handle named `world` is refused (`bad_scene`, `bad_request`), because the ledger posts entries for `world` to its account outside the table (decision 0057).
+  - `give`, `steal` and `loot` take "within 5 feet" exactly, with 5 cm of slack as a melee reach has; the slack was half a foot.
+  - A `load_scene` whose `party` leaves the open level-up's character behind is `rejected`, `level_up_open` (§4.14), so that prompt can always be answered.
+  - Time a road card takes off the day's travel rounds up to the next budget unit, so short delays never cost less than one long one.
+- `goods.jsonl` adds a steal sent by another creature's viewer (`not_visible`); `level_up.jsonl` adds a scene load that leaves Maren's open level-up behind (`rejected`); `place_creature.jsonl`'s handle refusals name `world`; `place_npcs.jsonl`'s saved world has spent one more budget unit.
+
 ## 1.0.0-dev.51 (2026-11-03)
 - A finished contract starts over (API-45, Milestone 9; protocol.md §4.15). A roster whose saved world holds a done escort contract no longer takes up that world: `start_campaign` starts the campaign fresh from `campaign.json`, the characters carry over and the advance is paid again. A roster mid-contract still resumes where it was left, with no second advance. When the resumed caravan stands somewhere other than the scene loaded, `start_campaign` now loads that place's (or the road's) scene with the party and logs its `scene_loaded`. Meaning only: no field changes; `RosterWorld.map`'s doc says so.
 - `escort.jsonl` goes on after the arrival: the party is saved, a new session from that roster starts at Vale Town on day 1 with a new contract and its advance. `roster.jsonl`'s campaign resume now loads the roster `save_roster` wrote (it carried a world saved before the escort and NPCs), so its `start_campaign` pays no second advance, and it loads `vale_road`, the scene the Crossing Inn plays in, where the caravan was left, with Wren placed (later `seq`s move).

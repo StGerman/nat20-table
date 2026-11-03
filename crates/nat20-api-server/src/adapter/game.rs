@@ -349,6 +349,18 @@ impl Game {
         roster: &[RosterCharacter],
     ) -> Result<Self, (Option<Game>, ApiError)> {
         let fail = |previous, e| Err((previous, e));
+        // An open level-up belongs to a creature of this game: a scene that leaves it behind
+        // would leave its prompt unanswerable (API-44).
+        if let Some(open) = previous.as_ref().and_then(|g| g.level_up.as_ref())
+            && !party.iter().any(|h| h.0 == open.handle())
+        {
+            let message = format!(
+                "{}'s level-up is open; carry {} into the next scene or answer it first.",
+                open.handle(),
+                open.handle()
+            );
+            return fail(previous, rejected(RejectReason::LevelUpOpen, message));
+        }
         if scene.creatures.is_empty() && party.is_empty() {
             return fail(
                 previous,
@@ -2164,11 +2176,11 @@ impl Game {
                 .spawns
                 .iter()
                 .any(|s| s.creatures.iter().any(|c| c.handle == *handle));
-        if handle.0 == "dm" || !scene::is_plain_name(&handle.0) || taken {
+        if !scene::is_creature_handle(&handle.0) || taken {
             return Err(error(
                 ErrorCode::BadRequest,
                 format!(
-                    "{} can't be a new creature's handle: it must be a plain name no creature or spawn of this scene uses, and not dm.",
+                    "{} can't be a new creature's handle: it must be a plain name no creature or spawn of this scene uses, and not dm or world.",
                     handle.0
                 ),
             ));
@@ -4369,13 +4381,15 @@ fn spawn_creature(
     roster: &[RosterCharacter],
 ) -> Result<Entity, ApiError> {
     let entity = spawn_bare(engine, def, pregens, roster)?;
-    if let Some(carries) = &def.carries {
-        goods::add_carries(engine, entity, carries).map_err(|m| {
-            error(
-                ErrorCode::BadScene,
-                format!("{}'s carries: {m}", def.handle.0),
-            )
-        })?;
+    if let Some(carries) = &def.carries
+        && let Err(m) = goods::add_carries(engine, entity, carries)
+    {
+        // A refused scene load keeps the game before it: leave no half-made creature in its world.
+        let _ = engine.despawn(entity);
+        return Err(error(
+            ErrorCode::BadScene,
+            format!("{}'s carries: {m}", def.handle.0),
+        ));
     }
     Ok(entity)
 }
