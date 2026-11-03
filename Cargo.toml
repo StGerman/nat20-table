@@ -42,7 +42,7 @@ nat20-world = { path = "crates/nat20-world" }
 # blocks, MON-11), core #70's head until it merges. cdc2c32 = 38ed11f plus core #72 (a Long Rest
 # needs 1 Hit Point and waits 16 hours, ENG-30) and core #73 (Exhaustion and malnutrition,
 # ENG-29), core #73's head until the stack merges.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "aacfb61a6a08c0d4b9678d1deac0f263bfdee8ed" }
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "3220a7f23f1b3a9d295a89a5dc88ad4a8aa7531b" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
