@@ -7,7 +7,7 @@ import type { LevelUpChoice } from "@nat20-table/engine-client";
 import { ModelPlayer, ROAD_PROMPT } from "../src/agents/player.ts";
 import { REPO } from "../src/engine.ts";
 import { castParty } from "../src/play/run.ts";
-import { formatLevelUpChoice, PlayerTools } from "../src/table/tools.ts";
+import { duration, formatLevelUpChoice, PlayerTools } from "../src/table/tools.ts";
 import { formatState } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
 
@@ -26,6 +26,10 @@ test("the road and level-up tools join a player's seat only in a living-world pa
   for (const tool of make(true).seatTools) {
     for (const field of ["viewer", "actor", "prompt_id"]) assert.ok(!(field in tool.inputSchema), `${tool.name} takes ${field}`);
   }
+});
+
+test("a leg's time reads in hours and minutes, never 0 hours", () => {
+  assert.deepEqual([40, 60, 200, 0].map(duration), ["40 minutes", "1 hour", "3 hours 20 minutes", "0 minutes"]);
 });
 
 test("a level-up choice reads as plain lines with the recommended pick marked", () => {
@@ -64,7 +68,7 @@ test("on the road a player looks at the world in words, gives a word on the card
 
     const went = await bren.travel("fast", "crossing_inn");
     assert.ok(went.ok, went.text);
-    assert.match(went.text, /miles in \d+ hours/);
+    assert.match(went.text, /miles in \d+ (hour|minute)/);
     // The road card the fixture meets on this leg: both Blades give their word.
     for (const [who, tools] of [["bren", bren], ["maren", maren]] as const) {
       const said = await tools.chooseCard("clear");

@@ -244,7 +244,7 @@ export class PlayerTools {
   travel(pace: Pace, to?: string): Promise<ToolOutcome> {
     if (this.table.inCombat) return this.answer(notNow("the caravan moves on once the fight is over"));
     return this.answer(send(this.table, this.me, { cmd: "travel", actor: this.me, pace, ...(to ? { to } : {}) }, (r) =>
-      r.result?.cmd === "travel" ? `${r.result.leg.arrived ? "arrived" : "stopped on the road for the day"}: ${r.result.leg.miles} miles in ${Math.round(r.result.leg.minutes / 60)} hours` : "",
+      r.result?.cmd === "travel" ? `${r.result.leg.arrived ? "arrived" : "stopped on the road for the day"}: ${r.result.leg.miles} miles in ${duration(r.result.leg.minutes)}` : "",
     ));
   }
 
@@ -279,6 +279,15 @@ export class PlayerTools {
       r.result?.cmd === "answer_level_up" ? (r.result.choice ? formatLevelUpChoice(r.result.choice) : "level up done") : "",
     ));
   }
+}
+
+/** A stretch of time in words: "40 minutes", "1 hour", "3 hours 20 minutes". */
+export function duration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  const hours = h > 0 ? `${h} hour${h === 1 ? "" : "s"}` : "";
+  const mins = m > 0 || h === 0 ? `${m} minute${m === 1 ? "" : "s"}` : "";
+  return [hours, mins].filter(Boolean).join(" ");
 }
 
 /** A level-up choice in plain lines: what to pick, how many, each option with its summary, the recommended ones marked. */
