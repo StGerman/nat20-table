@@ -199,6 +199,7 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
                 name: p.name.clone(),
                 kind: p.kind.clone(),
                 market: p.market,
+                inn_cp: p.inn_cp,
             })
             .collect(),
         roads,

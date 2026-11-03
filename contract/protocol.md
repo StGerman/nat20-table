@@ -128,6 +128,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | `events` | `since`, `viewer` | `{events, next}` | all |
 | `start_campaign` | `party[]` | `State` with `world` | game loop as DM, once (§4.11) |
 | `travel` | `actor`, `to?` (place or road id), `pace: fast\|normal\|slow` | `{leg, state}` | the caravan's driver, as itself (§4.11) |
+| `rest_night` | `actor`, `where: inn\|camp` | `{night, state}` | the caravan's driver, as itself (§4.12) |
 
 ### 4.1 Moving
 
@@ -286,6 +287,15 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
 - **What follows, in order.** The world clock moves on by the leg's minutes and core's time with it, less the ten minutes the scene change itself passes (§2), so effects that run out end and are logged. `traveled{leg}` is logged (public), then `place_discovered{place, name}` (public) when the leg reached a place the party didn't know. Then the engine loads the scene the leg ended in, carrying the party as `load_scene` does: the place's own scene on arrival, else the campaign's `road_scene`, which also stands for the road. `scene_loaded` follows. If that load fails, the world has still moved and the error says why.
 - The result is the `leg` (also in `traveled`) and the state in the new scene.
 
+### 4.12 Nights
+
+`rest_night{actor, where}` ends the day (API-42). The callers and the refusals before anything happens are `travel`'s (§4.11): `no_campaign`, `not_driver`, `wrong_mode`, `unknown_creature`.
+
+- **Where.** `inn` needs the caravan in a place with an inn (`inn_cp` in its place view), else `rejected`, `no_inn`. Every party member pays `inn_cp` for room and board, which is a full day's food; if any purse holds less, counted with change, nothing happens: `rejected`, `insufficient_funds`. `camp` works anywhere: party members eat one unit of the caravan's `rations` each, in party order, while they last.
+- **How long.** Until the next dawn (06:00), and never shorter than a Long Rest's 8 hours (SRD 5.2.1). A night called in the morning waits the day out.
+- **What follows, in order.** Each inn fee is a `ledger` entry (public, reason `inn`, to `world`). Each party member's day ends through core with what they ate: a full day's food, or nothing. Core runs Malnutrition (SRD 5.2.1, Gameplay Toolbox): five days without food bring an Exhaustion level, and each day after another; levels from malnutrition stay until a full day's food. Any saving throw it calls is logged as one. Then each party member who can take a Long Rest (at least 1 Hit Point, and 16 hours since the end of their last) takes one through core, which removes one Exhaustion level a Long Rest can remove. The world clock and core's time move on by the night, effects that run out end, and the `rest` event is logged. A new day of travel starts, and `night{night}` is logged last (public).
+- The result is the `night` (also in the event): `minutes`, and who `rested`, who was `not_rested` and who went `hungry`, and the state at dawn. The world crate takes the rations; the ledger does not log food yet.
+
 ## 5. Visibility (projection per `viewer`)
 
 | Data | `dm` | Owner (viewer = that creature) | Other player viewer |
@@ -318,7 +328,7 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
 | `world.roads`: a road to an undiscovered place, and every road's deck `zone` | yes | no; the road's known end in `unexplored`, never where it leads; no `zone` | no; as the owner |
 | `world.route` (where an NPC owner travels) | yes | no | no |
 | `world.drives` (whether this player may call `travel`) | n/a | yes | yes, for themselves |
-| `traveled`, `place_discovered` | yes | yes | yes |
+| `traveled`, `place_discovered`, `night` | yes | yes | yes |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
 
 The server projects; it doesn't authenticate. The engine trusts its single client. Projection exists so that a bug in the orchestrator's tool layer can't leak numbers, not to stop a hostile client.
@@ -361,6 +371,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `creature_placed` | `handle`, `monster` (DM only): a `place_creature` (§4.10) |
 | `traveled` | `leg: {actor, road, pace, miles, minutes, arrived, at}` (public): one `travel` leg (§4.11) |
 | `place_discovered` | `place`, `name` (public): the party found a place it did not know (§4.11) |
+| `night` | `night: {actor, lodging, minutes, rested, not_rested, hungry}` (public): one `rest_night` (§4.12) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
 ```json
@@ -391,12 +402,12 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `no_session` / `no_scene` | Lifecycle order is wrong | false |
 | `unknown_creature` / `unknown_option` / `unknown_check` / `unknown_anchor` / `unknown_spawn` / `unknown_encounter` | The id isn't in this scene | true |
 | `unknown_stat_block` | `place_creature` names a stat block the registry doesn't have | true |
-| `no_campaign` | A world command (`travel`) before `start_campaign` | false |
+| `no_campaign` | A world command (`travel`, `rest_night`) before `start_campaign` | false |
 | `not_your_turn` | `actor` isn't `awaiting.actor` (also returned by `legal_actions`, not an empty list) | true, after waiting |
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room`, `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room`, `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded`, `no_inn` | true |
 | `surrender_not_available` | `end_combat{surrender}` while the running encounter's surrender condition does not hold, or it declares none; nothing changed | false |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |

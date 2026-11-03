@@ -1,8 +1,8 @@
 {
-    "_comment": "A small test world for the conformance fixtures (API-41): a town, 12 miles of good grassland road to an inn, then 20 miles of hill trail to an old tower the party has not found. Not shipped content; Wend is MAP-6.",
+    "_comment": "A small test world for the conformance fixtures (API-41): a town, 12 miles of good grassland road to an inn (3 gp a night per person, high on purpose so a fixture runs a purse dry), then 20 miles of hill trail to an old tower the party has not found. Not shipped content; Wend is MAP-6.",
     "places": [
         {"id": "vale_town", "name": "Vale Town", "kind": "town", "market": true, "discovered": true, "scene": "vale_town"},
-        {"id": "crossing_inn", "name": "The Crossing Inn", "kind": "inn", "discovered": true},
+        {"id": "crossing_inn", "name": "The Crossing Inn", "kind": "inn", "inn_cp": 300, "discovered": true},
         {"id": "old_tower", "name": "The Old Tower", "kind": "ruin"}
     ],
     "roads": [

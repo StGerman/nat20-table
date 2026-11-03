@@ -155,4 +155,6 @@ pub enum RejectReason {
     DayOver,
     /// `travel` while a wagon carries more than its limit.
     Overloaded,
+    /// `rest_night{where: inn}` where the caravan is not at a place with an inn.
+    NoInn,
 }

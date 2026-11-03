@@ -208,8 +208,7 @@ pub fn sheet(
             .into_iter()
             .map(|e| e.line)
             .collect(),
-        // The core has no exhaustion model yet.
-        exhaustion: 0,
+        exhaustion: systems::exhaustion::level(&engine.world, entity),
         life_state,
         death_saves,
         equipment: equipment(engine, entity),
