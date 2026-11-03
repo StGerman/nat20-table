@@ -178,7 +178,8 @@ impl Session {
                 .map(|h| h.0.clone())
                 .filter(|h| touched(h))
                 .collect(),
-            world::Who::Blades => table.blades,
+            // The Blades were up when the card opened; an earlier effect may have downed one.
+            world::Who::Blades => table.blades.into_iter().filter(|h| touched(h)).collect(),
             world::Who::Owner => match &table.owner {
                 world::Owner::Player(owner) if touched(owner) => vec![owner.clone()],
                 _ => Vec::new(),
