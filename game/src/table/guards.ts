@@ -7,6 +7,7 @@
 // leak scan's (crates/nat20-duel/src/leak_scan.rs).
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { skeletonFile } from "../pack/read.ts";
 import type { TextGuard } from "./state.ts";
 
 /** A roll citation, `[r12]`: the only place a DM's text may hold digits. */
@@ -179,7 +180,7 @@ export function packIds(pack: string): PackIds {
     }
   }
   // The adventure's creature list (AGT-24): its entry ids and stat blocks are DM-only too.
-  const skeleton = path.join(pack, "adventure.json");
+  const skeleton = skeletonFile(pack);
   if (existsSync(skeleton)) {
     const adventure = JSON.parse(readFileSync(skeleton, "utf8")) as { stat_blocks?: Array<{ id: string; monster: string }> };
     for (const entry of adventure.stat_blocks ?? []) {

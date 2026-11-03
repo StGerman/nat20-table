@@ -10,6 +10,7 @@ import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
 import { type Adventure, SCHEMA_FILE, schemaText } from "../src/pack/adventure.ts";
 import { checkPack, repoPacks } from "../src/pack/check.ts";
+import { skeletonFile } from "../src/pack/read.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 
@@ -35,8 +36,53 @@ test("every pack in scenarios/ passes the pack check and loads every scene", asy
   for (const pack of packs) {
     const report = await checkPack(pack);
     assert.deepEqual(report.problems, [], pack);
-    const skeleton = readJson(path.join(pack, "adventure.json")) as Adventure;
+    const skeleton = readJson(skeletonFile(pack)) as Adventure;
     assert.deepEqual(report.loaded, skeleton.scenes.map((s) => s.id));
+  }
+});
+
+/** The Mill as a living-world pack on the Wend map (MAP-7): its skeleton moved to campaign.json with a world block. */
+function campaignMill(world: Record<string, unknown>, edit: (skeleton: Adventure) => void = () => undefined): { pack: string; close(): void } {
+  return planted((skeleton, pack) => {
+    edit(skeleton);
+    writeFileSync(path.join(pack, "campaign.json"), JSON.stringify({ ...skeleton, day_limit: 3, world }, null, 4));
+  });
+}
+
+const WEND = {
+  map: "wend",
+  start: "wendford",
+  hour: 8,
+  road_scene: "s2_mill_road",
+  scenes: { wendford: "s1_village_green" },
+  route: ["wendford", "wendmouth"],
+  caravan: { owner: "npc:merchant", wagons: [] },
+};
+
+test("a living-world pack's skeleton is its campaign.json: no exits needed, and the engine starts its campaign", async () => {
+  const good = campaignMill(WEND, (s) => {
+    for (const scene of s.scenes) scene.exits = [];
+  });
+  try {
+    assert.equal(path.basename(skeletonFile(good.pack)), "campaign.json");
+    const report = await checkPack(good.pack);
+    assert.deepEqual(report.problems, []);
+  } finally {
+    good.close();
+  }
+  const bad = campaignMill({ ...WEND, start: "the_moon" });
+  try {
+    const report = await checkPack(bad.pack);
+    assert.ok(report.problems.some((p) => p.startsWith("the engine refused the campaign: ")), report.problems.join("; "));
+  } finally {
+    bad.close();
+  }
+  const misplaced = planted((s) => Object.assign(s, { day_limit: 3 }));
+  try {
+    const report = await checkPack(misplaced.pack);
+    assert.ok(report.problems.includes("world and day_limit belong in campaign.json, not adventure.json"), report.problems.join("; "));
+  } finally {
+    misplaced.close();
   }
 });
 
