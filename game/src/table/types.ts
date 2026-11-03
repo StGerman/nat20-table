@@ -70,7 +70,7 @@ export type PlayerIntent =
   /** Esc on an empty line inside a follow-up pick: back to the turn's own options (AGT-48 Q5). */
   | { kind: "back" }
   | { kind: "reaction"; take: boolean }
-  | { kind: "command"; name: "sheet" | "where" | "options" | "log" | "usage" | "pause" | "quit" };
+  | { kind: "command"; name: "sheet" | "where" | "map" | "options" | "log" | "usage" | "pause" | "quit" };
 
 /** Why the loop needs the human. */
 export type HumanPrompt =

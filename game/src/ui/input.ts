@@ -4,13 +4,14 @@
 import type { HumanPrompt, PlayerIntent } from "../table/types.ts";
 
 /** The slash commands the loop answers (scope §4.5). */
-export const COMMANDS = ["sheet", "where", "options", "log", "usage", "pause", "quit"] as const;
+export const COMMANDS = ["sheet", "where", "map", "options", "log", "usage", "pause", "quit"] as const;
 export type CommandName = (typeof COMMANDS)[number];
 
 /** What each command does, for `/help`. */
 export const COMMAND_HELP: Record<CommandName | "help" | "panel", string> = {
   sheet: "your character sheet",
   where: "places and the creatures you can see, with distances",
+  map: "the places you know, the roads between them and where the caravan is",
   options: "your numbered options now",
   log: "the last engine lines, with their roll ids",
   usage: "tokens and API-equivalent cost so far, per agent",
