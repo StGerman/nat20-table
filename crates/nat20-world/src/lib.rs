@@ -22,8 +22,8 @@ pub use campaign::{CampaignFile, CampaignWorld};
 pub use caravan::{Caravan, CaravanError, Good, Goods, Owner, Wagon};
 pub use clock::{Clock, Watch};
 pub use deck::{
-    CardError, DC_LADDER, DRAW_DIE, Decided, Deck, DeckError, DeckFile, DeckState, Effect,
-    PendingCard, Resolution, Table, Target, When, Who,
+    Card, CardError, Choice, DC_LADDER, DRAW_DIE, Decided, Deck, DeckError, DeckFile, DeckState,
+    Effect, PendingCard, Resolution, Table, Target, When, Who,
 };
 pub use dice::{ListDice, WorldDice};
 pub use map::{Edge, Generate, MapError, Place, Position, Road, Terrain, WorldMap};

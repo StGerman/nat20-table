@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.45"
+    "version": "1.0.0-dev.46"
   },
   "$defs": {
     "Ability": {
@@ -650,6 +650,181 @@
       "required": [
         "owner",
         "wagons"
+      ]
+    },
+    "CardChoiceView": {
+      "description": "One choice on a road card.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The choice id; `choose_card` takes it.",
+          "type": "string"
+        },
+        "text": {
+          "description": "What the players read.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
+    "CardDecided": {
+      "description": "How a road card was decided.",
+      "oneOf": [
+        {
+          "description": "The player owner chose, after the Blades' advice.",
+          "type": "string",
+          "const": "owner"
+        },
+        {
+          "description": "The Blades' majority.",
+          "type": "string",
+          "const": "majority"
+        },
+        {
+          "description": "A tie, broken by the human seat (Blade cards) or the card's own pick.",
+          "type": "string",
+          "const": "tie"
+        },
+        {
+          "description": "The NPC owner insisted on a choice; the DM narrates why.",
+          "type": "string",
+          "const": "owner_insists"
+        },
+        {
+          "description": "Nobody could speak; the card's default.",
+          "type": "string",
+          "const": "default"
+        }
+      ]
+    },
+    "CardDm": {
+      "description": "The road card on the table, as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "choices": {
+          "description": "The choices.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardChoiceView"
+          }
+        },
+        "id": {
+          "description": "The card id in the world's deck.",
+          "type": "string"
+        },
+        "said": {
+          "description": "What each Blade has said so far.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardSaid"
+          }
+        },
+        "target": {
+          "description": "Who decides it.",
+          "$ref": "#/$defs/CardTarget"
+        },
+        "text": {
+          "description": "What the players read.",
+          "type": "string"
+        },
+        "waiting_for": {
+          "description": "The Blades who still have to speak.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        },
+        "zone": {
+          "description": "The deck zone it came from: a road zone or a place id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "zone",
+        "target",
+        "text",
+        "choices",
+        "said",
+        "waiting_for"
+      ]
+    },
+    "CardPlayer": {
+      "description": "The road card on the table, as a player sees it: no card id, zone or deck.",
+      "type": "object",
+      "properties": {
+        "choices": {
+          "description": "The choices.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardChoiceView"
+          }
+        },
+        "said": {
+          "description": "What each Blade has said so far.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardSaid"
+          }
+        },
+        "target": {
+          "description": "Who decides it.",
+          "$ref": "#/$defs/CardTarget"
+        },
+        "text": {
+          "description": "What the players read.",
+          "type": "string"
+        },
+        "waiting_for": {
+          "description": "The Blades who still have to speak.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        }
+      },
+      "required": [
+        "target",
+        "text",
+        "choices",
+        "said",
+        "waiting_for"
+      ]
+    },
+    "CardSaid": {
+      "description": "One seat's word on the card on the table: a Blade's advice or vote.",
+      "type": "object",
+      "properties": {
+        "actor": {
+          "description": "Who spoke.",
+          "$ref": "#/$defs/Handle"
+        },
+        "choice": {
+          "description": "The choice id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor",
+        "choice"
+      ]
+    },
+    "CardTarget": {
+      "description": "Who decides a road card.",
+      "oneOf": [
+        {
+          "description": "The road, the wagons, the cargo: the caravan owner decides after every Hired Blade\nadvises; an NPC owner takes the Blades' majority.",
+          "type": "string",
+          "const": "caravan"
+        },
+        {
+          "description": "The escort themselves: the Hired Blades vote.",
+          "type": "string",
+          "const": "blades"
+        }
       ]
     },
     "CargoView": {
@@ -1420,6 +1595,24 @@
             "cmd": {
               "type": "string",
               "const": "start_campaign"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The state after the word, with the card gone once it was decided.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "choose_card"
             },
             "state": {
               "description": "Projected for the request's `viewer`.",
@@ -3077,6 +3270,127 @@
           ]
         },
         {
+          "description": "A road card was drawn after a leg or a night in camp (protocol §4.13). Public: the text\nand choices only; the card id and the draw roll are DM-only.",
+          "type": "object",
+          "properties": {
+            "choices": {
+              "description": "The choices.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/CardChoiceView"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "card_drawn"
+            },
+            "target": {
+              "description": "Who decides it.",
+              "$ref": "#/$defs/CardTarget"
+            },
+            "text": {
+              "description": "What the players read.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "text",
+            "choices"
+          ]
+        },
+        {
+          "description": "A Hired Blade's advice on a caravan card or vote on a Blade card. Public.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who spoke.",
+              "$ref": "#/$defs/Handle"
+            },
+            "choice": {
+              "description": "The choice id.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "card_advice"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "choice"
+          ]
+        },
+        {
+          "description": "The card on the table was decided; its effects follow in the log. Public.",
+          "type": "object",
+          "properties": {
+            "choice": {
+              "description": "The choice id.",
+              "type": "string"
+            },
+            "decided": {
+              "description": "How it was decided.",
+              "$ref": "#/$defs/CardDecided"
+            },
+            "kind": {
+              "type": "string",
+              "const": "card_resolved"
+            }
+          },
+          "required": [
+            "kind",
+            "choice",
+            "decided"
+          ]
+        },
+        {
+          "description": "A road card added or took goods from the caravan. Public.",
+          "type": "object",
+          "properties": {
+            "change": {
+              "description": "Units gained (positive) or lost (negative).",
+              "type": "integer",
+              "format": "int32"
+            },
+            "good": {
+              "description": "The good id.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "cargo_changed"
+            }
+          },
+          "required": [
+            "kind",
+            "good",
+            "change"
+          ]
+        },
+        {
+          "description": "A road card cost the party time: the clock moved on and the day's travel shrank.\nPublic.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "time_lost"
+            },
+            "minutes": {
+              "description": "Minutes lost.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "minutes"
+          ]
+        },
+        {
           "description": "A night passed (`rest_night`), after its `ledger`, saving throw and `rest` entries.\nPublic.",
           "type": "object",
           "properties": {
@@ -4235,6 +4549,36 @@
           "description": "`rest_night{where: inn}` where the caravan is not at a place with an inn.",
           "type": "string",
           "const": "no_inn"
+        },
+        {
+          "description": "`travel` or `rest_night` while a road card waits for its decision.",
+          "type": "string",
+          "const": "card_pending"
+        },
+        {
+          "description": "`choose_card` with no card on the table.",
+          "type": "string",
+          "const": "no_card"
+        },
+        {
+          "description": "`choose_card` by a creature with no say on this card.",
+          "type": "string",
+          "const": "no_say"
+        },
+        {
+          "description": "`choose_card` by a seat that already spoke on this card.",
+          "type": "string",
+          "const": "already_spoke"
+        },
+        {
+          "description": "`choose_card` by a player owner before every Hired Blade advised.",
+          "type": "string",
+          "const": "waiting_for_advice"
+        },
+        {
+          "description": "`choose_card` with a choice the card does not have.",
+          "type": "string",
+          "const": "unknown_choice"
         }
       ]
     },
@@ -4835,6 +5179,17 @@
               "type": "string",
               "const": "start_campaign"
             },
+            "human": {
+              "description": "The human's creature, when a human plays: it breaks a tied Blade vote on a road\ncard (protocol §4.13).",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Handle"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "party": {
               "description": "The party: every creature in the current scene that travels with the caravan.",
               "type": "array",
@@ -4899,6 +5254,29 @@
             "cmd",
             "actor",
             "where"
+          ]
+        },
+        {
+          "description": "Speaks on the road card on the table (API-43; protocol §4.13): a Hired Blade's advice\non a caravan card or vote on a Blade card, or a player owner's call on a caravan card\nonce every Blade has advised. As the actor itself, never `dm`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who speaks: the viewer's own creature.",
+              "$ref": "#/$defs/Handle"
+            },
+            "choice": {
+              "description": "The choice id, from `world.card.choices`.",
+              "type": "string"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "choose_card"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "choice"
           ]
         }
       ],
@@ -5217,6 +5595,11 @@
           "description": "A death saving throw.",
           "type": "string",
           "const": "death_save"
+        },
+        {
+          "description": "A roll on a world table, such as a road card draw. Its roller is `world`.",
+          "type": "string",
+          "const": "table"
         }
       ]
     },
@@ -6548,6 +6931,17 @@
           "description": "The caravan.",
           "$ref": "#/$defs/CaravanView"
         },
+        "card": {
+          "description": "The road card waiting for its decision; `travel` and `rest_night` wait for it.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CardDm"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "clock": {
           "description": "The time.",
           "$ref": "#/$defs/ClockView"
@@ -6599,6 +6993,17 @@
         "caravan": {
           "description": "The caravan.",
           "$ref": "#/$defs/CaravanView"
+        },
+        "card": {
+          "description": "The road card waiting for its decision.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CardPlayer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "clock": {
           "description": "The time.",

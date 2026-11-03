@@ -269,6 +269,10 @@ pub enum Command {
     StartCampaign {
         /// The party: every creature in the current scene that travels with the caravan.
         party: Vec<Handle>,
+        /// The human's creature, when a human plays: it breaks a tied Blade vote on a road
+        /// card (protocol §4.13).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        human: Option<Handle>,
     },
     /// Travels one leg along one road (API-41; protocol §4.11). Only the caravan's owner, or any
     /// party member when an NPC owns it, may call it, as themselves: never `dm`. The leg goes as
@@ -296,6 +300,15 @@ pub enum Command {
         /// Inn or camp.
         #[serde(rename = "where")]
         lodging: Lodging,
+    },
+    /// Speaks on the road card on the table (API-43; protocol §4.13): a Hired Blade's advice
+    /// on a caravan card or vote on a Blade card, or a player owner's call on a caravan card
+    /// once every Blade has advised. As the actor itself, never `dm`.
+    ChooseCard {
+        /// Who speaks: the viewer's own creature.
+        actor: Handle,
+        /// The choice id, from `world.card.choices`.
+        choice: String,
     },
 }
 
@@ -586,6 +599,11 @@ pub enum CommandResult {
     },
     /// The state with the world in it.
     StartCampaign {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The state after the word, with the card gone once it was decided.
+    ChooseCard {
         /// Projected for the request's `viewer`.
         state: State,
     },

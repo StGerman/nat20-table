@@ -8,8 +8,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AdvantageState, Condition, DamageType, Handle, LegView, LifeState, Mode, NightView, OptionId,
-    PointFt, RollId, Side, state::CombatOverReason,
+    AdvantageState, CardChoiceView, CardDecided, CardTarget, Condition, DamageType, Handle,
+    LegView, LifeState, Mode, NightView, OptionId, PointFt, RollId, Side, state::CombatOverReason,
 };
 
 /// One log entry.
@@ -339,6 +339,43 @@ pub enum EventKind {
         /// The leg.
         leg: LegView,
     },
+    /// A road card was drawn after a leg or a night in camp (protocol §4.13). Public: the text
+    /// and choices only; the card id and the draw roll are DM-only.
+    CardDrawn {
+        /// Who decides it.
+        target: CardTarget,
+        /// What the players read.
+        text: String,
+        /// The choices.
+        choices: Vec<CardChoiceView>,
+    },
+    /// A Hired Blade's advice on a caravan card or vote on a Blade card. Public.
+    CardAdvice {
+        /// Who spoke.
+        actor: Handle,
+        /// The choice id.
+        choice: String,
+    },
+    /// The card on the table was decided; its effects follow in the log. Public.
+    CardResolved {
+        /// The choice id.
+        choice: String,
+        /// How it was decided.
+        decided: CardDecided,
+    },
+    /// A road card added or took goods from the caravan. Public.
+    CargoChanged {
+        /// The good id.
+        good: String,
+        /// Units gained (positive) or lost (negative).
+        change: i32,
+    },
+    /// A road card cost the party time: the clock moved on and the day's travel shrank.
+    /// Public.
+    TimeLost {
+        /// Minutes lost.
+        minutes: u32,
+    },
     /// A night passed (`rest_night`), after its `ledger`, saving throw and `rest` entries.
     /// Public.
     Night {
@@ -451,6 +488,8 @@ pub enum RollKind {
     Healing,
     /// A death saving throw.
     DeathSave,
+    /// A roll on a world table, such as a road card draw. Its roller is `world`.
+    Table,
 }
 
 /// One group of dice in a roll.

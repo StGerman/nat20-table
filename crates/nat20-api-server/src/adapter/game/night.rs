@@ -2,7 +2,7 @@
 //! Malnutrition save (ENG-29), and the Long Rest (ENG-30), all through core.
 
 use nat20_api_contract::{Coins, Handle, LedgerGoods, LedgerReason};
-use nat20_core::systems::exhaustion::Meal;
+use nat20_core::{components::items::inventory::Inventory, systems::exhaustion::Meal};
 
 use super::*;
 
@@ -97,6 +97,58 @@ impl Game {
         self.drain();
         self.log_unseen_changes();
         Ok((rested, not_rested))
+    }
+
+    /// Pays `copper` from the world into a creature's purse (a road card's gain) and logs the
+    /// `ledger` entry (public).
+    pub fn receive_world(
+        &mut self,
+        handle: &str,
+        copper: u32,
+        reason: LedgerReason,
+    ) -> Result<(), ApiError> {
+        let entity = self.entity(handle)?;
+        goods::ensure_inventory(&mut self.engine, entity);
+        let value = goods::monetary(&Coins {
+            cp: copper,
+            ..Coins::default()
+        });
+        systems::helpers::get_component_mut::<Inventory>(&mut self.engine.world, entity)
+            .checked_add_money(&value)
+            .map_err(|_| {
+                error(
+                    ErrorCode::Internal,
+                    format!("{handle}'s purse cannot hold {copper} cp more."),
+                )
+            })?;
+        self.post(
+            "world",
+            handle,
+            LedgerGoods::Coins { copper },
+            reason,
+            None,
+            Visibility::Public,
+        );
+        Ok(())
+    }
+
+    /// Gives a creature `levels` Exhaustion levels through core; returns the new level.
+    pub fn gain_exhaustion(&mut self, handle: &str, levels: u8) -> Result<u8, ApiError> {
+        let entity = self.entity(handle)?;
+        self.drain();
+        let level = systems::exhaustion::gain(&mut self.engine, entity, levels);
+        self.engine.update(0.0);
+        self.drain();
+        self.log_unseen_changes();
+        Ok(level)
+    }
+
+    /// Whether the creature is alive and conscious: able to make a check or speak.
+    pub fn is_up(&self, handle: &str) -> bool {
+        self.entity(handle).is_ok_and(|entity| {
+            systems::health::is_alive(&self.engine.world, entity)
+                && life_state_name(&self.engine, entity) == "normal"
+        })
     }
 
     /// The creature's Exhaustion level, from core.
