@@ -3,10 +3,10 @@
 // decides who is woken next. Agents act only through their bound tools and the human only through
 // the seat; every number the human picks becomes a complete command with no model call (D5).
 import type { StatBlockEntry } from "../pack/adventure.ts";
-import { EngineStopped, type CardDm, type Event, type Handle, type State, type WorldDm } from "@nat20-table/engine-client";
+import { EngineStopped, type CardDm, type Event, type Handle, type LevelUpChoice, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
-import { buildChoices, cardChoices, choiceLines, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
+import { buildChoices, cardChoices, choiceLines, levelUpChoices, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
@@ -317,6 +317,8 @@ export class TableLoop {
   private readonly campaign: CampaignLoop | undefined;
   /** The road cards the run has asked about, by the engine's log head when each was drawn, so a card that won't settle stops the run. */
   private cardAsked = new Map<string, number>();
+  /** The human's open level-up choice, from the engine's last answer (AGT-80). */
+  private levelChoice: LevelUpChoice | undefined;
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -455,9 +457,11 @@ export class TableLoop {
         throw new Error("the engine has no session");
       case "none":
       case "combat_over":
-      // A level-up left open (AGT-80) holds nobody else: the table plays on while it waits.
-      case "level_up":
         return this.exploreRound();
+      // A level-up is open (AGT-80): the human picks; an AI player that left it open takes the recommended.
+      case "level_up":
+        if (awaiting.actor === this.table.human) return this.humanLevelUp(awaiting.prompt_id);
+        return this.recommendedLevelUp(awaiting.actor, awaiting.prompt_id);
     }
   }
 
@@ -683,6 +687,77 @@ export class TableLoop {
     }
   }
 
+  /**
+   * The human's level-up, one choice at a time (design: level-up in plain words): the recommended
+   * pick in one line first, which Enter takes, then each option with its summary. A choice that
+   * wants several picks takes them one number at a time.
+   */
+  private async humanLevelUp(promptId: string): Promise<void> {
+    const human = this.human;
+    let choice = this.levelChoice?.prompt_id === promptId ? this.levelChoice : undefined;
+    if (!choice) {
+      // The engine gives the open choice again on a second level_up (an AI tool or a refusal lost it).
+      const again = await send(this.table, human, { cmd: "level_up", actor: human }, () => "the open choice");
+      choice = again.ok ? ((again.data as { choice?: LevelUpChoice | null } | undefined)?.choice ?? undefined) : undefined;
+      if (!choice || choice.prompt_id !== promptId) return this.answerLevelUp(human, promptId, []);
+    }
+    const picked: string[] = [];
+    for (;;) {
+      if (this.table.ended) return;
+      const choices = levelUpChoices(choice, picked);
+      const more = choice.picks - picked.length;
+      this.table.show({
+        kind: "options",
+        title: `Level ${choice.level}: ${choice.label}${choice.picks > 1 ? ` (pick ${more} more)` : ""}`,
+        lines: choiceLines(choices),
+        choices,
+        preset: 1,
+      });
+      const intent = await this.ask({ kind: "level_up" });
+      if (!intent) return;
+      if (intent.kind !== "option") {
+        this.table.show({ kind: "info", title: "Level up", text: "Pick a number, or press Enter for the recommended choice." });
+        continue;
+      }
+      const at = choices.find((c) => c.number === intent.number);
+      if (!at) {
+        this.table.show({ kind: "info", title: "No such number", text: `Pick 1 to ${choices.length}.` });
+        continue;
+      }
+      if (at.about!.id === "recommended") return this.answerLevelUp(human, promptId, [], choice);
+      picked.push(at.about!.id);
+      if (picked.length >= choice.picks) return this.answerLevelUp(human, promptId, picked, choice);
+    }
+  }
+
+  /** An AI player left its level-up open (a failed wake): the engine takes the recommended picks for it. */
+  private async recommendedLevelUp(handle: Handle, promptId: string): Promise<void> {
+    this.table.fallbacks += 1;
+    this.table.log("fallback", `${handle} left a level-up choice open: the recommended pick`, handle, { cause: this.causeOf(handle) });
+    await this.answerLevelUp(handle, promptId, []);
+  }
+
+  /** Sends one level-up answer as `handle`'s own viewer; empty `picks` takes the recommended. */
+  private async answerLevelUp(handle: Handle, promptId: string, picks: string[], choice?: LevelUpChoice): Promise<void> {
+    const outcome = await send(this.table, handle, { cmd: "answer_level_up", actor: handle, prompt_id: promptId, picks }, () => "answered");
+    if (handle === this.table.human) {
+      if (!outcome.ok) {
+        this.levelChoice = undefined;
+        // The choice stays open and is asked again (step), its words fetched anew.
+        await this.humanRejected(outcome);
+        return;
+      }
+      this.levelChoice = (outcome.data as { choice?: LevelUpChoice | null } | undefined)?.choice ?? undefined;
+      const names = new Map(choice?.options.map((o) => [o.id, o.name]) ?? []);
+      const took = picks.length > 0 ? picks.map((id) => names.get(id) ?? id).join(", ") : "the recommended";
+      this.table.log("intent", `${handle} levels up: ${took}`, handle);
+      if (!this.levelChoice) this.table.tellDm(`${handle} reached a new level.`);
+    } else if (!outcome.ok) {
+      throw new Error(`${handle}'s level-up won't take its recommended pick: ${outcome.text}`);
+    }
+    await this.settle();
+  }
+
   // --- Combat -------------------------------------------------------------------------------------
 
   private isTurnOf(handle: Handle): boolean {
@@ -797,6 +872,10 @@ export class TableLoop {
         break;
       case "rest_night":
         outcome = await send(this.table, human, { cmd: "rest_night", actor: human, where: act.where }, () => "the night passes");
+        break;
+      case "level_up":
+        outcome = await send(this.table, human, { cmd: "level_up", actor: human }, () => "the new level starts");
+        if (outcome.ok) this.levelChoice = (outcome.data as { choice?: LevelUpChoice | null } | undefined)?.choice ?? undefined;
         break;
     }
     // The human sees their own action's lines at once. What follows their turn (the monsters'
@@ -1178,7 +1257,8 @@ export class TableLoop {
         this.table.log("intent", `${human} picked: ${picked.label}`, human);
         this.table.tellDm(`${human} took an option: ${picked.label}`);
         // The road's own lines move the day on: the scene, the night or the card that follows is told next.
-        if (picked.act.kind === "travel" || picked.act.kind === "rest_night") return;
+        // A level-up asks its own choices next.
+        if (picked.act.kind === "travel" || picked.act.kind === "rest_night" || picked.act.kind === "level_up") return;
         line = picked.label;
         break;
       }
@@ -1477,6 +1557,13 @@ export class TableLoop {
     this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat);
     // Out of a fight, whoever may drive the caravan can move it on or end the day (AGT-80).
     if (!combat && state?.view === "player" && state.world) this.top = this.shown = [...this.top, ...roadChoices(state.world, this.top.length + 1)];
+    // Out of a fight, the next level when the sheet says it is due (AGT-80): a saved party can reach it in any pack.
+    if (!combat) {
+      const sheet = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
+      if (sheet.result?.cmd === "get_sheet" && sheet.result.sheet.xp?.can_level_up) {
+        this.top = this.shown = [...this.top, { number: this.top.length + 1, label: `Level up to level ${(sheet.result.sheet.level ?? 0) + 1}`, act: { kind: "level_up" }, about: { id: "level_up" } }];
+      }
+    }
     if (state) await this.showSituation(state, this.lastOptions);
     const budget = this.lastOptions.budget ?? undefined;
     this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top, ...(budget ? { budget } : {}) });

@@ -166,6 +166,14 @@ export function formatSheet(sheet: Sheet): string {
     `${sheet.name}, ${who}${sheet.subclass ? ` (${titled(sheet.subclass)})` : ""}`,
     `Hit Points ${sheet.hp} of ${sheet.hp_max}${sheet.temp_hp > 0 ? `, plus ${sheet.temp_hp} temporary` : ""} · Armor Class ${sheet.ac} · Speed ${sheet.speed_ft} ft · Initiative ${signed(sheet.initiative_bonus)} · Proficiency Bonus ${signed(sheet.proficiency_bonus)} · Passive Perception ${sheet.passive_perception}`,
   ];
+  // Experience (AGT-80): whether the next level is due, which the road's level_up tool needs.
+  if (sheet.xp) {
+    lines.push(
+      sheet.xp.can_level_up
+        ? `Experience: ${sheet.xp.points} XP. You can level up now: out of a fight, call level_up.`
+        : `Experience: ${sheet.xp.points} XP${typeof sheet.xp.next_level === "number" ? `, the next level at ${sheet.xp.next_level}` : ""}.`,
+    );
+  }
   if (sheet.life_state !== "conscious") {
     lines.push(`You are ${sheet.life_state}. Death saving throws: ${sheet.death_saves.successes} successes, ${sheet.death_saves.failures} failures.`);
   }

@@ -3,7 +3,7 @@
 // follow-up pick for the rest; variants, multi-target and area options open a follow-up pick from
 // the option's own list. Built only from the human's own `legal_actions` and state, both already
 // projected for the human's viewer.
-import type { ActionCost, ActionOption, Aim, Handle, Lodging, MoveTarget, Pace, Side, State, TargetCandidate, WorldPlayer } from "@nat20-table/engine-client";
+import type { ActionCost, ActionOption, Aim, Handle, LevelUpChoice, Lodging, MoveTarget, Pace, Side, State, TargetCandidate, WorldPlayer } from "@nat20-table/engine-client";
 import type { LegalActionsResult } from "../view.ts";
 import type { DecisionInput } from "./tools.ts";
 
@@ -17,7 +17,9 @@ export type ChoiceAct =
   /** Move the caravan on one stretch along its way (AGT-80): the merchant's route, or on along the road. */
   | { kind: "travel"; pace: Pace }
   /** End the day at the inn or in camp (AGT-80). */
-  | { kind: "rest_night"; where: Lodging };
+  | { kind: "rest_night"; where: Lodging }
+  /** Start the next level, which the sheet says is due (AGT-80). */
+  | { kind: "level_up" };
 
 export interface Choice {
   number: number;
@@ -90,6 +92,22 @@ export function cardChoices(card: { choices: Array<{ id: string; text: string }>
   for (const s of card.said) if (top === undefined || (count.get(s.choice) ?? 0) > (count.get(top) ?? 0)) top = s.choice;
   const choices = card.choices.map((c, i) => ({ number: i + 1, label: c.id === top ? `${c.text} (the others' choice)` : c.text, about: { id: c.id } }));
   return { choices, preset: (card.choices.findIndex((c) => c.id === top) + 1) || 1 };
+}
+
+/**
+ * A level-up choice as the human's numbered lines (AGT-80, design: level-up in plain words): first
+ * the recommended pick in one line, which Enter takes, then each option with its plain summary.
+ * `picked` are the ids already chosen when the choice wants more than one.
+ */
+export function levelUpChoices(choice: LevelUpChoice, picked: readonly string[] = []): Choice[] {
+  const name = new Map(choice.options.map((o) => [o.id, o.name]));
+  const recommended = choice.recommended.map((id) => name.get(id) ?? id).join(", ");
+  return [
+    { number: 1, label: `Take the recommended: ${recommended}`, about: { id: "recommended" } },
+    ...choice.options
+      .filter((o) => !picked.includes(o.id))
+      .map((o, i) => ({ number: i + 2, label: `${o.name}${o.summary ? `: ${o.summary}` : ""}`, about: { id: o.id } })),
+  ];
 }
 
 /** One line per choice, as the human reads them. */
