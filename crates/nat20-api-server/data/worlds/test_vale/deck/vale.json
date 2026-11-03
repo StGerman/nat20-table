@@ -1,0 +1,57 @@
+{
+    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. Not shipped content; the Wend deck is MAP-6.",
+    "cards": [
+        {
+            "id": "fallen_tree",
+            "zone": "vale_fields",
+            "target": "caravan",
+            "text": "A tree lies across the road. A farmer leans on his gate: for a few coppers each, the wagon can cross his field.",
+            "owner_pick": "clear",
+            "choices": [
+                {
+                    "id": "clear",
+                    "text": "Drag the tree aside.",
+                    "effects": [
+                        {
+                            "do": "check", "who": "blades", "ability": "strength", "skill": "athletics", "dc": 10,
+                            "success": [{"do": "delay", "minutes": 30}],
+                            "failure": [{"do": "delay", "minutes": 90}]
+                        }
+                    ]
+                },
+                {
+                    "id": "around",
+                    "text": "Pay the farmer and go round.",
+                    "effects": [
+                        {"do": "pay", "who": "party", "copper": 10},
+                        {"do": "delay", "minutes": 20}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "yard_wolves",
+            "zone": "crossing_inn",
+            "when": "night",
+            "target": "blades",
+            "text": "Wolves howl beyond the inn's yard wall, closer each time.",
+            "choices": [
+                {
+                    "id": "watch",
+                    "text": "Keep a sharp watch.",
+                    "effects": [
+                        {
+                            "do": "check", "who": "blades", "ability": "wisdom", "skill": "perception", "dc": 10,
+                            "failure": [{"do": "cargo", "good": "rations", "change": -1}]
+                        }
+                    ]
+                },
+                {
+                    "id": "drive_off",
+                    "text": "Go out and drive them off.",
+                    "effects": [{"do": "fight", "monsters": ["wolf"]}]
+                }
+            ]
+        }
+    ]
+}

@@ -395,7 +395,7 @@ fn grid_distance_ft(engine: &EngineState, a: Entity, b: Entity) -> Option<f32> {
 }
 
 /// Monsters spawn without an inventory; one that carries, gives or receives gets an empty one.
-fn ensure_inventory(engine: &mut EngineState, entity: Entity) {
+pub(super) fn ensure_inventory(engine: &mut EngineState, entity: Entity) {
     if engine.world.get::<&Inventory>(entity).is_err() {
         engine
             .world

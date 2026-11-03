@@ -157,4 +157,16 @@ pub enum RejectReason {
     Overloaded,
     /// `rest_night{where: inn}` where the caravan is not at a place with an inn.
     NoInn,
+    /// `travel` or `rest_night` while a road card waits for its decision.
+    CardPending,
+    /// `choose_card` with no card on the table.
+    NoCard,
+    /// `choose_card` by a creature with no say on this card.
+    NoSay,
+    /// `choose_card` by a seat that already spoke on this card.
+    AlreadySpoke,
+    /// `choose_card` by a player owner before every Hired Blade advised.
+    WaitingForAdvice,
+    /// `choose_card` with a choice the card does not have.
+    UnknownChoice,
 }

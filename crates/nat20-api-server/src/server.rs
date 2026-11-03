@@ -289,8 +289,11 @@ impl Server {
             Command::Loot { actor, from } => session.loot(&actor.0, &from.0),
             Command::PlaceCreature { .. } => session.place_creature(command, viewer),
             Command::StartFight { participants } => session.start_fight(participants, viewer),
-            Command::StartCampaign { party } => session.start_campaign(party, viewer),
+            Command::StartCampaign { party, human } => {
+                session.start_campaign(party, human.as_ref(), viewer)
+            }
             Command::RestNight { actor, lodging } => session.rest_night(&actor.0, *lodging, viewer),
+            Command::ChooseCard { actor, choice } => session.choose_card(&actor.0, choice, viewer),
             Command::Travel { actor, to, pace } => {
                 session.travel(&actor.0, to.as_deref(), *pace, viewer)
             }

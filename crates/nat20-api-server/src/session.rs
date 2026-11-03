@@ -17,6 +17,8 @@ use nat20_api_contract::{
     RollId, RollView, SceneFile, State, Visibility,
 };
 
+mod cards;
+
 use crate::{
     adapter::{
         events::Pending,
@@ -194,6 +196,7 @@ impl Session {
     pub fn start_campaign(
         &mut self,
         party: &[Handle],
+        human: Option<&Handle>,
         viewer: &Viewer,
     ) -> Result<CommandResult, ApiError> {
         if *viewer != Viewer::Dm {
@@ -236,7 +239,19 @@ impl Session {
                 ));
             }
         }
-        self.campaign = Some(Campaign::read(&self.data_dir, party.to_vec())?);
+        if let Some(human) = human
+            && !party.contains(human)
+        {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!("The human's creature {} is not in the party.", human.0),
+            ));
+        }
+        self.campaign = Some(Campaign::read(
+            &self.data_dir,
+            party.to_vec(),
+            human.map(|h| h.0.clone()),
+        )?);
         Ok(CommandResult::StartCampaign {
             state: self.state_for(viewer)?,
         })
@@ -260,6 +275,14 @@ impl Session {
             return Err(rejected(
                 RejectReason::NotDriver,
                 format!("{command} is the caravan's call: its driver sends it as themselves."),
+            ));
+        }
+        if campaign.world.state.deck.pending.is_some() {
+            return Err(rejected(
+                RejectReason::CardPending,
+                format!(
+                    "A road card waits for its decision; {command} waits until every seat has spoken (choose_card)."
+                ),
             ));
         }
         if !campaign.drives(actor) {
@@ -375,6 +398,9 @@ impl Session {
                 night: night.clone(),
             },
         ));
+        if lodging == Lodging::Camp {
+            self.draw_card(|world, dice| world.draw_at_night(dice))?;
+        }
         Ok(CommandResult::RestNight {
             night,
             state: self.state_for(viewer)?,
@@ -422,6 +448,8 @@ impl Session {
             ));
         }
         self.enter_scene(&scene, &party)?;
+        let road = leg.road.clone();
+        self.draw_card(|world, dice| world.draw_after_leg(&road, dice))?;
         Ok(CommandResult::Travel {
             leg: view,
             state: self.state_for(viewer)?,
@@ -944,7 +972,7 @@ impl Session {
             encounters: game.encounters(),
             spawns: game.spawns(),
             world: self.campaign.as_ref().map(|c| WorldFull {
-                view: c.dm_view(),
+                view: c.dm_view(|h| game.is_up(h)),
                 drivers: c.drivers(),
             }),
         };

@@ -241,6 +241,24 @@ pub fn text(kind: &EventKind) -> String {
                 }
             )
         }
+        EventKind::CardDrawn { text, choices, .. } => format!(
+            "A road card: {text} ({})",
+            choices
+                .iter()
+                .map(|c| c.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" / ")
+        ),
+        EventKind::CardAdvice { actor, choice } => format!("{} says: {choice}.", actor.0),
+        EventKind::CardResolved { choice, .. } => format!("The card is decided: {choice}."),
+        EventKind::CargoChanged { good, change } => {
+            if *change >= 0 {
+                format!("The caravan gains {change} {good}.")
+            } else {
+                format!("The caravan loses {} {good}.", change.unsigned_abs())
+            }
+        }
+        EventKind::TimeLost { minutes } => format!("The party loses {minutes} minutes."),
         EventKind::FlagSet { flag } => format!("Flag {flag} is set."),
         EventKind::HazardTriggered { hazard_id, actor } => {
             format!("{} sets off {hazard_id}.", actor.0)
@@ -332,6 +350,7 @@ pub fn roll_kind_word(kind: RollKind) -> &'static str {
         RollKind::Damage => "damage",
         RollKind::Healing => "healing",
         RollKind::DeathSave => "death saving throw",
+        RollKind::Table => "table roll",
     }
 }
 
