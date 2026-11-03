@@ -374,6 +374,61 @@ pub struct WorldDm {
     /// The road card waiting for its decision; `travel` and `rest_night` wait for it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card: Option<CardDm>,
+    /// Every place NPC, alive or dead, met or not, in the world file's order (API-48).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub npcs: Vec<NpcDm>,
+}
+
+/// How a place NPC feels about the party.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NpcAttitude {
+    /// Glad of them.
+    Friendly,
+    /// Neither.
+    Indifferent,
+    /// Against them: they stand on the hostile side of a fight.
+    Hostile,
+}
+
+/// A place NPC as the DM sees them (API-48).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct NpcDm {
+    /// The id; also their creature handle while the party is in their place.
+    pub id: String,
+    /// The name players read.
+    pub name: String,
+    /// The place they live in.
+    pub place: String,
+    /// The stat block they fight as.
+    pub monster: String,
+    /// How they feel about the party.
+    pub attitude: NpcAttitude,
+    /// Whether they are alive.
+    pub alive: bool,
+    /// Whether the party has met them.
+    pub met: bool,
+    /// Hit Points when the party last left them; absent when at full. While the party is in
+    /// their place, their creature in the scene has the live value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hp: Option<u32>,
+    /// Who they are, from the world file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+/// A place NPC the party has met, as a player sees them: never Hit Points, attitude or notes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct NpcKnown {
+    /// The id; also their creature handle while the party is in their place.
+    pub id: String,
+    /// The name.
+    pub name: String,
+    /// The place they live in.
+    pub place: String,
+    /// Whether they are alive, as far as the party knows: the party met them, so a death the
+    /// party saw is known.
+    pub alive: bool,
 }
 
 /// The world as one player sees it.
@@ -399,6 +454,9 @@ pub struct WorldPlayer {
     /// The road card waiting for its decision.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card: Option<CardPlayer>,
+    /// The place NPCs the party has met, in the world file's order (API-48).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub npcs: Vec<NpcKnown>,
 }
 
 /// One journey leg, in `travel`'s result and the `traveled` event.

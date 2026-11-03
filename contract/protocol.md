@@ -331,7 +331,16 @@ A roster carries the party from one game session to the next (API-45). The engin
 
 - **Saving.** `save_roster` (as `dm`; another viewer is `not_visible`) returns `{format: 1, characters, world?}`. `characters` are the campaign's party in its order, else every party character of the scene, each built from a pregen (a placed stat block is not saved): `handle`, `pregen`, `level`, `xp`, the level-up `choices` made in play (`level`, `prompt_id`, `picks`), `equipment` (equipped items with their slot, then carried ones, as in a pregen file; an item in a slot a pregen file can't name is saved as carried), `purse`, and `exhaustion`, `malnutrition` and `days_without_food`. Hit Points are not saved. `world` is present once a campaign runs: the map id and the world state (clock, where the caravan is, wagons and cargo, places discovered, the deck with a card on the table), opaque to clients. `save_roster` reads only: it changes nothing and can run at any time, mid-fight included.
 - **Loading.** `new_session{roster}` checks the roster first and refuses it with `bad_roster`, leaving the running session as it was, when its `format` is not 1, a handle repeats, or a `pregen` has no file. A scene pregen creature whose handle is in the roster is then rebuilt as saved: its pregen at the pregen's level, each level since through core's level-up with the saved `choices` (prompts with one answer answer themselves, as in `level_up`), its XP, gear and coins, then one Long Rest by the rule: full Hit Points and uses, the saved Exhaustion and hunger put back through core and one level removed unless malnutrition holds it. A character the roster cannot rebuild (a missing answer, a pick that is not an option) refuses the `load_scene` with `bad_roster`, and nothing changes. `start_campaign` on the roster's map takes up its world; on another map the campaign starts fresh.
-- **Not saved yet:** Hit Points, a character's death, rumours and place NPCs (API-48).
+- **Not saved yet:** Hit Points, a character's death and rumours. Place NPCs travel in the world state (§4.16).
+
+### 4.16 Place NPCs
+
+Townsfolk who live in one place and are there, as the party left them, when it comes back (API-48). A world's optional `npcs.json` names each once: `id` (also the creature's handle), `name`, `monster` (the stat block), `place`, `anchor` (in the scene that place loads), `attitude` (`friendly`, `indifferent`, the default, or `hostile`), `carries` (coins and items) and DM `notes`. `start_campaign` refuses a file whose NPC is in an unknown place, stands at an anchor the place's scene lacks, takes a handle that scene or the party already uses, or names an unknown stat block (`bad_scene`).
+
+- **Arrival.** When the party is in an NPC's place and the scene loaded is that place's (after `start_campaign` in the start scene, after a `travel` leg that arrives, or a `load_scene` of it while the caravan is there), each living NPC of the place is placed at their anchor, scripted, on the `hostile` side if hostile and `neutral` otherwise, with what they carry and the Hit Points the party left them with, through core. Each placing logs `creature_placed` (DM only), and the NPC is met from then on.
+- **Leaving.** Before any other scene loads, each NPC placed in the scene is written back from core: Hit Points (at least 1 when they come back), dead or alive, coin and items. Between visits nothing happens to them. The dead are not placed again.
+- **Coin.** While present, an NPC's coin is a creature holder like any other (`ledger` entries name their handle), so the trial balance holds across visits: they come back with what they left with.
+- **In the roster.** The world state saves each NPC as they are now, those in the scene included.
 
 ## 5. Visibility (projection per `viewer`)
 
@@ -368,6 +377,7 @@ A roster carries the party from one game session to the next (API-45). The engin
 | `world.card.id`, `world.card.zone`, the deck, the draw roll | yes | no | no |
 | `world.card` text, choices, `said`, `waiting_for` | yes | yes | yes |
 | `traveled`, `place_discovered`, `night`, `card_drawn`, `card_advice`, `card_resolved`, `cargo_changed`, `time_lost` | yes | yes | yes |
+| `world.npcs`: every place NPC with `monster`, `attitude`, `met`, `hp` and `notes` | yes | no; met NPCs only, with `id`, `name`, `place` and `alive` | no; as the owner |
 | Sheet `xp` (points, next level, `can_level_up`) and `xp_awarded` | yes | yes | no |
 | A level-up's choice (`level_up`, `answer_level_up` results) | n/a | yes | no; `awaiting` says only whose level-up is open |
 | `leveled_up` | yes | yes | yes (the table hears that a character grew) |

@@ -60,6 +60,8 @@ pub struct Session {
     campaign: Option<Campaign>,
     /// The party an earlier session saved, from `new_session{roster}` (API-45).
     roster: Option<Roster>,
+    /// The place NPCs placed in the current scene (API-48), written back when it is left.
+    npcs_here: Vec<String>,
 }
 
 impl Session {
@@ -81,6 +83,7 @@ impl Session {
             ledger_mismatches: Vec::new(),
             campaign: None,
             roster,
+            npcs_here: Vec::new(),
         };
         session.push(Pending {
             round: None,
@@ -177,13 +180,18 @@ impl Session {
     /// Loads a scene file already read and checked, carrying `party` in, and logs
     /// `scene_loaded`. Nothing changes on a refusal.
     fn enter_scene(&mut self, scene: &SceneFile, party: &[Handle]) -> Result<(), ApiError> {
+        // The place NPCs stay as the party leaves them (API-48).
+        self.npcs_leave();
         match Game::load(
             self.game.take(),
             scene,
             party,
             self.roster.as_ref().map_or(&[][..], |r| &r.characters),
         ) {
-            Ok(game) => self.game = Some(game),
+            Ok(game) => {
+                self.game = Some(game);
+                self.npcs_here.clear();
+            }
             Err((previous, e)) => {
                 self.game = previous;
                 return Err(e);
@@ -202,6 +210,44 @@ impl Session {
                 mode: Mode::Explore,
             },
         ));
+        self.npcs_arrive()
+    }
+
+    /// Writes back every place NPC placed in the current scene, as core holds them now.
+    fn npcs_leave(&mut self) {
+        let (Some(campaign), Some(game)) = (self.campaign.as_mut(), self.game.as_ref()) else {
+            return;
+        };
+        for id in &self.npcs_here {
+            if let Some(now) = game.npc_now(id) {
+                campaign.left(id, now);
+            }
+        }
+    }
+
+    /// Places the living NPCs of the place the party is in, when the scene is that place's
+    /// (API-48), and marks them met.
+    fn npcs_arrive(&mut self) -> Result<(), ApiError> {
+        let (Some(campaign), Some(game)) = (self.campaign.as_mut(), self.game.as_mut()) else {
+            return Ok(());
+        };
+        for npc in campaign.npcs_to_place(game.scene_id()) {
+            if game.has_creature(&npc.id) {
+                continue;
+            }
+            game.place_npc(
+                &npc.id,
+                &npc.monster,
+                npc.side,
+                &npc.anchor,
+                &npc.name,
+                &npc.carries,
+                npc.hp,
+            )?;
+            campaign.met(&npc.id);
+            self.npcs_here.push(npc.id);
+        }
+        self.push_entries();
         Ok(())
     }
 
@@ -267,6 +313,8 @@ impl Session {
             human.map(|h| h.0.clone()),
             self.roster.as_ref().and_then(|r| r.world.as_ref()),
         )?);
+        // The start place's NPCs join the scene the party is in, when it is the place's.
+        self.npcs_arrive()?;
         Ok(CommandResult::StartCampaign {
             state: self.state_for(viewer)?,
         })
@@ -798,7 +846,16 @@ impl Session {
             .as_ref()
             .map(|g| g.roster_characters(party))
             .unwrap_or_default();
-        let world = match &self.campaign {
+        // The place NPCs in the scene now are saved as they are now (API-48).
+        let mut saving = self.campaign.clone();
+        if let (Some(campaign), Some(game)) = (saving.as_mut(), self.game.as_ref()) {
+            for id in &self.npcs_here {
+                if let Some(now) = game.npc_now(id) {
+                    campaign.left(id, now);
+                }
+            }
+        }
+        let world = match &saving {
             Some(campaign) => Some(RosterWorld {
                 map: campaign.map_id.clone(),
                 state: serde_json::to_value(&campaign.world.state).map_err(|e| {
