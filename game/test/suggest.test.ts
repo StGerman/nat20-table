@@ -18,8 +18,13 @@ import { testTable } from "./helpers.ts";
 const CARD = "# Bren\n\n## Goal\nKeep the party alive.\n\n## Voice\nShort words.";
 
 test("the suggester's answer reads as three rows, without numbers or bullets", () => {
-  assert.deepEqual(suggestionRows('1. Look for tracks\n2) "Who goes there?"\n- Wait by the gate\n4. A fourth'), ["Look for tracks", '"Who goes there?"', "Wait by the gate"]);
+  assert.deepEqual(suggestionRows('1. Look for tracks\n2) "Who goes there?"\n- Wait by the gate'), ["Look for tracks", '"Who goes there?"', "Wait by the gate"]);
   assert.deepEqual(suggestionRows("\n\n"), []);
+  // Exactly three usable rows, or none: never two, four, an overlong row or a slash command.
+  assert.deepEqual(suggestionRows("Look for tracks\nWait by the gate"), []);
+  assert.deepEqual(suggestionRows("Look for tracks\nWait\nAsk\nA fourth"), []);
+  assert.deepEqual(suggestionRows(`Look for tracks\nWait\n${"x".repeat(61)}`), []);
+  assert.deepEqual(suggestionRows("Look for tracks\n/quit\nWait"), []);
   const prompt = suggestPrompt("bren", CARD, "ru");
   assert.match(prompt, /Keep the party alive\./);
   assert.match(prompt, /never name a number from the rules/);

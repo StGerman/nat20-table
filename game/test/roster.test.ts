@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -47,6 +47,12 @@ test("a roster written is read back with its hash, and the chain says whether th
     writeFileSync(rosterFile(dir, "copied"), JSON.stringify(roster(1)));
     assert.equal(readRoster(dir, "copied")!.chain, "unlogged");
     assert.equal(rosterLine(read.roster, new Map([["torva", "Torva"]])), "Torva (level 3)");
+    // A save that crashed after logging its hash leaves the roster before it: still a saved file.
+    appendFileSync(path.join(dir, "wend.chain.jsonl"), JSON.stringify({ run_id: "run-3", sha256: "c".repeat(64) }) + "\n");
+    assert.equal(readRoster(dir, "wend")!.chain, "held");
+    // A file that is not a roster is refused with a plain reason, before anything shows it.
+    writeFileSync(rosterFile(dir, "empty"), "{}");
+    assert.throws(() => readRoster(dir, "empty"), /is not a saved party/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

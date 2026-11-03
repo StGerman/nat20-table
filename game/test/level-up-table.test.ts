@@ -34,12 +34,20 @@ test("a level-up choice for the human: the recommended pick first, then each opt
   assert.deepEqual(levelUpChoices({ ...CHOICE, picks: 2 }, ["aid"]).map((c) => c.about?.id), ["recommended", "hold_person"]);
 });
 
-/** A human who lists the options once, levels up when offered, takes each recommended pick with Enter, then quits. */
+/**
+ * A human who lists the options once, levels up when offered, asks for `/options` at the first
+ * level-up choice, takes each recommended pick with Enter, then quits.
+ */
 function leveller(): (prompt: HumanPrompt, seat: ScriptedSeat) => PlayerIntent {
   let listed = false;
   let leveled = false;
+  let relisted = false;
   return (prompt, seat) => {
     if (prompt.kind === "level_up") {
+      if (!relisted) {
+        relisted = true;
+        return { kind: "command", name: "options" };
+      }
       leveled = true;
       return { kind: "option", number: 1 };
     }
@@ -71,7 +79,9 @@ test("the human levels up from the options after a fight, one plain choice at a 
     const report = await new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("torva")], maxSteps: 100 }).run("level_up_yard");
     assert.equal(report.ended, "the human quit");
     const asked = seat.shown.filter((e) => e.kind === "options" && e.title?.startsWith("Level 3: "));
-    assert.ok(asked.length > 0, "a level-up choice was shown");
+    assert.ok(asked.length > 1, "a level-up choice was shown");
+    // `/options` at a level-up choice shows that choice again, not the round's options.
+    assert.equal(asked[1].kind === "options" && asked[1].title, asked[0].kind === "options" && asked[0].title);
     for (const e of asked) {
       assert.ok(e.kind === "options");
       assert.match(e.lines[0], /^1\. Take the recommended: /);
