@@ -142,6 +142,41 @@ export function worldLines(world: WorldPlayer): string[] {
   return lines;
 }
 
+/** The time of day in words, for the map and the panel: "Day 2, early morning". */
+export function dayLine(world: WorldPlayer): string {
+  return `Day ${world.clock.day}, ${world.clock.watch.replace(/_/g, " ")}`;
+}
+
+/** Where the caravan is, in a few words: the place's name, or the road and how far is left. */
+export function caravanAt(world: WorldPlayer): string {
+  const name = (id: string) => world.places.find((p) => p.id === id)?.name ?? id.replace(/_/g, " ");
+  if (world.at.kind === "at") return name(world.at.place);
+  const road = world.roads.find((r) => r.id === (world.at as { road: string }).road);
+  const toward = road ? (road.from === world.at.came_from ? road.to : road.from) : undefined;
+  return `${world.at.road.replace(/_/g, " ")}, ${world.at.miles_left} mi${toward ? ` to ${name(toward)}` : " left"}`;
+}
+
+/**
+ * `/map` (AGT-79): a text sketch of the places the party knows and the roads between them, with
+ * the caravan marked. Only the player's own world view goes in, so undiscovered places stay off it
+ * (a road to one shows as a road to somewhere unknown).
+ */
+export function mapLines(world: WorldPlayer): string[] {
+  const name = (id: string) => world.places.find((p) => p.id === id)?.name ?? id.replace(/_/g, " ");
+  const here = world.at.kind === "at" ? world.at.place : undefined;
+  const lines = [`${dayLine(world)}. The caravan: ${here ? `at ${name(here)}` : `on the ${caravanAt(world)}`}.`];
+  for (const place of world.places) {
+    const about = [place.kind, ...(place.market ? ["market"] : []), ...(typeof place.inn_cp === "number" ? ["inn"] : [])].join(", ");
+    lines.push(`${place.id === here ? "▶" : " "} ${place.name} (${about})`);
+    for (const road of world.roads.filter((r) => r.from === place.id || r.to === place.id)) {
+      const other = road.from === place.id ? road.to : road.from;
+      lines.push(`    ${road.id.replace(/_/g, " ")} · ${road.miles} mi · ${name(other)}`);
+    }
+    for (const road of world.unexplored.filter((r) => r.from === place.id)) lines.push(`    ${road.id.replace(/_/g, " ")} · ${road.miles} mi · somewhere you don't know yet`);
+  }
+  return lines;
+}
+
 /** A signed bonus: `+3`, `-1`, `+0`. */
 const signed = (n: number) => (n < 0 ? `${n}` : `+${n}`);
 
