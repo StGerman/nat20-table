@@ -19,7 +19,10 @@
 // no narration check), --out DIR,
 // --max-steps N, --lang en|ru (decision 0038), --verbose (with --seat ink: AGT-37), --time-limit-min N,
 // --stall-rounds N, --upload REPO, --no-upload, --zip (AGT-41), --no-preview (with --seat ink: hide the
-// DM's narration as it is written, AGT-66; on by default since `npm run spike:partial` passed on the Mac).
+// DM's narration as it is written, AGT-66; on by default since `npm run spike:partial` passed on the Mac),
+// --roster NAME (API-45: play the party saved as `rosters/NAME.json` and save it again on every exit;
+// --seat ink asks "continue or new party" first), --new-party (start the pack's pregens instead),
+// --rosters DIR.
 import { spawn, type ChildProcess } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
@@ -43,6 +46,7 @@ import { usageBlock, UsageLog } from "../usage.ts";
 import { ModelJudge, ScriptedJudge } from "../check/judge.ts";
 import { narrationCheck } from "../check/narration.ts";
 import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
+import { readRoster, ROSTER_NAME, rosterLine, saveRoster, type SavedRoster } from "./roster.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, timingLines, type Casting, type PackParty } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
 import { uploadStage } from "./upload.ts";
@@ -125,6 +129,24 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
       ...(flags["dm-timeout-ms"] !== undefined ? { turnTimeoutMs: flags["dm-timeout-ms"] } : {}),
     });
 
+  // The saved party (API-45): read before anything starts, so a bad name or file costs nothing.
+  if (flags.roster !== undefined && !ROSTER_NAME.test(flags.roster)) {
+    console.error(`--roster ${flags.roster}: a roster's name is lowercase letters, digits and dashes`);
+    process.exit(2);
+  }
+  if (flags["new-party"] && flags.roster === undefined) {
+    console.error("--new-party starts a saved party over: name it with --roster.");
+    process.exit(2);
+  }
+  let saved: SavedRoster | undefined;
+  try {
+    saved = flags.roster === undefined ? undefined : readRoster(flags.rosters, flags.roster);
+  } catch (error) {
+    console.error(`--roster ${flags.roster}: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(2);
+  }
+  let partyChoice: "continue" | "new" = saved && !flags["new-party"] ? "continue" : "new";
+
   if (flags["dry-run"]) {
     const dm = modelDm();
     const { mcpServers, systemPrompt, env, ...options } = sessionOptions(dm.sessionConfig(), "<empty temp dir>");
@@ -142,10 +164,19 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // The pick screen opens the alternate screen the table then takes over (AGT-69); --play skips it.
   let screen: Instance | undefined;
   if (flags.seat === "ink" && !flags.play && party.human) {
-    const picked = await pickOnScreen(partyRoster(flags.pack), party.human, { title: pack.adventure.title });
+    const entries = partyRoster(flags.pack);
+    const ask = saved && partyChoice === "continue" ? saved : undefined;
+    const picked = await pickOnScreen(entries, party.human, {
+      title: pack.adventure.title,
+      ...(ask
+        ? { saved: { line: rosterLine(ask.roster, new Map(entries.map((e) => [e.handle, e.name]))), levels: new Map(ask.roster.characters.map((c) => [c.handle, c.level])) } }
+        : {}),
+    });
     screen = picked.instance;
+    if (picked.party) partyChoice = picked.party;
     if (picked.handle !== party.human) party = castParty(flags.pack, { play: picked.handle });
   }
+  const loaded = partyChoice === "continue" ? saved : undefined;
   const everyone = [...(party.human ? [party.human] : []), ...party.ai];
 
   // You at the keyboard, or a seat that fights by rule. Ctrl+C ends the table between decisions
@@ -169,7 +200,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const started = await (async () => {
     let engine: GameEngine | undefined;
     try {
-      engine = await GameEngine.start({ pack: flags.pack, runDir, seed: flags.seed });
+      engine = await GameEngine.start({ pack: flags.pack, runDir, seed: flags.seed, ...(loaded ? { roster: loaded.roster } : {}) });
       return { engine, carried: await startAt(engine, flags.pack, plan.first, everyone) };
     } catch (error) {
       engine?.close();
@@ -203,6 +234,9 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ended_at: null,
     ended: null,
     stop: null,
+    ...(flags.roster !== undefined
+      ? { roster: { name: flags.roster, party: partyChoice, loaded_sha256: loaded?.sha256 ?? null, chain: loaded?.chain ?? null, saved_sha256: null, not_saved: null } }
+      : {}),
   };
   writeRunRecord(runDir, record);
 
@@ -219,6 +253,10 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   });
   // Who plays whom, in the transcript as in run.json (AGT-35).
   table.log("system", party.human ? `the human plays ${party.human}; AI players: ${party.ai.join(", ")}` : `no human; AI players: ${party.ai.join(", ")}`);
+  if (record.roster) {
+    const r = record.roster;
+    table.log("system", loaded ? `the party saved as ${r.name}: ${rosterLine(loaded.roster)}${r.chain === "broken" ? "; its file was changed after its last save" : ""}` : `a new party, saved as ${r.name} when the run ends`);
+  }
   quit = () => table.end("the human quit", "operator");
   // Without a keyboard seat, Ctrl+C stops the run between decisions; a second one exits at once.
   const interrupted = () => {
@@ -327,6 +365,15 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     }
   };
   const end = await endState(engine).catch(() => []);
+  // The party is saved on every exit (API-45): the end, the time limit, a quit, a stop. A crash
+  // that took the engine down leaves the saved roster as it was.
+  if (record.roster) {
+    const result = await saveRoster(engine, flags.rosters, record.roster.name, record.run_id).catch((error: unknown) => ({
+      not_saved: error instanceof Error ? error.message : String(error),
+    }));
+    if ("sha256" in result) record.roster.saved_sha256 = result.sha256;
+    else record.roster.not_saved = result.not_saved;
+  }
   engine.close();
 
   record.ended_at = new Date().toISOString();
@@ -354,6 +401,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...(language === "en" ? [] : [`- Language of the DM's and the AI players' lines: ${language}`]),
     `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human ? `${party.human} ${ink ? "played in the terminal UI" : "on a scripted seat"}` : "no human at the table"}`,
     ...(ink ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
+    ...(record.roster ? [`- ${rosterReport(record.roster)}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
     ...(narration ? ["", ...narration.lines] : []),
     "",
@@ -377,9 +425,20 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   }
   // The report is the DM's view (monster Hit Points, lines said to AI players only), so the terminal
   // you just played in shows only how the run ended; the rest stays in the run folder.
-  console.log(ink ? `\nThe run is over: ${record.ended}. ${verdictLine}\n${written}` : `\n${[...verdictBlock(verdict).slice(1, -1), "", report].join("\n")}\n\n${written}`);
+  const kept = record.roster ? `\n${record.roster.saved_sha256 ? `Your party is saved as ${record.roster.name}: --roster ${record.roster.name} plays it again.` : `The party was not saved (${record.roster.not_saved}).`}` : "";
+  console.log(ink ? `\nThe run is over: ${record.ended}. ${verdictLine}${kept}\n${written}` : `\n${[...verdictBlock(verdict).slice(1, -1), "", report].join("\n")}\n\n${written}`);
   for (const line of uploaded) console.log(line);
   process.exitCode = failure || (checked && !checked.passed) ? 1 : 0;
+}
+
+/** The report's line on the saved party. */
+export function rosterReport(r: NonNullable<RunRecord["roster"]>): string {
+  const started =
+    r.party === "continue"
+      ? `continued the party saved as ${r.name} (sha256 ${r.loaded_sha256?.slice(0, 12)}${r.chain === "broken" ? ", changed after its last save" : r.chain === "unlogged" ? ", no save logged for it" : ""})`
+      : `a new party for the roster ${r.name}`;
+  const ended = r.saved_sha256 ? `saved (sha256 ${r.saved_sha256.slice(0, 12)})` : `not saved: ${r.not_saved}`;
+  return `Roster: ${started}; ${ended}`;
 }
 
 const CHECK_AUDIT = "Audit: every roll against the engine log";
