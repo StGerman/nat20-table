@@ -36,6 +36,14 @@
       "skills": ["insight", "medicine", "stealth"]
     }
   ],
+  "recommended": [
+    {
+      "_comment": "Primal Knowledge at level 3: Athletics; the list's other useful skills are already proficient.",
+      "level": 3,
+      "prompt_id": "choice.skills",
+      "picks": ["athletics"]
+    }
+  ],
   "equipment": [
     { "item": "nat20_core::item.greataxe", "quantity": 1, "equip": "melee_main_hand" },
     { "item": "nat20_core::item.potion_of_healing", "quantity": 1 }

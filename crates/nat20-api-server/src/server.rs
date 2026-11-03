@@ -294,6 +294,12 @@ impl Server {
             }
             Command::RestNight { actor, lodging } => session.rest_night(&actor.0, *lodging, viewer),
             Command::ChooseCard { actor, choice } => session.choose_card(&actor.0, choice, viewer),
+            Command::LevelUp { actor } => session.level_up(&actor.0, viewer),
+            Command::AnswerLevelUp {
+                actor,
+                prompt_id,
+                picks,
+            } => session.answer_level_up(&actor.0, &prompt_id.0, picks, viewer),
             Command::Travel { actor, to, pace } => {
                 session.travel(&actor.0, to.as_deref(), *pace, viewer)
             }

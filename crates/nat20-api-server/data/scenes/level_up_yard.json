@@ -1,0 +1,147 @@
+{
+    "id": "level_up_yard",
+    "description": "Milestone 9 test scene for XP and level-up (API-44, fixture level_up.jsonl): Maren and Torva face six Goblin Bosses, who can run (yard_rout allows fled). The win earns each of the two half of 1,200 XP, which takes both to the 900 XP of level 3.",
+    "anchors": [
+        {
+            "id": "yard",
+            "name": "the yard",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "torva",
+            "pregen": "barbarian_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": 10.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "boss_1",
+            "monster": "goblin_boss",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 40.0,
+                    "y_ft": 0.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "boss_2",
+            "monster": "goblin_boss",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 40.0,
+                    "y_ft": 10.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "boss_3",
+            "monster": "goblin_boss",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 40.0,
+                    "y_ft": 20.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "boss_4",
+            "monster": "goblin_boss",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 40.0,
+                    "y_ft": 30.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "boss_5",
+            "monster": "goblin_boss",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 40.0,
+                    "y_ft": 40.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "boss_6",
+            "monster": "goblin_boss",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 40.0,
+                    "y_ft": 50.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "encounters": [
+        {
+            "id": "yard_rout",
+            "participants": [
+                "maren",
+                "torva",
+                "boss_1",
+                "boss_2",
+                "boss_3",
+                "boss_4",
+                "boss_5",
+                "boss_6"
+            ],
+            "end_reasons": [
+                "fled"
+            ]
+        }
+    ]
+}

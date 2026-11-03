@@ -395,11 +395,16 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":209}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":209}
 {"at":"t","speaker":"bren","channel":"run","kind":"system","text":"bren accepts the surrender of goblin_4","rolls":[],"log_head":209}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":211}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 surrenders.","rolls":[],"log_head":211}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":211}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":211}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 surrenders.","rolls":[],"log_head":211}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":211}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The fight is done.","rolls":[],"log_head":211}
-{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":211}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 surrenders.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva gains 87 XP, 387 in all.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren gains 87 XP, 387 in all.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren gains 87 XP, 387 in all.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa gains 87 XP, 387 in all.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 surrenders.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":215}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren gains 87 XP, 387 in all.","rolls":[],"log_head":215}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The fight is done.","rolls":[],"log_head":215}
+{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":215}

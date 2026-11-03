@@ -50,6 +50,11 @@ pub struct PregenFile {
     /// each keyed by the registry id of what asks. The class's own picks stay in `skills`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub skill_choices: Vec<PregenSkillChoice>,
+    /// The picks the engine recommends when the character levels up in play past `level`
+    /// (`level_up`, protocol §4.14), each by the level and the prompt id. A choice with none
+    /// recommends its first options.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recommended: Vec<PregenRecommendation>,
     /// What the character carries, in the order it is put on or picked up. It replaces the
     /// class's and background's starting equipment, for which the engine takes the gold option.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -94,6 +99,21 @@ pub struct PregenChoice {
     pub prompt_id: String,
     /// The registry ids picked from the prompt's options, as many as it asks for, e.g.
     /// `["nat20_core::feat.fighting_style.defense"]`.
+    pub picks: Vec<String>,
+}
+
+/// The recommended answer to one choice of a later level-up.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PregenRecommendation {
+    /// Notes for humans reading the file. The engine ignores it.
+    #[serde(default, rename = "_comment", skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
+    /// The level the character reaches.
+    pub level: u8,
+    /// The prompt's id in core, e.g. `choice.spells`; a skill prompt is `choice.skills`.
+    pub prompt_id: String,
+    /// Option ids as `level_up` lists them, e.g. `["hold_person"]` or `["perception"]`.
     pub picks: Vec<String>,
 }
 

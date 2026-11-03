@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.46"
+    "version": "1.0.0-dev.47"
   },
   "$defs": {
     "Ability": {
@@ -585,6 +585,29 @@
           },
           "required": [
             "kind"
+          ]
+        },
+        {
+          "description": "A character's level-up is open, out of combat: its player answers the choice that\n`level_up` or the last `answer_level_up` returned (protocol §4.14). The choice itself\ngoes only to that player.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The creature levelling up.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "level_up"
+            },
+            "prompt_id": {
+              "description": "Echo it in `answer_level_up`.",
+              "$ref": "#/$defs/PromptId"
+            }
+          },
+          "required": [
+            "kind",
+            "prompt_id",
+            "actor"
           ]
         },
         {
@@ -1613,6 +1636,64 @@
             "cmd": {
               "type": "string",
               "const": "choose_card"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The level-up's first open choice, or none when core needed no answer from the player.",
+          "type": "object",
+          "properties": {
+            "choice": {
+              "description": "The choice to answer with `answer_level_up`; absent once the level-up is done.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/LevelUpChoice"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "cmd": {
+              "type": "string",
+              "const": "level_up"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The next open choice of the level-up, or none once it is done.",
+          "type": "object",
+          "properties": {
+            "choice": {
+              "description": "The choice to answer next; absent once the level-up is done.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/LevelUpChoice"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "cmd": {
+              "type": "string",
+              "const": "answer_level_up"
             },
             "state": {
               "description": "Projected for the request's `viewer`.",
@@ -3371,6 +3452,69 @@
           ]
         },
         {
+          "description": "A character gained Experience Points for a fight its side won (SRD 5.2.1: the XP of the\ndefeated foes, split evenly). Owner and DM only.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The character.",
+              "$ref": "#/$defs/Handle"
+            },
+            "can_level_up": {
+              "description": "It has the points for its next level.",
+              "type": "boolean"
+            },
+            "kind": {
+              "type": "string",
+              "const": "xp_awarded"
+            },
+            "total": {
+              "description": "Experience Points now.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "xp": {
+              "description": "Experience Points gained.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "xp",
+            "total",
+            "can_level_up"
+          ]
+        },
+        {
+          "description": "A character reached a new level (`level_up`). Public.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The character.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "leveled_up"
+            },
+            "level": {
+              "description": "The level it reached.",
+              "type": "integer",
+              "format": "uint8",
+              "maximum": 255,
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "level"
+          ]
+        },
+        {
           "description": "A road card cost the party time: the clock moved on and the day's travel shrank.\nPublic.",
           "type": "object",
           "properties": {
@@ -3436,6 +3580,35 @@
         "seq",
         "visibility",
         "text"
+      ]
+    },
+    "Experience": {
+      "description": "A character's Experience Points (SRD 5.2.1, Character Advancement).",
+      "type": "object",
+      "properties": {
+        "can_level_up": {
+          "description": "The character has the points for its next level: its player may call `level_up` out of\ncombat.",
+          "type": "boolean"
+        },
+        "next_level": {
+          "description": "The Experience Points the next level needs. Absent at level 20.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "points": {
+          "description": "Experience Points so far.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "points",
+        "can_level_up"
       ]
     },
     "FeatureLine": {
@@ -3802,6 +3975,86 @@
         "minutes",
         "arrived",
         "at"
+      ]
+    },
+    "LevelUpChoice": {
+      "description": "One choice of a level-up, asked of the levelling creature's player only (protocol §4.14).",
+      "type": "object",
+      "properties": {
+        "actor": {
+          "description": "The creature levelling up.",
+          "$ref": "#/$defs/Handle"
+        },
+        "label": {
+          "description": "What is chosen, in plain words, e.g. \"Spell Selection\".",
+          "type": "string"
+        },
+        "level": {
+          "description": "The level it reaches.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "options": {
+          "description": "The options, in a stable order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LevelUpOption"
+          }
+        },
+        "picks": {
+          "description": "How many options to pick.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "prompt_id": {
+          "description": "Echo it in `answer_level_up`.",
+          "$ref": "#/$defs/PromptId"
+        },
+        "recommended": {
+          "description": "The option ids recommended, as many as `picks`. An `answer_level_up` with no `picks`\ntakes them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "prompt_id",
+        "actor",
+        "level",
+        "label",
+        "picks",
+        "options",
+        "recommended"
+      ]
+    },
+    "LevelUpOption": {
+      "description": "One option of a level-up choice.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Echo it in `answer_level_up.picks`, e.g. `hold_person` or `athletics`.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name, e.g. \"Hold Person\".",
+          "type": "string"
+        },
+        "summary": {
+          "description": "One plain line on what it does, from the rules (a spell's own summary).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name"
       ]
     },
     "LifeState": {
@@ -4561,7 +4814,7 @@
           "const": "no_card"
         },
         {
-          "description": "`choose_card` by a creature with no say on this card.",
+          "description": "`choose_card` by a creature with no say on this card, or `choose_card`, `level_up` or\n`answer_level_up` not sent as the actor itself.",
           "type": "string",
           "const": "no_say"
         },
@@ -4579,6 +4832,26 @@
           "description": "`choose_card` with a choice the card does not have.",
           "type": "string",
           "const": "unknown_choice"
+        },
+        {
+          "description": "`level_up` by a character without the Experience Points for its next level.",
+          "type": "string",
+          "const": "not_enough_xp"
+        },
+        {
+          "description": "`level_up` while another character's level-up is open; one levels up at a time.",
+          "type": "string",
+          "const": "level_up_open"
+        },
+        {
+          "description": "`answer_level_up` with no level-up open for the actor.",
+          "type": "string",
+          "const": "no_level_up"
+        },
+        {
+          "description": "`answer_level_up` with picks that are not the choice's options, repeat one, or are not\nas many as it asks; the message lists the options.",
+          "type": "string",
+          "const": "bad_picks"
         }
       ]
     },
@@ -5277,6 +5550,55 @@
             "cmd",
             "actor",
             "choice"
+          ]
+        },
+        {
+          "description": "Opens a level-up (API-44; protocol §4.14) for a character whose sheet says\n`xp.can_level_up`, out of combat. Core applies the new level and answers what has one\nanswer; the result carries the first choice left for the player, if any. Sent again while\nthe level-up is open, it returns the open choice. As the actor itself, never `dm`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who levels up: the viewer's own creature.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "level_up"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor"
+          ]
+        },
+        {
+          "description": "Answers the open level-up choice (API-44; protocol §4.14). As the actor itself.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The levelling creature: the viewer's own.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "answer_level_up"
+            },
+            "picks": {
+              "description": "Option ids, as many as the choice's `picks`. Empty takes the choice's `recommended`.",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
+            },
+            "prompt_id": {
+              "description": "The choice's `prompt_id`.",
+              "$ref": "#/$defs/PromptId"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "prompt_id"
           ]
         }
       ],
@@ -6017,6 +6339,17 @@
           "type": "integer",
           "format": "uint32",
           "minimum": 0
+        },
+        "xp": {
+          "description": "Experience Points and whether the next level is due. Absent for monsters.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Experience"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [

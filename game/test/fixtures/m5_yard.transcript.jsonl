@@ -847,20 +847,25 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":485}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":485}
 {"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":485}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":493}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r487] ilsa rolls an attack roll vs goblin_4: 1d20 (18) +4 = 22 vs AC 15, hit.","rolls":["r487"],"log_head":493}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r488] ilsa rolls fire damage: 1d10 (7) = 7.","rolls":["r488"],"log_head":493}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 takes 7 fire damage.","rolls":[],"log_head":493}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 0/10 Hit Points.","rolls":[],"log_head":493}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is dead.","rolls":[],"log_head":493}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is no longer under Disengage.","rolls":[],"log_head":493}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":493}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r487] ilsa rolls an attack roll vs goblin_4: 1d20 (18) = 22, hit.","rolls":["r487"],"log_head":493}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r488] ilsa rolls fire damage: 1d10 (7) = 7.","rolls":["r488"],"log_head":493}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 takes 7 fire damage.","rolls":[],"log_head":493}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 is dead.","rolls":[],"log_head":493}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":493}
-{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":493}
-{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":493}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The yard falls quiet.","rolls":[],"log_head":493}
-{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":493}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r487] ilsa rolls an attack roll vs goblin_4: 1d20 (18) +4 = 22 vs AC 15, hit.","rolls":["r487"],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r488] ilsa rolls fire damage: 1d10 (7) = 7.","rolls":["r488"],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 takes 7 fire damage.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 0/10 Hit Points.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is dead.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is no longer under Disengage.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"ilsa uses Fire Bolt on goblin_4.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r487] ilsa rolls an attack roll vs goblin_4: 1d20 (18) = 22, hit.","rolls":["r487"],"log_head":497}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r488] ilsa rolls fire damage: 1d10 (7) = 7.","rolls":["r488"],"log_head":497}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 takes 7 fire damage.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_4 is dead.","rolls":[],"log_head":497}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash in the yard.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa gains 87 XP, 387 in all.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren gains 87 XP, 387 in all.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva gains 87 XP, 387 in all.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren gains 87 XP, 387 in all.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":497}
+{"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren gains 87 XP, 387 in all.","rolls":[],"log_head":497}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The yard falls quiet.","rolls":[],"log_head":497}
+{"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":497}
