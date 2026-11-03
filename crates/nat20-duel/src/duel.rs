@@ -41,7 +41,11 @@ pub fn record_fixture(seed: u32) -> String {
 
 fn play(client: &mut Client, seed: Option<u32>) -> (String, Vec<Event>) {
     let mut transcript = String::new();
-    call(client, &mut transcript, Command::NewSession { seed });
+    call(
+        client,
+        &mut transcript,
+        Command::NewSession { seed, roster: None },
+    );
     call(
         client,
         &mut transcript,

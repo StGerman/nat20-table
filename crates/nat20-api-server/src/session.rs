@@ -13,8 +13,8 @@ use nat20_ledger::{Asset, Entry, Holder, Holdings, Journal, Reason};
 use nat20_api_contract::{
     Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
     ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
-    Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId, ReactionTrigger, RejectReason,
-    RollId, RollView, SceneFile, State, Visibility,
+    Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId, ROSTER_FORMAT, ReactionTrigger,
+    RejectReason, RollId, RollView, Roster, RosterWorld, SceneFile, State, Visibility,
 };
 
 mod cards;
@@ -58,10 +58,17 @@ pub struct Session {
     ledger_mismatches: Vec<String>,
     /// The living world, once `start_campaign` ran (API-41).
     campaign: Option<Campaign>,
+    /// The party an earlier session saved, from `new_session{roster}` (API-45).
+    roster: Option<Roster>,
 }
 
 impl Session {
-    pub fn new(data_dir: PathBuf, protocol_version: &str, seed: u32) -> Self {
+    pub fn new(
+        data_dir: PathBuf,
+        protocol_version: &str,
+        seed: u32,
+        roster: Option<Roster>,
+    ) -> Self {
         let mut session = Self {
             data_dir,
             game: None,
@@ -73,6 +80,7 @@ impl Session {
             ledger: Journal::default(),
             ledger_mismatches: Vec::new(),
             campaign: None,
+            roster,
         };
         session.push(Pending {
             round: None,
@@ -169,7 +177,12 @@ impl Session {
     /// Loads a scene file already read and checked, carrying `party` in, and logs
     /// `scene_loaded`. Nothing changes on a refusal.
     fn enter_scene(&mut self, scene: &SceneFile, party: &[Handle]) -> Result<(), ApiError> {
-        match Game::load(self.game.take(), scene, party) {
+        match Game::load(
+            self.game.take(),
+            scene,
+            party,
+            self.roster.as_ref().map_or(&[][..], |r| &r.characters),
+        ) {
             Ok(game) => self.game = Some(game),
             Err((previous, e)) => {
                 self.game = previous;
@@ -252,6 +265,7 @@ impl Session {
             &self.data_dir,
             party.to_vec(),
             human.map(|h| h.0.clone()),
+            self.roster.as_ref().and_then(|r| r.world.as_ref()),
         )?);
         Ok(CommandResult::StartCampaign {
             state: self.state_for(viewer)?,
@@ -767,6 +781,41 @@ impl Session {
         Ok(CommandResult::Spawn {
             state: self.state_for(viewer)?,
             handles,
+        })
+    }
+
+    /// `save_roster`: the party and the world, for the next game session (API-45). DM only.
+    pub fn save_roster(&self, viewer: &Viewer) -> Result<CommandResult, ApiError> {
+        if *viewer != Viewer::Dm {
+            return Err(error(
+                ErrorCode::NotVisible,
+                "save_roster is the game's own command; send it as dm.",
+            ));
+        }
+        let party = self.campaign.as_ref().map(|c| c.party.as_slice());
+        let characters = self
+            .game
+            .as_ref()
+            .map(|g| g.roster_characters(party))
+            .unwrap_or_default();
+        let world = match &self.campaign {
+            Some(campaign) => Some(RosterWorld {
+                map: campaign.map_id.clone(),
+                state: serde_json::to_value(&campaign.world.state).map_err(|e| {
+                    error(
+                        ErrorCode::Internal,
+                        format!("The world state does not serialize: {e}."),
+                    )
+                })?,
+            }),
+            None => None,
+        };
+        Ok(CommandResult::SaveRoster {
+            roster: Roster {
+                format: ROSTER_FORMAT,
+                characters,
+                world,
+            },
         })
     }
 

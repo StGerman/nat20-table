@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 
 use nat20_api_contract::{
     Ability, CaravanView, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget, CargoView,
-    ClockView, ErrorCode, Handle, LegView, MilesToday, Pace, PlaceDm, RejectReason, RoadDm, Skill,
-    Terrain, WagonView, Watch, WorldDm, WorldPosition,
+    ClockView, ErrorCode, Handle, LegView, MilesToday, Pace, PlaceDm, RejectReason, RoadDm,
+    RosterWorld, Skill, Terrain, WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -34,6 +34,8 @@ pub struct Campaign {
     pub road_scene: String,
     /// The human's creature, when a human plays: it breaks a tied Blade vote
     pub human: Option<String>,
+    /// The world map's id, `worlds/<id>/`
+    pub map_id: String,
 }
 
 impl Campaign {
@@ -43,6 +45,7 @@ impl Campaign {
         data_dir: &Path,
         party: Vec<Handle>,
         human: Option<String>,
+        saved: Option<&RosterWorld>,
     ) -> Result<Self, nat20_api_contract::ApiError> {
         let file: world::CampaignFile = read_json(&data_dir.join(CAMPAIGN_FILE), "campaign")?;
         let setup = file.world;
@@ -82,11 +85,24 @@ impl Campaign {
         let built = built
             .with_deck(deck)
             .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
+        let mut built = built;
+        // A roster from a campaign on this map takes up the world where it was left (API-45).
+        if let Some(saved) = saved.filter(|w| w.map == setup.map) {
+            let state: world::WorldState =
+                serde_json::from_value(saved.state.clone()).map_err(|e| {
+                    error(
+                        ErrorCode::BadRoster,
+                        format!("The roster's world does not read: {e}."),
+                    )
+                })?;
+            built.state = state;
+        }
         let campaign = Self {
             world: built,
             party,
             human,
             road_scene: setup.road_scene,
+            map_id: setup.map.clone(),
         };
         let mut scenes: Vec<&str> = campaign
             .world

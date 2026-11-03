@@ -14,9 +14,9 @@ use nat20_api_contract::{
     Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
     ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec, HitDiceSpend,
     HitPointsRegained, Mode, MoveTarget, OptionArea, OptionId, OptionVariant, Placement, PointFt,
-    PregenFile, ReactionOption, RejectReason, RollId, ScenarioCheck, SceneFile, Sheet, Side, Spawn,
-    SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition, SurrenderTrigger, TargetCandidate,
-    Targeting, TurnBudget, UnavailableOption, Visibility,
+    PregenFile, ReactionOption, RejectReason, RollId, RosterCharacter, RosterChoice, ScenarioCheck,
+    SceneFile, Sheet, Side, Spawn, SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition,
+    SurrenderTrigger, TargetCandidate, Targeting, TurnBudget, UnavailableOption, Visibility,
 };
 use nat20_core::hecs::{self, Entity};
 use nat20_core::parry3d::{na::Point3, query::PointQuery};
@@ -71,9 +71,10 @@ use crate::{
     scene,
 };
 
-mod goods;
+pub(super) mod goods;
 mod level_up;
 mod night;
+mod roster;
 pub use goods::purse;
 pub use night::DAYS_FOOD_QUARTER_LB;
 
@@ -315,6 +316,11 @@ pub struct Game {
     level_up: Option<level_up::OpenLevelUp>,
     /// Level-up choices asked this session, for their prompt ids (`l1`, `l2`, ...).
     level_up_prompts: u32,
+    /// The level-up choices each character made in play, by handle, kept for the roster.
+    history: HashMap<String, Vec<RosterChoice>>,
+    /// The characters the session's roster saved: a scene pregen of the same handle is rebuilt
+    /// as saved (API-45).
+    roster: Vec<RosterCharacter>,
 }
 
 /// One creature's option list, as built now or as if its next turn began (explore mode).
@@ -338,6 +344,7 @@ impl Game {
         previous: Option<Game>,
         scene: &SceneFile,
         party: &[Handle],
+        roster: &[RosterCharacter],
     ) -> Result<Self, (Option<Game>, ApiError)> {
         let fail = |previous, e| Err((previous, e));
         if scene.creatures.is_empty() && party.is_empty() {
@@ -432,6 +439,7 @@ impl Game {
                 Vec::new(),
             ),
         };
+        game.roster = roster.to_vec();
 
         // Spawn the scene's own creatures. On any failure they are removed again.
         let mut spawned: Vec<SceneCreature> = Vec::new();
@@ -442,7 +450,7 @@ impl Game {
             game.global_seen = game.engine.event_log.events.len();
         };
         for def in &scene.creatures {
-            match spawn_creature(&mut game.engine, def, &pregens) {
+            match spawn_creature(&mut game.engine, def, &pregens, &game.roster) {
                 Ok(entity) => spawned.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -462,7 +470,7 @@ impl Game {
         let mut trial: Vec<SceneCreature> = Vec::new();
         let mut failed = None;
         for def in scene.spawns.iter().flat_map(|s| &s.creatures) {
-            match spawn_creature(&mut game.engine, def, &pregens) {
+            match spawn_creature(&mut game.engine, def, &pregens, &game.roster) {
                 Ok(entity) => trial.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -635,6 +643,8 @@ impl Game {
             next_turn: false,
             level_up: None,
             level_up_prompts: 0,
+            history: HashMap::new(),
+            roster: Vec::new(),
         }
     }
 
@@ -1999,7 +2009,7 @@ impl Game {
         let mut new: Vec<SceneCreature> = Vec::new();
         let mut failed = None;
         for def in defs {
-            match spawn_creature(&mut self.engine, def, &self.scene.pregens) {
+            match spawn_creature(&mut self.engine, def, &self.scene.pregens, &self.roster) {
                 Ok(entity) => new.push(SceneCreature {
                     handle: def.handle.0.clone(),
                     entity,
@@ -4354,8 +4364,9 @@ fn spawn_creature(
     engine: &mut EngineState,
     def: &nat20_api_contract::SceneCreature,
     pregens: &HashMap<String, PregenFile>,
+    roster: &[RosterCharacter],
 ) -> Result<Entity, ApiError> {
-    let entity = spawn_bare(engine, def, pregens)?;
+    let entity = spawn_bare(engine, def, pregens, roster)?;
     if let Some(carries) = &def.carries {
         goods::add_carries(engine, entity, carries).map_err(|m| {
             error(
@@ -4371,11 +4382,16 @@ fn spawn_bare(
     engine: &mut EngineState,
     def: &nat20_api_contract::SceneCreature,
     pregens: &HashMap<String, PregenFile>,
+    roster: &[RosterCharacter],
 ) -> Result<Entity, ApiError> {
     match (&def.pregen, &def.monster) {
-        (Some(pregen), None) => {
-            pregen::spawn(engine, &pregens[pregen]).map_err(|m| error(ErrorCode::BadScene, m))
-        }
+        (Some(pregen), None) => match roster.iter().find(|c| c.handle == def.handle) {
+            Some(saved) => pregen::spawn_saved(engine, &pregens[pregen], saved)
+                .map_err(|m| error(ErrorCode::BadRoster, format!("The roster's {m}."))),
+            None => {
+                pregen::spawn(engine, &pregens[pregen]).map_err(|m| error(ErrorCode::BadScene, m))
+            }
+        },
         (None, Some(monster)) => {
             monster::spawn(engine, monster).map_err(|m| error(ErrorCode::BadScene, m))
         }
@@ -4746,7 +4762,7 @@ mod tests {
         let scene = scene::read(&data, "help_yard").unwrap();
         // With seed 5 Ana's first DC 10 Medicine check fails.
         crate::adapter::seed_dice(5);
-        let Ok(mut game) = Game::load(None, &scene, &[]) else {
+        let Ok(mut game) = Game::load(None, &scene, &[], &[]) else {
             panic!("help_yard loads");
         };
         let fall = CheckSpec::Scenario {
@@ -4772,7 +4788,7 @@ mod tests {
         let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
         let scene = scene::read(&data, "prone_yard").unwrap();
         crate::adapter::seed_dice(1);
-        let Ok(mut game) = Game::load(None, &scene, &[]) else {
+        let Ok(mut game) = Game::load(None, &scene, &[], &[]) else {
             panic!("prone_yard loads");
         };
         let prone = EffectId::new("nat20_core", PRONE);
@@ -4804,7 +4820,7 @@ mod tests {
         let scene = scene::read(&data, "crowded_yard").unwrap();
         let start = |seed| {
             crate::adapter::seed_dice(seed);
-            let Ok(mut game) = Game::load(None, &scene, &[]) else {
+            let Ok(mut game) = Game::load(None, &scene, &[], &[]) else {
                 panic!("crowded_yard loads");
             };
             game.start_combat("yard_fight").unwrap();
