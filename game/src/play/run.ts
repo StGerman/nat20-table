@@ -7,6 +7,7 @@ import type { Handle, State } from "@nat20-table/engine-client";
 import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
+import { skeletonFile } from "../pack/read.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
 import type { FightReaction, RunReport, SceneChoice, SceneTime, TalkRound } from "../table/loop.ts";
 import type { TextGuard } from "../table/state.ts";
@@ -67,7 +68,7 @@ export type Casting = "default" | "none" | { play: Handle };
 
 /** The party of a scenario pack's skeleton, cast per `casting`, with the AI players' cards read from the pack. */
 export function castParty(pack: string, casting: Casting = "default"): PackParty {
-  const adventure = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8")));
+  const adventure = Adventure.parse(JSON.parse(readFileSync(skeletonFile(pack), "utf8")));
   const human =
     casting === "none" ? undefined : typeof casting === "object" ? casting.play : adventure.party.find((p) => p.seat === "human")?.handle;
   if (casting !== "none" && !human) throw new Error(`${pack}: the party has no human seat`);
@@ -111,7 +112,7 @@ export interface RosterEntry {
  * species, class and level from its pregen in the first scene, and the first line of its Goal.
  */
 export function partyRoster(pack: string, pregens = process.env.NAT20_PREGENS_DIR ?? path.join(REPO, "pregens")): RosterEntry[] {
-  const adventure = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8")));
+  const adventure = Adventure.parse(JSON.parse(readFileSync(skeletonFile(pack), "utf8")));
   const sheets = pregenSheets(pack, adventure, pregens);
   // "nat20_core::class.fighter" reads "Fighter".
   const named = (id: string) => (id.split(".").at(-1) ?? id).replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
@@ -138,7 +139,7 @@ export function guards(pack: string, engine: GameEngine): { narrationGuard: Text
  * into `scene`, or undefined when it is the first.
  */
 export async function startAt(engine: GameEngine, pack: string, scene: string, party: Handle[]): Promise<Handle[] | undefined> {
-  const scenes = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8"))).scenes.map((s) => s.id);
+  const scenes = Adventure.parse(JSON.parse(readFileSync(skeletonFile(pack), "utf8"))).scenes.map((s) => s.id);
   const at = scenes.indexOf(scene);
   if (at < 0) throw new Error(`${pack} has no scene ${scene}; its scenes: ${scenes.join(", ")}`);
   for (const [i, id] of scenes.slice(0, at).entries()) {
@@ -158,7 +159,7 @@ export async function startAt(engine: GameEngine, pack: string, scene: string, p
  * `onScene`.
  */
 export function scenePlan(pack: string, listed: string[]): { first: string; onScene: (sceneId: string, played: readonly string[]) => SceneChoice } {
-  const order = Adventure.parse(JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8"))).scenes.map((s) => s.id);
+  const order = Adventure.parse(JSON.parse(readFileSync(skeletonFile(pack), "utf8"))).scenes.map((s) => s.id);
   const at = listed.map((id) => order.indexOf(id));
   const unknown = listed.filter((_, i) => at[i] < 0);
   if (listed.length === 0) throw new Error("no scene to play");

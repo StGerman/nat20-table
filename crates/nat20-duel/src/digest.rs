@@ -90,15 +90,21 @@ pub fn pack_party(pack: &Path, pregens: &Path) -> Result<Vec<PartyMember>, Strin
         let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
         serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))
     };
-    let adventure = read(&pack.join("adventure.json"))?;
+    // A living-world pack's skeleton is its campaign.json (MAP-7).
+    let campaign = pack.join("campaign.json");
+    let adventure = read(&if campaign.exists() {
+        campaign
+    } else {
+        pack.join("adventure.json")
+    })?;
     let first = adventure["scenes"][0]["id"]
         .as_str()
-        .ok_or("adventure.json has no scenes")?;
+        .ok_or("the skeleton has no scenes")?;
     let scene = read(&pack.join("scenes").join(format!("{first}.json")))?;
     let mut party = Vec::new();
     for member in adventure["party"]
         .as_array()
-        .ok_or("adventure.json has no party")?
+        .ok_or("the skeleton has no party")?
     {
         let handle = member["handle"].as_str().unwrap_or_default().to_owned();
         let card = member["card"]

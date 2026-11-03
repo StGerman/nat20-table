@@ -181,6 +181,13 @@ export const Adventure = z
         `The only creatures the DM may place beyond the scene files (format ${STAT_BLOCKS_SINCE} and later). Empty: the DM improvises no creatures.`,
       ),
     scenes: z.array(Scene).min(1).describe("In play order; the first places the party, every later one carries it in."),
+    world: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        "A living-world pack's campaign.json only (MAP-7): the engine's world block (map, start, hour, caravan, route, road_scene, scenes, escort). The engine reads and checks it; the game reads only start and scenes. Its scenes need no exits: the road joins them.",
+      ),
+    day_limit: z.number().int().min(1).optional().describe("A living-world pack only: the last game day a run plays; the night after it ends the run."),
   })
   .describe("A scenario pack's skeleton (M6 spec §4). DM-only, like the prose and scene files.");
 

@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../engine.ts";
 import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS, STAT_BLOCKS_SINCE } from "./adventure.ts";
+import { skeletonFile } from "./read.ts";
 
 /** Every pack in the repository: each folder of `scenarios/`. */
 export function repoPacks(): string[] {
@@ -64,25 +65,30 @@ function duplicates(ids: string[]): string[] {
 export async function checkPack(dir: string, options: { binary?: string; pregens?: string } = {}): Promise<PackReport> {
   const report: PackReport = { pack: dir, loaded: [], problems: [] };
   const problem = (text: string) => report.problems.push(text);
-  const skeletonFile = path.join(dir, "adventure.json");
-  if (!existsSync(skeletonFile)) {
-    problem("no adventure.json");
+  const skeleton = skeletonFile(dir);
+  const name = path.basename(skeleton);
+  if (!existsSync(skeleton)) {
+    problem("no adventure.json or campaign.json");
     return report;
   }
   let raw: unknown;
   try {
-    raw = JSON.parse(readFileSync(skeletonFile, "utf8"));
+    raw = JSON.parse(readFileSync(skeleton, "utf8"));
   } catch (error) {
-    problem(`adventure.json is not JSON: ${(error as Error).message}`);
+    problem(`${name} is not JSON: ${(error as Error).message}`);
     return report;
   }
   const parsed = Adventure.safeParse(raw);
   if (!parsed.success) {
-    for (const issue of parsed.error.issues) problem(`adventure.json ${issue.path.join(".") || "(root)"}: ${issue.message}`);
+    for (const issue of parsed.error.issues) problem(`${name} ${issue.path.join(".") || "(root)"}: ${issue.message}`);
     return report;
   }
   const adventure = parsed.data;
   report.title = adventure.title;
+  // A living-world pack (MAP-7): its world lives in campaign.json, and its scenes are joined by the road.
+  const campaign = name === "campaign.json";
+  if (campaign && !adventure.world) problem("campaign.json has no world block");
+  if (!campaign && (adventure.world || adventure.day_limit)) problem("world and day_limit belong in campaign.json, not adventure.json");
   if (!(FORMAT_VERSIONS as readonly number[]).includes(adventure.format_version)) {
     problem(`format_version ${adventure.format_version} is not one this game reads (${FORMAT_VERSIONS.join(", ")})`);
     return report;
@@ -179,8 +185,8 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     for (const npc of scene.npcs) if (!npcIds.has(npc)) problem(`scene ${scene.id} lists npc ${npc}, which the skeleton doesn't`);
     for (const exit of scene.exits) if (!sceneIdList.includes(exit.to)) problem(`scene ${scene.id} exits to ${exit.to}, which the skeleton doesn't list`);
     const last = index === adventure.scenes.length - 1;
-    if (last && scene.exits.length > 0) problem(`scene ${scene.id} is the last and has exits`);
-    if (!last && scene.exits.length === 0) problem(`scene ${scene.id} has no exit`);
+    if (!campaign && last && scene.exits.length > 0) problem(`scene ${scene.id} is the last and has exits`);
+    if (!campaign && !last && scene.exits.length === 0) problem(`scene ${scene.id} has no exit`);
     if (!declared) continue;
     for (const hint of scene.checks) if (!declared.checks.has(hint.check)) problem(`scene ${scene.id} names check ${hint.check}, which its file doesn't declare`);
     for (const hint of scene.encounters) if (!declared.encounters.has(hint.encounter)) problem(`scene ${scene.id} names encounter ${hint.encounter}, which its file doesn't declare`);
@@ -231,6 +237,13 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
       }
       report.loaded.push(scene.id);
       await look(ids.get(scene.id)?.monsters ?? new Map());
+    }
+    // A living-world pack's campaign starts on its first scene: the engine checks the world, its
+    // deck, NPCs and every scene a journey can load (MAP-6, MAP-7).
+    if (campaign && report.loaded.length === adventure.scenes.length) {
+      const first = await engine.request("dm", { cmd: "load_scene", scene_id: adventure.scenes[0].id });
+      const started = first.ok ? await engine.request("dm", { cmd: "start_campaign", party }) : first;
+      if (!started.ok) problem(`the engine refused the campaign: ${started.error?.message}`);
     }
     for (const monster of new Set([...ids.values()].flatMap((d) => [...d.monsters.values()]))) {
       if (named.has(monster)) continue;
