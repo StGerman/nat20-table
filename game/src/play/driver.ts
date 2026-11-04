@@ -316,9 +316,10 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
       };
       if (limit > 0) deadline = setTimeout(stop, limit * 60_000);
     }
-    // A seat shows the scene's number in its header; the terminal prints progress only when nobody plays in it.
+    // A seat shows the scene's number in its header, or on the road the place's name; the terminal prints progress only when nobody plays in it.
     if (ink) {
-      if (p.kind === "scene_start") ink.scene(pack.adventure.scenes.findIndex((s) => s.id === p.scene) + 1, pack.adventure.scenes.length);
+      if (p.kind === "scene_start" && campaign) ink.place(pack.adventure.scenes.find((s) => s.id === p.scene)?.title ?? p.scene);
+      else if (p.kind === "scene_start") ink.scene(pack.adventure.scenes.findIndex((s) => s.id === p.scene) + 1, pack.adventure.scenes.length);
       return;
     }
     const runLines = transcript.records.filter((r) => r.channel === "run");
