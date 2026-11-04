@@ -221,10 +221,19 @@ export class InkSeat implements Seat {
 
   /** The slash-command picker while it stands (AGT-82): the commands the draft names, and the lit one. */
   get commandPicker(): { matches: CommandEntry[]; cursor: number } | undefined {
-    if (this.view.finale || this.view.commandsShut) return undefined;
+    if (this.view.finale || this.view.commandsShut || this.commandsHidden) return undefined;
     const matches = commandMatches(this.view.draft);
     if (!matches) return undefined;
     return { matches, cursor: Math.min(this.view.commandCursor ?? 0, Math.max(0, matches.length - 1)) };
+  }
+
+  /**
+   * The tiny frame draws no picker, so none stands there: the keys stay the editor's and a typed
+   * command runs as typed, never an unseen lit one. The screen sets it on every layout change.
+   */
+  private commandsHidden = false;
+  hideCommands(hidden: boolean): void {
+    this.commandsHidden = hidden;
   }
 
   /** Esc: closes the slash-command picker and keeps what is typed; false when none stood. */
@@ -811,6 +820,9 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   }, [seat]);
   const palette = seat.palette;
   const layout = frameLayout(size);
+  // The picker is drawn on every frame but the tiny one; where it isn't drawn it takes no keys.
+  const tiny = layout.mode === "tiny";
+  useEffect(() => seat.hideCommands(tiny), [seat, tiny]);
   const width = layout.story;
 
   // A typed number names an option: it is lit in the turn block and named after the cursor.

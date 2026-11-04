@@ -531,3 +531,20 @@ test("on a terminal, the command picker stands over the input row (AGT-82)", asy
     seat.stop();
   }
 });
+
+test("in a window too small to draw it, no command picker stands: the keys stay the editor's and a command runs as typed (AGT-82)", async () => {
+  const seat = new InkSeat("bren");
+  seat.hideCommands(true);
+  const asked = seat.ask({ kind: "explore" });
+  seat.type("/");
+  assert.equal(seat.commandPicker, undefined);
+  seat.move(-1);
+  seat.enter();
+  assert.equal(seat.getView().notice?.error, true, "a bare / is a mistake on the row, never an unseen /quit");
+  seat.edit({ kind: "clear" });
+  seat.type("/sheet\r");
+  assert.deepEqual(await asked, { kind: "command", name: "sheet" });
+  seat.hideCommands(false);
+  seat.type("/");
+  assert.ok(seat.commandPicker, "a window big enough again draws it again");
+});
