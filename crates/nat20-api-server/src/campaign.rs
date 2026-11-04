@@ -10,8 +10,9 @@ use std::path::{Path, PathBuf};
 use nat20_api_contract::{
     Ability, CaravanView, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget, CargoView,
     CarriedItem, Carries, ClockView, Coins, ErrorCode, EscortBlade, EscortDm, EscortView, Handle,
-    LegView, MilesToday, NpcAttitude, NpcDm, Pace, PlaceDm, RejectReason, RoadDm, RosterWorld,
-    Side, Skill, Terrain, WagonView, Watch, WorldDm, WorldPosition,
+    LegView, MilesToday, NpcAttitude, NpcDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm,
+    RosterWorld, Side, Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm,
+    WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -430,6 +431,48 @@ impl Campaign {
                 .filter(|b| !pending.said.contains_key(*b))
                 .map(|b| Handle(b.clone()))
                 .collect(),
+        })
+    }
+
+    /// How long each road out of the caravan's place takes, by road id (API-49).
+    pub fn reach(&self) -> std::collections::BTreeMap<String, ReachView> {
+        self.world
+            .reach()
+            .into_iter()
+            .map(|r| {
+                (
+                    r.road,
+                    ReachView {
+                        pace: to_pace(r.pace),
+                        minutes: r.minutes,
+                        nights: r.nights,
+                        arrives: clock_view(r.arrives),
+                    },
+                )
+            })
+            .collect()
+    }
+
+    /// The route to the escort's destination while the contract is under way (API-49).
+    pub fn trip(&self) -> Option<TripView> {
+        if self.world.state.escort.as_ref().is_some_and(|e| e.done) {
+            return None;
+        }
+        self.world.trip().map(|t| TripView {
+            legs: t
+                .legs
+                .into_iter()
+                .map(|l| TripLegView {
+                    road: l.road,
+                    to: l.to,
+                    pace: to_pace(l.pace),
+                    miles: l.miles,
+                    minutes: l.minutes,
+                    nights: l.nights,
+                    arrives: clock_view(l.arrives),
+                })
+                .collect(),
+            complete: t.complete,
         })
     }
 
