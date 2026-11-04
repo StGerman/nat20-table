@@ -1250,7 +1250,9 @@ export class TableLoop {
         this.table.show({ kind: "options", title: rest ? "The night" : "The road", lines: choiceLines(choices), choices, preset });
         const intent = await this.ask({ kind: "road" });
         if (!intent) return;
-        const picked = intent.kind === "option" ? choices.find((c) => c.number === intent.number) : undefined;
+        // A line's own text typed out is that line, as in the round's options.
+        const typed = intent.kind === "text" ? choices.find((c) => c.label.toLowerCase() === intent.text.trim().replace(/[.!]+$/, "").toLowerCase()) : undefined;
+        const picked = intent.kind === "option" ? choices.find((c) => c.number === intent.number) : typed;
         if (!picked) {
           this.table.show({ kind: "info", title: rest ? "The night" : "The road", text: `Pick 1 to ${choices.length}, or press Enter for the one shown.` });
           continue;

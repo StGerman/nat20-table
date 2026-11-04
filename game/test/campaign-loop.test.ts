@@ -385,3 +385,29 @@ test("a line on screen is taken by its name typed out, and by its number while t
     t.close();
   }
 });
+
+test("the DM can't propose the inn where there is none, and the night's line is taken by its name typed out", async () => {
+  // Copilot on table #265: an inn proposed in a place without one sent the driver a night the engine refuses.
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "road") return { kind: "text", text: "make camp for the night." };
+    return prompt.kind === "explore" ? { kind: "text", text: "We sleep here." } : ScriptedSeat.pass(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    const said: string[] = [];
+    const dm = new ScriptedDm({
+      table_turn: async (tools) => {
+        const inn = await tools.proposeRoad("inn");
+        said.push(inn.text);
+        if (!inn.ok) await tools.proposeRoad("camp");
+      },
+    });
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    const report = await loop.run("vale_town");
+    assert.equal(report.ended, "the day limit: day 1 is over", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    assert.match(said[0] ?? "", /no inn here/);
+    assert.deepEqual(t.requests().filter((r) => r.cmd === "rest_night").map((r) => [r.actor, r.where]), [["bren", "camp"]]);
+  } finally {
+    t.close();
+  }
+});
