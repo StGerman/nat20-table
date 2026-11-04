@@ -8,7 +8,8 @@
 use nat20_api_contract::{
     Anchor, AnchorObserved, AnchorView, CardPlayer, CheckView, Condition, CreatureFull,
     CreatureObserved, EncounterView, Event, EventKind, Handle, Mode, NpcKnown, PlaceKnown, PointFt,
-    RoadKnown, RoadUnexplored, RollView, Sheet, SpawnView, State, Visibility, WorldDm, WorldPlayer,
+    ReachView, RoadKnown, RoadUnexplored, RollView, Sheet, SpawnView, State, TripView, Visibility,
+    WorldDm, WorldPlayer,
 };
 
 use crate::render;
@@ -59,6 +60,10 @@ pub struct WorldFull {
     pub view: WorldDm,
     /// The handles that may call `travel`.
     pub drivers: Vec<String>,
+    /// How long each road out of the caravan's place takes, by road id (API-49).
+    pub reach: std::collections::BTreeMap<String, ReachView>,
+    /// The route to the escort's destination, cut before the first undiscovered place (API-49).
+    pub trip: Option<TripView>,
 }
 
 /// The state as `viewer` may see it. `None` when a creature viewer is not in the scene.
@@ -147,7 +152,12 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
 /// are both discovered in full, a road with one discovered end without where it leads; no
 /// deck zones, no route, no scene ids.
 fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
-    let WorldFull { view, drivers } = full;
+    let WorldFull {
+        view,
+        drivers,
+        reach,
+        trip,
+    } = full;
     let known: std::collections::HashSet<&str> = view
         .places
         .iter()
@@ -169,6 +179,7 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
                 terrain: road.terrain,
                 good_road: road.good_road,
                 max_pace: road.max_pace,
+                reach: reach.get(&road.id).copied(),
             }),
             (true, false) | (false, true) => unexplored.push(RoadUnexplored {
                 id: road.id.clone(),
@@ -181,6 +192,7 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
                 terrain: road.terrain,
                 good_road: road.good_road,
                 max_pace: road.max_pace,
+                reach: reach.get(&road.id).copied(),
             }),
             (false, false) => {}
         }
@@ -231,6 +243,7 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
             waiting_for: c.waiting_for,
         }),
         escort: view.escort.map(|e| e.contract),
+        trip,
         // Met NPCs only, and only what the party can see (API-48): never Hit Points, attitude
         // or notes.
         npcs: view
@@ -366,6 +379,8 @@ mod turned_back_tests {
             WorldFull {
                 view,
                 drivers: Vec::new(),
+                reach: Default::default(),
+                trip: None,
             },
         );
         assert_eq!(

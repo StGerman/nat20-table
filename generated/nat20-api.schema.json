@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.54"
+    "version": "1.0.0-dev.55"
   },
   "$defs": {
     "Ability": {
@@ -4895,6 +4895,38 @@
         "total_cp"
       ]
     },
+    "ReachView": {
+      "description": "How long one road out of the caravan's place takes (API-49), worked out by the world with the\ntravel rule: at a Normal pace, or the road's slower maximum, and when the day's distance runs\nout on the way, a night on the road and on the next morning. Players read it as prose and a\nwatch; the minutes are for wording, never shown.",
+      "type": "object",
+      "properties": {
+        "arrives": {
+          "description": "When the caravan gets to the road's other end.",
+          "$ref": "#/$defs/ClockView"
+        },
+        "minutes": {
+          "description": "Minutes on the move, nights left out.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "nights": {
+          "description": "Nights spent before arriving: 0 when the caravan gets there today.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "pace": {
+          "description": "The pace the plan goes at.",
+          "$ref": "#/$defs/Pace"
+        }
+      },
+      "required": [
+        "pace",
+        "minutes",
+        "nights",
+        "arrives"
+      ]
+    },
     "ReactionOption": {
       "description": "A reaction the actor can take.",
       "type": "object",
@@ -6146,6 +6178,17 @@
           "format": "uint32",
           "minimum": 0
         },
+        "reach": {
+          "description": "How long the road takes from where the caravan stands (API-49): set on each road out of\nthe caravan's place, absent elsewhere and on the road.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReachView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "terrain": {
           "description": "The predominant terrain.",
           "$ref": "#/$defs/Terrain"
@@ -6190,6 +6233,17 @@
           "type": "integer",
           "format": "uint32",
           "minimum": 0
+        },
+        "reach": {
+          "description": "How long the road takes from where the caravan stands (API-49): set on each road out of\nthe caravan's place, absent elsewhere and on the road.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReachView"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "terrain": {
           "description": "The predominant terrain.",
@@ -7537,6 +7591,76 @@
         }
       ]
     },
+    "TripLegView": {
+      "description": "One leg of the escort's trip (API-49).",
+      "type": "object",
+      "properties": {
+        "arrives": {
+          "description": "When the caravan gets to `to`.",
+          "$ref": "#/$defs/ClockView"
+        },
+        "miles": {
+          "description": "Miles still to go on this road.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "minutes": {
+          "description": "Minutes on the move, nights left out.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "nights": {
+          "description": "Nights spent before arriving, counted from the leg before.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "pace": {
+          "description": "The pace the plan goes at.",
+          "$ref": "#/$defs/Pace"
+        },
+        "road": {
+          "description": "The road id.",
+          "type": "string"
+        },
+        "to": {
+          "description": "The place the leg ends at; always one the party has discovered.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "road",
+        "to",
+        "pace",
+        "miles",
+        "minutes",
+        "nights",
+        "arrives"
+      ]
+    },
+    "TripView": {
+      "description": "The route the merchant's caravan travels from where it is to the escort's destination (API-49),\nleg by leg and with the day's distance shared across legs, as `ReachView` works it out.",
+      "type": "object",
+      "properties": {
+        "complete": {
+          "description": "Whether the legs reach the destination; false when they stop before an undiscovered place.",
+          "type": "boolean"
+        },
+        "legs": {
+          "description": "The legs in travel order. They stop before the first place the party hasn't discovered,\nso a trip never names one.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TripLegView"
+          }
+        }
+      },
+      "required": [
+        "legs",
+        "complete"
+      ]
+    },
     "TurnBudget": {
       "description": "What a creature has left of its turn in a fight: its action economy and movement. Owner and DM\nonly, like the options it comes with.",
       "type": "object",
@@ -7893,6 +8017,17 @@
         "today": {
           "description": "Miles the party can still travel today.",
           "$ref": "#/$defs/MilesToday"
+        },
+        "trip": {
+          "description": "The route to the escort's destination (API-49): while the contract is under way and the\nmerchant's caravan follows its route from a place on it.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TripView"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "unexplored": {
           "description": "Roads from a discovered place to one not yet found, in map file order.",

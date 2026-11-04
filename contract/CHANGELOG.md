@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.55 (2026-11-04)
+- Additive: travel plans on a player's world view (API-49, protocol §4.11). Each road out of the caravan's place, in `roads` or `unexplored`, carries an optional `reach` (`ReachView`: `pace`, `minutes`, `nights`, `arrives`). `WorldPlayer` carries an optional `trip` (`TripView`: `legs` of `TripLegView`, and `complete`) while an escort contract is under way and the NPC owner follows its route; the legs stop before the first undiscovered place. Both are worked out by `nat20-world` with the travel rule, on a copy of the world.
+- Fixtures whose player `get_state` stands in a place gain `reach` on its roads, and `trip` under an escort; the rest change by version.
+
 ## 1.0.0-dev.54 (2026-11-03)
 - Breaking (allowed before v1): `card_drawn`'s card words move from `text` to `card_text`. The event's own `text` and the variant's `text` were one JSON key, because `EventKind` is flattened into `Event`: the engine wrote the card's words over the rendered sentence, and no reader could parse a `card_drawn` line back into an `Event` (the game audit failed on the first one). The event's `text` is now the rendered sentence again ("A road card: … (choice / choice)").
   - Migration: read the card's words from `card_text`, or from the world view's `card`, as the game does.
