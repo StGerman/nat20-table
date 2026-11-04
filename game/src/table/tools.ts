@@ -903,6 +903,10 @@ export class DmTools {
     const world = (await this.dmState())?.world;
     if (!world) return notNow("there is no road in this adventure");
     if (world.card) return notNow("a road card waits for its word first");
+    if (step === "inn") {
+      const here = world.at.kind === "at" ? world.places.find((p) => p.id === (world.at as { place: string }).place) : undefined;
+      if (typeof here?.inn_cp !== "number") return notNow("there is no inn here: propose camp instead");
+    }
     this.table.road = { step };
     return {
       ok: true,
