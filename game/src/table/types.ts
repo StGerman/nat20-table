@@ -95,7 +95,12 @@ export type HumanPrompt =
   /** A road card waits for the human's word, asked last (AGT-80): a number, or Enter to go with the others. */
   | { kind: "card" }
   /** A choice for the human's new level (AGT-80): a number, or Enter for the recommended pick. */
-  | { kind: "level_up" };
+  | { kind: "level_up" }
+  /** The DM says the party moves on or settles for the night, and the human drives the caravan (AGT-80): Enter on the first line, or not yet. */
+  | { kind: "road" };
+
+/** What the DM may propose on the road (AGT-80, `propose_road`): the caravan moves on, or the day ends in camp or at the inn. */
+export type RoadStep = "move_on" | "camp" | "inn";
 
 /**
  * The human's seat (spec §3.4). The Ink UI implements it (step 11); scripted seats implement it
@@ -160,7 +165,9 @@ export type PlayerWake =
   /** A scene is ending: summarise it in a few sentences of fiction (AGT-6). */
   | "summary"
   /** A road card waits for its word (AGT-80): advice to the merchant or a vote, with choose_card. */
-  | "card";
+  | "card"
+  /** The DM says the party moves on or settles for the night, and it drives the caravan (AGT-80): travel or rest_night, or not yet. */
+  | "road";
 
 /**
  * An AI player (spec §3.2). It acts only through its tools, which are bound to its own handle.

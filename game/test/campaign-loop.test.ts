@@ -10,6 +10,7 @@ import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
 import { cardChoices, roadChoices } from "../src/table/choices.ts";
 import { TableLoop } from "../src/table/loop.ts";
+import { DmTools } from "../src/table/tools.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
 import { DM_ROAD_PROMPT } from "../src/agents/dm.ts";
@@ -259,6 +260,127 @@ test("a saved party takes up the world where it left it: the loop follows the ca
     assert.ok(state.result?.cmd === "get_state" && state.result.state.view === "dm");
     assert.deepEqual(state.result.state.world?.at, { kind: "at", place: "crossing_inn" });
     for (const blade of state.result.state.world!.escort!.contract.blades) assert.equal(blade.paid_cp, 200, `${blade.handle}: one advance`);
+  } finally {
+    t.close();
+  }
+});
+
+test("the party goes to sleep in words: the DM proposes the night, and the human who drives ends the day with Enter", async () => {
+  // The human never opens the options: they only say what Bren does (Stas's run, 2026-11-04).
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => (prompt.kind === "explore" ? { kind: "text", text: "I crawl under the wagon and sleep." } : ScriptedSeat.pass(prompt, s)));
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    let proposed = 0;
+    const dm = new ScriptedDm({
+      table_turn: async (tools) => {
+        proposed += 1;
+        const said = await tools.proposeRoad("camp");
+        assert.ok(said.ok, said.text);
+      },
+    });
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    const report = await loop.run("vale_town");
+    assert.equal(report.ended, "the day limit: day 1 is over", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    assert.equal(proposed, 1, "one proposal, one night");
+    const rest = t.requests().filter((r) => r.cmd === "rest_night");
+    assert.deepEqual(rest.map((r) => [r.actor, r.where]), [["bren", "camp"]], "the human ended the day, never the DM");
+    const asked = seat.shown.find((e) => e.kind === "options" && e.title === "The night");
+    assert.ok(asked?.kind === "options" && asked.preset === 1 && asked.lines.at(-1)?.endsWith("Not yet"), JSON.stringify(asked));
+    assert.ok(dm.briefings.some((b) => b.wake === "road" && b.briefing.includes("The night passed")));
+  } finally {
+    t.close();
+  }
+});
+
+test("with no human, the DM's proposed night wakes an AI player who drives, and it ends the day", async () => {
+  const t = await testTable({ seed: 1, noHuman: true, players: ["maren"] });
+  try {
+    const dm = new ScriptedDm({ table_turn: async (tools) => void (await tools.proposeRoad("camp")) });
+    const maren = new ScriptedPlayer("maren");
+    const loop = new TableLoop({ table: t.table, dm, players: [maren], maxSteps: 200, campaign: { party: ["maren"], dayLimit: 1 } });
+    const report = await loop.run("vale_town");
+    assert.equal(report.ended, "the day limit: day 1 is over", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    assert.ok(maren.briefings.some((b) => b.wake === "road" && b.briefing.includes("rest_night with where camp")));
+    assert.deepEqual(t.requests().filter((r) => r.cmd === "rest_night").map((r) => r.actor), ["maren"]);
+  } finally {
+    t.close();
+  }
+});
+
+test("the DM can't propose a night in a fight, twice, or in an adventure without a road", async () => {
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
+  try {
+    const tools = new DmTools(t.table);
+    const off = await tools.proposeRoad("camp");
+    assert.ok(!off.ok && off.text.includes("no road"), off.text);
+    t.table.road = { step: "camp" };
+    const twice = await tools.proposeRoad("inn");
+    assert.ok(!twice.ok && twice.text.includes("already"), twice.text);
+  } finally {
+    t.close();
+  }
+});
+
+test("the party says it moves on: the DM proposes it, and the human who drives takes the road with Enter", async () => {
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => (prompt.kind === "explore" ? { kind: "text", text: "Right then, let's go." } : ScriptedSeat.pass(prompt, s)));
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    let moved = false;
+    const dm = new ScriptedDm({
+      table_turn: async (tools) => {
+        const said = await tools.proposeRoad(moved ? "camp" : "move_on");
+        assert.ok(said.ok, said.text);
+        moved = true;
+      },
+    });
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    const report = await loop.run("vale_town");
+    assert.equal(report.ended, "the day limit: day 1 is over", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    assert.equal(t.requests().filter((r) => r.cmd === "travel")[0]?.actor, "bren", "the human moved the caravan on");
+    const asked = seat.shown.find((e) => e.kind === "options" && e.title === "The road");
+    assert.ok(asked?.kind === "options" && asked.lines[0]?.includes("Move on with the caravan"), JSON.stringify(asked));
+  } finally {
+    t.close();
+  }
+});
+
+test("a line on screen is taken by its name typed out, and by its number while the DM's question is open", async () => {
+  // Stas's run, 2026-11-04: the DM asked a question, /options listed the road, and "11" and
+  // "Move on with the caravan" both reached the DM as words, so the caravan never left.
+  // Each answer is asked for once: list the options, then name the road; once the DM asks, list them
+  // again and answer with the camp line's number.
+  let listed = false;
+  let moved = false;
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind !== "explore" && prompt.kind !== "answer") return ScriptedSeat.pass(prompt, s);
+    if (moved && prompt.kind === "explore") return { kind: "text", text: "I wait." };
+    if (!listed) {
+      listed = true;
+      return { kind: "command", name: "options" };
+    }
+    listed = false;
+    if (!moved) {
+      moved = true;
+      return { kind: "text", text: "move on with the caravan." };
+    }
+    const camp = s.choices.find((c) => c.label === "Make camp for the night");
+    return { kind: "text", text: camp ? String(camp.number) : "I wait." };
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    let asked = false;
+    const dm = new ScriptedDm({
+      table_turn: async (tools) => {
+        if (asked || !t.requests().some((r) => r.cmd === "travel")) return;
+        asked = true;
+        await tools.askHuman("Ready to stop for the night?");
+      },
+    });
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    const report = await loop.run("vale_town");
+    assert.equal(report.ended, "the day limit: day 1 is over", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    assert.equal(t.requests().filter((r) => r.cmd === "travel")[0]?.actor, "bren", "the typed name moved the caravan");
+    assert.equal(t.requests().filter((r) => r.cmd === "rest_night")[0]?.actor, "bren", "the number answered the question as the line");
   } finally {
     t.close();
   }
