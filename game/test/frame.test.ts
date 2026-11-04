@@ -169,6 +169,19 @@ test("a scene start puts a divider in the story and its number in the header, an
   }
 });
 
+test("on the road a place's scene puts its name in the divider and no scene count in the header", async () => {
+  // Stas's Fair in Wend run, 2026-11-04: "Scene 2 of 4" after Wendford looked as if the scenes ran backwards.
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), title: "Fair in Wend", now: () => 1_000_000 });
+  const { stdout } = startAt(seat, 124, 40);
+  try {
+    seat.place("Wendford");
+    await until("the divider", () => stdout.last.includes("— Wendford —"));
+    assert.ok(!stdout.last.split("\n")[0].includes("Scene"), stdout.last.split("\n")[0]);
+  } finally {
+    seat.stop();
+  }
+});
+
 test("under 40 columns or 16 rows the frame is one line asking for a bigger window, and the input row still works", async () => {
   const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
   const { stdin, stdout } = startAt(seat, 36, 20);

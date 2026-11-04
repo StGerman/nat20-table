@@ -180,6 +180,16 @@ export class InkSeat implements Seat {
     this.add([{ tone: "status", text: `— Scene ${number} of ${of} —` }]);
   }
 
+  /**
+   * A place's scene starts on the road (AGT-80): the caravan goes where the party takes it, so a
+   * scene's number in the pack would run in no order. The story's divider names the place, and the
+   * header drops the scene count: its game day and time of day say where in the journey the table is.
+   */
+  place(title: string): void {
+    this.update({ scene: undefined, started: this.view.started ?? this.now() });
+    this.add([{ tone: "status", text: `— ${title} —` }]);
+  }
+
   /** A line from the run itself (who plays, the run folder) into the story, instead of printing over the frame. */
   note(text: string): void {
     this.add([{ tone: "status", text }]);
