@@ -80,7 +80,7 @@ test("typed lines become intents by what the table waits for", () => {
   assert.deepEqual(readLine("/Sheet", turn), { kind: "intent", intent: { kind: "command", name: "sheet" } });
   assert.deepEqual(readLine("/help", turn), { kind: "help" });
   assert.deepEqual(readLine("/usage", turn), { kind: "intent", intent: { kind: "command", name: "usage" } });
-  assert.match((readLine("/dance", turn) as { text: string }).text, /^There is no \/dance\. Commands: \/help \/panel \/sheet \/where \/map \/options \/log \/usage \/pause \/suggest \/quit$/);
+  assert.match((readLine("/dance", turn) as { text: string }).text, /^There is no \/dance\. Commands: \/options \/sheet \/where \/map \/log \/usage \/pause \/suggest \/panel \/help \/quit$/);
   assert.deepEqual(readLine("/map", turn), { kind: "intent", intent: { kind: "command", name: "map" } });
   assert.deepEqual(readLine("   ", turn), { kind: "empty" });
   // A reaction: y or n, or a reaction's number; words don't answer it.
@@ -479,5 +479,55 @@ test("on the real loop, Esc in a follow-up pick goes back to the turn's options,
   } finally {
     unsubscribe();
     t.close();
+  }
+});
+
+test("a bare / opens the command picker: letters narrow it, ↑/↓ move, Tab completes, Enter runs, Esc closes (AGT-82)", async () => {
+  const seat = new InkSeat("bren");
+  seat.show({ kind: "options", lines: ["1. Longsword: goblin_1", "2. End turn"], choices: [] });
+  const asked = seat.ask({ kind: "combat_turn" });
+  seat.type("/");
+  assert.equal(seat.commandPicker?.matches[0].name, "options");
+  seat.move(1);
+  assert.equal(seat.commandPicker?.cursor, 1, "the arrows move the picker, not the options");
+  assert.equal(seat.getView().highlight, undefined);
+  seat.type("s");
+  assert.deepEqual(seat.commandPicker?.matches.map((m) => m.name), ["sheet", "suggest"]);
+  assert.equal(seat.commandPicker?.cursor, 0, "a typed letter lights the first match again");
+  seat.move(-1);
+  seat.edit({ kind: "complete" });
+  assert.equal(seat.getView().draft, "/suggest", "Tab puts the lit command in the line");
+  seat.edit({ kind: "clear" });
+  seat.type("/opt");
+  assert.deepEqual(seat.commandPicker?.matches.map((m) => m.name), ["options"]);
+  assert.equal(seat.closeCommands(), true, "Esc closes the picker");
+  assert.equal(seat.commandPicker, undefined);
+  assert.equal(seat.getView().draft, "/opt", "and keeps what is typed");
+  assert.equal(seat.closeCommands(), false, "a second Esc goes on to clear the line");
+  seat.edit({ kind: "backspace" });
+  assert.ok(seat.commandPicker, "a changed draft opens it again");
+  seat.edit({ kind: "clear" });
+  seat.type("/o\r");
+  assert.deepEqual(await asked, { kind: "command", name: "options" }, "Enter runs the lit command");
+  assert.equal(seat.commandPicker, undefined);
+});
+
+test("on a terminal, the command picker stands over the input row (AGT-82)", async () => {
+  const seat = new InkSeat("bren");
+  const { stdin, stdout } = startOnFakeTerminal(seat);
+  try {
+    void seat.ask({ kind: "explore" });
+    stdin.press("/");
+    await until("the picker", () => stdout.last.includes("Commands · ↑/↓ move"));
+    assert.match(stdout.last, /❯ \/options +your numbered options now/);
+    assert.match(stdout.last, / {2}\/sheet +your character sheet/);
+    stdin.press("sh");
+    await until("the narrowed picker", () => !stdout.last.includes("/options"));
+    assert.match(stdout.last, /❯ \/sheet/);
+    stdin.press("\u001b");
+    await until("the picker closed", () => !stdout.last.includes("Commands · ↑/↓ move"));
+    assert.match(stdout.last, /> \/sh/);
+  } finally {
+    seat.stop();
   }
 });
