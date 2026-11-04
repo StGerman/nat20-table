@@ -7,19 +7,22 @@ import type { HumanPrompt, PlayerIntent } from "../table/types.ts";
 export const COMMANDS = ["sheet", "where", "map", "options", "log", "usage", "pause", "suggest", "quit"] as const;
 export type CommandName = (typeof COMMANDS)[number];
 
-/** What each command does, for `/help`. */
+/**
+ * What each command does: the one registry `/help` and the slash-command picker read (AGT-82). Its
+ * order is theirs: /options and /sheet first, the two a first-time player needs (scope §6.6).
+ */
 export const COMMAND_HELP: Record<CommandName | "help" | "panel", string> = {
+  options: "your numbered options now",
   sheet: "your character sheet",
   where: "places and the creatures you can see, with distances",
-  map: "the places you know, the roads between them and where the caravan is",
-  options: "your numbered options now",
+  map: "the places you know, the roads, and where the caravan is",
   log: "the last engine lines, with their roll ids",
   usage: "tokens and API-equivalent cost so far, per agent",
   pause: "AI players wait until you type /pause again",
-  suggest: "turn the three suggested moves out of a fight off, or on again",
-  quit: "end the run (the run folder keeps everything so far)",
+  suggest: "turn the three suggested moves out of a fight off or on",
   panel: "fold the situation panel to one line, or open it again",
-  help: "this list",
+  help: "every command and key",
+  quit: "end the run (the run folder keeps everything so far)",
 };
 
 /** A typed line as the seat reads it: an intent for the loop, help for the screen, or a mistake. */
@@ -38,7 +41,7 @@ export function readLine(line: string, prompt: HumanPrompt | undefined): Typed {
     if (name === "help" || name === "?") return { kind: "help" };
     if (name === "panel") return { kind: "panel" };
     if ((COMMANDS as readonly string[]).includes(name)) return { kind: "intent", intent: { kind: "command", name: name as CommandName } };
-    return { kind: "error", text: `There is no /${name}. Commands: ${["help", "panel", ...COMMANDS].map((c) => `/${c}`).join(" ")}` };
+    return { kind: "error", text: `There is no /${name}. Commands: ${Object.keys(COMMAND_HELP).map((c) => `/${c}`).join(" ")}` };
   }
   if (!prompt) return { kind: "error", text: "The table is busy: wait for your prompt. A command typed now is answered when it comes." };
   if (prompt.kind === "paused") return { kind: "error", text: "Paused: only commands until /pause again." };

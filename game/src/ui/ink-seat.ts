@@ -8,7 +8,8 @@
 // waits on the human, the action zone holds the turn block (the budget and the numbered options,
 // AGT-36), then the input row: a line editor (editor.ts, AGT-48) whose placeholder is the
 // prompt's hint, or while no prompt is open a braille spinner with who is thinking; mistakes show
-// on the row, not in the story. The situation panel stands right of the story from 124 columns,
+// on the row, not in the story. A bare `/` on the row lists the commands over it, narrowed by
+// what is typed after it (commands.ts, AGT-82). The situation panel stands right of the story from 124 columns,
 // and folds to two rows above the action zone below that. The loop answers the slash commands
 // (`/sheet`, `/where`, `/options`, `/log`, `/usage`, `/pause`, `/quit`); `/help` and `/panel` are
 // answered here. The answers to /sheet, /where, /log, /usage and /help stand over the story as
@@ -22,6 +23,7 @@ import type { Situation } from "../table/situation.ts";
 import type { HumanPrompt, PlayerIntent, Seat, SuggestUpdate, TableEvent } from "../table/types.ts";
 import { edit, editFor, EMPTY, type Edit } from "./editor.ts";
 import { COMMAND_HELP, promptHint, readLine, type Typed } from "./input.ts";
+import { commandMatches, PICKER_ROWS, pickerRows, type CommandEntry } from "./commands.ts";
 import { actionRows, frameLayout, freshText, headerText, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, storyRows, storyWindow, type Scroll } from "./frame.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette, type Style } from "./palette.ts";
@@ -73,6 +75,13 @@ export interface SeatView {
   refusal?: string;
   /** The option ↑/↓ have lit (AGT-48 Q1): Enter on an empty line plays it. */
   highlight?: number;
+  /**
+   * The slash-command picker (AGT-82), which stands while the draft is a bare `/name` being typed:
+   * `commandCursor` is the row ↑/↓ have lit among the matches; `commandsShut` is set by Esc. Both
+   * reset whenever the draft changes.
+   */
+  commandCursor?: number;
+  commandsShut?: boolean;
   /**
    * The suggestions picker (AGT-49, input-line design §7.5): three moves and a last row for your
    * own words, where the cursor starts. `taken`: the suggestion Tab put in the draft.
@@ -208,6 +217,21 @@ export class InkSeat implements Seat {
   /** Whether the picker stands in the action zone now: one list owns the digits, so options hide it (§7.5). */
   private get picking(): Suggestions | undefined {
     return this.view.prompt && !this.view.options ? this.view.suggestions : undefined;
+  }
+
+  /** The slash-command picker while it stands (AGT-82): the commands the draft names, and the lit one. */
+  get commandPicker(): { matches: CommandEntry[]; cursor: number } | undefined {
+    if (this.view.finale || this.view.commandsShut) return undefined;
+    const matches = commandMatches(this.view.draft);
+    if (!matches) return undefined;
+    return { matches, cursor: Math.min(this.view.commandCursor ?? 0, Math.max(0, matches.length - 1)) };
+  }
+
+  /** Esc: closes the slash-command picker and keeps what is typed; false when none stood. */
+  closeCommands(): boolean {
+    if (!this.commandPicker) return false;
+    this.update({ commandsShut: true });
+    return true;
   }
 
   /** Esc: closes the suggestions picker; false when none was open. */
@@ -395,6 +419,13 @@ export class InkSeat implements Seat {
       this.cancelSuggest();
       this.cancelSuggest = undefined;
     }
+    // Tab puts the lit command in the line, without running it (AGT-82).
+    const commands = this.commandPicker;
+    if (change.kind === "complete" && commands && commands.matches.length > 0) {
+      const text = `/${commands.matches[commands.cursor].name}`;
+      this.update({ draft: text, cursor: text.length, notice: undefined });
+      return;
+    }
     const picking = this.picking;
     // Tab puts the next suggestion in the draft, while the draft is empty or still an unedited one (§7.5).
     if (change.kind === "complete" && picking && !this.view.draft.startsWith("/") && (!this.view.draft || this.view.draft === picking.taken?.text)) {
@@ -420,6 +451,9 @@ export class InkSeat implements Seat {
   }
 
   enter(): void {
+    // Enter on the slash-command picker runs the lit command (`/o` → `/options`, AGT-82).
+    const commands = this.commandPicker;
+    if (commands && commands.matches.length > 0) this.update({ draft: `/${commands.matches[commands.cursor].name}` });
     const picking = this.picking;
     // Enter on an empty line sends the suggestion under the cursor; on "Your own…" it sends nothing.
     if (picking && !this.view.draft.trim() && picking.cursor < picking.rows.length) {
@@ -521,6 +555,13 @@ export class InkSeat implements Seat {
    * human (AGT-48 Q1). The first press lights the first (↓) or the last (↑) option; it wraps round.
    */
   move(step: -1 | 1): void {
+    // The slash-command picker, while it stands, takes the arrows first (AGT-82).
+    const commands = this.commandPicker;
+    if (commands) {
+      const n = commands.matches.length;
+      if (n > 0) this.update({ commandCursor: (commands.cursor + step + n) % n });
+      return;
+    }
     // The picker, while it stands: the cursor goes round its rows, "Your own…" included (§7.5).
     const picking = this.picking;
     if (picking && !this.view.draft) {
@@ -609,7 +650,9 @@ export class InkSeat implements Seat {
   }
 
   private update(change: Partial<SeatView>): void {
-    this.view = { ...this.view, ...change };
+    // A changed draft starts the slash-command picker over: its first match lit, open again.
+    const fresh = change.draft !== undefined && change.draft !== this.view.draft ? { commandCursor: undefined, commandsShut: undefined } : {};
+    this.view = { ...this.view, ...fresh, ...change };
     for (const listener of this.listeners) listener();
   }
 }
@@ -666,8 +709,9 @@ export function helpText(): string {
     "",
     "Keys:",
     "  Enter      send the line",
+    "  /          on an empty line, the commands to choose from; type to narrow",
     "  Tab        complete a /command, or put the next suggestion in the line",
-    "  ↑/↓        light an option or a suggestion; Enter plays or sends it",
+    "  ↑/↓        light a command, an option or a suggestion; Enter runs it",
     "  Esc        close this, go back from a sub-list, or clear the line",
     "  PgUp/PgDn  scroll the story, or this",
     "  End        back to the newest lines",
@@ -782,6 +826,9 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const card = text && choice ? { label: choice.label.replace(/…$/, ""), cost: costText(choice.about?.cost), text } : undefined;
   const cardLine = card && layout.mode === "narrow" ? wrapText(`${card.label}: ${card.text}`, width, 0).split("\n")[0] : undefined;
   const inputH = view.draft ? rowsFor(`> ${view.draft} ${picked ? `  ${picked.line}` : ""}`, width, 3) : 1;
+  // The slash-command picker over the input row (AGT-82), cut to leave the story its rows.
+  const commands = seat.commandPicker;
+  const commandRows = commands ? pickerRows(view.draft, commands.matches, commands.cursor, Math.max(1, Math.min(PICKER_ROWS, size.rows - 18))) : [];
   const notice = view.notice ? wrapText(view.notice.text, width, 0).split("\n").slice(0, 2) : [];
   // Paused, the panel is a frame of the last moment: marked stale until the game goes on (screen 10).
   const paused = view.prompt?.kind === "paused";
@@ -793,7 +840,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
       ? // The bar and your own line, with a fallen ally and a foe in reach on it (AGT-47 C1).
         foldedRows(view.situation, { stale, glyphs: seat.glyphs, lit }).slice(0, NARROW_PANEL_ROWS)
       : [];
-  const below = 1 + (panel.length > 0 ? panel.length + 1 : 0) + notice.length + (cardLine ? 1 : 0) + inputH;
+  const below = 1 + (panel.length > 0 ? panel.length + 1 : 0) + notice.length + (cardLine ? 1 : 0) + commandRows.length + inputH;
   // The action zone: what is asked of the human now, above the turn block (screens 4, 5, 7 to 10).
   const said = (text: string, style: Style): Row[] => wrapText(text, width, 0).split("\n").map((row) => [{ text: row, style }]);
   const reaction = view.reaction;
@@ -835,6 +882,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     if (overlayRows && key.pageDown) return setOverlayTop(Math.min(overlayMax, overlayTop + Math.max(1, overlayRoom - 1)));
     if (key.pageUp) return setScroll(page(scroll, -1, story, storyH, view.lines.length));
     if (key.pageDown) return setScroll(page(scroll, 1, story, storyH, view.lines.length));
+    if (key.escape && seat.closeCommands()) return;
     if (key.escape && seat.closeOverlay(layout.mode === "narrow")) return;
     if (key.escape && seat.closeSuggestions()) return;
     if (key.escape && seat.back()) return;
@@ -927,6 +975,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     ...(action.length > 0 ? [...action.map((row, i) => line(row, `a${i}`)), blank("igap")] : []),
     ...notice.map((text, i) => h(Text, { key: `n${i}`, wrap: "truncate-end", ...textProps(view.notice!.error ? TONE_STYLE.error : TONE_STYLE.status, palette) }, text)),
     ...(cardLine ? [h(Text, { key: "card", wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, cardLine)] : []),
+    ...commandRows.map((row, i) => line(row, `c${i}`)),
     inputRow(),
   ];
   const headerRow = h(Text, { key: "header", wrap: "truncate-end", dimColor: true }, header);
