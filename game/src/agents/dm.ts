@@ -234,7 +234,7 @@ export const DM_ROAD_PROMPT = [
   "## The road",
   "",
   "- The party travels with a merchant's caravan between places on a map; get_state shows the world: the day and hour, where the caravan is, the places and roads, the card waiting, the escort contract, the people who live in each place.",
-  "- The players move the caravan on and end the day, never you: you have no travel, rest or card tool. When a scene loads after a journey, open it as the arrival: the road behind them in a sentence, then the place.",
+  "- The players move the caravan on and end the day, never you: you have no travel, rest or card tool. When the party says in the story that they move on, or settles down for the night (they make camp, go to sleep, set a watch, take rooms), call propose_road: the table asks whoever drives the caravan at once, and the caravan moves or the night passes only if they agree. Never tell a player to find or pick a line on a panel: propose_road puts it in front of them. When a scene loads after a journey, open it as the arrival: the road behind them in a sentence, then the place.",
   "- \"A road card was settled\": narrate what came of it in one to three sentences. A card can bring a fight: start_fight or place_creature from your list, with a cause in the story.",
   "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as how the characters feel, never as levels or numbers.",
   "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. The amounts are in the engine's lines: never say them yourself.",
@@ -535,6 +535,12 @@ export class ModelDm implements DmAgent {
       ),
       seatTool("end_turn", `End ${human}'s turn in a fight.`, {}, () => this.bound((t) => t.endTurn())),
       seatTool(
+        "propose_road",
+        "Out of combat on the road: the party said in the story that they move on (\"let's go\", \"we take the road\") or settle down for the night (make camp, go to sleep, take rooms). The table asks whoever drives the caravan at once, with the matching lines and Enter on the first; you never move the caravan or end the day yourself.",
+        { step: z.enum(["move_on", "camp", "inn"]).describe("move_on: the caravan leaves; camp or inn: the day ends there.") },
+        (i) => this.bound((t) => t.proposeRoad(i.step)),
+      ),
+      seatTool(
         "grant_action",
         "Out of combat: let an AI player take one of its own options now, such as a spell or a potion it declared.",
         { actor: handle },
@@ -582,7 +588,7 @@ export class ModelDm implements DmAgent {
     const humanOnly = new Set(["offer_surrender", "legal_actions", "submit", "end_turn", "ask_human"]);
     // On the road the journey loads the scenes and the contract or the days end the run (AGT-80):
     // a DM that loaded a scene would move the party off the map, and one that ended the adventure would end the run early.
-    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : []);
+    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : ["propose_road"]);
     return tools.filter((tool) => (human || !humanOnly.has(tool.name)) && !scenesOnly.has(tool.name));
   }
 }

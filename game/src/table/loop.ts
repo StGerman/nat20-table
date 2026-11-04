@@ -1218,6 +1218,64 @@ export class TableLoop {
     }
   }
 
+  /**
+   * The DM said the party moves on or settles for the night (AGT-80, `propose_road`); the DM never
+   * moves the caravan or ends the day (design S2), so whoever drives it is asked: the human when they
+   * drive, with the road's lines for that step and Enter on the one proposed; else the AI player who
+   * owns the caravan, or the first AI player when an NPC owns it. "Not yet" goes back to the DM. The
+   * leg or night that follows is told on the next step, as when a driver picks it from the options.
+   */
+  private async answerRoad(): Promise<void> {
+    const { step } = this.table.road!;
+    this.table.road = undefined;
+    if (this.table.inCombat || !this.campaign) return;
+    const owner = (await this.dmWorld())?.caravan.owner;
+    if (owner === undefined) return;
+    const human = this.table.human;
+    const npcOwned = owner.includes(":");
+    const rest = step !== "move_on";
+    if (human && (owner === human || npcOwned)) {
+      const state = await this.humanState();
+      if (state?.view !== "player" || !state.world?.drives) return;
+      const lines = roadChoices(state.world, 1).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel"));
+      const choices: Choice[] = [...lines.map((c, i) => ({ ...c, number: i + 1 })), { number: lines.length + 1, label: "Not yet" }];
+      const preset = (choices.findIndex((c) => c.act?.kind === "rest_night" && c.act.where === step) + 1) || 1;
+      await this.table.flush();
+      for (;;) {
+        if (this.table.ended) return;
+        this.table.show({ kind: "options", title: rest ? "The night" : "The road", lines: choiceLines(choices), choices, preset });
+        const intent = await this.ask({ kind: "road" });
+        if (!intent) return;
+        const picked = intent.kind === "option" ? choices.find((c) => c.number === intent.number) : undefined;
+        if (!picked) {
+          this.table.show({ kind: "info", title: rest ? "The night" : "The road", text: `Pick 1 to ${choices.length}, or press Enter for the one shown.` });
+          continue;
+        }
+        if (!picked.act) {
+          this.table.log("intent", `${human} picked: not yet`, human);
+          this.table.tellDm(`${human} says not yet: ${rest ? "the party stays up" : "the caravan stays where it is"}. Go on from there.`);
+          return;
+        }
+        const outcome = await this.humanAct(picked.act);
+        if (!outcome.ok) {
+          await this.humanRejected(outcome);
+          continue;
+        }
+        this.table.log("intent", `${human} picked: ${picked.label}`, human);
+        this.table.tellDm(`${human} took an option: ${picked.label}`);
+        return;
+      }
+    }
+    const driver = npcOwned ? this.table.players[0] : owner;
+    const agent = driver === undefined ? undefined : this.agents.get(driver);
+    if (!agent) return;
+    this.table.resetRetries(agent.handle);
+    const ask = rest
+      ? `The party is settling down for the night, as the DM tells it. You drive the caravan: end the day with rest_night with where ${step}, or say in one line with say why your character keeps going.`
+      : "The party is ready to move on, as the DM tells it. You drive the caravan: move it on with travel, or say in one line with say why your character waits.";
+    await this.wakePlayer(agent, "road", await this.playerBriefing(agent.handle, ask));
+  }
+
   /** The fight is over: the DM wraps it up, and the loop is back in explore mode (spec §3.3 step 7). */
   private async combatOver(event: Event): Promise<void> {
     // Its last blow or a surrender gets its reactions too (party talk R1).
@@ -1308,13 +1366,28 @@ export class TableLoop {
     await this.settle();
   }
 
+  /**
+   * Words that name a line on screen are that line: the line's own text, typed out, or its number
+   * while the DM's question is open (an answer is words otherwise, so a number there would reach the
+   * DM as text and the line would never be taken). Only the lines the human was shown count.
+   */
+  private typedOption(intent: PlayerIntent): PlayerIntent {
+    if (intent.kind !== "text") return intent;
+    const text = intent.text.trim().replace(/[.!]+$/, "").toLowerCase();
+    const byNumber = this.table.question && /^\d+$/.test(text) ? this.shown.find((c) => c.number === Number(text)) : undefined;
+    const byLabel = this.shown.find((c) => c.label.toLowerCase() === text);
+    const line = byNumber ?? byLabel;
+    return line ? { kind: "option", number: line.number } : intent;
+  }
+
   private async exploreRoundBody(human: Handle): Promise<void> {
     await this.table.flush();
     this.top = this.shown = [];
     let line = "";
     for (;;) {
-      const intent = await this.ask(this.table.question ? { kind: "answer" } : this.shown !== this.top ? { kind: "pick" } : { kind: "explore" });
-      if (!intent) return;
+      const asked = await this.ask(this.table.question ? { kind: "answer" } : this.shown !== this.top ? { kind: "pick" } : { kind: "explore" });
+      if (!asked) return;
+      const intent = this.typedOption(asked);
       if (intent.kind === "text") {
         this.table.question = undefined;
         await this.table.declare(human, intent.text);
@@ -1938,6 +2011,8 @@ export class TableLoop {
     const said = await this.wakeDmOnce(wake, events, ...lines);
     // A surrender the DM offered is answered at once, before anything else reaches the engine (AGT-30).
     if (this.table.surrender && !this.table.surrender.words && !this.table.ended) await this.answerSurrender();
+    // So is a road step it proposed (AGT-80): whoever drives the caravan takes it, or not yet.
+    if (this.table.road && !this.table.ended) await this.answerRoad();
     return said;
   }
 
