@@ -1238,6 +1238,10 @@ export class TableLoop {
       const state = await this.humanState();
       if (state?.view !== "player" || !state.world?.drives) return;
       const lines = roadChoices(state.world, 1).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel"));
+      if (lines.length === 0) {
+        this.table.tellDm(`${human} can't ${rest ? "end the day" : "move the caravan on"} now: nothing on the road offers it. Go on in fiction.`);
+        return;
+      }
       const choices: Choice[] = [...lines.map((c, i) => ({ ...c, number: i + 1 })), { number: lines.length + 1, label: "Not yet" }];
       const preset = (choices.findIndex((c) => c.act?.kind === "rest_night" && c.act.where === step) + 1) || 1;
       await this.table.flush();
