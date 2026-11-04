@@ -156,23 +156,87 @@ export function caravanAt(world: WorldPlayer): string {
   return `${world.at.road.replace(/_/g, " ")}, ${world.at.miles_left} mi${toward ? ` to ${name(toward)}` : " left"}`;
 }
 
+/** Time on the move in words (AGT-83): "under half an hour", "about an hour", "about 5 hours". Never minutes. */
+export function travelTime(minutes: number): string {
+  if (minutes < 30) return "under half an hour";
+  if (minutes < 60) return "under an hour";
+  const hours = Math.round(minutes / 60);
+  return hours === 1 ? "about an hour" : `about ${hours} hours`;
+}
+
+/** When the caravan gets somewhere, as a watch (AGT-83): "afternoon" today, "tomorrow morning", "day 5, evening". */
+export function arrivalWords(arrives: { day: number; watch: string }, today: number): string {
+  const watch = arrives.watch.replace(/_/g, " ");
+  if (arrives.day === today) return watch;
+  return arrives.day === today + 1 ? `tomorrow ${watch}` : `day ${arrives.day}, ${watch}`;
+}
+
 /**
- * `/map` (AGT-79): a text sketch of the places the party knows and the roads between them, with
- * the caravan marked. Only the player's own world view goes in, so undiscovered places stay off it
- * (a road to one shows as a road to somewhere unknown).
+ * `/map` and the side pane (AGT-83, B2 of the travel planner): the way ahead in travel order. With
+ * an escort under way, the route from here to the destination, each next stop with its rough time
+ * and the watch the caravan gets there, as the engine worked them out (`trip`, `reach`; API-49);
+ * then the places off the route, nearest first, an unknown end as "? somewhere new". Without a
+ * route, the roads out of here, nearest first. Times are words and watches only, never a clock.
+ * `wide` is `/map`'s form; the pane's fits 49 columns. Only the player's own world view goes in.
  */
-export function mapLines(world: WorldPlayer): string[] {
+export function mapLines(world: WorldPlayer, form: "wide" | "pane" = "wide"): string[] {
+  const wide = form === "wide";
   const name = (id: string) => world.places.find((p) => p.id === id)?.name ?? id.replace(/_/g, " ");
+  const today = world.clock.day;
+  const row = (left: string, right: string, width = wide ? 26 : 20) => (right ? `${left.padEnd(width)} ${right}` : left);
+  const escort = world.escort && !world.escort.done ? world.escort : undefined;
+  const lines = [[`Day ${today}`, world.clock.watch.replace(/_/g, " "), ...(escort ? [`to ${name(escort.destination)}`] : [])].join(" · "), ""];
   const here = world.at.kind === "at" ? world.at.place : undefined;
-  const lines = [`${dayLine(world)}. The caravan: ${here ? `at ${name(here)}` : `on the ${caravanAt(world)}`}.`];
-  for (const place of world.places) {
-    const about = [place.kind, ...(place.market ? ["market"] : []), ...(typeof place.inn_cp === "number" ? ["inn"] : [])].join(", ");
-    lines.push(`${place.id === here ? "▶" : " "} ${place.name} (${about})`);
-    for (const road of world.roads.filter((r) => r.from === place.id || r.to === place.id)) {
-      const other = road.from === place.id ? road.to : road.from;
-      lines.push(`    ${road.id.replace(/_/g, " ")} · ${road.miles} mi · ${name(other)}`);
+  const about = (id: string) => {
+    const p = world.places.find((x) => x.id === id);
+    return p ? [p.kind, ...(p.market ? ["market"] : []), ...(typeof p.inn_cp === "number" ? ["inn"] : [])].join(", ") : "";
+  };
+  const roadWords = (r: { id: string; miles: number; terrain: string; good_road: boolean }) =>
+    wide ? `${r.id.replace(/_/g, " ")} · ${r.miles} mi · ${r.good_road ? "good road" : `${r.terrain} country`}` : `${r.miles} mi`;
+  const legTime = (minutes: number, nights: number) =>
+    nights === 0 ? travelTime(minutes) : wide ? `${travelTime(minutes)}, ${nights === 1 ? "one night" : `${nights} nights`} out` : `${travelTime(minutes)}, overnight`;
+  if (here) lines.push(row(`▶ ${name(here)}`, wide ? `you are here · ${about(here)}` : ""));
+  else lines.push(`▶ on the ${caravanAt(world)}`);
+  const trip = world.trip ?? undefined;
+  const onRoute = new Set<string>(here ? [here] : []);
+  const legs = trip?.legs ?? [];
+  for (const [i, leg] of legs.entries()) {
+    const road = world.roads.find((r) => r.id === leg.road);
+    const last = i === legs.length - 1;
+    const end = last && trip!.complete ? "◎" : "●";
+    lines.push(row(`│ ${road ? roadWords(road) : `${leg.miles} mi`}`, legTime(leg.minutes, leg.nights), wide ? 38 : 20));
+    lines.push(row(`${end} ${name(leg.to)}`, `${wide ? "arrive " : ""}${arrivalWords(leg.arrives, today)}${wide && last && trip!.complete ? " · the contract ends" : ""}`));
+    onRoute.add(leg.to);
+  }
+  if (trip && !trip.complete) lines.push("│ … then on, by roads you don't know yet");
+  if (wide && legs.length > 0) {
+    const miles = legs.reduce((n, l) => n + l.miles, 0);
+    const nights = legs.reduce((n, l) => n + l.nights, 0);
+    const lastLeg = legs[legs.length - 1];
+    const when = nights === 0 && lastLeg.arrives.day === today ? "there by tonight" : `${nights === 1 ? "a night" : `${nights} nights`} on the way, there ${arrivalWords(lastLeg.arrives, today)}`;
+    lines.push("", `${miles} mi to go · ${travelTime(legs.reduce((n, l) => n + l.minutes, 0))} on the road`, trip!.complete ? when : "the rest of the way is new to you");
+  }
+  // Off the route: every road from a place on it that the route doesn't take, nearest first.
+  const taken = new Set(legs.map((l) => l.road));
+  type Off = { label: string; miles: number; right: string };
+  const off: Off[] = [];
+  const from = (place: string) => (place === here ? "here" : name(place));
+  for (const r of world.roads) {
+    if (taken.has(r.id)) continue;
+    for (const [a, b] of [[r.from, r.to], [r.to, r.from]] as const) {
+      if (!onRoute.has(a) || onRoute.has(b)) continue;
+      const time = r.reach ? legTime(r.reach.minutes, r.reach.nights) : "";
+      off.push({ label: name(b), miles: r.miles, right: wide ? `${r.miles} mi from ${from(a)}${time ? `   ${time}` : ""}` : time || `${r.miles} mi from ${from(a)}` });
     }
-    for (const road of world.unexplored.filter((r) => r.from === place.id)) lines.push(`    ${road.id.replace(/_/g, " ")} · ${road.miles} mi · somewhere you don't know yet`);
+  }
+  for (const r of world.unexplored) {
+    if (!onRoute.has(r.from)) continue;
+    const time = r.reach ? legTime(r.reach.minutes, r.reach.nights) : "";
+    off.push({ label: "? somewhere new", miles: r.miles, right: wide ? `${r.miles} mi from ${from(r.from)}${time ? `   ${time}` : ""}` : time || `${r.miles} mi from ${from(r.from)}` });
+  }
+  if (off.length > 0) {
+    lines.push("", legs.length > 0 ? (wide ? "OFF THE ROUTE" : "off the route") : wide ? "ROADS FROM HERE" : "roads from here");
+    for (const o of off.sort((x, y) => x.miles - y.miles)) lines.push(row(`  ${o.label}`, o.right));
   }
   return lines;
 }
