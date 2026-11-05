@@ -133,7 +133,7 @@
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren's turn.\",\"seq\":87,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"goblin_1, goblin_2 surrender.\",\"seq\":88,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Combat is over: the other side surrendered.\",\"seq\":89,\"own\":true}"}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren gains 100 XP, 400 in all.\",\"seq\":90}"}
+{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"You gain 100 experience, 400 in all.\",\"seq\":90,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The yard is yours.\"}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Scene m3_s4_prisoner loaded in explore mode.\",\"seq\":92}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"A new place opens before you.\"}"}
@@ -176,6 +176,6 @@
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"boss is dead.\",\"seq\":111,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"Blades flash.\"}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Combat is over. The party side wins.\",\"seq\":112,\"own\":true}"}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren gains 50 XP, 450 in all.\",\"seq\":113}"}
+{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"You gain 50 experience, 450 in all.\",\"seq\":113,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The cellar falls silent. The mill is quiet again.\"}"}
 {"seat":"bren","text":"{\"kind\":\"end\",\"text\":\"the adventure is over\"}"}

@@ -92,6 +92,64 @@ export function coinWords(copper: number): string {
   return parts.length > 0 ? parts.join(" ") : "0 cp";
 }
 
+/** Copper as coins in words, for a line the human reads: 200 is "2 gold pieces", 120 "1 gold piece and 2 silver pieces". */
+export function coinPhrase(copper: number): string {
+  const parts = (
+    [
+      [Math.floor(copper / 100), "gold"],
+      [Math.floor((copper % 100) / 10), "silver"],
+      [copper % 10, "copper"],
+    ] as const
+  )
+    .filter(([n]) => n > 0)
+    .map(([n, metal]) => `${n} ${metal} piece${n === 1 ? "" : "s"}`);
+  if (parts.length === 0) return "nothing";
+  return parts.length === 1 ? parts[0]! : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
+}
+
+/**
+ * What an engine event did for the human's own character, as one plain line the human sees at
+ * once (B4, ADR 0058): coin paid to them or by them, and experience gained. Others' gains stay in
+ * the DM's narration; any other event gives `undefined` and is held like every engine line.
+ */
+export function yourLine(event: Event, human: Handle): string | undefined {
+  const named = (holder: string) => (holder.includes(":") ? undefined : holder.charAt(0).toUpperCase() + holder.slice(1));
+  if (event.kind === "xp_awarded" && event.actor === human) {
+    return `You gain ${event.xp} experience, ${event.total} in all${event.can_level_up ? ": enough for your next level" : ""}.`;
+  }
+  if (event.kind !== "ledger" || event.what.kind !== "coins") return undefined;
+  const coins = coinPhrase(event.what.copper);
+  if (event.to === human) {
+    const from = named(event.from);
+    switch (event.reason) {
+      case "wage":
+        return `You are paid your wages: ${coins}.`;
+      case "loot":
+      case "theft":
+        return `You take ${coins}.`;
+      case "reward":
+        return `You are given ${coins} as a reward.`;
+      default:
+        return from ? `${from} gives you ${coins}.` : `You receive ${coins}.`;
+    }
+  }
+  if (event.from === human) {
+    const to = named(event.to);
+    switch (event.reason) {
+      case "inn":
+        return `You pay ${coins} for the inn.`;
+      case "toll":
+        return `You pay ${coins} toll.`;
+      case "loot":
+      case "theft":
+        return to ? `${to} takes ${coins} of yours.` : `You lose ${coins}.`;
+      default:
+        return to ? `You give ${to} ${coins}.` : `You pay ${coins}.`;
+    }
+  }
+  return undefined;
+}
+
 /**
  * The living world as one player knows it (M9, AGT-80): the day and hour, where the caravan is,
  * the places and roads the party knows, the caravan, a road card waiting for its decision, the
@@ -273,6 +331,12 @@ export function formatSheet(sheet: Sheet): string {
         : `Experience: ${sheet.xp.points} XP${typeof sheet.xp.next_level === "number" ? `, the next level at ${sheet.xp.next_level}` : ""}.`,
     );
   }
+  // The purse (B4): the coins themselves, as the character holds them.
+  const coins = (["pp", "gp", "ep", "sp", "cp"] as const)
+    .map((d) => [sheet.purse.coins[d] ?? 0, { pp: "platinum", gp: "gold", ep: "electrum", sp: "silver", cp: "copper" }[d]] as const)
+    .filter(([n]) => n > 0)
+    .map(([n, metal]) => `${n} ${metal}`);
+  lines.push(coins.length > 0 ? `Purse: ${coins.join(", ")}.` : "Purse: empty.");
   if (sheet.life_state !== "conscious") {
     lines.push(`You are ${sheet.life_state}. Death saving throws: ${sheet.death_saves.successes} successes, ${sheet.death_saves.failures} failures.`);
   }
