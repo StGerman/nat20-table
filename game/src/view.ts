@@ -233,7 +233,7 @@ export function arrivalWords(arrives: { day: number; watch: string }, today: num
  * `/map` and the side pane (AGT-83, B2 of the travel planner): the way ahead in travel order. With
  * an escort under way, the route from here to the destination, each next stop with its rough time
  * and the watch the caravan gets there, as the engine worked them out (`trip`, `reach`; API-49);
- * then the places off the route, nearest first, an unknown end as "? somewhere new". Without a
+ * then the places off the route, nearest first, a road whose end is unknown as "? unknown road". Without a
  * route, the roads out of here, nearest first. Times are words and watches only, never a clock.
  * `wide` is `/map`'s form; the pane's fits 49 columns. Only the player's own world view goes in.
  */
@@ -262,7 +262,8 @@ export function mapLines(world: WorldPlayer, form: "wide" | "pane" = "wide"): st
     const road = world.roads.find((r) => r.id === leg.road);
     const last = i === legs.length - 1;
     const end = last && trip!.complete ? "◎" : "●";
-    lines.push(row(`│ ${road ? roadWords(road) : `${leg.miles} mi`}`, legTime(leg.minutes, leg.nights), wide ? 38 : 20));
+    // The leg's own miles: on the road, the first leg is what is left of it, not the road's length.
+    lines.push(row(`│ ${road ? roadWords({ ...road, miles: leg.miles }) : `${leg.miles} mi`}`, legTime(leg.minutes, leg.nights), wide ? 38 : 20));
     lines.push(row(`${end} ${name(leg.to)}`, `${wide ? "arrive " : ""}${arrivalWords(leg.arrives, today)}${wide && last && trip!.complete ? " · the contract ends" : ""}`));
     onRoute.add(leg.to);
   }
@@ -290,7 +291,14 @@ export function mapLines(world: WorldPlayer, form: "wide" | "pane" = "wide"): st
   for (const r of world.unexplored) {
     if (!onRoute.has(r.from)) continue;
     const time = r.reach ? legTime(r.reach.minutes, r.reach.nights) : "";
-    off.push({ label: "? somewhere new", miles: r.miles, right: wide ? `${r.miles} mi from ${from(r.from)}${time ? `   ${time}` : ""}` : time || `${r.miles} mi from ${from(r.from)}` });
+    // An unknown road, not a place (Stas's run, 2026-11-05: "? somewhere new 4 mi from
+    // Wendmouth" read as where the party camped): the line says it is a road and where it starts.
+    const out = r.from === here ? "here" : name(r.from);
+    off.push(
+      wide
+        ? { label: "? unknown road", miles: r.miles, right: `${r.miles} mi out of ${out}${time ? `   ${time}` : ""}` }
+        : { label: r.from === here ? "? unknown road" : `? road out of ${out}`, miles: r.miles, right: time || `${r.miles} mi` },
+    );
   }
   if (off.length > 0) {
     lines.push("", legs.length > 0 ? (wide ? "OFF THE ROUTE" : "off the route") : wide ? "ROADS FROM HERE" : "roads from here");
