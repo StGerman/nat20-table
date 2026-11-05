@@ -69,6 +69,10 @@ function tagged<T extends Item | Choice>(item: T, about: NonNullable<Choice["abo
  * and no card waits: move on, make camp, and take rooms where there is an inn. Numbered from
  * `first`. With an NPC owner, or on the road, moving on goes the caravan's own way; a human who
  * owns the caravan picks a road out of the place it is in, one line per road.
+ *
+ * The engine's miles left today decide which paces show: no line moves on once the day's travel is
+ * spent (the caravan goes on after the night), and a fast line joins the normal one when the next
+ * stop is out of reach today at a normal pace but within it at a fast one, on a road that allows it.
  */
 export function roadChoices(world: WorldPlayer, first: number): Choice[] {
   if (!world.drives || world.card) return [];
@@ -76,20 +80,40 @@ export function roadChoices(world: WorldPlayer, first: number): Choice[] {
   const here = at === undefined ? undefined : world.places.find((p) => p.id === at);
   const placeName = new Map(world.places.map((p) => [p.id, p.name]));
   const owns = !world.caravan.owner.includes(":");
-  const moves: Item[] =
-    owns && at !== undefined
-      ? [
-          ...world.roads
-            .filter((r) => r.from === at || r.to === at)
-            .map((r): Item => {
-              const end = r.from === at ? r.to : r.from;
-              return { label: `Take the road to ${placeName.get(end) ?? end} (${r.miles} miles)`, act: { kind: "travel", pace: "normal", to: r.id }, about: { id: "travel" } };
-            }),
-          ...world.unexplored
-            .filter((r) => r.from === at)
-            .map((r): Item => ({ label: `Take an unexplored road (${r.miles} miles)`, act: { kind: "travel", pace: "normal", to: r.id }, about: { id: "travel" } })),
-        ]
-      : [{ label: "Move on with the caravan", act: { kind: "travel", pace: "normal" }, about: { id: "travel" } }];
+  // Absent only in a hand-built view; the engine always sends it.
+  const today = world.today as WorldPlayer["today"] | undefined;
+  const normal = today === undefined || today.normal > 0;
+  const fastToday = (miles: number, maxPace: string | undefined): boolean =>
+    today !== undefined && maxPace === "fast" && miles > today.normal && miles <= today.fast;
+  const allRoads: Array<{ id: string; max_pace?: string }> = [...world.roads, ...world.unexplored];
+  const paceOf = (road: string) => allRoads.find((r) => r.id === road)?.max_pace;
+  const otherEnd = (road: string, from: string): string | undefined => {
+    const r = world.roads.find((r) => r.id === road);
+    return r === undefined ? undefined : r.from === from ? r.to : r.from;
+  };
+  const travel = (pace: Pace, to?: string): ChoiceAct => ({ kind: "travel", pace, ...(to === undefined ? {} : { to }) });
+  const moves: Item[] = [];
+  if (owns && at !== undefined) {
+    for (const r of world.roads.filter((r) => r.from === at || r.to === at)) {
+      const end = placeName.get(r.from === at ? r.to : r.from) ?? (r.from === at ? r.to : r.from);
+      if (normal) moves.push({ label: `Take the road to ${end} (${r.miles} miles)`, act: travel("normal", r.id), about: { id: "travel" } });
+      if (fastToday(r.miles, r.max_pace)) moves.push({ label: `Take the road to ${end} at a fast pace, there today (${r.miles} miles)`, act: travel("fast", r.id), about: { id: "travel" } });
+    }
+    for (const r of world.unexplored.filter((r) => r.from === at)) {
+      if (normal) moves.push({ label: `Take an unexplored road (${r.miles} miles)`, act: travel("normal", r.id), about: { id: "travel" } });
+    }
+  } else {
+    if (normal) moves.push({ label: "Move on with the caravan", act: travel("normal"), about: { id: "travel" } });
+    // The next stretch: the rest of this road, or the merchant's next leg.
+    const next =
+      world.at.kind === "on_road"
+        ? { miles: world.at.miles_left, road: world.at.road, to: otherEnd(world.at.road, world.at.came_from) }
+        : world.trip?.legs[0] && { miles: world.trip.legs[0].miles, road: world.trip.legs[0].road, to: world.trip.legs[0].to };
+    if (next && fastToday(next.miles, paceOf(next.road))) {
+      const where = next.to === undefined ? undefined : placeName.get(next.to);
+      moves.push({ label: where ? `Push on at a fast pace to reach ${where} today` : "Push on at a fast pace to reach the road's end today", act: travel("fast"), about: { id: "travel" } });
+    }
+  }
   const items: Item[] = [
     ...moves,
     { label: "Make camp for the night", act: { kind: "rest_night", where: "camp" }, about: { id: "rest_night" } },
