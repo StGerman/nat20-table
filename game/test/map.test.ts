@@ -54,7 +54,7 @@ test("the map is the way ahead in travel order: the route with rough times and a
     "",
     "OFF THE ROUTE",
     "  Pell's mill              1 mi from Wendford",
-    "  ? somewhere new          2 mi from here   under an hour",
+    "  ? unknown road           2 mi out of here   under an hour",
   ]);
   const pane = mapLines(WORLD, "pane");
   assert.ok(pane.every((l) => l.length <= 49), pane.join("\n"));
@@ -67,13 +67,31 @@ test("without a route the map lists the roads out of here nearest first; a trip 
   const free = { ...WORLD, escort: null, trip: null } as unknown as WorldPlayer;
   const lines = mapLines(free);
   assert.equal(lines[0], "Day 3 · morning");
-  assert.deepEqual(lines.slice(lines.indexOf("ROADS FROM HERE") + 1), ["  ? somewhere new          2 mi from here   under an hour", "  Wendford                 8 mi from here   about 3 hours"]);
+  assert.deepEqual(lines.slice(lines.indexOf("ROADS FROM HERE") + 1), ["  ? unknown road           2 mi out of here   under an hour", "  Wendford                 8 mi from here   about 3 hours"]);
   const cut = { ...WORLD, trip: { complete: false, legs: [WORLD.trip!.legs[0]] } } as unknown as WorldPlayer;
   assert.ok(mapLines(cut).includes("│ … then on, by roads you don't know yet"), mapLines(cut).join("\n"));
   assert.ok(!mapLines(cut).some((l) => l.startsWith("◎")), "no destination mark short of it");
   const onRoad = { ...WORLD, at: { kind: "on_road", road: "river_road", came_from: "wendford", miles_left: 7 }, trip: null } as unknown as WorldPlayer;
   assert.equal(caravanAt(onRoad), "river road, 7 mi to Wendmouth");
   assert.equal(mapLines(onRoad)[2], "▶ on the river road, 7 mi to Wendmouth");
+});
+
+test("an unknown road says it is a road and where it starts, and a leg begun on the road shows the miles left (Stas's run, 2026-11-05)", () => {
+  // The caravan stopped on the river road, 4 mi short of Wendmouth; the pane said "20 mi" for the
+  // leg, and "? somewhere new 4 mi from Wendmouth", which read as the camp.
+  const onRoad = {
+    ...WORLD,
+    at: { kind: "on_road", road: "river_road", came_from: "wendford", miles_left: 4 },
+    unexplored: [{ id: "salt_road", from: "wendmouth", miles: 4, terrain: "coast", good_road: false, max_pace: "normal" }],
+    trip: { complete: true, legs: [{ road: "river_road", to: "wendmouth", pace: "normal", miles: 4, minutes: 80, nights: 0, arrives: { day: 3, hour: 11, minute: 20, watch: "morning" } }] },
+  } as unknown as WorldPlayer;
+  const wide = mapLines(onRoad);
+  assert.ok(wide.includes("│ river road · 4 mi · good road        about an hour"), wide.join("\n"));
+  assert.ok(wide.includes("  ? unknown road           4 mi out of Wendmouth"), wide.join("\n"));
+  const pane = mapLines(onRoad, "pane");
+  assert.ok(pane.includes("  ? road out of Wendmouth 4 mi"), pane.join("\n"));
+  assert.ok(pane.every((l) => l.length <= 49), pane.join("\n"));
+  assert.ok(!pane.some((l) => /somewhere new|20 mi/.test(l)), pane.join("\n"));
 });
 
 test("the panel's bar says the day and where the caravan is, and the side pane draws the map out of a fight", async () => {
