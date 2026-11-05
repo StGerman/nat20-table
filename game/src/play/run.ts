@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Handle, State } from "@nat20-table/engine-client";
+import type { Language } from "../agents/language.ts";
 import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
@@ -132,9 +133,9 @@ export function partyRoster(pack: string, pregens = process.env.NAT20_PREGENS_DI
 }
 
 /** The guards every live run puts on free text (spec §3.5): the DM's against the pack's ids. */
-export function guards(pack: string, engine: GameEngine): { narrationGuard: TextGuard; speechGuard: TextGuard } {
+export function guards(pack: string, engine: GameEngine, language: Language = "en"): { narrationGuard: TextGuard; speechGuard: TextGuard } {
   const ids = packIds(pack);
-  return { narrationGuard: narrationGuard({ ids, knownRoll: (id) => engine.rolls.has(id) }), speechGuard: speechGuard({ shown: ids.shown }) };
+  return { narrationGuard: narrationGuard({ ids, knownRoll: (id) => engine.rolls.has(id) }), speechGuard: speechGuard({ shown: ids.shown, language }) };
 }
 
 /**

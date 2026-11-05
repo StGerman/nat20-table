@@ -8,6 +8,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { skeletonFile } from "../pack/read.ts";
+import type { Language } from "../agents/language.ts";
 import type { TextGuard } from "./state.ts";
 
 /** A roll citation, `[r12]`: the only place a DM's text may hold digits. */
@@ -130,9 +131,25 @@ export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) 
   };
 }
 
-/** An AI player's text guard: refuses numbers, game-stat terms and mixed-script words. */
-export function speechGuard(options: { shown: ReadonlySet<string> }): TextGuard {
-  return (text) => numberIn(withoutShown(text, options.shown)) ?? statTermIn(text) ?? mixedScriptIn(text);
+/**
+ * In a Russian run, a line with letters and not one Cyrillic letter (AGT-38): an AI player slipped
+ * into English, and the human at the table reads Russian. Shown ids (goblin_1) don't count.
+ */
+function englishIn(text: string, shown: ReadonlySet<string>): string | undefined {
+  const words = withoutShown(text, shown);
+  return /\p{L}/u.test(words) && !/\p{Script=Cyrillic}/u.test(words) ? "it is in English: say it in Russian" : undefined;
+}
+
+/**
+ * An AI player's text guard: refuses numbers, game-stat terms and mixed-script words, and in a
+ * Russian run (`language` ru) a line with no Russian in it.
+ */
+export function speechGuard(options: { shown: ReadonlySet<string>; language?: Language }): TextGuard {
+  return (text) =>
+    numberIn(withoutShown(text, options.shown)) ??
+    statTermIn(text) ??
+    mixedScriptIn(text) ??
+    (options.language === "ru" ? englishIn(text, options.shown) : undefined);
 }
 
 interface SceneFileIds {

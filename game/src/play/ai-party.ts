@@ -89,7 +89,7 @@ const table = new TableState({
   seat: new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai),
   transcript,
   inputsFile: path.join(runDir, "inputs.jsonl"),
-  ...guards(flags.scenes!, engine),
+  ...guards(flags.scenes!, engine, language),
 });
 const players: PlayerAgent[] = party.ai.map((handle) =>
   scripted ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle)!, choice, language, russianNames: party.russianNames, usage }),
