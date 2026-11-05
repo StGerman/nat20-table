@@ -283,7 +283,8 @@ export function mapLines(world: WorldPlayer, form: "wide" | "pane" = "wide"): st
   for (const r of world.roads) {
     if (taken.has(r.id)) continue;
     for (const [a, b] of [[r.from, r.to], [r.to, r.from]] as const) {
-      if (!onRoute.has(a) || onRoute.has(b)) continue;
+      // A road between two stops the route doesn't take (a shortcut) shows once, from its first end.
+      if (!onRoute.has(a) || (onRoute.has(b) && a === r.to)) continue;
       const time = r.reach ? legTime(r.reach.minutes, r.reach.nights) : "";
       off.push({ label: name(b), miles: r.miles, right: wide ? `${r.miles} mi from ${from(a)}${time ? `   ${time}` : ""}` : time || `${r.miles} mi from ${from(a)}` });
     }
