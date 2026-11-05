@@ -792,6 +792,6 @@
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"goblin_4 is dead.\",\"seq\":491}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"Steel and teeth flash in the yard.\"}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Combat is over. The party side wins.\",\"seq\":493}"}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren gains 87 XP, 387 in all.\",\"seq\":497}"}
+{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"You gain 87 experience, 387 in all.\",\"seq\":497,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The yard falls quiet.\"}"}
 {"seat":"bren","text":"{\"kind\":\"end\",\"text\":\"the adventure is over\"}"}
