@@ -37,9 +37,9 @@ A. Stas chose to close on one unattended run (card, 2026-11-01 22:53Z) and accep
 
 ## Consequences
 
-- **Acceptance (scope §6):** criteria 1, 2, 3 and 5 are held by the two passing records above. Criterion 4 is reported: players meet the target, the DM misses it. Criterion 6 stays with friends-and-family testing.
+- **Acceptance (scope §6):** criterion 1 holds except its same-build clause, which Stas waived for this closure (card, 2026-11-01 22:53Z); the scope text and decision 0043 stay as written. Criteria 2, 3 and 5 are held by the two passing records above. Criterion 4 is reported: players meet the target, the DM misses it. Criterion 6 stays with friends-and-family testing.
 - **`TASKS.md`:** AGT-77 is done. It missed the DM target, which confirms that AGT-25 (pipelined narration) and AGT-68 (effort retune) belong in Milestone 9 phase 0, where they already sit, per 0056's revisit rule. Milestone 7 reads done, closed by this record.
-- **`CLAUDE.md`:** Milestone 7 cites this record instead of "closed for now".
+- **`CLAUDE.md`** and **`docs/milestones/milestone-7-demo-acceptance.md`:** Milestone 7 cites this record instead of "closed for now".
 - **Decision [0051](0051-m7-closed-for-now.md)** stays as written; this record ends what it left open.
 - **Defects seen in the closing runs** gate nothing here. AGT-73 (English in a Russian run), AGT-74 (empty run folders uploaded) and AGT-75 (a stale release binary on Stas's Mac) stay in Milestone 9. The DM narrating a condition or a position the engine does not hold (the row 3 flags confirmed in 19-50-27 and 22-59-29) has no row: the narration check catches it per run, and a row waits until Stas asks for a fix.
 
