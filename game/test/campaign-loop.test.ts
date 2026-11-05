@@ -154,6 +154,12 @@ test("the road's lines follow the engine's miles left today: none once the day i
   // A human who owns the caravan gets the fast line under the road it belongs to.
   const owned = { ...world, caravan: { owner: "bren", wagons: [] }, trip: null };
   assert.deepEqual(labels(owned), ["Take the road to Wendmouth (20 miles)", "Take the road to Wendmouth at a fast pace, there today (20 miles)", "Make camp for the night"]);
+  // With the normal miles spent but a few fast ones left, the day is still over: only the night.
+  assert.deepEqual(labels({ ...onRoad, today: { fast: 4, normal: 0, slow: 0 } }), ["Make camp for the night"]);
+  assert.deepEqual(labels({ ...owned, today: { fast: 20, normal: 0, slow: 0 } }), ["Make camp for the night"]);
+  // An unexplored road gets the same fast line when only a fast pace reaches its end today.
+  const unexplored = { ...owned, roads: [], unexplored: [{ id: "barrow_path", from: "wendford", miles: 20, max_pace: "fast" }] };
+  assert.deepEqual(labels(unexplored), ["Take an unexplored road (20 miles)", "Take an unexplored road at a fast pace, to its end today (20 miles)", "Make camp for the night"]);
 });
 
 test("once the day's travel is spent the DM can't propose moving on, and the human's options offer only the night", async () => {
