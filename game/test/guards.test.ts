@@ -19,6 +19,17 @@ test("the DM-only ids of The Silent Mill are its checks, encounters, spawns, fla
   for (const id of ["s3_mill_yard", "green_well", "goblin_1", "wolf_2", "bren"]) assert.ok(shown.has(id), `${id} is shown`);
 });
 
+test("both guards refuse a word that mixes Russian and Latin letters, and pass either alphabet alone (AGT-38)", () => {
+  const narration = narrationGuard({ ids: packIds(MILL), knownRoll: () => true });
+  const speech = speechGuard({ shown: packIds(MILL).shown });
+  for (const guard of [narration, speech]) {
+    assert.match(guard("Смотритель Бранnок поднимает руку.") ?? "", /mixes Russian and Latin letters in one word \(Бранnок\)/);
+    assert.equal(guard("Смотритель Браннок поднимает руку."), undefined);
+    assert.equal(guard("Brannock raises a hand."), undefined);
+    assert.equal(guard("Браннок кивает: «OK», и goblin_1 падает."), undefined, "a Latin word beside Russian ones is not a mixed word");
+  }
+});
+
 test("the narration guard refuses numbers, game statistics, DM-only ids and unknown roll ids", () => {
   const guard = narrationGuard({ ids: packIds(MILL), knownRoll: (id) => id === "r12" });
   const refused: Array<[string, RegExp]> = [

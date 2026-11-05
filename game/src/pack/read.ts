@@ -3,12 +3,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Adventure } from "./adventure.ts";
+import { worldNames } from "./campaign.ts";
 
 export interface PackText {
   dir: string;
   adventure: Adventure;
   /** The whole pack in play order: skeleton, adventure prose, lore, scenes, NPCs. */
   text: string;
+  /** The world's place NPCs' Russian names, `id: name`, for the DM's name line (AGT-38): none outside a campaign. */
+  placeNames?: string[];
 }
 
 /**
@@ -48,5 +51,6 @@ export function readPack(dir: string): PackText {
     "## NPCs",
     ...adventure.npcs.flatMap((npc) => ["", `### ${npc.name} (${npc.id})`, "", file(npc.prose)]),
   ].join("\n");
-  return { dir, adventure, text };
+  const placeNames = worldNames(dir);
+  return { dir, adventure, text, ...(placeNames.length > 0 ? { placeNames } : {}) };
 }

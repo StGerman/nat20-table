@@ -193,7 +193,7 @@ ${surrender}
 ${goodsRule}
 Be quick: decide, call the tools, narrate once. Most wakes need one to three tool calls.
 
-${[...guidance, ...dmLanguage(language, Boolean(human), russianNames(pack.adventure))].join("\n")}
+${[...guidance, ...dmLanguage(language, Boolean(human), [...russianNames(pack.adventure), ...(pack.placeNames ?? [])])].join("\n")}
 ## The adventure (only you see it)
 
 ${pack.text}`;

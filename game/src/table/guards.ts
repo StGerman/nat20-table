@@ -81,6 +81,17 @@ function statTermIn(text: string): string | undefined {
   return undefined;
 }
 
+/**
+ * A word that mixes Cyrillic and Latin letters, such as «Бранnок» (AGT-38): a model's slip
+ * between scripts, never a word of either language.
+ */
+const MIXED_SCRIPT = /(?<!\p{L})(?=\p{L}*\p{Script=Cyrillic})(?=\p{L}*\p{Script=Latin})\p{L}+(?!\p{L})/u;
+
+function mixedScriptIn(text: string): string | undefined {
+  const word = MIXED_SCRIPT.exec(text);
+  return word ? `it mixes Russian and Latin letters in one word (${word[0]}): write it in one alphabet` : undefined;
+}
+
 /** A run of letters, digits, `_` and `:`: an id, a handle or a word, as the leak scan reads them. */
 const TOKEN = /[A-Za-z0-9_:]+/g;
 
@@ -102,7 +113,7 @@ function withoutShown(text: string, shown: ReadonlySet<string>): string {
   return text.replace(TOKEN, (token) => (shown.has(bareToken(token)) ? " " : token));
 }
 
-/** The DM's text guard: refuses numbers, game-stat terms, DM-only ids and unknown roll ids. */
+/** The DM's text guard: refuses numbers, game-stat terms, mixed-script words, DM-only ids and unknown roll ids. */
 export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) => boolean }): TextGuard {
   return (text) => {
     for (const cited of text.matchAll(CITATION)) {
@@ -111,14 +122,17 @@ export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) 
     const bare = text.replace(CITATION, "");
     const secret = tokens(bare).find((token) => options.ids.dmOnly.has(token));
     return (
-      numberIn(withoutShown(bare, options.ids.shown)) ?? statTermIn(bare) ?? (secret ? `it names ${secret}, which only the DM knows` : undefined)
+      numberIn(withoutShown(bare, options.ids.shown)) ??
+      statTermIn(bare) ??
+      mixedScriptIn(bare) ??
+      (secret ? `it names ${secret}, which only the DM knows` : undefined)
     );
   };
 }
 
-/** An AI player's text guard: refuses numbers and game-stat terms. */
+/** An AI player's text guard: refuses numbers, game-stat terms and mixed-script words. */
 export function speechGuard(options: { shown: ReadonlySet<string> }): TextGuard {
-  return (text) => numberIn(withoutShown(text, options.shown)) ?? statTermIn(text);
+  return (text) => numberIn(withoutShown(text, options.shown)) ?? statTermIn(text) ?? mixedScriptIn(text);
 }
 
 interface SceneFileIds {
