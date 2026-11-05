@@ -71,8 +71,9 @@ function tagged<T extends Item | Choice>(item: T, about: NonNullable<Choice["abo
  * owns the caravan picks a road out of the place it is in, one line per road.
  *
  * The engine's miles left today decide which paces show: no line moves on once the day's travel is
- * spent (the caravan goes on after the night), and a fast line joins the normal one when the next
- * stop is out of reach today at a normal pace but within it at a fast one, on a road that allows it.
+ * spent (the caravan goes on after the night), and while some is left a fast line joins the normal
+ * one when the next stop is out of reach today at a normal pace but within it at a fast one, on a
+ * road that allows it.
  */
 export function roadChoices(world: WorldPlayer, first: number): Choice[] {
   if (!world.drives || world.card) return [];
@@ -84,7 +85,7 @@ export function roadChoices(world: WorldPlayer, first: number): Choice[] {
   const today = world.today as WorldPlayer["today"] | undefined;
   const normal = today === undefined || today.normal > 0;
   const fastToday = (miles: number, maxPace: string | undefined): boolean =>
-    today !== undefined && maxPace === "fast" && miles > today.normal && miles <= today.fast;
+    today !== undefined && today.normal > 0 && maxPace === "fast" && miles > today.normal && miles <= today.fast;
   const allRoads: Array<{ id: string; max_pace?: string }> = [...world.roads, ...world.unexplored];
   const paceOf = (road: string) => allRoads.find((r) => r.id === road)?.max_pace;
   const otherEnd = (road: string, from: string): string | undefined => {
@@ -101,6 +102,7 @@ export function roadChoices(world: WorldPlayer, first: number): Choice[] {
     }
     for (const r of world.unexplored.filter((r) => r.from === at)) {
       if (normal) moves.push({ label: `Take an unexplored road (${r.miles} miles)`, act: travel("normal", r.id), about: { id: "travel" } });
+      if (fastToday(r.miles, r.max_pace)) moves.push({ label: `Take an unexplored road at a fast pace, to its end today (${r.miles} miles)`, act: travel("fast", r.id), about: { id: "travel" } });
     }
   } else {
     if (normal) moves.push({ label: "Move on with the caravan", act: travel("normal"), about: { id: "travel" } });
