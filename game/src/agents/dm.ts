@@ -124,6 +124,11 @@ export function dmPrompt(pack: PackText, human: Handle | undefined, players: Han
   // The English run called Torva "he" throughout (M7 design §3.4): the pack names each one's pronouns.
   const named = pack.adventure.party.filter((p) => p.pronouns).map((p) => `${p.handle} ${p.pronouns}`);
   const pronouns = named.length > 0 ? ` Pronouns: ${named.join(", ")}; keep to them in every language.` : "";
+  // Stas's Wend run (2026-11-05): 30 of 51 narrations spoke of the human's character in the third
+  // person, as of a stranger. The human is spoken to; everyone else is named.
+  const youRule = human
+    ? `- The human sits at the table as ${human}, so narration speaks to ${human} as "you" (second person singular), and of everyone else by name: "you raise your shield as Torva's arrow flies". Narration to the table or to ${human} uses "you" for ${human} alone; for the whole party say the party or the names. Narration to one AI player's handle alone speaks to that character as "you".\n`
+    : "";
   const fightMoves = human ? ` (in a fight only ${human} moves, on ${human}'s turn)` : "";
   const hears = human ? "narrate (`to` \"table\" for everyone, or one character's handle) and ask_human" : "narrate (`to` \"table\" for everyone, or one character's handle)";
   const spoken = human
@@ -159,7 +164,7 @@ export function dmPrompt(pack: PackText, human: Handle | undefined, players: Han
 - Where everyone stands is the engine's too. Never narrate a character walking up to someone or somewhere unless move put them there. No creature backs away, flees, ducks behind something or closes in unless the engine shows it moving: a hit alone moves nobody. If move is refused, or not allowed now${fightMoves}, the character acts from where they stand: calls out, waits, points.
 - You act only through your tools. get_state shows you everything in the scene (creatures with their Hit Points, positions, checks, encounters, spawns, flags); call it when you need it.
 - What the table hears from you goes through ${hears}. Anything else you write reaches nobody.
-
+${youRule}
 ## What the table may hear
 
 A guard reads everything you say to the table and refuses it, with the reason, when it breaks one of these. Then rewrite it.

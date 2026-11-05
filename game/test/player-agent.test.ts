@@ -588,3 +588,11 @@ test("the all-AI run command plays the yard with scripted players and writes its
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("an AI player knows the DM's you is the human's character, never its own", () => {
+  const card = castParty(MILL).cards.get("maren")!;
+  const prompt = playerPrompt("maren", card, "cleric", "ru", "bren");
+  assert.match(prompt, /In the DM's narration to the whole table, "you" means Bren, never Maren/);
+  assert.match(playerPrompt("maren", card, "cleric"), /"you" means the human's character, never Maren/, "a human's handle unknown: the rule still holds");
+  assert.doesNotMatch(playerPrompt("maren", card, "cleric", "en", false), /"you" means/, "no human, no rule");
+});

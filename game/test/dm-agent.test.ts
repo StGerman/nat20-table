@@ -439,3 +439,13 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   const mill = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).seatTools.map((t) => t.name);
   assert.ok(mill.includes("load_scene") && mill.includes("end_adventure"));
 });
+
+test("the DM speaks to the human's character as you and names everyone else; a table with no human has no such rule", () => {
+  // Stas's Wend run (2026-11-05): 30 of 51 narrations spoke of the human's character in the third person.
+  const prompt = dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt", "ru");
+  assert.match(prompt, new RegExp(`narration speaks to ${PARTY.human} as "you" \\(second person singular\\), and of everyone else by name`));
+  assert.match(prompt, /Speak to the human's character with «ты», never «вы»/);
+  assert.doesNotMatch(dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt"), /«ты»/, "the English prompt stays English");
+  assert.match(prompt, /Narration to one AI player's handle alone speaks to that character as "you"/);
+  assert.doesNotMatch(dmPrompt(PACK, undefined, [PARTY.human!, ...PARTY.ai], "prompt"), /second person singular/);
+});
