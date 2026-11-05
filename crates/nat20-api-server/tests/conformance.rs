@@ -93,12 +93,11 @@ fn fixture_events_read_into_events() {
             .filter(|(_, l)| !l.trim().is_empty())
         {
             let fixture: Value = serde_json::from_str(line).unwrap();
-            let Some(events) = fixture
-                .pointer("/response/events")
-                .and_then(Value::as_array)
-            else {
-                continue;
-            };
+            // A command's own events, and the history an `events` command returns in its result.
+            let events = ["/response/events", "/response/result/events"]
+                .into_iter()
+                .filter_map(|at| fixture.pointer(at).and_then(Value::as_array))
+                .flatten();
             for event in events {
                 let parsed: Event = serde_json::from_value(event.clone()).unwrap_or_else(|error| {
                     panic!("{} line {}: {error}: {event}", path.display(), index + 1)
