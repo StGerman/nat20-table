@@ -19,8 +19,8 @@ use serde_json::{Value, json};
 
 use crate::game_audit::TranscriptRecord;
 
-/// Two creatures closer than this, centre to centre, are next to each other (5 ft, with slack for
-/// a diagonal step that rounds).
+/// Two creatures no farther apart than this on every axis, centre to centre, are next to each
+/// other: the 8 grid squares round a creature, diagonals included (5 ft, with slack for rounding).
 const ADJACENT_FT: f64 = 5.5;
 
 /// One party member as the pack names it.
@@ -170,6 +170,16 @@ fn position(creature: &Value) -> Option<(f64, f64, f64)> {
     ))
 }
 
+/// Next to each other on the grid: one square apart at most along each axis, so a diagonal
+/// neighbour (7.07 ft straight-line) counts too.
+fn next_to(a: (f64, f64, f64), b: (f64, f64, f64)) -> bool {
+    (a.0 - b.0)
+        .abs()
+        .max((a.1 - b.1).abs())
+        .max((a.2 - b.2).abs())
+        <= ADJACENT_FT
+}
+
 fn distance(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
     ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2) + (a.2 - b.2).powi(2)).sqrt()
 }
@@ -258,7 +268,7 @@ impl Replay {
         for (i, a) in creatures.iter().enumerate() {
             for b in &creatures[i + 1..] {
                 if let (Some(pa), Some(pb)) = (position(a), position(b))
-                    && distance(pa, pb) <= ADJACENT_FT
+                    && next_to(pa, pb)
                 {
                     let mut pair =
                         [a, b].map(|c| c["handle"].as_str().unwrap_or_default().to_owned());
@@ -432,4 +442,19 @@ pub fn digest_run(
         requests_replayed: replayed,
         diverged,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::next_to;
+
+    #[test]
+    fn a_diagonal_neighbour_is_adjacent() {
+        let at = (0.0, 0.0, 0.0);
+        assert!(next_to(at, (5.0, 0.0, 0.0)));
+        assert!(next_to(at, (5.0, 5.0, 0.0)));
+        assert!(next_to(at, (-5.0, 5.0, 5.0)));
+        assert!(!next_to(at, (10.0, 0.0, 0.0)));
+        assert!(!next_to(at, (10.0, 5.0, 0.0)));
+    }
 }
