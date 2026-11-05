@@ -75,7 +75,8 @@ function tagged<T extends Item | Choice>(item: T, about: NonNullable<Choice["abo
  * stop is out of reach today at a normal pace but within it at a fast one, on a road that allows it.
  */
 export function roadChoices(world: WorldPlayer, first: number): Choice[] {
-  if (!world.drives || world.card) return [];
+  // Once the contract is done the journey is over: the caravan goes nowhere more this run (B7).
+  if (!world.drives || world.card || world.escort?.done) return [];
   const at = world.at.kind === "at" ? world.at.place : undefined;
   const here = at === undefined ? undefined : world.places.find((p) => p.id === at);
   const placeName = new Map(world.places.map((p) => [p.id, p.name]));

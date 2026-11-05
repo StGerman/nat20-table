@@ -272,9 +272,20 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
   const t = await testTable({ seed: 3, pack, human: "bren", players: ["torva", "maren", "ilsa"], seat });
   try {
     const party = ["bren", "torva", "maren", "ilsa"];
-    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3 } });
+    const dm = new ScriptedDm({});
+    const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
     const report = await loop.run("fw_highsteads");
     assert.equal(report.ended, "the escort contract is done", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    // The journey's end (B7): one last turn in Wendmouth, the DM's closing, then the end card.
+    const ends = seat.shown.flatMap((e, i) => (e.kind === "info" && e.title === "Journey's end" ? [{ i, text: e.text }] : []));
+    assert.equal(ends.length, 2, JSON.stringify(ends));
+    assert.match(ends[0]!.text, /^The contract is done\. You have one last turn in Wendmouth before the story rests\.$/);
+    assert.ok(seat.shown.slice(ends[0]!.i, ends[1]!.i).some((e) => e.kind === "options"), "the human was asked once more in between");
+    assert.match(ends[1]!.text, /^The escort contract to Wendmouth is done\.\nOn this journey you earned \d+ gold pieces in wages( and \d+ experience)?\.\n/);
+    assert.match(ends[1]!.text, /more experience brings your next level\.|enough experience for your next level/);
+    assert.match(ends[1]!.text, /Your party is kept for the next journey\.$/);
+    assert.ok(dm.briefings.some((b) => b.briefing.includes("The journey is over")), "the DM wrote the closing");
+    assert.ok(!seat.shown.some((e) => e.kind === "options" && e.lines.some((l) => /Move on|Make camp/.test(l)) && seat.shown.indexOf(e) > ends[0]!.i), "no road lines after the contract");
     assert.ok(report.scenes.includes("fw_wendford") && report.scenes.at(-1) === "fw_wendmouth", report.scenes.join(", "));
     const state = await t.engine.request("dm", { cmd: "get_state" });
     assert.ok(state.result?.cmd === "get_state" && state.result.state.view === "dm");
