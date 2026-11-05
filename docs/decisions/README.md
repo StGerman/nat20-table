@@ -67,6 +67,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0056](0056-m10-closed-on-cheap-run.md) | Milestone 10 closes on a `play:cheap` run with Stas at the table (p95 6.5 s players, 4.9 s DM); the latency check on the demo models becomes AGT-77 | Accepted | 2026-11-01 | Stas (Milestone 10 implementation thread) |
 | [0057](0057-world-and-ledger-crates.md) | World rules and bookkeeping live in two serde-only table crates, `nat20-world` and `nat20-ledger`; core keeps the SRD rules on creatures; our own rules only as labelled variants | Accepted | 2026-11-02 | Stas (Milestone 9 spec D1, D2; system design S1 and the crate split) |
 | [0058](0058-human-plays-hired-blade.md) | In the first Living world session the human plays a Hired Blade, one caravan owner from `campaign.json` leads, and each Blade is paid 2 GP a day | Accepted | 2026-11-02 | Stas (Milestone 9 system design, S2, S4 and the pay) |
+| [0059](0059-demo-run-closed.md) | The Demo Run closes on two passing runs from different builds: Stas's `play:demo` 2026-10-30T20-40-59 and the all-AI `play:unattended` 2026-11-01T23-25-02 (AGT-77); the same-build pair left open by 0051 is no longer due | Accepted | 2026-11-05 | Stas ("Close the Demo Run" thread, decision cards) |
 
 ## Open questions to watch
 
