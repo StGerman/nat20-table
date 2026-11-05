@@ -124,6 +124,9 @@ impl World {
                 arrives: copy.state.clock,
             });
         }
+        // Where on the route the plan stands: a route may pass one place twice, so each look
+        // starts after the stop the plan last reached, and the plan always moves forward.
+        let mut from = 0;
         loop {
             let Position::At { place } = copy.state.at.clone() else {
                 return None;
@@ -134,7 +137,8 @@ impl World {
                     complete: true,
                 });
             }
-            let i = self.route.iter().position(|p| *p == place)?;
+            let i = from + self.route[from..].iter().position(|p| *p == place)?;
+            from = i + 1;
             let next = self.route.get(i + 1)?;
             if !self.state.discovered.contains(next) {
                 return Some(Trip {
@@ -278,6 +282,19 @@ mod tests {
         // The first leg spends 12 of the day's 24 miles; the hills take the other 12, a night, and 8.
         assert_eq!(roads, vec![("town_inn", 0), ("inn_ruin", 1)]);
         assert_eq!(trip.legs[1].minutes, 400);
+    }
+
+    #[test]
+    fn a_route_that_passes_a_place_twice_is_planned_forward_to_its_end() {
+        let mut world = escorted("ruin");
+        world.route = ["town", "inn", "town", "inn", "ruin"]
+            .map(String::from)
+            .to_vec();
+        world.state.discovered.insert("ruin".into());
+        let trip = world.trip().unwrap();
+        assert!(trip.complete);
+        let stops: Vec<_> = trip.legs.iter().map(|l| l.to.as_str()).collect();
+        assert_eq!(stops, vec!["inn", "town", "inn", "ruin"]);
     }
 
     #[test]
