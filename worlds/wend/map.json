@@ -20,6 +20,13 @@
             "inn_cp": 40
         },
         {
+            "_comment": "Where the river road crosses the Millbeck, eight miles below Wendford: a footbridge, a willow hut and a ford upstream. A stop on the road, not a market; its stretch of road is the Millbeck zone, which holds only the toll card (B8).",
+            "id": "millbeck_bridge",
+            "name": "The Millbeck bridge",
+            "kind": "crossing",
+            "discovered": true
+        },
+        {
             "_comment": "A mile upriver at the end of a hedged lane. The Silent Mill.",
             "id": "pells_mill",
             "name": "Pell's mill",
@@ -58,11 +65,21 @@
     ],
     "roads": [
         {
-            "_comment": "The river road: a day with a wagon at a normal pace.",
-            "id": "river_road",
+            "_comment": "The river road's upper stretch, Wendford down to the Millbeck bridge: its own zone, for the toll at the bridge alone.",
+            "id": "bridge_road",
             "from": "wendford",
+            "to": "millbeck_bridge",
+            "miles": 8,
+            "terrain": "grassland",
+            "good_road": true,
+            "zone": "millbeck"
+        },
+        {
+            "_comment": "The river road from the Millbeck bridge to the fair: with the upper stretch, a day with a wagon at a normal pace.",
+            "id": "river_road",
+            "from": "millbeck_bridge",
             "to": "wendmouth",
-            "miles": 20,
+            "miles": 12,
             "terrain": "grassland",
             "good_road": true,
             "zone": "lowland"

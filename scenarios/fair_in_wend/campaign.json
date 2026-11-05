@@ -218,7 +218,7 @@
     ],
     "day_limit": 3,
     "world": {
-        "_comment": "The engine's world block. Odda Vell owns the wagon (an NPC owner): any Blade moves it on along her route and calls the night. The contract is made on the evening of day 1 at the Highsteads; the route goes down the slope track to Wendford (eight miles of hill, most of a morning with a loaded wagon), then the river road to the fair (twenty miles, a long day). With the night at the Highsteads and one on the way, the wagon reaches the fair on day 3, within the day limit.",
+        "_comment": "The engine's world block. Odda Vell owns the wagon (an NPC owner): any Blade moves it on along her route and calls the night. The contract is made on the evening of day 1 at the Highsteads; the route goes down the slope track to Wendford (eight miles of hill, most of a morning with a loaded wagon), then the river road to the fair (twenty miles, a long day), stopping at the Millbeck bridge eight miles down, where the toll men wait (B8); the bridge has no scene of its own and loads the road scene. With the night at the Highsteads and one on the way, the wagon reaches the fair on day 3, within the day limit.",
         "map": "wend",
         "start": "highsteads",
         "day": 1,
@@ -232,6 +232,7 @@
         "route": [
             "highsteads",
             "wendford",
+            "millbeck_bridge",
             "wendmouth"
         ],
         "caravan": {

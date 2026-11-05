@@ -1,0 +1,72 @@
+{
+    "_comment": "The Millbeck bridge (B8, Stas 2026-11-05: the bridge as a fixed event, fitted to Faces of the Road): the only card of the Millbeck zone, the upper stretch of the river road, so the first leg down from Wendford always meets it, once. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours. The two toll men are SRD 5.2.1 Bandits. In every fight the toll men swing first; the Blades never start it. Deeds, the brothers' NPC ids and the Wendford pay-off wait for Milestone 11 (Word on the Road). Three choices, as the scope allows (2 or 3): walking on with weapons drawn (go_ready) waits for Stas's call on a fourth.",
+    "cards": [
+        {
+            "id": "millbeck_bridge",
+            "zone": "millbeck",
+            "target": "caravan",
+            "once": true,
+            "text": "At the little bridge over the Millbeck a man in a torn sheepskin coat and a borrowed helmet holds out his cap: the reeve's toll, he says, two silver a head. His brother leans on a cudgel by a willow hut, beside a cold fire and a heap of gnawed sheep bones.",
+            "owner_pick": "argue",
+            "choices": [
+                {
+                    "id": "pay",
+                    "text": "Pay him and cross.",
+                    "effects": [
+                        {
+                            "do": "pay",
+                            "who": "party",
+                            "copper": 20
+                        }
+                    ]
+                },
+                {
+                    "id": "argue",
+                    "text": "Tell him the reeve charges no such toll. If he won't hear it, the brothers will swing first.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 15,
+                            "failure": [
+                                {
+                                    "do": "fight",
+                                    "monsters": [
+                                        "bandit",
+                                        "bandit"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "ford",
+                    "text": "Go upstream and ford the beck.",
+                    "effects": [
+                        {
+                            "do": "delay",
+                            "minutes": 90
+                        },
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "strength",
+                            "skill": "athletics",
+                            "dc": 10,
+                            "failure": [
+                                {
+                                    "do": "cargo",
+                                    "good": "rations",
+                                    "change": -2
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
