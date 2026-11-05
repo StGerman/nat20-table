@@ -40,7 +40,7 @@ use nat20_core::{
         modifier::{FlatModifiable, ModifierMap, ModifierSource},
         resource::{RechargeRule, ResourceAmount, ResourceBudgetKind, ResourceMap},
         saving_throw::SavingThrowKind,
-        time::{TimeMode, TimeStep, TurnBoundary},
+        time::{EntityClock, TimeMode, TimeStep, TurnBoundary},
     },
     engine::{
         action_prompt::{ActionData, ActionPromptKind},
@@ -555,6 +555,19 @@ impl Game {
                         );
                     }
                 }
+            }
+        }
+        // The creatures' own clocks move on by the same ten minutes, effects aside (the rounds
+        // above did those), so the 16 hours core counts before the next Long Rest keep step
+        // with the world's clock across scene changes.
+        for &entity in &turns {
+            if let Ok(mut clock) = game.engine.world.get::<&mut EntityClock>(entity) {
+                let mode = clock.mode();
+                clock.set_mode(TimeMode::RealTime);
+                clock.update(TimeStep::RealTime {
+                    delta_seconds: (ROUNDS_BETWEEN_SCENES * 6) as f32,
+                });
+                clock.set_mode(mode);
             }
         }
         // The update sweeps what expired, and what ran out is logged while the old scene's

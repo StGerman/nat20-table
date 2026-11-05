@@ -539,7 +539,7 @@ impl Session {
                 hungry.push(handle.clone());
             }
         }
-        let (rested, not_rested) = game.night(&party, minutes)?;
+        let (rested, not_rested) = game.night(&party, minutes, world::LONG_REST_MINUTES)?;
         // A day of service for each Blade who is not dead (API-47).
         next.escort_night(|b| game.is_dead(b));
         self.campaign = Some(next);
