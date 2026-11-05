@@ -63,6 +63,13 @@ test("the map is the way ahead in travel order: the route with rough times and a
   assert.doesNotMatch([...mapLines(WORLD), ...pane].join("\n"), /\d:\d\d|\bmin\b|\d+ minutes/);
 });
 
+test("a road between two stops that the route doesn't take shows off the route, once", () => {
+  const ridge = { id: "ridge_way", from: "highsteads", to: "wendmouth", miles: 30, terrain: "hill", good_road: false, max_pace: "normal" };
+  const shortcut = { ...WORLD, roads: [...WORLD.roads, ridge] } as unknown as WorldPlayer;
+  const off = mapLines(shortcut).filter((l) => /^ {2}Wendmouth +30 mi from here$/.test(l));
+  assert.equal(off.length, 1, mapLines(shortcut).join("\n"));
+});
+
 test("without a route the map lists the roads out of here nearest first; a trip cut short says the rest is new; on the road no place is marked", () => {
   const free = { ...WORLD, escort: null, trip: null } as unknown as WorldPlayer;
   const lines = mapLines(free);
