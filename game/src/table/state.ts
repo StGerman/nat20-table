@@ -276,14 +276,15 @@ export class TableState {
     for (const event of take(this.screen, limit)) {
       const line = eventLine(event);
       this.transcript.add({ speaker: "engine", channel: `to:${this.human}`, kind: "engine", text: line });
-      this.recent.push(line);
+      // Coin and experience for the human's own character show at once, in plain words (B4):
+      // otherwise they are held like others' lines and dropped under the DM's narration. `/log`
+      // reads the same plain line; the transcript keeps the engine's.
+      const mine = this.human ? yourLine(event, this.human) : undefined;
+      this.recent.push(mine ?? line);
       if (this.recent.length > RECENT_LINES) this.recent.shift();
       if (event.kind === "turn_start") this.screenTurn = event.actor;
       const own = this.screenTurn === this.human;
       if (event.kind === "turn_end" || event.kind === "combat_over") this.screenTurn = undefined;
-      // Coin and experience for the human's own character show at once, in plain words (B4):
-      // otherwise they are held like others' lines and dropped under the DM's narration.
-      const mine = this.human ? yourLine(event, this.human) : undefined;
       this.show({ kind: "engine", text: mine ?? event.text, seq: event.seq, ...(event.kind === "roll" ? { roll: event.roll.id } : {}), ...(own || mine ? { own: true as const } : {}) });
     }
     if (this.unnarrated) {
