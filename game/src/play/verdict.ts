@@ -80,6 +80,10 @@ function readLines<T>(file: string): T[] {
     .map((line) => JSON.parse(line) as T);
 }
 
+function readText(file: string): string | undefined {
+  return existsSync(file) ? readFileSync(file, "utf8") : undefined;
+}
+
 function readJson<T>(file: string): T | undefined {
   return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as T) : undefined;
 }
@@ -88,6 +92,9 @@ const minutes = (ms: number) => `${(ms / 60_000).toFixed(1)} min`;
 
 /** The engine's request log in a run folder. */
 const ENGINE_LOG = "engine-log.jsonl";
+
+/** The engine's stderr in a run folder: the server writes each failed ledger trial balance there as a `ledger: ` line. */
+const ENGINE_STDERR = "engine-stderr.log";
 
 /** Row 1: the planned scenes played to the end within the time limit. */
 function timeRow(run: RunRecord): VerdictRow {
@@ -201,7 +208,7 @@ interface EngineLogLine {
  * the map, not scenes in order. "3 game days" reads as the run's day limit: the contract is done
  * by the end of the last day the run plays (S4: the exit is "contract done, pay in the ledger").
  */
-function campaignRows(run: RunRecord, log: Event[], engineLog: EngineLogLine[]): VerdictRow[] {
+function campaignRows(run: RunRecord, log: Event[], engineLog: EngineLogLine[], stderr: string | undefined): VerdictRow[] {
   const campaign = run.campaign!;
   const first = run.scenes[0];
   const end = run.scenes.at(-1)?.ended_at ?? run.ended_at;
@@ -240,6 +247,19 @@ function campaignRows(run: RunRecord, log: Event[], engineLog: EngineLogLine[]):
     detail: `${[...paid].map(([b, cp]) => `${b} ${cp / 100} gp`).join(", ") || "no wages"}${unpaid.length > 0 ? `; unpaid: ${unpaid.join(", ")}` : ""}${settled < 0 ? "; the contract never settled" : ""}`,
   };
 
+  // The ledger's trial balance: every merchant's purse in the world matches the journal (S4). The
+  // server checks it after every ledger entry and writes each mismatch to stderr.
+  const mismatches = stderr === undefined ? [] : stderr.split("\n").filter((line) => line.startsWith("ledger: "));
+  const ledger: VerdictRow =
+    stderr === undefined
+      ? { row: "m9-ledger", title: "The ledger's trial balance holds", status: "pending", detail: `no ${ENGINE_STDERR} in the run folder` }
+      : {
+          row: "m9-ledger",
+          title: "The ledger's trial balance holds",
+          status: mismatches.length === 0 ? "pass" : "fail",
+          detail: mismatches.length === 0 ? "no purse differs from the journal" : `${mismatches.length} mismatches, first: ${mismatches[0]!.slice("ledger: ".length)}`,
+        };
+
   const cards = log.filter((e) => e.kind === "card_resolved").length;
   const road: VerdictRow = { row: "m9-road", title: "At least 1 road event", status: cards > 0 ? "pass" : "fail", detail: `${cards} road cards settled` };
 
@@ -253,7 +273,7 @@ function campaignRows(run: RunRecord, log: Event[], engineLog: EngineLogLine[]):
     roster?.party === "continue"
       ? { row: "m9-roster", title: "The party arrives with the previous run's roster", status: "pass", detail: `${roster.name}, loaded ${roster.loaded_sha256?.slice(0, 12) ?? "?"}` }
       : { row: "m9-roster", title: "The party arrives with the previous run's roster", status: "reported", detail: roster ? `a new party for ${roster.name}: the next run must continue it` : "no --roster: nothing carried or saved" };
-  return [row1, journeys, pay, road, fight, carried];
+  return [row1, journeys, pay, ledger, road, fight, carried];
 }
 
 /** Row 4: latency, measured and reported only (D1). */
@@ -296,7 +316,7 @@ export function computeVerdict(dir: string): Verdict {
   }));
   narrationFlags.push(...handFlags);
   const retries = retryRows(run, transcript, answers);
-  const progress = run.campaign ? campaignRows(run, log, readLines<EngineLogLine>(path.join(dir, ENGINE_LOG))) : [timeRow(run)];
+  const progress = run.campaign ? campaignRows(run, log, readLines<EngineLogLine>(path.join(dir, ENGINE_LOG)), readText(path.join(dir, ENGINE_STDERR))) : [timeRow(run)];
   const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
   const flags = [...narrationFlags, ...retries.flags];
   const not_eligible = [
