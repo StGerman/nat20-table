@@ -480,8 +480,9 @@ export class TableLoop {
       }
     }
     if (this.table.ended) return;
-    // The human's last turn at the journey's end is over, and no fight holds the table (B7).
-    if (this.journeyEnd === "closing" && !this.table.inCombat) {
+    // The human's last turn at the journey's end is over, and no fight or level-up holds the
+    // table (B7): a level-up picked on the last turn is answered first, then the journey closes.
+    if (this.journeyEnd === "closing" && !this.table.inCombat && this.table.awaiting.kind !== "level_up") {
       const destination = (await this.dmWorld())?.escort?.contract.destination ?? "";
       await this.closeJourney(destination);
       return;
