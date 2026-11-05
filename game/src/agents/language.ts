@@ -16,6 +16,7 @@ export function dmLanguage(language: Language, human = true, names: readonly str
       ? "Write everything the table hears in Russian: narration, questions to the human, the closing narration, and your scene summaries and memory. The human may write in Russian or English; read either."
       : "Write everything the table hears in Russian: narration, the closing narration, and your scene summaries and memory.",
     "The engine's lines, the options and the scene files are in English: tell what they mean in the fiction, in Russian, and never quote them. Tool inputs stay exactly as the tools take them: ids, handles, skills and option ids.",
+    ...(human ? ["Speak to the human's character with «ты», never «вы»: «вы» is for the whole party."] : []),
     "The guard reads Russian too: no numbers in words from ten up (десять, двадцать, сто), and no game statistics (КД, класс доспеха, СЛ, хиты, очки здоровья, бонус атаки).",
     ...russianNameLine(names),
     "",

@@ -63,6 +63,8 @@ export interface ModelPlayerConfig {
   language?: Language;
   /** Whether a human plays one of the other characters; default true. False for a table with no human (AGT-40). */
   withHuman?: boolean;
+  /** The human's character, when a human plays one: the DM speaks to it as "you". */
+  human?: Handle;
   /** The character's class from its pregen (`fighter`), for its block of the rules primer. */
   characterClass: string;
   /** The pack's one Russian name per party member (`PackParty.russianNames`), for a Russian prompt (AGT-38); never the NPCs'. */
@@ -108,7 +110,7 @@ export const ROAD_PROMPT = [
   "When your sheet says you can level up, out of a fight, call level_up and answer each choice with answer_level_up. Take the recommended pick unless your card gives your character a clear reason not to.",
 ].join("\n");
 
-export function playerPrompt(handle: Handle, fullCard: string, characterClass: string, language: Language = "en", human = true, names: readonly string[] = []): string {
+export function playerPrompt(handle: Handle, fullCard: string, characterClass: string, language: Language = "en", human: boolean | Handle = true, names: readonly string[] = []): string {
   const name = cardName(handle, fullCard);
   const russianVoice = RUSSIAN_VOICE.exec(fullCard)?.[1].trim();
   const card = promptCard(fullCard);
@@ -116,7 +118,13 @@ export function playerPrompt(handle: Handle, fullCard: string, characterClass: s
   const others = human ? "A human and other AI players play the other characters." : "Other AI players play the other characters.";
   const after = human ? "after the human's character acted" : "after the DM narrated";
   const waits = human ? " The human's character answers when its player likes; nobody waits for it." : "";
-  return `You are a player at a game of Dungeons & Dragons (fifth edition, 2024 rules). You play one character, ${name} (handle ${handle}), and only ${name}. Another AI runs the game as the Dungeon Master (DM). ${others}
+  // The DM speaks to the human's character as "you" (B5): in narration to the whole table that
+  // "you" is never this player's own character.
+  const humanName = typeof human === "string" ? human.charAt(0).toUpperCase() + human.slice(1) : "the human's character";
+  const you = human
+    ? `\n\nThe DM speaks to the human's character, ${humanName}, as "you", and names everyone else. In the DM's narration to the whole table, "you" means ${humanName}, never ${name}: ${name} is the one the DM calls by name. Only narration sent to ${name} alone speaks to ${name} as "you".`
+    : "";
+  return `You are a player at a game of Dungeons & Dragons (fifth edition, 2024 rules). You play one character, ${name} (handle ${handle}), and only ${name}. Another AI runs the game as the Dungeon Master (DM). ${others}${you}
 
 ## At the table
 
@@ -222,7 +230,7 @@ export class ModelPlayer implements PlayerAgent {
   constructor(config: ModelPlayerConfig) {
     this.config = config;
     this.handle = config.handle;
-    const prompt = playerPrompt(config.handle, config.card, config.characterClass, config.language, config.withHuman ?? true, config.russianNames);
+    const prompt = playerPrompt(config.handle, config.card, config.characterClass, config.language, config.human ?? config.withHuman ?? true, config.russianNames);
     this.systemPrompt = config.livingWorld ? `${prompt}\n\n${ROAD_PROMPT}` : prompt;
     this.seatTools = this.defineTools();
   }
