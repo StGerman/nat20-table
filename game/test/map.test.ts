@@ -16,7 +16,7 @@ const WORLD = {
   drives: true,
   today: { fast: 30, normal: 24, slow: 18 },
   places: [
-    { id: "wendmouth", name: "Wendmouth", kind: "town", market: true, inn_cp: 80 },
+    { id: "wendmouth", name: "Saltmouth", kind: "town", market: true, inn_cp: 80 },
     { id: "wendford", name: "Wendford", kind: "village", market: true, inn_cp: 40 },
     { id: "pells_mill", name: "Pell's mill", kind: "mill", market: false },
     { id: "highsteads", name: "The Highsteads", kind: "hamlet", market: true },
@@ -41,13 +41,13 @@ const WORLD = {
 
 test("the map is the way ahead in travel order: the route with rough times and arrival watches, then what is off it, nearest first", () => {
   assert.deepEqual(mapLines(WORLD), [
-    "Day 3 · morning · to Wendmouth",
+    "Day 3 · morning · to Saltmouth",
     "",
     "▶ The Highsteads           you are here · hamlet, market",
     "│ slope track · 8 mi · hill country    about 3 hours",
     "● Wendford                 arrive afternoon",
     "│ river road · 20 mi · good road       about 7 hours, one night out",
-    "◎ Wendmouth                arrive tomorrow morning · the contract ends",
+    "◎ Saltmouth                arrive tomorrow morning · the contract ends",
     "",
     "28 mi to go · about 9 hours on the road",
     "a night on the way, there tomorrow morning",
@@ -66,7 +66,7 @@ test("the map is the way ahead in travel order: the route with rough times and a
 test("a road between two stops that the route doesn't take shows off the route, once", () => {
   const ridge = { id: "ridge_way", from: "highsteads", to: "wendmouth", miles: 30, terrain: "hill", good_road: false, max_pace: "normal" };
   const shortcut = { ...WORLD, roads: [...WORLD.roads, ridge] } as unknown as WorldPlayer;
-  const off = mapLines(shortcut).filter((l) => /^ {2}Wendmouth +30 mi from here$/.test(l));
+  const off = mapLines(shortcut).filter((l) => /^ {2}Saltmouth +30 mi from here$/.test(l));
   assert.equal(off.length, 1, mapLines(shortcut).join("\n"));
 });
 
@@ -79,13 +79,13 @@ test("without a route the map lists the roads out of here nearest first; a trip 
   assert.ok(mapLines(cut).includes("│ … then on, by roads you don't know yet"), mapLines(cut).join("\n"));
   assert.ok(!mapLines(cut).some((l) => l.startsWith("◎")), "no destination mark short of it");
   const onRoad = { ...WORLD, at: { kind: "on_road", road: "river_road", came_from: "wendford", miles_left: 7 }, trip: null } as unknown as WorldPlayer;
-  assert.equal(caravanAt(onRoad), "river road, 7 mi to Wendmouth");
-  assert.equal(mapLines(onRoad)[2], "▶ on the river road, 7 mi to Wendmouth");
+  assert.equal(caravanAt(onRoad), "river road, 7 mi to Saltmouth");
+  assert.equal(mapLines(onRoad)[2], "▶ on the river road, 7 mi to Saltmouth");
 });
 
 test("an unknown road says it is a road and where it starts, and a leg begun on the road shows the miles left (Stas's run, 2026-11-05)", () => {
-  // The caravan stopped on the river road, 4 mi short of Wendmouth; the pane said "20 mi" for the
-  // leg, and "? somewhere new 4 mi from Wendmouth", which read as the camp.
+  // The caravan stopped on the river road, 4 mi short of Saltmouth; the pane said "20 mi" for the
+  // leg, and "? somewhere new 4 mi from Saltmouth", which read as the camp.
   const onRoad = {
     ...WORLD,
     at: { kind: "on_road", road: "river_road", came_from: "wendford", miles_left: 4 },
@@ -94,9 +94,9 @@ test("an unknown road says it is a road and where it starts, and a leg begun on 
   } as unknown as WorldPlayer;
   const wide = mapLines(onRoad);
   assert.ok(wide.includes("│ river road · 4 mi · good road        about an hour"), wide.join("\n"));
-  assert.ok(wide.includes("  ? unknown road           4 mi out of Wendmouth"), wide.join("\n"));
+  assert.ok(wide.includes("  ? unknown road           4 mi out of Saltmouth"), wide.join("\n"));
   const pane = mapLines(onRoad, "pane");
-  assert.ok(pane.includes("  ? road out of Wendmouth 4 mi"), pane.join("\n"));
+  assert.ok(pane.includes("  ? road out of Saltmouth 4 mi"), pane.join("\n"));
   assert.ok(pane.every((l) => l.length <= 49), pane.join("\n"));
   assert.ok(!pane.some((l) => /somewhere new|20 mi/.test(l)), pane.join("\n"));
 });

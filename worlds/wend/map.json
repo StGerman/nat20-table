@@ -1,11 +1,11 @@
 {
-    "_comment": "The Wend valley (MAP-6, Milestone 9): the hand-written core of the map that carries Fair in Wend now and The Lair of Arachas later. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Places from lore/the_wend_valley.md and the Milestone 9 spec. A pack does not draw the map: it names the pack_slot it fills. Places with discovered false, roads to them and the edges are DM data only. Distances in miles; terrain and good roads set the maximum pace (SRD 5.2.1, Travel Terrain, Good Roads). A place's scene comes from the pack, so none is set here: travel loads the campaign's road scene until a pack names one. Inn prices are room and board per person per night, from the SRD 5.1 lodging and meal prices (a 2014 fill under Rule 7). The name Wendmouth is a draft.",
+    "_comment": "The Wend valley (MAP-6, Milestone 9): the hand-written core of the map that carries Fair in Wend now and The Lair of Arachas later. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Places from lore/the_wend_valley.md and the Milestone 9 spec. A pack does not draw the map: it names the pack_slot it fills. Places with discovered false, roads to them and the edges are DM data only. Distances in miles; terrain and good roads set the maximum pace (SRD 5.2.1, Travel Terrain, Good Roads). A place's scene comes from the pack, so none is set here: travel loads the campaign's road scene until a pack names one. Inn prices are room and board per person per night, from the SRD 5.1 lodging and meal prices (a 2014 fill under Rule 7).",
     "places": [
         {
             "_comment": "The fair town at the river's mouth, a day downriver from Wendford. Salt, iron and cloth.",
             "id": "wendmouth",
-            "name": "Wendmouth",
-            "name_ru": "Уэндмут",
+            "name": "Saltmouth",
+            "name_ru": "Солтмут",
             "kind": "town",
             "market": true,
             "discovered": true,
@@ -63,7 +63,7 @@
             "pack_slot": "lair_of_arachas"
         },
         {
-            "_comment": "Salt pans and an old ferry landing south of Wendmouth: a free slot for the next pack.",
+            "_comment": "Salt pans and an old ferry landing south of Saltmouth: a free slot for the next pack.",
             "id": "salt_flats",
             "name": "The salt flats",
             "name_ru": "солончаки",

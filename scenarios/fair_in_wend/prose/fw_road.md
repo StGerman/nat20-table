@@ -1,6 +1,6 @@
 # On the road
 
-The one road scene for every stretch and every camp: the slope track from the Highsteads to Wendford (hills, slow with a wagon) and the river road from Wendford to Wendmouth (a good road along the water meadows).
+The one road scene for every stretch and every camp: the slope track from the Highsteads to Wendford (hills, slow with a wagon) and the river road from Wendford to Saltmouth (a good road along the water meadows).
 
 **Read aloud, by stretch.**
 - *The slope track:* the wagon brakes squealing on the steep turns, heather and bog on either side, the valley opening below in grey light.

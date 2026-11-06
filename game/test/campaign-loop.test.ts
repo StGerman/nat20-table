@@ -124,14 +124,14 @@ test("a human who owns the caravan picks a road out of the place, each line carr
 });
 
 test("the road's lines follow the engine's miles left today: none once the day is spent, and a fast line when only a fast pace gets there today", () => {
-  // Stas's run, 2026-11-05: at Wendford with 16 normal miles left and 20 to Wendmouth, only the
+  // Stas's run, 2026-11-05: at Wendford with 16 normal miles left and 20 to Saltmouth, only the
   // normal pace was offered, and twice "Move on" was picked on a spent day and refused in English.
   const world = {
     drives: true,
     at: { kind: "at", place: "wendford" },
     places: [
       { id: "wendford", name: "Wendford", kind: "village", market: true },
-      { id: "wendmouth", name: "Wendmouth", kind: "town", market: true },
+      { id: "wendmouth", name: "Saltmouth", kind: "town", market: true },
     ],
     roads: [{ id: "river_road", from: "wendford", to: "wendmouth", miles: 20, max_pace: "fast" }],
     unexplored: [],
@@ -141,7 +141,7 @@ test("the road's lines follow the engine's miles left today: none once the day i
     trip: { complete: true, legs: [{ road: "river_road", to: "wendmouth", pace: "normal", miles: 20, minutes: 400, nights: 1 }] },
   };
   const labels = (w: object) => roadChoices(w as never, 1).map((c) => c.label);
-  assert.deepEqual(labels(world), ["Move on with the caravan", "Push on at a fast pace to reach Wendmouth today", "Make camp for the night"]);
+  assert.deepEqual(labels(world), ["Move on with the caravan", "Push on at a fast pace to reach Saltmouth today", "Make camp for the night"]);
   assert.deepEqual(roadChoices(world as never, 1)[1]?.act, { kind: "travel", pace: "fast" });
   assert.deepEqual(labels({ ...world, today: { fast: 30, normal: 24, slow: 18 } }), ["Move on with the caravan", "Make camp for the night"], "normal gets there today");
   assert.deepEqual(labels({ ...world, roads: [{ ...world.roads[0], max_pace: "normal" }] }), ["Move on with the caravan", "Make camp for the night"], "the road allows no fast pace");
@@ -149,11 +149,11 @@ test("the road's lines follow the engine's miles left today: none once the day i
   assert.deepEqual(labels({ ...world, today: spent }), ["Make camp for the night"]);
   // On the road the stretch is what is left of it, toward the road's other end.
   const onRoad = { ...world, at: { kind: "on_road", road: "river_road", came_from: "wendford", miles_left: 4 }, trip: null };
-  assert.deepEqual(labels({ ...onRoad, today: { fast: 4, normal: 3, slow: 2 } }), ["Move on with the caravan", "Push on at a fast pace to reach Wendmouth today", "Make camp for the night"]);
+  assert.deepEqual(labels({ ...onRoad, today: { fast: 4, normal: 3, slow: 2 } }), ["Move on with the caravan", "Push on at a fast pace to reach Saltmouth today", "Make camp for the night"]);
   assert.deepEqual(labels({ ...onRoad, today: spent }), ["Make camp for the night"]);
   // A human who owns the caravan gets the fast line under the road it belongs to.
   const owned = { ...world, caravan: { owner: "bren", wagons: [] }, trip: null };
-  assert.deepEqual(labels(owned), ["Take the road to Wendmouth (20 miles)", "Take the road to Wendmouth at a fast pace, there today (20 miles)", "Make camp for the night"]);
+  assert.deepEqual(labels(owned), ["Take the road to Saltmouth (20 miles)", "Take the road to Saltmouth at a fast pace, there today (20 miles)", "Make camp for the night"]);
   // With the normal miles spent but a few fast ones left, the day is still over: only the night.
   assert.deepEqual(labels({ ...onRoad, today: { fast: 4, normal: 0, slow: 0 } }), ["Make camp for the night"]);
   assert.deepEqual(labels({ ...owned, today: { fast: 20, normal: 0, slow: 0 } }), ["Make camp for the night"]);
@@ -302,16 +302,16 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
     const report = await loop.run("fw_highsteads");
     assert.equal(report.ended, "the escort contract is done", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
-    // The journey's end (B7): one last turn in Wendmouth, the DM's closing, then the end card.
+    // The journey's end (B7): one last turn in Saltmouth, the DM's closing, then the end card.
     const ends = seat.shown.flatMap((e, i) => (e.kind === "info" && e.title === "Journey's end" ? [{ i, text: e.text }] : []));
     assert.equal(ends.length, 2, JSON.stringify(ends));
-    assert.match(ends[0]!.text, /^The contract is done\. You have one last turn in Wendmouth before the story rests\.$/);
+    assert.match(ends[0]!.text, /^The contract is done\. You have one last turn in Saltmouth before the story rests\.$/);
     assert.ok(seat.shown.slice(ends[0]!.i, ends[1]!.i).some((e) => e.kind === "options"), "the human was asked once more in between");
-    assert.match(ends[1]!.text, /^The escort contract to Wendmouth is done\.\nOn this journey you earned \d+ gold pieces in wages( and \d+ experience)?\.\n/);
+    assert.match(ends[1]!.text, /^The escort contract to Saltmouth is done\.\nOn this journey you earned \d+ gold pieces in wages( and \d+ experience)?\.\n/);
     assert.match(ends[1]!.text, /more experience brings your next level\.|enough experience for your next level/);
     assert.match(ends[1]!.text, /Your party is kept for the next journey\.$/);
     assert.ok(dm.briefings.some((b) => b.briefing.includes("The journey is over")), "the DM wrote the closing");
-    // The pay is told once (AGT-86, decision 0060 F5): Wendmouth's opening leaves it to the pay's own wake.
+    // The pay is told once (AGT-86, decision 0060 F5): Saltmouth's opening leaves it to the pay's own wake.
     const opening = dm.briefings.filter((b) => b.wake === "scene_open" && b.briefing.includes("fw_wendmouth is loaded")).at(-1);
     assert.ok(opening?.briefing.includes("open the arrival here without the pay"), opening?.briefing);
     const pay = dm.briefings.find((b) => b.briefing.includes("the merchant paid the Blades what they are owed"));

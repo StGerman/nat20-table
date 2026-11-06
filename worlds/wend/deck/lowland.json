@@ -1,5 +1,5 @@
 {
-    "_comment": "Road cards for the Wend valley floor (MAP-6, API-43): the river road from the Millbeck bridge to Wendmouth and the mill lane. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours, not the SRD's. Checks use the SRD DC ladder; fights use SRD 5.2.1 stat blocks. Text the players read never names a DC, a number of hit points or a stat block.",
+    "_comment": "Road cards for the Wend valley floor (MAP-6, API-43): the river road from the Millbeck bridge to Saltmouth and the mill lane. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours, not the SRD's. Checks use the SRD DC ladder; fights use SRD 5.2.1 stat blocks. Text the players read never names a DC, a number of hit points or a stat block.",
     "cards": [
         {
             "id": "rutted_road",
