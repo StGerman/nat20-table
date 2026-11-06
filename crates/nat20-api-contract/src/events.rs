@@ -340,12 +340,14 @@ pub enum EventKind {
         leg: LegView,
     },
     /// A road card was drawn after a leg or a night in camp (protocol §4.13). Public: the text
-    /// and choices only; the card id and the draw roll are DM-only.
+    /// and choices only; the card id and the draw roll are DM-only. The card's own words are
+    /// `card_text`: a field named `text` here would clash with the event's own `text`, which the
+    /// variant is flattened into.
     CardDrawn {
         /// Who decides it.
         target: CardTarget,
-        /// What the players read.
-        text: String,
+        /// What the players read: the card's own words.
+        card_text: String,
         /// The choices.
         choices: Vec<CardChoiceView>,
     },

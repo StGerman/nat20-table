@@ -241,8 +241,10 @@ pub fn text(kind: &EventKind) -> String {
                 }
             )
         }
-        EventKind::CardDrawn { text, choices, .. } => format!(
-            "A road card: {text} ({})",
+        EventKind::CardDrawn {
+            card_text, choices, ..
+        } => format!(
+            "A road card: {card_text} ({})",
             choices
                 .iter()
                 .map(|c| c.text.as_str())

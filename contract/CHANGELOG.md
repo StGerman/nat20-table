@@ -3,6 +3,11 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.54 (2026-11-03)
+- Breaking (allowed before v1): `card_drawn`'s card words move from `text` to `card_text`. The event's own `text` and the variant's `text` were one JSON key, because `EventKind` is flattened into `Event`: the engine wrote the card's words over the rendered sentence, and no reader could parse a `card_drawn` line back into an `Event` (the game audit failed on the first one). The event's `text` is now the rendered sentence again ("A road card: … (choice / choice)").
+  - Migration: read the card's words from `card_text`, or from the world view's `card`, as the game does.
+- Fixtures with a `card_drawn` event change by that field and that sentence; the rest by version.
+
 ## 1.0.0-dev.53 (2026-11-03)
 - Copilot review fixes on the Milestone 9 stack, meaning only: no field changes.
   - `travel` and `rest_night` while a level-up is open are `rejected`, `level_up_open` (§4.11, §4.12, §4.14), before the world or core changes; `LevelUpOpen`'s doc says so.
