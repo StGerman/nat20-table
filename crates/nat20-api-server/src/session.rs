@@ -247,10 +247,11 @@ impl Session {
     }
 
     /// The caravan arrived at `place`: at the escort's destination, the Blades are paid what
-    /// they are owed and `escort_settled` is logged.
-    fn escort_arrive(&mut self, place: &str) -> Result<(), ApiError> {
+    /// they are owed and `escort_settled` is logged. Returns whether this arrival settled the
+    /// contract.
+    fn escort_arrive(&mut self, place: &str) -> Result<bool, ApiError> {
         let Some(campaign) = self.campaign.as_mut() else {
-            return Ok(());
+            return Ok(false);
         };
         let settled_before = campaign.world.state.escort.as_ref().is_some_and(|e| e.done);
         let game = self.game.as_ref();
@@ -265,7 +266,7 @@ impl Session {
                 },
             ));
         }
-        Ok(())
+        Ok(settled && !settled_before)
     }
 
     /// Writes back every place NPC placed in the current scene, as core holds them now.
@@ -608,11 +609,12 @@ impl Session {
             ));
         }
         self.enter_scene(&scene, &party)?;
-        if leg.arrived {
-            self.escort_arrive(&leg.toward)?;
+        let settled = leg.arrived && self.escort_arrive(&leg.toward)?;
+        // The leg that settles the contract ends the journey: no road card follows it.
+        if !settled {
+            let road = leg.road.clone();
+            self.draw_card(|world, dice| world.draw_after_leg(&road, dice))?;
         }
-        let road = leg.road.clone();
-        self.draw_card(|world, dice| world.draw_after_leg(&road, dice))?;
         Ok(CommandResult::Travel {
             leg: view,
             state: self.state_for(viewer)?,
