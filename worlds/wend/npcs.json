@@ -4,6 +4,7 @@
         {
             "id": "shepherd_gwyn",
             "name": "Gwyn the shepherd",
+            "name_ru": "пастушка Гвин",
             "monster": "commoner",
             "place": "highsteads",
             "anchor": "by_the_wagon",
@@ -14,6 +15,7 @@
         {
             "id": "osric_hale",
             "name": "Osric Hale, the reeve",
+            "name_ru": "староста Осрик Хейл",
             "monster": "commoner",
             "place": "wendford",
             "anchor": "by_the_wagon",
@@ -24,6 +26,7 @@
         {
             "id": "warden_brannock",
             "name": "Brannock, the fair warden",
+            "name_ru": "смотритель ярмарки Браннок",
             "monster": "guard",
             "place": "wendmouth",
             "anchor": "by_the_wagon",

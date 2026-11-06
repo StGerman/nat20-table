@@ -36,6 +36,9 @@ pub struct NpcDef {
     pub id: String,
     /// The name players read
     pub name: String,
+    /// What a Russian run calls them (AGT-38), such as «староста Осрик Хейл»
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name_ru: Option<String>,
     /// The engine stat block they fight as (`guard`, `commoner`)
     pub monster: String,
     /// The place they live in, a place id

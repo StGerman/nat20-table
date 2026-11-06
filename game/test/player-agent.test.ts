@@ -205,6 +205,18 @@ test("a Russian run gives every agent the party's Russian names, and the DM the 
   assert.ok(!dmPrompt(pack, "bren", party.ai, "prompt", "en").includes("Names in Russian"));
 });
 
+test("a campaign's place NPCs get their Russian names in the DM's name line, never in a player's (AGT-38)", () => {
+  const wend = path.join(REPO, "scenarios/fair_in_wend");
+  const pack = readPack(wend);
+  assert.deepEqual(pack.placeNames, ["shepherd_gwyn: пастушка Гвин", "osric_hale: староста Осрик Хейл", "warden_brannock: смотритель ярмарки Браннок"]);
+  const party = castParty(wend);
+  const dm = dmPrompt(pack, "bren", party.ai, "prompt", "ru");
+  assert.match(dm, /odda_vell: торговка зерном Одда Велл; shepherd_gwyn: пастушка Гвин; osric_hale: староста Осрик Хейл; warden_brannock: смотритель ярмарки Браннок\./);
+  const player = playerPrompt("maren", party.cards.get("maren")!, "cleric", "ru", true, party.russianNames);
+  for (const npc of ["Гвин", "Браннок"]) assert.ok(!player.includes(npc), npc);
+  assert.equal(readPack(MILL).placeNames, undefined, "a pack without a campaign has no place NPCs");
+});
+
 test("a card's Voice in Russian reaches only a Russian prompt, after the rule to carry the voice by meaning", () => {
   const card = castParty(MILL).cards.get("maren")!;
   assert.match(card, /## Voice in Russian\n\n/);
