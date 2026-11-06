@@ -7,8 +7,8 @@
 
 use nat20_api_contract::{
     Anchor, AnchorObserved, AnchorView, CheckView, Condition, CreatureFull, CreatureObserved,
-    EncounterView, Event, EventKind, Handle, Mode, PointFt, RollView, Sheet, SpawnView, State,
-    Visibility,
+    EncounterView, Event, EventKind, Handle, Mode, PlaceKnown, PointFt, RoadKnown, RoadUnexplored,
+    RollView, Sheet, SpawnView, State, Visibility, WorldDm, WorldPlayer,
 };
 
 use crate::render;
@@ -49,6 +49,16 @@ pub struct FullState {
     pub encounters: Vec<EncounterView>,
     /// The scene's spawns with whether each was placed.
     pub spawns: Vec<SpawnView>,
+    /// The living world, once a campaign runs.
+    pub world: Option<WorldFull>,
+}
+
+/// The world in full, and who may drive the caravan.
+pub struct WorldFull {
+    /// The DM's view.
+    pub view: WorldDm,
+    /// The handles that may call `travel`.
+    pub drivers: Vec<String>,
 }
 
 /// The state as `viewer` may see it. `None` when a creature viewer is not in the scene.
@@ -64,6 +74,7 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
         checks,
         encounters,
         spawns,
+        world,
     } = full;
     let handle = match viewer {
         Viewer::Dm => {
@@ -85,6 +96,7 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
                 checks,
                 encounters,
                 spawns,
+                world: world.map(|w| w.view),
             });
         }
         Viewer::Creature(handle) => handle,
@@ -127,7 +139,72 @@ pub fn state(viewer: &Viewer, full: FullState) -> Option<State> {
             .collect(),
         me,
         others,
+        world: world.map(|w| world_for(handle, w)),
     })
+}
+
+/// The world as one player sees it (protocol §5): discovered places only; a road whose ends
+/// are both discovered in full, a road with one discovered end without where it leads; no
+/// deck zones, no route, no scene ids.
+fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
+    let WorldFull { view, drivers } = full;
+    let known: std::collections::HashSet<&str> = view
+        .places
+        .iter()
+        .filter(|p| p.discovered)
+        .map(|p| p.id.as_str())
+        .collect();
+    let mut roads = Vec::new();
+    let mut unexplored = Vec::new();
+    for road in &view.roads {
+        match (
+            known.contains(road.from.as_str()),
+            known.contains(road.to.as_str()),
+        ) {
+            (true, true) => roads.push(RoadKnown {
+                id: road.id.clone(),
+                from: road.from.clone(),
+                to: road.to.clone(),
+                miles: road.miles,
+                terrain: road.terrain,
+                good_road: road.good_road,
+                max_pace: road.max_pace,
+            }),
+            (true, false) | (false, true) => unexplored.push(RoadUnexplored {
+                id: road.id.clone(),
+                from: if known.contains(road.from.as_str()) {
+                    road.from.clone()
+                } else {
+                    road.to.clone()
+                },
+                miles: road.miles,
+                terrain: road.terrain,
+                good_road: road.good_road,
+                max_pace: road.max_pace,
+            }),
+            (false, false) => {}
+        }
+    }
+    WorldPlayer {
+        clock: view.clock,
+        at: view.at,
+        today: view.today,
+        drives: drivers.iter().any(|d| d == handle),
+        places: view
+            .places
+            .iter()
+            .filter(|p| p.discovered)
+            .map(|p| PlaceKnown {
+                id: p.id.clone(),
+                name: p.name.clone(),
+                kind: p.kind.clone(),
+                market: p.market,
+            })
+            .collect(),
+        roads,
+        unexplored,
+        caravan: view.caravan,
+    }
 }
 
 /// A sheet goes only to its owner and the DM (Rule 3): `None` for anyone else.

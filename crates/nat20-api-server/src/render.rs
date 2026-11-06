@@ -207,6 +207,20 @@ pub fn text(kind: &EventKind) -> String {
             }
         ),
         EventKind::CreaturePlaced { handle, .. } => format!("{} appears.", handle.0),
+        EventKind::Traveled { leg } => {
+            if leg.arrived {
+                format!(
+                    "The caravan travels {} miles along {} and arrives.",
+                    leg.miles, leg.road
+                )
+            } else {
+                format!(
+                    "The caravan travels {} miles along {} and stops on the road for the day.",
+                    leg.miles, leg.road
+                )
+            }
+        }
+        EventKind::PlaceDiscovered { name, .. } => format!("The party finds {name}."),
         EventKind::FlagSet { flag } => format!("Flag {flag} is set."),
         EventKind::HazardTriggered { hazard_id, actor } => {
             format!("{} sets off {hazard_id}.", actor.0)

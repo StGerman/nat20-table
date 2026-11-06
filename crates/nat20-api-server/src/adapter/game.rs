@@ -3493,6 +3493,32 @@ impl Game {
     /// someone's next turn (a Help) lasts until that turn, however long the engine takes to
     /// settle. Core gives a creature outside an encounter a real-time clock; a fight's
     /// participants keep the turn-based clocks core gives them.
+    /// Lets `minutes` of world time pass out of combat for every creature in the scene (a
+    /// journey leg, API-41): effects and Concentration that run out end, and what ran out is
+    /// logged. Nothing rolls.
+    pub fn pass_minutes(&mut self, minutes: u32) {
+        if minutes == 0 {
+            return;
+        }
+        self.drain();
+        let creatures: Vec<Entity> = self.scene.creatures.iter().map(|c| c.entity).collect();
+        for &creature in &creatures {
+            systems::time::set_time_mode(&mut self.engine.world, creature, TimeMode::RealTime);
+            systems::time::advance_time(
+                &mut self.engine,
+                creature,
+                TimeStep::RealTime {
+                    delta_seconds: minutes as f32 * 60.0,
+                },
+            );
+        }
+        self.pause_story_clocks();
+        // The update sweeps what expired.
+        self.engine.update(0.0);
+        self.drain();
+        self.log_unseen_changes();
+    }
+
     fn pause_story_clocks(&mut self) {
         for c in &self.scene.creatures {
             if self.engine.encounter_for_entity(c.entity).is_none() {

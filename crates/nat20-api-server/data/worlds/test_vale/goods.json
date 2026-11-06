@@ -1,0 +1,8 @@
+{
+    "_comment": "Test goods. Prices and weights from the SRD 5.1 Trade Goods table and the SRD 5.2.1 Rations (CC-BY-4.0).",
+    "goods": [
+        {"id": "wheat", "name": "wheat (1 lb.)", "price_cp": 1, "weight_lb": 1},
+        {"id": "iron", "name": "iron (1 lb.)", "price_cp": 10, "weight_lb": 1},
+        {"id": "rations", "name": "rations (1 day)", "price_cp": 50, "weight_lb": 2}
+    ]
+}

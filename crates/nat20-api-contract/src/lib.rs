@@ -18,6 +18,7 @@
 //! - [`pregen`]: the pregenerated character file a scene names. Not sent on the wire; it has its
 //!   own schema root, [`PregenFile`].
 //! - [`vocab`]: identifiers, geometry and the rules enums the other modules share.
+//! - [`world`]: the living world's clock, map and caravan views (Milestone 9).
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,7 @@ pub mod pregen;
 pub mod scene;
 pub mod state;
 pub mod vocab;
+pub mod world;
 
 pub use envelope::*;
 pub use errors::*;
@@ -37,13 +39,14 @@ pub use pregen::*;
 pub use scene::*;
 pub use state::*;
 pub use vocab::*;
+pub use world::*;
 
 /// Protocol name returned by `hello`.
 pub const PROTOCOL_NAME: &str = "nat20-api";
 /// Protocol major version; every request carries it as `v`.
 pub const PROTOCOL_MAJOR: u8 = 1;
 /// Full contract version (semver). Bump with every change and log it in `contract/CHANGELOG.md`.
-pub const CONTRACT_VERSION: &str = "1.0.0-dev.43";
+pub const CONTRACT_VERSION: &str = "1.0.0-dev.44";
 
 /// The protocol major version. Only `1` exists; any other value is rejected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

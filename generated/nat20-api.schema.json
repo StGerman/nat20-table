@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.43"
+    "version": "1.0.0-dev.44"
   },
   "$defs": {
     "Ability": {
@@ -631,6 +631,59 @@
         }
       ]
     },
+    "CaravanView": {
+      "description": "The caravan. Every player sees it.",
+      "type": "object",
+      "properties": {
+        "owner": {
+          "description": "Who owns it and decides where it goes: a player's handle, or `npc:<id>` for a world NPC\nthat follows the campaign's route.",
+          "type": "string"
+        },
+        "wagons": {
+          "description": "The wagons.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WagonView"
+          }
+        }
+      },
+      "required": [
+        "owner",
+        "wagons"
+      ]
+    },
+    "CargoView": {
+      "description": "Some of one good in a wagon.",
+      "type": "object",
+      "properties": {
+        "good": {
+          "description": "The good id.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name, with its unit.",
+          "type": "string"
+        },
+        "quantity": {
+          "description": "Units aboard.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "weight_lb": {
+          "description": "The weight of all of them, in pounds.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "good",
+        "name",
+        "quantity",
+        "weight_lb"
+      ]
+    },
     "CarriedItem": {
       "description": "Some of one item a creature carries.",
       "type": "object",
@@ -807,6 +860,40 @@
         "test",
         "dc",
         "rolled"
+      ]
+    },
+    "ClockView": {
+      "description": "The world's time. The one calendar: core keeps time inside a fight by turns.",
+      "type": "object",
+      "properties": {
+        "day": {
+          "description": "The day of the campaign, from 1.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "hour": {
+          "description": "The hour, 0 to 23.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "minute": {
+          "description": "The minute of the hour, 0 to 59.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "watch": {
+          "description": "The part of the day.",
+          "$ref": "#/$defs/Watch"
+        }
+      },
+      "required": [
+        "day",
+        "hour",
+        "minute",
+        "watch"
       ]
     },
     "Coins": {
@@ -1324,6 +1411,47 @@
             "cmd",
             "state",
             "handle"
+          ]
+        },
+        {
+          "description": "The state with the world in it.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "start_campaign"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The leg and the state after it, in the scene the leg ended in.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "travel"
+            },
+            "leg": {
+              "description": "The leg, also in the `traveled` event.",
+              "$ref": "#/$defs/LegView"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "leg",
+            "state"
           ]
         },
         {
@@ -1909,6 +2037,11 @@
           "description": "`place_creature` names a stat block the registry doesn't have.",
           "type": "string",
           "const": "unknown_stat_block"
+        },
+        {
+          "description": "A world command (`travel`) before `start_campaign`.",
+          "type": "string",
+          "const": "no_campaign"
         },
         {
           "description": "The actor is not the one the engine is waiting on.",
@@ -2901,6 +3034,47 @@
             "handle",
             "monster"
           ]
+        },
+        {
+          "description": "The caravan travelled one leg (`travel`). Public. On arrival `place_discovered` may\nfollow, then `scene_loaded` for the scene the leg ended in.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "traveled"
+            },
+            "leg": {
+              "description": "The leg.",
+              "$ref": "#/$defs/LegView"
+            }
+          },
+          "required": [
+            "kind",
+            "leg"
+          ]
+        },
+        {
+          "description": "The party found a place it did not know: it is in every player's `world.places` from\nnow on. Public.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "place_discovered"
+            },
+            "name": {
+              "description": "Its name.",
+              "type": "string"
+            },
+            "place": {
+              "description": "The place id.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "place",
+            "name"
+          ]
         }
       ],
       "required": [
@@ -3228,6 +3402,53 @@
         }
       ]
     },
+    "LegView": {
+      "description": "One journey leg, in `travel`'s result and the `traveled` event.",
+      "type": "object",
+      "properties": {
+        "actor": {
+          "description": "Who called `travel`.",
+          "$ref": "#/$defs/Handle"
+        },
+        "arrived": {
+          "description": "Whether the caravan reached the road's end; if not, it stopped on the road because the\nday's distance is spent.",
+          "type": "boolean"
+        },
+        "at": {
+          "description": "Where the caravan is now.",
+          "$ref": "#/$defs/WorldPosition"
+        },
+        "miles": {
+          "description": "Miles covered.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "minutes": {
+          "description": "Minutes the leg took.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "pace": {
+          "description": "The pace.",
+          "$ref": "#/$defs/Pace"
+        },
+        "road": {
+          "description": "The road.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor",
+        "road",
+        "pace",
+        "miles",
+        "minutes",
+        "arrived",
+        "at"
+      ]
+    },
     "LifeState": {
       "description": "Life state of a creature.",
       "oneOf": [
@@ -3251,6 +3472,35 @@
           "type": "string",
           "const": "dead"
         }
+      ]
+    },
+    "MilesToday": {
+      "description": "How many more miles the party can travel today at each pace. A day's distance is shared:\na mile at Fast spends 1/30 of the day, at Normal 1/24, at Slow 1/18.",
+      "type": "object",
+      "properties": {
+        "fast": {
+          "description": "Miles left today at a Fast pace.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "normal": {
+          "description": "Miles left today at a Normal pace.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "slow": {
+          "description": "Miles left today at a Slow pace.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "fast",
+        "normal",
+        "slow"
       ]
     },
     "Mode": {
@@ -3444,6 +3694,92 @@
       "required": [
         "variant",
         "name"
+      ]
+    },
+    "Pace": {
+      "description": "How fast the party travels (SRD 5.2.1, Travel Pace).",
+      "oneOf": [
+        {
+          "description": "2 miles an hour, 18 a day.",
+          "type": "string",
+          "const": "slow"
+        },
+        {
+          "description": "3 miles an hour, 24 a day.",
+          "type": "string",
+          "const": "normal"
+        },
+        {
+          "description": "4 miles an hour, 30 a day.",
+          "type": "string",
+          "const": "fast"
+        }
+      ]
+    },
+    "PlaceDm": {
+      "description": "A place as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "discovered": {
+          "description": "Whether the party has discovered it.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "The place id.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "What kind of place it is (`town`, `village`, `inn`, `ruin`).",
+          "type": "string"
+        },
+        "market": {
+          "description": "Whether it has a market.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "The name players read.",
+          "type": "string"
+        },
+        "scene": {
+          "description": "The scene the engine loads on arrival.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "market",
+        "discovered",
+        "scene"
+      ]
+    },
+    "PlaceKnown": {
+      "description": "A discovered place, as a player sees it.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The place id; `travel` takes it as `to`.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "What kind of place it is (`town`, `village`, `inn`, `ruin`).",
+          "type": "string"
+        },
+        "market": {
+          "description": "Whether it has a market.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "The name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "market"
       ]
     },
     "Placement": {
@@ -3746,6 +4082,31 @@
           "description": "`place_creature` finds no free spot within 10 feet of where it was asked to place.",
           "type": "string",
           "const": "no_room"
+        },
+        {
+          "description": "`travel` by someone who doesn't drive the caravan: not its owner, or not in the party\nwhen an NPC owns it.",
+          "type": "string",
+          "const": "not_driver"
+        },
+        {
+          "description": "`travel` to a place or road no road from here leads to, or, without `to`, an NPC\nowner's route with no next place.",
+          "type": "string",
+          "const": "no_road"
+        },
+        {
+          "description": "`travel` at a pace faster than the road or the party allows; the message names the\nfastest.",
+          "type": "string",
+          "const": "pace_too_fast"
+        },
+        {
+          "description": "`travel` after the day's distance is spent; a night's rest starts a new day.",
+          "type": "string",
+          "const": "day_over"
+        },
+        {
+          "description": "`travel` while a wagon carries more than its limit.",
+          "type": "string",
+          "const": "overloaded"
         }
       ]
     },
@@ -4337,6 +4698,57 @@
             "cmd",
             "participants"
           ]
+        },
+        {
+          "description": "Starts the living world from the scenario pack's `campaign.json` (API-41; protocol\n§4.11): its map, goods, start place, day and hour, caravan and route. Called once, by the\ngame loop as `dm`, after the start place's scene is loaded. The party is carried into\nevery scene a journey loads, as `load_scene` carries it.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "start_campaign"
+            },
+            "party": {
+              "description": "The party: every creature in the current scene that travels with the caravan.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "required": [
+            "cmd",
+            "party"
+          ]
+        },
+        {
+          "description": "Travels one leg along one road (API-41; protocol §4.11). Only the caravan's owner, or any\nparty member when an NPC owns it, may call it, as themselves: never `dm`. The leg goes as\nfar as the day's distance allows and stops on the road when it is spent; the clock moves\non, core's time with it, and the engine loads the place's scene on arrival or the road\nscene on the road, with the party.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who calls it: the viewer's own creature.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "travel"
+            },
+            "pace": {
+              "description": "The pace; no faster than the road allows, and Slow when a party member's Speed is\nhalved.",
+              "$ref": "#/$defs/Pace"
+            },
+            "to": {
+              "description": "A neighbouring place id or a road id. Left out: on along the road, or to the next\nplace on the route when an NPC owns the caravan.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "pace"
+          ]
         }
       ],
       "required": [
@@ -4471,6 +4883,141 @@
           "type": "string",
           "const": "long"
         }
+      ]
+    },
+    "RoadDm": {
+      "description": "A road as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "from": {
+          "description": "One end, a place id.",
+          "type": "string"
+        },
+        "good_road": {
+          "description": "Whether it is a good road (the maximum pace is one step faster).",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "The road id.",
+          "type": "string"
+        },
+        "max_pace": {
+          "description": "The fastest pace the road allows.",
+          "$ref": "#/$defs/Pace"
+        },
+        "miles": {
+          "description": "The length in miles.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "terrain": {
+          "description": "The predominant terrain.",
+          "$ref": "#/$defs/Terrain"
+        },
+        "to": {
+          "description": "The other end, a place id.",
+          "type": "string"
+        },
+        "zone": {
+          "description": "The deck zone road cards come from.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "to",
+        "miles",
+        "terrain",
+        "good_road",
+        "max_pace",
+        "zone"
+      ]
+    },
+    "RoadKnown": {
+      "description": "A road between two discovered places, as a player sees it.",
+      "type": "object",
+      "properties": {
+        "from": {
+          "description": "One end, a place id.",
+          "type": "string"
+        },
+        "good_road": {
+          "description": "Whether it is a good road.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "The road id; `travel` takes it as `to`.",
+          "type": "string"
+        },
+        "max_pace": {
+          "description": "The fastest pace the road allows.",
+          "$ref": "#/$defs/Pace"
+        },
+        "miles": {
+          "description": "The length in miles.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "terrain": {
+          "description": "The predominant terrain.",
+          "$ref": "#/$defs/Terrain"
+        },
+        "to": {
+          "description": "The other end, a place id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "to",
+        "miles",
+        "terrain",
+        "good_road",
+        "max_pace"
+      ]
+    },
+    "RoadUnexplored": {
+      "description": "A road from a discovered place to one the party has not found yet, as a player sees it:\nwhere it starts and how long it is, not where it leads.",
+      "type": "object",
+      "properties": {
+        "from": {
+          "description": "The discovered end, a place id.",
+          "type": "string"
+        },
+        "good_road": {
+          "description": "Whether it is a good road.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "The road id; `travel` takes it as `to`.",
+          "type": "string"
+        },
+        "max_pace": {
+          "description": "The fastest pace the road allows.",
+          "$ref": "#/$defs/Pace"
+        },
+        "miles": {
+          "description": "The length in miles.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "terrain": {
+          "description": "The predominant terrain.",
+          "$ref": "#/$defs/Terrain"
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "miles",
+        "terrain",
+        "good_road",
+        "max_pace"
       ]
     },
     "RollId": {
@@ -5404,6 +5951,17 @@
             "view": {
               "type": "string",
               "const": "dm"
+            },
+            "world": {
+              "description": "The living world, once `start_campaign` ran.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/WorldDm"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "required": [
@@ -5474,6 +6032,17 @@
             "viewer": {
               "description": "The creature whose player is looking.",
               "$ref": "#/$defs/Handle"
+            },
+            "world": {
+              "description": "The living world, once `start_campaign` ran.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/WorldPlayer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "required": [
@@ -5549,6 +6118,61 @@
           "description": "An area, aimed with `submit.aim`; `area` says its shape and whom each aim catches.",
           "type": "string",
           "const": "area"
+        }
+      ]
+    },
+    "Terrain": {
+      "description": "The predominant terrain of a road (SRD 5.2.1, Travel Terrain). It sets the road's maximum\npace.",
+      "oneOf": [
+        {
+          "description": "Normal at most (Fast needs skis, which the world does not model).",
+          "type": "string",
+          "const": "arctic"
+        },
+        {
+          "description": "Normal at most.",
+          "type": "string",
+          "const": "coastal"
+        },
+        {
+          "description": "Normal at most.",
+          "type": "string",
+          "const": "desert"
+        },
+        {
+          "description": "Normal at most.",
+          "type": "string",
+          "const": "forest"
+        },
+        {
+          "description": "Fast at most.",
+          "type": "string",
+          "const": "grassland"
+        },
+        {
+          "description": "Normal at most.",
+          "type": "string",
+          "const": "hill"
+        },
+        {
+          "description": "Slow at most.",
+          "type": "string",
+          "const": "mountain"
+        },
+        {
+          "description": "Slow at most.",
+          "type": "string",
+          "const": "swamp"
+        },
+        {
+          "description": "Normal at most.",
+          "type": "string",
+          "const": "underdark"
+        },
+        {
+          "description": "Normal at most.",
+          "type": "string",
+          "const": "urban"
         }
       ]
     },
@@ -5680,6 +6304,245 @@
           "required": [
             "scope",
             "handle"
+          ]
+        }
+      ]
+    },
+    "WagonView": {
+      "description": "One cart or wagon. Every player sees the caravan.",
+      "type": "object",
+      "properties": {
+        "cargo": {
+          "description": "The cargo, by good id.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CargoView"
+          }
+        },
+        "limit_lb": {
+          "description": "The most cargo it can move, in pounds (SRD 5.2.1, Mounts and Cargo).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "load_lb": {
+          "description": "The cargo aboard, in pounds.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "n": {
+          "description": "The number, from 1; the ledger holder `wagon:<n>`.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "vehicle": {
+          "description": "The vehicle (`cart`, `wagon`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "n",
+        "vehicle",
+        "limit_lb",
+        "load_lb",
+        "cargo"
+      ]
+    },
+    "Watch": {
+      "description": "A part of the day, four hours long; the night is two of them.",
+      "oneOf": [
+        {
+          "description": "Midnight to 4:00.",
+          "type": "string",
+          "const": "small_hours"
+        },
+        {
+          "description": "4:00 to 8:00.",
+          "type": "string",
+          "const": "dawn"
+        },
+        {
+          "description": "8:00 to noon.",
+          "type": "string",
+          "const": "morning"
+        },
+        {
+          "description": "Noon to 16:00.",
+          "type": "string",
+          "const": "afternoon"
+        },
+        {
+          "description": "16:00 to 20:00.",
+          "type": "string",
+          "const": "evening"
+        },
+        {
+          "description": "20:00 to midnight.",
+          "type": "string",
+          "const": "night"
+        }
+      ]
+    },
+    "WorldDm": {
+      "description": "The world as the DM sees it.",
+      "type": "object",
+      "properties": {
+        "at": {
+          "description": "Where the caravan is.",
+          "$ref": "#/$defs/WorldPosition"
+        },
+        "caravan": {
+          "description": "The caravan.",
+          "$ref": "#/$defs/CaravanView"
+        },
+        "clock": {
+          "description": "The time.",
+          "$ref": "#/$defs/ClockView"
+        },
+        "places": {
+          "description": "Every place, discovered or not, in map file order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PlaceDm"
+          }
+        },
+        "roads": {
+          "description": "Every road, in map file order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RoadDm"
+          }
+        },
+        "route": {
+          "description": "The places an NPC owner travels, in order; empty when a player owns the caravan.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "today": {
+          "description": "Miles the party can still travel today.",
+          "$ref": "#/$defs/MilesToday"
+        }
+      },
+      "required": [
+        "clock",
+        "at",
+        "today",
+        "places",
+        "roads",
+        "caravan",
+        "route"
+      ]
+    },
+    "WorldPlayer": {
+      "description": "The world as one player sees it.",
+      "type": "object",
+      "properties": {
+        "at": {
+          "description": "Where the caravan is.",
+          "$ref": "#/$defs/WorldPosition"
+        },
+        "caravan": {
+          "description": "The caravan.",
+          "$ref": "#/$defs/CaravanView"
+        },
+        "clock": {
+          "description": "The time.",
+          "$ref": "#/$defs/ClockView"
+        },
+        "drives": {
+          "description": "Whether this player may call `travel`: the owner, or any party member when an NPC owns\nthe caravan.",
+          "type": "boolean"
+        },
+        "places": {
+          "description": "The places the party has discovered, in map file order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PlaceKnown"
+          }
+        },
+        "roads": {
+          "description": "Roads between two discovered places, in map file order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RoadKnown"
+          }
+        },
+        "today": {
+          "description": "Miles the party can still travel today.",
+          "$ref": "#/$defs/MilesToday"
+        },
+        "unexplored": {
+          "description": "Roads from a discovered place to one not yet found, in map file order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RoadUnexplored"
+          }
+        }
+      },
+      "required": [
+        "clock",
+        "at",
+        "today",
+        "drives",
+        "places",
+        "roads",
+        "unexplored",
+        "caravan"
+      ]
+    },
+    "WorldPosition": {
+      "description": "Where the caravan is, tagged by `kind`.",
+      "oneOf": [
+        {
+          "description": "In a place.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "at"
+            },
+            "place": {
+              "description": "The place id.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "place"
+          ]
+        },
+        {
+          "description": "Part way along a road, stopped for the day or on the move.",
+          "type": "object",
+          "properties": {
+            "came_from": {
+              "description": "The place the caravan set out from on this road; always a discovered place.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "on_road"
+            },
+            "miles_left": {
+              "description": "Miles still to go to the road's other end.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "road": {
+              "description": "The road id.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "road",
+            "came_from",
+            "miles_left"
           ]
         }
       ]

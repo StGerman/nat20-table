@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     Ability, Aim, CheckTest, Condition, Handle, HealthBand, LifeState, Mode, OptionId, PointFt,
-    PromptId, RejectReason, Side, Skill, SpawnWhen,
+    PromptId, RejectReason, Side, Skill, SpawnWhen, WorldDm, WorldPlayer,
 };
 
 /// The session state, projected for the request's `viewer`, tagged by `view`.
@@ -39,6 +39,9 @@ pub enum State {
         encounters: Vec<EncounterView>,
         /// The loaded scene's spawns, in scene file order.
         spawns: Vec<SpawnView>,
+        /// The living world, once `start_campaign` ran.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        world: Option<WorldDm>,
     },
     /// What one player sees: their own creature in full, the others as observed.
     Player {
@@ -60,6 +63,9 @@ pub enum State {
         others: Vec<CreatureObserved>,
         /// The scene's named landmarks, in scene file order, with the distance from the viewer.
         anchors: Vec<AnchorObserved>,
+        /// The living world, once `start_campaign` ran.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        world: Option<WorldPlayer>,
     },
 }
 
