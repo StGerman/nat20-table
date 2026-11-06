@@ -60,7 +60,11 @@ impl Campaign {
             )));
         }
         let dir = world_dir(data_dir, &setup.map);
-        let map: world::WorldMap = read_json(&dir.join("map.json"), "world map")?;
+        let mut map: world::WorldMap = read_json(&dir.join("map.json"), "world map")?;
+        // A shared map names no scenes: the pack says which of its scenes each place loads (MAP-7).
+        setup
+            .place_scenes(&mut map)
+            .map_err(|e| bad(format!("The campaign's scenes: {e}.")))?;
         let goods: world::Goods = read_json(&dir.join("goods.json"), "goods file")?;
         if setup.day == 0 || setup.hour > 23 {
             return Err(bad(format!(
