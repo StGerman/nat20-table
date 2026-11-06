@@ -6,8 +6,10 @@
 //! (`add_card`), and a drawn card goes to the discard until the zone's pile runs dry, when
 //! the discard is shuffled back. A `once` card leaves the game when drawn.
 //!
-//! A draw is one d100 roll on the pile in file order, so the server logs it as one world
-//! roll with an id. The card offers 2 or 3 choices. Who decides follows the card's
+//! A draw is one d100 roll on the pile in file order for each card it takes, so the server
+//! logs each as a world roll with an id: a pile of one puts its card on the table, and a
+//! bigger pile offers two or three cards, rolled without putting one back, for the DM's pick
+//! (API-53). The card offers 2 or 3 choices. Who decides follows the card's
 //! `target` (Stas, 2026-11-02): a caravan card is the caravan owner's call after the Hired
 //! Blades advise, and an NPC owner takes their majority; a Blade card is the Blades' vote.
 //! The world returns the chosen choice's effects as data; the server runs them through
@@ -111,6 +113,9 @@ pub struct Card {
     pub owner_pick: Option<String>,
     /// Two or three choices in every case the conditions allow
     pub choices: Vec<Choice>,
+    /// What only the DM reads: the card's one oddity, voiced at every meeting (API-53)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 /// How long a drawn card stays out of the game.
@@ -382,6 +387,26 @@ impl std::fmt::Display for DeckError {
 
 impl std::error::Error for DeckError {}
 
+/// Why a pick was refused (API-53).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PickError {
+    /// No draw is waiting for a pick
+    NothingOffered,
+    /// The card is not one of the offered
+    NotOffered(String),
+}
+
+impl std::fmt::Display for PickError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NothingOffered => write!(f, "no cards are offered for a pick"),
+            Self::NotOffered(card) => write!(f, "{card} is not one of the cards offered"),
+        }
+    }
+}
+
+impl std::error::Error for PickError {}
+
 /// A world's deck: every card of every deck file.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Deck {
@@ -409,10 +434,48 @@ pub struct DeckState {
     /// moment takes the first of them without a roll (ENG-34)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub soon: Vec<String>,
+    /// The cards a draw offered the DM, in roll order, waiting for a pick (API-53): still in
+    /// the pile, not yet on the table
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub offered: Vec<String>,
     /// The card on the table, waiting for its decision
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pending: Option<PendingCard>,
 }
+
+impl DeckState {
+    /// Whether a card waits: offered for a pick, or on the table for its decision.
+    pub fn waiting(&self) -> bool {
+        self.pending.is_some() || !self.offered.is_empty()
+    }
+}
+
+/// What a draw did (API-53).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Drawn {
+    /// A card went on the table without a pick: a soon card, or a pile of one
+    Table {
+        /// The card id
+        card: String,
+        /// It came from the soon queue
+        soon: bool,
+    },
+    /// Two or three cards are offered for the DM's pick, in roll order
+    Offered(Vec<String>),
+}
+
+impl Drawn {
+    /// The card that went on the table, when no pick is needed.
+    pub fn table(&self) -> Option<&str> {
+        match self {
+            Self::Table { card, .. } => Some(card),
+            Self::Offered(_) => None,
+        }
+    }
+}
+
+/// The most cards one draw offers (API-53, deck doc change 13).
+pub const MAX_OFFERED: usize = 3;
 
 /// A drawn card waiting for its decision.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -776,10 +839,12 @@ impl Deck {
             .collect()
     }
 
-    /// Draws a card of `zone` and puts it on the table with the choices its deeds offer:
-    /// one d100 roll on the pile. When the pile is empty the zone's discard is shuffled back
-    /// first; a zone with no card in play draws nothing and rolls nothing. A card already on
-    /// the table is never replaced.
+    /// Draws in `zone` (API-53): a soon card goes on the table without a roll; otherwise one
+    /// d100 roll on the pile for each card offered, up to three, without putting a card back
+    /// between rolls. A pile of one puts its card on the table; a bigger pile offers its cards
+    /// for a pick (`pick`), and they stay in the pile until then. When the pile is empty the
+    /// zone's discard is shuffled back first; a zone with no card in play draws nothing and
+    /// rolls nothing. Nothing is drawn while a card waits.
     pub fn draw(
         &self,
         zone: &str,
@@ -788,8 +853,8 @@ impl Deck {
         deeds: &DeedBook,
         state: &mut DeckState,
         dice: &mut impl WorldDice,
-    ) -> Option<String> {
-        if state.pending.is_some() {
+    ) -> Option<Drawn> {
+        if state.waiting() {
             return None;
         }
         // A soon card comes first, without a roll; one whose deeds or place do not hold yet
@@ -803,7 +868,10 @@ impl Deck {
             let id = state.soon.remove(at);
             let card = self.card(&id).expect("checked above");
             self.put_on_table(card, deeds, state);
-            return Some(id);
+            return Some(Drawn::Table {
+                card: id,
+                soon: true,
+            });
         }
         let mut pile = self.pile(zone, when, discovered, deeds, state);
         if pile.is_empty() {
@@ -819,11 +887,43 @@ impl Deck {
         if pile.is_empty() {
             return None;
         }
-        let roll = dice.roll(DRAW_DIE, "road card");
-        let index = ((roll - 1) as usize * pile.len()) / DRAW_DIE as usize;
-        let card = pile[index];
-        self.put_on_table(card, deeds, state);
-        Some(card.id.clone())
+        let rolls = pile.len().min(MAX_OFFERED);
+        let mut offered = Vec::with_capacity(rolls);
+        for _ in 0..rolls {
+            let roll = dice.roll(DRAW_DIE, "road card");
+            let index = ((roll - 1) as usize * pile.len()) / DRAW_DIE as usize;
+            offered.push(pile.remove(index).id.clone());
+        }
+        if let [only] = offered.as_slice() {
+            let card = self.card(only).expect("drawn from the deck");
+            self.put_on_table(card, deeds, state);
+            return Some(Drawn::Table {
+                card: only.clone(),
+                soon: false,
+            });
+        }
+        state.offered = offered.clone();
+        Some(Drawn::Offered(offered))
+    }
+
+    /// The DM's pick among the offered cards (API-53): the card goes on the table with the
+    /// choices its deeds offer; the others stay in the pile.
+    pub fn pick(&self, card: &str, deeds: &DeedBook, state: &mut DeckState) -> Result<(), PickError> {
+        if state.offered.is_empty() {
+            return Err(PickError::NothingOffered);
+        }
+        if !state.offered.iter().any(|c| c == card) {
+            return Err(PickError::NotOffered(card.to_owned()));
+        }
+        let picked = self.card(card).ok_or_else(|| PickError::NotOffered(card.to_owned()))?;
+        state.offered.clear();
+        self.put_on_table(picked, deeds, state);
+        Ok(())
+    }
+
+    /// The choice ids a card would offer with these deeds; empty when it offers all.
+    pub fn offer_ids(card: &Card, deeds: &DeedBook) -> Vec<String> {
+        offered_ids(card, deeds)
     }
 
     /// A drawn card goes on the table with the choices its deeds offer, and to the discard,
@@ -1186,13 +1286,33 @@ mod tests {
         assert!(d.validate(&map).unwrap_err().0.contains("off the ladder"));
     }
 
+    /// Draws and, when cards are offered, picks the first rolled, as the engine does when
+    /// the DM does not answer.
+    fn draw_one(
+        d: &Deck,
+        zone: &str,
+        when: When,
+        found: &BTreeSet<String>,
+        state: &mut DeckState,
+        dice: &mut ListDice,
+    ) -> Option<String> {
+        match d.draw(zone, when, found, &DeedBook::new(), state, dice)? {
+            Drawn::Table { card, .. } => Some(card),
+            Drawn::Offered(cards) => {
+                d.pick(&cards[0], &DeedBook::new(), state).unwrap();
+                Some(cards[0].clone())
+            }
+        }
+    }
+
     #[test]
-    fn a_draw_rolls_d100_on_the_pile_in_file_order() {
+    fn a_draw_offers_the_pile_rolled_without_putting_a_card_back() {
         let d = deck();
         let mut state = DeckState::default();
-        // Two cards in play in `fields`: faces 1-50 take mud, 51-100 the beggar.
-        let mut dice = ListDice::new([51]);
-        let card = d.draw(
+        // Two cards in play in `fields`: the first roll's faces 1-50 take mud, 51-100 the
+        // beggar; the second roll is on the one card left.
+        let mut dice = ListDice::new([51, 1]);
+        let drawn = d.draw(
             "fields",
             When::Road,
             &known(),
@@ -1200,10 +1320,14 @@ mod tests {
             &mut state,
             &mut dice,
         );
-        assert_eq!(card.as_deref(), Some("beggar"));
-        assert_eq!(dice.asked(), &[(100, "road card".to_string())]);
-        assert!(state.discard.contains("beggar"));
-        // A card on the table is never replaced.
+        assert_eq!(
+            drawn,
+            Some(Drawn::Offered(vec!["beggar".into(), "mud".into()]))
+        );
+        assert_eq!(dice.asked().len(), 2, "one roll for each card offered");
+        assert!(state.waiting() && state.pending.is_none());
+        assert!(state.discard.is_empty(), "offered cards stay in the pile");
+        // Nothing more is drawn while cards are offered.
         assert_eq!(
             d.draw(
                 "fields",
@@ -1215,6 +1339,70 @@ mod tests {
             ),
             None
         );
+        assert_eq!(
+            d.pick("beggar_returns", &DeedBook::new(), &mut state),
+            Err(PickError::NotOffered("beggar_returns".into()))
+        );
+        d.pick("mud", &DeedBook::new(), &mut state).unwrap();
+        assert_eq!(state.pending.as_ref().unwrap().card, "mud");
+        assert!(state.offered.is_empty());
+        assert_eq!(state.discard, BTreeSet::from(["mud".to_string()]));
+        assert_eq!(
+            d.pick("beggar", &DeedBook::new(), &mut state),
+            Err(PickError::NothingOffered)
+        );
+        // The beggar was passed over: still in the pile.
+        state.pending = None;
+        let pile = d.pile("fields", When::Road, &known(), &DeedBook::new(), &state);
+        assert_eq!(
+            pile.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(),
+            ["beggar"]
+        );
+    }
+
+    #[test]
+    fn a_draw_offers_at_most_three_and_a_pile_of_one_needs_no_pick() {
+        let mut d = deck();
+        for n in 0..3 {
+            let mut extra = d.cards[0].clone();
+            extra.id = format!("mud_{n}");
+            d.cards.push(extra);
+        }
+        let mut state = DeckState::default();
+        let mut dice = ListDice::new([1, 1, 1, 1]);
+        let Some(Drawn::Offered(cards)) = d.draw(
+            "fields",
+            When::Road,
+            &known(),
+            &DeedBook::new(),
+            &mut state,
+            &mut dice,
+        ) else {
+            panic!("five cards in play offer a pick");
+        };
+        assert_eq!(cards, ["mud", "beggar", "mud_0"]);
+        assert_eq!(dice.asked().len(), MAX_OFFERED);
+        // A pile of one: its card goes on the table, after its one roll as before.
+        let mut state = DeckState {
+            discard: BTreeSet::from(["mud".into()]),
+            ..DeckState::default()
+        };
+        let mut one = ListDice::new([100]);
+        assert_eq!(
+            deck().draw(
+                "fields",
+                When::Road,
+                &known(),
+                &DeedBook::new(),
+                &mut state,
+                &mut one
+            ),
+            Some(Drawn::Table {
+                card: "beggar".into(),
+                soon: false
+            })
+        );
+        assert_eq!(one.asked().len(), 1);
     }
 
     #[test]
@@ -1224,17 +1412,9 @@ mod tests {
             discard: BTreeSet::from(["mud".into(), "beggar".into()]),
             ..DeckState::default()
         };
-        let mut dice = ListDice::new([1]);
+        let mut dice = ListDice::new([1, 1]);
         assert_eq!(
-            d.draw(
-                "fields",
-                When::Road,
-                &known(),
-                &DeedBook::new(),
-                &mut state,
-                &mut dice
-            )
-            .as_deref(),
+            draw_one(&d, "fields", When::Road, &known(), &mut state, &mut dice).as_deref(),
             Some("mud")
         );
         assert_eq!(state.discard, BTreeSet::from(["mud".to_string()]));
@@ -1264,7 +1444,7 @@ mod tests {
                 &mut state,
                 &mut dice
             )
-            .as_deref(),
+            .as_ref().and_then(Drawn::table),
             Some("ruin_ghost")
         );
     }
@@ -1490,7 +1670,7 @@ mod tests {
             &mut state,
             &mut dice,
         );
-        assert_eq!(card.as_deref(), Some("bridge_again"));
+        assert_eq!(card.as_ref().and_then(Drawn::table), Some("bridge_again"));
         let pending = state.pending.as_ref().unwrap();
         assert_eq!(pending.choices, ["shout", "say_no", "ford"]);
 
@@ -1600,15 +1780,8 @@ mod tests {
         d.cards[0].once = serde_json::from_str("\"contract\"").unwrap();
         assert_eq!(d.cards[0].once, Once::CONTRACT);
         let mut state = DeckState::default();
-        let mut dice = ListDice::new([1]);
-        d.draw(
-            "fields",
-            When::Road,
-            &known(),
-            &DeedBook::new(),
-            &mut state,
-            &mut dice,
-        );
+        let mut dice = ListDice::new([1, 1]);
+        draw_one(&d, "fields", When::Road, &known(), &mut state, &mut dice);
         assert!(state.gone_for_contract.contains("mud"));
         assert!(!state.discard.contains("mud") && !state.gone.contains("mud"));
         state.pending = None;
@@ -1647,21 +1820,14 @@ mod tests {
             &mut state,
             &mut none,
         );
-        assert_eq!(card.as_deref(), Some("beggar_returns"));
+        assert_eq!(card.as_ref().and_then(Drawn::table), Some("beggar_returns"));
         assert!(none.asked().is_empty(), "no roll for a soon card");
         assert!(state.soon.is_empty());
         assert!(state.gone.contains("beggar_returns"));
         // The next draw rolls on the pile as usual.
         state.pending = None;
-        let mut dice = ListDice::new([1]);
-        let card = d.draw(
-            "fields",
-            When::Road,
-            &known(),
-            &DeedBook::new(),
-            &mut state,
-            &mut dice,
-        );
+        let mut dice = ListDice::new([1, 1]);
+        let card = draw_one(&d, "fields", When::Road, &known(), &mut state, &mut dice);
         assert_eq!(card.as_deref(), Some("mud"));
     }
 
@@ -1684,7 +1850,7 @@ mod tests {
             &mut state,
             &mut dice,
         );
-        assert_eq!(card.as_deref(), Some("ruin_ghost"));
+        assert_eq!(card.as_ref().and_then(Drawn::table), Some("ruin_ghost"));
         d.cards[3].zone = "fields".into();
         assert!(d.validate(&map).unwrap_err().0.contains("is no place"));
     }

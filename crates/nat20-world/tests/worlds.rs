@@ -156,7 +156,7 @@ fn the_first_leg_down_from_wendford_always_meets_the_millbeck_toll_once() {
     // The Millbeck zone holds the toll card alone: any roll draws it.
     let mut dice = nat20_world::ListDice::new([100]);
     let card = world.draw_after_leg("bridge_road", &mut dice).unwrap();
-    assert_eq!(card, "millbeck_bridge");
+    assert_eq!(card.table(), Some("millbeck_bridge"), "a pile of one: no pick");
     world.state.deck.pending = None;
     // It is `once`: the stretch draws nothing after it, either way.
     world.travel(Some("wendford"), Pace::Normal, false).unwrap();
@@ -172,9 +172,15 @@ fn the_river_road_below_the_bridge_draws_a_lowland_card() {
     world
         .travel(Some("wendmouth"), Pace::Normal, false)
         .unwrap();
-    let mut dice = nat20_world::ListDice::new([1]);
-    let card = world.draw_after_leg("river_road", &mut dice).unwrap();
-    assert_eq!(world.deck.card(&card).unwrap().zone, "lowland");
+    let mut dice = nat20_world::ListDice::new([1, 1, 1]);
+    let nat20_world::Drawn::Offered(cards) = world.draw_after_leg("river_road", &mut dice).unwrap()
+    else {
+        panic!("the lowland pile offers cards for a pick");
+    };
+    assert!(cards.len() > 1 && cards.len() <= nat20_world::MAX_OFFERED);
+    for card in &cards {
+        assert_eq!(world.deck.card(card).unwrap().zone, "lowland");
+    }
 }
 
 #[test]
