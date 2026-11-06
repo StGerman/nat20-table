@@ -1,0 +1,17 @@
+{
+    "_comment": "Goods of the Wend valley (MAP-6). Prices and weights from the SRD 5.1 Trade Goods table (CC-BY-4.0, Wizards of the Coast; the 5.2.1 SRD has no such table, a 2014 fill under Rule 7) and Rations from SRD 5.2.1 (CC-BY-4.0). Livestock walks and cloth is sold by the yard, so neither is cargo here. The valley's own goods (wool, honey, peat, ale) come with markets as a labelled variant rule.",
+    "goods": [
+        {"id": "wheat", "name": "wheat (1 lb.)", "price_cp": 1, "weight_lb": 1},
+        {"id": "flour", "name": "flour (1 lb.)", "price_cp": 2, "weight_lb": 1},
+        {"id": "salt", "name": "salt (1 lb.)", "price_cp": 5, "weight_lb": 1},
+        {"id": "iron", "name": "iron (1 lb.)", "price_cp": 10, "weight_lb": 1},
+        {"id": "copper", "name": "copper (1 lb.)", "price_cp": 50, "weight_lb": 1},
+        {"id": "ginger", "name": "ginger (1 lb.)", "price_cp": 100, "weight_lb": 1},
+        {"id": "cinnamon", "name": "cinnamon (1 lb.)", "price_cp": 200, "weight_lb": 1},
+        {"id": "pepper", "name": "pepper (1 lb.)", "price_cp": 200, "weight_lb": 1},
+        {"id": "cloves", "name": "cloves (1 lb.)", "price_cp": 300, "weight_lb": 1},
+        {"id": "silver", "name": "silver (1 lb.)", "price_cp": 500, "weight_lb": 1},
+        {"id": "saffron", "name": "saffron (1 lb.)", "price_cp": 1500, "weight_lb": 1},
+        {"id": "rations", "name": "rations (1 day)", "price_cp": 50, "weight_lb": 2}
+    ]
+}

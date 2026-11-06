@@ -1,0 +1,127 @@
+{
+    "_comment": "The Wend valley (MAP-6, Milestone 9): the hand-written core of the map that carries Fair in Wend now and The Lair of Arachas later. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Places from lore/the_wend_valley.md and the Milestone 9 spec. A pack does not draw the map: it names the pack_slot it fills. Places with discovered false, roads to them and the edges are DM data only. Distances in miles; terrain and good roads set the maximum pace (SRD 5.2.1, Travel Terrain, Good Roads). A place's scene comes from the pack, so none is set here: travel loads the campaign's road scene until a pack names one. Inn prices are room and board per person per night, from the SRD 5.1 lodging and meal prices (a 2014 fill under Rule 7). The name Wendmouth is a draft.",
+    "places": [
+        {
+            "_comment": "The fair town at the river's mouth, a day downriver from Wendford. Salt, iron and cloth.",
+            "id": "wendmouth",
+            "name": "Wendmouth",
+            "kind": "town",
+            "market": true,
+            "discovered": true,
+            "inn_cp": 80
+        },
+        {
+            "_comment": "Forty households where the old road crosses the river. Flour and ale; a room over the alehouse.",
+            "id": "wendford",
+            "name": "Wendford",
+            "kind": "village",
+            "market": true,
+            "discovered": true,
+            "inn_cp": 40
+        },
+        {
+            "_comment": "A mile upriver at the end of a hedged lane. The Silent Mill.",
+            "id": "pells_mill",
+            "name": "Pell's mill",
+            "kind": "site",
+            "discovered": true,
+            "pack_slot": "the_silent_mill"
+        },
+        {
+            "_comment": "Upland farms on the slopes under the Hollin Hills. Wool, honey and peat.",
+            "id": "highsteads",
+            "name": "The Highsteads",
+            "kind": "hamlet",
+            "market": true
+        },
+        {
+            "_comment": "What is left of the Nettle Tooth band, herding sheep for food. Barter with the hills.",
+            "id": "snitts_camp",
+            "name": "Snitt's camp",
+            "kind": "camp",
+            "market": true
+        },
+        {
+            "_comment": "A hollow oak on a barrow at the valley's northern edge. The Lair of Arachas.",
+            "id": "barrow_oak",
+            "name": "The Barrow Oak",
+            "kind": "site",
+            "pack_slot": "lair_of_arachas"
+        },
+        {
+            "_comment": "Salt pans and an old ferry landing south of Wendmouth: a free slot for the next pack.",
+            "id": "salt_flats",
+            "name": "The salt flats",
+            "kind": "site",
+            "pack_slot": "wendmouth_spare"
+        }
+    ],
+    "roads": [
+        {
+            "_comment": "The river road: a day with a wagon at a normal pace.",
+            "id": "river_road",
+            "from": "wendford",
+            "to": "wendmouth",
+            "miles": 20,
+            "terrain": "grassland",
+            "good_road": true,
+            "zone": "lowland"
+        },
+        {
+            "id": "mill_lane",
+            "from": "wendford",
+            "to": "pells_mill",
+            "miles": 1,
+            "terrain": "grassland",
+            "zone": "lowland"
+        },
+        {
+            "id": "slope_track",
+            "from": "wendford",
+            "to": "highsteads",
+            "miles": 8,
+            "terrain": "hill",
+            "zone": "slopes"
+        },
+        {
+            "id": "barrow_path",
+            "from": "highsteads",
+            "to": "barrow_oak",
+            "miles": 2,
+            "terrain": "hill",
+            "zone": "barrows"
+        },
+        {
+            "id": "sheep_trail",
+            "from": "highsteads",
+            "to": "snitts_camp",
+            "miles": 5,
+            "terrain": "hill",
+            "zone": "barrows"
+        },
+        {
+            "id": "salt_road",
+            "from": "wendmouth",
+            "to": "salt_flats",
+            "miles": 4,
+            "terrain": "coastal",
+            "zone": "coast"
+        }
+    ],
+    "edges": [
+        {
+            "_comment": "The caravans' road: the generated road to a far city leaves here. Closed in Milestone 9.",
+            "id": "old_road_west",
+            "from": "wendford",
+            "name": "the old road west",
+            "generate": "road"
+        },
+        {
+            "_comment": "Closed in Milestone 9.",
+            "id": "old_road_east",
+            "from": "wendford",
+            "name": "the old road east",
+            "generate": "road"
+        }
+    ]
+}

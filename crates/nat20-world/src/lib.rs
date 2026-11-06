@@ -21,7 +21,7 @@ pub use campaign::{CampaignFile, CampaignWorld};
 pub use caravan::{Caravan, CaravanError, Good, Goods, Owner, Wagon};
 pub use clock::{Clock, Watch};
 pub use dice::{ListDice, WorldDice};
-pub use map::{MapError, Place, Position, Road, Terrain, WorldMap};
+pub use map::{Edge, Generate, MapError, Place, Position, Road, Terrain, WorldMap};
 pub use travel::{
     LONG_REST_MINUTES, Leg, Pace, RATIONS, TravelError, WAKE_HOUR, World, WorldState,
 };
