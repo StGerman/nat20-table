@@ -208,6 +208,8 @@ export type DmWake =
   | "combat_over"
   /** The road moved on (AGT-80): a card settled, a night passed, the escort was paid. */
   | "road"
+  /** A draw offered two or three road cards (AGT-88): pick one with pick_card. */
+  | "pick"
   | "summary";
 
 export interface DmAgent {

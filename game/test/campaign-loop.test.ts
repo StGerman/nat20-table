@@ -298,7 +298,16 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
   const t = await testTable({ seed: 3, pack, human: "bren", players: ["torva", "maren", "ilsa"], seat });
   try {
     const party = ["bren", "torva", "maren", "ilsa"];
-    const dm = new ScriptedDm({});
+    // The DM picks the last card offered at the first draw that offers some, and picks nothing
+    // after, so the run shows both the DM's pick and the table's (AGT-88).
+    let picked = 0;
+    const dm = new ScriptedDm({
+      pick: async (tools, briefing) => {
+        if (picked++ > 0) return;
+        const ids = [...briefing.matchAll(/^Offered card \d+: ([a-z0-9_]+) /gm)].map((m) => m[1]!);
+        await tools.pickCard(ids.at(-1)!, "It follows from what the party did.");
+      },
+    });
     const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
     const report = await loop.run("fw_highsteads");
     assert.equal(report.ended, "the escort contract is done", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
@@ -326,14 +335,22 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     // Every Blade is paid at least the advance and the day of arrival, from Odda's purse.
     for (const blade of escort.contract.blades) assert.ok(blade.paid_cp >= 400, `${blade.handle} paid ${blade.paid_cp}`);
     assert.ok(state.result.state.world!.clock.day <= 3, "within the day limit");
-    // Wend's road piles hold more than one card, so draws offer cards; until the DM's pick tool
-    // (AGT-88) the table takes the first card rolled, as the engine's pick (API-53).
+    // Wend's road piles hold more than one card, so draws offer cards (API-53). The DM is woken
+    // to pick with the offered cards and the deeds (AGT-88); a wake that picks nothing leaves the
+    // first card rolled to the table, counted as a fallback.
+    const wakes = dm.briefings.filter((b) => b.wake === "pick");
+    assert.ok(wakes.length >= 2, `${wakes.length} pick wakes`);
+    assert.ok(wakes.every((b) => /^Offered card 1: /m.test(b.briefing) && /^Offered card 2: /m.test(b.briefing) && /deeds/i.test(b.briefing)), wakes[0]?.briefing);
     const picks = t.requests().filter((r) => r.cmd === "pick_card");
-    assert.ok(picks.length > 0, "a draw offered cards and the table picked one");
-    assert.ok(picks.every((r) => r.viewer === "dm" && (r as { fallback?: boolean }).fallback === true));
+    assert.equal(picks.length, wakes.length, "one pick a draw");
+    assert.ok(picks.every((r) => r.viewer === "dm"));
+    assert.equal(picks.filter((r) => (r as { fallback?: boolean }).fallback === true).length, wakes.length - 1, "every pick after the first is the table's");
     const log = await t.engine.request("dm", { cmd: "events", since: 0 });
     assert.ok(log.result?.cmd === "events");
-    assert.ok(log.result.events.some((e) => e.kind === "card_picked" && e.came === "engine_pick"));
+    const came = log.result.events.flatMap((e) => (e.kind === "card_picked" && e.came !== "soon" ? [e.came] : []));
+    assert.deepEqual(came, ["dm_pick", ...Array(wakes.length - 1).fill("engine_pick")]);
+    assert.ok(log.result.events.some((e) => e.kind === "card_picked" && e.came === "dm_pick" && e.reason === "It follows from what the party did."));
+    assert.equal(t.table.transcript.records.filter((r) => r.kind === "fallback" && r.text.startsWith("the DM picked no road card")).length, wakes.length - 1);
   } finally {
     t.close();
   }

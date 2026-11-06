@@ -36,7 +36,7 @@ const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary"];
  * call drains in the background. Not `scene_open`, `table_turn` or `summary`, which go on with
  * tools after narrating (`load_scene`, `request_check`, `short_rest`).
  */
-export const DM_SETTLE_ON: Partial<Record<DmWake, readonly string[]>> = { narrate: ["narrate"], combat_over: ["narrate"] };
+export const DM_SETTLE_ON: Partial<Record<DmWake, readonly string[]>> = { narrate: ["narrate"], combat_over: ["narrate"], pick: ["pick_card"] };
 
 /** The DM's craft guidance (D10): our own text, one skill per file, for the DM session only. */
 export const CRAFT_PLUGIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../dm-craft");
@@ -242,6 +242,7 @@ export const DM_ROAD_PROMPT = [
   "- The players move the caravan on and end the day, never you: you have no travel, rest or card tool. When the party says in the story that they move on, or settles down for the night (they make camp, go to sleep, set a watch, take rooms), call propose_road: the table asks whoever drives the caravan at once, and the caravan moves or the night passes only if they agree. Never tell a player to find or pick a line on a panel: propose_road puts it in front of them. When a scene loads after a journey, open it as the arrival: the road behind them in a sentence, then the place.",
   "- \"A road card was settled\": narrate what came of it in one to three sentences. A card can bring a fight: start_fight or place_creature from your list, with a cause in the story.",
   "- A card's choice may say which customs it keeps or breaks (\"keeps word_kept\"). When that choice is taken, show how the people who saw or heard it take it, in a look, a word or a silence, never a judgement from you. Never say the custom's id at the table.",
+  "- \"Pick a road card\": a draw offered two or three cards. Pick with pick_card, by this rule, in order: the card that continues what the party did (it reads a deed, or follows from one); failing that, the card that gives the human's character the clearest problem to act on; between two that do equally well, the one that can come to a fight. Never pick a card to spare the party a fight. Say why in one line. Narrate nothing yet: the table hears the card next.",
   "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as how the characters feel, never as levels or numbers.",
   "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. The amounts are in the engine's lines: never say them yourself.",
   "- Time in a place: the journey and the nights move the clock, and nothing else does. When the party spends time where they are (a meal, a long talk, a search, a wait), call pass_time once for it, with the span the story took: short_while, hour, or watch (until the next part of the day). Time in a place shortens the day's road. Never past midnight: the night is the players' call.",
@@ -432,6 +433,12 @@ export class ModelDm implements DmAgent {
       // Time in a place (API-50): any living-world pack, whatever its format; outside one the tool
       // list drops it with the scenes-only tools (Copilot on table #295).
       seatTool(
+        "pick_card",
+        "A draw offered two or three road cards: put one on the table, by its id, with one line of why. The others stay in the deck for later. The table hears only the card you pick.",
+        { card: z.string().describe("The offered card's id."), reason: z.string().describe("One line: why this card now.") },
+        (i) => this.bound((t) => t.pickCard(i.card, i.reason)),
+      ),
+      seatTool(
         "pass_time",
         "Out of combat, let time pass where the party is (a meal, a long talk, a search, a wait): short_while is half an hour, hour an hour, watch until the next part of the day begins. Never past midnight: the night is the players' call.",
         { span: z.enum(["short_while", "hour", "watch"]).describe("How long.") },
@@ -603,7 +610,7 @@ export class ModelDm implements DmAgent {
     const humanOnly = new Set(["offer_surrender", "legal_actions", "submit", "end_turn", "ask_human"]);
     // On the road the journey loads the scenes and the contract or the days end the run (AGT-80):
     // a DM that loaded a scene would move the party off the map, and one that ended the adventure would end the run early.
-    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : ["propose_road", "pass_time"]);
+    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : ["propose_road", "pass_time", "pick_card"]);
     return tools.filter((tool) => (human || !humanOnly.has(tool.name)) && !scenesOnly.has(tool.name));
   }
 }

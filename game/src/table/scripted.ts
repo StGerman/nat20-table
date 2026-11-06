@@ -236,6 +236,11 @@ export function roadDm(): ScriptedDm {
     narrate: line("The moment passes as the engine says."),
     combat_over: line("The fight is over."),
     road: line("The caravan moves on along the road."),
+    // The first card rolled, as the briefing lists them (AGT-88): scripted runs replay byte for byte.
+    pick: async (tools, briefing) => {
+      const first = /^Offered card 1: ([a-z0-9_]+) /m.exec(briefing)?.[1];
+      if (first) await tools.pickCard(first, "The first card rolled.");
+    },
     summary: async () => "The caravan went on along the road.",
   });
 }
