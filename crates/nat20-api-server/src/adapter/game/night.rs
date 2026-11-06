@@ -60,14 +60,22 @@ impl Game {
         Ok(meal == Meal::Full)
     }
 
-    /// A night of `minutes` for the party: those who can take a Long Rest (at least 1 Hit
-    /// Point, 16 hours since their last) take one through core, time passes for everyone in
-    /// the scene, and the rest finishes. Returns who rested and who could not.
+    /// A night of `minutes` for the party, with the Long Rest in its last `rest_minutes`: the
+    /// hours before them pass first, as the party sets up camp and keeps the evening. Then
+    /// those who can take a Long Rest (at least 1 Hit Point, 16 hours since their last) take
+    /// one through core, the rest's hours pass for everyone in the scene, and the rest
+    /// finishes. A night called in the afternoon thus sleeps from the evening, not from the
+    /// moment it is called. Returns who rested and who could not.
     pub fn night(
         &mut self,
         party: &[Handle],
         minutes: u32,
+        rest_minutes: u32,
     ) -> Result<(Vec<Handle>, Vec<Handle>), ApiError> {
+        self.drain();
+        self.close_finished_fight();
+        let rest_minutes = rest_minutes.min(minutes);
+        self.pass_minutes(minutes - rest_minutes);
         let mut rested = Vec::new();
         let mut not_rested = Vec::new();
         let mut entities = Vec::new();
@@ -83,12 +91,11 @@ impl Game {
             }
         }
         self.drain();
-        self.close_finished_fight();
         if !entities.is_empty() {
             systems::time::start_rest(&mut self.engine, entities.clone(), &RestKind::Long)
                 .map_err(|e| error(ErrorCode::Internal, format!("core refused the rest: {e:?}")))?;
         }
-        self.pass_minutes(minutes);
+        self.pass_minutes(rest_minutes);
         if !entities.is_empty() {
             systems::time::finish_rest(&mut self.engine, entities)
                 .map_err(|e| error(ErrorCode::Internal, format!("core refused the rest: {e:?}")))?;

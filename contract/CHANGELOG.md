@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.56 (2026-11-05)
+- Meaning only, no field changes (API-42, protocol §4.12): `rest_night` takes the Long Rest in the night's last 8 hours, not from the moment the night is called. A camp called in the afternoon or morning after a dawn wake used to find the 16-hour wait unfinished and leave everyone `not_rested`; now the hours before the last 8 pass first, and the party rests. Core's creature clocks also move on by the ten minutes between two scenes, so the 16 hours core counts keep step with the world's clock.
+- `rest_night.jsonl` and `road_cards.jsonl`: a night that starts at dawn after a rested night now rests, with the `rest` event before `night`, and the seq and roll ids after it move by one. `place_npcs.jsonl` gains a camp called at 10:00 on day 2, in which both rest.
+
 ## 1.0.0-dev.55 (2026-11-04)
 - Additive: travel plans on a player's world view (API-49, protocol §4.11). Each road out of the caravan's place, in `roads` or `unexplored`, carries an optional `reach` (`ReachView`: `pace`, `minutes`, `nights`, `arrives`). `WorldPlayer` carries an optional `trip` (`TripView`: `legs` of `TripLegView`, and `complete`) while an escort contract is under way and the NPC owner follows its route; the legs stop before the first undiscovered place. Both are worked out by `nat20-world` with the travel rule, on a copy of the world.
 - Fixtures whose player `get_state` stands in a place gain `reach` on its roads, and `trip` under an escort; the rest change by version.
