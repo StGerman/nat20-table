@@ -458,7 +458,13 @@ impl Session {
                 .unwrap_or_default();
             self.contract_start = Some(RosterStart {
                 characters,
-                world: self.roster.as_ref().and_then(|r| r.world.clone()),
+                // A saved world of another map was not taken up (`Campaign::read`), so this
+                // contract started from its own file: keep none.
+                world: self
+                    .roster
+                    .as_ref()
+                    .and_then(|r| r.world.clone())
+                    .filter(|w| w.map == campaign.map_id),
             });
         }
         // The trip from where the last contract ended, told in one line (API-51, ENG-37).

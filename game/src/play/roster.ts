@@ -125,7 +125,8 @@ export function rosterRefusal(roster: Roster): string | undefined {
 export function replayRoster(roster: Roster): Roster | undefined {
   const start = roster.contract_start;
   if (!roster.world || !start) return undefined;
-  return { format: roster.format, characters: start.characters, ...(start.world ? { world: start.world } : {}) };
+  // The start goes along too, so a replay saved before its contract begins can be played again.
+  return { format: roster.format, characters: start.characters, ...(start.world ? { world: start.world } : {}), contract_start: start };
 }
 
 /** The saved party in one line for the start screen: "Torva (level 3), Maren (level 2)". */

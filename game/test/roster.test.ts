@@ -130,9 +130,9 @@ test("a party with a journey behind it can play that journey again; one saved by
   const world = { map: "wend", state: { memory: {}, contract: {} } };
   const start = { characters: [{ ...torva, xp: 300, level: 2 }] };
   const saved = { ...roster(900), world, contract_start: start } as unknown as Roster;
-  assert.deepEqual(replayRoster(saved), { format: 2, characters: start.characters });
+  assert.deepEqual(replayRoster(saved), { format: 2, characters: start.characters, contract_start: start });
   const later = { ...saved, contract_start: { ...start, world } } as unknown as Roster;
-  assert.deepEqual(replayRoster(later), { format: 2, characters: start.characters, world });
+  assert.deepEqual(replayRoster(later), { format: 2, characters: start.characters, world, contract_start: { ...start, world } });
   assert.equal(replayRoster(roster(900)), undefined, "no journey yet");
   assert.equal(rosterRefusal(roster(900)), undefined);
   assert.match(rosterRefusal({ ...roster(900), format: 1 } as Roster) ?? "", /older version of the game.*stays as it is.*--new-party/);
