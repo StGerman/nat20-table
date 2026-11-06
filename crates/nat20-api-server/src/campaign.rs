@@ -94,7 +94,9 @@ impl Campaign {
             .with_deck(deck)
             .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
         let mut built = built;
-        // A roster from a campaign on this map takes up the world where it was left (API-45).
+        // A roster from a campaign on this map takes up the world where it was left (API-45),
+        // unless its contract is done: then the party, who keep their characters, take the
+        // campaign's contract again from its start, and the advance is paid again.
         if let Some(saved) = saved.filter(|w| w.map == setup.map) {
             let state: world::WorldState =
                 serde_json::from_value(saved.state.clone()).map_err(|e| {
@@ -103,7 +105,9 @@ impl Campaign {
                         format!("The roster's world does not read: {e}."),
                     )
                 })?;
-            built.state = state;
+            if !state.escort.as_ref().is_some_and(|e| e.done) {
+                built.state = state;
+            }
         }
         // The place NPCs (API-48), after the state: a roster's NPCs keep what happened to them.
         let npcs_file = dir.join("npcs.json");

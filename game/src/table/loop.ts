@@ -427,10 +427,14 @@ export class TableLoop {
     // A fight that ended or a scene that loaded changes the phase, whoever caused it. Handling one
     // can cause the next (the DM loads the next scene when a fight ends), so read until it's quiet.
     for (let events = await this.watch(); events.length > 0; events = await this.watch()) {
-      for (const event of events) {
+      // A scene another one replaced before the table saw it is never opened: a saved party's
+      // world moves it from the first scene to where the caravan stands (API-45).
+      const lastScene = events.map((e) => e.kind).lastIndexOf("scene_loaded");
+      for (const [i, event] of events.entries()) {
         if (this.table.ended) return;
         if (event.kind === "combat_over") await this.combatOver(event);
-        if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id);
+        if (event.kind === "scene_loaded" && i < lastScene) this.table.log("system", `scene ${event.scene_id} left before it opened`);
+        else if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id);
         if (this.campaign) await this.roadEvent(event);
       }
     }

@@ -29,7 +29,9 @@ pub struct Roster {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RosterWorld {
-    /// The world map's id, e.g. `wend`. A campaign on another map starts fresh.
+    /// The world map's id, e.g. `wend`. A campaign on another map starts fresh, and so does one
+    /// whose saved escort contract is done: the party keep their characters and take the
+    /// campaign's contract again from its start.
     pub map: String,
     /// The world's state, as the engine wrote it.
     pub state: serde_json::Value,

@@ -155,3 +155,34 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     t.close();
   }
 });
+
+test("a saved party takes up the world where it left it: the loop follows the caravan to its scene, and no second advance is paid", async () => {
+  const first = await testTable({ seed: 1, human: "bren", players: ["maren"] });
+  let roster;
+  try {
+    await first.engine.request("dm", { cmd: "load_scene", scene_id: "vale_town" });
+    await first.engine.request("dm", { cmd: "start_campaign", party: ["bren", "maren"] });
+    await first.engine.request("bren", { cmd: "travel", actor: "bren", to: "crossing_inn", pace: "normal" });
+    const saved = await first.engine.request("dm", { cmd: "save_roster" });
+    assert.ok(saved.result?.cmd === "save_roster");
+    roster = saved.result.roster;
+  } finally {
+    first.close();
+  }
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], roster });
+  try {
+    const dm = new ScriptedDm({});
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 6, campaign: { party: ["bren", "maren"] } });
+    const report = await loop.run("vale_town");
+    // The DM opens only the scene the caravan stands in, never the first scene it left at once.
+    assert.equal(report.scenes[0], "vale_road", report.scenes.join(", "));
+    assert.ok(dm.briefings.some((b) => b.wake === "scene_open" && b.briefing.includes("Scene vale_road is loaded")));
+    assert.ok(!dm.briefings.some((b) => b.wake === "scene_open" && b.briefing.includes("Scene vale_town is loaded")));
+    const state = await t.engine.request("dm", { cmd: "get_state" });
+    assert.ok(state.result?.cmd === "get_state" && state.result.state.view === "dm");
+    assert.deepEqual(state.result.state.world?.at, { kind: "at", place: "crossing_inn" });
+    for (const blade of state.result.state.world!.escort!.contract.blades) assert.equal(blade.paid_cp, 200, `${blade.handle}: one advance`);
+  } finally {
+    t.close();
+  }
+});
