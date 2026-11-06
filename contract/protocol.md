@@ -321,6 +321,7 @@ A world's deck is `worlds/<id>/deck/*.json` (API-43). Each card belongs to a zon
   - *Blade card* (`target: blades`): each Blade's word is a vote (`card_advice`). Once all have voted the majority wins; a tie goes to the human's creature (`start_campaign.human`) when it voted for one of the tied choices, else the card's pick, else the first tied choice.
   - A creature with no say is `rejected`, `no_say`; a second word `already_spoke`; a choice the card lacks `unknown_choice`; no card `no_card`. In a fight the card waits: `wrong_mode`. A card nobody can speak on is settled at once by its default.
 - **What follows, in order.** `card_resolved{choice, decided}` (public), then the choice's effects in order. A group check rolls a ladder check through core for each creature named and succeeds when at least half succeed (SRD 5.1, Group Checks); its rolls and their outcome are logged as any `request_check`'s. Coin paid to or taken from the world is a `ledger` entry (reason `toll` or `reward`; a payer pays what their purse holds, up to the price). Goods gained or lost are `cargo_changed{good, change}` (public), time lost `time_lost{minutes}` (public), with the clock, core's time and the day's travel moving on. Exhaustion goes through core. A check or a fight takes the creatures named who are up; a payment, a gain and Exhaustion take every one named who is not dead. A fight places each stat block hostile at the scene's first anchor (`creature_placed`, DM only) and starts a fight with the party as `start_fight` does; it always comes last.
+- **Deeds** (Milestone 11, ENG-33, ENG-36, API-52). A choice can write a deed (`remember`), and a card or a choice can need deeds (`if`) or their absence (`unless`): a card whose condition fails is not in the pile, a choice whose condition fails is not offered, and the choices offered are fixed when the card goes on the table (`card_drawn` and `world.card` list only those; any other is `unknown_choice`). A card fight's creature that names an NPC writes `killed_<npc>` when it dies. Each new deed logs `deed_remembered{deed, by, day, contract}` (DM only) where its effect runs, or right after the death's `life_state`; `by` is the seats whose word made the choice, the handles that rolled the check it sits under, or the creature that dealt the last blow. A deed done again keeps its first record and logs nothing. The DM's `world.deeds` lists every deed the world remembers, this contract's and earlier ones (§4.15). No player view, `text` or `message` carries a deed.
 
 ### 4.14 Experience and level-ups
 
@@ -404,6 +405,7 @@ The party is hired to see the caravan to a place (API-47). The terms sit in `cam
 | `reach` on each road out of here, and `world.trip` (the route's legs over discovered places only, §4.11) | no (the DM reads `route` and the roads) | yes | yes |
 | `world.drives` (whether this player may call `travel`) | n/a | yes | yes, for themselves |
 | `world.card.id`, `world.card.zone`, the deck, the draw roll | yes | no | no |
+| `world.deeds`, `deed_remembered` (deeds, who did them, the day and the contract) | yes | no | no |
 | `world.card` text, choices, `said`, `waiting_for` | yes | yes | yes |
 | `traveled`, `place_discovered`, `night`, `card_drawn`, `card_advice`, `card_resolved`, `cargo_changed`, `time_lost`, `time_passed` | yes | yes | yes |
 | `world.npcs`: every place NPC with `monster`, `attitude`, `met`, `hp` and `notes` | yes | no; met NPCs only, with `id`, `name`, `place` and `alive` | no; as the owner |
@@ -465,6 +467,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `time_lost` | `minutes` (public): a card cost the party time |
 | `time_passed` | `minutes`, `clock` (public): one `pass_time` (§4.18) |
 | `escort_settled` | `destination` (public): the caravan reached the escort's destination and the Blades were paid (§4.17) |
+| `deed_remembered` | `deed`, `by[]`, `day`, `contract` (DM only): the world remembered a deed (§4.13) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
 ```json

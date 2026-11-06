@@ -406,6 +406,20 @@ pub enum EventKind {
         /// The world's time after it.
         clock: ClockView,
     },
+    /// The world remembered a deed (Milestone 11, API-52): a road card's choice wrote it, or a
+    /// card fight's named NPC died. DM only: deeds never reach a player view, prompt or line
+    /// (Rule 3); the players remember what they did through the story.
+    DeedRemembered {
+        /// The deed id, in snake_case, as the deck names it (`killed_<npc>` for a death).
+        deed: String,
+        /// Who did it: the seats whose word made the choice, the handles that rolled the check it
+        /// sits under, or the creature that dealt the last blow; empty when nobody spoke.
+        by: Vec<Handle>,
+        /// The day it was done.
+        day: u32,
+        /// The contract it was done in: 1 for a party's first.
+        contract: u32,
+    },
     /// The caravan reached the escort contract's destination and the Blades' pay was settled
     /// (API-47), after its `wage` ledger entries. Public.
     EscortSettled {

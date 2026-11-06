@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.61 (2026-11-06)
+- Additive (API-52, protocol §4.13, decision 0063): deeds on the wire, DM only. A new event `deed_remembered{deed, by, day, contract}` when the world remembers a deed (a road card's `remember`, or a card fight's named NPC killed), and `WorldDm.deeds` (`DeedDm`: `deed`, `by`, `day`, `contract`), every deed the world remembers. Neither is in any player view (visibility table). §4.13 also writes down what ENG-33 and ENG-36 already do: `if`/`unless`, the offered choices, the death deed.
+- The test world's tree card remembers `cleared_the_tree` when the Blades drag it aside. `escort.jsonl` gains a DM `events` line that shows `deed_remembered` (by bren and maren), and its DM `get_state` and saved roster carry the deed; `place_npcs.jsonl` and `travel.jsonl` carry it in their DM world views. Other fixtures change by version only.
+
 ## 1.0.0-dev.60 (2026-11-06)
 - Meaning only, no field changes (ENG-38, protocol §4.15, decision 0063 Q7): a scenario pack's own `deck/*.json` joins its world's road deck while the pack's contract runs, and a roster whose escort contract is under way is refused with `bad_roster` by `start_campaign` from another pack on the same map (one plain line: finish that journey first). Packs are told apart by `campaign.json`'s `id`; a roster saved before this names no pack and is taken up as before.
 - No fixture changes: the fixtures play one pack. `tests/api.rs` `a_pack_brings_its_own_cards_and_keeps_its_contract` shows both sides on two copies of the test pack. Fixtures change by version only.

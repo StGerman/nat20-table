@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.60"
+    "version": "1.0.0-dev.61"
   },
   "$defs": {
     "Ability": {
@@ -2213,6 +2213,41 @@
         "failures"
       ]
     },
+    "DeedDm": {
+      "description": "A deed the world remembers, as the DM sees it (API-52).",
+      "type": "object",
+      "properties": {
+        "by": {
+          "description": "Who did it; empty when nobody spoke.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        },
+        "contract": {
+          "description": "The contract it was done in: 1 for a party's first.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "day": {
+          "description": "The day it was done.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "deed": {
+          "description": "The deed id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "deed",
+        "by",
+        "day",
+        "contract"
+      ]
+    },
     "DiceRolled": {
       "description": "One group of dice in a roll.",
       "type": "object",
@@ -3727,6 +3762,46 @@
             "kind",
             "minutes",
             "clock"
+          ]
+        },
+        {
+          "description": "The world remembered a deed (Milestone 11, API-52): a road card's choice wrote it, or a\ncard fight's named NPC died. DM only: deeds never reach a player view, prompt or line\n(Rule 3); the players remember what they did through the story.",
+          "type": "object",
+          "properties": {
+            "by": {
+              "description": "Who did it: the seats whose word made the choice, the handles that rolled the check it\nsits under, or the creature that dealt the last blow; empty when nobody spoke.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "contract": {
+              "description": "The contract it was done in: 1 for a party's first.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "day": {
+              "description": "The day it was done.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "deed": {
+              "description": "The deed id, in snake_case, as the deck names it (`killed_<npc>` for a death).",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "deed_remembered"
+            }
+          },
+          "required": [
+            "kind",
+            "deed",
+            "by",
+            "day",
+            "contract"
           ]
         },
         {
@@ -7989,6 +8064,13 @@
         "clock": {
           "description": "The time.",
           "$ref": "#/$defs/ClockView"
+        },
+        "deeds": {
+          "description": "Every deed the world remembers, by id (Milestone 11, API-52): this contract's and the\nones before. DM only.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DeedDm"
+          }
         },
         "escort": {
           "description": "The escort contract, when the party is hired on one (API-47).",
