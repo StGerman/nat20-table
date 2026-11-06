@@ -748,7 +748,14 @@ export class TableLoop {
    * An AI player that gives no word goes with the others. Returns whether a card was asked about.
    */
   private async cardRound(): Promise<boolean> {
-    const world = await this.dmWorld();
+    let world = await this.dmWorld();
+    // A draw that offered two or three cards waits for the DM's pick (API-53). Until the DM's
+    // pick tool lands (AGT-88), the table takes the first card rolled, as the engine's pick.
+    const first = world?.offered?.[0];
+    if (first && !this.table.ended) {
+      await send(this.table, "dm", { cmd: "pick_card", card: first.id, reason: "The table took the first card rolled.", fallback: true }, () => `the road card ${first.id} is on the table`);
+      world = await this.dmWorld();
+    }
     const card = world?.card;
     if (!card) return false;
     // A player owner makes the caravan's call after every Blade's advice (S2): the card waits for them
