@@ -40,6 +40,26 @@ test("in a Russian run the speech guard refuses a line with no Russian in it, an
   assert.equal(speechGuard({ shown })("I check the barn door for tracks."), undefined);
 });
 
+test("in a Russian run both guards refuse a word in Latin letters beside Russian ones, and only there (AGT-73, F7)", () => {
+  const ids = packIds(MILL);
+  const speech = speechGuard({ shown: ids.shown, language: "ru" });
+  const narration = narrationGuard({ ids, knownRoll: () => true, language: "ru" });
+  for (const guard of [speech, narration]) {
+    // Decision 0060 F7 and AGT-73's run 19-50-27.
+    assert.match(guard("Torva идёт к старосте.") ?? "", /a word in Latin letters \(Torva\): write it in Russian/);
+    assert.match(guard("Ильза идёт first.") ?? "", /\(first\)/);
+    assert.match(guard("«Well, now…» — тянет староста.") ?? "", /\(Well\)/);
+    assert.match(guard("torva идёт к старосте.") ?? "", /\(torva\)/, "a handle with no _ or digit is a name, written in Russian");
+    assert.equal(guard("goblin_1 падает, и Торва идёт к старосте."), undefined, "a shown id passes");
+    assert.equal(guard("Торва идёт к старосте, а Брен ждёт у ворот."), undefined);
+    assert.equal(guard("Ильза сама спросит про пастуха. PASS"), undefined, "an answer word of the prompt passes (run 07-29-50, T92)");
+  }
+  assert.equal(narration("Гоблин падает [r12]."), undefined, "a roll citation is not a word");
+  assert.equal(speechGuard({ shown: ids.shown })("Torva идёт к старосте."), undefined, "an English run lets it pass");
+  assert.equal(narrationGuard({ ids, knownRoll: () => true })("Torva идёт к старосте."), undefined, "an English run lets it pass");
+  assert.equal(speechGuard({ shown: ids.shown, language: "ru" })("I go first."), "it is in English: say it in Russian", "a line all in English keeps its own reason");
+});
+
 test("the narration guard refuses numbers, game statistics, DM-only ids and unknown roll ids", () => {
   const guard = narrationGuard({ ids: packIds(MILL), knownRoll: (id) => id === "r12" });
   const refused: Array<[string, RegExp]> = [

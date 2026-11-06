@@ -114,8 +114,11 @@ function withoutShown(text: string, shown: ReadonlySet<string>): string {
   return text.replace(TOKEN, (token) => (shown.has(bareToken(token)) ? " " : token));
 }
 
-/** The DM's text guard: refuses numbers, game-stat terms, mixed-script words, DM-only ids and unknown roll ids. */
-export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) => boolean }): TextGuard {
+/**
+ * The DM's text guard: refuses numbers, game-stat terms, mixed-script words, DM-only ids and unknown
+ * roll ids, and in a Russian run (`language` ru, decision 0038) a word in Latin letters (AGT-73).
+ */
+export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) => boolean; language?: Language }): TextGuard {
   return (text) => {
     for (const cited of text.matchAll(CITATION)) {
       if (!options.knownRoll(`r${cited[1]}`)) return `it cites [r${cited[1]}], a roll the log doesn't have`;
@@ -126,7 +129,8 @@ export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) 
       numberIn(withoutShown(bare, options.ids.shown)) ??
       statTermIn(bare) ??
       mixedScriptIn(bare) ??
-      (secret ? `it names ${secret}, which only the DM knows` : undefined)
+      (secret ? `it names ${secret}, which only the DM knows` : undefined) ??
+      (options.language === "ru" ? latinWordIn(bare, options.ids.shown) : undefined)
     );
   };
 }
@@ -140,16 +144,39 @@ function englishIn(text: string, shown: ReadonlySet<string>): string | undefined
   return /\p{L}/u.test(words) && !/\p{Script=Cyrillic}/u.test(words) ? "it is in English: say it in Russian" : undefined;
 }
 
+/** An id (with an `_`, a digit or a `:`) every player is shown, such as goblin_1: a name, in any alphabet. */
+function shownId(token: string, shown: ReadonlySet<string>): boolean {
+  return /[_:\d]/.test(token) && shown.has(token);
+}
+
+/** The answer words a player writes in Latin letters by its prompt (party talk §4.3): SPEAK, BOTH, ACT, PASS. */
+const HAND_WORDS = new Set(["SPEAK", "BOTH", "ACT", "PASS"]);
+
+/** A word of two Latin letters or more: in a Russian line, an English word or a name left in Latin letters. */
+const LATIN_WORD = /(?<![\p{L}\d_:])\p{Script=Latin}{2,}(?![\p{L}\d_:])/u;
+
+/**
+ * In a Russian run, a word in Latin letters beside Russian ones (AGT-73, decision 0060 F7: «Torva
+ * идёт к старосте», «идёт first», a headman's "Well, now…"): the human reads Russian, and the name
+ * line gives every name in Russian letters. Ids every player is shown (goblin_1) are names and pass;
+ * a handle with no `_` or digit (torva) is a name and is written in Russian.
+ */
+function latinWordIn(text: string, shown: ReadonlySet<string>): string | undefined {
+  const words = text.replace(TOKEN, (token) => (shownId(bareToken(token), shown) || HAND_WORDS.has(token) ? " " : token));
+  const word = LATIN_WORD.exec(words);
+  return word ? `it has a word in Latin letters (${word[0]}): write it in Russian` : undefined;
+}
+
 /**
  * An AI player's text guard: refuses numbers, game-stat terms and mixed-script words, and in a
- * Russian run (`language` ru) a line with no Russian in it.
+ * Russian run (`language` ru) a line with no Russian in it or a word in Latin letters.
  */
 export function speechGuard(options: { shown: ReadonlySet<string>; language?: Language }): TextGuard {
   return (text) =>
     numberIn(withoutShown(text, options.shown)) ??
     statTermIn(text) ??
     mixedScriptIn(text) ??
-    (options.language === "ru" ? englishIn(text, options.shown) : undefined);
+    (options.language === "ru" ? (englishIn(text, options.shown) ?? latinWordIn(text, options.shown)) : undefined);
 }
 
 interface SceneFileIds {
