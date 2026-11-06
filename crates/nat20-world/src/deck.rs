@@ -280,6 +280,10 @@ pub enum Effect {
     AddCard {
         /// The card id
         card: String,
+        /// The card comes next (ENG-34): the next draw in its zone and moment takes it
+        /// without a roll
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        soon: bool,
     },
     /// The world remembers a deed, with who did it and the day (ENG-33)
     Remember {
@@ -319,6 +323,10 @@ pub struct DeckState {
     /// `once` cards already drawn
     #[serde(default)]
     pub gone: BTreeSet<String>,
+    /// Cards added with `soon`, in the order added: the next draw in a card's zone and
+    /// moment takes the first of them without a roll (ENG-34)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub soon: Vec<String>,
     /// The card on the table, waiting for its decision
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pending: Option<PendingCard>,
@@ -555,7 +563,7 @@ impl Deck {
         for card in &self.cards {
             for effect in Deck::effects(card) {
                 match effect {
-                    Effect::AddCard { card: next } => {
+                    Effect::AddCard { card: next, .. } => {
                         match self.card(next) {
                             Some(c) if c.chained => {}
                             Some(_) => {
@@ -673,6 +681,19 @@ impl Deck {
         if state.pending.is_some() {
             return None;
         }
+        // A soon card comes first, without a roll; one whose deeds or place do not hold yet
+        // waits in the queue.
+        let soon = state.soon.iter().position(|id| {
+            self.card(id).is_some_and(|c| {
+                c.zone == zone && c.when == when && self.in_play(c, discovered, deeds, state)
+            })
+        });
+        if let Some(at) = soon {
+            let id = state.soon.remove(at);
+            let card = self.card(&id).expect("checked above");
+            self.put_on_table(card, deeds, state);
+            return Some(id);
+        }
         let mut pile = self.pile(zone, when, discovered, deeds, state);
         if pile.is_empty() {
             let back: Vec<String> = self
@@ -690,6 +711,13 @@ impl Deck {
         let roll = dice.roll(DRAW_DIE, "road card");
         let index = ((roll - 1) as usize * pile.len()) / DRAW_DIE as usize;
         let card = pile[index];
+        self.put_on_table(card, deeds, state);
+        Some(card.id.clone())
+    }
+
+    /// A drawn card goes on the table with the choices its deeds offer, and to the discard,
+    /// or out of the game when it is `once`.
+    fn put_on_table(&self, card: &Card, deeds: &DeedBook, state: &mut DeckState) {
         if card.once {
             state.gone.insert(card.id.clone());
         } else {
@@ -700,13 +728,16 @@ impl Deck {
             choices: offered_ids(card, deeds),
             said: BTreeMap::new(),
         });
-        Some(card.id.clone())
     }
 
-    /// A chained card joins the deck.
-    pub fn add(&self, state: &mut DeckState, card: &str) {
+    /// A chained card joins the deck; a `soon` one also joins the queue the next draw in its
+    /// zone takes first.
+    pub fn add(&self, state: &mut DeckState, card: &str, soon: bool) {
         if self.card(card).is_some_and(|c| c.chained) {
             state.added.insert(card.to_string());
+            if soon && !state.soon.iter().any(|c| c == card) {
+                state.soon.push(card.to_string());
+            }
         }
     }
 
@@ -998,7 +1029,10 @@ mod tests {
     fn the_validator_finds_broken_cards() {
         let map = small_map();
         let mut d = deck();
-        d.cards[1].choices[0].effects[1] = Effect::AddCard { card: "mud".into() };
+        d.cards[1].choices[0].effects[1] = Effect::AddCard {
+            card: "mud".into(),
+            soon: false,
+        };
         assert!(d.validate(&map).unwrap_err().0.contains("not chained"));
 
         let mut d = deck();
@@ -1151,7 +1185,7 @@ mod tests {
         );
         assert!(state.pending.is_none());
         // A chained card joins the deck.
-        d.add(&mut state, "beggar_returns");
+        d.add(&mut state, "beggar_returns", false);
         assert!(state.added.contains("beggar_returns"));
     }
 
@@ -1436,5 +1470,51 @@ mod tests {
         let back = serde_json::to_value(card).unwrap();
         assert_eq!(back["if"], "paid");
         assert_eq!(back["unless"][0], "fought");
+    }
+
+    #[test]
+    fn a_soon_card_comes_next_without_a_roll() {
+        let d = deck();
+        let mut state = DeckState::default();
+        d.add(&mut state, "beggar_returns", true);
+        d.add(&mut state, "beggar_returns", true);
+        assert_eq!(state.soon, ["beggar_returns"]);
+        // Not at night: the queue waits for its own zone and moment.
+        let mut none = ListDice::new([]);
+        assert_eq!(
+            d.draw(
+                "fields",
+                When::Night,
+                &known(),
+                &DeedBook::new(),
+                &mut state,
+                &mut none
+            ),
+            None
+        );
+        let card = d.draw(
+            "fields",
+            When::Road,
+            &known(),
+            &DeedBook::new(),
+            &mut state,
+            &mut none,
+        );
+        assert_eq!(card.as_deref(), Some("beggar_returns"));
+        assert!(none.asked().is_empty(), "no roll for a soon card");
+        assert!(state.soon.is_empty());
+        assert!(state.gone.contains("beggar_returns"));
+        // The next draw rolls on the pile as usual.
+        state.pending = None;
+        let mut dice = ListDice::new([1]);
+        let card = d.draw(
+            "fields",
+            When::Road,
+            &known(),
+            &DeedBook::new(),
+            &mut state,
+            &mut dice,
+        );
+        assert_eq!(card.as_deref(), Some("mud"));
     }
 }

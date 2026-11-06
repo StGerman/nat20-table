@@ -300,10 +300,10 @@ impl Session {
                 ));
                 Ok(())
             }
-            world::Effect::AddCard { card } => {
+            world::Effect::AddCard { card, soon } => {
                 let campaign = self.campaign.as_mut().expect("a card needs a campaign");
                 let world = &mut campaign.world;
-                world.deck.add(&mut world.state.deck, card);
+                world.deck.add(&mut world.state.deck, card, *soon);
                 Ok(())
             }
             // DM-only bookkeeping (ENG-33); `deed_remembered` reaches the wire with API-52.
