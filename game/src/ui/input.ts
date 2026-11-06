@@ -75,5 +75,7 @@ export function promptHint(prompt: HumanPrompt, handle: string): string {
       return "Your word on the road: a number, or Enter to go with the others.";
     case "level_up":
       return "Your new level: a number, or Enter for the recommended pick.";
+    case "road":
+      return "The caravan waits on you: Enter for the first line, or a number.";
   }
 }

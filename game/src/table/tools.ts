@@ -23,7 +23,7 @@ import type {
 } from "@nat20-table/engine-client";
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
 import type { NoteKind, TableState } from "./state.ts";
-import type { ToolOutcome } from "./types.ts";
+import type { RoadStep, ToolOutcome } from "./types.ts";
 import type { StatBlockEntry } from "../pack/adventure.ts";
 
 /** What an agent may give `submit`: an option, and its targets, variant or aim. */
@@ -888,6 +888,30 @@ export class DmTools {
     const a = this.table.awaiting;
     if (a.kind !== "action" || a.actor !== human) return Promise.resolve(notNow(`it is not ${human}'s turn`));
     return send(this.table, "dm", { cmd: "end_turn", actor: human, prompt_id: a.prompt_id }, () => "turn ended");
+  }
+
+  /**
+   * The party said in the story that they move on, or settled down for the night (AGT-80): the table
+   * asks whoever drives the caravan once this wake is over. The DM never moves the caravan or ends
+   * the day (design S2). Only out of a fight, with no road card or level-up waiting, one at a time.
+   */
+  async proposeRoad(step: RoadStep): Promise<ToolOutcome> {
+    if (this.table.exhausted("dm")) return this.table.spent();
+    if (this.table.inCombat) return notNow("the road waits until the fight is over");
+    if (this.table.road) return notNow("the table is already asking whoever drives the caravan");
+    if (this.table.awaiting.kind === "level_up") return notNow(`the road waits until ${this.table.awaiting.actor}'s level-up is done`);
+    const world = (await this.dmState())?.world;
+    if (!world) return notNow("there is no road in this adventure");
+    if (world.card) return notNow("a road card waits for its word first");
+    if (step === "inn") {
+      const here = world.at.kind === "at" ? world.places.find((p) => p.id === (world.at as { place: string }).place) : undefined;
+      if (typeof here?.inn_cp !== "number") return notNow("there is no inn here: propose camp instead");
+    }
+    this.table.road = { step };
+    return {
+      ok: true,
+      text: `the table asks whoever drives the caravan whether to ${step === "move_on" ? "move on" : "end the day"}; narrate the party getting ready, never the journey or the night itself`,
+    };
   }
 
   /** Lets an AI player take one of its own options out of combat (spec §3.3 step 4). */

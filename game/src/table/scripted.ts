@@ -119,6 +119,8 @@ export interface ScriptedPlayerPolicy {
   /** With the floor: speaks with `say` and returns what it sets out to do, or nothing to pass. */
   declare?: (tools: PlayerTools, briefing: string) => Promise<string | void>;
   granted?: (tools: PlayerTools) => Promise<void>;
+  /** The DM proposed a road step and this player drives the caravan (AGT-80). Default: what was proposed. */
+  road?: (tools: PlayerTools, briefing: string) => Promise<string | void>;
   /**
    * Reacts between turns in a fight (party talk R1, AGT-34): speaks with `say`, or returns nothing to
    * pass. Without it the player is never woken to react, so scripted runs play as before.
@@ -179,6 +181,13 @@ export class ScriptedPlayer implements PlayerAgent {
         return this.policy.bark?.(tools, briefing);
       case "summary":
         return `${this.handle} remembers the scene.`;
+      case "road": {
+        // Does what the briefing proposes, unless the policy says otherwise.
+        if (this.policy.road) return this.policy.road(tools, briefing);
+        const where = /rest_night with where (camp|inn)/.exec(briefing)?.[1] as "camp" | "inn" | undefined;
+        await (where ? tools.restNight(where) : tools.travel("normal"));
+        return;
+      }
       case "card": {
         // The first choice the briefing lists, unless the policy says otherwise.
         if (this.policy.card) return this.policy.card(tools, briefing);
@@ -454,6 +463,11 @@ export class ScriptedSeat implements Seat {
       case "level_up":
         // The scripted human takes the recommended pick, as Enter does (AGT-80).
         return { kind: "option", number: 1 };
+      case "road": {
+        // The scripted human takes the DM's proposal, as Enter does (AGT-80).
+        const offered = [...seat.shown].reverse().find((e) => e.kind === "options");
+        return { kind: "option", number: (offered?.kind === "options" ? offered.preset : undefined) ?? 1 };
+      }
       case "card": {
         // The scripted human goes with the others on a road card, as Enter does (AGT-80).
         const offered = [...seat.shown].reverse().find((e) => e.kind === "options");

@@ -7,7 +7,7 @@ import type { GameEngine } from "../engine.ts";
 import { eventLine, noDeaths, tellable } from "../view.ts";
 import type { Address } from "./floor.ts";
 import { Transcript } from "./transcript.ts";
-import type { FallbackCause, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
+import type { FallbackCause, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
 /** Kinds of private note an AI player keeps (spec §3.6, AGT-21). */
 export const NOTE_KINDS = ["fact", "promise", "suspicion", "plan", "bond"] as const;
@@ -78,6 +78,12 @@ export class TableState {
    * may the DM accept it with `end_combat`.
    */
   surrender: { handles: Handle[]; words: boolean } | undefined;
+  /**
+   * A road step the DM proposed that whoever drives the caravan hasn't answered yet (AGT-80): the
+   * party said in the story that they move on, or settled down for the night. The DM never moves the
+   * caravan or ends the day (design S2); the loop asks the driver.
+   */
+  road: { step: RoadStep } | undefined;
   /** DM narrations and questions the human was shown, so the loop can tell whether a wake answered them. */
   dmToHuman = 0;
   /** Why the run ended, once it has. */
