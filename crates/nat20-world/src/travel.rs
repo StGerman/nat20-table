@@ -407,7 +407,8 @@ impl World {
         true
     }
 
-    /// Draws a road card after a leg along `road`. Returns the card on the table, if any.
+    /// Draws after a leg along `road`. Returns what the draw did: a card on the table, or cards
+    /// offered for the DM's pick (API-53); none when the zone has no card in play.
     pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
         let zone = self.map.road(road)?.zone.clone();
         self.deck.draw(
@@ -420,7 +421,8 @@ impl World {
         )
     }
 
-    /// Draws an arrival card of `place` when a leg ends there (ENG-35).
+    /// Draws an arrival card of `place` when a leg ends there (ENG-35): on the table, or
+    /// offered for a pick (API-53).
     pub fn draw_on_arrival(&mut self, place: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
         self.deck.draw(
             place,
@@ -438,7 +440,8 @@ impl World {
             .pick(card, &self.state.deeds, &mut self.state.deck)
     }
 
-    /// Draws a night card after a night in camp where the caravan is.
+    /// Draws a night card after a night in camp where the caravan is: on the table, or offered
+    /// for a pick (API-53).
     pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<Drawn> {
         let zone = self.zone_here();
         self.deck.draw(

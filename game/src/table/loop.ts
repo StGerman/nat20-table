@@ -753,7 +753,9 @@ export class TableLoop {
     // pick tool lands (AGT-88), the table takes the first card rolled, as the engine's pick.
     const first = world?.offered?.[0];
     if (first && !this.table.ended) {
-      await send(this.table, "dm", { cmd: "pick_card", card: first.id, reason: "The table took the first card rolled.", fallback: true }, () => `the road card ${first.id} is on the table`);
+      const picked = await send(this.table, "dm", { cmd: "pick_card", card: first.id, reason: "The table took the first card rolled.", fallback: true }, () => `the road card ${first.id} is on the table`);
+      // A refused pick leaves the cards offered and every road move refused: the run can't go on.
+      if (!picked.ok) throw new Error(`the table could not pick the road card ${first.id}: ${picked.text}`);
       world = await this.dmWorld();
     }
     const card = world?.card;

@@ -8271,7 +8271,7 @@
           }
         },
         "offered": {
-          "description": "The cards a draw offered, in roll order, waiting for the DM's `pick_card` (API-53);\n`travel` and `rest_night` wait for the pick.",
+          "description": "The cards a draw offered, in roll order, waiting for the DM's `pick_card` (API-53);\n`travel`, `rest_night`, `pass_time` and `choose_card` wait for the pick.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/OfferedCard"

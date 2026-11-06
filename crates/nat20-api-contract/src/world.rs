@@ -475,7 +475,7 @@ pub struct WorldDm {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card: Option<CardDm>,
     /// The cards a draw offered, in roll order, waiting for the DM's `pick_card` (API-53);
-    /// `travel` and `rest_night` wait for the pick.
+    /// `travel`, `rest_night`, `pass_time` and `choose_card` wait for the pick.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub offered: Vec<OfferedCard>,
     /// Every place NPC, alive or dead, met or not, in the world file's order (API-48).
