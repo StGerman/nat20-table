@@ -48,10 +48,43 @@ fn every_world_validates() {
                 road.id
             );
         }
-        deck(&dir)
+        let world_deck = deck(&dir);
+        world_deck
             .validate(&map)
             .unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
+        // Each pack's own cards join the world's deck while its contract runs (ENG-38): every
+        // pair validates, and card ids are unique across the world and all its packs, whose
+        // deeds the world's cards may read.
+        let packs = packs_on(dir.file_name().unwrap().to_str().unwrap());
+        let mut all = world_deck.clone();
+        for pack in &packs {
+            let joined = world_deck.clone().join(deck(pack));
+            joined
+                .validate(&map)
+                .unwrap_or_else(|e| panic!("{} with {}: {e}", dir.display(), pack.display()));
+            all = all.join(deck(pack));
+        }
+        all.validate(&map)
+            .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
+        all.check_deeds_written(&Default::default())
+            .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
     }
+}
+
+/// The scenario packs whose campaign plays on world `id`: the shipped packs and the server's
+/// test pack.
+fn packs_on(id: &str) -> Vec<PathBuf> {
+    let mut dirs = vec![repo().join("crates/nat20-api-server/data")];
+    for entry in std::fs::read_dir(repo().join("scenarios")).unwrap() {
+        dirs.push(entry.unwrap().path());
+    }
+    dirs.sort();
+    dirs.into_iter()
+        .filter(|d| {
+            let file = d.join("campaign.json");
+            file.exists() && read::<serde_json::Value>(&file)["world"]["map"].as_str() == Some(id)
+        })
+        .collect()
 }
 
 /// A world's deck, files in name order, as the server reads it.
