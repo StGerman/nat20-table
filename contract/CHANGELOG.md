@@ -5,6 +5,7 @@ Within major 1, changes are additive only. Nothing is released yet, so versions 
 
 ## 1.0.0-dev.59 (2026-11-06)
 - Meaning only, no field changes (ENG-37, protocol §4.15, decision 0063): `start_campaign` on a roster whose escort contract is done keeps the world's memory instead of starting the world again. The clock goes on from the saved day (the campaign's start hour on the next day, plus the trip to its start place at 24 miles a day), and the discovered places, the road deck, the deeds and the place NPCs carry over; the caravan, its place and the escort come from `campaign.json`, and the advance is paid as before. The roster's shape is unchanged (`RosterWorld.state` stays opaque; roster format 2 is API-51).
+- Meaning only (ENG-35, protocol §4.13, in the same Milestone 11 stack): road cards with `when: arrival` are drawn when a leg ends at their place, after its scene loads and before the pay; at the escort's destination `escort_settled` comes only once that card is decided and any fight it started is over. `tests/api.rs` `the_destination_s_arrival_card_is_decided_before_the_pay` shows it; the test world has no arrival card, so no fixture moves.
 - `escort.jsonl`: the second contract, started from the saved roster at the Old Tower on day 2, now starts on day 5 at 8:00 in Vale Town (the day after, plus two days on the road) with the first contract's discard kept. Other fixtures, and the game's recorded session logs, change by version only.
 
 ## 1.0.0-dev.58 (2026-11-06)
