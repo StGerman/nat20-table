@@ -23,7 +23,7 @@ Milestone 11 makes the road remember. Today a card is drawn at random, decided, 
 4. **Place cards** (change 3). Cards with `when: arrival` are drawn when `travel` ends at their place: the Wendford and Saltmouth pay-offs.
 5. **Memory across contracts** (change 10). The world splits into the contract (position, caravan, escort, card on the table) and the memory (clock, deeds, deck, NPCs, discovered places). A finished contract resets only the contract.
 6. **Draw three, DM picks** (change 13). The engine rolls three cards, the DM picks one and logs why.
-7. **Scouting ahead** (decision 7). Before a leg a Blade may scout: a check, and on a success the party sees the next card before the caravan meets it. This takes the early-draw part of foretell (change 6).
+7. **Scouting ahead** (decision 7). One Blade walks ahead as the scout. When a leg's card is drawn, the scout makes a check before the card is shown, and on a success the party meets the card forewarned: its forewarned choice is open. Foretell (change 6) stays out.
 8. **Story-space** (decision 9). The DM prompt rules, and the five card tests: the validator checks what code can check, the narration judge asks the rest.
 9. **Card suggestions** (decision 4). After each run, the DM writes up to two suggested cards into the run report; accepted ones join the deck later as authored cards.
 10. **Content** (change 1). The Faces of the Road cards, the cast, and chain D, each card passing the five tests.
@@ -117,7 +117,7 @@ One card, from draw to deed:
 1. A leg, a night or an arrival ends.
 2. The engine rolls three cards from the pile (three roll ids).
 3. The DM picks one and logs why. No pick for a soon card or a pile of one.
-4. The card goes on the table, public, as today.
+4. The card goes on the table, public, as today. If a Blade walks ahead and the card names a `scout` skill, the scout's check comes first, and a success opens the forewarned choice.
 5. The seats advise and vote, the human first (decision 0062), and the caller decides.
 6. The choice's effects run, with any check or fight through core.
 7. A deed is remembered. Later draws and arrivals read it through `if` and `unless`, which takes the loop back to step 2.
@@ -152,9 +152,13 @@ The new parts are the DM's pick and the deed: a choice writes a deed, a later dr
 
 ### Scouting ahead (decision 7)
 
-- New command `scout {actor}`, before a leg, by one Hired Blade (never `dm`, never the NPC owner), once per leg.
-- The engine draws for the leg's zone first, as a draw on the road would: three offered to the DM (`cards_offered`, DM only), and the DM picks. A scout's pick does not put the card on the table: `pick_card` queues it as soon for that leg, and nothing public is sent (no `card_drawn`). The picked card names what there is to find, in a new field `scout`: `perception` for a creature or a person waiting on the road, `survival` for tracks, a trail or a hazard (the SRD 5.2.1 Search table: Perception finds a concealed creature or object, Survival finds tracks). The engine rolls the Blade's Wisdom check with that skill through core, against the Search DC of the road's terrain (the SRD 5.2.1 Travel Terrain table: 15 for grassland, hill and coast, so 15 on every road in the Wend valley; no `scout_dc` in `map.json`). The caravan keeps its Normal pace, so the check has neither Advantage nor Disadvantage (Q4).
-- On a success the party sees the card at once (`card_scouted`, public: text and choices only), and the engine writes the deed `scouted_<card>`, so the card can offer a forewarned choice through `if`. On a failure the DM narrates nothing found, and the caravan meets the same card unwarned. Either way the card stays queued as soon for that leg and goes on the table (`card_drawn`, as today) when the caravan meets it: scouting changes whether the party sees the card coming, never which card comes, so a failed scout cannot reroll the road. The roll's skill is public, so a Perception roll hints that something alive waits ahead; a DM at a real table gives the same hint by asking for the check, so it stays.
+Scout at the draw (Stas, 17:55Z): the scout rolls when the leg's card is drawn, not before the leg, so no card waits hidden and the draw keeps one path.
+
+- New command `scout {actor}`: a Hired Blade (never `dm`, never the NPC owner) takes the head of the caravan. The role stands for every leg until another Blade takes it; one scout at a time.
+- When a leg's card is drawn (picked by the DM, a soon card, or a zone's only card such as the Millbeck bridge) and the card names a skill in a new field `scout`, the engine rolls the scout's Wisdom check with that skill through core before the card is shown: `perception` for a creature or a person waiting on the road, `survival` for tracks, a trail or a hazard (the SRD 5.2.1 Search table: Perception finds a concealed creature or object, Survival finds tracks). The DC is the Search DC of the road's terrain (the SRD 5.2.1 Travel Terrain table: 15 for grassland, hill and coast, so 15 on every road in the Wend valley; no `scout_dc` in `map.json`). The caravan keeps its Normal pace, so the check has neither Advantage nor Disadvantage (Q4).
+- On a success the card goes on the table with its forewarned choice open: a choice under the condition `if: "scouted"`, which replaces another choice (the 2-or-3 rule). `scouted` is true only for this draw; it is not a deed and is not remembered, so the next draw of the same card is not forewarned by an old scout. A forewarned choice that matters later writes its own deed. On a failure the card goes on the table as written.
+- No roll: a card with no `scout` field (nothing to find: a flock, a dog, a friendly peddler), a night card (the watch is the card itself), an arrival card, or a party with no scout.
+- The roll is public like any check and comes in the same answer as `card_drawn`, a line before it, so its skill hints at nothing the card does not show at once. The scout changes how the party meets a card, never which card comes: the draw and the pick come first.
 
 ## Wire contract and visibility
 
@@ -164,8 +168,8 @@ Every change below goes in Rule 1 order in its own PR: the contract crate, `cont
 
 | Command | Who | What |
 | --- | --- | --- |
-| `pick_card {card, reason}` (new) | DM only | Puts one offered card on the table, or, when a scout drew the offer, queues it as soon for the leg without showing it; `reason` is one line. Refused when nothing is offered or the card is not one of them (new reason `card_not_offered`). |
-| `scout {actor}` (new) | a Hired Blade, as itself | Before a leg, once per leg. Refused for `dm`, the NPC owner, a second scout on the same leg, at the journey's end, or while a card is offered or on the table. |
+| `pick_card {card, reason}` (new) | DM only | Puts one offered card on the table; `reason` is one line. Refused when nothing is offered or the card is not one of them (new reason `card_not_offered`). |
+| `scout {actor}` (new) | a Hired Blade, as itself | Takes the head of the caravan for every leg until another Blade takes it. Refused for `dm`, the NPC owner, in combat, or while a card is offered or on the table. |
 | `travel`, `rest_night` | as today | Also wait while cards are offered, with today's waiting-card reason. |
 | `new_session {roster}`, `save_roster` | as today | Roster format 2; format 1 is refused with `bad_roster` (protocol §4.15). |
 
@@ -176,15 +180,14 @@ Every change below goes in Rule 1 order in its own PR: the contract crate, `cont
 | `cards_offered`: the offered cards with text, choices and roll ids | yes | no | no |
 | `card_drawn`: how the card came (picked by the DM, by the engine on a timeout, soon, the only card) and the pick's reason | yes | no | no |
 | `card_drawn`: text and choices, as today | yes | yes | yes |
-| `card_scouted`: text and choices of the card ahead | yes | yes | yes |
 | `deed_remembered`: deed, `by`, day, contract | yes | no | no |
 | `WorldDm.deeds`, `WorldDm.offered` | yes | no | no |
-| the card ahead in the player world view, after a scout | yes | yes | yes |
-| a card's `scout` skill before a scout rolls, the scout DC, the scout roll's `against`, and a card's `note` | yes | no | no |
+| who walks ahead as the scout, in the world views | yes | yes | yes |
+| a card's `scout` field and its `if: "scouted"` choice before the draw, the scout roll's `against`, and a card's `note` | yes | no | no |
 
 - **Deeds stay DM-only** (Rule 3). Players remember what they did through the story; the word "deed", its id and its bookkeeping never reach a player view, a player prompt or the TUI.
 - **The pick stays DM-only.** Players never learn that two other cards were rolled, so no player can game the pick, and Vera never sees a card she "missed".
-- **New fixtures:** a pick (three offered, one picked, two back in the pile), a pick by the engine on a timeout, a scout success and a failure, a death deed written in a card fight, a format 1 roster refused, a next contract that keeps the memory.
+- **New fixtures:** a pick (three offered, one picked, two back in the pile), a pick by the engine on a timeout, a scouted card with its forewarned choice and a failed scout, a death deed written in a card fight, a format 1 roster refused, a next contract that keeps the memory.
 
 ## Game loop, DM and agents
 
@@ -208,14 +211,15 @@ The card text rule (decision 11) is the other half: a choice names the action, a
 
 ### Scouting at the table
 
-- Before a leg, each AI Blade has a `scout` tool and the human sees *Scout ahead* in `/options`; the human is offered it first, as on road cards since AGT-87, and if they pass, the first AI Blade to call it wins.
-- On a success the card ahead appears in every player's view and in the TUI situation panel as the road ahead, in English (card 7). On a failure the DM narrates nothing found.
+- Before any leg, each AI Blade has a `scout` tool and the human sees *Walk ahead as the scout* in `/options`; the human is offered it first, as on road cards since AGT-87. It is one choice for the road, not one per leg.
+- The M9 exit runs show the need: in both, the Blades set an order of march on their own ("Торва впереди", "Брен ... встать впереди неё по дороге к мосту"; Ilsa: "идти рядом с телегой, не впереди"), and Stas twice asked Ilsa what she had noticed. None of it changed anything in the engine; the scout gives that talk an effect.
+- The TUI situation panel shows who walks ahead, in English (card 7). On a success the DM opens the card on what the scout saw.
 
 ### The run report and the verdict
 
 - **New verdict rows:** `m11-deck` (exit row 2), `m11-thread` (row 3), `m11-memory` (row 5, run 2 only); story-space flags go through the narration judge (row 4), and Stas confirms them as in Milestone 9.
 - **The judge's new question:** for each scene opening and each settled card, does the human's character have a problem to act on?
-- **The report adds:** every deed (run, day, `by`), every pick with its reason, every pay-off (a draw or arrival that read a deed), the draw-three counts, every fight, and up to two cards the DM suggests after the run (decision 4), in the deck file format but not loaded.
+- **The report adds:** every deed (run, day, `by`), every pick with its reason, every pay-off (a draw or arrival that read a deed), the draw-three counts, every fight, every scout roll and whether the forewarned choice was taken, and up to two cards the DM suggests after the run (decision 4), in the deck file format but not loaded.
 
 ## Content
 
@@ -229,6 +233,7 @@ The deck doc names 23 cards. Milestone 11 builds 22 of them; Tobin's fortune wai
 | Arrivals | *The boy's story*, *Tobin's hands*, *Rufus wants his due*, *Odda's mark*, *The loaf at the sea*, and the two new Wendford arrivals (bridge paid, bridge forded) | place cards, deeds |
 | The way back and the merchants | The Way Back pack (campaign.json, Fenn, four scenes and their prose); *Wet salt*, *Salt on credit*, *Men at the iron* (Fenn's, in The Way Back's deck); *The meadow track* (Odda's, in Fair in Wend's deck); *The bridge again* (world deck) | pack decks, deeds, memory across contracts |
 
+- **Scout fields.** A card with something to find names its skill in `scout` and has one forewarned choice under `if: "scouted"` that replaces one of its choices; a card with nothing to find has neither. In the M9 runs 8 of the 14 leg cards drawn had something to find (the Millbeck bridge, the goblins on the ridge and the peddler's warning of men in the willows for Perception; the mud and the landslide for Survival); the flock, the sheepdog and the peddler himself had nothing.
 - **The five card tests.** The validator checks the two that code can check: no two choices of a card alike (their effects differ), and every choice changes something later (it has an effect or writes a deed). The other three (someone wants something, the stake is visible, the text names the action and not the outcome) are checked in review: each content PR lists every card it adds against the five tests, and the judge's story-space question catches the rest in play. On fights the validator only warns (Q6, a recommendation): a route that meets fewer than two cards with a choice that can come to a fight is named in its output, and the build stays green.
 - **The cast's Russian names** (Tobin, Bel and Tam Corrin, Mother Sedge, Rufus, Sister Agna, Col, Dunn, Fenn Lusk) go into the Russian glossary that the hygiene stack added (AGT-85), with their declined forms, so the DM and the players never improvise them.
 - **One anachronism each**, as the deck doc lists them, in a new optional card field `note` that only the DM sees, so the DM voices it at every meeting.
@@ -251,13 +256,13 @@ The rows are in `TASKS.md` § Milestones, row 11 (the project copy is the live o
 | 2. Contract and server | API-51 | Roster format 2 (format 1 refused); the world at the contract's start kept beside the world now, and the start question's third answer, *play the last contract again* (the TUI line and the unattended flag) | S–M |
 | 2 | API-52 | Deeds on the wire: `deed_remembered`, `WorldDm.deeds` | S |
 | 2 | API-53 | Draw three: `cards_offered`, `WorldDm.offered`, `pick_card`, the card's `note` | M |
-| 2 | API-54 | Scouting: `scout`, the card's `scout` skill, the SRD Search DC by terrain, `card_scouted`, the card ahead in the player view | M |
+| 2 | API-54 | Scouting at the draw: `scout` (who walks ahead), the card's `scout` skill, the SRD Search DC by terrain, the roll before `card_drawn`, the draw-only `scouted` condition | S |
 | 3. Table | AGT-88 | The DM's pick: the wake, the tool, the pick rule, the scripted and the timeout pick | S–M |
 | 3 | AGT-89 | The five story-space rules in the DM prompt | S |
-| 3 | AGT-90 | Scouting at the table: the AI tool, `/options`, the situation panel | S–M |
+| 3 | AGT-90 | Scouting at the table: the AI tool, *Walk ahead as the scout* in `/options`, who walks ahead in the situation panel | S |
 | 3 | AGT-91 | Run report and verdict: `m11-*` rows, the judge's question, deeds, picks, pay-offs, counts, fights, suggested cards | M |
 | 4. Content | MAP-10 | 29 cards: 22 from the deck doc, two new Wendford arrivals, *The bridge again* and the merchants' four; chain D, the cast's notes and Russian names; one PR per group | L |
-| 4 | MAP-11 | The validator's static card tests: two of the five tests, and a warning for a route with fewer than two fight cards | S |
+| 4 | MAP-11 | The validator's static card tests: two of the five tests, a `scout` field only with an `if: "scouted"` choice and the other way round, and a warning for a route with fewer than two fight cards | S |
 | 4 | MAP-12 | The Way Back pack: campaign.json (route, Fenn's wagon and cargo, escort), Fenn's prose and Russian names, four scenes and their prose, the README | M |
 | 5. Exit | AGT-92 | The exit pair (card 3): *Fair in Wend*, then *The Way Back* on the same roster | S |
 
@@ -273,7 +278,7 @@ Q1 to Q7 were decided by Stas on 6 November: his cards, his message of 16:44Z fo
 | Q1 | How long does a `once` card stay gone? | For the world; `once: "contract"` for a card that should come back each contract | For the contract only: the dead toll men would be back at the bridge on the next contract |
 | Q2 | Where and when does the next contract start? | (16:44Z) Play the way back as a pack of its own, *The Way Back*, with a new merchant, Fenn; the clock carries on from the saved day; a party somewhere else travels to the pack's start in one line | Odda's start place again, with the way back told in one line: the party never sees the road home, and run 2 replays run 1's road. Clock reset to day 1: deed days would lie |
 | Q3 | Build variants (change 5)? | No; per-case choices with `if` and `unless` do it inside the 2-or-3 rule | Variants too: small after deeds, but a second way to write the same thing |
-| Q4 | What check does scouting take? | (17:04Z) By the card ahead (SRD 5.2.1 Search table): Wisdom (Perception) for a creature or a person, Wisdom (Survival) for tracks, a trail or a hazard; DC = the Search DC of the road's terrain (15 on every Wend road); Normal pace, so no Advantage; a failed scout meets the same card unwarned; no time cost | The player picks how to scout, and a wrong pick finds nothing: true to the SRD, but a hidden guess for Vera. Always Survival: the SRD gives creatures to Perception. A group check: the whole party cannot ride ahead and guard the cart |
+| Q4 | What check does scouting take? | (17:04Z, refined 17:55Z) By the card ahead (SRD 5.2.1 Search table): Wisdom (Perception) for a creature or a person, Wisdom (Survival) for tracks, a trail or a hazard; DC = the Search DC of the road's terrain (15 on every Wend road); Normal pace, so no Advantage; no time cost. Rolled at the draw: one Blade walks ahead as a standing role, the check comes when the leg's card is drawn, and a success opens the card's forewarned choice | Scout before the leg and show the card early: a hidden queue and a second pick path (Copilot on table #298) for little gain, since the party talks a card over before deciding it anyway. The player picks how to scout, and a wrong pick finds nothing: true to the SRD, but a hidden guess for Vera. Always Survival: the SRD gives creatures to Perception. A group check: the whole party cannot ride ahead and guard the cart |
 | Q5 | What if the DM does not pick? | The engine takes the first card rolled, and the report counts it | A random one of the three: hides a broken DM wake. Fail the run: one slow wake should not cost a two-hour run |
 | Q6 | Keep Milestone 9's fight row? | (16:44Z and 17:09Z) More fights, as a recommendation, not a gate: no exit row; the pick rule prefers a fight card on a tie; the validator warns on a route with fewer than two fight cards; the report counts every fight | A gate, one card fight in each run: too strict, Stas does not want to control it. Drop fights from the design and only report them: Stas wants more fights, not fewer |
 | Q7 | Where do the merchants' own cards live? | (17:16Z) In the merchant's pack, `scenarios/<pack>/deck/`, joining the world's deck while that pack's contract runs: three for Fenn, one for Odda | An owner field on cards in the world deck: works, but puts each pack's people into the shared deck. Cards by direction, up or down: the direction is already in the zones, and the merchant is the one who wants something |
@@ -282,7 +287,8 @@ Q1 to Q7 were decided by Stas on 6 November: his cards, his message of 16:44Z fo
 
 - **The DM picks the mildest card every time.** The DM on `play:unattended` runs at low effort: cheap, not wise. The draw-three counts show it after run 1; the fallback is the deck doc's weighted draw.
 - **Content is the bottleneck.** 29 cards and a second pack (four scenes, a new merchant) with Russian names, notes and the five tests is the largest content push yet, and each needs Stas's read. One PR per group keeps each read under half an hour; the way back is its own PR.
-- **Waits get longer.** The talk round p95 was already 45.5 s; a pick adds one DM call per draw and scouting adds a decision before a leg. Reported, not gated; Vera feels it first.
+- **Waits get longer.** The talk round p95 was already 45.5 s; a pick adds one DM call per draw; scouting adds one choice for the road (who walks ahead), not a decision per leg. Reported, not gated; Vera feels it first.
+- **Scouting pays rarely.** At DC 15 the party's best Wisdom (Perception) bonus, +4 (Maren), succeeds half the time, and the human's Fighter at +2 two times in five. With 8 of 14 leg cards worth scouting in the M9 runs (1.6 a run), that is about two forewarned cards in three runs. The run report counts scout rolls, successes and forewarned choices taken; if it proves too rare, the SRD's Help (a second Blade gives Advantage) is the first lever, not a lower DC.
 - **Run 2 depends on run 1.** A failed run 2 has to replay from the world run 1 left, so the question the TUI already asks at the start of a session (continue the saved party, or a new party) gains a third answer when the saved world has a contract: *play the last contract again from its start*. For that, roster format 2 keeps the world as it stood when the contract began beside the world as it is now; an unattended run takes the same choice as a flag. `run.json` records which answer the run took, and the hash chain shows the file. Enter still means continue, so nobody starts over by accident, and the new line gets a Vera test.
 - **Exit row 5 could miss by chance.** It should not: the Millbeck bridge is a fixed stop both ways, so every bridge choice in run 1 writes a deed, and run 2 reads it three times by construction: *The bridge again* on the road, a Wendford arrival that night, and *Gwyn's news* at the Highsteads. That proves the machinery end to end; whether the story is good is row 4's job.
 - **The name promises hearsay.** "Word on the road" ships without hearsay (change 7); in Milestone 11 the word travels as arrival cards that read deeds. Hearsay comes when this cut has been played.
@@ -292,11 +298,11 @@ Q1 to Q7 were decided by Stas on 6 November: his cards, his message of 16:44Z fo
 Would Vera get through Milestone 11 alone? Mostly yes, and it is better for her than Milestone 9.
 
 - **Better:** the road answers what she did. The boy she let ride comes back with a story; the men she spared at the bridge are in the stocks when she passes Wendford. That is the legible story she reads novels for, and it has no numbers in it. The way back makes it plainer still: she climbs back past the people the road down left behind, and only one face, Fenn's, is new.
-- **Better:** *Scout ahead* gives her a thing to do before a leg, so she is not a passenger on the road. Since AGT-87 she also votes first on a road card, before the AI Blades talk her out of it.
+- **Better:** *Walk ahead as the scout* gives her a role on the road, chosen once, so she is not a passenger; when it pays, the card opens on what her character saw. Since AGT-87 she also votes first on a road card, before the AI Blades talk her out of it.
 - **Neutral:** she never sees the pick or a deed. Nothing new to learn, and nothing to feel she missed.
 - **Worse:** longer waits (one more DM call per card), and English lines in the TUI around Russian prose (card 7). Neither stops her; both add friction.
 - **Risk:** a new party at Milestone 11 (card 4) is no loss to her, since she has no saved party yet. Once she has one, a roster format change that throws her party away is a quit, so the next format change after Milestone 11 needs a converter.
 
-This section is the design-level question, Claude's read of it. The Vera test itself runs in the `vera` subagent on player-facing text only (CLAUDE.md), at three points: in each content PR on the new card text and choices (required), in the PRs that add TUI lines (*Scout ahead*, the old-roster refusal, the start question's third answer), and on a narration sample from each exit run (exit row 4).
+This section is the design-level question, Claude's read of it. The Vera test itself runs in the `vera` subagent on player-facing text only (CLAUDE.md), at three points: in each content PR on the new card text and choices (required), in the PRs that add TUI lines (*Walk ahead as the scout*, the old-roster refusal, the start question's third answer), and on a narration sample from each exit run (exit row 4).
 
 Stas decides.

@@ -85,7 +85,7 @@ Accepted by Stas on 2026-11-06 (Q1 to Q7, decision 0063). How it is built: `docs
 1. **The road remembers.** A choice on a card writes a **deed**; later cards and arrivals read it (`if`, `unless`). Deeds stay DM-only: players remember what they did through the story.
 2. **The DM picks the card that continues the story.** The engine rolls three cards; the DM picks one and logs why. Without an answer, the engine takes the first card rolled.
 3. **The world outlives a contract.** The memory (clock, deeds, deck, place NPCs, discovered places) is kept; only the contract (caravan, escort, position) is rebuilt from the next pack. A `once` card is gone for the world.
-4. **A Blade can scout ahead:** a Wisdom check, Perception or Survival as the card ahead names it, against the terrain's Search DC (SRD 5.2.1); a success shows the card before the caravan meets it.
+4. **A Blade can walk ahead as the scout:** when a leg's card is drawn, a Wisdom check, Perception or Survival as the card names it, against the terrain's Search DC (SRD 5.2.1); a success opens the card's forewarned choice.
 5. **Every scene opens on a problem for the human's character** (the five story-space rules in the DM prompt; the five card tests on every card).
 6. **A second pack, *The Way Back*:** the next contract in the same world, up the valley with a new merchant, Fenn Lusk; each merchant may bring a few cards of their own in the pack.
 

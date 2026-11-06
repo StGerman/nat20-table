@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-06
-- **Decided by:** Stas, in the Faces of the Road thread: start cards 3 and 4 (15:25Z), Q1, Q3 and Q5 on decision cards, Q2 and Q6 in his message of 16:44Z, Q4 on a decision card (17:04Z), Q6 again at 17:09Z ("too strict ... it's just a recommendation"), and "Ок" at 17:16Z for Q7 and the whole Milestone 11 design
+- **Decided by:** Stas, in the Faces of the Road thread: start cards 3 and 4 (15:25Z), Q1, Q3 and Q5 on decision cards, Q2 and Q6 in his message of 16:44Z, Q4 on a decision card (17:04Z) and its timing, scout at the draw (17:55Z), Q6 again at 17:09Z ("too strict ... it's just a recommendation"), and "Ок" at 17:16Z for Q7 and the whole Milestone 11 design
 
 ## Context
 
@@ -34,7 +34,8 @@ The design left seven questions and two start cards for Stas. Constraints: Rules
 - **B. Variants too.** Con: small after deeds, but a second way to write the same thing.
 
 ### Q4. What check does scouting take?
-- **A. By the card ahead (chosen).** The card names `perception` (a creature or a person) or `survival` (tracks, a trail, a hazard), as the SRD 5.2.1 Search table splits them; DC = the terrain's Search DC (15 on every Wend road; no `scout_dc`); Normal pace, so no Advantage; the card is drawn first, so a failed scout meets the same card unwarned. Pro: true to the SRD, no hidden guess for the player. Con: a public Perception roll hints that something alive is ahead, as a real DM's request for the check would.
+- **A. By the card ahead, rolled at the draw (chosen).** One Blade walks ahead as the scout, a standing role. When a leg's card is drawn, the card names `perception` (a creature or a person) or `survival` (tracks, a trail, a hazard), as the SRD 5.2.1 Search table splits them, and the scout rolls that Wisdom check before the card is shown; DC = the terrain's Search DC (15 on every Wend road; no `scout_dc`); Normal pace, so no Advantage. A success opens the card's forewarned choice (`if: "scouted"`, true for that draw only). Pro: true to the SRD, no hidden guess for the player, one draw path, nothing held hidden. Con: the party meets the card ready rather than seeing it coming; at DC 15 a scout succeeds 40 to 50 percent of the time.
+- **A2. By the card ahead, scouted before the leg, the card shown early (the first design).** Con: the picked card waits hidden in a queue and `pick_card` needs a second path, so a failed scout does not leak it (Copilot on table #298); seeing it early adds little, since the party talks a card over before deciding it anyway.
 - **B. The player picks the skill; a wrong pick finds nothing.** Con: a hidden guess for Vera.
 - **C. Always Survival.** Con: the SRD gives creatures to Perception.
 - **D. A group check.** Con: the whole party cannot ride ahead and guard the cart.
@@ -61,8 +62,8 @@ Card 3 A, card 4 B, and Q1 to Q7 option A each, as above. Together they make the
 ## Consequences
 
 - `WorldState` splits into the memory and the contract (ENG-37); roster format 2 (API-51) refuses format 1 with `bad_roster`; the start question gains *play the last contract again* (API-51).
-- New deck fields and effects: `remember`, `if`, `unless`, `soon`, `when: arrival`, `scout`, `note`, `once: "contract"`; a fight monster may name an NPC (ENG-33 to ENG-36, ENG-38).
-- New wire: `pick_card`, `scout`, `cards_offered`, `card_scouted`, `deed_remembered`, `WorldDm.deeds`, `WorldDm.offered`, from contract 1.0.0-dev.59 (API-52 to API-54).
+- New deck fields and effects: `remember`, `if`, `unless`, `soon`, `when: arrival`, `scout`, the draw-only condition `scouted`, `note`, `once: "contract"`; a fight monster may name an NPC (ENG-33 to ENG-36, ENG-38).
+- New wire: `pick_card`, `scout`, `cards_offered`, `deed_remembered`, `WorldDm.deeds`, `WorldDm.offered`, from contract 1.0.0-dev.59 (API-52 to API-54).
 - New content: 29 cards and the pack `scenarios/the_way_back` with Fenn Lusk (MAP-10, MAP-12); the validator's two static card tests and the fight warning (MAP-11).
 - The Milestone 9 exit row "1 fight outside a scene" does not carry into Milestone 11 (`docs/scope/living-world-scope.md` §8.3).
 - The next roster format change after Milestone 11 needs a converter (card 4, Vera).
@@ -70,7 +71,7 @@ Card 3 A, card 4 B, and Q1 to Q7 option A each, as above. Together they make the
 ## Revisit when
 
 - Q5 or Q6: the draw-three counts after exit run 1 show the DM taking the mildest card or dodging fight cards; fall back to the deck doc's weighted draw.
-- Q4: the scout's skill hint spoils cards in play, or Vera does not understand *Scout ahead*.
+- Q4: the run report shows scouts rarely succeed or the forewarned choice is rarely taken (first lever: the SRD's Help for Advantage), or Vera does not understand *Walk ahead as the scout*.
 - Card 4: anyone outside the exit runs has a saved party.
 - Q7: a merchant's cards need to appear outside that merchant's contract.
 
