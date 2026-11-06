@@ -119,7 +119,7 @@ impl Session {
         if let Some(resolution) = world.deck.settle_unattended(&mut world.state.deck, &table) {
             self.resolve_card(resolution)?;
         }
-        Ok(())
+        Ok(true)
     }
 
     /// `pick_card`: the DM's pick among the offered cards (API-53). The card goes on the table
