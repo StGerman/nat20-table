@@ -126,9 +126,10 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | `end_combat` | `reason: "surrender"\|"fled"\|"scenario"` | `State` | DM, only when the encounter allows the reason (§4.4) |
 | `spawn` | `spawn_id` (declared in the scene file) | `State` | DM / scenario trigger |
 | `events` | `since`, `viewer` | `{events, next}` | all |
-| `start_campaign` | `party[]` | `State` with `world` | game loop as DM, once (§4.11) |
+| `start_campaign` | `party[]`, `human?` (the human's creature, a party member) | `State` with `world` | game loop as DM, once (§4.11) |
 | `travel` | `actor`, `to?` (place or road id), `pace: fast\|normal\|slow` | `{leg, state}` | the caravan's driver, as itself (§4.11) |
 | `rest_night` | `actor`, `where: inn\|camp` | `{night, state}` | the caravan's driver, as itself (§4.12) |
+| `choose_card` | `actor`, `choice` | `State` | a Hired Blade or a player owner, as itself (§4.13) |
 
 ### 4.1 Moving
 
@@ -295,6 +296,19 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
 - **How long.** Until the next dawn (06:00), and never shorter than a Long Rest's 8 hours (SRD 5.2.1). A night called in the morning waits the day out.
 - **What follows, in order.** Each inn fee is a `ledger` entry (public, reason `inn`, to `world`). Each party member's day ends through core with what they ate: a full day's food, or nothing. Core runs Malnutrition (SRD 5.2.1, Gameplay Toolbox): five days without food bring an Exhaustion level, and each day after another; levels from malnutrition stay until a full day's food. Any saving throw it calls is logged as one. Then each party member who can take a Long Rest (at least 1 Hit Point, and 16 hours since the end of their last) takes one through core, which removes one Exhaustion level a Long Rest can remove. The world clock and core's time move on by the night, effects that run out end, and the `rest` event is logged. A new day of travel starts, and `night{night}` is logged last (public).
 - The result is the `night` (also in the event): `minutes`, and who `rested`, who was `not_rested` and who went `hungry`, and the state at dawn. The world crate takes the rations; the ledger does not log food yet.
+- After a night in camp the engine draws a night card (§4.13).
+
+### 4.13 Road cards
+
+A world's deck is `worlds/<id>/deck/*.json` (API-43). Each card belongs to a zone: a road's `zone`, or a place id for a night in camp there. A card joins the deck when the place it `requires` is discovered, or when a choice adds it (a chained card); a drawn card goes to the discard until its zone's pile runs dry, and a `once` card leaves the game.
+
+- **The draw.** After every `travel` leg (on the leg's road zone, once the scene has loaded) and every `rest_night{where: camp}` (on the road zone, or the place), the engine rolls a d100 on the zone's pile in file order. The roll is a `roll` event with an `rN` id, roller `world`, kind `table`, **DM only**: its die face would tell players the pile's size. A zone with no card in play rolls nothing. Then `card_drawn{target, text, choices}` (public). The card id, its zone and the deck appear only in the DM's `world.card`.
+- **While a card waits,** `travel` and `rest_night` are `rejected`, `card_pending`. `world.card` (both views) shows the text, the choices, what each Blade has `said`, and who the engine is `waiting_for`.
+- **Who speaks** (`choose_card{actor, choice}`, as the actor itself). The Hired Blades are the party members, less a player owner, who are in the scene and up (alive and conscious).
+  - *Caravan card* (`target: caravan`): each Blade's word is advice, logged as `card_advice` (public). A player owner decides with their own `choose_card`, and only after every Blade has advised (`rejected`, `waiting_for_advice`). An NPC owner takes the Blades' majority once all have advised; a tie goes to the card's own pick, and a choice the card marks as the owner's insistence wins whatever the advice (the DM narrates why).
+  - *Blade card* (`target: blades`): each Blade's word is a vote (`card_advice`). Once all have voted the majority wins; a tie goes to the human's creature (`start_campaign.human`) when it voted for one of the tied choices, else the card's pick, else the first tied choice.
+  - A creature with no say is `rejected`, `no_say`; a second word `already_spoke`; a choice the card lacks `unknown_choice`; no card `no_card`. In a fight the card waits: `wrong_mode`. A card nobody can speak on is settled at once by its default.
+- **What follows, in order.** `card_resolved{choice, decided}` (public), then the choice's effects in order. A group check rolls a ladder check through core for each creature named and succeeds when at least half succeed (SRD 5.1, Group Checks); its rolls and their outcome are logged as any `request_check`'s. Coin paid to or taken from the world is a `ledger` entry (reason `toll` or `reward`; a payer pays what their purse holds, up to the price). Goods gained or lost are `cargo_changed{good, change}` (public), time lost `time_lost{minutes}` (public), with the clock, core's time and the day's travel moving on. Exhaustion goes through core. A fight places each stat block hostile at the scene's first anchor (`creature_placed`, DM only) and starts a fight with the party as `start_fight` does; it always comes last.
 
 ## 5. Visibility (projection per `viewer`)
 
@@ -328,7 +342,9 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
 | `world.roads`: a road to an undiscovered place, and every road's deck `zone` | yes | no; the road's known end in `unexplored`, never where it leads; no `zone` | no; as the owner |
 | `world.route` (where an NPC owner travels) | yes | no | no |
 | `world.drives` (whether this player may call `travel`) | n/a | yes | yes, for themselves |
-| `traveled`, `place_discovered`, `night` | yes | yes | yes |
+| `world.card.id`, `world.card.zone`, the deck, the draw roll | yes | no | no |
+| `world.card` text, choices, `said`, `waiting_for` | yes | yes | yes |
+| `traveled`, `place_discovered`, `night`, `card_drawn`, `card_advice`, `card_resolved`, `cargo_changed`, `time_lost` | yes | yes | yes |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
 
 The server projects; it doesn't authenticate. The engine trusts its single client. Projection exists so that a bug in the orchestrator's tool layer can't leak numbers, not to stop a hostile client.
@@ -372,6 +388,11 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `traveled` | `leg: {actor, road, pace, miles, minutes, arrived, at}` (public): one `travel` leg (§4.11) |
 | `place_discovered` | `place`, `name` (public): the party found a place it did not know (§4.11) |
 | `night` | `night: {actor, lodging, minutes, rested, not_rested, hungry}` (public): one `rest_night` (§4.12) |
+| `card_drawn` | `target`, `text`, `choices` (public): a road card was drawn (§4.13) |
+| `card_advice` | `actor`, `choice` (public): a Blade's advice or vote |
+| `card_resolved` | `choice`, `decided: owner\|majority\|tie\|owner_insists\|default` (public) |
+| `cargo_changed` | `good`, `change` (public): a card added or took goods from the caravan |
+| `time_lost` | `minutes` (public): a card cost the party time |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
 ```json
@@ -402,12 +423,12 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `no_session` / `no_scene` | Lifecycle order is wrong | false |
 | `unknown_creature` / `unknown_option` / `unknown_check` / `unknown_anchor` / `unknown_spawn` / `unknown_encounter` | The id isn't in this scene | true |
 | `unknown_stat_block` | `place_creature` names a stat block the registry doesn't have | true |
-| `no_campaign` | A world command (`travel`, `rest_night`) before `start_campaign` | false |
+| `no_campaign` | A world command (`travel`, `rest_night`, `choose_card`) before `start_campaign` | false |
 | `not_your_turn` | `actor` isn't `awaiting.actor` (also returned by `legal_actions`, not an empty list) | true, after waiting |
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room`, `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded`, `no_inn` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room`, `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded`, `no_inn`, `card_pending`, `no_card`, `no_say`, `already_spoke`, `waiting_for_advice`, `unknown_choice` | true |
 | `surrender_not_available` | `end_combat{surrender}` while the running encounter's surrender condition does not hold, or it declares none; nothing changed | false |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |

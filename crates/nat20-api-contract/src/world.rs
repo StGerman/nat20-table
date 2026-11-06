@@ -51,6 +51,85 @@ pub struct NightView {
     pub hungry: Vec<Handle>,
 }
 
+/// Who decides a road card.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CardTarget {
+    /// The road, the wagons, the cargo: the caravan owner decides after every Hired Blade
+    /// advises; an NPC owner takes the Blades' majority.
+    Caravan,
+    /// The escort themselves: the Hired Blades vote.
+    Blades,
+}
+
+/// One choice on a road card.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CardChoiceView {
+    /// The choice id; `choose_card` takes it.
+    pub id: String,
+    /// What the players read.
+    pub text: String,
+}
+
+/// One seat's word on the card on the table: a Blade's advice or vote.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CardSaid {
+    /// Who spoke.
+    pub actor: Handle,
+    /// The choice id.
+    pub choice: String,
+}
+
+/// The road card on the table, as the DM sees it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CardDm {
+    /// The card id in the world's deck.
+    pub id: String,
+    /// The deck zone it came from: a road zone or a place id.
+    pub zone: String,
+    /// Who decides it.
+    pub target: CardTarget,
+    /// What the players read.
+    pub text: String,
+    /// The choices.
+    pub choices: Vec<CardChoiceView>,
+    /// What each Blade has said so far.
+    pub said: Vec<CardSaid>,
+    /// The Blades who still have to speak.
+    pub waiting_for: Vec<Handle>,
+}
+
+/// The road card on the table, as a player sees it: no card id, zone or deck.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CardPlayer {
+    /// Who decides it.
+    pub target: CardTarget,
+    /// What the players read.
+    pub text: String,
+    /// The choices.
+    pub choices: Vec<CardChoiceView>,
+    /// What each Blade has said so far.
+    pub said: Vec<CardSaid>,
+    /// The Blades who still have to speak.
+    pub waiting_for: Vec<Handle>,
+}
+
+/// How a road card was decided.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CardDecided {
+    /// The player owner chose, after the Blades' advice.
+    Owner,
+    /// The Blades' majority.
+    Majority,
+    /// A tie, broken by the human seat (Blade cards) or the card's own pick.
+    Tie,
+    /// The NPC owner insisted on a choice; the DM narrates why.
+    OwnerInsists,
+    /// Nobody could speak; the card's default.
+    Default,
+}
+
 /// A part of the day, four hours long; the night is two of them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -292,6 +371,9 @@ pub struct WorldDm {
     pub caravan: CaravanView,
     /// The places an NPC owner travels, in order; empty when a player owns the caravan.
     pub route: Vec<String>,
+    /// The road card waiting for its decision; `travel` and `rest_night` wait for it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card: Option<CardDm>,
 }
 
 /// The world as one player sees it.
@@ -314,6 +396,9 @@ pub struct WorldPlayer {
     pub unexplored: Vec<RoadUnexplored>,
     /// The caravan.
     pub caravan: CaravanView,
+    /// The road card waiting for its decision.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card: Option<CardPlayer>,
 }
 
 /// One journey leg, in `travel`'s result and the `traveled` event.

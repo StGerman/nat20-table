@@ -6,9 +6,9 @@
 //! and gets every roll in the `player` view.
 
 use nat20_api_contract::{
-    Anchor, AnchorObserved, AnchorView, CheckView, Condition, CreatureFull, CreatureObserved,
-    EncounterView, Event, EventKind, Handle, Mode, PlaceKnown, PointFt, RoadKnown, RoadUnexplored,
-    RollView, Sheet, SpawnView, State, Visibility, WorldDm, WorldPlayer,
+    Anchor, AnchorObserved, AnchorView, CardPlayer, CheckView, Condition, CreatureFull,
+    CreatureObserved, EncounterView, Event, EventKind, Handle, Mode, PlaceKnown, PointFt,
+    RoadKnown, RoadUnexplored, RollView, Sheet, SpawnView, State, Visibility, WorldDm, WorldPlayer,
 };
 
 use crate::render;
@@ -205,6 +205,13 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
         roads,
         unexplored,
         caravan: view.caravan,
+        card: view.card.map(|c| CardPlayer {
+            target: c.target,
+            text: c.text,
+            choices: c.choices,
+            said: c.said,
+            waiting_for: c.waiting_for,
+        }),
     }
 }
 

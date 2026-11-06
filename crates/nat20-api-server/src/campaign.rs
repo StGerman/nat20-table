@@ -8,8 +8,9 @@
 use std::path::{Path, PathBuf};
 
 use nat20_api_contract::{
-    CaravanView, CargoView, ClockView, ErrorCode, Handle, LegView, MilesToday, Pace, PlaceDm,
-    RejectReason, RoadDm, Terrain, WagonView, Watch, WorldDm, WorldPosition,
+    Ability, CaravanView, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget, CargoView,
+    ClockView, ErrorCode, Handle, LegView, MilesToday, Pace, PlaceDm, RejectReason, RoadDm, Skill,
+    Terrain, WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -31,12 +32,18 @@ pub struct Campaign {
     pub party: Vec<Handle>,
     /// The scene for the road and for places without a scene of their own
     pub road_scene: String,
+    /// The human's creature, when a human plays: it breaks a tied Blade vote
+    pub human: Option<String>,
 }
 
 impl Campaign {
     /// Reads `campaign.json` from the pack and its world from `<pack>/worlds/<id>/`, else from
     /// the shared worlds directory, and checks that every scene a journey can load exists.
-    pub fn read(data_dir: &Path, party: Vec<Handle>) -> Result<Self, nat20_api_contract::ApiError> {
+    pub fn read(
+        data_dir: &Path,
+        party: Vec<Handle>,
+        human: Option<String>,
+    ) -> Result<Self, nat20_api_contract::ApiError> {
         let file: world::CampaignFile = read_json(&data_dir.join(CAMPAIGN_FILE), "campaign")?;
         let setup = file.world;
         if !scene::is_plain_name(&setup.map) {
@@ -70,9 +77,15 @@ impl Campaign {
             world::Clock::at(setup.day, setup.hour, 0),
         )
         .map_err(|e| bad(format!("The campaign's world {}: {e}.", setup.map)))?;
+        let deck = read_deck(&dir)?;
+        check_effects(&deck, &built.goods)?;
+        let built = built
+            .with_deck(deck)
+            .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
         let campaign = Self {
             world: built,
             party,
+            human,
             road_scene: setup.road_scene,
         };
         let mut scenes: Vec<&str> = campaign
@@ -155,8 +168,54 @@ impl Campaign {
         }
     }
 
-    /// The world as the DM sees it.
-    pub fn dm_view(&self) -> WorldDm {
+    /// Who sits at the table for a card: the owner, the Blades who can speak (party members
+    /// `up`, less a player owner), and the human's seat.
+    pub fn table(&self, up: impl Fn(&str) -> bool) -> world::Table {
+        let owner = self.world.state.caravan.owner.clone();
+        let blades = self
+            .party
+            .iter()
+            .filter(|h| !matches!(&owner, world::Owner::Player(o) if *o == h.0))
+            .filter(|h| up(&h.0))
+            .map(|h| h.0.clone())
+            .collect();
+        world::Table {
+            owner,
+            blades,
+            tie_breaker: self.human.clone(),
+        }
+    }
+
+    /// The card on the table, as the DM sees it.
+    fn card_view(&self, table: &world::Table) -> Option<CardDm> {
+        let pending = self.world.state.deck.pending.as_ref()?;
+        let card = self.world.deck.card(&pending.card)?;
+        Some(CardDm {
+            id: card.id.clone(),
+            zone: card.zone.clone(),
+            target: target(card.target),
+            text: card.text.clone(),
+            choices: choices(card),
+            said: pending
+                .said
+                .iter()
+                .map(|(actor, choice)| CardSaid {
+                    actor: Handle(actor.clone()),
+                    choice: choice.clone(),
+                })
+                .collect(),
+            waiting_for: table
+                .blades
+                .iter()
+                .filter(|b| !pending.said.contains_key(*b))
+                .map(|b| Handle(b.clone()))
+                .collect(),
+        })
+    }
+
+    /// The world as the DM sees it; `up` tells which party members can speak on a card.
+    pub fn dm_view(&self, up: impl Fn(&str) -> bool) -> WorldDm {
+        let table = self.table(up);
         let w = &self.world;
         let state = &w.state;
         WorldDm {
@@ -228,6 +287,7 @@ impl Campaign {
                 world::Owner::Npc(_) => w.route.clone(),
                 world::Owner::Player(_) => Vec::new(),
             },
+            card: self.card_view(&table),
         }
     }
 
@@ -256,6 +316,92 @@ impl Campaign {
             }
         }
     }
+}
+
+/// The world's deck: every `deck/*.json`, files in name order; none is an empty deck.
+fn read_deck(dir: &Path) -> Result<world::Deck, nat20_api_contract::ApiError> {
+    let deck_dir = dir.join("deck");
+    let Ok(entries) = std::fs::read_dir(&deck_dir) else {
+        return Ok(world::Deck::default());
+    };
+    let mut paths: Vec<PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "json"))
+        .collect();
+    paths.sort();
+    let mut files = Vec::new();
+    for path in paths {
+        files.push(read_json::<world::DeckFile>(&path, "deck file")?);
+    }
+    Ok(world::Deck::from_files(files))
+}
+
+/// What the world crate can't check on a card: abilities and skills (the skill's own
+/// ability), stat blocks and goods.
+fn check_effects(
+    deck: &world::Deck,
+    goods: &world::Goods,
+) -> Result<(), nat20_api_contract::ApiError> {
+    for card in &deck.cards {
+        for effect in world::Deck::effects(card) {
+            let problem = match effect {
+                world::Effect::Check { ability, skill, .. } => match parse_check(ability, skill) {
+                    Some((a, s)) if crate::adapter::sheet::skill_fits(a, s) => None,
+                    Some(_) => Some(format!("{skill} is not a {ability} check")),
+                    None => Some(format!("{ability} / {skill} is not an ability and a skill")),
+                },
+                world::Effect::Fight { monsters } => monsters
+                    .iter()
+                    .find_map(|m| crate::adapter::monster::check(m).err()),
+                world::Effect::Cargo { good, .. } if goods.get(good).is_none() => {
+                    Some(format!("there is no good {good}"))
+                }
+                _ => None,
+            };
+            if let Some(problem) = problem {
+                return Err(bad(format!("Deck card {}: {problem}.", card.id)));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// A card check's ability and skill as wire values.
+pub fn parse_check(ability: &str, skill: &str) -> Option<(Ability, Skill)> {
+    let ability = serde_json::from_value(serde_json::Value::String(ability.to_owned())).ok()?;
+    let skill = serde_json::from_value(serde_json::Value::String(skill.to_owned())).ok()?;
+    Some((ability, skill))
+}
+
+/// How a card was decided, on the wire.
+pub fn decided(decided: world::Decided) -> CardDecided {
+    match decided {
+        world::Decided::Owner => CardDecided::Owner,
+        world::Decided::Majority => CardDecided::Majority,
+        world::Decided::Tie => CardDecided::Tie,
+        world::Decided::OwnerInsists => CardDecided::OwnerInsists,
+        world::Decided::Default => CardDecided::Default,
+    }
+}
+
+/// A card's target, on the wire.
+pub fn target(target: world::Target) -> CardTarget {
+    match target {
+        world::Target::Caravan => CardTarget::Caravan,
+        world::Target::Blades => CardTarget::Blades,
+    }
+}
+
+/// A card's choices, on the wire.
+pub fn choices(card: &world::Card) -> Vec<CardChoiceView> {
+    card.choices
+        .iter()
+        .map(|c| CardChoiceView {
+            id: c.id.clone(),
+            text: c.text.clone(),
+        })
+        .collect()
 }
 
 /// `<pack>/worlds/<id>` when the pack carries its world, else the shared worlds directory.

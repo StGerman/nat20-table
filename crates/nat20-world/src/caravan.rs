@@ -234,6 +234,34 @@ impl Caravan {
         self.wagons.iter().find(|w| w.n == n)
     }
 
+    /// Loads up to `quantity` units of `good` into the wagons in order, as many as fit under
+    /// each wagon's limit. Returns how many were loaded.
+    pub fn load_anywhere(
+        &mut self,
+        good: &str,
+        quantity: u32,
+        goods: &Goods,
+    ) -> Result<u32, CaravanError> {
+        let weight = goods
+            .get(good)
+            .ok_or_else(|| CaravanError::UnknownGood(good.to_string()))?
+            .weight_lb
+            .max(1);
+        let mut left = quantity;
+        for wagon in &mut self.wagons {
+            if left == 0 {
+                break;
+            }
+            let room = wagon.limit_lb().saturating_sub(wagon.load_lb(goods)?) / weight;
+            let take = room.min(left);
+            if take > 0 {
+                *wagon.cargo.entry(good.to_string()).or_default() += take;
+                left -= take;
+            }
+        }
+        Ok(quantity - left)
+    }
+
     /// Takes `quantity` units of `good` from the wagons in order, all or nothing.
     pub fn unload_anywhere(&mut self, good: &str, quantity: u32) -> Result<(), CaravanError> {
         let held = self.total(good);
@@ -417,6 +445,17 @@ pub(crate) mod tests {
         caravan.unload(1, "rations", 20).unwrap();
         assert_eq!(caravan.total("rations"), 0);
         assert!(!caravan.wagon(1).unwrap().cargo.contains_key("rations"));
+    }
+
+    #[test]
+    fn loading_anywhere_fills_the_wagons_up_to_their_limits() {
+        let mut caravan = caravan("npc:merchant");
+        let goods = goods();
+        let free = caravan.wagons[0].limit_lb() - caravan.wagons[0].load_lb(&goods).unwrap();
+        let loaded = caravan.load_anywhere("iron", free + 5, &goods).unwrap();
+        assert_eq!(loaded, free);
+        assert_eq!(caravan.overloaded(&goods).unwrap(), None);
+        assert!(caravan.load_anywhere("gold", 1, &goods).is_err());
     }
 
     #[test]

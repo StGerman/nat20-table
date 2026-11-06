@@ -543,6 +543,11 @@ fn tail(id: &str, prefix: &str) -> String {
 
 /// The six abilities in sheet order.
 /// The core ability behind a wire ability.
+/// Whether `skill` is a check of `ability` (a ladder check needs the skill's own ability).
+pub fn skill_fits(ability: WireAbility, skill: WireSkill) -> bool {
+    core_ability(ability) == core_skill(skill).ability()
+}
+
 pub(super) fn core_ability(ability: WireAbility) -> Ability {
     ABILITIES
         .iter()
