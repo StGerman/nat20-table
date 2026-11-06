@@ -9,8 +9,6 @@ import type { Address } from "./floor.ts";
 import { Transcript } from "./transcript.ts";
 import type { FallbackCause, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
-/** A handle as the engine and the pack write one: lowercase letters, digits and `_`, starting with a letter. */
-const HANDLE = /^[a-z][a-z0-9_]*$/;
 
 /** Kinds of private note an AI player keeps (spec §3.6, AGT-21). */
 export const NOTE_KINDS = ["fact", "promise", "suspicion", "plan", "bond"] as const;
@@ -381,7 +379,9 @@ export class TableState {
    * and out of combat the loop may hand it the floor. A line said `once` (a reaction between turns
    * in a fight, AGT-34) is dropped when it is refused, with no retry: its moment has passed.
    */
-  async speak(from: Handle, text: string, to?: Handle, once = false): Promise<ToolOutcome> {
+  async speak(from: Handle, text: string, target?: Handle, once = false): Promise<ToolOutcome> {
+    // Trimmed before any check, so " torva " is torva (Copilot on table #289).
+    const to = target?.trim() || undefined;
     if (to === from) {
       if (once) return this.dropped(from, "a character doesn't speak to itself");
       if (this.exhausted(from)) return this.spent();
@@ -390,7 +390,7 @@ export class TableState {
     }
     // Anyone else present, an NPC or a foe (AGT-84, decision 0060 F3: ilsa to odda_vell): the line
     // is said aloud, the whole table hears whom it was for, and nobody gets the floor from it.
-    if (to !== undefined && !this.party.includes(to)) return this.say(from, text, "speech", undefined, once, to.trim());
+    if (to !== undefined && !this.party.includes(to)) return this.say(from, text, "speech", undefined, once, to);
     return this.say(from, text, "speech", to, once);
   }
 
@@ -410,10 +410,9 @@ export class TableState {
     const human = from === this.human;
     if (!human) {
       if (!once && this.exhausted(from)) return this.spent();
-      // An id-shaped addressee (`odda_vell`, `bandit_1`) is a handle, not words: the language and
-      // number checks would refuse it (review of table #289). A name in prose is guarded like the line.
-      const proseAddressee = addressee !== undefined && !HANDLE.test(addressee);
-      const refused = this.speechGuard(text) ?? (proseAddressee ? this.speechGuard(addressee) : undefined);
+      // The guard passes a handle-shaped addressee unless only the DM knows it, and guards a name in
+      // words like the line (review of table #289).
+      const refused = this.speechGuard(text) ?? (addressee !== undefined ? this.speechGuard(addressee) : undefined);
       if (refused && once) return this.dropped(from, refused);
       if (refused) return this.refuse(from, kind === "speech" ? "speech" : "declaration", refused, "Say it without that.");
     }

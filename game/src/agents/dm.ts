@@ -428,16 +428,18 @@ export class ModelDm implements DmAgent {
             (i) => this.bound((t) => t.startFight(i.participants)),
           ),
           ]),
+      // Time in a place (API-50): any living-world pack, whatever its format; outside one the tool
+      // list drops it with the scenes-only tools (Copilot on table #295).
+      seatTool(
+        "pass_time",
+        "Out of combat, let time pass where the party is (a meal, a long talk, a search, a wait): short_while is half an hour, hour an hour, watch until the next part of the day begins. Never past midnight: the night is the players' call.",
+        { span: z.enum(["short_while", "hour", "watch"]).describe("How long.") },
+        (i) => this.bound((t) => t.passTime(i.span)),
+      ),
       // Coin and items change hands only in a living-world pack (ITM-6, format 2 on).
       ...(this.config.pack.adventure.format_version < GOODS_SINCE
         ? []
         : [
-            seatTool(
-              "pass_time",
-              "Out of combat, let time pass where the party is (a meal, a long talk, a search, a wait): short_while is half an hour, hour an hour, watch until the next part of the day begins. Never past midnight: the night is the players' call.",
-              { span: z.enum(["short_while", "hour", "watch"]).describe("How long.") },
-              (i) => this.bound((t) => t.passTime(i.span)),
-            ),
             seatTool(
               "give",
               "Out of combat, one character hands another within 5 feet some coin or one item they carry (worn or wielded gear stays). Give coins or an item.",
