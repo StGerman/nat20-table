@@ -87,7 +87,7 @@ export class TableState {
   road: { step: RoadStep } | undefined;
   /**
    * The human was offered *Walk ahead as the scout* (AGT-90): until then an AI Blade's scout tool
-   * waits, so the human is asked first, as on road cards (AGT-87). Always true with no human.
+   * waits, so the human is asked first, as on road cards (AGT-87). Not checked with no human at the table.
    */
   scoutOffered = false;
   /** DM narrations and questions the human was shown, so the loop can tell whether a wake answered them. */
