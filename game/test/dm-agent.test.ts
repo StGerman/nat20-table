@@ -446,6 +446,18 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   assert.ok(names.includes("pick_card"), names.join(", "));
   assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line\./);
   assert.ok(!mill.includes("pick_card"));
+  // Story-space (AGT-89, design decision 9): five rules on the road, the human's character named in the second.
+  const space = dm.systemPrompt.slice(dm.systemPrompt.indexOf("## Story-space"));
+  assert.equal(space.split("\n").filter((l) => l.startsWith("- ")).length, 5, space);
+  assert.match(space, /- Open every scene on its problem/);
+  assert.match(space, /- Put bren in that problem/);
+  assert.match(space, /co-writers: .*never decide for them/);
+  assert.match(space, /- Tie every consequence to a deed or a roll/);
+  assert.match(space, /- No "pleasant nothing"/);
+  const noHuman = new ModelDm({ pack: wend, players: ["bren", "torva", "maren", "ilsa"], choice: CHOICE, livingWorld: true }).systemPrompt;
+  assert.match(noHuman, /- Put one of the party in that problem/);
+  assert.doesNotMatch(noHuman, /undefined/);
+  assert.doesNotMatch(new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).systemPrompt, /## Story-space/, "The Silent Mill keeps its prompt");
 });
 
 test("the DM speaks to the human's character as you and names everyone else; a table with no human has no such rule", () => {

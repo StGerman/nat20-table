@@ -251,6 +251,24 @@ export const DM_ROAD_PROMPT = [
   "- Where the craft notes above speak of a scene's exits, loading the next scene or end_adventure, read the road instead: the journey moves the party on, and the run ends on its own when the escort is paid or the days run out.",
 ].join("\n");
 
+/**
+ * Story-space (Milestone 11, AGT-89, design decision 9): five rules that make every scene and
+ * every card a problem the party acts on. English here, spoken in the run's language (decision 0038).
+ */
+export function storySpacePrompt(human: Handle | undefined): string {
+  return [
+    "## Story-space",
+    "",
+    "- Open every scene on its problem: who wants what here, and what stands in the way, in the first lines.",
+    human
+      ? `- Put ${human} in that problem: someone asks ${human}, looks to ${human}, or stands in ${human}'s way.`
+      : "- Put one of the party in that problem: someone asks them, looks to them, or stands in their way.",
+    "- The players are co-writers: offer them a problem and its stakes, never decide for them what their characters do, feel or say.",
+    "- Tie every consequence to a deed or a roll: something the party did, or a roll the engine made. Nothing happens to them from nowhere.",
+    "- No \"pleasant nothing\": a scene or a stop that asks nothing of the party is told in one or two sentences and left behind.",
+  ].join("\n");
+}
+
 export class ModelDm implements DmAgent {
   readonly systemPrompt: string;
   readonly seatTools: SeatTool[];
@@ -268,7 +286,7 @@ export class ModelDm implements DmAgent {
   constructor(config: ModelDmConfig) {
     this.config = config;
     const prompt = dmPrompt(config.pack, config.human, config.players, config.craft ?? "prompt", config.language);
-    this.systemPrompt = config.livingWorld ? `${prompt.replace(SCENES_LINE, ROAD_SCENES_LINE)}\n\n${DM_ROAD_PROMPT}` : prompt;
+    this.systemPrompt = config.livingWorld ? `${prompt.replace(SCENES_LINE, ROAD_SCENES_LINE)}\n\n${DM_ROAD_PROMPT}\n\n${storySpacePrompt(config.human)}` : prompt;
     this.seatTools = this.defineTools();
   }
 
