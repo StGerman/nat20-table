@@ -3,7 +3,9 @@
 // the human last (Enter goes with the others), the DM tells the card and the night, the party is
 // saved after the night, and the night past the day limit ends the run.
 import assert from "node:assert/strict";
+import path from "node:path";
 import { test } from "node:test";
+import { REPO } from "../src/engine.ts";
 import { cardChoices, roadChoices } from "../src/table/choices.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
@@ -107,6 +109,48 @@ test("a campaign pack names its start scene and day limit; the DM reads the worl
     assert.match(text, /World: day 1, /);
     assert.match(text, /The merchant's route: /);
     assert.match(text, /the merchant's purse holds /);
+  } finally {
+    t.close();
+  }
+});
+
+/** A Hired Blade who moves the caravan on whenever it may, and makes camp when the day's travel is spent. */
+function blade(): (prompt: HumanPrompt, seat: ScriptedSeat) => PlayerIntent {
+  let listed = false;
+  let seen = 0;
+  return (prompt, seat) => {
+    if (prompt.kind !== "explore") return prompt.kind === "combat_turn" || prompt.kind === "pick" ? ScriptedSeat.fight(prompt, seat) : ScriptedSeat.pass(prompt, seat);
+    if (!listed) {
+      listed = true;
+      return { kind: "command", name: "options" };
+    }
+    listed = false;
+    // A refused move since the last pick: the day's travel is spent, so the night comes.
+    const refused = seat.shown.slice(seen).some((e) => e.kind === "info" && e.title === "Not accepted");
+    seen = seat.shown.length;
+    const want = refused ? "Make camp for the night" : "Move on with the caravan";
+    const choice = seat.choices.find((c) => c.label === want) ?? seat.choices.find((c) => c.label === "Make camp for the night");
+    return choice ? { kind: "option", number: choice.number } : { kind: "text", text: "I keep watch." };
+  };
+}
+
+test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid and the run ends with the contract done", async () => {
+  const pack = path.join(REPO, "scenarios/fair_in_wend");
+  const seat = new ScriptedSeat("bren", [], blade());
+  const t = await testTable({ seed: 3, pack, human: "bren", players: ["torva", "maren", "ilsa"], seat });
+  try {
+    const party = ["bren", "torva", "maren", "ilsa"];
+    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3 } });
+    const report = await loop.run("fw_highsteads");
+    assert.equal(report.ended, "the escort contract is done", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    assert.ok(report.scenes.includes("fw_wendford") && report.scenes.at(-1) === "fw_wendmouth", report.scenes.join(", "));
+    const state = await t.engine.request("dm", { cmd: "get_state" });
+    assert.ok(state.result?.cmd === "get_state" && state.result.state.view === "dm");
+    const escort = state.result.state.world?.escort;
+    assert.ok(escort?.contract.done);
+    // Every Blade is paid at least the advance and the day of arrival, from Odda's purse.
+    for (const blade of escort.contract.blades) assert.ok(blade.paid_cp >= 400, `${blade.handle} paid ${blade.paid_cp}`);
+    assert.ok(state.result.state.world!.clock.day <= 3, "within the day limit");
   } finally {
     t.close();
   }
