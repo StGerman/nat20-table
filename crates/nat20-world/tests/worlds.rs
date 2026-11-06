@@ -98,7 +98,11 @@ fn wend() -> World {
     World::new(
         read(&dir.join("map.json")),
         read(&dir.join("goods.json")),
-        vec!["wendford".into(), "wendmouth".into()],
+        vec![
+            "wendford".into(),
+            "millbeck_bridge".into(),
+            "wendmouth".into(),
+        ],
         caravan,
         "wendford",
         Clock::at(1, 8, 0),
@@ -109,8 +113,29 @@ fn wend() -> World {
 }
 
 #[test]
-fn the_river_road_draws_a_lowland_card() {
+fn the_first_leg_down_from_wendford_always_meets_the_millbeck_toll_once() {
     let mut world = wend();
+    let leg = world
+        .travel(Some("millbeck_bridge"), Pace::Normal, false)
+        .unwrap();
+    assert!(leg.arrived);
+    assert_eq!(leg.miles, 8);
+    // The Millbeck zone holds the toll card alone: any roll draws it.
+    let mut dice = nat20_world::ListDice::new([100]);
+    let card = world.draw_after_leg("bridge_road", &mut dice).unwrap();
+    assert_eq!(card, "millbeck_bridge");
+    world.state.deck.pending = None;
+    // It is `once`: the stretch draws nothing after it, either way.
+    world.travel(Some("wendford"), Pace::Normal, false).unwrap();
+    assert_eq!(world.draw_after_leg("bridge_road", &mut dice), None);
+}
+
+#[test]
+fn the_river_road_below_the_bridge_draws_a_lowland_card() {
+    let mut world = wend();
+    world
+        .travel(Some("millbeck_bridge"), Pace::Normal, false)
+        .unwrap();
     world
         .travel(Some("wendmouth"), Pace::Normal, false)
         .unwrap();
@@ -122,11 +147,14 @@ fn the_river_road_draws_a_lowland_card() {
 #[test]
 fn wendmouth_is_a_day_downriver_by_wagon() {
     let mut world = wend();
+    let to_bridge = world
+        .travel(Some("millbeck_bridge"), Pace::Normal, false)
+        .unwrap();
     let leg = world
         .travel(Some("wendmouth"), Pace::Normal, false)
         .unwrap();
     assert!(leg.arrived);
-    assert_eq!(leg.miles, 20);
+    assert_eq!(to_bridge.miles + leg.miles, 20);
     // A normal day is 24 miles; 4 are left.
     assert_eq!(world.miles_left_today(Pace::Normal), 4);
 }
@@ -158,5 +186,8 @@ fn only_the_valley_floor_is_known_at_the_start() {
     let world = wend();
     let mut known: Vec<_> = world.state.discovered.iter().map(String::as_str).collect();
     known.sort_unstable();
-    assert_eq!(known, ["pells_mill", "wendford", "wendmouth"]);
+    assert_eq!(
+        known,
+        ["millbeck_bridge", "pells_mill", "wendford", "wendmouth"]
+    );
 }

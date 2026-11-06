@@ -1,5 +1,5 @@
 {
-    "_comment": "Road cards for the Wend valley floor (MAP-6, API-43): the river road between Wendford and Wendmouth and the mill lane. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours, not the SRD's. Checks use the SRD DC ladder; fights use SRD 5.2.1 stat blocks. Text the players read never names a DC, a number of hit points or a stat block.",
+    "_comment": "Road cards for the Wend valley floor (MAP-6, API-43): the river road from the Millbeck bridge to Wendmouth and the mill lane. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours, not the SRD's. Checks use the SRD DC ladder; fights use SRD 5.2.1 stat blocks. Text the players read never names a DC, a number of hit points or a stat block.",
     "cards": [
         {
             "id": "rutted_road",
@@ -13,9 +13,23 @@
                     "text": "Put your shoulders to the wheel and heave.",
                     "effects": [
                         {
-                            "do": "check", "who": "blades", "ability": "strength", "skill": "athletics", "dc": 10,
-                            "success": [{"do": "delay", "minutes": 20}],
-                            "failure": [{"do": "delay", "minutes": 90}]
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "strength",
+                            "skill": "athletics",
+                            "dc": 10,
+                            "success": [
+                                {
+                                    "do": "delay",
+                                    "minutes": 20
+                                }
+                            ],
+                            "failure": [
+                                {
+                                    "do": "delay",
+                                    "minutes": 90
+                                }
+                            ]
                         }
                     ]
                 },
@@ -23,40 +37,10 @@
                     "id": "unload",
                     "text": "Unload the heaviest sacks, roll the wagon free, and load them again.",
                     "owner_insists": true,
-                    "effects": [{"do": "delay", "minutes": 60}]
-                }
-            ]
-        },
-        {
-            "id": "toll_bridge",
-            "zone": "lowland",
-            "target": "caravan",
-            "text": "At the little bridge over the Millbeck a man in a borrowed helmet says the reeve's toll is two silver a head, and holds out his cap.",
-            "owner_pick": "pay",
-            "choices": [
-                {
-                    "id": "pay",
-                    "text": "Pay him and cross.",
-                    "effects": [{"do": "pay", "who": "party", "copper": 20}]
-                },
-                {
-                    "id": "argue",
-                    "text": "Tell him the reeve charges no such toll.",
                     "effects": [
                         {
-                            "do": "check", "who": "blades", "ability": "charisma", "skill": "persuasion", "dc": 15,
-                            "failure": [{"do": "pay", "who": "party", "copper": 20}]
-                        }
-                    ]
-                },
-                {
-                    "id": "ford",
-                    "text": "Go upstream and ford the beck.",
-                    "effects": [
-                        {"do": "delay", "minutes": 90},
-                        {
-                            "do": "check", "who": "blades", "ability": "strength", "skill": "athletics", "dc": 10,
-                            "failure": [{"do": "cargo", "good": "rations", "change": -2}]
+                            "do": "delay",
+                            "minutes": 60
                         }
                     ]
                 }
@@ -66,45 +50,22 @@
             "id": "peddler",
             "zone": "lowland",
             "target": "blades",
-            "text": "A peddler pushing a handcart falls in beside the escort. He has news from up and down the road, he says, and he has not eaten since yesterday.",
+            "text": "A peddler pushing a handcart falls in beside the escort. He has news from up and down the road, he says, and he has not eaten since yesterday. Two men with cudgels sit by the Millbeck bridge, he says, taking a toll the reeve never set.",
             "choices": [
                 {
                     "id": "share",
                     "text": "Share your food and listen.",
                     "effects": [
-                        {"do": "cargo", "good": "rations", "change": -1},
-                        {"do": "add_card", "card": "peddler_warning"}
+                        {
+                            "do": "cargo",
+                            "good": "rations",
+                            "change": -1
+                        }
                     ]
                 },
                 {
                     "id": "send_off",
                     "text": "Send him on his way."
-                }
-            ]
-        },
-        {
-            "id": "peddler_warning",
-            "zone": "lowland",
-            "target": "blades",
-            "chained": true,
-            "once": true,
-            "text": "The peddler you fed catches you up at a bend, out of breath: two men with cudgels are waiting in the willows ahead.",
-            "choices": [
-                {
-                    "id": "go_ready",
-                    "text": "Walk on with weapons drawn.",
-                    "effects": [{"do": "fight", "monsters": ["bandit", "bandit"]}]
-                },
-                {
-                    "id": "slip_past",
-                    "text": "Lead the wagon quietly through the water meadow.",
-                    "effects": [
-                        {
-                            "do": "check", "who": "blades", "ability": "dexterity", "skill": "stealth", "dc": 15,
-                            "success": [{"do": "delay", "minutes": 40}],
-                            "failure": [{"do": "fight", "monsters": ["bandit", "bandit"]}]
-                        }
-                    ]
                 }
             ]
         },
@@ -117,7 +78,13 @@
                 {
                     "id": "feed",
                     "text": "Toss it a crust and let it come along.",
-                    "effects": [{"do": "cargo", "good": "rations", "change": -1}]
+                    "effects": [
+                        {
+                            "do": "cargo",
+                            "good": "rations",
+                            "change": -1
+                        }
+                    ]
                 },
                 {
                     "id": "shoo",
@@ -137,15 +104,31 @@
                     "text": "Keep a sharp watch by the wagon.",
                     "effects": [
                         {
-                            "do": "check", "who": "blades", "ability": "wisdom", "skill": "perception", "dc": 10,
-                            "failure": [{"do": "cargo", "good": "rations", "change": -2}]
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "perception",
+                            "dc": 10,
+                            "failure": [
+                                {
+                                    "do": "cargo",
+                                    "good": "rations",
+                                    "change": -2
+                                }
+                            ]
                         }
                     ]
                 },
                 {
                     "id": "sleep",
                     "text": "It's only mist. Sleep.",
-                    "effects": [{"do": "cargo", "good": "rations", "change": -2}]
+                    "effects": [
+                        {
+                            "do": "cargo",
+                            "good": "rations",
+                            "change": -2
+                        }
+                    ]
                 }
             ]
         },
@@ -159,15 +142,34 @@
                 {
                     "id": "stand",
                     "text": "Stand between the wolves and the horses.",
-                    "effects": [{"do": "fight", "monsters": ["wolf", "wolf"]}]
+                    "effects": [
+                        {
+                            "do": "fight",
+                            "monsters": [
+                                "wolf",
+                                "wolf"
+                            ]
+                        }
+                    ]
                 },
                 {
                     "id": "build_fire",
                     "text": "Build the fire high and wait for dawn.",
                     "effects": [
                         {
-                            "do": "check", "who": "blades", "ability": "wisdom", "skill": "survival", "dc": 10,
-                            "failure": [{"do": "fight", "monsters": ["wolf"]}]
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "survival",
+                            "dc": 10,
+                            "failure": [
+                                {
+                                    "do": "fight",
+                                    "monsters": [
+                                        "wolf"
+                                    ]
+                                }
+                            ]
                         }
                     ]
                 }
@@ -186,8 +188,18 @@
                     "text": "Make room for them at the fire.",
                     "effects": [
                         {
-                            "do": "check", "who": "blades", "ability": "wisdom", "skill": "insight", "dc": 15,
-                            "failure": [{"do": "cargo", "good": "rations", "change": -2}]
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "insight",
+                            "dc": 15,
+                            "failure": [
+                                {
+                                    "do": "cargo",
+                                    "good": "rations",
+                                    "change": -2
+                                }
+                            ]
                         }
                     ]
                 },
