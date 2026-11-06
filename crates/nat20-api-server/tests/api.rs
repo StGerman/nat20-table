@@ -3111,3 +3111,86 @@ fn a_pack_brings_its_own_cards_and_keeps_its_contract() {
     );
     let _ = std::fs::remove_dir_all(&base);
 }
+
+/// A card fight's named NPC who dies writes `killed_<npc>`, by whoever dealt the last blow
+/// (ENG-36). The deed is DM-only; the saved roster's world shows it.
+#[test]
+fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
+    let dir = std::env::temp_dir().join(format!("nat20_table_death_deed_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let deck_path = dir.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
+    deck["cards"][1]["choices"][1]["effects"][0]["monsters"] =
+        json!([{ "stat": "wolf", "npc": "grey" }]);
+    std::fs::write(&deck_path, deck.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    ));
+    let both = |api: &mut Api, choice: &str| -> Value {
+        let mut last = Value::Null;
+        for who in ["bren", "maren"] {
+            last = api.call(
+                who,
+                json!({ "cmd": "choose_card", "actor": who, "choice": choice }),
+            );
+            assert_eq!(last["ok"], true, "{last}");
+        }
+        last
+    };
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    ));
+    both(&mut api, "clear");
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "rest_night", "actor": "bren", "where": "camp" }),
+    ));
+    let mut last = both(&mut api, "drive_off");
+    let weapon = |who: &str| if who == "bren" { "longsword" } else { "mace" };
+    for _ in 0..300 {
+        if last["awaiting"]["kind"] != "action" {
+            break;
+        }
+        let who = last["awaiting"]["actor"].as_str().unwrap().to_owned();
+        let prompt = last["awaiting"]["prompt_id"].clone();
+        let attack = api.call(
+            "dm",
+            json!({ "cmd": "submit", "actor": who, "prompt_id": prompt,
+                    "option_id": format!("melee_attack/{}", weapon(&who)), "targets": ["wolf_1"] }),
+        );
+        last = if attack["ok"] == true {
+            attack
+        } else {
+            api.call(
+                "dm",
+                json!({ "cmd": "end_turn", "actor": who, "prompt_id": prompt }),
+            )
+        };
+    }
+    let saved = api.call("dm", json!({ "cmd": "save_roster" }));
+    ok(&saved);
+    let deed = &saved["result"]["roster"]["world"]["state"]["deeds"]["killed_grey"];
+    let by = deed["by"]
+        .as_array()
+        .unwrap_or_else(|| panic!("no deed: {saved}"));
+    assert_eq!(by.len(), 1, "{deed}");
+    assert!(
+        ["bren", "maren"].contains(&by[0].as_str().unwrap()),
+        "{deed}"
+    );
+    assert_eq!(deed["contract"], 1, "{deed}");
+    let _ = std::fs::remove_dir_all(&dir);
+}

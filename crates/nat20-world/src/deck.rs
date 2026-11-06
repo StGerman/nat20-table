@@ -279,8 +279,9 @@ pub enum Effect {
     /// A fight: these stat blocks are placed hostile on the road and the fight starts. It
     /// comes last in its list
     Fight {
-        /// Stat block ids, one per creature
-        monsters: Vec<String>,
+        /// One per creature: a stat block id, or `{"stat", "npc"}` for a creature who is an
+        /// NPC of the story (ENG-36): its death writes the deed `killed_<npc>`
+        monsters: Vec<Monster>,
     },
     /// Everyone in `who` pays `copper` each to the world, as much as their purse holds
     Pay {
@@ -330,6 +331,43 @@ pub enum Effect {
         /// The deed id, in snake_case
         deed: String,
     },
+}
+
+/// One creature of a card's fight.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Monster {
+    /// A stat block id
+    Stat(String),
+    /// A stat block that is an NPC of the story
+    Npc {
+        /// The stat block id
+        stat: String,
+        /// The NPC's id, in snake_case: the deed `killed_<npc>` is written when it dies
+        npc: String,
+    },
+}
+
+impl Monster {
+    /// The stat block id.
+    pub fn stat(&self) -> &str {
+        match self {
+            Monster::Stat(stat) | Monster::Npc { stat, .. } => stat,
+        }
+    }
+
+    /// The NPC it is, if any.
+    pub fn npc(&self) -> Option<&str> {
+        match self {
+            Monster::Stat(_) => None,
+            Monster::Npc { npc, .. } => Some(npc),
+        }
+    }
+}
+
+/// The deed a named NPC's death writes (ENG-36).
+pub fn killed_deed(npc: &str) -> String {
+    format!("killed_{npc}")
 }
 
 /// Why a deck is unusable.
@@ -669,7 +707,7 @@ impl Deck {
                 )
                 .flat_map(Deeds::ids);
             for deed in reads {
-                if !written.contains(deed.as_str()) && !elsewhere.contains(deed) {
+                if !written.contains(deed) && !elsewhere.contains(deed) {
                     return Err(DeckError(format!(
                         "card {} reads deed {deed}, which nothing writes",
                         card.id
@@ -686,16 +724,22 @@ impl Deck {
         self
     }
 
-    /// Every deed some choice of the deck can write.
-    pub fn deeds_written(&self) -> BTreeSet<&str> {
-        self.cards
-            .iter()
-            .flat_map(Deck::effects)
-            .filter_map(|e| match e {
-                Effect::Remember { deed } => Some(deed.as_str()),
-                _ => None,
-            })
-            .collect()
+    /// Every deed some choice of the deck can write: its `remember`s, and `killed_<npc>` for
+    /// each NPC a card's fight names.
+    pub fn deeds_written(&self) -> BTreeSet<String> {
+        let mut written = BTreeSet::new();
+        for effect in self.cards.iter().flat_map(Deck::effects) {
+            match effect {
+                Effect::Remember { deed } => {
+                    written.insert(deed.clone());
+                }
+                Effect::Fight { monsters } => {
+                    written.extend(monsters.iter().filter_map(Monster::npc).map(killed_deed));
+                }
+                _ => {}
+            }
+        }
+        written
     }
 
     fn in_play(
@@ -1129,7 +1173,7 @@ mod tests {
         let mut d = deck();
         d.cards[1].choices[1].effects = vec![
             Effect::Fight {
-                monsters: vec!["wolf".into()],
+                monsters: vec![Monster::Stat("wolf".into())],
             },
             Effect::Delay { minutes: 10 },
         ];
@@ -1643,5 +1687,33 @@ mod tests {
         assert_eq!(card.as_deref(), Some("ruin_ghost"));
         d.cards[3].zone = "fields".into();
         assert!(d.validate(&map).unwrap_err().0.contains("is no place"));
+    }
+
+    #[test]
+    fn a_fight_s_named_npc_writes_its_death_deed() {
+        let file: DeckFile = serde_json::from_str(
+            r#"{"cards": [
+              {"id": "toll", "zone": "fields", "target": "blades", "text": "Two men with cudgels.",
+               "choices": [
+                 {"id": "fight", "text": "Go at them.", "effects": [{"do": "fight", "monsters": [{"stat": "bandit", "npc": "col"}, "bandit"]}]},
+                 {"id": "pay", "text": "Pay.", "effects": [{"do": "remember", "deed": "paid"}]}
+               ]},
+              {"id": "grave", "zone": "fields", "target": "blades", "text": "A new grave.", "if": "killed_col",
+               "choices": [{"id": "stop", "text": "Stop."}, {"id": "go", "text": "Go on."}]}
+            ]}"#,
+        )
+        .unwrap();
+        let d = Deck::from_files([file]);
+        d.validate(&small_map()).unwrap();
+        assert!(d.deeds_written().contains("killed_col"));
+        d.check_deeds_written(&BTreeSet::new()).unwrap();
+        let Effect::Fight { monsters } = &d.cards[0].choices[0].effects[0] else {
+            panic!("a fight");
+        };
+        assert_eq!(
+            (monsters[0].stat(), monsters[0].npc()),
+            ("bandit", Some("col"))
+        );
+        assert_eq!((monsters[1].stat(), monsters[1].npc()), ("bandit", None));
     }
 }

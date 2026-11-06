@@ -62,6 +62,14 @@ pub struct Session {
     roster: Option<Roster>,
     /// The place NPCs placed in the current scene (API-48), written back when it is left.
     npcs_here: Vec<String>,
+    /// A card fight's named NPCs by handle, until they die (ENG-36)
+    card_npcs: HashMap<String, String>,
+    /// Who rolled each logged roll, by roll id (ENG-36)
+    rollers: HashMap<String, String>,
+    /// Who dealt the last damage to each creature, by handle (ENG-36)
+    last_blow: HashMap<String, String>,
+    /// The creature that took the last option (ENG-36): the blow's dealer when no roll is cited
+    last_actor: Option<String>,
 }
 
 impl Session {
@@ -84,6 +92,10 @@ impl Session {
             campaign: None,
             roster,
             npcs_here: Vec::new(),
+            card_npcs: HashMap::new(),
+            rollers: HashMap::new(),
+            last_blow: HashMap::new(),
+            last_actor: None,
         };
         session.push(Pending {
             round: None,
@@ -1331,6 +1343,7 @@ impl Session {
             }
             _ => {}
         }
+        self.follow_blows(&kind);
         self.log.push(Event {
             seq,
             round: pending.round,
