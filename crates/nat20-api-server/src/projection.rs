@@ -6,10 +6,10 @@
 //! and gets every roll in the `player` view.
 
 use nat20_api_contract::{
-    Anchor, AnchorObserved, AnchorView, CardPlayer, CheckView, Condition, CreatureFull,
-    CreatureObserved, EncounterView, Event, EventKind, Handle, Mode, NpcKnown, PlaceKnown, PointFt,
-    ReachView, RoadKnown, RoadUnexplored, RollView, Sheet, SpawnView, State, TripView, Visibility,
-    WorldDm, WorldPlayer,
+    Anchor, AnchorObserved, AnchorView, CardChoiceView, CardPlayer, CheckView, Condition,
+    CreatureFull, CreatureObserved, EncounterView, Event, EventKind, Handle, Mode, NpcKnown,
+    PlaceKnown, PointFt, ReachView, RoadKnown, RoadUnexplored, RollView, Sheet, SpawnView, State,
+    TripView, Visibility, WorldDm, WorldPlayer,
 };
 
 use crate::render;
@@ -238,7 +238,15 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
         card: view.card.map(|c| CardPlayer {
             target: c.target,
             text: c.text,
-            choices: c.choices,
+            // A player reads the words only: the customs a choice touches are the DM's (API-55).
+            choices: c
+                .choices
+                .into_iter()
+                .map(|choice| CardChoiceView {
+                    id: choice.id,
+                    text: choice.text,
+                })
+                .collect(),
             said: c.said,
             waiting_for: c.waiting_for,
         }),

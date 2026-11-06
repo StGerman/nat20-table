@@ -98,8 +98,8 @@
             "text": "A broken cart lies on its side in the ditch.",
             "scout": "survival",
             "choices": [
-                {"id": "pass", "text": "Pass it by."},
-                {"id": "search", "text": "Look through it.", "unless": "scouted", "effects": [{"do": "delay", "minutes": 15}]},
+                {"id": "pass", "text": "Pass it by.", "keeps": ["road_keeps_its_own"]},
+                {"id": "search", "text": "Look through it.", "breaks": ["road_keeps_its_own"], "unless": "scouted", "effects": [{"do": "delay", "minutes": 15}]},
                 {"id": "ruts", "text": "Follow the wheel ruts back to where it left the trail.", "if": "scouted"}
             ]
         }

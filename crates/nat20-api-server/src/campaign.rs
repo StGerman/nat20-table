@@ -8,11 +8,11 @@
 use std::path::{Path, PathBuf};
 
 use nat20_api_contract::{
-    Ability, CaravanView, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget, CargoView,
-    CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade, EscortDm, EscortView,
-    Handle, LegView, MilesToday, NpcAttitude, NpcDm, OfferedCard, Pace, PlaceDm, ReachView,
-    RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain, TripLegView, TripView, WagonView,
-    Watch, WorldDm, WorldPosition,
+    Ability, CaravanView, CardChoiceDm, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget,
+    CargoView, CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade, EscortDm,
+    EscortView, Handle, LegView, MilesToday, NpcAttitude, NpcDm, OfferedCard, Pace, PlaceDm,
+    ReachView, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain, TripLegView, TripView,
+    WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -467,7 +467,7 @@ impl Campaign {
             zone: card.zone.clone(),
             target: target(card.target),
             text: card.text.clone(),
-            choices: choices(card, Some(&offers)),
+            choices: choices_dm(card, Some(&offers)),
             note: card.note.clone(),
             scout: card.scout.map(scout_skill),
         })
@@ -482,7 +482,7 @@ impl Campaign {
             zone: card.zone.clone(),
             target: target(card.target),
             text: card.text.clone(),
-            choices: choices(card, Some(pending)),
+            choices: choices_dm(card, Some(pending)),
             said: pending
                 .said
                 .iter()
@@ -845,6 +845,21 @@ pub fn choices(card: &world::Card, pending: Option<&world::PendingCard>) -> Vec<
         .map(|c| CardChoiceView {
             id: c.id.clone(),
             text: c.text.clone(),
+        })
+        .collect()
+}
+
+/// A card's choices as the DM sees them (API-55): the offered ones, else all, with the customs
+/// each keeps or breaks.
+pub fn choices_dm(card: &world::Card, pending: Option<&world::PendingCard>) -> Vec<CardChoiceDm> {
+    card.choices
+        .iter()
+        .filter(|c| pending.is_none_or(|p| p.offers(&c.id)))
+        .map(|c| CardChoiceDm {
+            id: c.id.clone(),
+            text: c.text.clone(),
+            keeps: c.keeps.clone(),
+            breaks: c.breaks.clone(),
         })
         .collect()
 }

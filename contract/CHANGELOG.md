@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.65 (2026-11-06)
+- Additive (API-55, ENG-39, protocol §4.13): customs on card choices, DM only. `CardDm.choices` and `OfferedCard.choices` are now `CardChoiceDm{id, text, keeps?, breaks?}`, the ids of the world's customs a choice keeps or breaks; the wire shape only gains two optional fields. A player's `CardPlayer.choices` and `card_drawn.choices` stay `CardChoiceView{id, text}`.
+- The test world gains `customs.json` with one custom, and its `broken_cart` choices keep and break it, so `draw_three.jsonl` and `scout.jsonl` show the tags in the DM's offered cards and the player views do not. Other fixtures change by version only.
+
 ## 1.0.0-dev.64 (2026-11-06)
 - Breaking for saved rosters (API-51, protocol §4.15, decision 0063): roster format 2. `ROSTER_FORMAT` is 2 and `RosterWorld.state` is `{memory, contract}`, still opaque. A format 1 roster is refused with `bad_roster` and one plain line (start a new party); there is no converter. Migration: a party saved before this build starts over with `--new-party`.
 - Additive: `Roster.contract_start` (`RosterStart{characters, world?}`), the party and world the contract started from, so a client can play the contract again from its start; and a public event `trip_to_start{from, days}` when a new contract takes up the world the last one left (ENG-37's one-line trip, now on the wire).
