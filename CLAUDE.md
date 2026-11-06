@@ -47,7 +47,7 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 
 Milestone 8 (upstream proposal) was dropped on 2026-10-18: upstream declines AI-authored contributions (`docs/decisions/0023-long-lived-fork.md`).
 
-After Milestone 7 the order is 10, then 9. Milestone 10, Speed and polish, was done on 2026-11-01, closed on a `play:cheap` run with Stas at the table (`docs/decisions/0056-m10-closed-on-cheap-run.md`). Milestone 9, Living world (was Improvised play), is next: `docs/scope/living-world-scope.md`, design `docs/design/m9-system-design.md`.
+After Milestone 7 the order is 10, then 9. Milestone 10, Speed and polish, was done on 2026-11-01, closed on a `play:cheap` run with Stas at the table (`docs/decisions/0056-m10-closed-on-cheap-run.md`). Milestone 9, Living world (was Improvised play), was done on 2026-11-06, closed on two exit runs of *Fair in Wend* on one build, one all AI and one with Stas as a Hired Blade (`docs/decisions/0060-m9-closed.md`; scope `docs/scope/living-world-scope.md`, design `docs/design/m9-system-design.md`). Milestone 11, Word on the road, is next; its spec is not written yet.
 
 ## Design in brief
 
