@@ -286,6 +286,6 @@
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"ilsa's turn.\",\"seq\":209}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"goblin_4 surrenders.\",\"seq\":210}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Combat is over: the other side surrendered.\",\"seq\":211}"}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren gains 87 XP, 387 in all.\",\"seq\":213}"}
+{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"You gain 87 experience, 387 in all.\",\"seq\":213,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The fight is done.\"}"}
 {"seat":"bren","text":"{\"kind\":\"end\",\"text\":\"the adventure is over\"}"}
