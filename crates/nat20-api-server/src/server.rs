@@ -312,6 +312,7 @@ impl Server {
                 session.start_campaign(party, human.as_ref(), viewer)
             }
             Command::RestNight { actor, lodging } => session.rest_night(&actor.0, *lodging, viewer),
+            Command::PassTime { span } => session.pass_time(*span, viewer),
             Command::ChooseCard { actor, choice } => session.choose_card(&actor.0, choice, viewer),
             Command::SaveRoster => session.save_roster(viewer),
             Command::LevelUp { actor } => session.level_up(&actor.0, viewer),

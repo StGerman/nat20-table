@@ -14,7 +14,7 @@ use nat20_api_contract::{
     Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
     ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
     Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId, ROSTER_FORMAT, ReactionTrigger,
-    RejectReason, RollId, RollView, Roster, RosterWorld, SceneFile, State, Visibility,
+    RejectReason, RollId, RollView, Roster, RosterWorld, SceneFile, State, TimeSpan, Visibility,
 };
 
 mod cards;
@@ -25,7 +25,7 @@ use crate::{
         events::Pending,
         game::{DAYS_FOOD_QUARTER_LB, Game, TriggerCause, Wait},
     },
-    campaign::Campaign,
+    campaign::{Campaign, clock_view},
     errors::{error, rejected, with_awaiting},
     projection::{self, FullState, Viewer, WorldFull},
     render, scene,
@@ -564,6 +564,75 @@ impl Session {
         }
         Ok(CommandResult::RestNight {
             night,
+            state: self.state_for(viewer)?,
+        })
+    }
+
+    /// Lets time pass out of combat at the DM's call (API-50): the world clock and the day's
+    /// travel move as a road card's lost time moves them, and core's time with them, so
+    /// effects that run out end. Never past midnight. Nothing changes on a refusal.
+    pub fn pass_time(
+        &mut self,
+        span: TimeSpan,
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
+        if *viewer != Viewer::Dm {
+            return Err(error(
+                ErrorCode::NotVisible,
+                "pass_time is the DM's call; send it as dm.",
+            ));
+        }
+        let Some(campaign) = self.campaign.as_ref() else {
+            return Err(error(
+                ErrorCode::NoCampaign,
+                "No campaign is running; the game starts one with start_campaign.",
+            ));
+        };
+        if campaign.world.state.deck.pending.is_some() {
+            return Err(rejected(
+                RejectReason::CardPending,
+                "A road card waits for its decision; time passes once every seat has spoken (choose_card).",
+            ));
+        }
+        let clock = campaign.world.state.clock;
+        let game = self
+            .game
+            .as_ref()
+            .ok_or_else(|| error(ErrorCode::NoScene, "Load a scene first."))?;
+        if game.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "A fight is running; inside it time goes by turns.",
+            ));
+        }
+        if let Some((handle, _)) = game.open_level_up() {
+            return Err(rejected(
+                RejectReason::LevelUpOpen,
+                format!("{handle}'s level-up is open; pass_time waits until it is answered."),
+            ));
+        }
+        let minutes = match span {
+            TimeSpan::ShortWhile => 30,
+            TimeSpan::Hour => 60,
+            TimeSpan::Watch => clock.minutes_to_next_watch(),
+        };
+        if minutes >= clock.minutes_to_midnight() {
+            return Err(rejected(
+                RejectReason::NightFalls,
+                "That runs past midnight: the day is over, and the party spends the night with rest_night.",
+            ));
+        }
+        let campaign = self.campaign.as_mut().expect("checked above");
+        campaign.world.delay(minutes);
+        let clock = clock_view(campaign.world.state.clock);
+        self.game_mut()?.pass_minutes(minutes);
+        self.push_entries();
+        self.push(Pending::public(
+            None,
+            EventKind::TimePassed { minutes, clock },
+        ));
+        Ok(CommandResult::PassTime {
+            minutes,
             state: self.state_for(viewer)?,
         })
     }

@@ -360,6 +360,15 @@ The party is hired to see the caravan to a place (API-47). The terms sit in `cam
 - **Trial balance.** The journal's account for the merchant opens with what the purse held before the first payment, and after each batch it must equal the world's purse, as the creatures' accounts must equal core.
 - **In the roster.** The world state keeps the days, the pay and the purse. A campaign taken up from a roster pays no second advance.
 
+### 4.18 Time in a place
+
+`pass_time{span}` lets time pass out of combat at the DM's call (API-50, decision 0061): a meal at the alehouse, a talk with the reeve, a search of a hut. Travel and nights move the clock themselves (§4.11, §4.12); nothing else did, so a whole stop in a village took no time.
+
+- **Who and when.** Only `dm` sends it; a creature viewer gets `not_visible`. Before `start_campaign` it answers `no_campaign`, in a fight `wrong_mode`, while a road card waits `rejected`, `card_pending`, and while a level-up is open `rejected`, `level_up_open`.
+- **How long.** `short_while` is 30 minutes, `hour` 60, and `watch` runs until the next watch begins (0:00, 4:00, 8:00, noon, 16:00, 20:00). A span that would reach midnight is `rejected`, `night_falls`: the day ends with `rest_night`.
+- **What follows.** As a card's lost time (§4.13): the world clock and core's time move on, effects that run out end and are logged, and the day's travel shrinks by as much, an 8-hour travel day being the whole day's distance. Then `time_passed{minutes, clock}` (public).
+- The result is the `minutes` (also in the event) and the state after it.
+
 ## 5. Visibility (projection per `viewer`)
 
 | Data | `dm` | Owner (viewer = that creature) | Other player viewer |
@@ -395,7 +404,7 @@ The party is hired to see the caravan to a place (API-47). The terms sit in `cam
 | `world.drives` (whether this player may call `travel`) | n/a | yes | yes, for themselves |
 | `world.card.id`, `world.card.zone`, the deck, the draw roll | yes | no | no |
 | `world.card` text, choices, `said`, `waiting_for` | yes | yes | yes |
-| `traveled`, `place_discovered`, `night`, `card_drawn`, `card_advice`, `card_resolved`, `cargo_changed`, `time_lost` | yes | yes | yes |
+| `traveled`, `place_discovered`, `night`, `card_drawn`, `card_advice`, `card_resolved`, `cargo_changed`, `time_lost`, `time_passed` | yes | yes | yes |
 | `world.npcs`: every place NPC with `monster`, `attitude`, `met`, `hp` and `notes` | yes | no; met NPCs only, with `id`, `name`, `place` and `alive` | no; as the owner |
 | `world.escort`: the terms, each Blade's days served and pay, `done`; `escort_settled` | yes | yes | yes |
 | `world.escort.purse_cp` (the merchant's purse) | yes | no | no |
@@ -453,6 +462,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `xp_awarded` | `actor`, `xp`, `total`, `can_level_up` (owner and DM): a won fight's XP share |
 | `leveled_up` | `actor`, `level` (public) |
 | `time_lost` | `minutes` (public): a card cost the party time |
+| `time_passed` | `minutes`, `clock` (public): one `pass_time` (§4.18) |
 | `escort_settled` | `destination` (public): the caravan reached the escort's destination and the Blades were paid (§4.17) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
@@ -489,7 +499,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room`, `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded`, `no_inn`, `card_pending`, `no_card`, `no_say`, `already_spoke`, `waiting_for_advice`, `unknown_choice`, `not_enough_xp`, `level_up_open`, `no_level_up`, `bad_picks` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room`, `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded`, `no_inn`, `card_pending`, `no_card`, `no_say`, `already_spoke`, `waiting_for_advice`, `unknown_choice`, `not_enough_xp`, `level_up_open`, `no_level_up`, `bad_picks`, `night_falls` | true |
 | `surrender_not_available` | `end_combat{surrender}` while the running encounter's surrender condition does not hold, or it declares none; nothing changed | false |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |

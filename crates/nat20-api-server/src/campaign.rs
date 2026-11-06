@@ -851,7 +851,7 @@ fn terrain(t: world::Terrain) -> Terrain {
     }
 }
 
-fn clock_view(clock: world::Clock) -> ClockView {
+pub(crate) fn clock_view(clock: world::Clock) -> ClockView {
     ClockView {
         day: clock.day,
         hour: clock.hour(),

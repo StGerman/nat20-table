@@ -181,6 +181,8 @@ pub enum RejectReason {
     LevelUpOpen,
     /// `answer_level_up` with no level-up open for the actor.
     NoLevelUp,
+    /// `pass_time` that would run past midnight: the day ends with `rest_night` (API-50).
+    NightFalls,
     /// `answer_level_up` with picks that are not the choice's options, repeat one, or are not
     /// as many as it asks; the message lists the options.
     BadPicks,

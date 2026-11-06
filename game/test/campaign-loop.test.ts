@@ -252,6 +252,26 @@ test("a campaign pack names its start scene and day limit; the DM reads the worl
   }
 });
 
+test("the DM lets time pass in a place: the watch moves on, and a span past midnight is refused (API-50)", async () => {
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
+  try {
+    const dm = new DmTools(t.table);
+    await t.engine.request("dm", { cmd: "load_scene", scene_id: "vale_town" });
+    await t.engine.request("dm", { cmd: "start_campaign", party: ["bren", "maren"] });
+    // The test world starts at 8:00: half an hour, then to noon, the evening and the night.
+    const short = await dm.passTime("short_while");
+    assert.deepEqual([short.ok, short.text], [true, "time passed; it is now day 1, morning"]);
+    assert.equal((await dm.passTime("watch")).text, "time passed; it is now day 1, afternoon");
+    assert.equal((await dm.passTime("watch")).text, "time passed; it is now day 1, evening");
+    assert.equal((await dm.passTime("watch")).text, "time passed; it is now day 1, night");
+    const late = await dm.passTime("watch");
+    assert.equal(late.ok, false);
+    assert.match(late.text, /runs past midnight/);
+  } finally {
+    t.close();
+  }
+});
+
 /** A Hired Blade who moves the caravan on whenever it may, and makes camp when the day's travel is spent. */
 function blade(): (prompt: HumanPrompt, seat: ScriptedSeat) => PlayerIntent {
   let listed = false;

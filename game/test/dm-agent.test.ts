@@ -438,6 +438,10 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   // A pack played in order keeps both.
   const mill = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).seatTools.map((t) => t.name);
   assert.ok(mill.includes("load_scene") && mill.includes("end_adventure"));
+  // Time in a place (API-50, decision 0060 F2): the road's DM lets it pass, a pack played in order has no clock.
+  assert.ok(names.includes("pass_time"), names.join(", "));
+  assert.match(dm.systemPrompt, /- Time in a place: .*call pass_time once for it/);
+  assert.ok(!mill.includes("pass_time"));
 });
 
 test("the DM speaks to the human's character as you and names everyone else; a table with no human has no such rule", () => {
