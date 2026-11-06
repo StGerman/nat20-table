@@ -135,7 +135,7 @@ test("a party with a journey behind it can play that journey again; one saved by
   assert.deepEqual(replayRoster(later), { format: 2, characters: start.characters, world });
   assert.equal(replayRoster(roster(900)), undefined, "no journey yet");
   assert.equal(rosterRefusal(roster(900)), undefined);
-  assert.match(rosterRefusal({ ...roster(900), format: 1 } as Roster) ?? "", /older version of the game.*--new-party/);
+  assert.match(rosterRefusal({ ...roster(900), format: 1 } as Roster) ?? "", /older version of the game.*stays as it is.*--new-party/);
   const base = { name: "wend", loaded_sha256: "a".repeat(64), saved_sha256: "b".repeat(64), not_saved: null, chain: "held" as const };
   assert.equal(rosterReport({ ...base, party: "again" }), `Roster: played the last journey of the party saved as wend again from where it began (sha256 ${"a".repeat(12)}); saved (sha256 ${"b".repeat(12)})`);
 });
@@ -144,7 +144,7 @@ test("the party question with a journey behind it has a third answer; Enter stil
   assert.deepEqual(partyRows("Torva (level 3)", 2, true), [
     "  1. Continue with your party: Torva (level 3)",
     "  2. Start a new party (it replaces the saved one when this game ends)",
-    "❯ 3. Play the last journey again from where it began, with the party as it was then",
+    "❯ 3. Play the last journey again from where it began, with the party as it was then (it replaces the saved one when this game ends)",
   ]);
   assert.equal(partyKey({ at: 0 }, { kind: "enter" }, true).party, "continue");
   assert.equal(partyKey({ at: 0 }, { kind: "digit", digit: 3 }, true).state.at, 2);

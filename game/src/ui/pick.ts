@@ -42,7 +42,7 @@ export function pickKey(roster: RosterEntry[], state: PickState, key: PickKey): 
  */
 export function partyRows(saved: string, at: number, again = false): string[] {
   const rows = [`Continue with your party: ${saved}`, "Start a new party (it replaces the saved one when this game ends)"];
-  if (again) rows.push("Play the last journey again from where it began, with the party as it was then");
+  if (again) rows.push("Play the last journey again from where it began, with the party as it was then (it replaces the saved one when this game ends)");
   return rows.map((row, i) => `${i === at ? "❯" : " "} ${i + 1}. ${row}`);
 }
 
