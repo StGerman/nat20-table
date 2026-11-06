@@ -3,8 +3,8 @@
 //! coin and exhaustion run through core by way of the adapter.
 
 use nat20_api_contract::{
-    AdvantageState, ApiError, CheckSpec, CommandResult, DiceRolled, ErrorCode, EventKind, Handle,
-    LedgerReason, LifeState, Mode, Placement, RejectReason, RollId, RollKind, RollOutcome,
+    AdvantageState, ApiError, CardCame, CheckSpec, CommandResult, DiceRolled, ErrorCode, EventKind,
+    Handle, LedgerReason, LifeState, Mode, Placement, RejectReason, RollId, RollKind, RollOutcome,
     RollView, Side, Visibility,
 };
 use nat20_world as world;
@@ -36,19 +36,19 @@ impl world::WorldDice for SessionDice {
 }
 
 impl Session {
-    /// Draws a road card with `draw` and logs the roll (DM only) and `card_drawn` (public).
-    /// A card nobody can speak on is settled at once.
+    /// Draws with `draw` and logs each draw roll (DM only). A card that needs no pick goes on
+    /// the table (`show_card`); two or three are offered to the DM (`cards_offered`, DM only)
+    /// and wait for `pick_card` (API-53). Returns whether the draw drew anything.
     pub(super) fn draw_card(
         &mut self,
-        draw: impl FnOnce(&mut world::World, &mut SessionDice) -> Option<String>,
-    ) -> Result<(), ApiError> {
+        draw: impl FnOnce(&mut world::World, &mut SessionDice) -> Option<world::Drawn>,
+    ) -> Result<bool, ApiError> {
         let Some(campaign) = self.campaign.as_mut() else {
-            return Ok(());
+            return Ok(false);
         };
         let mut dice = SessionDice::default();
         let drawn = draw(&mut campaign.world, &mut dice);
-        let card = drawn.and_then(|id| campaign.world.deck.card(&id).cloned());
-        let offered = campaign.world.state.deck.pending.clone();
+        let mut rolls = Vec::new();
         for (sides, value, why) in dice.rolls {
             self.push(Pending {
                 round: None,
@@ -57,8 +57,52 @@ impl Session {
                     roll: world_roll(sides, value, &why),
                 },
             });
+            rolls.push(RollId(format!("r{}", self.log.len())));
         }
-        let Some(card) = card else {
+        match drawn {
+            None => Ok(false),
+            Some(world::Drawn::Offered(cards)) => {
+                let campaign = self.campaign.as_ref().expect("checked above");
+                let cards = cards
+                    .iter()
+                    .filter_map(|id| campaign.offered_card(id))
+                    .collect();
+                self.push(Pending {
+                    round: None,
+                    visibility: Visibility::Dm,
+                    kind: EventKind::CardsOffered { cards, rolls },
+                });
+                Ok(true)
+            }
+            Some(world::Drawn::Table { card, soon }) => {
+                if soon {
+                    self.push(Pending {
+                        round: None,
+                        visibility: Visibility::Dm,
+                        kind: EventKind::CardPicked {
+                            card,
+                            came: CardCame::Soon,
+                            reason: None,
+                        },
+                    });
+                }
+                self.show_card()?;
+                Ok(true)
+            }
+        }
+    }
+
+    /// Logs the card on the table (`card_drawn`, public). A card nobody can speak on is
+    /// settled at once.
+    fn show_card(&mut self) -> Result<(), ApiError> {
+        let Some(campaign) = self.campaign.as_ref() else {
+            return Ok(());
+        };
+        let pending = campaign.world.state.deck.pending.clone();
+        let Some(card) = pending
+            .as_ref()
+            .and_then(|p| campaign.world.deck.card(&p.card).cloned())
+        else {
             return Ok(());
         };
         self.push(Pending::public(
@@ -66,7 +110,7 @@ impl Session {
             EventKind::CardDrawn {
                 target: campaign::target(card.target),
                 card_text: card.text.clone(),
-                choices: campaign::choices(&card, offered.as_ref()),
+                choices: campaign::choices(&card, pending.as_ref()),
             },
         ));
         let table = self.table();
@@ -76,6 +120,59 @@ impl Session {
             self.resolve_card(resolution)?;
         }
         Ok(())
+    }
+
+    /// `pick_card`: the DM's pick among the offered cards (API-53). The card goes on the table
+    /// as a drawn card does; the others stay in the pile.
+    pub fn pick_card(
+        &mut self,
+        card: &str,
+        reason: &str,
+        fallback: bool,
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
+        if *viewer != Viewer::Dm {
+            return Err(error(
+                ErrorCode::NotVisible,
+                "pick_card is the DM's call; send it as dm.",
+            ));
+        }
+        let Some(campaign) = self.campaign.as_mut() else {
+            return Err(error(
+                ErrorCode::NoCampaign,
+                "No campaign is running; the game starts one with start_campaign.",
+            ));
+        };
+        campaign.world.pick_card(card).map_err(|e| {
+            let offered = campaign.world.state.deck.offered.join(", ");
+            let message = match e {
+                world::PickError::NothingOffered => {
+                    "No road cards are offered; a pick follows a draw that offers two or three."
+                        .to_owned()
+                }
+                world::PickError::NotOffered(_) => {
+                    format!("{card} is not one of the cards offered; pick one of: {offered}.")
+                }
+            };
+            rejected(RejectReason::CardNotOffered, message)
+        })?;
+        self.push(Pending {
+            round: None,
+            visibility: Visibility::Dm,
+            kind: EventKind::CardPicked {
+                card: card.to_owned(),
+                came: if fallback {
+                    CardCame::EnginePick
+                } else {
+                    CardCame::DmPick
+                },
+                reason: Some(reason.to_owned()),
+            },
+        });
+        self.show_card()?;
+        Ok(CommandResult::PickCard {
+            state: self.state_for(viewer)?,
+        })
     }
 
     /// Who sits at the table for the card: Blades who are up and in the scene.
@@ -104,6 +201,12 @@ impl Session {
                 "No campaign is running; the game starts one with start_campaign.",
             ));
         };
+        if !campaign.world.state.deck.offered.is_empty() {
+            return Err(rejected(
+                RejectReason::NoCard,
+                "The road card is not on the table yet; the DM is still choosing it.",
+            ));
+        }
         if campaign.world.state.deck.pending.is_none() {
             return Err(rejected(
                 RejectReason::NoCard,

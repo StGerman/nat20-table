@@ -434,7 +434,8 @@ impl World {
 
     /// The DM picks one of the offered cards (API-53): it goes on the table.
     pub fn pick_card(&mut self, card: &str) -> Result<(), PickError> {
-        self.deck.pick(card, &self.state.deeds, &mut self.state.deck)
+        self.deck
+            .pick(card, &self.state.deeds, &mut self.state.deck)
     }
 
     /// Draws a night card after a night in camp where the caravan is.

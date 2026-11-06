@@ -265,7 +265,7 @@ impl Session {
         let Some(campaign) = self.campaign.as_ref() else {
             return Ok(false);
         };
-        if campaign.world.state.deck.pending.is_some()
+        if campaign.world.state.deck.waiting()
             || self.game.as_ref().is_some_and(|g| g.mode() == Mode::Combat)
         {
             return Ok(false);
@@ -460,6 +460,14 @@ impl Session {
                 format!("{command} is the caravan's call: its driver sends it as themselves."),
             ));
         }
+        if !campaign.world.state.deck.offered.is_empty() {
+            return Err(rejected(
+                RejectReason::CardPending,
+                format!(
+                    "A road card is being chosen; {command} waits until the DM picks it (pick_card)."
+                ),
+            ));
+        }
         if campaign.world.state.deck.pending.is_some() {
             return Err(rejected(
                 RejectReason::CardPending,
@@ -618,10 +626,10 @@ impl Session {
                 "No campaign is running; the game starts one with start_campaign.",
             ));
         };
-        if campaign.world.state.deck.pending.is_some() {
+        if campaign.world.state.deck.waiting() {
             return Err(rejected(
                 RejectReason::CardPending,
-                "A road card waits for its decision; time passes once every seat has spoken (choose_card).",
+                "A road card waits for its decision; time passes once it is picked (pick_card) and every seat has spoken (choose_card).",
             ));
         }
         let clock = campaign.world.state.clock;

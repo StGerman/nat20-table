@@ -10,9 +10,9 @@ use std::path::{Path, PathBuf};
 use nat20_api_contract::{
     Ability, CaravanView, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget, CargoView,
     CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade, EscortDm, EscortView,
-    Handle, LegView, MilesToday, NpcAttitude, NpcDm, Pace, PlaceDm, ReachView, RejectReason,
-    RoadDm, RosterWorld, Side, Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm,
-    WorldPosition,
+    Handle, LegView, MilesToday, NpcAttitude, NpcDm, OfferedCard, Pace, PlaceDm, ReachView,
+    RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain, TripLegView, TripView, WagonView,
+    Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -433,6 +433,25 @@ impl Campaign {
         }
     }
 
+    /// An offered card, as the DM sees it (API-53): the choices it would offer with the
+    /// deeds the world remembers now.
+    pub fn offered_card(&self, id: &str) -> Option<OfferedCard> {
+        let card = self.world.deck.card(id)?;
+        let offers = world::PendingCard {
+            card: card.id.clone(),
+            choices: world::Deck::offer_ids(card, &self.world.state.deeds),
+            said: Default::default(),
+        };
+        Some(OfferedCard {
+            id: card.id.clone(),
+            zone: card.zone.clone(),
+            target: target(card.target),
+            text: card.text.clone(),
+            choices: choices(card, Some(&offers)),
+            note: card.note.clone(),
+        })
+    }
+
     /// The card on the table, as the DM sees it.
     fn card_view(&self, table: &world::Table) -> Option<CardDm> {
         let pending = self.world.state.deck.pending.as_ref()?;
@@ -457,6 +476,7 @@ impl Campaign {
                 .filter(|b| !pending.said.contains_key(*b))
                 .map(|b| Handle(b.clone()))
                 .collect(),
+            note: card.note.clone(),
         })
     }
 
@@ -577,6 +597,12 @@ impl Campaign {
                 world::Owner::Player(_) => Vec::new(),
             },
             card: self.card_view(&table),
+            offered: state
+                .deck
+                .offered
+                .iter()
+                .filter_map(|id| self.offered_card(id))
+                .collect(),
             deeds: state
                 .deeds
                 .iter()

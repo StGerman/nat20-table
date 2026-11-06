@@ -8,9 +8,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AdvantageState, CardChoiceView, CardDecided, CardTarget, ClockView, Condition, DamageType,
-    Handle, LegView, LifeState, Mode, NightView, OptionId, PointFt, RollId, Side,
-    state::CombatOverReason,
+    AdvantageState, CardCame, CardChoiceView, CardDecided, CardTarget, ClockView, Condition,
+    DamageType, Handle, LegView, LifeState, Mode, NightView, OfferedCard, OptionId, PointFt,
+    RollId, Side, state::CombatOverReason,
 };
 
 /// One log entry.
@@ -419,6 +419,26 @@ pub enum EventKind {
         day: u32,
         /// The contract it was done in: 1 for a party's first.
         contract: u32,
+    },
+    /// A draw offered two or three road cards for the DM's pick (API-53), after their draw
+    /// rolls. DM only: the players never learn which cards were passed over.
+    CardsOffered {
+        /// The cards, in roll order: the first is the one the engine takes when the DM does
+        /// not pick.
+        cards: Vec<OfferedCard>,
+        /// The draw roll behind each card, in the same order.
+        rolls: Vec<RollId>,
+    },
+    /// How the next card came to the table (API-53), right before its `card_drawn`. DM only.
+    /// Not logged for a zone's only card, whose draw roll alone shows it.
+    CardPicked {
+        /// The card id.
+        card: String,
+        /// How it came.
+        came: CardCame,
+        /// The pick's one-line reason; absent for a soon card.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
     },
     /// The caravan reached the escort contract's destination and the Blades' pay was settled
     /// (API-47), after its `wage` ledger entries. Public.

@@ -908,14 +908,21 @@ impl Deck {
 
     /// The DM's pick among the offered cards (API-53): the card goes on the table with the
     /// choices its deeds offer; the others stay in the pile.
-    pub fn pick(&self, card: &str, deeds: &DeedBook, state: &mut DeckState) -> Result<(), PickError> {
+    pub fn pick(
+        &self,
+        card: &str,
+        deeds: &DeedBook,
+        state: &mut DeckState,
+    ) -> Result<(), PickError> {
         if state.offered.is_empty() {
             return Err(PickError::NothingOffered);
         }
         if !state.offered.iter().any(|c| c == card) {
             return Err(PickError::NotOffered(card.to_owned()));
         }
-        let picked = self.card(card).ok_or_else(|| PickError::NotOffered(card.to_owned()))?;
+        let picked = self
+            .card(card)
+            .ok_or_else(|| PickError::NotOffered(card.to_owned()))?;
         state.offered.clear();
         self.put_on_table(picked, deeds, state);
         Ok(())
@@ -1444,7 +1451,8 @@ mod tests {
                 &mut state,
                 &mut dice
             )
-            .as_ref().and_then(Drawn::table),
+            .as_ref()
+            .and_then(Drawn::table),
             Some("ruin_ghost")
         );
     }
