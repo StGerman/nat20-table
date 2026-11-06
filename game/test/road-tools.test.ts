@@ -1,0 +1,97 @@
+// The road and level-up tools of an AI player (M9, AGT-80 step 1): the tools join the seat only in
+// a living-world pack, `look` shows the world in words, and each tool sends its bound command.
+import assert from "node:assert/strict";
+import path from "node:path";
+import { test } from "node:test";
+import type { LevelUpChoice } from "@nat20-table/engine-client";
+import { ModelPlayer, ROAD_PROMPT } from "../src/agents/player.ts";
+import { REPO } from "../src/engine.ts";
+import { castParty } from "../src/play/run.ts";
+import { duration, formatLevelUpChoice, PlayerTools } from "../src/table/tools.ts";
+import { formatState } from "../src/view.ts";
+import { testTable } from "./helpers.ts";
+
+const MILL = path.join(REPO, "scenarios/the_silent_mill");
+const CHOICE = { model: "claude-sonnet-5-5", effort: "low" } as const;
+const SEAT = ["my_sheet", "look", "legal_actions", "submit_decision", "move", "end_turn", "react", "say"];
+const ROAD = ["travel", "rest_night", "choose_card", "level_up", "answer_level_up"];
+
+test("the road and level-up tools join a player's seat only in a living-world pack, before note", () => {
+  const party = castParty(MILL);
+  const make = (livingWorld?: boolean) =>
+    new ModelPlayer({ handle: "maren", card: party.cards.get("maren")!, characterClass: "cleric", choice: CHOICE, ...(livingWorld === undefined ? {} : { livingWorld }) });
+  assert.deepEqual(make().seatTools.map((t) => t.name), [...SEAT, "note"]);
+  assert.deepEqual(make(false).seatTools.map((t) => t.name), [...SEAT, "note"]);
+  assert.deepEqual(make(true).seatTools.map((t) => t.name), [...SEAT, ...ROAD, "note"]);
+  for (const tool of make(true).seatTools) {
+    for (const field of ["viewer", "actor", "prompt_id"]) assert.ok(!(field in tool.inputSchema), `${tool.name} takes ${field}`);
+  }
+});
+
+test("a leg's time reads in hours and minutes, never 0 hours", () => {
+  assert.deepEqual([40, 60, 200, 0].map(duration), ["40 minutes", "1 hour", "3 hours 20 minutes", "0 minutes"]);
+});
+
+test("a level-up choice reads as plain lines with the recommended pick marked", () => {
+  const choice = {
+    prompt_id: "p1",
+    level: 3,
+    label: "Choose a subclass",
+    picks: 1,
+    options: [
+      { id: "life_domain", name: "Life Domain", summary: "Healing grows stronger." },
+      { id: "light_domain", name: "Light Domain" },
+    ],
+    recommended: ["life_domain"],
+  } as unknown as LevelUpChoice;
+  assert.equal(
+    formatLevelUpChoice(choice),
+    "Level 3: Choose a subclass (pick 1).\n- life_domain: Life Domain. Healing grows stronger. (recommended)\n- light_domain: Light Domain",
+  );
+});
+
+test("on the road a player looks at the world in words, gives a word on the card, travels and rests; without an open level-up there is nothing to answer", async () => {
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
+  try {
+    assert.ok((await t.engine.request("dm", { cmd: "load_scene", scene_id: "vale_town" })).ok);
+    assert.ok((await t.engine.request("dm", { cmd: "start_campaign", party: ["bren", "maren"] })).ok);
+    const bren = new PlayerTools("bren", t.table);
+    const maren = new PlayerTools("maren", t.table);
+
+    const state = await t.engine.request("maren", { cmd: "get_state" });
+    assert.ok(state.result?.cmd === "get_state");
+    const seen = formatState(state.result.state);
+    assert.match(seen, /Day 1, .*The caravan is at /);
+    assert.match(seen, /Known places: /);
+    assert.match(seen, /Escort contract: to /);
+    assert.doesNotMatch(seen, /purse_cp|\bAC\b|\bDC\b/, "no merchant's purse, no target numbers");
+
+    const went = await bren.travel("fast", "crossing_inn");
+    assert.ok(went.ok, went.text);
+    assert.match(went.text, /miles in \d+ (hour|minute)/);
+    // The road card the fixture meets on this leg: both Blades give their word.
+    for (const [who, tools] of [["bren", bren], ["maren", maren]] as const) {
+      const said = await tools.chooseCard("clear");
+      assert.ok(said.ok, `${who}: ${said.text}`);
+    }
+    const night = await bren.restNight("camp");
+    assert.ok(night.ok, night.text);
+    assert.match(night.text, /^the night passes; rested: /);
+
+    const none = await maren.answerLevelUp(["life_domain"]);
+    assert.equal(none.ok, false);
+    assert.match(none.text, /no level-up choice open; call level_up/);
+    const sent = t.requests().map((r) => [r.cmd, r.viewer, r.actor]);
+    for (const cmd of ["travel", "choose_card", "rest_night"]) assert.ok(sent.some(([c, v, a]) => c === cmd && v === a), `${cmd} is sent as the player, for the player`);
+  } finally {
+    t.close();
+  }
+});
+
+test("a living-world player's prompt tells it about the road, and only then", () => {
+  const party = castParty(MILL);
+  const make = (livingWorld: boolean) => new ModelPlayer({ handle: "ilsa", card: party.cards.get("ilsa")!, characterClass: "wizard", choice: CHOICE, livingWorld });
+  assert.ok(make(true).systemPrompt.endsWith(ROAD_PROMPT));
+  assert.ok(!make(false).systemPrompt.includes("## On the road"));
+  assert.doesNotMatch(ROAD_PROMPT, /Wend|Mill|crossing|vale/i, "no pack's places in the generic prompt");
+});

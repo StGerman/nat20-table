@@ -70,6 +70,11 @@ export interface ModelPlayerConfig {
   usage?: UsageLog;
   /** Every wake's limit. Default `PLAYER_TURN_TIMEOUT_MS`, and `PLAYER_LONG_WAKE_TIMEOUT_MS` for the long wakes. */
   turnTimeoutMs?: number;
+  /**
+   * Whether the pack runs the living world (M9, AGT-80): the road tools (`travel`, `rest_night`,
+   * `choose_card`) and the level-up tools join the seat tools. Default false.
+   */
+  livingWorld?: boolean;
   /** Opens a session; `AgentSession` by default. Tests pass one that calls the tools as a model would. */
   open?: (config: SessionConfig) => TurnSession;
 }
@@ -91,6 +96,18 @@ export function cardName(handle: Handle, card: string): string {
 }
 
 /** The player's system prompt: the same for every session of the run, so it stays cached. */
+/**
+ * What a player on the road needs to know (M9, AGT-80), added to the prompt in a living-world
+ * pack. Generic: no place, card or contract of any pack is named here.
+ */
+export const ROAD_PROMPT = [
+  "## On the road",
+  "Between the places of the adventure the party travels with a merchant's caravan. look shows the day, where the caravan is, the known places and roads, any road card waiting and the escort contract.",
+  "Only whoever may drive the caravan moves it on (travel) and ends the day (rest_night); look says when that is you.",
+  "When a road card waits for your word, give it with choose_card: on the caravan's card it is advice to the merchant, who decides; on a card for the Blades it is your vote. Choose as your character would, and say why in one line if they would.",
+  "When your sheet says you can level up, out of a fight, call level_up and answer each choice with answer_level_up. Take the recommended pick unless your card gives your character a clear reason not to.",
+].join("\n");
+
 export function playerPrompt(handle: Handle, fullCard: string, characterClass: string, language: Language = "en", human = true, names: readonly string[] = []): string {
   const name = cardName(handle, fullCard);
   const russianVoice = RUSSIAN_VOICE.exec(fullCard)?.[1].trim();
@@ -205,7 +222,8 @@ export class ModelPlayer implements PlayerAgent {
   constructor(config: ModelPlayerConfig) {
     this.config = config;
     this.handle = config.handle;
-    this.systemPrompt = playerPrompt(config.handle, config.card, config.characterClass, config.language, config.withHuman ?? true, config.russianNames);
+    const prompt = playerPrompt(config.handle, config.card, config.characterClass, config.language, config.withHuman ?? true, config.russianNames);
+    this.systemPrompt = config.livingWorld ? `${prompt}\n\n${ROAD_PROMPT}` : prompt;
     this.seatTools = this.defineTools();
   }
 
@@ -338,7 +356,7 @@ export class ModelPlayer implements PlayerAgent {
    */
   private defineTools(): SeatTool[] {
     const handle = z.string().describe("A creature's handle, such as goblin_1.");
-    return [
+    const tools = [
       seatTool("my_sheet", "Your character sheet: abilities, Hit Points, spells and slots, equipment.", {}, () => this.bound((t) => t.mySheet())),
       seatTool(
         "look",
@@ -412,6 +430,43 @@ export class ModelPlayer implements PlayerAgent {
         },
         (input) => this.bound((t) => t.say(input.text, input.to)),
       ),
+    ];
+    const road = [
+      seatTool(
+        "travel",
+        "On the road with the caravan, out of a fight: move it on one stretch, to a known place or along a road (ids from look). Leave `to` out to go on along the road, or along the merchant's route when the merchant drives. A faster pace covers more ground and is easier to ambush. Only whoever may drive the caravan can.",
+        {
+          pace: z.enum(["slow", "normal", "fast"]),
+          to: z.string().optional().describe("A known place id or a road id, from look."),
+        },
+        (input) => this.bound((t) => t.travel(input.pace, input.to)),
+      ),
+      seatTool(
+        "rest_night",
+        "End the day: a night at the inn (each pays the room) or in camp (the caravan's food). Out of a fight; only whoever may drive the caravan can.",
+        { where: z.enum(["inn", "camp"]) },
+        (input) => this.bound((t) => t.restNight(input.where)),
+      ),
+      seatTool(
+        "choose_card",
+        "Give your word on the road card waiting (look shows it): advice to the merchant on a caravan card, or your vote on a card the Blades decide. Use a choice id.",
+        { choice: z.string().describe("A choice id from the card.") },
+        (input) => this.bound((t) => t.chooseCard(input.choice)),
+      ),
+      seatTool(
+        "level_up",
+        "When your sheet says you can level up, out of a fight: start the new level. The answer is the first choice to make, if any, with a recommended pick.",
+        {},
+        () => this.bound((t) => t.levelUp()),
+      ),
+      seatTool(
+        "answer_level_up",
+        "Answer the open level-up choice with the option ids you pick, as many as it asks. The answer is the next choice, or that the level is done.",
+        { picks: z.array(z.string()).describe("Option ids from the choice.") },
+        (input) => this.bound((t) => t.answerLevelUp(input.picks)),
+      ),
+    ];
+    const last = [
       seatTool(
         "note",
         "Keep a private note; nobody else reads it. Fiction only, never numbers.",
@@ -424,5 +479,6 @@ export class ModelPlayer implements PlayerAgent {
           }),
       ),
     ];
+    return [...tools, ...(this.config.livingWorld ? road : []), ...last];
   }
 }

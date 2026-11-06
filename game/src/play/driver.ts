@@ -24,7 +24,7 @@
 // --seat ink asks "continue or new party" first), --new-party (start the pack's pregens instead),
 // --rosters DIR.
 import { spawn, type ChildProcess } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { ModelDm, type CraftMode } from "../agents/dm.ts";
@@ -265,8 +265,10 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     table.end("stopped with Ctrl+C", "operator");
   };
   if (!ink) process.on("SIGINT", interrupted);
+  // A pack with a campaign file runs the living world: the AI players get the road tools (AGT-80).
+  const livingWorld = existsSync(path.join(flags.pack, "campaign.json"));
   const players: PlayerAgent[] = party.ai.map((handle) =>
-    flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle)!, choice: playerChoice, language, withHuman: Boolean(party.human), russianNames: party.russianNames, usage }),
+    flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle)!, choice: playerChoice, language, withHuman: Boolean(party.human), russianNames: party.russianNames, usage, livingWorld }),
   );
   const fights = Object.fromEntries(pack.adventure.scenes.flatMap((s) => (s.encounters[0] ? [[s.id, s.encounters[0].encounter]] : [])));
   // A scripted whole-adventure run walks every scene (AGT-39); a scene run ends after its first fight.

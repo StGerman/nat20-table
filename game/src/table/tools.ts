@@ -12,6 +12,9 @@ import type {
   HelpSpec,
   HitDiceSpend,
   Goods,
+  LevelUpChoice,
+  Lodging,
+  Pace,
   MoveTarget,
   Placement,
   Response,
@@ -43,7 +46,7 @@ function refusal(response: Response): string {
 /** Commands that change the session. The rest only read it. */
 const CHANGES = new Set<Command["cmd"]>([
   "submit", "move", "end_turn", "react", "request_check", "help", "short_rest", "start_combat", "end_combat", "spawn", "load_scene",
-  "place_creature", "start_fight", "give", "steal", "loot",
+  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "choose_card", "level_up", "answer_level_up",
 ]);
 
 /**
@@ -233,6 +236,66 @@ export class PlayerTools {
   note(kind: NoteKind, text: string): Promise<ToolOutcome> {
     return this.answer(this.table.note(this.me, kind, text));
   }
+
+  /**
+   * Moves the caravan on one leg (M9, AGT-80): toward a known place or along a road, or, when an
+   * NPC owns the caravan, on along its route. The engine decides who may.
+   */
+  travel(pace: Pace, to?: string): Promise<ToolOutcome> {
+    if (this.table.inCombat) return this.answer(notNow("the caravan moves on once the fight is over"));
+    return this.answer(send(this.table, this.me, { cmd: "travel", actor: this.me, pace, ...(to ? { to } : {}) }, (r) =>
+      r.result?.cmd === "travel" ? `${r.result.leg.arrived ? "arrived" : "stopped on the road for the day"}: ${r.result.leg.miles} miles in ${duration(r.result.leg.minutes)}` : "",
+    ));
+  }
+
+  /** Ends the day at the inn or in camp (M9, AGT-80). */
+  restNight(where: Lodging): Promise<ToolOutcome> {
+    if (this.table.inCombat) return this.answer(notNow("the night waits until the fight is over"));
+    return this.answer(send(this.table, this.me, { cmd: "rest_night", actor: this.me, where }, (r) =>
+      r.result?.cmd === "rest_night"
+        ? `the night passes; rested: ${r.result.night.rested.join(", ") || "nobody"}${r.result.night.hungry.length > 0 ? `; hungry: ${r.result.night.hungry.join(", ")}` : ""}`
+        : "",
+    ));
+  }
+
+  /** Gives this character's word on the road card waiting: advice, a vote or the owner's call. */
+  chooseCard(choice: string): Promise<ToolOutcome> {
+    return this.answer(send(this.table, this.me, { cmd: "choose_card", actor: this.me, choice }, () => `you said: ${choice}`));
+  }
+
+  /** Opens a level-up when the sheet says it can (M9, AGT-80); the answer is the first choice, if any. */
+  levelUp(): Promise<ToolOutcome> {
+    if (this.table.inCombat) return this.answer(notNow("you level up once the fight is over"));
+    return this.answer(send(this.table, this.me, { cmd: "level_up", actor: this.me }, (r) =>
+      r.result?.cmd === "level_up" ? (r.result.choice ? formatLevelUpChoice(r.result.choice) : "level up done") : "",
+    ));
+  }
+
+  /** Answers the open level-up choice with the ids picked. */
+  answerLevelUp(picks: string[]): Promise<ToolOutcome> {
+    const a = this.table.awaiting;
+    if (a.kind !== "level_up" || a.actor !== this.me) return this.answer(notNow("you have no level-up choice open; call level_up"));
+    return this.answer(send(this.table, this.me, { cmd: "answer_level_up", actor: this.me, prompt_id: a.prompt_id, picks: [...picks] }, (r) =>
+      r.result?.cmd === "answer_level_up" ? (r.result.choice ? formatLevelUpChoice(r.result.choice) : "level up done") : "",
+    ));
+  }
+}
+
+/** A stretch of time in words: "40 minutes", "1 hour", "3 hours 20 minutes". */
+export function duration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  const hours = h > 0 ? `${h} hour${h === 1 ? "" : "s"}` : "";
+  const mins = m > 0 || h === 0 ? `${m} minute${m === 1 ? "" : "s"}` : "";
+  return [hours, mins].filter(Boolean).join(" ");
+}
+
+/** A level-up choice in plain lines: what to pick, how many, each option with its summary, the recommended ones marked. */
+export function formatLevelUpChoice(choice: LevelUpChoice): string {
+  return [
+    `Level ${choice.level}: ${choice.label} (pick ${choice.picks}).`,
+    ...choice.options.map((o) => `- ${o.id}: ${o.name}${o.summary ? `. ${o.summary}` : ""}${choice.recommended.includes(o.id) ? " (recommended)" : ""}`),
+  ].join("\n");
 }
 
 /**

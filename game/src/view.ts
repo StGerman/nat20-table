@@ -1,7 +1,7 @@
 // Compact text an agent reads, made from engine responses that were already projected for that
 // agent's viewer (Rule 3: projection happens in the engine; this file only formats). Text instead
 // of raw JSON keeps every turn's input small, which is most of the latency and cost (M6 spec §7).
-import type { ActionOption, CommandResult, Event, Handle, Sheet, State, TurnBudget } from "@nat20-table/engine-client";
+import type { ActionOption, CommandResult, Event, Handle, Sheet, State, TurnBudget, WorldPlayer } from "@nat20-table/engine-client";
 
 /** The result of `legal_actions`. */
 export type LegalActionsResult = Extract<CommandResult, { cmd: "legal_actions" }>;
@@ -79,7 +79,67 @@ export function formatState(state: State): string {
         .join("; ")}.`,
     );
   }
+  if (state.view === "player" && state.world) lines.push("", ...worldLines(state.world));
   return lines.join("\n");
+}
+
+/** Copper as coins a reader counts: 300 is "3 gp", 250 is "2 gp 5 sp", 7 is "7 cp". */
+export function coinWords(copper: number): string {
+  const gp = Math.floor(copper / 100);
+  const sp = Math.floor((copper % 100) / 10);
+  const cp = copper % 10;
+  const parts = [gp ? `${gp} gp` : "", sp ? `${sp} sp` : "", cp ? `${cp} cp` : ""].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : "0 cp";
+}
+
+/**
+ * The living world as one player knows it (M9, AGT-80): the day and hour, where the caravan is,
+ * the places and roads the party knows, the caravan, a road card waiting for its decision, the
+ * escort contract, and the townsfolk met. Only what the player view carries.
+ */
+export function worldLines(world: WorldPlayer): string[] {
+  const placeName = new Map(world.places.map((p) => [p.id, p.name]));
+  const named = (id: string) => (placeName.has(id) ? `${placeName.get(id)} (${id})` : id);
+  const clock = world.clock;
+  const time = `${String(clock.hour).padStart(2, "0")}:${String(clock.minute).padStart(2, "0")}`;
+  const where =
+    world.at.kind === "at"
+      ? `The caravan is at ${named(world.at.place)}.`
+      : `The caravan is on the road ${world.at.road}, out from ${named(world.at.came_from)}, ${world.at.miles_left} miles from its end.`;
+  const lines = [`Day ${clock.day}, ${clock.watch.replace(/_/g, " ")} (${time}). ${where}`];
+  lines.push(`Travel left today: ${world.today.fast} miles at a fast pace, ${world.today.normal} normal, ${world.today.slow} slow.`);
+  if (world.drives) lines.push("You may move the caravan on (travel) and end the day (rest_night).");
+  lines.push(
+    `Known places: ${world.places
+      .map((p) => `${p.name} (${p.id}, ${p.kind}${p.market ? ", market" : ""}${typeof p.inn_cp === "number" ? `, inn ${coinWords(p.inn_cp)} a night each` : ""})`)
+      .join("; ")}.`,
+  );
+  if (world.roads.length > 0) {
+    lines.push(`Roads: ${world.roads.map((r) => `${r.id}: ${named(r.from)} to ${named(r.to)}, ${r.miles} miles of ${r.terrain}${r.good_road ? " on a good road" : ""}, ${r.max_pace} pace at most`).join("; ")}.`);
+  }
+  if (world.unexplored.length > 0) {
+    lines.push(`Roads to places you don't know yet: ${world.unexplored.map((r) => `${r.id} from ${named(r.from)}, ${r.miles} miles`).join("; ")}.`);
+  }
+  const cargo = world.caravan.wagons.flatMap((w) => w.cargo.map((c) => `${c.quantity} ${c.name}`));
+  lines.push(`The caravan (${world.caravan.owner}'s): ${world.caravan.wagons.length} wagon${world.caravan.wagons.length === 1 ? "" : "s"}${cargo.length > 0 ? `, carrying ${cargo.join(", ")}` : ""}.`);
+  if (world.card) {
+    const card = world.card;
+    lines.push(`A road card waits (${card.target === "caravan" ? "the caravan's call" : "the Blades decide"}): ${card.text}`);
+    lines.push(`Choices: ${card.choices.map((c) => `${c.id}: ${c.text}`).join(" | ")}`);
+    if (card.said.length > 0) lines.push(`Said so far: ${card.said.map((s) => `${s.actor} ${s.choice}`).join(", ")}.`);
+    if (card.waiting_for.length > 0) lines.push(`Waiting for: ${card.waiting_for.join(", ")}.`);
+  }
+  if (world.escort) {
+    const e = world.escort;
+    lines.push(
+      `Escort contract: to ${named(e.destination)} for ${coinWords(e.wage_cp)} a day each${e.done ? ", done" : ""}. ${e.blades
+        .map((b) => `${b.handle}: ${b.served} day${b.served === 1 ? "" : "s"} served, ${coinWords(b.paid_cp)} paid`)
+        .join("; ")}.`,
+    );
+  }
+  const met = world.npcs ?? [];
+  if (met.length > 0) lines.push(`People you have met: ${met.map((n) => `${n.name} of ${named(n.place)}${n.alive ? "" : " (dead)"}`).join("; ")}.`);
+  return lines;
 }
 
 /** A signed bonus: `+3`, `-1`, `+0`. */
