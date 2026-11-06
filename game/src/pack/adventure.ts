@@ -168,6 +168,12 @@ export const Adventure = z
     lore: z.array(packPath).default([]).describe("Setting text the DM reads, possibly shared with other packs (paths may leave the pack)."),
     party: z.array(PartyMember).min(1).describe("The party, in seat order. The first scene's file places them."),
     npcs: z.array(Npc).default([]),
+    glossary_ru: z
+      .record(z.string().min(1), z.string().min(1))
+      .default({})
+      .describe(
+        "How a Russian run says the pack's words that a model translates badly (AGT-85), keyed by the English word in the prose: \"oilskin coat\": \"промасленный плащ\". Only the DM's Russian prompt carries it; the skeleton is DM-only.",
+      ),
     glyphs: z
       .record(z.string().min(1), z.string().min(1))
       .default({})
@@ -213,15 +219,26 @@ export function schemaText(): string {
 }
 
 /**
+ * The declined forms of a party member's Russian name among its `names` (AGT-85: Maren wrote
+ * «Брентом» for «Бреном»), as " (Брена, Брену, Бреном)": the forms that share the name's stem, so
+ * another spelling («Ильса» beside «Ильза») is never offered as a case of it. Empty when there are none.
+ */
+function declined(name: string, names: readonly string[]): string {
+  const stem = name.replace(/[аяоеёыиуюй]$/u, "");
+  const forms = names.filter((form) => form !== name && form.startsWith(stem) && /^\p{Script=Cyrillic}+$/u.test(form));
+  return forms.length > 0 ? ` (${forms.join(", ")})` : "";
+}
+
+/**
  * The pack's canonical Russian names (AGT-38): party members by handle, and NPCs by id for the DM
  * only. The NPCs are scenario data, so a player's prompt gets the party's names alone (Rule 3).
  */
 export function russianNames(
-  adventure: { party: Array<{ handle: string; name_ru?: string }>; npcs?: Array<{ id: string; name_ru?: string }> },
+  adventure: { party: Array<{ handle: string; name_ru?: string; names?: string[] }>; npcs?: Array<{ id: string; name_ru?: string }> },
   options: { npcs: boolean } = { npcs: true },
 ): string[] {
   return [
-    ...adventure.party.flatMap((p) => (p.name_ru ? [`${p.handle}: ${p.name_ru}`] : [])),
+    ...adventure.party.flatMap((p) => (p.name_ru ? [`${p.handle}: ${p.name_ru}${declined(p.name_ru, p.names ?? [])}`] : [])),
     ...(options.npcs ? (adventure.npcs ?? []) : []).flatMap((n) => (n.name_ru ? [`${n.id}: ${n.name_ru}`] : [])),
   ];
 }

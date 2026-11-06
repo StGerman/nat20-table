@@ -67,7 +67,7 @@ export interface ModelPlayerConfig {
   human?: Handle;
   /** The character's class from its pregen (`fighter`), for its block of the rules primer. */
   characterClass: string;
-  /** The pack's one Russian name per party member (`PackParty.russianNames`), for a Russian prompt (AGT-38); never the NPCs'. */
+  /** The pack's one Russian name per party member and per known place (`PackParty.russianNames`), for a Russian prompt (AGT-38, AGT-85); never the NPCs'. */
   russianNames?: readonly string[];
   usage?: UsageLog;
   /** Every wake's limit. Default `PLAYER_TURN_TIMEOUT_MS`, and `PLAYER_LONG_WAKE_TIMEOUT_MS` for the long wakes. */

@@ -5,6 +5,7 @@
             "_comment": "The fair town at the river's mouth, a day downriver from Wendford. Salt, iron and cloth.",
             "id": "wendmouth",
             "name": "Wendmouth",
+            "name_ru": "Уэндмут",
             "kind": "town",
             "market": true,
             "discovered": true,
@@ -14,6 +15,7 @@
             "_comment": "Forty households where the old road crosses the river. Flour and ale; a room over the alehouse.",
             "id": "wendford",
             "name": "Wendford",
+            "name_ru": "Вендфорд",
             "kind": "village",
             "market": true,
             "discovered": true,
@@ -23,6 +25,7 @@
             "_comment": "Where the river road crosses the Millbeck, eight miles below Wendford: a footbridge, a willow hut and a ford upstream. A stop on the road, not a market; its stretch of road is the Millbeck zone, which holds only the toll card (B8).",
             "id": "millbeck_bridge",
             "name": "The Millbeck bridge",
+            "name_ru": "мост через Миллбек",
             "kind": "crossing",
             "discovered": true
         },
@@ -30,6 +33,7 @@
             "_comment": "A mile upriver at the end of a hedged lane. The Silent Mill.",
             "id": "pells_mill",
             "name": "Pell's mill",
+            "name_ru": "мельница Пелла",
             "kind": "site",
             "discovered": true,
             "pack_slot": "the_silent_mill"
@@ -38,6 +42,7 @@
             "_comment": "Upland farms on the slopes under the Hollin Hills. Wool, honey and peat.",
             "id": "highsteads",
             "name": "The Highsteads",
+            "name_ru": "Хайстедс",
             "kind": "hamlet",
             "market": true
         },
@@ -45,6 +50,7 @@
             "_comment": "What is left of the Nettle Tooth band, herding sheep for food. Barter with the hills.",
             "id": "snitts_camp",
             "name": "Snitt's camp",
+            "name_ru": "лагерь Снитта",
             "kind": "camp",
             "market": true
         },
@@ -52,6 +58,7 @@
             "_comment": "A hollow oak on a barrow at the valley's northern edge. The Lair of Arachas.",
             "id": "barrow_oak",
             "name": "The Barrow Oak",
+            "name_ru": "Курганный дуб",
             "kind": "site",
             "pack_slot": "lair_of_arachas"
         },
@@ -59,6 +66,7 @@
             "_comment": "Salt pans and an old ferry landing south of Wendmouth: a free slot for the next pack.",
             "id": "salt_flats",
             "name": "The salt flats",
+            "name_ru": "солончаки",
             "kind": "site",
             "pack_slot": "wendmouth_spare"
         }
