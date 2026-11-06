@@ -217,6 +217,11 @@ impl Session {
         self.push_entries();
         // Roll keys are per scene; the old scene's rolls are never cited again.
         self.roll_keys.clear();
+        // So are creature handles: a card fight's named NPC who lived through it stays behind,
+        // and a new creature with the same handle here is not them (ENG-36).
+        self.card_npcs.clear();
+        self.last_blow.clear();
+        self.last_actor = None;
         self.decided = true;
         self.push(Pending::public(
             None,
