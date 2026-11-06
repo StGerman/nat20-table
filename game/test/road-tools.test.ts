@@ -8,7 +8,7 @@ import { ModelPlayer, ROAD_PROMPT } from "../src/agents/player.ts";
 import { REPO } from "../src/engine.ts";
 import { castParty } from "../src/play/run.ts";
 import { BarkTools, duration, formatLevelUpChoice, HandTools, PlayerTools, ReactionFloor } from "../src/table/tools.ts";
-import { formatState } from "../src/view.ts";
+import { customsTag, formatState } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
@@ -127,4 +127,11 @@ test("the road waits for the floor and for an open level-up: a hand or bark wake
   } finally {
     t.close();
   }
+});
+
+test("the DM reads which customs a card choice keeps or breaks; a choice that touches none reads as before (API-55)", () => {
+  assert.equal(customsTag({}), "");
+  assert.equal(customsTag({ keeps: [], breaks: [] }), "");
+  assert.equal(customsTag({ keeps: ["word_kept"] }), " (keeps word_kept)");
+  assert.equal(customsTag({ keeps: ["bread_shared"], breaks: ["debt_paid", "word_kept"] }), " (keeps bread_shared; breaks debt_paid, word_kept)");
 });

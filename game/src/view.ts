@@ -431,7 +431,7 @@ export function dmWorldLines(world: WorldDm): string[] {
   lines.push(`Caravan (${world.caravan.owner}): ${world.caravan.wagons.length} wagon${world.caravan.wagons.length === 1 ? "" : "s"}${cargo.length > 0 ? `, ${cargo.join(", ")}` : ""}.`);
   if (world.card) {
     const c = world.card;
-    lines.push(`Road card ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}`).join(" | ")}.${c.waiting_for.length > 0 ? ` Waiting for ${c.waiting_for.join(", ")}.` : ""}`);
+    lines.push(`Road card ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}${customsTag(x)}`).join(" | ")}.${c.waiting_for.length > 0 ? ` Waiting for ${c.waiting_for.join(", ")}.` : ""}`);
   }
   if (world.escort) {
     const e = world.escort;
@@ -500,4 +500,13 @@ export function tellable(events: Event[], deaths: Deaths): Event[] {
     if (e.kind !== "turn_start" && e.kind !== "turn_end") return true;
     return !dead(e.actor, e.seq);
   });
+}
+
+/** The customs a choice keeps or breaks, for the DM (API-55): " (keeps word_kept; breaks debt_paid)", or nothing. */
+export function customsTag(choice: { keeps?: string[]; breaks?: string[] }): string {
+  const parts = [
+    ...(choice.keeps && choice.keeps.length > 0 ? [`keeps ${choice.keeps.join(", ")}`] : []),
+    ...(choice.breaks && choice.breaks.length > 0 ? [`breaks ${choice.breaks.join(", ")}`] : []),
+  ];
+  return parts.length > 0 ? ` (${parts.join("; ")})` : "";
 }
