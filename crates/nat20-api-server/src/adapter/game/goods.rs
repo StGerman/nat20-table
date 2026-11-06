@@ -377,7 +377,7 @@ fn core_item_id(item: &str) -> Result<ItemId, ApiError> {
 
 /// The sheet's name for a core item id: `nat20_core::item.potion_of_healing` is
 /// `potion_of_healing`.
-fn short_item_id(item: &ItemId) -> String {
+pub(super) fn short_item_id(item: &ItemId) -> String {
     let full = item.to_string();
     full.rsplit_once("item.")
         .map(|(_, short)| short.to_owned())

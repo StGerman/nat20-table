@@ -1,4 +1,5 @@
-//! The living world for nat20-table: the clock, the map, the caravan and the road event deck.
+//! The living world for nat20-table: the clock, the map, the caravan, the road event deck and
+//! the place NPCs.
 //!
 //! The world is data plus SRD tables about the world (travel pace, travel terrain,
 //! drawn vehicles). Rules on creatures stay in core: the world never rolls a save or
@@ -16,6 +17,7 @@ pub mod clock;
 pub mod deck;
 pub mod dice;
 pub mod map;
+pub mod npcs;
 pub mod travel;
 
 pub use campaign::{CampaignFile, CampaignWorld};
@@ -27,6 +29,7 @@ pub use deck::{
 };
 pub use dice::{ListDice, WorldDice};
 pub use map::{Edge, Generate, MapError, Place, Position, Road, Terrain, WorldMap};
+pub use npcs::{Attitude, NpcCarries, NpcCoins, NpcDef, NpcFile, NpcItem, NpcLeft, NpcState};
 pub use travel::{
     LONG_REST_MINUTES, Leg, Pace, RATIONS, TravelError, WAKE_HOUR, World, WorldState,
 };

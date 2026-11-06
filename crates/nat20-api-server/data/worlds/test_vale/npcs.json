@@ -1,0 +1,15 @@
+{
+    "_comment": "The test world's one place NPC (API-48): the innkeeper of the Crossing Inn, by the wagon whenever the party is at the inn. The inn has no scene of its own, so she stands in the road scene, but only while the caravan is at the inn. Not shipped content.",
+    "npcs": [
+        {
+            "id": "innkeeper_wren",
+            "name": "Wren the innkeeper",
+            "monster": "commoner",
+            "place": "crossing_inn",
+            "anchor": "by_the_wagon",
+            "attitude": "friendly",
+            "carries": {"coins": {"gp": 4}},
+            "notes": "Keeps the Crossing Inn; hears every rumour from the hills before anyone in town."
+        }
+    ]
+}

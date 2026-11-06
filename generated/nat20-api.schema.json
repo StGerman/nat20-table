@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.48"
+    "version": "1.0.0-dev.49"
   },
   "$defs": {
     "Ability": {
@@ -4321,6 +4321,113 @@
         "hungry"
       ]
     },
+    "NpcAttitude": {
+      "description": "How a place NPC feels about the party.",
+      "oneOf": [
+        {
+          "description": "Glad of them.",
+          "type": "string",
+          "const": "friendly"
+        },
+        {
+          "description": "Neither.",
+          "type": "string",
+          "const": "indifferent"
+        },
+        {
+          "description": "Against them: they stand on the hostile side of a fight.",
+          "type": "string",
+          "const": "hostile"
+        }
+      ]
+    },
+    "NpcDm": {
+      "description": "A place NPC as the DM sees them (API-48).",
+      "type": "object",
+      "properties": {
+        "alive": {
+          "description": "Whether they are alive.",
+          "type": "boolean"
+        },
+        "attitude": {
+          "description": "How they feel about the party.",
+          "$ref": "#/$defs/NpcAttitude"
+        },
+        "hp": {
+          "description": "Hit Points when the party last left them; absent when at full. While the party is in\ntheir place, their creature in the scene has the live value.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "id": {
+          "description": "The id; also their creature handle while the party is in their place.",
+          "type": "string"
+        },
+        "met": {
+          "description": "Whether the party has met them.",
+          "type": "boolean"
+        },
+        "monster": {
+          "description": "The stat block they fight as.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name players read.",
+          "type": "string"
+        },
+        "notes": {
+          "description": "Who they are, from the world file.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "place": {
+          "description": "The place they live in.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "place",
+        "monster",
+        "attitude",
+        "alive",
+        "met"
+      ]
+    },
+    "NpcKnown": {
+      "description": "A place NPC the party has met, as a player sees them: never Hit Points, attitude or notes.",
+      "type": "object",
+      "properties": {
+        "alive": {
+          "description": "Whether they are alive, as far as the party knows: the party met them, so a death the\nparty saw is known.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "The id; also their creature handle while the party is in their place.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name.",
+          "type": "string"
+        },
+        "place": {
+          "description": "The place they live in.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "place",
+        "alive"
+      ]
+    },
     "OptionArea": {
       "description": "The area an option fills, and a preview of each aim.",
       "type": "object",
@@ -7556,6 +7663,13 @@
           "description": "The time.",
           "$ref": "#/$defs/ClockView"
         },
+        "npcs": {
+          "description": "Every place NPC, alive or dead, met or not, in the world file's order (API-48).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NpcDm"
+          }
+        },
         "places": {
           "description": "Every place, discovered or not, in map file order.",
           "type": "array",
@@ -7622,6 +7736,13 @@
         "drives": {
           "description": "Whether this player may call `travel`: the owner, or any party member when an NPC owns\nthe caravan.",
           "type": "boolean"
+        },
+        "npcs": {
+          "description": "The place NPCs the party has met, in the world file's order (API-48).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NpcKnown"
+          }
         },
         "places": {
           "description": "The places the party has discovered, in map file order.",
