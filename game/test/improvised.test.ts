@@ -86,3 +86,25 @@ test("the leak guard keeps the creature list's entry ids and creature_placed fro
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("give, steal and loot go to the engine as the DM's, out of combat, for any character (ITM-6)", async () => {
+  const t = await testTable({ seed: 27 });
+  try {
+    const dm = new DmTools(t.table);
+    assert.equal((await dm.loadScene("m5_s3_yard")).ok, true);
+    assert.equal((await dm.move("bren", { kind: "creature", handle: "maren" })).ok, true);
+    const gave = await dm.give("bren", "maren", { kind: "coins", coins: { gp: 1 } });
+    assert.equal(gave.ok, true, gave.text);
+    const stole = await dm.steal("bren", "maren", { kind: "coins", coins: { sp: 1 } });
+    assert.match(stole.text, /^\[r\d+\] (unseen: tell bren alone|noticed)/);
+    const looted = await dm.loot("bren", "maren");
+    assert.equal(looted.ok, false);
+    assert.match(looted.text, /not_fallen/);
+    const sent = t.requests().filter((r) => ["give", "steal", "loot"].includes(r.cmd as string));
+    assert.deepEqual(sent.map((r) => [r.cmd, r.viewer, r.actor]), [["give", "dm", "bren"], ["steal", "dm", "bren"], ["loot", "dm", "bren"]]);
+    const unknown = await dm.give("nobody", "maren", { kind: "coins", coins: { gp: 1 } });
+    assert.match(unknown.text, /nobody is not in the scene/);
+  } finally {
+    t.close();
+  }
+});

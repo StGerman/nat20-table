@@ -8,10 +8,10 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Ability, Handle, Skill } from "@nat20-table/engine-client";
+import type { Ability, Goods, Handle, Skill } from "@nat20-table/engine-client";
 import { z } from "zod";
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
-import { russianNames } from "../pack/adventure.ts";
+import { GOODS_SINCE, russianNames } from "../pack/adventure.ts";
 import type { PackText } from "../pack/read.ts";
 import type { DmTools } from "../table/tools.ts";
 import type { DmAgent, DmWake, ToolOutcome } from "../table/types.ts";
@@ -92,6 +92,30 @@ export function craftSkills(dir = CRAFT_PLUGIN): Array<{ name: string; descripti
 }
 
 /** The DM's system prompt: the same for every session of a run. */
+const coinCount = z.number().int().nonnegative().optional();
+
+/** Coins by kind, as the DM names them for give and steal. */
+const COINS = z
+  .object({ cp: coinCount, sp: coinCount, ep: coinCount, gp: coinCount, pp: coinCount })
+  .describe("Coins by kind: cp, sp, ep, gp, pp.");
+
+/** The goods a give or steal names: coins or one item, never both. */
+function goods(input: { coins?: z.infer<typeof COINS>; item?: string }): Goods | undefined {
+  if (Boolean(input.coins) === Boolean(input.item)) return undefined;
+  if (input.item) return { kind: "item", item: input.item };
+  const c = input.coins!;
+  return {
+    kind: "coins",
+    coins: {
+      ...(c.cp ? { cp: c.cp } : {}),
+      ...(c.sp ? { sp: c.sp } : {}),
+      ...(c.ep ? { ep: c.ep } : {}),
+      ...(c.gp ? { gp: c.gp } : {}),
+      ...(c.pp ? { pp: c.pp } : {}),
+    },
+  };
+}
+
 export function dmPrompt(pack: PackText, human: Handle | undefined, players: Handle[], craft: CraftMode, language: Language = "en"): string {
   const party = [...(human ? [human] : []), ...players];
   // A table with no human (M7 spec §4.2, AGT-40): every character is an AI player, nobody is asked
@@ -124,6 +148,9 @@ export function dmPrompt(pack: PackText, human: Handle | undefined, players: Han
   const improvised = creatures.length === 0
     ? "there is no fight with anyone the scene doesn't hold. "
     : `a fight starts only through the engine. When the story calls for a creature the scene doesn't hold, bring it in with place_creature from this list, never another: ${creatures.map((c) => `${c.id} (${c.name ?? c.monster})`).join(", ")}. When a fight breaks out that none of the scene's encounters holds (a robbery turns to blades, a beast attacks), call start_fight with everyone in it, then narrate. A fight needs a cause in the story: never start one to fill time. What a creature carries is the engine's: never name coin or goods it hasn't shown in an event. `;
+  const goodsRule = pack.adventure.format_version < GOODS_SINCE
+    ? ""
+    : "- Coin and items: when a character hands something over, tries to steal, or takes from the fallen, call give, steal or loot with that character as actor; the engine moves the goods and rolls a theft. Name amounts only as the engine's events show them. A theft that goes unseen you tell to the thief alone (narrate to their handle): the victim and the others never learn of it. One that is noticed, the whole table sees.\n";
   return `You are the Dungeon Master of "${pack.adventure.title}", a game of Dungeons & Dragons (fifth edition, 2024 rules). ${seats}${pronouns}
 
 ## How this table works
@@ -158,7 +185,7 @@ ${surrender}
 - Scenes: the skeleton lists the scenes in order with their exits. When an exit's condition holds, narrate the way there, then call load_scene with the next scene's id and the party (${party.join(", ")}), adding the handle of any creature that surrendered when the exit carries captives, and stop: the next scene's opening comes with your next wake, and narration after load_scene is refused. After the last scene, call end_adventure with the closing narration.
 - Memory: remember keeps a fact you established in fiction that the engine doesn't track (a name you improvised, a promise, a door you called locked) for the rest of the adventure. Fiction only: positions, Hit Points and results always come fresh from the engine. Memory can change which check you ask for; it never decides an outcome.
 - Actions the adventure didn't plan for (robbing an NPC, threatening a villager): turn the intent into what the engine can do, usually a ladder check. Nothing changes hands and nobody is hurt unless the engine says so; ${improvised}A consequence the engine doesn't track is fiction you remember, and the adventure goes on along its exits.
-
+${goodsRule}
 Be quick: decide, call the tools, narrate once. Most wakes need one to three tool calls.
 
 ${[...guidance, ...dmLanguage(language, Boolean(human), russianNames(pack.adventure))].join("\n")}
@@ -367,6 +394,37 @@ export class ModelDm implements DmAgent {
             { participants: z.array(handle).describe("Every creature in the fight.") },
             (i) => this.bound((t) => t.startFight(i.participants)),
           ),
+          ]),
+      // Coin and items change hands only in a living-world pack (ITM-6, format 2 on).
+      ...(this.config.pack.adventure.format_version < GOODS_SINCE
+        ? []
+        : [
+            seatTool(
+              "give",
+              "Out of combat, one character hands another within 5 feet some coin or one item they carry (worn or wielded gear stays). Give coins or an item.",
+              { actor: handle.describe("Who gives."), to: handle.describe("Who receives."), coins: COINS.optional(), item: z.string().optional().describe("An item id as on the sheet, such as potion_of_healing.") },
+              (i) =>
+                this.bound((t) => {
+                  const what = goods(i);
+                  return what ? t.give(i.actor, i.to, what) : refuse("give either coins or an item");
+                }),
+            ),
+            seatTool(
+              "steal",
+              "Out of combat, a character tries to take coin or an item from a creature within 5 feet unseen. The engine rolls Sleight of Hand against the target's passive Perception. A theft that goes unseen is told to the thief alone.",
+              { actor: handle.describe("The thief."), target: handle.describe("Who is robbed."), coins: COINS.optional(), item: z.string().optional().describe("An item id as on the sheet.") },
+              (i) =>
+                this.bound((t) => {
+                  const what = goods(i);
+                  return what ? t.steal(i.actor, i.target, what) : refuse("give either coins or an item");
+                }),
+            ),
+            seatTool(
+              "loot",
+              "Out of combat, a character takes everything a fallen or surrendered creature within 5 feet carries.",
+              { actor: handle.describe("Who takes."), from: handle.describe("The fallen or surrendered creature.") },
+              (i) => this.bound((t) => t.loot(i.actor, i.from)),
+            ),
           ]),
       seatTool(
         "request_check",
