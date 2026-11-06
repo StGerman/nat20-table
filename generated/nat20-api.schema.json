@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.62"
+    "version": "1.0.0-dev.63"
   },
   "$defs": {
     "Ability": {
@@ -771,6 +771,17 @@
           "items": {
             "$ref": "#/$defs/CardSaid"
           }
+        },
+        "scout": {
+          "description": "The skill the scout checked with when the card was shown (API-54); absent for a card\nwith nothing to find.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Skill"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "target": {
           "description": "Who decides it.",
@@ -1681,6 +1692,24 @@
             "cmd": {
               "type": "string",
               "const": "pick_card"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The state with the new scout in the world.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "scout"
             },
             "state": {
               "description": "Projected for the request's `viewer`.",
@@ -3879,6 +3908,52 @@
           ]
         },
         {
+          "description": "A Hired Blade walks ahead of the caravan as the scout (API-54), from now until another\ntakes the role. Public.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The scout.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "scout_ahead"
+            }
+          },
+          "required": [
+            "kind",
+            "actor"
+          ]
+        },
+        {
+          "description": "The scout looked ahead before a road card was shown (API-54): after the scout's check\nroll, right before `card_drawn`. On a success the card offers its forewarned choice.\nPublic, like the roll.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The scout.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "scout_looked"
+            },
+            "roll": {
+              "description": "The check roll.",
+              "$ref": "#/$defs/RollId"
+            },
+            "saw": {
+              "description": "The check succeeded: the party meets the card forewarned.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "roll",
+            "saw"
+          ]
+        },
+        {
           "description": "How the next card came to the table (API-53), right before its `card_drawn`. DM only.\nNot logged for a zone's only card, whose draw roll alone shows it.",
           "type": "object",
           "properties": {
@@ -4789,6 +4864,17 @@
             "null"
           ]
         },
+        "scout": {
+          "description": "The skill the scout would check with (API-54); absent for a card with nothing to find.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Skill"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "target": {
           "description": "Who would decide it.",
           "$ref": "#/$defs/CardTarget"
@@ -5418,7 +5504,7 @@
           "const": "no_inn"
         },
         {
-          "description": "`travel`, `rest_night` or `pass_time` while a road card waits for its decision, or\nwhile a draw's cards wait for the DM's pick (API-53).",
+          "description": "`travel`, `rest_night`, `pass_time` or `scout` while a road card waits for its\ndecision, or while a draw's cards wait for the DM's pick (API-53).",
           "type": "string",
           "const": "card_pending"
         },
@@ -5433,7 +5519,7 @@
           "const": "card_not_offered"
         },
         {
-          "description": "`choose_card` by a creature with no say on this card, or `choose_card`, `level_up` or\n`answer_level_up` not sent as the actor itself.",
+          "description": "`choose_card` by a creature with no say on this card, `scout` by a creature that is\nnot a Hired Blade, or `choose_card`, `scout`, `level_up` or `answer_level_up` not sent\nas the actor itself.",
           "type": "string",
           "const": "no_say"
         },
@@ -6231,6 +6317,24 @@
             "cmd",
             "card",
             "reason"
+          ]
+        },
+        {
+          "description": "Walks ahead of the caravan as the scout (API-54; protocol §4.13): a Hired Blade takes\nthe role for every leg until another Blade takes it. When a leg's road card names a\nskill to scout with, the scout's Wisdom check comes before the card is shown, and a\nsuccess opens the card's forewarned choice. As the actor itself, never `dm`; never the\ncaravan's owner.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who walks ahead: the viewer's own creature, a Hired Blade.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "scout"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor"
           ]
         },
         {
@@ -8298,6 +8402,17 @@
             "type": "string"
           }
         },
+        "scout": {
+          "description": "The Hired Blade who walks ahead as the scout (API-54).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Handle"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "today": {
           "description": "Miles the party can still travel today.",
           "$ref": "#/$defs/MilesToday"
@@ -8375,6 +8490,17 @@
           "items": {
             "$ref": "#/$defs/RoadKnown"
           }
+        },
+        "scout": {
+          "description": "The Hired Blade who walks ahead as the scout (API-54).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Handle"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "today": {
           "description": "Miles the party can still travel today.",

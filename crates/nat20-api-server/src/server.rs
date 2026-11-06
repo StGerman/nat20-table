@@ -319,6 +319,7 @@ impl Server {
                 reason,
                 fallback,
             } => session.pick_card(card, reason, *fallback, viewer),
+            Command::Scout { actor } => session.scout(&actor.0, viewer),
             Command::SaveRoster => session.save_roster(viewer),
             Command::LevelUp { actor } => session.level_up(&actor.0, viewer),
             Command::AnswerLevelUp {

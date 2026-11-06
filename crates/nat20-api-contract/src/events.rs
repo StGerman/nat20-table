@@ -429,6 +429,23 @@ pub enum EventKind {
         /// The draw roll behind each card, in the same order.
         rolls: Vec<RollId>,
     },
+    /// A Hired Blade walks ahead of the caravan as the scout (API-54), from now until another
+    /// takes the role. Public.
+    ScoutAhead {
+        /// The scout.
+        actor: Handle,
+    },
+    /// The scout looked ahead before a road card was shown (API-54): after the scout's check
+    /// roll, right before `card_drawn`. On a success the card offers its forewarned choice.
+    /// Public, like the roll.
+    ScoutLooked {
+        /// The scout.
+        actor: Handle,
+        /// The check roll.
+        roll: RollId,
+        /// The check succeeded: the party meets the card forewarned.
+        saw: bool,
+    },
     /// How the next card came to the table (API-53), right before its `card_drawn`. DM only.
     /// Not logged for a zone's only card, whose draw roll alone shows it.
     CardPicked {

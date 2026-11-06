@@ -449,6 +449,7 @@ impl Campaign {
             text: card.text.clone(),
             choices: choices(card, Some(&offers)),
             note: card.note.clone(),
+            scout: card.scout.map(scout_skill),
         })
     }
 
@@ -477,6 +478,7 @@ impl Campaign {
                 .map(|b| Handle(b.clone()))
                 .collect(),
             note: card.note.clone(),
+            scout: card.scout.map(scout_skill),
         })
     }
 
@@ -603,6 +605,7 @@ impl Campaign {
                 .iter()
                 .filter_map(|id| self.offered_card(id))
                 .collect(),
+            scout: state.scout.clone().map(Handle),
             deeds: state
                 .deeds
                 .iter()
@@ -785,6 +788,14 @@ pub fn parse_check(ability: &str, skill: &str) -> Option<(Ability, Skill)> {
     let ability = serde_json::from_value(serde_json::Value::String(ability.to_owned())).ok()?;
     let skill = serde_json::from_value(serde_json::Value::String(skill.to_owned())).ok()?;
     Some((ability, skill))
+}
+
+/// The skill a card is scouted with, on the wire (API-54).
+pub fn scout_skill(skill: world::ScoutSkill) -> Skill {
+    match skill {
+        world::ScoutSkill::Perception => Skill::Perception,
+        world::ScoutSkill::Survival => Skill::Survival,
+    }
 }
 
 /// How a card was decided, on the wire.
