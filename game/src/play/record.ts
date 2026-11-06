@@ -8,6 +8,7 @@ import type { Handle } from "@nat20-table/engine-client";
 import { REPO } from "../paths.ts";
 import type { SceneTime } from "../table/loop.ts";
 import type { StopKind } from "../table/types.ts";
+import type { RosterRecord } from "./roster.ts";
 import type { Settings } from "./settings.ts";
 
 /** The run folder's format: bumped when a file in it changes shape. */
@@ -52,6 +53,8 @@ export interface RunRecord {
   ended: string | null;
   /** Which stop ended it early, or null when it ended in play. */
   stop: StopKind | null;
+  /** The saved party the run played and saved (API-45), with its hash in and out; absent without --roster. */
+  roster?: RosterRecord;
 }
 
 /** The checkout a run comes from: its commit, and whether tracked files had changes. */
