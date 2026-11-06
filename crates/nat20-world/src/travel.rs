@@ -85,6 +85,12 @@ impl Pace {
 
 /// What the world remembers between calls, and what a roster saves: the time, where the
 /// caravan is, what the party has discovered, the caravan, and the day's travel so far.
+///
+/// Two parts (ENG-37, decision 0063): the **memory** (the clock, the discovered places, the
+/// deeds, the deck but the card on the table and the `once: "contract"` marks, the place NPCs,
+/// the contract count) outlives a contract; the **contract** (where the caravan is, the
+/// caravan, the day's travel, the escort, the card on the table) is rebuilt from the next
+/// pack's campaign file by [`World::carry_memory`]. Roster format 2 (API-51) saves them apart.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct WorldState {
@@ -122,6 +128,20 @@ fn first_contract() -> u32 {
 
 fn is_first_contract(contract: &u32) -> bool {
     *contract == 1
+}
+
+/// The miles a party travels in a day between contracts: a normal pace (SRD 5.2.1 Travel
+/// Pace, 24 miles a day).
+pub const MILES_PER_DAY_BETWEEN: u32 = 24;
+
+/// How a new contract took up the world a finished one left (ENG-37).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Carried {
+    /// The place the party was in when the last contract ended
+    pub from: String,
+    /// The days the trip to the new contract's start took, at a normal pace: 0 when the party
+    /// was already there
+    pub days: u32,
 }
 
 /// The world: the map and goods files, the route an NPC owner follows, and the state.
@@ -328,6 +348,40 @@ impl World {
                 .unwrap_or_default(),
             Position::At { place } => place.clone(),
         }
+    }
+
+    /// Takes up the memory of the world a finished contract left, for a world just built
+    /// from the next contract's campaign file (ENG-37, decision 0063 Q1 and Q2): the clock,
+    /// the discovered places, the deeds, the deck (but the card on the table and the
+    /// `once: "contract"` marks) and the place NPCs come from `saved`; the caravan, where it
+    /// stands and the day's travel stay this world's. The contract count goes up by one. The
+    /// clock never goes back: the contract starts at `start_hour` on the day after the saved
+    /// day, plus the days the trip from where the party was takes at a normal pace (one day per
+    /// [`MILES_PER_DAY_BETWEEN`] miles by the shortest road, rounded up).
+    pub fn carry_memory(&mut self, saved: WorldState, start_hour: u32) -> Carried {
+        let from = match &saved.at {
+            Position::At { place } => place.clone(),
+            Position::OnRoad { toward, .. } => toward.clone(),
+        };
+        let start = self.place_here().unwrap_or_default().to_string();
+        let left = match &saved.at {
+            Position::OnRoad { miles_left, .. } => *miles_left,
+            Position::At { .. } => 0,
+        };
+        let miles = left + self.map.miles_between(&from, &start).unwrap_or(0);
+        let days = miles.div_ceil(MILES_PER_DAY_BETWEEN);
+        let mut deck = saved.deck;
+        deck.pending = None;
+        deck.gone_for_contract.clear();
+        let mut discovered = saved.discovered;
+        discovered.extend(std::mem::take(&mut self.state.discovered));
+        self.state.clock = Clock::at(saved.clock.day + 1 + days, start_hour, 0);
+        self.state.discovered = discovered;
+        self.state.deeds = saved.deeds;
+        self.state.deck = deck;
+        self.state.npcs = saved.npcs;
+        self.state.contract = saved.contract + 1;
+        Carried { from, days }
     }
 
     /// Remembers a deed done today by `by` in the contract under way. A deed done again
@@ -545,6 +599,59 @@ mod tests {
             Clock::at(1, 8, 0),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn the_next_contract_keeps_the_memory_and_starts_after_the_saved_day() {
+        let mut done = world("maren");
+        done.remember("helped_farmer", vec!["bren".into()]);
+        done.state.deck.gone.insert("ghost".into());
+        done.state
+            .deck
+            .gone_for_contract
+            .insert("fair_crowd".into());
+        done.state.deck.discard.insert("mud".into());
+        done.state.discovered.insert("ruin".into());
+        done.state.at = Position::At {
+            place: "inn".into(),
+        };
+        done.state.clock = Clock::at(2, 20, 0);
+        // The next contract starts in town at 9:00: 12 miles from the inn is one day's trip.
+        let mut next = world("maren");
+        next.state.clock = Clock::at(1, 9, 0);
+        let carried = next.carry_memory(done.state.clone(), 9);
+        assert_eq!(
+            carried,
+            Carried {
+                from: "inn".into(),
+                days: 1
+            }
+        );
+        assert_eq!(next.state.clock, Clock::at(4, 9, 0));
+        assert_eq!(next.place_here(), Some("town"));
+        assert_eq!(next.state.contract, 2);
+        assert!(next.state.deeds.contains_key("helped_farmer"));
+        assert!(
+            next.state.deck.gone.contains("ghost"),
+            "once is for the world"
+        );
+        assert!(
+            next.state.deck.gone_for_contract.is_empty(),
+            "once: contract comes back"
+        );
+        assert!(next.state.deck.discard.contains("mud"));
+        assert!(next.state.discovered.contains("ruin"));
+        // A deed written now records the second contract.
+        next.remember("paid_toll", vec![]);
+        assert_eq!(next.state.deeds["paid_toll"].contract, 2);
+        // From the start place itself, no trip: the day after.
+        let mut again = world("maren");
+        let mut at_start = done.state;
+        at_start.at = Position::At {
+            place: "town".into(),
+        };
+        assert_eq!(again.carry_memory(at_start, 9).days, 0);
+        assert_eq!(again.state.clock, Clock::at(3, 9, 0));
     }
 
     #[test]

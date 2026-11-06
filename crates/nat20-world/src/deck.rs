@@ -94,9 +94,11 @@ pub struct Card {
     /// The card starts outside the deck; an `add_card` effect puts it in
     #[serde(default)]
     pub chained: bool,
-    /// The card leaves the game once drawn instead of going to the discard
-    #[serde(default)]
-    pub once: bool,
+    /// The card leaves the game once drawn instead of going to the discard: `true` for the
+    /// world (gone for every later contract too), `"contract"` for the rest of the contract
+    /// only (ENG-37, decision 0063 Q1)
+    #[serde(default, skip_serializing_if = "Once::is_never")]
+    pub once: Once,
     /// Deeds the card needs: it is in the pile only when every one is remembered
     #[serde(default, rename = "if", skip_serializing_if = "Option::is_none")]
     pub if_deeds: Option<Deeds>,
@@ -109,6 +111,41 @@ pub struct Card {
     pub owner_pick: Option<String>,
     /// Two or three choices in every case the conditions allow
     pub choices: Vec<Choice>,
+}
+
+/// How long a drawn card stays out of the game.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Once {
+    /// `true`: gone for the world; `false` (the default): back to the discard
+    Flag(bool),
+    /// `"contract"`: gone for the rest of the contract, back when the next one starts
+    Scope(OnceScope),
+}
+
+/// The one word `once` takes besides `true` and `false`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OnceScope {
+    /// For the rest of the contract
+    Contract,
+}
+
+impl Once {
+    /// Gone for the world once drawn.
+    pub const WORLD: Once = Once::Flag(true);
+    /// Gone for the rest of the contract once drawn.
+    pub const CONTRACT: Once = Once::Scope(OnceScope::Contract);
+
+    fn is_never(&self) -> bool {
+        *self == Once::Flag(false)
+    }
+}
+
+impl Default for Once {
+    fn default() -> Self {
+        Once::Flag(false)
+    }
 }
 
 /// One deed id, or a list of them, in a card's or a choice's `if` or `unless`.
@@ -323,9 +360,13 @@ pub struct DeckState {
     /// Cards in the discard
     #[serde(default)]
     pub discard: BTreeSet<String>,
-    /// `once` cards already drawn
+    /// `once` cards already drawn: gone for the world
     #[serde(default)]
     pub gone: BTreeSet<String>,
+    /// `once: "contract"` cards drawn in the contract under way: back when the next starts
+    /// (ENG-37)
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub gone_for_contract: BTreeSet<String>,
     /// Cards added with `soon`, in the order added: the next draw in a card's zone and
     /// moment takes the first of them without a roll (ENG-34)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -654,6 +695,7 @@ impl Deck {
                 .as_ref()
                 .is_none_or(|p| discovered.contains(p))
             && !state.gone.contains(&card.id)
+            && !state.gone_for_contract.contains(&card.id)
             && card.holds(deeds)
     }
 
@@ -727,11 +769,11 @@ impl Deck {
     /// A drawn card goes on the table with the choices its deeds offer, and to the discard,
     /// or out of the game when it is `once`.
     fn put_on_table(&self, card: &Card, deeds: &DeedBook, state: &mut DeckState) {
-        if card.once {
-            state.gone.insert(card.id.clone());
-        } else {
-            state.discard.insert(card.id.clone());
-        }
+        match card.once {
+            Once::WORLD => state.gone.insert(card.id.clone()),
+            Once::CONTRACT => state.gone_for_contract.insert(card.id.clone()),
+            Once::Flag(_) => state.discard.insert(card.id.clone()),
+        };
         state.pending = Some(PendingCard {
             card: card.id.clone(),
             choices: offered_ids(card, deeds),
@@ -1479,6 +1521,39 @@ mod tests {
         let back = serde_json::to_value(card).unwrap();
         assert_eq!(back["if"], "paid");
         assert_eq!(back["unless"][0], "fought");
+    }
+
+    #[test]
+    fn once_reads_true_or_contract() {
+        let mut d = deck();
+        let json = serde_json::to_value(&d.cards[2]).unwrap();
+        assert_eq!(json["once"], true);
+        assert!(
+            serde_json::to_value(&d.cards[0])
+                .unwrap()
+                .get("once")
+                .is_none()
+        );
+        d.cards[0].once = serde_json::from_str("\"contract\"").unwrap();
+        assert_eq!(d.cards[0].once, Once::CONTRACT);
+        let mut state = DeckState::default();
+        let mut dice = ListDice::new([1]);
+        d.draw(
+            "fields",
+            When::Road,
+            &known(),
+            &DeedBook::new(),
+            &mut state,
+            &mut dice,
+        );
+        assert!(state.gone_for_contract.contains("mud"));
+        assert!(!state.discard.contains("mud") && !state.gone.contains("mud"));
+        state.pending = None;
+        let pile = d.pile("fields", When::Road, &known(), &DeedBook::new(), &state);
+        assert_eq!(
+            pile.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(),
+            ["beggar"]
+        );
     }
 
     #[test]

@@ -27,7 +27,8 @@ pub use caravan::{Caravan, CaravanError, Good, Goods, Owner, Wagon};
 pub use clock::{Clock, Watch};
 pub use deck::{
     Card, CardError, Choice, DC_LADDER, DRAW_DIE, Decided, Deck, DeckError, DeckFile, DeckState,
-    Deed, DeedBook, Deeds, Effect, PendingCard, Resolution, Table, Target, When, Who,
+    Deed, DeedBook, Deeds, Effect, Once, OnceScope, PendingCard, Resolution, Table, Target, When,
+    Who,
 };
 pub use dice::{ListDice, WorldDice};
 pub use escort::{EscortState, EscortTerms, SKILLED_WAGE_CP, Wage};
@@ -35,5 +36,6 @@ pub use map::{Edge, Generate, MapError, Place, Position, Road, Terrain, WorldMap
 pub use npcs::{Attitude, NpcCarries, NpcCoins, NpcDef, NpcFile, NpcItem, NpcLeft, NpcState};
 pub use plan::{Reach, Trip, TripLeg};
 pub use travel::{
-    LONG_REST_MINUTES, Leg, Pace, RATIONS, TravelError, WAKE_HOUR, World, WorldState,
+    Carried, LONG_REST_MINUTES, Leg, MILES_PER_DAY_BETWEEN, Pace, RATIONS, TravelError, WAKE_HOUR,
+    World, WorldState,
 };
