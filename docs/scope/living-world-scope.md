@@ -1,7 +1,7 @@
 # Living world: scope
 
-Status: accepted by Stas. Decisions D0 to D4 on 2026-11-01 (Milestone 9 spec), S1 to S4 on 2026-11-02 (Milestone 9 system design). Owner: Stas.
-Companion documents: the system design `docs/design/m9-system-design.md` (how it is built), decisions 0057 (where the world rules and the bookkeeping live) and 0058 (who the human plays in the first session). Commentable copies: spec https://claude.ai/artifact/T3cwJH8snR6q9GXj1Mnedu, design https://claude.ai/artifact/526ws4LhGXdCB9ZVz7ZiYo.
+Status: accepted by Stas. Decisions D0 to D4 on 2026-11-01 (Milestone 9 spec), S1 to S4 on 2026-11-02 (Milestone 9 system design), Q1 to Q7 on 2026-11-06 (Milestone 11, §8). Owner: Stas.
+Companion documents: the system design `docs/design/m9-system-design.md` (how it is built), decisions 0057 (where the world rules and the bookkeeping live) and 0058 (who the human plays in the first session). Commentable copies: spec https://claude.ai/artifact/T3cwJH8snR6q9GXj1Mnedu, design https://claude.ai/artifact/526ws4LhGXdCB9ZVz7ZiYo. For Milestone 11 (§8): the spec and system design `docs/design/m11-system-design.md` (commentable copy https://claude.ai/artifact/VEh7rGHVVWmXntPNYuWw5Q) and decision 0063.
 
 This scope sits beside `docs/scope/demo-run-scope.md`; it does not edit it (D0). The demo scope stays frozen, so the Demo Run's acceptance stays checkable on its own terms. Where the two disagree, this document governs Milestone 9 and later work, and the demo scope governs the Demo Run.
 
@@ -76,8 +76,45 @@ Four phases, each ending in a run on Stas's Mac and a regression of *The Silent 
 - **LLMs and money.** Agents do no arithmetic; they get finished totals. The narration judge checks narrated coin against the ledger.
 - **Vera.** Pay at the table must sound like a scene, not a table of numbers; as a Hired Blade she never reads a price list.
 
+## 8. Milestone 11: Word on the road
+
+Accepted by Stas on 2026-11-06 (Q1 to Q7, decision 0063). How it is built: `docs/design/m11-system-design.md`. Input: the Faces of the Road deck doc (https://claude.ai/artifact/89fYVEn1nvGmUH64vmP5LJ), decisions 1 to 12.
+
+### 8.1 Bottom line
+
+1. **The road remembers.** A choice on a card writes a **deed**; later cards and arrivals read it (`if`, `unless`). Deeds stay DM-only: players remember what they did through the story.
+2. **The DM picks the card that continues the story.** The engine rolls three cards; the DM picks one and logs why. Without an answer, the engine takes the first card rolled.
+3. **The world outlives a contract.** The memory (clock, deeds, deck, place NPCs, discovered places) is kept; only the contract (caravan, escort, position) is rebuilt from the next pack. A `once` card is gone for the world.
+4. **A Blade can scout ahead:** a Wisdom check, Perception or Survival as the card ahead names it, against the terrain's Search DC (SRD 5.2.1); a success shows the card before the caravan meets it.
+5. **Every scene opens on a problem for the human's character** (the five story-space rules in the DM prompt; the five card tests on every card).
+6. **A second pack, *The Way Back*:** the next contract in the same world, up the valley with a new merchant, Fenn Lusk; each merchant may bring a few cards of their own in the pack.
+
+### 8.2 Out of scope
+
+Hearsay, road NPCs, addressed cards, fight outcomes and NPC schedules (until this cut has been played once); variants (per-case choices do the job); foretell for the DM alone; live DM cards; a real party split on the map; Russian TUI lines (decision 0038); a converter for old rosters (a roster saved before Milestone 11 is refused, and the party starts new); core work; latency gates.
+
+### 8.3 Acceptance (the Milestone 11 exit)
+
+Two runs on one build: *Fair in Wend* with every seat AI on a new roster, then *The Way Back* on the same roster with Stas as a Hired Blade. In each:
+
+1. The Milestone 9 rows that still apply: the contract done and paid in the ledger, the trial balance, every roll cited, 0 leaks, the roster hash chain, the contract in 120 minutes or less.
+2. At least 3 road cards and 1 arrival card decided, each DM pick with its logged reason.
+3. At least one deed written by a choice and read later in the same run.
+4. No story-space flag from the narration judge that Stas confirms; the Vera test reads one scene opening and one deed-reading card from each run and is quoted verbatim.
+
+In run 2 also:
+
+5. At least one card or arrival reads a deed written in run 1.
+
+Reported, not gated: p95 against the Milestone 9 pair, every fight, the draw-three counts, the DM's suggested cards. Fights are a recommendation, not a gate (Stas, 2026-11-06): the Milestone 9 row "1 fight outside a scene" does not carry over.
+
+### 8.4 Order
+
+Five phases, in one stack merged after the exit pair: the world crate, the contract and server, the table, the content, the exit. The docs (CON-18) merge first on their own. Rows and their phases are in `TASKS.md` § Milestones, row 11.
+
 ## Sources
 
 - Milestone 9 spec, D0 to D4 (Claude Doc above; Markdown copy in the project files, `engine/m9/m9-spec.md`).
 - `docs/design/m9-system-design.md`.
 - SRD 5.2.1: Travel Pace, Long Rest, Exhaustion, Malnutrition, Hirelings, Mounts and Vehicles. SRD 5.1: Trade Goods.
+- Milestone 11: `docs/design/m11-system-design.md`, decision 0063, the Faces of the Road deck doc (above). SRD 5.2.1: Search, Travel Pace, Travel Terrain.
