@@ -730,7 +730,7 @@ fn check_effects(
                 },
                 world::Effect::Fight { monsters } => monsters
                     .iter()
-                    .find_map(|m| crate::adapter::monster::check(m).err()),
+                    .find_map(|m| crate::adapter::monster::check(m.stat()).err()),
                 world::Effect::Cargo { good, .. } if goods.get(good).is_none() => {
                     Some(format!("there is no good {good}"))
                 }
