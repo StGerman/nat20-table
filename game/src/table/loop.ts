@@ -5,7 +5,7 @@
 import type { StatBlockEntry } from "../pack/adventure.ts";
 import { EngineStopped, type CardDm, type Event, type Handle, type LevelUpChoice, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
-import { eventLine, formatOptions, formatSheet, formatState, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
+import { eventLine, formatOptions, formatSheet, formatState, mapLines, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, cardChoices, choiceLines, levelUpChoices, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
@@ -1474,7 +1474,7 @@ export class TableLoop {
     }
   }
 
-  private async command(name: "sheet" | "where" | "options" | "log" | "usage" | "pause" | "quit"): Promise<void> {
+  private async command(name: "sheet" | "where" | "map" | "options" | "log" | "usage" | "pause" | "quit"): Promise<void> {
     const human = this.human;
     switch (name) {
       case "sheet": {
@@ -1485,6 +1485,13 @@ export class TableLoop {
       case "where": {
         const state = await this.humanState();
         this.table.show({ kind: "info", title: "Where", text: state ? formatState(state) : "" });
+        return;
+      }
+      case "map": {
+        // The human's own world view only (AGT-79): the places they know and the roads between them.
+        const state = await this.humanState();
+        const world = state?.view === "player" ? state.world : undefined;
+        this.table.show({ kind: "info", title: "Map", text: world ? mapLines(world).join("\n") : "There is no map here: this adventure is not on the road." });
         return;
       }
       case "options":

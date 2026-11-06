@@ -85,6 +85,11 @@ export function situationRows(
   if (hidden > 0) rows.push([{ text: `       +${hidden} more · /where`, style: muted }]);
   // The foes out of the fight (AGT-47 C5): `Fallen`, so `down` keeps one meaning, a dying ally.
   if (downRow) rows.push([{ text: `Fallen ${situation.down.join(", ")}`, style: muted }]);
+  // The side pane out of a fight has room for the map (AGT-79), as far as the rows go.
+  if (pane && situation.mode === "explore" && situation.road) {
+    const left = size.rows - rows.length - 1;
+    if (left > 1) rows.push([], ...situation.road.map.slice(1, 1 + left).map((line): Row => [{ text: line, style: muted }]));
+  }
   return rows;
 }
 
@@ -130,7 +135,8 @@ function bar(s: Situation, stale = false, glyphs?: Record<string, string>): Row 
   };
   if (s.mode === "explore") {
     const party = s.creatures.filter((c) => c.side === "party");
-    row.push({ text: "Explore" });
+    // In the living world the bar says the day and where the caravan is (AGT-79).
+    row.push({ text: s.road ? s.road.where : "Explore" });
     if (party.length > 0) row.push({ text: " · party: " }, ...join(party.map((c) => [{ text: `${c.handle} ` }, health(c.health)])));
   } else {
     row.push({ text: `Round ${s.round ?? 1}` });
