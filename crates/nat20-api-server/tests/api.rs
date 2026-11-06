@@ -3185,3 +3185,84 @@ fn a_pack_brings_its_own_cards_and_keeps_its_contract() {
     );
     let _ = std::fs::remove_dir_all(&base);
 }
+
+/// An arrival card nobody can speak on is settled at once (ENG-35), and it is still the leg's
+/// only card: no road card follows it.
+#[test]
+fn an_unattended_arrival_card_keeps_the_road_card_off_the_last_leg() {
+    let dir = std::env::temp_dir().join(format!(
+        "nat20_table_unattended_arrival_{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let deck_path = dir.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
+    let cards = deck["cards"].as_array_mut().unwrap();
+    cards.push(json!({
+        "id": "tower_gate", "zone": "old_tower", "when": "arrival", "target": "blades",
+        "text": "A crow sits on the tower gate.",
+        "choices": [{ "id": "shoo", "text": "Shoo it." }, { "id": "leave", "text": "Leave it." }]
+    }));
+    cards.push(json!({
+        "id": "hill_goats", "zone": "vale_hills", "target": "blades",
+        "text": "Goats watch from the rocks.",
+        "choices": [{ "id": "wave", "text": "Wave." }, { "id": "pass", "text": "Pass by." }]
+    }));
+    std::fs::write(&deck_path, deck.to_string()).unwrap();
+    // The human owns the caravan, with no escort, and travels alone: no Blade can speak on a
+    // Blade card.
+    let campaign_path = dir.join("campaign.json");
+    let mut campaign: Value =
+        serde_json::from_str(&std::fs::read_to_string(&campaign_path).unwrap()).unwrap();
+    campaign["world"]["caravan"]["owner"] = json!("bren");
+    campaign["world"].as_object_mut().unwrap().remove("escort");
+    std::fs::write(&campaign_path, campaign.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call("dm", json!({ "cmd": "start_campaign", "party": ["bren"] })));
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    ));
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "choose_card", "actor": "bren", "choice": "around" }),
+    ));
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "rest_night", "actor": "bren", "where": "camp" }),
+    ));
+    let last = api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "old_tower", "pace": "normal" }),
+    );
+    ok(&last);
+    let seen = kinds(&last);
+    assert!(
+        seen.iter().any(|k| k == "card_resolved"),
+        "settled at once: {last}"
+    );
+    assert_eq!(
+        seen.iter().filter(|k| *k == "card_drawn").count(),
+        1,
+        "the arrival card alone: {last}"
+    );
+    let text: Vec<&str> = last["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "card_drawn")
+        .map(|e| e["card_text"].as_str().unwrap())
+        .collect();
+    assert_eq!(text, ["A crow sits on the tower gate."]);
+    let _ = std::fs::remove_dir_all(&dir);
+}
