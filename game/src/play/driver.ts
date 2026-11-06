@@ -268,7 +268,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     seat,
     transcript,
     inputsFile: path.join(runDir, "inputs.jsonl"),
-    ...guards(flags.pack, engine),
+    ...guards(flags.pack, engine, language),
   });
   // Who plays whom, in the transcript as in run.json (AGT-35).
   table.log("system", party.human ? `the human plays ${party.human}; AI players: ${party.ai.join(", ")}` : `no human; AI players: ${party.ai.join(", ")}`);

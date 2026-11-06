@@ -30,6 +30,16 @@ test("both guards refuse a word that mixes Russian and Latin letters, and pass e
   }
 });
 
+test("in a Russian run the speech guard refuses a line with no Russian in it, and only there (AGT-38)", () => {
+  const { shown } = packIds(MILL);
+  const russian = speechGuard({ shown, language: "ru" });
+  assert.match(russian("I check the barn door for tracks.") ?? "", /in English: say it in Russian/);
+  assert.equal(russian("Осматриваю дверь амбара."), undefined);
+  assert.equal(russian("goblin_1 — бей его!"), undefined, "a shown id beside Russian words passes");
+  assert.equal(speechGuard({ shown, language: "en" })("I check the barn door for tracks."), undefined);
+  assert.equal(speechGuard({ shown })("I check the barn door for tracks."), undefined);
+});
+
 test("the narration guard refuses numbers, game statistics, DM-only ids and unknown roll ids", () => {
   const guard = narrationGuard({ ids: packIds(MILL), knownRoll: (id) => id === "r12" });
   const refused: Array<[string, RegExp]> = [
