@@ -68,6 +68,11 @@ const Npc = z
     name: z.string().min(1).describe("What the characters call them."),
     name_ru: z.string().min(1).optional().describe("What a Russian run calls them (AGT-38), such as «староста Осрик Хейл»."),
     prose: packPath.describe("Who they are, voice, wants, what they know and tell, what they hide."),
+    stat_block: id
+      .optional()
+      .describe(
+        "An entry of `stat_blocks` (format 2): what the NPC fights as when the story turns violent and the scene doesn't place them, such as town_guard. The DM brings them in with place_creature under that entry (MON-11).",
+      ),
     creatures: z
       .array(z.strictObject({ scene: id.describe("A scene id of this skeleton."), handle: id.describe("A creature in that scene's file, its spawns included.") }))
       .optional()

@@ -192,7 +192,9 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
       problem(`scene ${scene.id} has ${declared.partyStarts} party_start anchors for a party of ${adventure.party.length}`);
     }
   }
+  const entries = new Set(adventure.stat_blocks.map((s) => s.id));
   for (const npc of adventure.npcs) {
+    if (npc.stat_block && !entries.has(npc.stat_block)) problem(`npc ${npc.id} names stat block entry ${npc.stat_block}, which stat_blocks doesn't list`);
     for (const link of npc.creatures ?? []) {
       const declared = ids.get(link.scene);
       if (!sceneIdList.includes(link.scene)) problem(`npc ${npc.id} names scene ${link.scene}, which the skeleton doesn't list`);

@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.43 (2026-11-02)
+- **Changed meaning:** `place_creature` no longer refuses a side the stat block's faction disagrees with (MON-11; protocol.md §4.10). The creature takes the side it is placed on, and the engine sets the attitude between it and each creature of the scene, both ways, to match. This lets a townsfolk NPC (Guard, Noble, Commoner, Guard Captain, core #70) fight the party. No type changes; the doc comment says so. Scene files are unchanged: their creatures still must agree with their sides.
+- `place_creature.jsonl` pc-10 now places a Guard `hostile` (it used to show a wolf refused on the party side). `start_fight.jsonl` gains sf-3b, a Guard named "Town watchman" placed hostile, who fights beside the wolf in sf-7.
+
 ## 1.0.0-dev.42 (2026-11-02)
 - New command `start_fight{participants}` (API-34, decision 0035; protocol.md §4.4), additive: the DM starts a fight among creatures present that no authored encounter fits. Each participant must be in the scene, conscious, on the party or the hostile side and listed once, with at least one creature on each side. Initiative is rolled as for an authored fight, with no surprise, no surrender and no early end. The fight shows in the DM's `encounters` as `fight_<n>`. Result `start_fight{state}`.
 - New fixture `start_fight.jsonl` (scene `place_yard`, seed 1). It covers:

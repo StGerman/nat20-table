@@ -139,6 +139,11 @@
             "minLength": 1,
             "description": "Who they are, voice, wants, what they know and tell, what they hide."
           },
+          "stat_block": {
+            "description": "An entry of `stat_blocks` (format 2): what the NPC fights as when the story turns violent and the scene doesn't place them, such as town_guard. The DM brings them in with place_creature under that entry (MON-11).",
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
           "creatures": {
             "description": "When the NPC is also an engine creature (it can be fought, talked down or captured): the scene and handle it has. Several entries when any one of them may become the NPC, such as whichever goblin surrenders.",
             "type": "array",
