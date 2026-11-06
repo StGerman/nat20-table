@@ -63,6 +63,25 @@ test("a run folder goes to runs/<run-id>/ in the runs repo, with the run's ident
   }
 });
 
+test("a folder with no run.json is skipped, sends nothing and is not a failure (AGT-74)", () => {
+  const { root, remote, runDir, clone } = setup();
+  try {
+    const empty = path.join(root, "runs", "full-2026-11-01T19-47-21-000Z");
+    mkdirSync(empty, { recursive: true });
+    const skipped = uploadRun(empty, { repo: remote, clone });
+    assert.equal(skipped.ok, false);
+    assert.ok(!skipped.ok && skipped.skipped, JSON.stringify(skipped));
+    assert.match(skipped.ok ? "" : skipped.why, /^skipped: full-2026-11-01T19-47-21-000Z has no run\.json/);
+    assert.equal(git(remote, "rev-parse", "--verify", "--quiet", "main").status === 0, false, "nothing was pushed");
+    assert.ok(uploadRun(runDir, { repo: remote, clone }).ok, "a real run beside it still goes up");
+    assert.deepEqual(remoteFiles(remote, path.basename(empty)), []);
+    const typo = uploadRun(path.join(root, "runs", "no-such-run"), { repo: remote, clone });
+    assert.ok(!typo.ok && !typo.skipped, "a path that isn't there is a failure, not a skip (Copilot on table #292)");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("uploading again sends only what changed, never deletes, and keeps the repo's confirmations", () => {
   const { root, remote, runDir, clone } = setup();
   try {

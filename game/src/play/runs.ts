@@ -29,7 +29,7 @@ if (stage === "upload") {
   let failed = 0;
   for (const run of dirs) {
     const result = uploadRun(run, { repo });
-    if (!result.ok) failed += 1;
+    if (!result.ok && !result.skipped) failed += 1;
     console.log(`${path.basename(run)}: ${result.ok ? `${result.changed ? `commit ${result.commit}` : "up to date"}${result.pushed ? ", pushed" : ""}. ${result.where}` : result.why}`);
   }
   process.exit(failed === 0 ? 0 : 1);

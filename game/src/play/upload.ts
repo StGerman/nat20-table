@@ -39,7 +39,7 @@ export interface UploadOptions {
 
 export type UploadResult =
   | { ok: true; changed: boolean; pushed: boolean; commit: string; where: string }
-  | { ok: false; why: string };
+  | { ok: false; why: string; skipped?: true };
 
 /** The destination a play command uploads to: `--upload`, else `NAT20_RUNS_REPO`; none with `--no-upload`. */
 export function uploadTarget(flags: { upload?: string; "no-upload"?: boolean }, env: NodeJS.ProcessEnv = process.env): string | undefined {
@@ -127,6 +127,11 @@ function where(repo: string, runId: string): string {
 export function uploadRun(runDir: string, options: UploadOptions): UploadResult {
   try {
     const runId = path.basename(path.resolve(runDir));
+    // A run that stopped before it started leaves a folder with no run.json and nothing to read
+    // (AGT-74): it is skipped, not sent and not counted as a failure.
+    // A path that isn't a folder at all is a typo, and fails as before (Copilot on table #292).
+    if (!existsSync(runDir) || !statSync(runDir).isDirectory()) return { ok: false, why: `failed: ${runDir} is not a run folder` };
+    if (!existsSync(path.join(runDir, RUN_JSON))) return { ok: false, skipped: true, why: `skipped: ${runId} has no ${RUN_JSON}, so the run stopped before it started; nothing is uploaded` };
     const secret = findSecret(runDir);
     if (secret) return { ok: false, why: `refused: ${secret.file} holds what looks like ${secret.what}; remove it and run npm run runs:upload -- ${runDir}` };
     const clone = options.clone ?? process.env[RUNS_CLONE_ENV] ?? path.join(homedir(), ".nat20", "runs-repo");
@@ -144,10 +149,8 @@ export function uploadRun(runDir: string, options: UploadOptions): UploadResult 
     git(clone, "add", "--", path.join("runs", runId));
     const changed = git(clone, "diff", "--cached", "--quiet").status !== 0;
     if (changed) {
-      const run = existsSync(path.join(runDir, RUN_JSON)) ? readRunRecord(runDir) : undefined;
-      const subject = run
-        ? `${runId}: ${verdict}, ${run.profile?.name ?? "no profile"}, table ${run.build.table_commit.slice(0, 7)}${run.build.dirty ? " (dirty)" : ""}, seed ${run.seed}`
-        : `${runId}: a run folder without run.json`;
+      const run = readRunRecord(runDir);
+      const subject = `${runId}: ${verdict}, ${run.profile?.name ?? "no profile"}, table ${run.build.table_commit.slice(0, 7)}${run.build.dirty ? " (dirty)" : ""}, seed ${run.seed}`;
       const committed = git(clone, "commit", "--quiet", "-m", subject);
       if (committed.status !== 0) return { ok: false, why: `git commit failed: ${committed.stderr.trim() || committed.stdout.trim()}` };
     }
