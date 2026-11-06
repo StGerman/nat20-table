@@ -345,6 +345,8 @@ export class TableLoop {
    * ("last_turn"), then the DM's closing narration and the end card ("closing").
    */
   private journeyEnd: "last_turn" | "closing" | undefined;
+  /** The escort's settling, held while the destination's arrival card waits (ENG-35). */
+  private settledLater: Event | undefined;
   /** The destination's scene opened without the pay, which the `escort_settled` wake tells next (AGT-86). */
   private arrivalOpened = false;
   /** The human's experience when the campaign started, for what the journey earned. */
@@ -485,6 +487,15 @@ export class TableLoop {
       }
     }
     if (this.table.ended) return;
+    // A road card waits for the party's word out of a fight (AGT-80): it is asked before anything else.
+    if (this.campaign && !this.table.inCombat && (await this.cardRound())) return;
+    // The destination's arrival card is settled and its fight, if any, is over: the pay comes now (ENG-35).
+    if (this.settledLater && !this.table.inCombat && !(await this.dmWorld())?.card) {
+      const settled = this.settledLater;
+      this.settledLater = undefined;
+      await this.roadEvent(settled);
+      return;
+    }
     // The human's last turn at the journey's end is over, and no fight or level-up holds the
     // table (B7): a level-up picked on the last turn is answered first, then the journey closes.
     if (this.journeyEnd === "closing" && !this.table.inCombat && this.table.awaiting.kind !== "level_up") {
@@ -492,8 +503,6 @@ export class TableLoop {
       await this.closeJourney(destination);
       return;
     }
-    // A road card waits for the party's word out of a fight (AGT-80): it is asked before anything else.
-    if (this.campaign && !this.table.inCombat && (await this.cardRound())) return;
     await this.showSituation();
     const awaiting = this.table.awaiting;
     // A fight drops the requests the talk before it carried or left pending (party talk §4.4).
@@ -706,6 +715,12 @@ export class TableLoop {
         return;
       }
       case "escort_settled":
+        // The destination's arrival card is on the table (ENG-35): the party decides it first,
+        // and the pay, the last turn and the closing follow once it is settled.
+        if ((await this.dmWorld())?.card) {
+          this.settledLater = event;
+          return;
+        }
         await this.wakeDm(
           "road",
           undefined,

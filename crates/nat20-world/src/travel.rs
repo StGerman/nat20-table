@@ -360,6 +360,18 @@ impl World {
         )
     }
 
+    /// Draws an arrival card of `place` when a leg ends there (ENG-35).
+    pub fn draw_on_arrival(&mut self, place: &str, dice: &mut impl WorldDice) -> Option<String> {
+        self.deck.draw(
+            place,
+            When::Arrival,
+            &self.state.discovered,
+            &self.state.deeds,
+            &mut self.state.deck,
+            dice,
+        )
+    }
+
     /// Draws a night card after a night in camp where the caravan is.
     pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<String> {
         let zone = self.zone_here();

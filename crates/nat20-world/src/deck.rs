@@ -65,6 +65,9 @@ pub enum When {
     Road,
     /// After a night in camp on such a road, or in the place the zone names
     Night,
+    /// When a journey leg ends at the place the zone names, once its scene has loaded
+    /// (ENG-35): the place's pay-offs
+    Arrival,
 }
 
 /// One card.
@@ -500,6 +503,12 @@ impl Deck {
             if card.when == When::Road && !road_zones.contains(card.zone.as_str()) {
                 return bad(format!(
                     "road card {} is in {}, which is no road's zone",
+                    card.id, card.zone
+                ));
+            }
+            if card.when == When::Arrival && map.place(&card.zone).is_none() {
+                return bad(format!(
+                    "arrival card {} is in {}, which is no place",
                     card.id, card.zone
                 ));
             }
@@ -1516,5 +1525,29 @@ mod tests {
             &mut dice,
         );
         assert_eq!(card.as_deref(), Some("mud"));
+    }
+
+    #[test]
+    fn an_arrival_card_lives_in_a_place() {
+        let map = small_map();
+        let mut d = deck();
+        d.cards[3].when = When::Arrival;
+        d.cards[3].zone = "inn".into();
+        d.validate(&map).unwrap();
+        let mut dice = ListDice::new([1]);
+        let mut state = DeckState::default();
+        let mut found = known();
+        found.insert("ruin".into());
+        let card = d.draw(
+            "inn",
+            When::Arrival,
+            &found,
+            &DeedBook::new(),
+            &mut state,
+            &mut dice,
+        );
+        assert_eq!(card.as_deref(), Some("ruin_ghost"));
+        d.cards[3].zone = "fields".into();
+        assert!(d.validate(&map).unwrap_err().0.contains("is no place"));
     }
 }
