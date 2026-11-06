@@ -90,6 +90,9 @@ const table = new TableState({
   transcript,
   inputsFile: path.join(runDir, "inputs.jsonl"),
   ...guards(flags.scenes!, engine, language),
+  // The scripted yard DM writes English whatever the players' language, so its narration is held to
+  // the English guard (review of table #288: a Russian guard would drop every line it says).
+  narrationGuard: guards(flags.scenes!, engine, "en").narrationGuard,
 });
 const players: PlayerAgent[] = party.ai.map((handle) =>
   scripted ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle)!, choice, language, human: party.human, russianNames: party.russianNames, usage }),
