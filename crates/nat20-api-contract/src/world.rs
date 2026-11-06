@@ -296,6 +296,10 @@ pub struct RoadKnown {
     pub good_road: bool,
     /// The fastest pace the road allows.
     pub max_pace: Pace,
+    /// How long the road takes from where the caravan stands (API-49): set on each road out of
+    /// the caravan's place, absent elsewhere and on the road.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reach: Option<ReachView>,
 }
 
 /// A road from a discovered place to one the party has not found yet, as a player sees it:
@@ -314,6 +318,56 @@ pub struct RoadUnexplored {
     pub good_road: bool,
     /// The fastest pace the road allows.
     pub max_pace: Pace,
+    /// How long the road takes from where the caravan stands (API-49): set on each road out of
+    /// the caravan's place, absent elsewhere and on the road.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reach: Option<ReachView>,
+}
+
+/// How long one road out of the caravan's place takes (API-49), worked out by the world with the
+/// travel rule: at a Normal pace, or the road's slower maximum, and when the day's distance runs
+/// out on the way, a night on the road and on the next morning. Players read it as prose and a
+/// watch; the minutes are for wording, never shown.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct ReachView {
+    /// The pace the plan goes at.
+    pub pace: Pace,
+    /// Minutes on the move, nights left out.
+    pub minutes: u32,
+    /// Nights spent before arriving: 0 when the caravan gets there today.
+    pub nights: u32,
+    /// When the caravan gets to the road's other end.
+    pub arrives: ClockView,
+}
+
+/// One leg of the escort's trip (API-49).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct TripLegView {
+    /// The road id.
+    pub road: String,
+    /// The place the leg ends at; always one the party has discovered.
+    pub to: String,
+    /// The pace the plan goes at.
+    pub pace: Pace,
+    /// Miles still to go on this road.
+    pub miles: u32,
+    /// Minutes on the move, nights left out.
+    pub minutes: u32,
+    /// Nights spent before arriving, counted from the leg before.
+    pub nights: u32,
+    /// When the caravan gets to `to`.
+    pub arrives: ClockView,
+}
+
+/// The route the merchant's caravan travels from where it is to the escort's destination (API-49),
+/// leg by leg and with the day's distance shared across legs, as `ReachView` works it out.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct TripView {
+    /// The legs in travel order. They stop before the first place the party hasn't discovered,
+    /// so a trip never names one.
+    pub legs: Vec<TripLegView>,
+    /// Whether the legs reach the destination; false when they stop before an undiscovered place.
+    pub complete: bool,
 }
 
 /// Some of one good in a wagon.
@@ -500,6 +554,10 @@ pub struct WorldPlayer {
     /// The escort contract, when the party is hired on one (API-47).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub escort: Option<EscortView>,
+    /// The route to the escort's destination (API-49): while the contract is under way and the
+    /// merchant's caravan follows its route from a place on it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trip: Option<TripView>,
 }
 
 /// One journey leg, in `travel`'s result and the `traveled` event.

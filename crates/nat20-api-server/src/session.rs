@@ -1187,6 +1187,8 @@ impl Session {
             world: self.campaign.as_ref().map(|c| WorldFull {
                 view: c.dm_view(|h| game.is_up(h)),
                 drivers: c.drivers(),
+                reach: c.reach(),
+                trip: c.trip(),
             }),
         };
         projection::state(viewer, full).ok_or_else(|| {
