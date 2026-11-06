@@ -1,5 +1,5 @@
 {
-    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. Dragging the tree aside remembers a deed (API-52). Not shipped content; the Wend deck is MAP-6.",
+    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. Dragging the tree aside remembers a deed (API-52). The tower trail holds four cards that come only while the tree was not cleared (`unless`), so only the draw_three fixture meets them, and the DM picks among those a draw offers (API-53). Not shipped content; the Wend deck is MAP-6.",
     "cards": [
         {
             "id": "fallen_tree",
@@ -52,6 +52,51 @@
                     "text": "Go out and drive them off.",
                     "effects": [{"do": "fight", "monsters": ["wolf"]}]
                 }
+            ]
+        },
+        {
+            "id": "hill_goats",
+            "zone": "vale_hills",
+            "target": "blades",
+            "unless": "cleared_the_tree",
+            "text": "Goats watch the wagon from the rocks above the trail.",
+            "choices": [
+                {"id": "wave", "text": "Wave to them."},
+                {"id": "shoo", "text": "Throw a stone to clear them off the trail.", "effects": [{"do": "delay", "minutes": 15}]}
+            ]
+        },
+        {
+            "id": "shepherd_boy",
+            "zone": "vale_hills",
+            "target": "blades",
+            "unless": "cleared_the_tree",
+            "text": "A shepherd boy sits on a stone and asks where the wagon is going.",
+            "choices": [
+                {"id": "tell", "text": "Tell him."},
+                {"id": "walk_on", "text": "Walk on without a word.", "effects": [{"do": "delay", "minutes": 15}]}
+            ]
+        },
+        {
+            "id": "cairn",
+            "zone": "vale_hills",
+            "target": "blades",
+            "unless": "cleared_the_tree",
+            "text": "A cairn of stones stands beside the trail, one stone fallen.",
+            "note": "The stones are warm to the touch, even at night.",
+            "choices": [
+                {"id": "set", "text": "Set the stone back."},
+                {"id": "leave", "text": "Leave it.", "effects": [{"do": "delay", "minutes": 15}]}
+            ]
+        },
+        {
+            "id": "broken_cart",
+            "zone": "vale_hills",
+            "target": "blades",
+            "unless": "cleared_the_tree",
+            "text": "A broken cart lies on its side in the ditch.",
+            "choices": [
+                {"id": "pass", "text": "Pass it by."},
+                {"id": "search", "text": "Look through it.", "effects": [{"do": "delay", "minutes": 15}]}
             ]
         }
     ]

@@ -3289,7 +3289,7 @@ fn an_unattended_arrival_card_keeps_the_road_card_off_the_last_leg() {
         "choices": [{ "id": "shoo", "text": "Shoo it." }, { "id": "leave", "text": "Leave it." }]
     }));
     cards.push(json!({
-        "id": "hill_goats", "zone": "vale_hills", "target": "blades",
+        "id": "hill_crows", "zone": "vale_hills", "target": "blades",
         "text": "Goats watch from the rocks.",
         "choices": [{ "id": "wave", "text": "Wave." }, { "id": "pass", "text": "Pass by." }]
     }));
