@@ -1,7 +1,7 @@
 // The human's input row as a line editor (M10 P6, TASKS.md AGT-48, engine/m6/input-line-design.md):
 // a pure reducer over the typed text and the cursor, and the map from Ink's keys to its edits.
 // Pure, so the editing is tested without a terminal, like panel.ts.
-import { COMMANDS } from "./input.ts";
+import { COMMAND_HELP } from "./input.ts";
 
 /** What is typed so far, and where the cursor stands in it (0 = before the first character). */
 export interface Draft {
@@ -30,7 +30,7 @@ export type Edit =
   | { kind: "complete" };
 
 /** The slash commands Tab completes, the seat's own included. */
-const COMPLETABLE = ["help", "panel", ...COMMANDS];
+const COMPLETABLE = Object.keys(COMMAND_HELP);
 
 export function edit(draft: Draft, change: Edit): Draft {
   const { text, cursor } = draft;
