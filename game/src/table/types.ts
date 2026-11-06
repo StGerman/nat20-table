@@ -43,7 +43,7 @@ export type TableEvent =
       lines: string[];
       choices: Choice[];
       budget?: TurnBudget;
-      /** The number Enter on an empty line takes (a road card: "go with the others", AGT-80). */
+      /** The number Enter on an empty line takes (a road card: the first choice when the human speaks first, else the others' choice; AGT-80, AGT-87). */
       preset?: number;
     }
   /** A reaction the human may take: yes or no. */
