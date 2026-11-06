@@ -36,9 +36,14 @@ export function pickKey(roster: RosterEntry[], state: PickState, key: PickKey): 
   }
 }
 
-/** The rows of the first question when a party is saved: go on with it, or start a new one. */
-export function partyRows(saved: string, at: number): string[] {
-  return [`Continue with your party: ${saved}`, "Start a new party (it replaces the saved one when this game ends)"].map((row, i) => `${i === at ? "❯" : " "} ${i + 1}. ${row}`);
+/**
+ * The rows of the first question when a party is saved: go on with it, or start a new one; with
+ * `again`, also play the last journey again from where it began (API-51).
+ */
+export function partyRows(saved: string, at: number, again = false): string[] {
+  const rows = [`Continue with your party: ${saved}`, "Start a new party (it replaces the saved one when this game ends)"];
+  if (again) rows.push("Play the last journey again from where it began, with the party as it was then");
+  return rows.map((row, i) => `${i === at ? "❯" : " "} ${i + 1}. ${row}`);
 }
 
 /** The list's rows: a cursor on the highlighted one, the names padded so what they are lines up, the default marked. */
@@ -108,32 +113,34 @@ export function PickScreen({ roster, fallback, title, palette, onPick }: { roste
 }
 
 /** A key on the party question: the new highlight, and the answer once Enter picks. */
-export function partyKey(state: PickState, key: PickKey): { state: PickState; party?: Party } {
+export function partyKey(state: PickState, key: PickKey, again = false): { state: PickState; party?: Party } {
+  const rows = again ? 3 : 2;
   switch (key.kind) {
     case "up":
+      return { state: { at: (state.at + rows - 1) % rows } };
     case "down":
-      return { state: { at: 1 - state.at } };
+      return { state: { at: (state.at + 1) % rows } };
     case "digit":
-      return key.digit === 1 || key.digit === 2 ? { state: { at: key.digit - 1 } } : { state };
+      return key.digit >= 1 && key.digit <= rows ? { state: { at: key.digit - 1 } } : { state };
     case "enter":
-      return { state, party: state.at === 0 ? "continue" : "new" };
+      return { state, party: (["continue", "new", "again"] as const)[state.at] };
   }
 }
 
-/** Whether the run goes on with the saved party or starts a new one. */
-export type Party = "continue" | "new";
+/** Whether the run goes on with the saved party, starts a new one, or plays the last journey again (API-51). */
+export type Party = "continue" | "new" | "again";
 
 const keyOf = (input: string, key: { upArrow: boolean; downArrow: boolean; return: boolean }): PickKey | undefined =>
   key.upArrow ? { kind: "up" } : key.downArrow ? { kind: "down" } : key.return ? { kind: "enter" } : /^\d$/.test(input) ? { kind: "digit", digit: Number(input) } : undefined;
 
-function PartyScreen({ saved, title, palette, onParty }: { saved: string; title?: string; palette: Palette; onParty: (party: Party | "") => void }) {
+function PartyScreen({ saved, again, title, palette, onParty }: { saved: string; again: boolean; title?: string; palette: Palette; onParty: (party: Party | "") => void }) {
   const size: PanelSize = useWindowSize();
   const [state, setState] = useState<PickState>({ at: 0 });
   useInput((input, key) => {
     if (key.ctrl && input === "c") return onParty("");
     const press = keyOf(input, key);
     if (!press) return;
-    const next = partyKey(state, press);
+    const next = partyKey(state, press, again);
     setState(next.state);
     if (next.party) onParty(next.party);
   });
@@ -146,17 +153,25 @@ function PartyScreen({ saved, title, palette, onParty }: { saved: string; title?
     h(
       Box,
       { key: "body", flexDirection: "column", flexGrow: 1 },
-      ...partyRows(saved, state.at).map((row, i) => h(Text, { key: `p${i}`, wrap: "wrap", ...(i === state.at ? textProps({ accent: "rust", bold: true }, palette) : {}) }, row)),
+      ...partyRows(saved, state.at, again).map((row, i) => h(Text, { key: `p${i}`, wrap: "wrap", ...(i === state.at ? textProps({ accent: "rust", bold: true }, palette) : {}) }, row)),
     ),
     h(Text, { key: "keys", wrap: "truncate-end", ...hint }, "↑/↓ or a number, Enter to choose · Ctrl+C quits"),
   );
 }
 
+/** A saved party on the start screen: its line, its levels, and the levels its last journey began at when it can be played again (API-51). */
+export interface SavedParty {
+  line: string;
+  levels: ReadonlyMap<Handle, number>;
+  startLevels?: ReadonlyMap<Handle, number>;
+}
+
 /** The party question when a party is saved, then the pick list. */
-function StartScreen({ roster, fallback, title, palette, saved, onStart }: { roster: RosterEntry[]; fallback: Handle; title?: string; palette: Palette; saved: { line: string; levels: ReadonlyMap<Handle, number> }; onStart: (party: Party | "", handle: Handle) => void }) {
+function StartScreen({ roster, fallback, title, palette, saved, onStart }: { roster: RosterEntry[]; fallback: Handle; title?: string; palette: Palette; saved: SavedParty; onStart: (party: Party | "", handle: Handle) => void }) {
   const [party, setParty] = useState<Party | undefined>(undefined);
-  if (!party) return h(PartyScreen, { saved: saved.line, title, palette, onParty: (p: Party | "") => (p ? setParty(p) : onStart("", "")) });
-  const shown = party === "continue" ? roster.map((r) => ({ ...r, level: saved.levels.get(r.handle) ?? r.level })) : roster;
+  if (!party) return h(PartyScreen, { saved: saved.line, again: saved.startLevels !== undefined, title, palette, onParty: (p: Party | "") => (p ? setParty(p) : onStart("", "")) });
+  const levels = party === "continue" ? saved.levels : party === "again" ? saved.startLevels : undefined;
+  const shown = levels ? roster.map((r) => ({ ...r, level: levels.get(r.handle) ?? r.level })) : roster;
   return h(PickScreen, { roster: shown, fallback, title, palette, onPick: (handle: Handle) => onStart(party, handle) });
 }
 
@@ -168,7 +183,7 @@ function StartScreen({ roster, fallback, title, palette, saved, onStart }: { ros
 export function pickOnScreen(
   roster: RosterEntry[],
   fallback: Handle,
-  options: { title?: string; palette?: Palette; render?: RenderOptions; saved?: { line: string; levels: ReadonlyMap<Handle, number> } } = {},
+  options: { title?: string; palette?: Palette; render?: RenderOptions; saved?: SavedParty } = {},
 ): Promise<{ handle: Handle; instance: Instance; party?: Party }> {
   return new Promise((resolve) => {
     // A crash before the pick gives the terminal back before its trace prints, as the table does.

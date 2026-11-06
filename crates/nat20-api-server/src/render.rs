@@ -275,6 +275,11 @@ pub fn text(kind: &EventKind) -> String {
             CardCame::EnginePick => format!("The DM did not pick; the engine takes {card}."),
             CardCame::Soon => format!("{card} comes next, as an earlier choice set it."),
         },
+        EventKind::TripToStart { from, days } => match days {
+            0 => format!("The new contract starts where the last one ended, at {from}."),
+            1 => format!("The party travels one day from {from} to the new contract's start."),
+            n => format!("The party travels {n} days from {from} to the new contract's start."),
+        },
         EventKind::ScoutAhead { actor } => {
             format!("{} walks ahead of the caravan as the scout.", actor.0)
         }
