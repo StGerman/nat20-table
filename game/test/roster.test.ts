@@ -136,6 +136,7 @@ test("a party with a journey behind it can play that journey again; one saved by
   assert.equal(replayRoster(roster(900)), undefined, "no journey yet");
   assert.equal(rosterRefusal(roster(900)), undefined);
   assert.match(rosterRefusal({ ...roster(900), format: 1 } as Roster) ?? "", /older version of the game.*stays as it is.*--new-party/);
+  assert.match(rosterRefusal({ ...roster(900), format: 3 } as Roster) ?? "", /newer version of the game.*stays as it is.*--new-party/);
   const base = { name: "wend", loaded_sha256: "a".repeat(64), saved_sha256: "b".repeat(64), not_saved: null, chain: "held" as const };
   assert.equal(rosterReport({ ...base, party: "again" }), `Roster: played the last journey of the party saved as wend again from where it began (sha256 ${"a".repeat(12)}); saved (sha256 ${"b".repeat(12)})`);
 });

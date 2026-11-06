@@ -113,6 +113,7 @@ export const ROSTER_FORMAT = 2;
 /** Why a saved party can't be carried on, in one plain line; undefined when it can. */
 export function rosterRefusal(roster: Roster): string | undefined {
   if (roster.format === ROSTER_FORMAT) return undefined;
+  if (roster.format > ROSTER_FORMAT) return "this party was saved by a newer version of the game, which this version can't read. Its file stays as it is. To play it, update the game; to play now, start a new party: add --new-party to the command.";
   return "this party was saved by an older version of the game, which this version can't read. Its file stays as it is. To play now, start a new party: add --new-party to the command.";
 }
 
