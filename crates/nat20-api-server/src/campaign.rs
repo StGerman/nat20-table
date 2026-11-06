@@ -9,9 +9,9 @@ use std::path::{Path, PathBuf};
 
 use nat20_api_contract::{
     Ability, CaravanView, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget, CargoView,
-    CarriedItem, Carries, ClockView, Coins, ErrorCode, EscortBlade, EscortDm, EscortView, Handle,
-    LegView, MilesToday, NpcAttitude, NpcDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm,
-    RosterWorld, Side, Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm,
+    CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade, EscortDm, EscortView,
+    Handle, LegView, MilesToday, NpcAttitude, NpcDm, Pace, PlaceDm, ReachView, RejectReason,
+    RoadDm, RosterWorld, Side, Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm,
     WorldPosition,
 };
 use nat20_world as world;
@@ -577,6 +577,16 @@ impl Campaign {
                 world::Owner::Player(_) => Vec::new(),
             },
             card: self.card_view(&table),
+            deeds: state
+                .deeds
+                .iter()
+                .map(|(id, d)| DeedDm {
+                    deed: id.clone(),
+                    by: d.by.iter().cloned().map(Handle).collect(),
+                    day: d.day,
+                    contract: d.contract,
+                })
+                .collect(),
             escort: self.escort_view().map(|contract| EscortDm {
                 contract,
                 purse_cp: state.escort.as_ref().map_or(0, |e| e.purse_cp),

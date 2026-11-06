@@ -313,18 +313,33 @@ impl Session {
         }
     }
 
-    /// The world remembers a deed (ENG-33). DM-only bookkeeping: `deed_remembered` reaches
-    /// the wire with API-52.
+    /// The world remembers a deed (ENG-33) and logs `deed_remembered`, DM only (API-52). A deed
+    /// done again keeps its first record and logs nothing.
     pub(super) fn remember(&mut self, deed: &str, by: Vec<String>) {
-        if let Some(campaign) = self.campaign.as_mut() {
-            campaign.world.remember(deed, by);
+        let Some(campaign) = self.campaign.as_mut() else {
+            return;
+        };
+        if !campaign.world.remember(deed, by) {
+            return;
         }
+        let record = campaign.world.state.deeds[deed].clone();
+        self.push(Pending {
+            round: None,
+            visibility: Visibility::Dm,
+            kind: EventKind::DeedRemembered {
+                deed: deed.to_owned(),
+                by: record.by.into_iter().map(Handle).collect(),
+                day: record.day,
+                contract: record.contract,
+            },
+        });
     }
 
     /// Follows the blows of a fight for the death deed (ENG-36): who rolled each roll, who dealt
     /// the last damage to each creature, and, when a card fight's named NPC dies, the deed
-    /// `killed_<npc>` by the one who dealt the last blow.
-    pub(super) fn follow_blows(&mut self, kind: &EventKind) {
+    /// `killed_<npc>` by the one who dealt the last blow: returned, for the caller to remember
+    /// once the death itself is logged.
+    pub(super) fn follow_blows(&mut self, kind: &EventKind) -> Option<(String, Vec<String>)> {
         match kind {
             EventKind::Action { actor, .. } => self.last_actor = Some(actor.0.clone()),
             EventKind::Roll {
@@ -351,11 +366,12 @@ impl Session {
             } => {
                 if let Some(npc) = self.card_npcs.remove(&target.0) {
                     let by = self.last_blow.get(&target.0).cloned().into_iter().collect();
-                    self.remember(&world::killed_deed(&npc), by);
+                    return Some((world::killed_deed(&npc), by));
                 }
             }
             _ => {}
         }
+        None
     }
 
     /// A card's fight: each stat block placed hostile at the scene's first anchor under a

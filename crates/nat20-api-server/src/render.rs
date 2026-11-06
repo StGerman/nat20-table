@@ -266,6 +266,14 @@ pub fn text(kind: &EventKind) -> String {
             clock.day,
             snake_words(&clock.watch)
         ),
+        EventKind::DeedRemembered { deed, by, .. } => {
+            if by.is_empty() {
+                format!("The world remembers {deed}.")
+            } else {
+                let by: Vec<&str> = by.iter().map(|h| h.0.as_str()).collect();
+                format!("The world remembers {deed}, by {}.", by.join(", "))
+            }
+        }
         EventKind::EscortSettled { destination } => {
             format!("The caravan reaches {destination}; the Blades are paid what they are owed.")
         }
