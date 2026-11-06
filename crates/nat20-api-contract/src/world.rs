@@ -84,6 +84,24 @@ pub struct CardChoiceView {
     pub text: String,
 }
 
+/// One choice on a road card, as the DM sees it (API-55): the players' words and the
+/// customs taking it keeps or breaks. DM only; players see [`CardChoiceView`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CardChoiceDm {
+    /// The choice id; `choose_card` takes it.
+    pub id: String,
+    /// What the players read.
+    pub text: String,
+    /// The customs taking it keeps, by id from the world's customs (ENG-39): the DM narrates
+    /// who reacts, never a verdict. Empty when it touches none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keeps: Vec<String>,
+    /// The customs taking it breaks, by id from the world's customs (ENG-39). Empty when it
+    /// touches none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub breaks: Vec<String>,
+}
+
 /// One seat's word on the card on the table: a Blade's advice or vote.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct CardSaid {
@@ -104,8 +122,8 @@ pub struct CardDm {
     pub target: CardTarget,
     /// What the players read.
     pub text: String,
-    /// The choices.
-    pub choices: Vec<CardChoiceView>,
+    /// The choices, with the customs each keeps or breaks (API-55).
+    pub choices: Vec<CardChoiceDm>,
     /// What each Blade has said so far.
     pub said: Vec<CardSaid>,
     /// The Blades who still have to speak.
@@ -130,8 +148,8 @@ pub struct OfferedCard {
     pub target: CardTarget,
     /// What the players would read.
     pub text: String,
-    /// The choices it would offer.
-    pub choices: Vec<CardChoiceView>,
+    /// The choices it would offer, with the customs each keeps or breaks (API-55).
+    pub choices: Vec<CardChoiceDm>,
     /// What only the DM reads: the card's one oddity.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,

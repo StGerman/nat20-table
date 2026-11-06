@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.64"
+    "version": "1.0.0-dev.65"
   },
   "$defs": {
     "Ability": {
@@ -695,6 +695,38 @@
         }
       ]
     },
+    "CardChoiceDm": {
+      "description": "One choice on a road card, as the DM sees it (API-55): the players' words and the\ncustoms taking it keeps or breaks. DM only; players see [`CardChoiceView`].",
+      "type": "object",
+      "properties": {
+        "breaks": {
+          "description": "The customs taking it breaks, by id from the world's customs (ENG-39). Empty when it\ntouches none.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "id": {
+          "description": "The choice id; `choose_card` takes it.",
+          "type": "string"
+        },
+        "keeps": {
+          "description": "The customs taking it keeps, by id from the world's customs (ENG-39): the DM narrates\nwho reacts, never a verdict. Empty when it touches none.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "description": "What the players read.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
     "CardChoiceView": {
       "description": "One choice on a road card.",
       "type": "object",
@@ -748,10 +780,10 @@
       "type": "object",
       "properties": {
         "choices": {
-          "description": "The choices.",
+          "description": "The choices, with the customs each keeps or breaks (API-55).",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/CardChoiceView"
+            "$ref": "#/$defs/CardChoiceDm"
           }
         },
         "id": {
@@ -4872,10 +4904,10 @@
       "type": "object",
       "properties": {
         "choices": {
-          "description": "The choices it would offer.",
+          "description": "The choices it would offer, with the customs each keeps or breaks (API-55).",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/CardChoiceView"
+            "$ref": "#/$defs/CardChoiceDm"
           }
         },
         "id": {
