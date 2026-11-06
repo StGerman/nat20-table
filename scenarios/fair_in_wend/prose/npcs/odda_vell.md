@@ -1,6 +1,6 @@
 # Odda Vell, the grain factor
 
-**Who she is.** A broad, weathered woman of about fifty in a man's oilskin coat, widowed young, who has bought the Highsteads' wheat for twenty autumns and sold it at the Wendmouth fair. She drives the wagon herself, talks to the horses more than to people, and keeps her purse inside her coat.
+**Who she is.** A broad, weathered woman of about fifty in a man's oilskin coat, widowed young, who has bought the Highsteads' wheat for twenty autumns and sold it at the Saltmouth fair. She drives the wagon herself, talks to the horses more than to people, and keeps her purse inside her coat.
 
 **Voice.** Short sentences and farm sayings ("A wet road is still a road." "Bread doesn't argue."). Calls the Blades by their names once she has learned them, and "my lot" before that. Laughs at herself, never at the hill folk.
 

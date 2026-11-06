@@ -293,7 +293,7 @@ export function mapLines(world: WorldPlayer, form: "wide" | "pane" = "wide"): st
     if (!onRoute.has(r.from)) continue;
     const time = r.reach ? legTime(r.reach.minutes, r.reach.nights) : "";
     // An unknown road, not a place (Stas's run, 2026-11-05: "? somewhere new 4 mi from
-    // Wendmouth" read as where the party camped): the line says it is a road and where it starts.
+    // Saltmouth" read as where the party camped): the line says it is a road and where it starts.
     const out = r.from === here ? "here" : name(r.from);
     off.push(
       wide

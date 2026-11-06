@@ -1,6 +1,6 @@
-# The fair at Wendmouth
+# The fair at Saltmouth
 
-**Read aloud.** Wendmouth on fair week: the town gate wide open, a press of carts, the smell of salt and roasting chestnuts, a fiddler somewhere out of sight. Odda brings the wagon onto the fair ground, puts both hands flat on the sacks and lets out a breath she has been holding since the Highsteads.
+**Read aloud.** Saltmouth on fair week: the town gate wide open, a press of carts, the smell of salt and roasting chestnuts, a fiddler somewhere out of sight. Odda brings the wagon onto the fair ground, puts both hands flat on the sacks and lets out a breath she has been holding since the Highsteads.
 
 **What the characters can notice.**
 - Watching the crowd around the wagon (the `spot_the_cutpurse` check), a character sees a thin boy working his way towards Odda's coat. Stopped, he runs; nobody gets hurt.

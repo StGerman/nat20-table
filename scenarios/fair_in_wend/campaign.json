@@ -203,7 +203,7 @@
         },
         {
             "id": "fw_wendmouth",
-            "title": "The fair at Wendmouth",
+            "title": "The fair at Saltmouth",
             "beat": "narrative",
             "target_minutes": 10,
             "prose": "prose/fw_wendmouth.md",

@@ -174,7 +174,7 @@ The world and the sandbox are separate folders: the Wend map is written once and
 | `worlds/wend/deck/*.json` | zone and place cards, choices with effects and chains; NPCs and packs add their own | server; deck linter in CI |
 | `scenarios/fair_in_wend/` | the sandbox: `campaign.json` (an extension of the `adventure.json` format, not a second file: world, start, day limit, allowed stat blocks, enabled variant rules, caravan owner and route, escort contract), place scenes and one shared `road` scene for road events and fights, DM prose, a skeleton for `pack:check` | server, DM agent |
 
-The shared `road` scene removes the risk of "positions without a scene map": it has anchors (ahead, behind, by the wagon, roadside), and `place_creature` uses them. The town name Wendmouth is a draft; it appears only in content and changes with one replace.
+The shared `road` scene removes the risk of "positions without a scene map": it has anchors (ahead, behind, by the wagon, roadside), and `place_creature` uses them. The town name Saltmouth is a draft; it appears only in content and changes with one replace.
 
 ## Tests and exit
 
@@ -205,7 +205,7 @@ S1 and the crate split are recorded in decision 0057; S2, S4 and the pay in deci
 
 **Pay (S4, accepted by Stas 2026-11-02).** Each Hired Blade is paid the SRD skilled-hireling wage, 2 GP a day per person; there is no shared pot. The merchant pays from their own purse (`npc:<id>`), and the engine writes one `wage` entry per Blade. The terms (an advance, the rest on arrival) are in `campaign.json`. A fallen Blade is paid for the days served. If the merchant dies, the rest of the pay is in their purse and can be looted; that is the party's moral choice, not arithmetic.
 
-The name Wendmouth stays open and blocks nothing.
+The name Saltmouth stays open and blocks nothing.
 
 ## Risks, without sugar
 

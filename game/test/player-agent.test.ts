@@ -216,7 +216,7 @@ test("a campaign's place NPCs get their Russian names in the DM's name line, nev
   const wend = path.join(REPO, "scenarios/fair_in_wend");
   const pack = readPack(wend);
   const places = [
-    "wendmouth: Уэндмут",
+    "wendmouth: Солтмут",
     "wendford: Вендфорд",
     "millbeck_bridge: мост через Миллбек",
     "pells_mill: мельница Пелла",
@@ -228,7 +228,7 @@ test("a campaign's place NPCs get their Russian names in the DM's name line, nev
   assert.deepEqual(pack.placeNames, ["shepherd_gwyn: пастушка Гвин", "osric_hale: староста Осрик Хейл", "warden_brannock: смотритель ярмарки Браннок", ...places]);
   const party = castParty(wend);
   const dm = dmPrompt(pack, "bren", party.ai, "prompt", "ru");
-  assert.match(dm, /odda_vell: торговка зерном Одда Велл; shepherd_gwyn: пастушка Гвин; osric_hale: староста Осрик Хейл; warden_brannock: смотритель ярмарки Браннок; wendmouth: Уэндмут;/);
+  assert.match(dm, /odda_vell: торговка зерном Одда Велл; shepherd_gwyn: пастушка Гвин; osric_hale: староста Осрик Хейл; warden_brannock: смотритель ярмарки Браннок; wendmouth: Солтмут;/);
   // The pack's glossary reaches the DM's Russian prompt alone (AGT-85, F4 «оилскиновый плащ»).
   assert.match(dm, /Words in Russian: write these words of the prose as given here: oilskin coat: промасленный плащ\./);
   assert.ok(!dmPrompt(pack, "bren", party.ai, "prompt", "en").includes("Words in Russian"));
@@ -236,7 +236,7 @@ test("a campaign's place NPCs get their Russian names in the DM's name line, nev
   for (const npc of ["Гвин", "Браннок"]) assert.ok(!player.includes(npc), npc);
   assert.ok(!player.includes("промасленный"), "the glossary is the DM's");
   // A player knows the start place and the places the map marks discovered, and no other (AGT-85, Rule 3).
-  const known = ["wendmouth: Уэндмут", "wendford: Вендфорд", "millbeck_bridge: мост через Миллбек", "pells_mill: мельница Пелла", "highsteads: Хайстедс"];
+  const known = ["wendmouth: Солтмут", "wendford: Вендфорд", "millbeck_bridge: мост через Миллбек", "pells_mill: мельница Пелла", "highsteads: Хайстедс"];
   for (const place of places) assert.equal(player.includes(place), known.includes(place), place);
   assert.equal(readPack(MILL).placeNames, undefined, "a pack without a campaign has no place NPCs");
 });
