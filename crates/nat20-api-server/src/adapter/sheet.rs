@@ -115,7 +115,6 @@ pub fn sheet(
         })
         .collect::<Vec<_>>();
     let initiative_bonus = bonus(engine, entity, skill_set.get(&Skill::Initiative));
-    let perception = bonus(engine, entity, skill_set.get(&Skill::Perception));
     drop(skill_set);
 
     let points = systems::helpers::get_component::<
@@ -182,7 +181,8 @@ pub fn sheet(
         ac: systems::loadout::armor_class(engine, entity).total().max(0) as u32,
         speed_ft: (speed_m / METERS_PER_FOOT).round() as u32,
         initiative_bonus,
-        passive_perception: (10 + i32::from(perception)).max(0) as u8,
+        passive_perception: systems::d20::passive_score(engine, entity, Skill::Perception).max(0)
+            as u8,
         hp,
         hp_max,
         temp_hp,

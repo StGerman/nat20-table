@@ -220,7 +220,8 @@ pub struct Sheet {
     pub speed_ft: u32,
     /// Initiative bonus.
     pub initiative_bonus: i8,
-    /// Passive Perception: 10 plus the Perception bonus.
+    /// Passive Perception, as core computes it (SRD 5.2.1): 10 plus the Perception bonus, plus 5
+    /// with Advantage on Perception checks or minus 5 with Disadvantage.
     pub passive_perception: u8,
     /// Current Hit Points.
     pub hp: u32,
