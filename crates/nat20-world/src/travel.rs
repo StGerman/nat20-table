@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
-    deck::{Deck, DeckError, DeckState, When},
+    deck::{Deck, DeckError, DeckState, Deed, DeedBook, When},
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
     map::{MapError, Position, WorldMap},
@@ -107,6 +107,21 @@ pub struct WorldState {
     /// The escort contract: days served, pay so far, the merchant's purse (API-47)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub escort: Option<EscortState>,
+    /// The deeds the world remembers, by id (ENG-33): DM-only
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub deeds: DeedBook,
+    /// The contract under way: 1 for the first, the number a deed records; left out of the
+    /// saved state while it is 1
+    #[serde(default = "first_contract", skip_serializing_if = "is_first_contract")]
+    pub contract: u32,
+}
+
+fn first_contract() -> u32 {
+    1
+}
+
+fn is_first_contract(contract: &u32) -> bool {
+    *contract == 1
 }
 
 /// The world: the map and goods files, the route an NPC owner follows, and the state.
@@ -228,6 +243,8 @@ impl World {
                 caravan,
                 traveled_today: 0,
                 deck: DeckState::default(),
+                deeds: DeedBook::new(),
+                contract: first_contract(),
                 npcs: BTreeMap::new(),
                 escort: None,
             },
@@ -313,6 +330,23 @@ impl World {
         }
     }
 
+    /// Remembers a deed done today by `by` in the contract under way. A deed done again
+    /// keeps its first record. Returns whether it is new.
+    pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
+        if self.state.deeds.contains_key(deed) {
+            return false;
+        }
+        self.state.deeds.insert(
+            deed.to_string(),
+            Deed {
+                by,
+                day: self.state.clock.day,
+                contract: self.state.contract,
+            },
+        );
+        true
+    }
+
     /// Draws a road card after a leg along `road`. Returns the card on the table, if any.
     pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<String> {
         let zone = self.map.road(road)?.zone.clone();
@@ -320,6 +354,7 @@ impl World {
             &zone,
             When::Road,
             &self.state.discovered,
+            &self.state.deeds,
             &mut self.state.deck,
             dice,
         )
@@ -332,6 +367,7 @@ impl World {
             &zone,
             When::Night,
             &self.state.discovered,
+            &self.state.deeds,
             &mut self.state.deck,
             dice,
         )
@@ -497,6 +533,30 @@ mod tests {
             Clock::at(1, 8, 0),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn a_deed_keeps_its_first_record() {
+        let mut world = world("maren");
+        assert!(world.remember("paid_toll", vec!["bren".into()]));
+        world.delay(24 * 60);
+        assert!(!world.remember("paid_toll", vec!["maren".into()]));
+        assert_eq!(
+            world.state.deeds["paid_toll"],
+            Deed {
+                by: vec!["bren".into()],
+                day: 1,
+                contract: 1,
+            }
+        );
+        // A roster saved before deeds reads as the first contract with none.
+        let mut saved = serde_json::to_value(&world.state).unwrap();
+        let fields = saved.as_object_mut().unwrap();
+        fields.remove("deeds");
+        fields.remove("contract");
+        let back: WorldState = serde_json::from_value(saved).unwrap();
+        assert!(back.deeds.is_empty());
+        assert_eq!(back.contract, 1);
     }
 
     #[test]

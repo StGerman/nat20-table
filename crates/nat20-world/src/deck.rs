@@ -12,6 +12,12 @@
 //! Blades advise, and an NPC owner takes their majority; a Blade card is the Blades' vote.
 //! The world returns the chosen choice's effects as data; the server runs them through
 //! core (checks, fights, exhaustion, coin) and the world (cargo, time, chained cards).
+//!
+//! Deeds (Milestone 11, ENG-33, decision 0063): a choice can `remember` a deed, and a card or
+//! a choice can ask for deeds (`if`) or for their absence (`unless`). A card whose
+//! condition fails is not in the pile; a choice whose condition fails is not offered, and
+//! the choices offered are fixed when the card goes on the table. Deeds are DM-only
+//! bookkeeping: the players remember what they did through the story.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -88,12 +94,85 @@ pub struct Card {
     /// The card leaves the game once drawn instead of going to the discard
     #[serde(default)]
     pub once: bool,
+    /// Deeds the card needs: it is in the pile only when every one is remembered
+    #[serde(default, rename = "if", skip_serializing_if = "Option::is_none")]
+    pub if_deeds: Option<Deeds>,
+    /// Deeds that keep the card out: it is in the pile only when none is remembered
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unless: Option<Deeds>,
     /// The choice an NPC owner takes on a tie (caravan cards); the first tied choice when
-    /// absent
+    /// absent or not offered
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_pick: Option<String>,
-    /// Two or three choices
+    /// Two or three choices in every case the conditions allow
     pub choices: Vec<Choice>,
+}
+
+/// One deed id, or a list of them, in a card's or a choice's `if` or `unless`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Deeds {
+    /// One deed
+    One(String),
+    /// Several deeds
+    All(Vec<String>),
+}
+
+impl Deeds {
+    /// The deed ids.
+    pub fn ids(&self) -> &[String] {
+        match self {
+            Deeds::One(id) => std::slice::from_ref(id),
+            Deeds::All(ids) => ids,
+        }
+    }
+}
+
+/// A deed the world remembers: what the party did, who did it, and when.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Deed {
+    /// The handles that voted for the choice, or rolled the check it sits under; the owner
+    /// who called a caravan card; empty when nobody could speak
+    #[serde(default)]
+    pub by: Vec<String>,
+    /// The day it was done
+    pub day: u32,
+    /// The contract it was done in: 1 for the first
+    pub contract: u32,
+}
+
+/// The deeds remembered, by id. A deed done again keeps its first record.
+pub type DeedBook = BTreeMap<String, Deed>;
+
+/// Whether `if` and `unless` hold against the deeds remembered: every `if` deed is, and no
+/// `unless` deed is.
+fn holds(if_deeds: Option<&Deeds>, unless: Option<&Deeds>, known: &dyn Fn(&str) -> bool) -> bool {
+    if_deeds.is_none_or(|d| d.ids().iter().all(|id| known(id)))
+        && unless.is_none_or(|d| !d.ids().iter().any(|id| known(id)))
+}
+
+impl Card {
+    /// Whether the card's own conditions hold.
+    pub fn holds(&self, deeds: &DeedBook) -> bool {
+        holds(self.if_deeds.as_ref(), self.unless.as_ref(), &|id| {
+            deeds.contains_key(id)
+        })
+    }
+
+    /// The choices offered against these deeds, in card order.
+    pub fn offered(&self, deeds: &DeedBook) -> Vec<&Choice> {
+        self.choices.iter().filter(|c| c.holds(deeds)).collect()
+    }
+}
+
+impl Choice {
+    /// Whether the choice's conditions hold.
+    pub fn holds(&self, deeds: &DeedBook) -> bool {
+        holds(self.if_deeds.as_ref(), self.unless.as_ref(), &|id| {
+            deeds.contains_key(id)
+        })
+    }
 }
 
 /// One choice on a card.
@@ -111,6 +190,12 @@ pub struct Choice {
     /// cargo); the DM narrates why. At most one per card, caravan cards only
     #[serde(default)]
     pub owner_insists: bool,
+    /// Deeds the choice needs: it is offered only when every one is remembered
+    #[serde(default, rename = "if", skip_serializing_if = "Option::is_none")]
+    pub if_deeds: Option<Deeds>,
+    /// Deeds that keep the choice off the card: it is offered only when none is remembered
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unless: Option<Deeds>,
     /// What happens, in order
     #[serde(default)]
     pub effects: Vec<Effect>,
@@ -196,6 +281,11 @@ pub enum Effect {
         /// The card id
         card: String,
     },
+    /// The world remembers a deed, with who did it and the day (ENG-33)
+    Remember {
+        /// The deed id, in snake_case
+        deed: String,
+    },
 }
 
 /// Why a deck is unusable.
@@ -239,9 +329,25 @@ pub struct DeckState {
 pub struct PendingCard {
     /// The card id
     pub card: String,
+    /// The choice ids offered, fixed when the card went on the table; empty means every
+    /// choice of the card
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub choices: Vec<String>,
     /// Each Blade's advice (caravan card) or vote (Blade card), by handle
     #[serde(default)]
     pub said: BTreeMap<String, String>,
+}
+
+impl PendingCard {
+    /// Whether `choice` is offered.
+    pub fn offers(&self, choice: &str) -> bool {
+        self.choices.is_empty() || self.choices.iter().any(|c| c == choice)
+    }
+
+    /// The card's choices offered, in card order.
+    pub fn offered<'a>(&self, card: &'a Card) -> Vec<&'a Choice> {
+        card.choices.iter().filter(|c| self.offers(&c.id)).collect()
+    }
 }
 
 /// Who sits at the table for a card's decision.
@@ -280,6 +386,10 @@ pub struct Resolution {
     pub choice: String,
     /// How it was decided
     pub decided: Decided,
+    /// Who made the call: the Blades whose word was the choice, or the player owner who
+    /// called it; empty when nobody could speak. A `remember` at the top of the choice
+    /// records them
+    pub by: Vec<String>,
     /// The choice's effects, for the server to run
     pub effects: Vec<Effect>,
 }
@@ -358,8 +468,9 @@ impl Deck {
     /// `owner_pick` that names a choice, at most one `owner_insists` and only on caravan
     /// cards, zones that are a road zone or a place (a road card's a road zone), `requires` that names a place, DCs
     /// on the ladder, a fight only last in its list, `add_card` that names a chained card, every chained card added by
-    /// some choice, and no pile over [`MAX_PILE`] cards. Goods and stat blocks are the
-    /// server's to check.
+    /// some choice, no pile over [`MAX_PILE`] cards, every deed a card or a choice reads
+    /// written by some `remember`, and 2 or 3 choices offered in every case a card's
+    /// conditions allow (ENG-33). Goods and stat blocks are the server's to check.
     pub fn validate(&self, map: &WorldMap) -> Result<(), DeckError> {
         let bad = |s: String| Err(DeckError(s));
         let road_zones: BTreeSet<&str> = map.roads.iter().map(|r| r.zone.as_str()).collect();
@@ -389,7 +500,13 @@ impl Deck {
             {
                 return bad(format!("card {} requires unknown place {place}", card.id));
             }
-            if !(2..=3).contains(&card.choices.len()) {
+            // A card may hold more choices than it offers, when deeds pick between them; the
+            // cases are checked below. A card without conditions offers all of them.
+            let conditional = card
+                .choices
+                .iter()
+                .any(|c| c.if_deeds.is_some() || c.unless.is_some());
+            if card.choices.len() < 2 || (!conditional && card.choices.len() > 3) {
                 return bad(format!("card {} needs 2 or 3 choices", card.id));
             }
             let mut choices = BTreeSet::new();
@@ -463,6 +580,28 @@ impl Deck {
                 }
             }
         }
+        let written = self.deeds_written();
+        for card in &self.cards {
+            let reads = card
+                .if_deeds
+                .iter()
+                .chain(&card.unless)
+                .chain(
+                    card.choices
+                        .iter()
+                        .flat_map(|c| c.if_deeds.iter().chain(&c.unless)),
+                )
+                .flat_map(Deeds::ids);
+            for deed in reads {
+                if !written.contains(deed.as_str()) {
+                    return bad(format!(
+                        "card {} reads deed {deed}, which nothing writes",
+                        card.id
+                    ));
+                }
+            }
+            check_cases(card)?;
+        }
         if let Some(lost) = self
             .cards
             .iter()
@@ -473,45 +612,68 @@ impl Deck {
         Ok(())
     }
 
-    fn in_play(&self, card: &Card, discovered: &BTreeSet<String>, state: &DeckState) -> bool {
+    /// Every deed some choice of the deck can write.
+    pub fn deeds_written(&self) -> BTreeSet<&str> {
+        self.cards
+            .iter()
+            .flat_map(Deck::effects)
+            .filter_map(|e| match e {
+                Effect::Remember { deed } => Some(deed.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn in_play(
+        &self,
+        card: &Card,
+        discovered: &BTreeSet<String>,
+        deeds: &DeedBook,
+        state: &DeckState,
+    ) -> bool {
         (!card.chained || state.added.contains(&card.id))
             && card
                 .requires
                 .as_ref()
                 .is_none_or(|p| discovered.contains(p))
             && !state.gone.contains(&card.id)
+            && card.holds(deeds)
     }
 
-    /// The pile of a zone: the cards in play and not in the discard, in file order.
+    /// The pile of a zone: the cards in play and not in the discard, in file order. A card
+    /// is in play once chained in, its place discovered, not gone, and its deeds hold.
     pub fn pile<'a>(
         &'a self,
         zone: &str,
         when: When,
         discovered: &BTreeSet<String>,
+        deeds: &DeedBook,
         state: &DeckState,
     ) -> Vec<&'a Card> {
         self.cards
             .iter()
             .filter(|c| c.zone == zone && c.when == when)
-            .filter(|c| self.in_play(c, discovered, state) && !state.discard.contains(&c.id))
+            .filter(|c| self.in_play(c, discovered, deeds, state) && !state.discard.contains(&c.id))
             .collect()
     }
 
-    /// Draws a card of `zone` and puts it on the table: one d100 roll on the pile. When the
-    /// pile is empty the zone's discard is shuffled back first; a zone with no card in play
-    /// draws nothing and rolls nothing. A card already on the table is never replaced.
+    /// Draws a card of `zone` and puts it on the table with the choices its deeds offer:
+    /// one d100 roll on the pile. When the pile is empty the zone's discard is shuffled back
+    /// first; a zone with no card in play draws nothing and rolls nothing. A card already on
+    /// the table is never replaced.
     pub fn draw(
         &self,
         zone: &str,
         when: When,
         discovered: &BTreeSet<String>,
+        deeds: &DeedBook,
         state: &mut DeckState,
         dice: &mut impl WorldDice,
     ) -> Option<String> {
         if state.pending.is_some() {
             return None;
         }
-        let mut pile = self.pile(zone, when, discovered, state);
+        let mut pile = self.pile(zone, when, discovered, deeds, state);
         if pile.is_empty() {
             let back: Vec<String> = self
                 .cards
@@ -520,7 +682,7 @@ impl Deck {
                 .map(|c| c.id.clone())
                 .collect();
             state.discard.retain(|id| !back.contains(id));
-            pile = self.pile(zone, when, discovered, state);
+            pile = self.pile(zone, when, discovered, deeds, state);
         }
         if pile.is_empty() {
             return None;
@@ -535,6 +697,7 @@ impl Deck {
         }
         state.pending = Some(PendingCard {
             card: card.id.clone(),
+            choices: offered_ids(card, deeds),
             said: BTreeMap::new(),
         });
         Some(card.id.clone())
@@ -559,7 +722,7 @@ impl Deck {
     ) -> Result<Option<Resolution>, CardError> {
         let pending = state.pending.as_ref().ok_or(CardError::NoCard)?;
         let card = self.card(&pending.card).ok_or(CardError::NoCard)?;
-        if !card.choices.iter().any(|c| c.id == choice) {
+        if !card.choices.iter().any(|c| c.id == choice) || !pending.offers(choice) {
             return Err(CardError::UnknownChoice(choice.to_string()));
         }
         let player_owner = matches!(&table.owner, Owner::Player(o) if o == handle);
@@ -577,7 +740,12 @@ impl Deck {
             if !missing.is_empty() {
                 return Err(CardError::WaitingFor(missing));
             }
-            Some(resolve(card, choice, Decided::Owner))
+            Some(resolve(
+                card,
+                choice,
+                Decided::Owner,
+                vec![handle.to_string()],
+            ))
         } else if blade {
             let pending = state.pending.as_mut().expect("checked above");
             pending.said.insert(handle.to_string(), choice.to_string());
@@ -603,19 +771,23 @@ impl Deck {
         if !table.blades.is_empty() || owner_decides {
             return None;
         }
-        state.pending = None;
-        let pick = card
-            .choices
+        let offered = pending.offered(card);
+        let pick = offered
             .iter()
             .find(|c| c.owner_insists)
-            .map(|c| c.id.clone())
-            .or_else(|| card.owner_pick.clone())
-            .unwrap_or_else(|| card.choices[0].id.clone());
-        Some(resolve(card, &pick, Decided::Default))
+            .or_else(|| {
+                offered
+                    .iter()
+                    .find(|c| card.owner_pick.as_deref() == Some(c.id.as_str()))
+            })
+            .or(offered.first())
+            .map(|c| c.id.clone())?;
+        state.pending = None;
+        Some(resolve(card, &pick, Decided::Default, Vec::new()))
     }
 }
 
-fn resolve(card: &Card, choice: &str, decided: Decided) -> Resolution {
+fn resolve(card: &Card, choice: &str, decided: Decided, by: Vec<String>) -> Resolution {
     let effects = card
         .choices
         .iter()
@@ -626,25 +798,123 @@ fn resolve(card: &Card, choice: &str, decided: Decided) -> Resolution {
         card: card.id.clone(),
         choice: choice.to_string(),
         decided,
+        by,
         effects,
     }
 }
 
+/// The ids of the choices a card offers against these deeds; empty when it offers every
+/// choice, as [`PendingCard::choices`] reads it.
+fn offered_ids(card: &Card, deeds: &DeedBook) -> Vec<String> {
+    let offered = card.offered(deeds);
+    if offered.len() == card.choices.len() {
+        return Vec::new();
+    }
+    offered.iter().map(|c| c.id.clone()).collect()
+}
+
+/// The most deeds the choices of one card may read, so the validator's cases stay few.
+const MAX_CASE_DEEDS: usize = 10;
+
+/// Checks that a card offers 2 or 3 choices in every case its own conditions allow: every
+/// way the deeds its choices read can be remembered or not, with the card's `if` deeds
+/// remembered and its `unless` deeds not.
+fn check_cases(card: &Card) -> Result<(), DeckError> {
+    let bad = |s: String| Err(DeckError(s));
+    let must: BTreeSet<&str> = card
+        .if_deeds
+        .iter()
+        .flat_map(Deeds::ids)
+        .map(String::as_str)
+        .collect();
+    let never: BTreeSet<&str> = card
+        .unless
+        .iter()
+        .flat_map(Deeds::ids)
+        .map(String::as_str)
+        .collect();
+    if let Some(both) = must.intersection(&never).next() {
+        return bad(format!(
+            "card {} both needs and refuses deed {both}",
+            card.id
+        ));
+    }
+    let free: Vec<&str> = card
+        .choices
+        .iter()
+        .flat_map(|c| c.if_deeds.iter().chain(&c.unless))
+        .flat_map(Deeds::ids)
+        .map(String::as_str)
+        .filter(|d| !must.contains(d) && !never.contains(d))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    if free.len() > MAX_CASE_DEEDS {
+        return bad(format!(
+            "card {}'s choices read {} deeds, more than {MAX_CASE_DEEDS}",
+            card.id,
+            free.len()
+        ));
+    }
+    for mask in 0u32..(1 << free.len()) {
+        let known = |id: &str| {
+            must.contains(id)
+                || free
+                    .iter()
+                    .position(|d| *d == id)
+                    .is_some_and(|i| mask & (1 << i) != 0)
+        };
+        let offered = card
+            .choices
+            .iter()
+            .filter(|c| holds(c.if_deeds.as_ref(), c.unless.as_ref(), &known))
+            .count();
+        if !(2..=3).contains(&offered) {
+            let case: Vec<&str> = free
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| mask & (1 << i) != 0)
+                .map(|(_, d)| *d)
+                .collect();
+            return bad(format!(
+                "card {} offers {offered} choices when the deeds remembered are [{}]; it needs 2 or 3",
+                card.id,
+                case.join(", ")
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Decides a card once every Blade has spoken, when the Blades decide it: a Blade card, or
-/// a caravan card an NPC owns.
+/// a caravan card an NPC owns. Only the choices offered count.
 fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolution> {
     if table.blades.iter().any(|b| !pending.said.contains_key(b)) {
         return None;
     }
+    let offered = pending.offered(card);
+    let voters = |choice: &str| -> Vec<String> {
+        table
+            .blades
+            .iter()
+            .filter(|b| pending.said.get(*b).is_some_and(|c| c == choice))
+            .cloned()
+            .collect()
+    };
     if card.target == Target::Caravan {
         if matches!(table.owner, Owner::Player(_)) {
             return None;
         }
-        if let Some(insist) = card.choices.iter().find(|c| c.owner_insists) {
-            return Some(resolve(card, &insist.id, Decided::OwnerInsists));
+        if let Some(insist) = offered.iter().find(|c| c.owner_insists) {
+            return Some(resolve(
+                card,
+                &insist.id,
+                Decided::OwnerInsists,
+                voters(&insist.id),
+            ));
         }
     }
-    let mut counts: Vec<(&str, usize)> = card.choices.iter().map(|c| (c.id.as_str(), 0)).collect();
+    let mut counts: Vec<(&str, usize)> = offered.iter().map(|c| (c.id.as_str(), 0)).collect();
     for said in pending.said.values() {
         if let Some(count) = counts.iter_mut().find(|(id, _)| id == said) {
             count.1 += 1;
@@ -656,8 +926,9 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
         .filter(|(_, n)| *n == top)
         .map(|(id, _)| *id)
         .collect();
+    let first = *tied.first()?;
     if tied.len() == 1 {
-        return Some(resolve(card, tied[0], Decided::Majority));
+        return Some(resolve(card, first, Decided::Majority, voters(first)));
     }
     let human = table
         .tie_breaker
@@ -665,8 +936,8 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
         .and_then(|h| pending.said.get(h))
         .filter(|c| card.target == Target::Blades && tied.contains(&c.as_str()));
     let pick = card.owner_pick.as_deref().filter(|p| tied.contains(p));
-    let choice = human.map(String::as_str).or(pick).unwrap_or(tied[0]);
-    Some(resolve(card, choice, Decided::Tie))
+    let choice = human.map(String::as_str).or(pick).unwrap_or(first);
+    Some(resolve(card, choice, Decided::Tie, voters(choice)))
 }
 
 #[cfg(test)]
@@ -776,13 +1047,27 @@ mod tests {
         let mut state = DeckState::default();
         // Two cards in play in `fields`: faces 1-50 take mud, 51-100 the beggar.
         let mut dice = ListDice::new([51]);
-        let card = d.draw("fields", When::Road, &known(), &mut state, &mut dice);
+        let card = d.draw(
+            "fields",
+            When::Road,
+            &known(),
+            &DeedBook::new(),
+            &mut state,
+            &mut dice,
+        );
         assert_eq!(card.as_deref(), Some("beggar"));
         assert_eq!(dice.asked(), &[(100, "road card".to_string())]);
         assert!(state.discard.contains("beggar"));
         // A card on the table is never replaced.
         assert_eq!(
-            d.draw("fields", When::Road, &known(), &mut state, &mut dice),
+            d.draw(
+                "fields",
+                When::Road,
+                &known(),
+                &DeedBook::new(),
+                &mut state,
+                &mut dice
+            ),
             None
         );
     }
@@ -796,8 +1081,15 @@ mod tests {
         };
         let mut dice = ListDice::new([1]);
         assert_eq!(
-            d.draw("fields", When::Road, &known(), &mut state, &mut dice)
-                .as_deref(),
+            d.draw(
+                "fields",
+                When::Road,
+                &known(),
+                &DeedBook::new(),
+                &mut state,
+                &mut dice
+            )
+            .as_deref(),
             Some("mud")
         );
         assert_eq!(state.discard, BTreeSet::from(["mud".to_string()]));
@@ -805,15 +1097,29 @@ mod tests {
         // The ruin's night card waits for the ruin; nothing else is in the hills.
         let mut none = ListDice::new([]);
         assert_eq!(
-            d.draw("hills", When::Night, &known(), &mut state, &mut none),
+            d.draw(
+                "hills",
+                When::Night,
+                &known(),
+                &DeedBook::new(),
+                &mut state,
+                &mut none
+            ),
             None
         );
         let mut found = known();
         found.insert("ruin".into());
         let mut dice = ListDice::new([100]);
         assert_eq!(
-            d.draw("hills", When::Night, &found, &mut state, &mut dice)
-                .as_deref(),
+            d.draw(
+                "hills",
+                When::Night,
+                &found,
+                &DeedBook::new(),
+                &mut state,
+                &mut dice
+            )
+            .as_deref(),
             Some("ruin_ghost")
         );
     }
@@ -824,6 +1130,7 @@ mod tests {
         let mut state = DeckState {
             pending: Some(PendingCard {
                 card: "beggar".into(),
+                choices: Vec::new(),
                 said: BTreeMap::new(),
             }),
             ..DeckState::default()
@@ -855,6 +1162,7 @@ mod tests {
         let mut state = DeckState {
             pending: Some(PendingCard {
                 card: "mud".into(),
+                choices: Vec::new(),
                 said: BTreeMap::new(),
             }),
             ..DeckState::default()
@@ -873,6 +1181,7 @@ mod tests {
         let mut state = DeckState {
             pending: Some(PendingCard {
                 card: "mud".into(),
+                choices: Vec::new(),
                 said: BTreeMap::new(),
             }),
             ..DeckState::default()
@@ -898,6 +1207,7 @@ mod tests {
         let mut state = DeckState {
             pending: Some(PendingCard {
                 card: "mud".into(),
+                choices: Vec::new(),
                 said: BTreeMap::new(),
             }),
             ..DeckState::default()
@@ -928,6 +1238,7 @@ mod tests {
         let mut state = DeckState {
             pending: Some(PendingCard {
                 card: "beggar".into(),
+                choices: Vec::new(),
                 said: BTreeMap::new(),
             }),
             ..DeckState::default()
@@ -954,6 +1265,7 @@ mod tests {
         let mut state = DeckState {
             pending: Some(PendingCard {
                 card: "mud".into(),
+                choices: Vec::new(),
                 said: BTreeMap::new(),
             }),
             ..DeckState::default()
@@ -963,5 +1275,166 @@ mod tests {
             (done.choice.as_str(), done.decided),
             ("unload", Decided::Default)
         );
+    }
+
+    fn deed_deck() -> Deck {
+        let file: DeckFile = serde_json::from_str(
+            r#"{
+              "cards": [
+                {"id": "bridge", "zone": "fields", "target": "blades", "text": "A toll bridge.",
+                 "choices": [
+                   {"id": "pay", "text": "Pay.", "effects": [{"do": "remember", "deed": "paid"}]},
+                   {"id": "fight", "text": "Fight.", "effects": [{"do": "remember", "deed": "fought"}]}
+                 ]},
+                {"id": "bridge_again", "zone": "fields", "target": "blades", "text": "The bridge again.",
+                 "if": "paid", "unless": ["fought"],
+                 "choices": [
+                   {"id": "pay_again", "text": "Pay again.", "unless": "angry"},
+                   {"id": "shout", "text": "Shout.", "if": "angry"},
+                   {"id": "say_no", "text": "Say no.", "effects": [{"do": "remember", "deed": "angry"}]},
+                   {"id": "ford", "text": "Ford the beck."}
+                 ]}
+              ]
+            }"#,
+        )
+        .unwrap();
+        Deck::from_files([file])
+    }
+
+    fn book(ids: &[&str]) -> DeedBook {
+        ids.iter()
+            .map(|id| {
+                (
+                    id.to_string(),
+                    Deed {
+                        by: vec![],
+                        day: 1,
+                        contract: 1,
+                    },
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn deeds_put_cards_in_the_pile_and_choices_on_the_card() {
+        let d = deed_deck();
+        d.validate(&small_map()).unwrap();
+        let ids = |deeds: &DeedBook| -> Vec<String> {
+            d.pile("fields", When::Road, &known(), deeds, &DeckState::default())
+                .iter()
+                .map(|c| c.id.clone())
+                .collect()
+        };
+        assert_eq!(ids(&book(&[])), ["bridge"]);
+        assert_eq!(ids(&book(&["paid"])), ["bridge", "bridge_again"]);
+        assert_eq!(ids(&book(&["paid", "fought"])), ["bridge"]);
+
+        // Faces 51-100 take the second card; its choices are fixed on the table.
+        let mut state = DeckState {
+            discard: BTreeSet::from(["bridge".into()]),
+            ..DeckState::default()
+        };
+        let mut dice = ListDice::new([1]);
+        let deeds = book(&["paid", "angry"]);
+        let card = d.draw(
+            "fields",
+            When::Road,
+            &known(),
+            &deeds,
+            &mut state,
+            &mut dice,
+        );
+        assert_eq!(card.as_deref(), Some("bridge_again"));
+        let pending = state.pending.as_ref().unwrap();
+        assert_eq!(pending.choices, ["shout", "say_no", "ford"]);
+
+        let table = npc_table();
+        assert_eq!(
+            d.speak(&mut state, &table, "bren", "pay_again"),
+            Err(CardError::UnknownChoice("pay_again".into()))
+        );
+        d.speak(&mut state, &table, "bren", "shout").unwrap();
+        let done = d
+            .speak(&mut state, &table, "maren", "ford")
+            .unwrap()
+            .unwrap();
+        // A tie with no human vote among the tied and no owner pick: the first offered.
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            ("shout", Decided::Tie)
+        );
+        assert_eq!(done.by, ["bren"]);
+    }
+
+    #[test]
+    fn a_decision_says_who_made_it() {
+        let d = deck();
+        let table = npc_table();
+        let mut state = DeckState {
+            pending: Some(PendingCard {
+                card: "beggar".into(),
+                choices: Vec::new(),
+                said: BTreeMap::new(),
+            }),
+            ..DeckState::default()
+        };
+        d.speak(&mut state, &table, "bren", "give").unwrap();
+        let done = d
+            .speak(&mut state, &table, "maren", "give")
+            .unwrap()
+            .unwrap();
+        assert_eq!(done.decided, Decided::Majority);
+        assert_eq!(done.by, ["bren", "maren"]);
+    }
+
+    #[test]
+    fn the_validator_checks_deeds_and_every_case() {
+        let map = small_map();
+        let mut d = deed_deck();
+        d.cards[0].choices[0].effects.clear();
+        assert_eq!(
+            d.validate(&map).unwrap_err().0,
+            "card bridge_again reads deed paid, which nothing writes"
+        );
+
+        // Without `say_no`, a party that is not angry has only two choices left, and an
+        // angry one too: still fine. Without `ford` as well, one choice is left.
+        let mut d = deed_deck();
+        d.cards[1].choices.retain(|c| c.id != "say_no");
+        d.cards[0].choices[1].effects.push(Effect::Remember {
+            deed: "angry".into(),
+        });
+        d.validate(&map).unwrap();
+        d.cards[1].choices.retain(|c| c.id != "ford");
+        assert_eq!(
+            d.validate(&map).unwrap_err().0,
+            "card bridge_again offers 1 choices when the deeds remembered are []; it needs 2 or 3"
+        );
+
+        // Four choices that are all offered at once are too many.
+        let mut d = deed_deck();
+        d.cards[1].choices[1].if_deeds = None;
+        d.cards[1].choices[0].unless = None;
+        assert!(d.validate(&map).unwrap_err().0.contains("2 or 3 choices"));
+
+        let mut d = deed_deck();
+        d.cards[1].unless = Some(Deeds::One("paid".into()));
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("both needs and refuses")
+        );
+    }
+
+    #[test]
+    fn a_card_reads_deeds_from_json_as_one_or_a_list() {
+        let card = &deed_deck().cards[1];
+        assert_eq!(card.if_deeds, Some(Deeds::One("paid".into())));
+        assert_eq!(card.unless, Some(Deeds::All(vec!["fought".into()])));
+        let back = serde_json::to_value(card).unwrap();
+        assert_eq!(back["if"], "paid");
+        assert_eq!(back["unless"][0], "fought");
     }
 }
