@@ -1,0 +1,15 @@
+[package]
+name = "nat20-world"
+version = "0.1.0"
+description = "The living world for nat20-table: clock, map, caravan (Milestone 9, decision 0057)."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+# Only serde and nat20-ledger are allowed here, never nat20_core or the contract (CI job world-pure).
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
