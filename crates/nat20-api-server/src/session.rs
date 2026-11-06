@@ -686,6 +686,13 @@ impl Session {
             ));
         }
         self.enter_scene(&scene, &party)?;
+        // A leg that ends at a place draws the place's arrival card first, in its scene and
+        // before the pay (ENG-35): at the destination it comes before the journey's last turn.
+        // A card on the table then keeps the road card off it.
+        if leg.arrived {
+            let place = leg.toward.clone();
+            self.draw_card(|world, dice| world.draw_on_arrival(&place, dice))?;
+        }
         let settled = leg.arrived && self.escort_arrive(&leg.toward)?;
         // The leg that settles the contract ends the journey: no road card follows it.
         if !settled {
