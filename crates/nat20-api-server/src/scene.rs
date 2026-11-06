@@ -356,7 +356,7 @@ pub fn parse_dice(dice: &str) -> Option<(u32, u32, u32)> {
         .then_some((count, size, bonus))
 }
 
-fn is_plain_name(s: &str) -> bool {
+pub(crate) fn is_plain_name(s: &str) -> bool {
     !s.is_empty()
         && s.chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')

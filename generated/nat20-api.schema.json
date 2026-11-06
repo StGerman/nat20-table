@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.40"
+    "version": "1.0.0-dev.41"
   },
   "$defs": {
     "Ability": {
@@ -631,6 +631,50 @@
         }
       ]
     },
+    "CarriedItem": {
+      "description": "Some of one item a creature carries.",
+      "type": "object",
+      "properties": {
+        "item": {
+          "description": "The item's id, as on a sheet (`potion_of_healing`).",
+          "type": "string"
+        },
+        "quantity": {
+          "description": "How many.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "item",
+        "quantity"
+      ]
+    },
+    "Carries": {
+      "description": "What a creature carries for `loot`.",
+      "type": "object",
+      "properties": {
+        "coins": {
+          "description": "Its coins.",
+          "$ref": "#/$defs/Coins",
+          "default": {
+            "cp": 0,
+            "ep": 0,
+            "gp": 0,
+            "pp": 0,
+            "sp": 0
+          }
+        },
+        "items": {
+          "description": "Its items.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CarriedItem"
+          }
+        }
+      }
+    },
     "CheckSpec": {
       "description": "Which check `request_check` rolls.",
       "oneOf": [
@@ -1242,6 +1286,29 @@
           ]
         },
         {
+          "description": "The state after the creature is placed.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "place_creature"
+            },
+            "handle": {
+              "description": "The new creature's handle.",
+              "$ref": "#/$defs/Handle"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state",
+            "handle"
+          ]
+        },
+        {
           "description": "Log entries after `since`.",
           "type": "object",
           "properties": {
@@ -1819,6 +1886,11 @@
           "description": "The encounter id is not declared by the scene.",
           "type": "string",
           "const": "unknown_encounter"
+        },
+        {
+          "description": "`place_creature` names a stat block the registry doesn't have.",
+          "type": "string",
+          "const": "unknown_stat_block"
         },
         {
           "description": "The actor is not the one the engine is waiting on.",
@@ -2788,6 +2860,29 @@
             "spawn_id",
             "handles"
           ]
+        },
+        {
+          "description": "The DM placed a creature the scene file doesn't list (`place_creature`). DM only, like\n`spawned`; players see the creature in their state. In a running fight its `initiative`\nroll follows.",
+          "type": "object",
+          "properties": {
+            "handle": {
+              "description": "The new creature.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "creature_placed"
+            },
+            "monster": {
+              "description": "Its stat block id.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "handle",
+            "monster"
+          ]
         }
       ],
       "required": [
@@ -3333,6 +3428,49 @@
         "name"
       ]
     },
+    "Placement": {
+      "description": "Where a creature is placed.",
+      "oneOf": [
+        {
+          "description": "At one of the scene's anchors.",
+          "type": "object",
+          "properties": {
+            "anchor": {
+              "description": "Anchor id from this scene.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "anchor"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "anchor"
+          ]
+        },
+        {
+          "description": "At an exact point.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "point"
+            },
+            "point": {
+              "description": "The point, in feet.",
+              "$ref": "#/$defs/PointFt"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "point"
+          ]
+        }
+      ]
+    },
     "PointFt": {
       "description": "A point in feet. The engine works in metres internally and converts at the boundary.",
       "type": "object",
@@ -3585,6 +3723,11 @@
           "description": "`loot` of a creature that carries nothing.",
           "type": "string",
           "const": "nothing_carried"
+        },
+        {
+          "description": "`place_creature` finds no free spot within 10 feet of where it was asked to place.",
+          "type": "string",
+          "const": "no_room"
         }
       ]
     },
@@ -4103,6 +4246,57 @@
             "cmd",
             "actor",
             "from"
+          ]
+        },
+        {
+          "description": "Places one monster the scene file doesn't list, for a story beat no authored spawn fits\n(API-33, decision 0035; protocol §4.10). The DM's command: the game's DM tool takes the\nstat block and its `carries` from the pack's `stat_blocks` list, never from the DM's own\nwords. The engine refuses an unknown stat block, a taken handle and an anchor the scene\ndoesn't have, and puts the creature on the nearest free spot within 10 feet of `at`.\nDuring a fight it joins it, as a spawn does. It is gone with the scene, like the scene's\nown creatures.",
+          "type": "object",
+          "properties": {
+            "at": {
+              "description": "Where it is placed: an anchor of this scene or a point.",
+              "$ref": "#/$defs/Placement"
+            },
+            "carries": {
+              "description": "Coin and items it carries, from the pack's `stat_blocks` entry. DM-only until looted.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Carries"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "cmd": {
+              "type": "string",
+              "const": "place_creature"
+            },
+            "handle": {
+              "description": "A new handle, unique in the session and the scene's spawns: a plain name, not `dm`.",
+              "$ref": "#/$defs/Handle"
+            },
+            "monster": {
+              "description": "A stat block id, as in a scene file's `monster` (`bandit`, or a namespaced id).",
+              "type": "string"
+            },
+            "name": {
+              "description": "A display name instead of the stat block's, such as `Grey-coated bandit`.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "side": {
+              "description": "Which side of a fight it is on.",
+              "$ref": "#/$defs/Side"
+            }
+          },
+          "required": [
+            "cmd",
+            "handle",
+            "monster",
+            "side",
+            "at"
           ]
         }
       ],

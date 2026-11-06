@@ -242,6 +242,28 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
 - **Purses on the sheet.** `get_sheet` carries `purse`: the coins by kind and `total_cp`, the whole purse in copper pieces. It is the owner's and the DM's (§5).
 - **Monsters' purses.** A scene creature may carry `carries`: coins and items it holds when placed (§2.1). Monsters have no purse otherwise. What a monster carries is the scene's, DM-only data, until it moves to someone in a `ledger` entry.
 
+### 4.10 Creatures the scene file doesn't list
+
+`place_creature{handle, monster, side, at, name?, carries?}` places one monster for a story beat no authored spawn fits (API-33, decision 0035). It is the DM's command; a player's tools never bind it. The game's DM tool takes `monster` and `carries` only from the pack's `stat_blocks` list in `adventure.json`, so the coin a creature carries is authored, never named by the DM; the engine doesn't read `adventure.json` and trusts its single client for that, as for everything else (§5).
+
+- **Checked before anything changes:**
+  - `handle` must be a plain name that no creature of the scene and no spawn of the scene file uses, and not `dm`; otherwise `bad_request`.
+  - `name`, when given, is one line of at most 40 characters (`bad_request`).
+  - An anchor the scene doesn't have answers `unknown_anchor`, with the scene's anchor ids in the DM's hint.
+  - A stat block the registry doesn't have answers `unknown_stat_block`.
+  - A side its stat block can't take beside the scene's creatures (a goblin on the party side) answers `bad_request`.
+  - `carries` with an unknown item is `bad_request`.
+- **Where it stands.** On the ground at `at`, or else on the nearest free spot of the 5-foot grid around it, up to 10 feet away, tried in a fixed order: the ring at 5 feet first, then the ring at 10. When every spot is taken, or there is no ground there, it answers `rejected` with `no_room` and nothing is placed.
+- **What follows.**
+  - The engine runs the creature with its scripted policy, as any scene monster.
+  - `name` replaces the stat block's name in every view.
+  - The engine logs a DM-only `creature_placed{handle, monster}`; players see the creature in their state like any other, with its health band and visible conditions.
+  - During a fight it joins it as a spawn does: it rolls initiative, and the roll is logged.
+  - Out of combat it stays out of any fight until one includes it (API-34).
+  - Like the scene's own creatures, it is gone when the next scene loads.
+  - A pending prompt keeps its id.
+- The result is the state after the placement and the new `handle`.
+
 ## 5. Visibility (projection per `viewer`)
 
 | Data | `dm` | Owner (viewer = that creature) | Other player viewer |
@@ -265,7 +287,8 @@ Out of combat (`wrong_mode` in a fight), between two creatures within 5 feet of 
 | `budget` in `legal_actions` (actions, Bonus Action, Reaction and movement left) | yes | yes | no (`legal_actions` for another actor is `not_visible`) |
 | `summary` on an option (the rule's own short text, the same for everyone) | yes | yes | no (`legal_actions` for another actor is `not_visible`) |
 | Purse (sheet `purse`: coins by kind and `total_cp`) | yes | yes | no |
-| What a scene creature `carries` (scene file) | yes | no | no |
+| What a scene creature `carries` (scene file, or `place_creature`'s) | yes | no | no |
+| `creature_placed` (the stat block id) | yes | no | no (the creature itself is in state) |
 | `ledger` entries for `trade` and `loot`, and `theft_noticed` | yes | yes | yes (handing over or picking up is seen) |
 | A `steal`'s Sleight of Hand roll and its `theft` ledger entry | yes | the thief only | no (the victim doesn't know) |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
@@ -307,6 +330,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 - `concentration_started` follows the cast that applied the spell's effect, once per cast however many targets it has. `concentration_ended` comes when the engine ends it: a failed Concentration save after damage (`failed_save`; the save is logged first, a Constitution save with `dc_source: "rule"` and DC 10 or half the damage), dropping to 0 Hit Points (`incapacitated`), or casting another Concentration spell (`replaced`, logged before the new cast's `action` and its `concentration_started`). When the spell's duration runs out (`expired`), its effects end and so does the Concentration: in a fight that is at the start of the caster's turn, and the entry comes right after that `turn_start`; between scenes it comes right before `scene_loaded` (§2).
 - `condition_added`, `condition_removed`, `effect_started` and `effect_ended` are found by comparing each creature with what the log last showed, since core logs none of them. Each comes right after the entry that explains it: Unconscious after the creature's `life_state`; an effect that runs out at a turn boundary after that `turn_start` or `turn_end`; a spell's effect after its caster's `concentration_ended` for that spell. Anything else, such as an effect a spell or Help applies, or a Help's Advantage used up by a roll, comes at the end of the command's entries. Ends come before starts, so a spell cast again shows its old effect ending first. `condition_*` is public with `source` absent for now; `effect_*` goes to the DM and the target's owner.
 | `spawned` | `spawn_id`, `handles[]` (DM only) |
+| `creature_placed` | `handle`, `monster` (DM only): a `place_creature` (§4.10) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
 ```json
@@ -336,11 +360,12 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `unsupported_version` | `v` mismatch | false |
 | `no_session` / `no_scene` | Lifecycle order is wrong | false |
 | `unknown_creature` / `unknown_option` / `unknown_check` / `unknown_anchor` / `unknown_spawn` / `unknown_encounter` | The id isn't in this scene | true |
+| `unknown_stat_block` | `place_creature` names a stat block the registry doesn't have | true |
 | `not_your_turn` | `actor` isn't `awaiting.actor` (also returned by `legal_actions`, not an empty list) | true, after waiting |
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room` | true |
 | `surrender_not_available` | `end_combat{surrender}` while the running encounter's surrender condition does not hold, or it declares none; nothing changed | false |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |
