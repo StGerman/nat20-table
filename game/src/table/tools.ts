@@ -270,6 +270,16 @@ export class PlayerTools {
     return a.actor === this.me ? "your level-up" : `${a.actor}'s level-up`;
   }
 
+  /**
+   * Walks ahead of the caravan as the scout (AGT-90, API-54): for every leg until another Blade
+   * does. Waits until the human was offered it first.
+   */
+  scout(): Promise<ToolOutcome> {
+    if (this.table.inCombat) return this.answer(notNow("the scout walks ahead once the fight is over"));
+    if (this.table.human && !this.table.scoutOffered) return this.answer(notNow(`${this.table.human} is asked first who walks ahead; ask again on the road`));
+    return this.answer(send(this.table, this.me, { cmd: "scout", actor: this.me }, () => "you walk ahead of the caravan as the scout; when a card comes on the road, you look first"));
+  }
+
   /** Gives this character's word on the road card waiting: advice, a vote or the owner's call. */
   chooseCard(choice: string): Promise<ToolOutcome> {
     return this.answer(send(this.table, this.me, { cmd: "choose_card", actor: this.me, choice }, () => `you said: ${choice}`));
@@ -355,6 +365,10 @@ export class HandTools extends PlayerTools {
   }
 
   override chooseCard(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override scout(): Promise<ToolOutcome> {
     return this.wait();
   }
 

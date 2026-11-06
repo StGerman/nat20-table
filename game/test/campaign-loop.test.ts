@@ -100,6 +100,15 @@ test("the road's lines join the human's options only when the human may drive an
   ]);
   assert.deepEqual(roadChoices({ ...(world as object), drives: false } as never, 1), []);
   assert.deepEqual(roadChoices({ ...(world as object), card: { text: "x" } } as never, 1), []);
+  // A Hired Blade may walk ahead as the scout (AGT-90): one line for the road, gone once they do;
+  // a merchant or a run with no escort has none.
+  const escort = { destination: "mill", blades: [{ handle: "bren", served: 0, paid_cp: 0 }], done: false };
+  const blade = { ...(world as object), escort } as never;
+  assert.deepEqual(roadChoices(blade, 1, "bren").at(-1), { number: 4, label: "Walk ahead as the scout", act: { kind: "scout" }, about: { id: "scout" } });
+  assert.equal(roadChoices({ ...(blade as object), scout: "torva" } as never, 1, "bren").at(-1)?.label, "Walk ahead as the scout", "another Blade's turn ahead can be taken");
+  assert.ok(!roadChoices({ ...(blade as object), scout: "bren" } as never, 1, "bren").some((c) => c.act?.kind === "scout"));
+  assert.ok(!roadChoices(blade, 1, "odda").some((c) => c.act?.kind === "scout"), "not a Blade");
+  assert.ok(!roadChoices(world, 1, "bren").some((c) => c.act?.kind === "scout"), "no escort");
 });
 
 test("a human who owns the caravan picks a road out of the place, each line carrying where it goes", () => {

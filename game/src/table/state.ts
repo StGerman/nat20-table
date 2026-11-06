@@ -85,6 +85,11 @@ export class TableState {
    * caravan or ends the day (design S2); the loop asks the driver.
    */
   road: { step: RoadStep } | undefined;
+  /**
+   * The human was offered *Walk ahead as the scout* (AGT-90): until then an AI Blade's scout tool
+   * waits, so the human is asked first, as on road cards (AGT-87). Always true with no human.
+   */
+  scoutOffered = false;
   /** DM narrations and questions the human was shown, so the loop can tell whether a wake answered them. */
   dmToHuman = 0;
   /** Why the run ended, once it has. */

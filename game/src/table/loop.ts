@@ -1078,6 +1078,9 @@ export class TableLoop {
       case "rest_night":
         outcome = await send(this.table, human, { cmd: "rest_night", actor: human, where: act.where }, () => "the night passes");
         break;
+      case "scout":
+        outcome = await send(this.table, human, { cmd: "scout", actor: human }, () => "you walk ahead of the caravan as the scout");
+        break;
       case "level_up":
         outcome = await send(this.table, human, { cmd: "level_up", actor: human }, () => "the new level starts");
         if (outcome.ok) this.levelChoice = (outcome.data as { choice?: LevelUpChoice | null } | undefined)?.choice ?? undefined;
@@ -1953,7 +1956,12 @@ export class TableLoop {
     this.lastOptions = listed.result as LegalActionsResult;
     this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat);
     // Out of a fight, whoever may drive the caravan can move it on or end the day (AGT-80).
-    if (!combat && state?.view === "player" && state.world) this.top = this.shown = [...this.top, ...roadChoices(state.world, this.top.length + 1)];
+    if (!combat && state?.view === "player" && state.world) {
+      const road = roadChoices(state.world, this.top.length + 1, human);
+      // The human has seen *Walk ahead as the scout*, or isn't a Blade: the AI Blades may scout now (AGT-90).
+      if (road.length > 0) this.table.scoutOffered = true;
+      this.top = this.shown = [...this.top, ...road];
+    }
     // Out of a fight, the next level when the sheet says it is due (AGT-80): a saved party can reach it in any pack.
     if (!combat) {
       const sheet = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
