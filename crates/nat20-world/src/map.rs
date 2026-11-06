@@ -62,6 +62,10 @@ pub struct Place {
     pub id: String,
     /// The name players read
     pub name: String,
+    /// The one Russian form the agents write in a Russian run (AGT-85), such as «Вендфорд».
+    /// The game's prompts read it; the engine never does
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name_ru: Option<String>,
     /// What kind of place it is (`town`, `village`, `inn`, `ruin`), for the DM's prose
     pub kind: String,
     /// Whether the place has a market (markets come with the second sandbox)

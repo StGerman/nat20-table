@@ -6,8 +6,11 @@
 export const LANGUAGES = ["en", "ru"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-/** The DM's language section, or nothing for English. */
-export function dmLanguage(language: Language, human = true, names: readonly string[] = []): string[] {
+/**
+ * The DM's language section, or nothing for English. `glossary` is the pack's `glossary_ru`
+ * (AGT-85): English words of the prose and the Russian a run writes for them.
+ */
+export function dmLanguage(language: Language, human = true, names: readonly string[] = [], glossary: Readonly<Record<string, string>> = {}): string[] {
   if (language === "en") return [];
   return [
     "## Language",
@@ -19,6 +22,9 @@ export function dmLanguage(language: Language, human = true, names: readonly str
     ...(human ? ["Speak to the human's character with «ты», never «вы»: «вы» is for the whole party."] : []),
     "The guard reads Russian too: no numbers in words from ten up (десять, двадцать, сто), and no game statistics (КД, класс доспеха, СЛ, хиты, очки здоровья, бонус атаки).",
     ...russianNameLine(names),
+    ...(Object.keys(glossary).length > 0
+      ? [`Words in Russian: write these words of the prose as given here: ${Object.entries(glossary).map(([en, ru]) => `${en}: ${ru}`).join("; ")}.`]
+      : []),
     "",
   ];
 }

@@ -8,6 +8,7 @@ import type { Language } from "../agents/language.ts";
 import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
+import { knownPlaceNames } from "../pack/campaign.ts";
 import { skeletonFile } from "../pack/read.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
 import type { FightReaction, RunReport, SceneChoice, SceneTime, SuggestionCounts, TalkRound } from "../table/loop.ts";
@@ -38,7 +39,7 @@ export interface PackParty {
   names: Map<Handle, string[]>;
   /** Each party member's class from its pregen (`fighter`), for its block of the players' rules primer (AGT-52); every AI seat has one. */
   classes: Map<Handle, string>;
-  /** In a Russian run, the one Russian name of each party member the pack gives one (AGT-38): `bren: Брен`. Players' prompts take it; NPC names are the DM's alone. */
+  /** In a Russian run, the one Russian name of each party member the pack gives one, with its declined forms (AGT-38, AGT-85: `bren: Брен (Брена, Брену, Бреном, Брене)`), then each place the party knows (`wendford: Вендфорд`). Players' prompts take it; NPC names and undiscovered places are the DM's alone. */
   russianNames: string[];
   /** The pack's turn-order glyphs, by party handle or creature kind (AGT-67). */
   glyphs?: Record<string, string>;
@@ -96,7 +97,7 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
   for (const p of ai) if (!classes.has(p.handle)) throw new Error(`${pack}: party ${p.handle} has an AI seat and no pregen in the first scene, so no class`);
   const humanEntry = adventure.party.find((p) => p.handle === human);
   const humanCard = humanEntry?.card ? readFileSync(path.resolve(pack, humanEntry.card), "utf8") : undefined;
-  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: russianNames(adventure, { npcs: false }), glyphs: adventure.glyphs };
+  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: [...russianNames(adventure, { npcs: false }), ...knownPlaceNames(pack)], glyphs: adventure.glyphs };
 }
 
 /** One line of the pick list (AGT-35): a party member as a player picking a pregen sees it. */

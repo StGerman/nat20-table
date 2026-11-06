@@ -10,7 +10,7 @@ export interface PackText {
   adventure: Adventure;
   /** The whole pack in play order: skeleton, adventure prose, lore, scenes, NPCs. */
   text: string;
-  /** The world's place NPCs' Russian names, `id: name`, for the DM's name line (AGT-38): none outside a campaign. */
+  /** The world's place NPCs' and places' Russian names, `id: name`, for the DM's name line (AGT-38, AGT-85): none outside a campaign. */
   placeNames?: string[];
 }
 

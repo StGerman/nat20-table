@@ -191,7 +191,14 @@ test("with --lang ru a model player speaks, declares, notes and summarises in Ru
 
 test("a Russian run gives every agent the party's Russian names, and the DM the NPCs' too (AGT-38)", () => {
   const party = castParty(MILL);
-  assert.deepEqual(party.russianNames, ["bren: Брен", "torva: Торва", "maren: Марен", "ilsa: Ильза"]);
+  // Each name comes with its declined forms from `names` (AGT-85: Maren wrote «Брентом»), never
+  // another spelling of it («Мэрен», «Ильса»).
+  assert.deepEqual(party.russianNames, [
+    "bren: Брен (Брена, Брену, Бреном, Брене)",
+    "torva: Торва (Торвы, Торве, Торву, Торвой)",
+    "maren: Марен (Марена, Марене, Марену, Мареной)",
+    "ilsa: Ильза (Ильзы, Ильзе, Ильзу, Ильзой)",
+  ]);
   const line = `Names in Russian: write each as given here, declined as Russian declines it: ${party.russianNames.join("; ")}.`;
   const card = party.cards.get("maren")!;
   const russian = playerPrompt("maren", card, "cleric", "ru", true, party.russianNames);
@@ -201,19 +208,36 @@ test("a Russian run gives every agent the party's Russian names, and the DM the 
   assert.ok(!playerPrompt("maren", card, "cleric", "en", true, party.russianNames).includes("Names in Russian"), "an English prompt has no Russian names");
   const pack = readPack(MILL);
   const dm = dmPrompt(pack, "bren", party.ai, "prompt", "ru");
-  assert.match(dm, /Names in Russian: write each as given here, declined as Russian declines it: bren: Брен; torva: Торва; maren: Марен; ilsa: Ильза; osric_hale: староста Осрик Хейл;/);
+  assert.match(dm, /Names in Russian: write each as given here, declined as Russian declines it: bren: Брен \(Брена, Брену, Бреном, Брене\); torva: Торва \(Торвы, Торве, Торву, Торвой\); maren: Марен \(Марена, Марене, Марену, Мареной\); ilsa: Ильза \(Ильзы, Ильзе, Ильзу, Ильзой\); osric_hale: староста Осрик Хейл;/);
   assert.ok(!dmPrompt(pack, "bren", party.ai, "prompt", "en").includes("Names in Russian"));
 });
 
 test("a campaign's place NPCs get their Russian names in the DM's name line, never in a player's (AGT-38)", () => {
   const wend = path.join(REPO, "scenarios/fair_in_wend");
   const pack = readPack(wend);
-  assert.deepEqual(pack.placeNames, ["shepherd_gwyn: пастушка Гвин", "osric_hale: староста Осрик Хейл", "warden_brannock: смотритель ярмарки Браннок"]);
+  const places = [
+    "wendmouth: Вендмут",
+    "wendford: Вендфорд",
+    "millbeck_bridge: мост через Миллбек",
+    "pells_mill: мельница Пелла",
+    "highsteads: Хайстедс",
+    "snitts_camp: лагерь Снитта",
+    "barrow_oak: Курганный дуб",
+    "salt_flats: солончаки",
+  ];
+  assert.deepEqual(pack.placeNames, ["shepherd_gwyn: пастушка Гвин", "osric_hale: староста Осрик Хейл", "warden_brannock: смотритель ярмарки Браннок", ...places]);
   const party = castParty(wend);
   const dm = dmPrompt(pack, "bren", party.ai, "prompt", "ru");
-  assert.match(dm, /odda_vell: торговка зерном Одда Велл; shepherd_gwyn: пастушка Гвин; osric_hale: староста Осрик Хейл; warden_brannock: смотритель ярмарки Браннок\./);
+  assert.match(dm, /odda_vell: торговка зерном Одда Велл; shepherd_gwyn: пастушка Гвин; osric_hale: староста Осрик Хейл; warden_brannock: смотритель ярмарки Браннок; wendmouth: Вендмут;/);
+  // The pack's glossary reaches the DM's Russian prompt alone (AGT-85, F4 «оилскиновый плащ»).
+  assert.match(dm, /Words in Russian: write these words of the prose as given here: oilskin coat: промасленный плащ\./);
+  assert.ok(!dmPrompt(pack, "bren", party.ai, "prompt", "en").includes("Words in Russian"));
   const player = playerPrompt("maren", party.cards.get("maren")!, "cleric", "ru", true, party.russianNames);
   for (const npc of ["Гвин", "Браннок"]) assert.ok(!player.includes(npc), npc);
+  assert.ok(!player.includes("промасленный"), "the glossary is the DM's");
+  // A player knows the start place and the places the map marks discovered, and no other (AGT-85, Rule 3).
+  const known = ["wendmouth: Вендмут", "wendford: Вендфорд", "millbeck_bridge: мост через Миллбек", "pells_mill: мельница Пелла", "highsteads: Хайстедс"];
+  for (const place of places) assert.equal(player.includes(place), known.includes(place), place);
   assert.equal(readPack(MILL).placeNames, undefined, "a pack without a campaign has no place NPCs");
 });
 
