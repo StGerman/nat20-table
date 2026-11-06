@@ -356,16 +356,16 @@ impl Deck {
 
     /// Checks the deck against the map: unique ids, 2 or 3 choices with unique ids, an
     /// `owner_pick` that names a choice, at most one `owner_insists` and only on caravan
-    /// cards, zones that are a road zone or a place, `requires` that names a place, DCs
+    /// cards, zones that are a road zone or a place (a road card's a road zone), `requires` that names a place, DCs
     /// on the ladder, a fight only last in its list, `add_card` that names a chained card, every chained card added by
     /// some choice, and no pile over [`MAX_PILE`] cards. Goods and stat blocks are the
     /// server's to check.
     pub fn validate(&self, map: &WorldMap) -> Result<(), DeckError> {
         let bad = |s: String| Err(DeckError(s));
-        let zones: BTreeSet<&str> = map
-            .roads
+        let road_zones: BTreeSet<&str> = map.roads.iter().map(|r| r.zone.as_str()).collect();
+        let zones: BTreeSet<&str> = road_zones
             .iter()
-            .map(|r| r.zone.as_str())
+            .copied()
             .chain(map.places.iter().map(|p| p.id.as_str()))
             .collect();
         let mut ids = BTreeSet::new();
@@ -376,6 +376,13 @@ impl Deck {
             }
             if !zones.contains(card.zone.as_str()) {
                 return bad(format!("card {} is in unknown zone {}", card.id, card.zone));
+            }
+            // Only a road's zone is drawn from after a leg; a place zone holds night cards.
+            if card.when == When::Road && !road_zones.contains(card.zone.as_str()) {
+                return bad(format!(
+                    "road card {} is in {}, which is no road's zone",
+                    card.id, card.zone
+                ));
             }
             if let Some(place) = &card.requires
                 && map.place(place).is_none()
@@ -726,6 +733,11 @@ mod tests {
         let mut d = deck();
         d.cards[0].zone = "sea".into();
         assert!(d.validate(&map).unwrap_err().0.contains("unknown zone sea"));
+
+        let mut d = deck();
+        let road = d.cards.iter().position(|c| c.when == When::Road).unwrap();
+        d.cards[road].zone = "inn".into();
+        assert!(d.validate(&map).unwrap_err().0.contains("no road's zone"));
 
         let mut d = deck();
         d.cards[1].choices[0].effects.pop();

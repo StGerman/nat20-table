@@ -318,12 +318,36 @@ pub fn purse(engine: &EngineState, entity: Entity) -> Purse {
     }
 }
 
+/// The most of one item a scene, spawn, placement or NPC can give a creature to carry.
+pub(crate) const MAX_CARRIED: u32 = 100;
+
+/// Checks what a creature is to carry, before anything is spawned: every item exists, no more
+/// than [`MAX_CARRIED`] of one item, and the coins fit in a purse.
+pub fn check_carries(carries: &Carries) -> Result<(), String> {
+    // Rows of the same item add up: the cap is per item, not per row.
+    let mut totals: std::collections::BTreeMap<&str, u32> = std::collections::BTreeMap::new();
+    for CarriedItem { item, quantity } in &carries.items {
+        core_item_id(item).map_err(|e| e.message)?;
+        let total = totals.entry(item.as_str()).or_default();
+        *total = total.saturating_add(*quantity);
+        if *total > MAX_CARRIED {
+            return Err(format!(
+                "carries {total} {item}; at most {MAX_CARRIED} of one item"
+            ));
+        }
+    }
+    Inventory::new()
+        .checked_add_money(&monetary(&carries.coins))
+        .map_err(|_| "carries more coins than a purse holds".to_string())
+}
+
 /// Gives a freshly spawned creature what its scene entry says it carries.
 pub fn add_carries(
     engine: &mut EngineState,
     entity: Entity,
     carries: &Carries,
 ) -> Result<(), String> {
+    check_carries(carries)?;
     ensure_inventory(engine, entity);
     for CarriedItem { item, quantity } in &carries.items {
         let id = core_item_id(item).map_err(|e| e.message)?;
@@ -409,5 +433,32 @@ pub(super) fn ensure_inventory(engine: &mut EngineState, entity: Entity) {
             .world
             .insert_one(entity, Inventory::new())
             .expect("the creature exists");
+    }
+}
+
+#[cfg(test)]
+mod carries_tests {
+    use super::*;
+    use nat20_api_contract::Coins;
+
+    fn carries(rows: &[u32]) -> Carries {
+        Carries {
+            coins: Coins::default(),
+            items: rows
+                .iter()
+                .map(|&quantity| CarriedItem {
+                    item: "potion_of_healing".into(),
+                    quantity,
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn the_cap_counts_every_row_of_one_item() {
+        assert!(check_carries(&carries(&[MAX_CARRIED])).is_ok());
+        let err = check_carries(&carries(&[MAX_CARRIED, MAX_CARRIED])).unwrap_err();
+        assert!(err.contains("at most 100"), "{err}");
+        assert!(check_carries(&carries(&[u32::MAX, 1])).is_err());
     }
 }

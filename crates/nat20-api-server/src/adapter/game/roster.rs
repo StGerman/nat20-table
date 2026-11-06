@@ -21,31 +21,33 @@ const ROSTER_SLOTS: [(EquipmentSlot, EquipSlot); 5] = [
 impl Game {
     /// The characters to save: `party` in its order when given, else every party character in
     /// the scene, in scene order. A creature not built from a pregen (a placed stat block) is
-    /// not saved.
+    /// not saved. A party member left out of the scene keeps what the roster it came from says.
     pub fn roster_characters(&self, party: Option<&[Handle]>) -> Vec<RosterCharacter> {
-        let creatures: Vec<&SceneCreature> = match party {
+        match party {
             Some(party) => party
                 .iter()
-                .filter_map(|h| self.scene.creatures.iter().find(|c| c.handle == h.0))
+                .filter_map(
+                    |h| match self.scene.creatures.iter().find(|c| c.handle == h.0) {
+                        Some(c) => self.saved(c),
+                        None => self.roster.iter().find(|r| r.handle == *h).cloned(),
+                    },
+                )
                 .collect(),
             None => self
                 .scene
                 .creatures
                 .iter()
                 .filter(|c| c.side == Side::Party)
+                .filter_map(|c| self.saved(c))
                 .collect(),
-        };
-        creatures
-            .into_iter()
-            .filter_map(|c| self.saved(c))
-            .collect()
+        }
     }
 
     fn saved(&self, creature: &SceneCreature) -> Option<RosterCharacter> {
         let pregen = creature.pregen.clone()?;
         let world = &self.engine.world;
         let entity = creature.entity;
-        let (level, xp) = {
+        let (mut level, xp) = {
             let levels = world.get::<&CharacterLevels>(entity).ok()?;
             (levels.total_level(), levels.experience())
         };
@@ -62,6 +64,16 @@ impl Game {
                 .cloned()
                 .unwrap_or_default(),
         );
+        // A level-up still open is saved as not begun: the level before it, none of its picks.
+        // Its XP stays, so the character levels up again after loading.
+        if let Some(open) = self
+            .level_up
+            .as_ref()
+            .filter(|open| open.handle() == creature.handle)
+        {
+            level = open.level() - 1;
+            choices.retain(|c| c.level != open.level());
+        }
         let exhaustion = systems::exhaustion::exhaustion(world, entity);
         Some(RosterCharacter {
             handle: Handle(creature.handle.clone()),

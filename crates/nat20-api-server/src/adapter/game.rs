@@ -72,6 +72,11 @@ use crate::{
 };
 
 pub(super) mod goods;
+
+/// Checks what a creature is to carry before it is placed (an NPC's, when the campaign loads).
+pub(crate) fn check_carries(carries: &nat20_api_contract::Carries) -> Result<(), String> {
+    goods::check_carries(carries)
+}
 mod level_up;
 mod night;
 mod npcs;
@@ -2097,6 +2102,16 @@ impl Game {
             }
         }
         if let Some(e) = failed {
+            // The creatures already here forget the attitudes towards the ones that leave.
+            for other in &self.scene.creatures {
+                if let Ok(mut overrides) =
+                    self.engine.world.get::<&mut AttitudeOverride>(other.entity)
+                {
+                    for c in &new {
+                        overrides.entities.remove(&c.entity);
+                    }
+                }
+            }
             for c in &new {
                 let _ = self.engine.despawn(c.entity);
             }
@@ -2186,7 +2201,11 @@ impl Game {
             ));
         }
         if let Some(name) = name
-            && (name.trim().is_empty() || name.chars().count() > 40 || name.contains('\n'))
+            && (name.trim().is_empty()
+                || name.chars().count() > 40
+                || name
+                    .chars()
+                    .any(|c| c.is_control() || matches!(c, '\u{2028}' | '\u{2029}')))
         {
             return Err(error(
                 ErrorCode::BadRequest,
@@ -2529,22 +2548,19 @@ impl Game {
     /// don't, by overriding both creatures' attitudes towards each other. Leaves a pair whose
     /// factions already agree with their sides as it is.
     fn align_attitudes(&mut self, a: &SceneCreature, b: &SceneCreature) {
-        let hostile = systems::factions::mutual_attitude(&self.engine.world, a.entity, b.entity)
-            == Attitude::Hostile;
-        let should_be = matches!(
+        let attitude = if matches!(
             (a.side, b.side),
             (Side::Party, Side::Hostile) | (Side::Hostile, Side::Party)
-        );
-        if hostile == should_be {
-            return;
-        }
-        let attitude = if should_be {
+        ) {
             Attitude::Hostile
         } else if a.side == b.side {
             Attitude::Friendly
         } else {
             Attitude::Neutral
         };
+        if systems::factions::mutual_attitude(&self.engine.world, a.entity, b.entity) == attitude {
+            return;
+        }
         let (ea, eb) = (a.entity, b.entity);
         self.attitude_overrides(ea, |o| {
             o.entities.insert(eb, attitude);

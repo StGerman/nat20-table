@@ -160,22 +160,28 @@ impl Session {
         self.run_effects(&resolution.effects)
     }
 
-    /// The handles an effect touches, in party order.
-    fn who(&self, who: world::Who) -> Vec<String> {
+    /// The handles an effect touches, in party order. A check rolls for those on their feet
+    /// only; a payment, a gain or Exhaustion touches every living one, downed or not.
+    fn who(&self, who: world::Who, rolling: bool) -> Vec<String> {
         let table = self.table();
         let campaign = self.campaign.as_ref().expect("a card needs a campaign");
         let game = self.game.as_ref();
-        let up = |h: &str| game.is_some_and(|g| g.has_creature(h) && g.is_up(h));
+        let touched = |h: &str| {
+            game.is_some_and(|g| {
+                g.has_creature(h) && if rolling { g.is_up(h) } else { !g.is_dead(h) }
+            })
+        };
         match who {
             world::Who::Party => campaign
                 .party
                 .iter()
                 .map(|h| h.0.clone())
-                .filter(|h| up(h))
+                .filter(|h| touched(h))
                 .collect(),
-            world::Who::Blades => table.blades,
+            // The Blades were up when the card opened; an earlier effect may have downed one.
+            world::Who::Blades => table.blades.into_iter().filter(|h| touched(h)).collect(),
             world::Who::Owner => match &table.owner {
-                world::Owner::Player(owner) if up(owner) => vec![owner.clone()],
+                world::Owner::Player(owner) if touched(owner) => vec![owner.clone()],
                 _ => Vec::new(),
             },
         }
@@ -204,7 +210,7 @@ impl Session {
                         "a deck check names no ability or skill",
                     )
                 })?;
-                let rollers = self.who(*who);
+                let rollers = self.who(*who, true);
                 let spec = CheckSpec::Ladder {
                     ability,
                     skill: Some(skill),
@@ -224,7 +230,7 @@ impl Session {
             }
             world::Effect::Fight { monsters } => self.card_fight(monsters),
             world::Effect::Pay { who, copper } => {
-                for payer in self.who(*who) {
+                for payer in self.who(*who, false) {
                     let game = self.game_mut()?;
                     let held = game.purse_total_cp(&payer)?;
                     let paid = u32::try_from(held.min(u64::from(*copper))).unwrap_or(*copper);
@@ -236,7 +242,7 @@ impl Session {
                 Ok(())
             }
             world::Effect::Gain { who, copper } => {
-                for taker in self.who(*who) {
+                for taker in self.who(*who, false) {
                     self.game_mut()?
                         .receive_world(&taker, *copper, LedgerReason::Reward)?;
                     self.push_entries();
@@ -274,7 +280,7 @@ impl Session {
                 Ok(())
             }
             world::Effect::Exhaustion { who, levels } => {
-                for tired in self.who(*who) {
+                for tired in self.who(*who, false) {
                     self.game_mut()?.gain_exhaustion(&tired, *levels)?;
                     self.push_entries();
                 }
@@ -304,7 +310,7 @@ impl Session {
     /// fresh handle, then a fight between them and the party members who are up.
     fn card_fight(&mut self, monsters: &[String]) -> Result<(), ApiError> {
         let mut fighters: Vec<Handle> = self
-            .who(world::Who::Party)
+            .who(world::Who::Party, true)
             .into_iter()
             .map(Handle)
             .collect();

@@ -100,7 +100,7 @@ impl EscortState {
     pub fn advance(&mut self, terms: &EscortTerms) -> Vec<Wage> {
         let due = u64::from(terms.wage_cp) * u64::from(terms.advance_days);
         let blades = self.blades.clone();
-        blades.iter().filter_map(|b| self.pay(b, due)).collect()
+        blades.iter().flat_map(|b| self.pay(b, due)).collect()
     }
 
     /// A night passes: each Blade still standing (`alive`) has served one more day.
@@ -136,7 +136,7 @@ impl EscortState {
         }
         blades
             .iter()
-            .filter_map(|b| {
+            .flat_map(|b| {
                 let earned = u64::from(terms.wage_cp) * u64::from(self.served(b));
                 let owed = earned.saturating_sub(self.paid(b));
                 self.pay(b, owed)
@@ -154,18 +154,22 @@ impl EscortState {
         self.paid_cp.get(blade).copied().unwrap_or(0)
     }
 
-    /// Pays `copper` to `blade` from the purse, or what the purse has left.
-    fn pay(&mut self, blade: &str, copper: u64) -> Option<Wage> {
-        let paid = copper.min(self.purse_cp).min(u64::from(u32::MAX));
-        if paid == 0 {
-            return None;
+    /// Pays `copper` to `blade` from the purse, or what the purse has left: one wage per
+    /// `u32::MAX` copper, the most one ledger entry carries, so nothing owed is cut off.
+    fn pay(&mut self, blade: &str, copper: u64) -> Vec<Wage> {
+        let mut left = copper.min(self.purse_cp);
+        self.purse_cp -= left;
+        *self.paid_cp.entry(blade.to_string()).or_default() += left;
+        let mut wages = Vec::new();
+        while left > 0 {
+            let part = left.min(u64::from(u32::MAX));
+            left -= part;
+            wages.push(Wage {
+                blade: blade.to_string(),
+                copper: u32::try_from(part).expect("at most u32::MAX"),
+            });
         }
-        self.purse_cp -= paid;
-        *self.paid_cp.entry(blade.to_string()).or_default() += paid;
-        Some(Wage {
-            blade: blade.to_string(),
-            copper: u32::try_from(paid).expect("capped at u32::MAX"),
-        })
+        wages
     }
 }
 
@@ -185,6 +189,23 @@ mod tests {
 
     fn blades() -> Vec<String> {
         vec!["bren".into(), "maren".into()]
+    }
+
+    #[test]
+    fn a_wage_past_one_ledger_entry_is_paid_in_parts() {
+        let mut escort = EscortState {
+            blades: vec!["bren".into()],
+            served: BTreeMap::new(),
+            paid_cp: BTreeMap::new(),
+            purse_cp: u64::from(u32::MAX) * 2 + 5,
+            done: false,
+        };
+        let wages = escort.pay("bren", u64::from(u32::MAX) + 7);
+        assert_eq!(
+            wages.iter().map(|w| w.copper).collect::<Vec<_>>(),
+            vec![u32::MAX, 7]
+        );
+        assert_eq!(escort.paid("bren"), u64::from(u32::MAX) + 7);
     }
 
     #[test]

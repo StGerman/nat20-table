@@ -281,7 +281,7 @@ export function formatDmState(state: State): string {
   return lines.join("\n");
 }
 
-/** The world as the DM reads it (AGT-80): the player's lines plus the card's id and zone, the route, the merchant's purse and every place NPC. */
+/** The world as the DM reads it (AGT-80): the player's lines plus the card's id and zone, the route, the merchant's purse and every place NPC with their notes. */
 export function dmWorldLines(world: WorldDm): string[] {
   const placeName = new Map(world.places.map((p) => [p.id, p.name]));
   const named = (id: string) => (placeName.has(id) ? `${placeName.get(id)} (${id})` : id);
@@ -303,6 +303,8 @@ export function dmWorldLines(world: WorldDm): string[] {
   const npcs = world.npcs ?? [];
   if (npcs.length > 0) {
     lines.push(`Place NPCs: ${npcs.map((n) => `${n.name} (${n.id}, ${n.monster}, ${n.attitude}) of ${named(n.place)}${n.alive ? "" : ", dead"}${n.met ? ", met" : ""}`).join("; ")}.`);
+    // Who each one is, from the world file: the DM plays them from these notes.
+    for (const n of npcs) if (n.notes) lines.push(`${n.name} (${n.id}): ${n.notes}`);
   }
   return lines;
 }

@@ -165,7 +165,8 @@ impl NpcFile {
                     .id
                     .chars()
                     .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
-            if !plain || npc.id == "dm" {
+            // dm and world are the table's own names, never a creature's handle
+            if !plain || npc.id == "dm" || npc.id == "world" {
                 return Err(MapError(format!(
                     "the NPC id {:?} is not a plain snake_case name",
                     npc.id
@@ -180,7 +181,13 @@ impl NpcFile {
                     npc.id, npc.place
                 )));
             }
-            if npc.name.trim().is_empty() || npc.name.chars().count() > 40 {
+            if npc.name.trim().is_empty()
+                || npc.name.chars().count() > 40
+                || npc
+                    .name
+                    .chars()
+                    .any(|c| c.is_control() || matches!(c, '\u{2028}' | '\u{2029}'))
+            {
                 return Err(MapError(format!(
                     "the NPC {}'s name is one line of 1 to 40 characters",
                     npc.id
@@ -210,11 +217,11 @@ pub fn settle(defs: &[NpcDef], state: &mut BTreeMap<String, NpcState>) {
 }
 
 /// Records an NPC as the party leaves them: their Hit Points (none when at full), whether they
-/// are alive, and what they carry.
+/// are alive, and what they carry. A living NPC left at 0 Hit Points comes back with 1.
 pub fn left(state: &mut NpcState, now: NpcLeft) {
     let (current, max) = now.hp;
     state.alive = now.alive;
-    state.hp = (now.alive && current < max).then_some(current);
+    state.hp = (now.alive && current < max).then_some(current.max(1).min(max));
     state.carries = now.carries;
 }
 
@@ -250,6 +257,14 @@ mod tests {
         assert!(twice.validate(&map()).is_err());
         let bad_id = file(&REEVE.replace(r#""id": "reeve""#, r#""id": "Reeve""#));
         assert!(bad_id.validate(&map()).is_err());
+        let world = file(&REEVE.replace(r#""id": "reeve""#, r#""id": "world""#));
+        assert!(
+            world.validate(&map()).is_err(),
+            "world is the ledger's name"
+        );
+        let mut two_lines = npcs.clone();
+        two_lines.npcs[0].name = "Reeve\rof the town".into();
+        assert!(two_lines.validate(&map()).is_err());
     }
 
     #[test]
@@ -294,6 +309,15 @@ mod tests {
             },
         );
         assert_eq!(state.hp, None, "at full");
+        left(
+            &mut state,
+            NpcLeft {
+                hp: (0, 11),
+                alive: true,
+                carries: carries.clone(),
+            },
+        );
+        assert_eq!(state.hp, Some(1), "a living NPC comes back with at least 1");
         left(
             &mut state,
             NpcLeft {

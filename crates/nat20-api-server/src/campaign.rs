@@ -106,6 +106,18 @@ impl Campaign {
                     )
                 })?;
             if !state.escort.as_ref().is_some_and(|e| e.done) {
+                // A contract under way is the saved party's: another party can't take it up.
+                if let Some(escort) = &state.escort
+                    && escort.blades != party.iter().map(|h| h.0.clone()).collect::<Vec<_>>()
+                {
+                    return Err(error(
+                        ErrorCode::BadRoster,
+                        format!(
+                            "The roster's escort contract is under way with {}; start the campaign with that party.",
+                            escort.blades.join(", ")
+                        ),
+                    ));
+                }
                 built.state = state;
             }
         }
@@ -119,6 +131,14 @@ impl Campaign {
         let built = built
             .with_npcs(npcs)
             .map_err(|e| bad(format!("The world {}'s NPCs: {e}.", setup.map)))?;
+        // A player merchant drives the caravan, so they must travel with it.
+        if let world::Owner::Player(owner) = &built.state.caravan.owner
+            && !party.iter().any(|h| h.0 == *owner)
+        {
+            return Err(bad(format!(
+                "The caravan's owner {owner} is not in the party, so nobody could drive it."
+            )));
+        }
         // The escort contract (API-47): the Hired Blades are the party, less a player merchant.
         let (built, due) = match setup.escort {
             Some(terms) => {
@@ -151,7 +171,7 @@ impl Campaign {
             .collect();
         scenes.push(&campaign.road_scene);
         for id in scenes {
-            scene::read(data_dir, id)?;
+            read_scene(data_dir, id)?;
         }
         campaign.check_npcs(data_dir)?;
         Ok(campaign)
@@ -164,7 +184,7 @@ impl Campaign {
             let scene_id = self.scene_at(&world::Position::At {
                 place: npc.place.clone(),
             });
-            let file = scene::read(data_dir, &scene_id)?;
+            let file = read_scene(data_dir, &scene_id)?;
             if !file.anchors.iter().any(|a| a.id == npc.anchor) {
                 return Err(bad(format!(
                     "The NPC {} stands at anchor {}, which scene {scene_id} doesn't have.",
@@ -183,6 +203,8 @@ impl Campaign {
                 )));
             }
             monster::check(&npc.monster).map_err(|e| bad(format!("The NPC {}: {e}", npc.id)))?;
+            crate::adapter::game::check_carries(&carries_wire(&npc.carries))
+                .map_err(|e| bad(format!("The NPC {}'s carries: {e}.", npc.id)))?;
         }
         Ok(())
     }
@@ -561,6 +583,17 @@ pub struct NpcPlacement {
     pub hp: Option<u32>,
 }
 
+/// Reads a scene a journey can load; any reason it can't be read is the campaign's `bad_scene`.
+fn read_scene(
+    data_dir: &Path,
+    id: &str,
+) -> Result<nat20_api_contract::SceneFile, nat20_api_contract::ApiError> {
+    scene::read(data_dir, id).map_err(|e| nat20_api_contract::ApiError {
+        code: ErrorCode::BadScene,
+        ..e
+    })
+}
+
 fn carries_wire(c: &world::NpcCarries) -> Carries {
     Carries {
         coins: Coins {
@@ -584,14 +617,26 @@ fn carries_wire(c: &world::NpcCarries) -> Carries {
 /// The world's deck: every `deck/*.json`, files in name order; none is an empty deck.
 fn read_deck(dir: &Path) -> Result<world::Deck, nat20_api_contract::ApiError> {
     let deck_dir = dir.join("deck");
-    let Ok(entries) = std::fs::read_dir(&deck_dir) else {
-        return Ok(world::Deck::default());
+    // Only a world with no deck directory has no cards; any other failure to read it is the
+    // campaign's, never a silently smaller deck.
+    let unreadable = |e: std::io::Error| {
+        bad(format!(
+            "The deck {} does not read: {e}.",
+            deck_dir.display()
+        ))
     };
-    let mut paths: Vec<PathBuf> = entries
-        .filter_map(Result::ok)
-        .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|x| x == "json"))
-        .collect();
+    let entries = match std::fs::read_dir(&deck_dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(world::Deck::default()),
+        Err(e) => return Err(unreadable(e)),
+    };
+    let mut paths: Vec<PathBuf> = Vec::new();
+    for entry in entries {
+        let path = entry.map_err(unreadable)?.path();
+        if path.extension().is_some_and(|x| x == "json") {
+            paths.push(path);
+        }
+    }
     paths.sort();
     let mut files = Vec::new();
     for path in paths {

@@ -185,9 +185,27 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
             (false, false) => {}
         }
     }
+    // A party that turned back towards where it set out came from the road's undiscovered
+    // end: players see the position from the end they know instead, never the other's name.
+    let at = match view.at {
+        nat20_api_contract::WorldPosition::OnRoad {
+            road,
+            came_from,
+            miles_left,
+        } if !known.contains(came_from.as_str()) => {
+            let full_road = view.roads.iter().find(|r| r.id == road);
+            let other = full_road.map(|r| if r.from == came_from { &r.to } else { &r.from });
+            nat20_api_contract::WorldPosition::OnRoad {
+                came_from: other.cloned().unwrap_or_default(),
+                miles_left: full_road.map_or(0, |r| r.miles.saturating_sub(miles_left)),
+                road,
+            }
+        }
+        at => at,
+    };
     WorldPlayer {
         clock: view.clock,
-        at: view.at,
+        at,
         today: view.today,
         drives: drivers.iter().any(|d| d == handle),
         places: view
@@ -310,5 +328,53 @@ fn player_roll(full: &RollView) -> RollView {
             advantage: *advantage,
         },
         player => player.clone(),
+    }
+}
+
+#[cfg(test)]
+mod turned_back_tests {
+    use super::*;
+
+    /// The DM's world from the travel fixture: on the tower trail, 8 miles from the
+    /// undiscovered tower, having set out from the inn.
+    fn dm_world() -> WorldDm {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../contract/fixtures/travel.jsonl"
+        );
+        let line = std::fs::read_to_string(path)
+            .unwrap()
+            .lines()
+            .find(|l| l.contains(r#""id": "tr-15""#) || l.contains(r#""id":"tr-15""#))
+            .unwrap()
+            .to_owned();
+        let v: serde_json::Value = serde_json::from_str(&line).unwrap();
+        serde_json::from_value(v["response"]["result"]["state"]["world"].clone()).unwrap()
+    }
+
+    #[test]
+    fn a_turned_back_party_never_shows_the_undiscovered_end() {
+        let mut view = dm_world();
+        // Turned back towards the inn: the DM's position names the tower as where it came from.
+        view.at = nat20_api_contract::WorldPosition::OnRoad {
+            road: "tower_trail".into(),
+            came_from: "old_tower".into(),
+            miles_left: 15,
+        };
+        let player = world_for(
+            "maren",
+            WorldFull {
+                view,
+                drivers: Vec::new(),
+            },
+        );
+        assert_eq!(
+            player.at,
+            nat20_api_contract::WorldPosition::OnRoad {
+                road: "tower_trail".into(),
+                came_from: "crossing_inn".into(),
+                miles_left: 5,
+            }
+        );
     }
 }

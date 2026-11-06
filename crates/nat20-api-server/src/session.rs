@@ -180,7 +180,9 @@ impl Session {
     /// Loads a scene file already read and checked, carrying `party` in, and logs
     /// `scene_loaded`. Nothing changes on a refusal.
     fn enter_scene(&mut self, scene: &SceneFile, party: &[Handle]) -> Result<(), ApiError> {
-        // The place NPCs stay as the party leaves them (API-48).
+        // The place NPCs stay as the party leaves them (API-48); a refused load puts the
+        // campaign back as it was.
+        let campaign_before = self.campaign.clone();
         self.npcs_leave();
         match Game::load(
             self.game.take(),
@@ -194,6 +196,7 @@ impl Session {
             }
             Err((previous, e)) => {
                 self.game = previous;
+                self.campaign = campaign_before;
                 return Err(e);
             }
         }
@@ -278,7 +281,8 @@ impl Session {
     }
 
     /// Places the living NPCs of the place the party is in, when the scene is that place's
-    /// (API-48), and marks them met.
+    /// (API-48), and marks them met. An NPC with no free spot near their anchor is not there
+    /// this time: the scene has already loaded, so nothing is refused.
     fn npcs_arrive(&mut self) -> Result<(), ApiError> {
         let (Some(campaign), Some(game)) = (self.campaign.as_mut(), self.game.as_mut()) else {
             return Ok(());
@@ -287,7 +291,7 @@ impl Session {
             if game.has_creature(&npc.id) {
                 continue;
             }
-            game.place_npc(
+            if let Err(e) = game.place_npc(
                 &npc.id,
                 &npc.monster,
                 npc.side,
@@ -295,7 +299,10 @@ impl Session {
                 &npc.name,
                 &npc.carries,
                 npc.hp,
-            )?;
+            ) {
+                eprintln!("npc: {} is not placed: {}", npc.id, e.message);
+                continue;
+            }
             campaign.met(&npc.id);
             self.npcs_here.push(npc.id);
         }
@@ -374,7 +381,13 @@ impl Session {
             .map(|c| c.scene_at(&c.world.state.at))
             .unwrap_or_default();
         if self.game.as_ref().is_some_and(|g| g.scene_id() != here) {
-            let scene = scene::read(&self.data_dir, &here)?;
+            let scene = match scene::read(&self.data_dir, &here) {
+                Ok(scene) => scene,
+                Err(e) => {
+                    self.campaign = None;
+                    return Err(e);
+                }
+            };
             let party = party.to_vec();
             if let Err(e) = self.enter_scene(&scene, &party) {
                 // Nothing starts on a refusal.
@@ -441,6 +454,12 @@ impl Session {
             return Err(error(
                 ErrorCode::WrongMode,
                 "A fight is running; the caravan moves on once it is over.",
+            ));
+        }
+        if let Some((handle, _)) = game.open_level_up() {
+            return Err(rejected(
+                RejectReason::LevelUpOpen,
+                format!("{handle}'s level-up is open; {command} waits until it is answered."),
             ));
         }
         if let Some(missing) = campaign.party.iter().find(|h| !game.has_creature(&h.0)) {
@@ -1263,16 +1282,19 @@ impl Session {
     }
 
     /// The coin trial balance (AGT-78): every creature the journal knows holds, in core, the
-    /// copper the journal says. Items are left out: a potion drunk leaves the pack with no
-    /// ledger entry. A creature no longer in the scene isn't compared.
+    /// copper the journal says, a creature that gave away all it had included. Items are left
+    /// out: a potion drunk leaves the pack with no ledger entry. A creature no longer in the
+    /// scene isn't compared.
     fn check_coin(&mut self) {
         let Some(game) = self.game.as_ref() else {
             return;
         };
-        for (holder, holdings) in self.ledger.balances() {
+        let mut balances = self.ledger.balances();
+        for holder in self.ledger.holders() {
             let Holder::Creature(handle) = &holder else {
                 continue;
             };
+            let holdings = balances.remove(&holder).unwrap_or_default();
             if let Some(core) = game.purse_copper(handle)
                 && core != holdings.copper
             {
@@ -1296,9 +1318,10 @@ impl Session {
         let Ok(holder) = merchant.parse::<Holder>() else {
             return;
         };
-        let Some(held) = self.ledger.balances().get(&holder).map(|h| h.copper) else {
+        if !self.ledger.holders().contains(&holder) {
             return;
-        };
+        }
+        let held = self.ledger.balance(&holder).copper;
         if i64::try_from(purse).ok() != Some(held) {
             let line = format!(
                 "ledger: {merchant} holds {purse} cp in the world but {held} cp in the journal"

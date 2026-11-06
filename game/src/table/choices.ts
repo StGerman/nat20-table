@@ -15,7 +15,7 @@ export type ChoiceAct =
   | { kind: "dash_move"; to: MoveTarget }
   | { kind: "end_turn" }
   /** Move the caravan on one stretch along its way (AGT-80): the merchant's route, or on along the road. */
-  | { kind: "travel"; pace: Pace }
+  | { kind: "travel"; pace: Pace; to?: string }
   /** End the day at the inn or in camp (AGT-80). */
   | { kind: "rest_night"; where: Lodging }
   /** Start the next level, which the sheet says is due (AGT-80). */
@@ -67,14 +67,31 @@ function tagged<T extends Item | Choice>(item: T, about: NonNullable<Choice["abo
 /**
  * The road's own lines after the human's options (AGT-80), when the human may drive the caravan
  * and no card waits: move on, make camp, and take rooms where there is an inn. Numbered from
- * `first`. Moving on goes the caravan's own way; a road or place to pick is for the merchant's
- * seat, later.
+ * `first`. With an NPC owner, or on the road, moving on goes the caravan's own way; a human who
+ * owns the caravan picks a road out of the place it is in, one line per road.
  */
 export function roadChoices(world: WorldPlayer, first: number): Choice[] {
   if (!world.drives || world.card) return [];
-  const here = world.at.kind === "at" ? world.places.find((p) => p.id === (world.at as { place: string }).place) : undefined;
+  const at = world.at.kind === "at" ? world.at.place : undefined;
+  const here = at === undefined ? undefined : world.places.find((p) => p.id === at);
+  const placeName = new Map(world.places.map((p) => [p.id, p.name]));
+  const owns = !world.caravan.owner.includes(":");
+  const moves: Item[] =
+    owns && at !== undefined
+      ? [
+          ...world.roads
+            .filter((r) => r.from === at || r.to === at)
+            .map((r): Item => {
+              const end = r.from === at ? r.to : r.from;
+              return { label: `Take the road to ${placeName.get(end) ?? end} (${r.miles} miles)`, act: { kind: "travel", pace: "normal", to: r.id }, about: { id: "travel" } };
+            }),
+          ...world.unexplored
+            .filter((r) => r.from === at)
+            .map((r): Item => ({ label: `Take an unexplored road (${r.miles} miles)`, act: { kind: "travel", pace: "normal", to: r.id }, about: { id: "travel" } })),
+        ]
+      : [{ label: "Move on with the caravan", act: { kind: "travel", pace: "normal" }, about: { id: "travel" } }];
   const items: Item[] = [
-    { label: "Move on with the caravan", act: { kind: "travel", pace: "normal" }, about: { id: "travel" } },
+    ...moves,
     { label: "Make camp for the night", act: { kind: "rest_night", where: "camp" }, about: { id: "rest_night" } },
     ...(typeof here?.inn_cp === "number" ? [{ label: `Take rooms at the inn for the night`, act: { kind: "rest_night", where: "inn" } as ChoiceAct, about: { id: "rest_night" } }] : []),
   ];

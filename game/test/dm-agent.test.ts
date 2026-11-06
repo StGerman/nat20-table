@@ -286,6 +286,18 @@ test("--seat ai plays the scene with every character an AI player and records no
   }
 });
 
+test("a campaign refuses scripted players, who would never move the caravan (AGT-80)", () => {
+  const cli = path.join(REPO, "game/src/play/full.ts");
+  const pack = path.join(REPO, "scenarios/fair_in_wend");
+  const run = spawnSync(
+    process.execPath,
+    ["--experimental-strip-types", "--no-warnings", cli, "--pack", pack, "--seat", "ai", "--dm", "scripted", "--players", "scripted", "--seed", "5", "--no-audit", "--no-upload"],
+    { encoding: "utf8" },
+  );
+  assert.equal(run.status, 2, run.stderr || run.stdout);
+  assert.match(run.stderr, /scripted players never move the caravan/);
+});
+
 test("the exit run's scene list plays Scene 1, passes over Scene 2 and plays Scene 3", () => {
   const out = mkdtempSync(path.join(tmpdir(), "scene-"));
   try {

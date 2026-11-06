@@ -201,12 +201,16 @@ pub struct Holdings {
 }
 
 impl Holdings {
+    /// Saturates instead of overflowing: no real purse comes near `i64::MAX`, and a stuck
+    /// total then shows up in the trial balance as a mismatch instead of a panic or a wrap.
     fn apply(&mut self, what: &Asset, sign: i64) {
         match what {
-            Asset::Coin { copper } => self.copper += sign * i64::from(*copper),
+            Asset::Coin { copper } => {
+                self.copper = self.copper.saturating_add(sign * i64::from(*copper));
+            }
             Asset::Item { item, quantity } => {
                 let held = self.items.entry(item.clone()).or_insert(0);
-                *held += sign * i64::from(*quantity);
+                *held = held.saturating_add(sign * i64::from(*quantity));
                 if *held == 0 {
                     self.items.remove(item);
                 }
@@ -309,6 +313,24 @@ impl Journal {
         &self.entries
     }
 
+    /// Every holder the journal knows: in the opening, or in any entry, whatever it holds now.
+    pub fn holders(&self) -> BTreeSet<Holder> {
+        self.opening
+            .keys()
+            .cloned()
+            .chain(
+                self.entries
+                    .iter()
+                    .flat_map(|e| [e.from.clone(), e.to.clone()]),
+            )
+            .collect()
+    }
+
+    /// What one holder holds now; nothing for a holder the journal doesn't know.
+    pub fn balance(&self, holder: &Holder) -> Holdings {
+        self.balances().remove(holder).unwrap_or_default()
+    }
+
     /// Each holder's holdings now: the opening plus every entry. Holders that
     /// end with nothing are left out.
     pub fn balances(&self) -> BTreeMap<Holder, Holdings> {
@@ -393,5 +415,55 @@ mod open_account_tests {
         );
         assert_eq!(journal.balances()[&bren].copper, 300);
         assert_eq!(journal.balances()[&maren].copper, 200);
+    }
+
+    #[test]
+    fn a_holder_that_gave_everything_away_is_still_known() {
+        let bren = Holder::Creature("bren".into());
+        let maren = Holder::Creature("maren".into());
+        let mut journal = Journal::new(BTreeMap::from([(
+            bren.clone(),
+            Holdings {
+                copper: 200,
+                ..Holdings::default()
+            },
+        )]));
+        journal
+            .post(Entry {
+                from: bren.clone(),
+                to: maren.clone(),
+                what: coin(200),
+                reason: Reason::Trade,
+                roll: None,
+            })
+            .unwrap();
+        assert!(!journal.balances().contains_key(&bren));
+        assert!(journal.holders().contains(&bren));
+        assert_eq!(journal.balance(&bren), Holdings::default());
+    }
+
+    #[test]
+    fn a_huge_opening_saturates_instead_of_overflowing() {
+        let bren = Holder::Creature("bren".into());
+        let mut journal = Journal::new(BTreeMap::from([(
+            Holder::Creature("maren".into()),
+            Holdings {
+                copper: i64::MAX,
+                ..Holdings::default()
+            },
+        )]));
+        journal
+            .post(Entry {
+                from: bren,
+                to: Holder::Creature("maren".into()),
+                what: coin(1),
+                reason: Reason::Trade,
+                roll: None,
+            })
+            .unwrap();
+        assert_eq!(
+            journal.balance(&Holder::Creature("maren".into())).copper,
+            i64::MAX
+        );
     }
 }

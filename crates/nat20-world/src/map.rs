@@ -250,9 +250,14 @@ impl WorldMap {
         }
         let mut edges = BTreeSet::new();
         for edge in &self.edges {
-            if places.contains(edge.id.as_str()) || !edges.insert(edge.id.as_str()) {
+            // A travel `to` names a road or a place, so an edge sharing either id would be
+            // travelled as that road instead of refused as closed.
+            if places.contains(edge.id.as_str())
+                || roads.contains(edge.id.as_str())
+                || !edges.insert(edge.id.as_str())
+            {
                 return Err(MapError(format!(
-                    "edge id {} is used twice or by a place",
+                    "edge id {} is used twice or by a place or road",
                     edge.id
                 )));
             }
@@ -394,6 +399,16 @@ pub(crate) mod tests {
         let mut clash = map;
         clash.edges[0].id = "inn".into();
         assert!(clash.validate().unwrap_err().0.contains("edge id inn"));
+
+        let mut road_clash = clash;
+        road_clash.edges[0].id = "town_inn".into();
+        assert!(
+            road_clash
+                .validate()
+                .unwrap_err()
+                .0
+                .contains("edge id town_inn")
+        );
     }
 
     #[test]
