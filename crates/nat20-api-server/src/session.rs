@@ -217,6 +217,11 @@ impl Session {
         self.push_entries();
         // Roll keys are per scene; the old scene's rolls are never cited again.
         self.roll_keys.clear();
+        // So are creature handles: a card fight's named NPC who lived through it stays behind,
+        // and a new creature with the same handle here is not them (ENG-36).
+        self.card_npcs.clear();
+        self.last_blow.clear();
+        self.last_actor = None;
         self.decided = true;
         self.push(Pending::public(
             None,
@@ -274,6 +279,14 @@ impl Session {
             return Ok(false);
         };
         self.escort_arrive(&place)
+    }
+
+    /// Whether the escort contract is done.
+    fn escort_done(&self) -> bool {
+        self.campaign
+            .as_ref()
+            .and_then(|c| c.world.state.escort.as_ref())
+            .is_some_and(|e| e.done)
     }
 
     /// The caravan arrived at `place`: at the escort's destination, the Blades are paid what
@@ -720,14 +733,20 @@ impl Session {
         // before the pay (ENG-35). At the destination the escort settles only once the card is
         // decided and any fight it starts is over (`settle_if_arrived`), so a roster saved in
         // between keeps the contract under way with the card on the table. A card on the table
-        // also keeps the road card off the leg.
+        // also keeps the road card off the leg, even when nobody could speak on it and it was
+        // settled at once.
+        let done_before = self.escort_done();
+        let mut arrival_card = false;
         if leg.arrived {
             let place = leg.toward.clone();
-            self.draw_card(|world, dice| world.draw_on_arrival(&place, dice))?;
+            arrival_card = self.draw_card(|world, dice| world.draw_on_arrival(&place, dice))?;
         }
-        let settled = leg.arrived && self.settle_if_arrived()?;
+        if leg.arrived {
+            self.settle_if_arrived()?;
+        }
+        let settled = !done_before && self.escort_done();
         // The leg that settles the contract ends the journey: no road card follows it.
-        if !settled {
+        if !settled && !arrival_card {
             let road = leg.road.clone();
             self.draw_card(|world, dice| world.draw_after_leg(&road, dice))?;
         }

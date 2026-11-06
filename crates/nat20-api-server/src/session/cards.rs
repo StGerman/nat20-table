@@ -37,13 +37,13 @@ impl world::WorldDice for SessionDice {
 
 impl Session {
     /// Draws a road card with `draw` and logs the roll (DM only) and `card_drawn` (public).
-    /// A card nobody can speak on is settled at once.
+    /// A card nobody can speak on is settled at once. Returns whether a card was drawn.
     pub(super) fn draw_card(
         &mut self,
         draw: impl FnOnce(&mut world::World, &mut SessionDice) -> Option<String>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<bool, ApiError> {
         let Some(campaign) = self.campaign.as_mut() else {
-            return Ok(());
+            return Ok(false);
         };
         let mut dice = SessionDice::default();
         let drawn = draw(&mut campaign.world, &mut dice);
@@ -59,7 +59,7 @@ impl Session {
             });
         }
         let Some(card) = card else {
-            return Ok(());
+            return Ok(false);
         };
         self.push(Pending::public(
             None,
@@ -75,7 +75,7 @@ impl Session {
         if let Some(resolution) = world.deck.settle_unattended(&mut world.state.deck, &table) {
             self.resolve_card(resolution)?;
         }
-        Ok(())
+        Ok(true)
     }
 
     /// Who sits at the table for the card: Blades who are up and in the scene.
