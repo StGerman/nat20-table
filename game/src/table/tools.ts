@@ -12,6 +12,7 @@ import type {
   HelpSpec,
   HitDiceSpend,
   MoveTarget,
+  Placement,
   Response,
   State,
   Viewer,
@@ -19,6 +20,7 @@ import type {
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
 import type { NoteKind, TableState } from "./state.ts";
 import type { ToolOutcome } from "./types.ts";
+import type { StatBlockEntry } from "../pack/adventure.ts";
 
 /** What an agent may give `submit`: an option, and its targets, variant or aim. */
 export interface DecisionInput {
@@ -40,6 +42,7 @@ function refusal(response: Response): string {
 /** Commands that change the session. The rest only read it. */
 const CHANGES = new Set<Command["cmd"]>([
   "submit", "move", "end_turn", "react", "request_check", "help", "short_rest", "start_combat", "end_combat", "spawn", "load_scene",
+  "place_creature", "start_fight",
 ]);
 
 /**
@@ -428,6 +431,8 @@ export interface ScenePasses {
   current?(): string | undefined;
   /** Scenes that offer a Short Rest (the skeleton's `rest`): leaving one unrested reminds the DM once. */
   rests?: ReadonlySet<string>;
+  /** The pack's `stat_blocks` list (API-33, AGT-24): the only creatures the DM may place. */
+  statBlocks?: readonly StatBlockEntry[];
 }
 
 /**
@@ -612,6 +617,51 @@ export class DmTools {
   private async dmState(): Promise<Extract<State, { view: "dm" }> | undefined> {
     const r = this.table.observe(await this.table.engine.request("dm", { cmd: "get_state" }));
     return r.ok && r.result?.cmd === "get_state" && r.result.state.view === "dm" ? r.result.state : undefined;
+  }
+
+  /**
+   * Brings in one creature from the pack's `stat_blocks` list (AGT-24): the stat block, its side and
+   * what it carries come from the entry, never from the DM, who names only the entry, a new handle
+   * and where it stands (a place, or beside a creature). The engine finds the nearest free spot.
+   */
+  async placeCreature(entry: string, handle: string, where: { place?: string; near?: string }): Promise<ToolOutcome> {
+    const list = this.passes?.statBlocks ?? [];
+    const found = list.find((s) => s.id === entry);
+    if (!found) {
+      return list.length === 0
+        ? notNow("this adventure lists no creatures to bring in; only the scene's own spawns")
+        : { ok: false, text: `no creature ${entry} in the adventure's list: ${list.map((s) => s.id).join(", ")}` };
+    }
+    let at: Placement;
+    if (where.place) at = { kind: "anchor", anchor: where.place };
+    else if (where.near) {
+      const state = await this.dmState();
+      const beside = state?.creatures.find((c) => c.handle === where.near);
+      if (!beside) return { ok: false, text: `no creature ${where.near} in this scene` };
+      at = { kind: "point", point: beside.position_ft };
+    } else return { ok: false, text: "give a place or a creature to stand beside" };
+    return send(
+      this.table,
+      "dm",
+      {
+        cmd: "place_creature",
+        handle,
+        monster: found.monster,
+        side: found.side,
+        at,
+        ...(found.name ? { name: found.name } : {}),
+        ...(found.carries ? { carries: found.carries } : {}),
+      },
+      () => (this.table.inCombat ? `${handle} is here and joins the fight; initiative rolled` : `${handle} is here`),
+    );
+  }
+
+  /** A fight among creatures present that no scene encounter fits (API-34): no surprise, no early end. */
+  startFight(participants: string[]): Promise<ToolOutcome> {
+    if ((this.passes?.statBlocks ?? []).length === 0) {
+      return Promise.resolve(notNow("this adventure holds no fights beyond its scenes' encounters"));
+    }
+    return send(this.table, "dm", { cmd: "start_fight", participants: [...participants] }, () => "the fight is on; initiative rolled");
   }
 
   spawn(spawn_id: string): Promise<ToolOutcome> {

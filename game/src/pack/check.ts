@@ -5,7 +5,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSyn
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../engine.ts";
-import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS } from "./adventure.ts";
+import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS, STAT_BLOCKS_SINCE } from "./adventure.ts";
 
 /** Every pack in the repository: each folder of `scenarios/`. */
 export function repoPacks(): string[] {
@@ -88,6 +88,10 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     return report;
   }
 
+  if (adventure.stat_blocks.length > 0 && adventure.format_version < STAT_BLOCKS_SINCE) {
+    problem(`stat_blocks needs format_version ${STAT_BLOCKS_SINCE} or later`);
+  }
+
   // Every file it names. The pack's own files stay inside it, so the folder can be moved or shared
   // whole; only lore may be shared text outside it.
   const own = [
@@ -143,6 +147,7 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     ["scene", sceneIdList],
     ["npc", adventure.npcs.map((n) => n.id)],
     ["party handle", adventure.party.map((p) => p.handle)],
+    ["stat block entry", adventure.stat_blocks.map((s) => s.id)],
   ] as const) {
     for (const id of duplicates([...list])) problem(`${what} ${id} is listed twice`);
   }
@@ -228,6 +233,30 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     for (const monster of new Set([...ids.values()].flatMap((d) => [...d.monsters.values()]))) {
       if (named.has(monster)) continue;
       kinds.add((monster.split(/[.:]/).at(-1) ?? monster).split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "));
+    }
+    // Every stat_blocks entry places, beside the party in the last scene: the engine knows the stat
+    // block, the side and every item it carries (API-33). The next load would clear them.
+    if (report.loaded.length === adventure.scenes.length && adventure.stat_blocks.length > 0) {
+      const r = await engine.request("dm", { cmd: "get_state" });
+      const near = r.ok && r.result?.cmd === "get_state" && r.result.state.view === "dm"
+        ? r.result.state.creatures.find((c) => party.includes(c.handle))?.position_ft
+        : undefined;
+      for (const [i, entry] of adventure.stat_blocks.entries()) {
+        if (!near) break;
+        const placed = await engine.request("dm", {
+          cmd: "place_creature",
+          handle: `pack_check_${i + 1}`,
+          monster: entry.monster,
+          side: entry.side,
+          at: { kind: "point", point: { x_ft: near.x_ft + 30, y_ft: near.y_ft, z_ft: near.z_ft } },
+          ...(entry.carries ? { carries: entry.carries } : {}),
+        });
+        if (!placed.ok && placed.error?.reason !== "no_room") problem(`stat_blocks ${entry.id}: the engine refused it: ${placed.error?.message}`);
+      }
+    }
+    for (const entry of adventure.stat_blocks) {
+      kinds.add((entry.monster.split(/[.:]/).at(-1) ?? entry.monster).split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "));
+      if (entry.name) kinds.add(entry.name);
     }
     // A glyph key that is no party handle and no kind any scene places would never be drawn (AGT-67).
     if (report.loaded.length === adventure.scenes.length) {

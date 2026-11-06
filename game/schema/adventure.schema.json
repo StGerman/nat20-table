@@ -15,7 +15,7 @@
       "type": "integer",
       "minimum": -9007199254740991,
       "maximum": 9007199254740991,
-      "description": "The skeleton format, one of 1."
+      "description": "The skeleton format, one of 1, 2."
     },
     "id": {
       "type": "string",
@@ -184,6 +184,113 @@
       "additionalProperties": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "stat_blocks": {
+      "default": [],
+      "description": "The only creatures the DM may place beyond the scene files (format 2 and later). Empty: the DM improvises no creatures.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "_comment": {
+            "description": "A note for people editing the file; the game ignores it.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "description": "What the DM names in place_creature, such as road_bandit. DM-only, like the stat block id."
+          },
+          "monster": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A stat block id in the engine's registry, as in a scene file's `monster` (`wolf`, or a namespaced id)."
+          },
+          "side": {
+            "default": "hostile",
+            "description": "Which side of a fight it is on. The engine refuses a side its stat block can't take beside the party.",
+            "type": "string",
+            "enum": [
+              "hostile",
+              "neutral",
+              "party"
+            ]
+          },
+          "name": {
+            "description": "What the table calls the creature instead of the stat block's name, such as Grey wolf.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "carries": {
+            "description": "Coin and items each such creature carries, taken by loot once it falls or surrenders. Authored here, never by the DM; DM-only until looted.",
+            "type": "object",
+            "properties": {
+              "coins": {
+                "type": "object",
+                "properties": {
+                  "cp": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sp": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "ep": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "gp": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "pp": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "item": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]+$",
+                      "description": "An item id as on a sheet, such as potion_of_healing."
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "item",
+                    "quantity"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "monster"
+        ],
+        "additionalProperties": false,
+        "description": "A creature the DM may bring in when a story beat needs one the scene file doesn't hold (API-33, AGT-24)."
       }
     },
     "scenes": {

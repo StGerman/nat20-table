@@ -390,3 +390,14 @@ test("a refused narration takes its preview off the seat at once, not at the wak
     t.close();
   }
 });
+
+test("a pack with a creature list gives the DM place_creature and start_fight, and names the list (AGT-24)", () => {
+  const pack = { ...PACK, adventure: { ...PACK.adventure, stat_blocks: [{ id: "road_wolf", monster: "wolf", side: "hostile" as const, name: "Grey wolf" }] } };
+  const dm = new ModelDm({ pack, human: PARTY.human, players: PARTY.ai, choice: CHOICE });
+  const names = dm.seatTools.map((t) => t.name);
+  assert.deepEqual(names, [...DM_TOOLS.slice(0, DM_TOOLS.indexOf("spawn") + 1), "place_creature", "start_fight", ...DM_TOOLS.slice(DM_TOOLS.indexOf("spawn") + 1)]);
+  assert.match(dm.systemPrompt, /place_creature from this list, never another: road_wolf \(Grey wolf\)/);
+  assert.doesNotMatch(dm.systemPrompt, /there is no fight with anyone the scene doesn't hold/);
+  // The Silent Mill lists none, so its DM keeps the old rule and tools.
+  assert.match(new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).systemPrompt, /there is no fight with anyone the scene doesn't hold/);
+});

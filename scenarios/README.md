@@ -36,4 +36,6 @@ npm run pack:check -- <pack folder>     # no folder: every pack in scenarios/
 
 The skeleton's type is `game/src/pack/adventure.ts`; after changing it, run `npm run pack:schema` and commit the regenerated schema. A change that old packs can't read bumps `format_version`, and the game keeps reading the old version until those packs are migrated.
 
+Format 2 adds `stat_blocks`: the creatures the DM may bring in beyond the scene files (API-33, AGT-24), each with an entry id, a stat block, a side, an optional name and what it carries. Only a pack that lists some gives the DM `place_creature` and `start_fight`; the DM names an entry, never a stat block or coin. `pack:check` places each entry beside the party in the last scene, so an unknown stat block, side or item is caught before play. A format 1 pack, such as *The Silent Mill*, lists none.
+
 A pack committed to this repo carries only our own text or CC-BY text (Rule 7). A private pack built from a published adventure stays outside the repo.
