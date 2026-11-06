@@ -431,6 +431,9 @@ export class ScriptedSeat implements Seat {
       case "surrender":
         // The scripted human accepts every surrender it is offered (decision D4).
         return { kind: "option", number: 1 };
+      case "level_up":
+        // The scripted human takes the recommended pick, as Enter does (AGT-80).
+        return { kind: "option", number: 1 };
       case "card": {
         // The scripted human goes with the others on a road card, as Enter does (AGT-80).
         const offered = [...seat.shown].reverse().find((e) => e.kind === "options");

@@ -89,7 +89,9 @@ export type HumanPrompt =
   /** The DM offered a surrender: accept it (1), fight on (2), or say what you do (AGT-30). */
   | { kind: "surrender" }
   /** A road card waits for the human's word, asked last (AGT-80): a number, or Enter to go with the others. */
-  | { kind: "card" };
+  | { kind: "card" }
+  /** A choice for the human's new level (AGT-80): a number, or Enter for the recommended pick. */
+  | { kind: "level_up" };
 
 /**
  * The human's seat (spec §3.4). The Ink UI implements it (step 11); scripted seats implement it
