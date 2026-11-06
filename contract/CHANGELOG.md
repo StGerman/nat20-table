@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.58 (2026-11-06)
+- Additive (API-50, protocol §4.18, decision 0061): `pass_time{span}`, the DM's command to let time pass out of combat in a place, so a stop in a village takes time (decision 0060 F2). `span` is a new `TimeSpan` (`short_while`, `hour`, `watch`); the result carries `minutes` and the state. A new public event `time_passed{minutes, clock}`, and a new reject reason `night_falls` for a span that would reach midnight. The clock, core's time and the day's travel move as a card's `time_lost` moves them.
+- New fixture `pass_time.jsonl`. `errors.jsonl`'s unknown-command message lists `pass_time`. Other fixtures change by version only.
+
 ## 1.0.0-dev.57 (2026-11-05)
 - Meaning only, no field changes (API-43, protocol §4.13): the `travel` leg that settles the escort contract draws no road card. The draw came after `escort_settled`, so the card sat on the table at the journey's end and was never shown or resolved (Stas's Wend run 11-05, B2).
 - No fixture changes: the test world's deck has no card on the tower trail, where the fixtures' contract settles. `tests/api.rs` `the_leg_that_ends_the_contract_draws_no_road_card` adds one to a copy of the deck and shows both sides: the first leg draws, the settling leg does not. Fixtures change by version only.

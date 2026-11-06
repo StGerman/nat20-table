@@ -261,6 +261,11 @@ pub fn text(kind: &EventKind) -> String {
             }
         }
         EventKind::TimeLost { minutes } => format!("The party loses {minutes} minutes."),
+        EventKind::TimePassed { minutes, clock } => format!(
+            "{minutes} minutes pass; it is day {}, {}.",
+            clock.day,
+            snake_words(&clock.watch)
+        ),
         EventKind::EscortSettled { destination } => {
             format!("The caravan reaches {destination}; the Blades are paid what they are owed.")
         }

@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 /// Minutes in a day.
 pub const MINUTES_PER_DAY: u32 = 24 * 60;
 
+/// Minutes in a watch: four hours.
+pub const WATCH_MINUTES: u32 = 4 * 60;
+
 /// The world's time: a day number from 1 and the minute of that day.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Clock {
@@ -70,6 +73,17 @@ impl Clock {
         minutes
     }
 
+    /// Minutes until the next watch begins (0:00, 4:00, 8:00, noon, 16:00, 20:00): 240 at
+    /// the very start of a watch.
+    pub fn minutes_to_next_watch(&self) -> u32 {
+        WATCH_MINUTES - self.minute % WATCH_MINUTES
+    }
+
+    /// Minutes until midnight: the whole day at 0:00.
+    pub fn minutes_to_midnight(&self) -> u32 {
+        MINUTES_PER_DAY - self.minute
+    }
+
     /// The hour of the day, 0 to 23.
     pub fn hour(&self) -> u32 {
         self.minute / 60
@@ -91,6 +105,15 @@ impl Clock {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_next_watch_and_midnight_are_counted_from_now() {
+        assert_eq!(Clock::at(1, 13, 30).minutes_to_next_watch(), 150);
+        assert_eq!(Clock::at(1, 12, 0).minutes_to_next_watch(), 240);
+        assert_eq!(Clock::at(1, 23, 59).minutes_to_next_watch(), 1);
+        assert_eq!(Clock::at(1, 21, 0).minutes_to_midnight(), 180);
+        assert_eq!(Clock::at(2, 0, 0).minutes_to_midnight(), MINUTES_PER_DAY);
+    }
 
     #[test]
     fn advancing_crosses_midnight() {

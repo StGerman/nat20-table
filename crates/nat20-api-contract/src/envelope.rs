@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, LegView, LevelUpChoice, Lodging,
     NightView, OptionId, Pace, Placement, PointFt, PromptId, RollId, Roster, Sheet, Side, Skill,
-    State, V1, Viewer,
+    State, TimeSpan, V1, Viewer,
     state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
@@ -306,6 +306,14 @@ pub enum Command {
         /// Inn or camp.
         #[serde(rename = "where")]
         lodging: Lodging,
+    },
+    /// Lets time pass out of combat (API-50; protocol §4.18): a meal at the alehouse, a talk,
+    /// a search in a place. The world clock, the day's travel and core's time move on as a
+    /// road card's lost time moves them; never past midnight, which ends the day with
+    /// `rest_night`. The DM's call: sent as `dm` only.
+    PassTime {
+        /// How long.
+        span: TimeSpan,
     },
     /// Speaks on the road card on the table (API-43; protocol §4.13): a Hired Blade's advice
     /// on a caravan card or vote on a Blade card, or a player owner's call on a caravan card
@@ -659,6 +667,13 @@ pub enum CommandResult {
     RestNight {
         /// The night, also in the `night` event.
         night: NightView,
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The time that passed and the state after it.
+    PassTime {
+        /// Minutes passed, also in the `time_passed` event.
+        minutes: u32,
         /// Projected for the request's `viewer`.
         state: State,
     },

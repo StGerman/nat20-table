@@ -19,6 +19,7 @@ import type {
   Placement,
   Response,
   State,
+  TimeSpan,
   Viewer,
 } from "@nat20-table/engine-client";
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
@@ -46,7 +47,7 @@ function refusal(response: Response): string {
 /** Commands that change the session. The rest only read it. */
 const CHANGES = new Set<Command["cmd"]>([
   "submit", "move", "end_turn", "react", "request_check", "help", "short_rest", "start_combat", "end_combat", "spawn", "load_scene",
-  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "choose_card", "level_up", "answer_level_up",
+  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "pass_time", "choose_card", "level_up", "answer_level_up",
 ]);
 
 /**
@@ -778,6 +779,17 @@ export class DmTools {
       },
       () => (this.table.inCombat ? `${handle} is here and joins the fight; initiative rolled` : `${handle} is here`),
     );
+  }
+
+  /**
+   * Out of combat in the living world: time passes where the party is (API-50), in the DM's span.
+   * The answer says the new watch; the engine refuses a span that would reach midnight.
+   */
+  async passTime(span: TimeSpan): Promise<ToolOutcome> {
+    return send(this.table, "dm", { cmd: "pass_time", span }, (r) => {
+      const clock = r.result?.cmd === "pass_time" && r.result.state.view === "dm" ? r.result.state.world?.clock : undefined;
+      return clock ? `time passed; it is now day ${clock.day}, ${clock.watch.replace(/_/g, " ")}` : "time passed";
+    });
   }
 
   /** Out of combat: one creature hands another, within 5 feet, coin or one carried item (ITM-6). */

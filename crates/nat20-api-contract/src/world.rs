@@ -33,6 +33,19 @@ pub enum Lodging {
     Camp,
 }
 
+/// How long `pass_time` lets pass (API-50): coarse spans the fiction names, never minutes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum TimeSpan {
+    /// Half an hour: a meal, a word with someone, a look round.
+    ShortWhile,
+    /// An hour.
+    Hour,
+    /// Until the next watch begins (the watches start at 0:00, 4:00, 8:00, noon, 16:00 and
+    /// 20:00).
+    Watch,
+}
+
 /// One night, in `rest_night`'s result and the `night` event.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct NightView {

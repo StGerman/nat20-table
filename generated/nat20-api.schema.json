@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.57"
+    "version": "1.0.0-dev.58"
   },
   "$defs": {
     "Ability": {
@@ -1743,6 +1743,31 @@
           "required": [
             "cmd",
             "night",
+            "state"
+          ]
+        },
+        {
+          "description": "The time that passed and the state after it.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "pass_time"
+            },
+            "minutes": {
+              "description": "Minutes passed, also in the `time_passed` event.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "minutes",
             "state"
           ]
         },
@@ -3680,6 +3705,31 @@
           ]
         },
         {
+          "description": "Time passed out of combat at the DM's call (`pass_time`, API-50): the clock moved on and\nthe day's travel shrank, as a road card's lost time does. Public.",
+          "type": "object",
+          "properties": {
+            "clock": {
+              "description": "The world's time after it.",
+              "$ref": "#/$defs/ClockView"
+            },
+            "kind": {
+              "type": "string",
+              "const": "time_passed"
+            },
+            "minutes": {
+              "description": "Minutes passed.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "minutes",
+            "clock"
+          ]
+        },
+        {
           "description": "The caravan reached the escort contract's destination and the Blades' pay was settled\n(API-47), after its `wage` ledger entries. Public.",
           "type": "object",
           "properties": {
@@ -5191,6 +5241,11 @@
           "const": "no_level_up"
         },
         {
+          "description": "`pass_time` that would run past midnight: the day ends with `rest_night` (API-50).",
+          "type": "string",
+          "const": "night_falls"
+        },
+        {
           "description": "`answer_level_up` with picks that are not the choice's options, repeat one, or are not\nas many as it asks; the message lists the options.",
           "type": "string",
           "const": "bad_picks"
@@ -5880,6 +5935,24 @@
             "cmd",
             "actor",
             "where"
+          ]
+        },
+        {
+          "description": "Lets time pass out of combat (API-50; protocol §4.18): a meal at the alehouse, a talk,\na search in a place. The world clock, the day's travel and core's time move on as a\nroad card's lost time moves them; never past midnight, which ends the day with\n`rest_night`. The DM's call: sent as `dm` only.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "pass_time"
+            },
+            "span": {
+              "description": "How long.",
+              "$ref": "#/$defs/TimeSpan"
+            }
+          },
+          "required": [
+            "cmd",
+            "span"
           ]
         },
         {
@@ -7588,6 +7661,26 @@
           "description": "Normal at most.",
           "type": "string",
           "const": "urban"
+        }
+      ]
+    },
+    "TimeSpan": {
+      "description": "How long `pass_time` lets pass (API-50): coarse spans the fiction names, never minutes.",
+      "oneOf": [
+        {
+          "description": "Half an hour: a meal, a word with someone, a look round.",
+          "type": "string",
+          "const": "short_while"
+        },
+        {
+          "description": "An hour.",
+          "type": "string",
+          "const": "hour"
+        },
+        {
+          "description": "Until the next watch begins (the watches start at 0:00, 4:00, 8:00, noon, 16:00 and\n20:00).",
+          "type": "string",
+          "const": "watch"
         }
       ]
     },

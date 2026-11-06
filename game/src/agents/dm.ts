@@ -243,6 +243,7 @@ export const DM_ROAD_PROMPT = [
   "- \"A road card was settled\": narrate what came of it in one to three sentences. A card can bring a fight: start_fight or place_creature from your list, with a cause in the story.",
   "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as how the characters feel, never as levels or numbers.",
   "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. The amounts are in the engine's lines: never say them yourself.",
+  "- Time in a place: the journey and the nights move the clock, and nothing else does. When the party spends time where they are (a meal, a long talk, a search, a wait), call pass_time once for it, with the span the story took: short_while, hour, or watch (until the next part of the day). Time in a place shortens the day's road. Never past midnight: the night is the players' call.",
   "- Money: never name a price, a wage or a sum of coin except as the engine's events show it. The merchant is a person, not a ledger.",
   "- People of a place are still there when the party comes back, as the party left them; get_state lists them, and whether the party has met them.",
   "- Where the craft notes above speak of a scene's exits, loading the next scene or end_adventure, read the road instead: the journey moves the party on, and the run ends on its own when the escort is paid or the days run out.",
@@ -427,6 +428,14 @@ export class ModelDm implements DmAgent {
             (i) => this.bound((t) => t.startFight(i.participants)),
           ),
           ]),
+      // Time in a place (API-50): any living-world pack, whatever its format; outside one the tool
+      // list drops it with the scenes-only tools (Copilot on table #295).
+      seatTool(
+        "pass_time",
+        "Out of combat, let time pass where the party is (a meal, a long talk, a search, a wait): short_while is half an hour, hour an hour, watch until the next part of the day begins. Never past midnight: the night is the players' call.",
+        { span: z.enum(["short_while", "hour", "watch"]).describe("How long.") },
+        (i) => this.bound((t) => t.passTime(i.span)),
+      ),
       // Coin and items change hands only in a living-world pack (ITM-6, format 2 on).
       ...(this.config.pack.adventure.format_version < GOODS_SINCE
         ? []
@@ -593,7 +602,7 @@ export class ModelDm implements DmAgent {
     const humanOnly = new Set(["offer_surrender", "legal_actions", "submit", "end_turn", "ask_human"]);
     // On the road the journey loads the scenes and the contract or the days end the run (AGT-80):
     // a DM that loaded a scene would move the party off the map, and one that ended the adventure would end the run early.
-    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : ["propose_road"]);
+    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : ["propose_road", "pass_time"]);
     return tools.filter((tool) => (human || !humanOnly.has(tool.name)) && !scenesOnly.has(tool.name));
   }
 }

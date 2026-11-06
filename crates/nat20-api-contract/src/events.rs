@@ -8,8 +8,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AdvantageState, CardChoiceView, CardDecided, CardTarget, Condition, DamageType, Handle,
-    LegView, LifeState, Mode, NightView, OptionId, PointFt, RollId, Side, state::CombatOverReason,
+    AdvantageState, CardChoiceView, CardDecided, CardTarget, ClockView, Condition, DamageType,
+    Handle, LegView, LifeState, Mode, NightView, OptionId, PointFt, RollId, Side,
+    state::CombatOverReason,
 };
 
 /// One log entry.
@@ -396,6 +397,14 @@ pub enum EventKind {
     TimeLost {
         /// Minutes lost.
         minutes: u32,
+    },
+    /// Time passed out of combat at the DM's call (`pass_time`, API-50): the clock moved on and
+    /// the day's travel shrank, as a road card's lost time does. Public.
+    TimePassed {
+        /// Minutes passed.
+        minutes: u32,
+        /// The world's time after it.
+        clock: ClockView,
     },
     /// The caravan reached the escort contract's destination and the Blades' pay was settled
     /// (API-47), after its `wage` ledger entries. Public.
