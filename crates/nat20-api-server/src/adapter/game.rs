@@ -4226,6 +4226,12 @@ impl Game {
 
     // ---- lookups --------------------------------------------------------
 
+    /// A scene creature's purse in core, in copper pieces (AGT-78's trial balance).
+    pub fn purse_copper(&self, handle: &str) -> Option<i64> {
+        let entity = self.entity(handle).ok()?;
+        i64::try_from(goods::purse(&self.engine, entity).total_cp).ok()
+    }
+
     fn entity(&self, handle: &str) -> Result<Entity, ApiError> {
         self.scene
             .creatures
