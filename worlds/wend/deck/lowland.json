@@ -36,7 +36,6 @@
                 {
                     "id": "unload",
                     "text": "Unload the heaviest sacks, roll the wagon free, and load them again.",
-                    "owner_insists": true,
                     "effects": [
                         {
                             "do": "delay",
