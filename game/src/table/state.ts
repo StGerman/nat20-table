@@ -9,6 +9,9 @@ import type { Address } from "./floor.ts";
 import { Transcript } from "./transcript.ts";
 import type { FallbackCause, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
+/** A handle as the engine and the pack write one: lowercase letters, digits and `_`, starting with a letter. */
+const HANDLE = /^[a-z][a-z0-9_]*$/;
+
 /** Kinds of private note an AI player keeps (spec §3.6, AGT-21). */
 export const NOTE_KINDS = ["fact", "promise", "suspicion", "plan", "bond"] as const;
 export type NoteKind = (typeof NOTE_KINDS)[number];
@@ -407,7 +410,10 @@ export class TableState {
     const human = from === this.human;
     if (!human) {
       if (!once && this.exhausted(from)) return this.spent();
-      const refused = this.speechGuard(text) ?? (addressee ? this.speechGuard(addressee) : undefined);
+      // An id-shaped addressee (`odda_vell`, `bandit_1`) is a handle, not words: the language and
+      // number checks would refuse it (review of table #289). A name in prose is guarded like the line.
+      const proseAddressee = addressee !== undefined && !HANDLE.test(addressee);
+      const refused = this.speechGuard(text) ?? (proseAddressee ? this.speechGuard(addressee) : undefined);
       if (refused && once) return this.dropped(from, refused);
       if (refused) return this.refuse(from, kind === "speech" ? "speech" : "declaration", refused, "Say it without that.");
     }
