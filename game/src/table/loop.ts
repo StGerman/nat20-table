@@ -512,6 +512,8 @@ export class TableLoop {
       this.table.end(`the run stops before ${sceneId}`);
       return;
     }
+    // The DM's tools follow the scene the table is in, whoever loaded it (a resumed caravan's included).
+    this.dmTools.sceneHeard(sceneId);
     const first = this.scenes.length === 0;
     // The scene is left with someone still waiting for the floor: the report counts it (decision 0050).
     const left = this.sceneTimes.at(-1);

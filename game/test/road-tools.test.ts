@@ -7,7 +7,7 @@ import type { LevelUpChoice } from "@nat20-table/engine-client";
 import { ModelPlayer, ROAD_PROMPT } from "../src/agents/player.ts";
 import { REPO } from "../src/engine.ts";
 import { castParty } from "../src/play/run.ts";
-import { duration, formatLevelUpChoice, PlayerTools } from "../src/table/tools.ts";
+import { BarkTools, duration, formatLevelUpChoice, HandTools, PlayerTools, ReactionFloor } from "../src/table/tools.ts";
 import { formatState } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
 
@@ -94,4 +94,37 @@ test("a living-world player's prompt tells it about the road, and only then", ()
   assert.ok(make(true).systemPrompt.endsWith(ROAD_PROMPT));
   assert.ok(!make(false).systemPrompt.includes("## On the road"));
   assert.doesNotMatch(ROAD_PROMPT, /Wend|Mill|crossing|vale/i, "no pack's places in the generic prompt");
+});
+
+test("the road waits for the floor and for an open level-up: a hand or bark wake can't move the caravan, end the day, give a card word or level up", async () => {
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
+  try {
+    assert.ok((await t.engine.request("dm", { cmd: "load_scene", scene_id: "vale_town" })).ok);
+    assert.ok((await t.engine.request("dm", { cmd: "start_campaign", party: ["bren", "maren"] })).ok);
+    const before = t.requests().length;
+    const wakes: PlayerTools[] = [new HandTools("maren", t.table), new BarkTools("maren", t.table, new ReactionFloor(() => undefined))];
+    for (const tools of wakes) {
+      const outcomes = [
+        await tools.travel("normal"),
+        await tools.restNight("camp"),
+        await tools.chooseCard("clear"),
+        await tools.levelUp(),
+        await tools.answerLevelUp(["aid"]),
+      ];
+      for (const o of outcomes) {
+        assert.equal(o.ok, false);
+        assert.match(o.text, /^not now: /);
+      }
+    }
+    assert.equal(t.requests().length, before, "nothing reached the engine");
+    // Another character's level-up is open: the caravan and the night wait for it.
+    t.table.awaiting = { kind: "level_up", actor: "maren", prompt_id: "l1" };
+    const bren = new PlayerTools("bren", t.table);
+    assert.match((await bren.travel("normal")).text, /once maren's level-up is done/);
+    assert.match((await bren.restNight("camp")).text, /until maren's level-up is done/);
+    assert.match((await new PlayerTools("maren", t.table).travel("normal")).text, /once your level-up is done/);
+    assert.equal(t.requests().length, before, "still nothing reached the engine");
+  } finally {
+    t.close();
+  }
 });

@@ -21,6 +21,13 @@ pub(super) struct OpenLevelUp {
     asked: Option<Asked>,
 }
 
+impl OpenLevelUp {
+    /// The levelling character.
+    pub(super) fn handle(&self) -> &str {
+        &self.handle
+    }
+}
+
 struct Asked {
     choice: LevelUpChoice,
     /// The prompt as offered, with core's options.

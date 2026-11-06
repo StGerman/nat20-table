@@ -280,7 +280,7 @@ fn check_creature(creature: &SceneCreature, anchors: &HashSet<String>) -> Result
 /// A handle is a plain name and not `dm`, whether the scene defines the creature or it is
 /// carried in, so a reference that could never resolve is refused up front.
 fn check_handle(handle: &str) -> Result<(), ApiError> {
-    if handle == "dm" || !is_plain_name(handle) {
+    if !is_creature_handle(handle) {
         return Err(error(
             ErrorCode::BadScene,
             format!("{handle:?} cannot be a creature handle."),
@@ -356,6 +356,13 @@ pub fn parse_dice(dice: &str) -> Option<(u32, u32, u32)> {
         .then_some((count, size, bonus))
 }
 
+/// A name a creature may take as its handle: a plain name that is neither the DM viewer `dm`
+/// nor `world`, the ledger's account outside the table (decision 0057), so a creature's ledger
+/// entries can never be posted to the world.
+pub(crate) fn is_creature_handle(handle: &str) -> bool {
+    !matches!(handle, "dm" | "world") && is_plain_name(handle)
+}
+
 pub(crate) fn is_plain_name(s: &str) -> bool {
     !s.is_empty()
         && s.chars()
@@ -368,6 +375,18 @@ mod tests {
 
     fn data_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data")
+    }
+
+    /// `dm` and `world` are never a creature's handle: one is the DM viewer, the other the
+    /// ledger's account outside the table, which a creature's entries would be posted to.
+    #[test]
+    fn dm_and_world_are_reserved_handles() {
+        for reserved in ["dm", "world"] {
+            assert!(!is_creature_handle(reserved));
+            assert!(check_handle(reserved).is_err());
+        }
+        assert!(is_creature_handle("worldly_wren"));
+        assert!(!is_creature_handle("npc:wren"));
     }
 
     /// Every scene the engine ships reads and passes the checks.

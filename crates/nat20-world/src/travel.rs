@@ -338,10 +338,12 @@ impl World {
     }
 
     /// Time lost to a road event: the clock moves on and the day's travel shrinks by as
-    /// much, an 8-hour travel day being the whole day's distance.
+    /// much, an 8-hour travel day being the whole day's distance. A part of a budget unit is
+    /// rounded up, so delays never leave more travel than the time they took allows: eight
+    /// one-minute delays cost at least what one eight-minute delay costs.
     pub fn delay(&mut self, minutes: u32) {
         self.state.clock.advance(minutes);
-        let spent = minutes.saturating_mul(DAY_BUDGET) / (8 * 60);
+        let spent = minutes.saturating_mul(DAY_BUDGET).div_ceil(8 * 60);
         self.state.traveled_today = self
             .state
             .traveled_today
@@ -661,6 +663,19 @@ mod tests {
         assert_eq!(world.miles_left_today(Pace::Normal), 18);
         world.delay(10 * 60);
         assert_eq!(world.miles_left_today(Pace::Normal), 0);
+    }
+
+    #[test]
+    fn short_delays_never_cost_less_than_one_long_one() {
+        let mut short = world("maren");
+        for _ in 0..8 {
+            short.delay(1);
+        }
+        let mut long = world("maren");
+        long.delay(8);
+        assert_eq!(short.state.clock, long.state.clock);
+        assert!(short.state.traveled_today >= long.state.traveled_today);
+        assert_eq!(long.state.traveled_today, 6);
     }
 
     #[test]

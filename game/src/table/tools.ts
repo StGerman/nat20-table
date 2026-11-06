@@ -243,6 +243,8 @@ export class PlayerTools {
    */
   travel(pace: Pace, to?: string): Promise<ToolOutcome> {
     if (this.table.inCombat) return this.answer(notNow("the caravan moves on once the fight is over"));
+    const levelling = this.levelling();
+    if (levelling) return this.answer(notNow(`the caravan moves on once ${levelling} is done`));
     return this.answer(send(this.table, this.me, { cmd: "travel", actor: this.me, pace, ...(to ? { to } : {}) }, (r) =>
       r.result?.cmd === "travel" ? `${r.result.leg.arrived ? "arrived" : "stopped on the road for the day"}: ${r.result.leg.miles} miles in ${duration(r.result.leg.minutes)}` : "",
     ));
@@ -251,11 +253,20 @@ export class PlayerTools {
   /** Ends the day at the inn or in camp (M9, AGT-80). */
   restNight(where: Lodging): Promise<ToolOutcome> {
     if (this.table.inCombat) return this.answer(notNow("the night waits until the fight is over"));
+    const levelling = this.levelling();
+    if (levelling) return this.answer(notNow(`the night waits until ${levelling} is done`));
     return this.answer(send(this.table, this.me, { cmd: "rest_night", actor: this.me, where }, (r) =>
       r.result?.cmd === "rest_night"
         ? `the night passes; rested: ${r.result.night.rested.join(", ") || "nobody"}${r.result.night.hungry.length > 0 ? `; hungry: ${r.result.night.hungry.join(", ")}` : ""}`
         : "",
     ));
+  }
+
+  /** The level-up open, if any, in words ("your level-up", "maren's level-up"): the road waits for it, since a new scene would leave it unanswered. */
+  private levelling(): string | undefined {
+    const a = this.table.awaiting;
+    if (a.kind !== "level_up") return undefined;
+    return a.actor === this.me ? "your level-up" : `${a.actor}'s level-up`;
   }
 
   /** Gives this character's word on the road card waiting: advice, a vote or the owner's call. */
@@ -330,6 +341,27 @@ export class HandTools extends PlayerTools {
   }
 
   override say(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  // The road (AGT-80) waits for the floor too: no leg, night, card word or level-up from a hand wake.
+  override travel(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override restNight(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override chooseCard(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override levelUp(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override answerLevelUp(): Promise<ToolOutcome> {
     return this.wait();
   }
 }
@@ -433,6 +465,26 @@ export class BarkTools extends PlayerTools {
     return this.notYours();
   }
 
+  override travel(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override restNight(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override chooseCard(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override levelUp(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
+  override answerLevelUp(): Promise<ToolOutcome> {
+    return this.notYours();
+  }
+
   /**
    * The line is heard only if nobody spoke first and its speaker can still speak; a refused line is
    * dropped, not retried. Lines are tried one at a time, so a refused one frees the floor for the next.
@@ -507,7 +559,7 @@ export interface ScenePasses {
 export class DmTools {
   private readonly table: TableState;
   private readonly passes: ScenePasses | undefined;
-  /** The scene this DM's own load_scene loaded last: the loop hears of it only after the wake. */
+  /** The scene loaded last: by this DM's own load_scene (the loop hears of it only after the wake), or as the loop heard it. */
   private loaded: string | undefined;
   /** Scenes in which the party took a Short Rest. */
   private readonly restedIn = new Set<string>();
@@ -526,6 +578,14 @@ export class DmTools {
   /** The human's character, or undefined at a table with no human (AGT-40): who decides a surrender. */
   get human(): Handle | undefined {
     return this.table.human;
+  }
+
+  /**
+   * The loop heard a scene load, whoever loaded it: the DM, a `travel` leg, or `start_campaign`
+   * moving a saved party to where its caravan stands (API-45). The scene being played is that one.
+   */
+  sceneHeard(sceneId: string): void {
+    this.loaded = sceneId;
   }
 
   /** A DM wake begins: what the wake before it loaded no longer holds its narration back. */

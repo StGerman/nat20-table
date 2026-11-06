@@ -117,6 +117,14 @@ const PLANTS: [string, (skeleton: Adventure, pack: string) => void, string][] = 
     "stat_blocks road_wolf: the engine refused it",
   ],
   [
+    "a name the engine refuses to show",
+    (s) => {
+      s.format_version = 2;
+      s.stat_blocks = [{ id: "road_wolf", monster: "wolf", side: "hostile", name: "Grey\nWolf" }];
+    },
+    "stat_blocks road_wolf: the engine refused it",
+  ],
+  [
     "an NPC naming a stat block entry the list doesn't have",
     (s) => {
       s.format_version = 2;

@@ -175,7 +175,8 @@ pub enum RejectReason {
     UnknownChoice,
     /// `level_up` by a character without the Experience Points for its next level.
     NotEnoughXp,
-    /// `level_up` while another character's level-up is open; one levels up at a time.
+    /// `level_up` while another character's level-up is open (one levels up at a time), or a
+    /// `load_scene` that leaves the open level-up's character behind.
     LevelUpOpen,
     /// `answer_level_up` with no level-up open for the actor.
     NoLevelUp,
