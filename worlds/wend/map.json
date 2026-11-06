@@ -5,7 +5,7 @@
             "_comment": "The fair town at the river's mouth, a day downriver from Wendford. Salt, iron and cloth.",
             "id": "wendmouth",
             "name": "Wendmouth",
-            "name_ru": "Вендмут",
+            "name_ru": "Уэндмут",
             "kind": "town",
             "market": true,
             "discovered": true,
