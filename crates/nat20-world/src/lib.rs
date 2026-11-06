@@ -27,7 +27,7 @@ pub use caravan::{Caravan, CaravanError, Good, Goods, Owner, Wagon};
 pub use clock::{Clock, Watch};
 pub use deck::{
     Card, CardError, Choice, DC_LADDER, DRAW_DIE, Decided, Deck, DeckError, DeckFile, DeckState,
-    Effect, PendingCard, Resolution, Table, Target, When, Who,
+    Deed, DeedBook, Deeds, Effect, PendingCard, Resolution, Table, Target, When, Who,
 };
 pub use dice::{ListDice, WorldDice};
 pub use escort::{EscortState, EscortTerms, SKILLED_WAGE_CP, Wage};
