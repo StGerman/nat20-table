@@ -1,7 +1,7 @@
 // The preflight (runbook Part 1, `npm run preflight`): it reports, never leaks, what the shell holds.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { engineBinary, REPO } from "../src/paths.ts";
@@ -31,4 +31,14 @@ test("the preflight loads with no package installed: it imports Node built-ins a
   };
   visit(path.join(REPO, "game/src/play/preflight.ts"));
   assert.ok(seen.size > 1);
+});
+
+test("check:ts runs the debug engine, never a release build a pin bump left stale; play prefers the release build (AGT-75)", () => {
+  const debug = path.join(REPO, "target/debug/nat20-api-server");
+  assert.equal(engineBinary({ NAT20_ENGINE_BUILD: "debug" }), debug);
+  assert.equal(engineBinary({ NAT20_ENGINE_BUILD: "debug", NAT20_API_SERVER: "/opt/engine" }), "/opt/engine", "NAT20_API_SERVER still wins");
+  const release = path.join(REPO, "target/release/nat20-api-server");
+  assert.equal(engineBinary({}), existsSync(release) ? release : debug);
+  const pkg = JSON.parse(readFileSync(path.join(REPO, "package.json"), "utf8")) as { scripts: Record<string, string> };
+  assert.match(pkg.scripts["check:ts"], /NAT20_ENGINE_BUILD=debug node .*--test/);
 });
