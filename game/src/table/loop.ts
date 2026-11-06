@@ -345,6 +345,8 @@ export class TableLoop {
    * ("last_turn"), then the DM's closing narration and the end card ("closing").
    */
   private journeyEnd: "last_turn" | "closing" | undefined;
+  /** The destination's scene opened without the pay, which the `escort_settled` wake tells next (AGT-86). */
+  private arrivalOpened = false;
   /** The human's experience when the campaign started, for what the journey earned. */
   private startXp: number | undefined;
   /** The road cards the run has asked about, by the engine's log head when each was drawn, so a card that won't settle stops the run. */
@@ -471,11 +473,14 @@ export class TableLoop {
       // A scene another one replaced before the table saw it is never opened: a saved party's
       // world moves it from the first scene to where the caravan stands (API-45).
       const lastScene = events.map((e) => e.kind).lastIndexOf("scene_loaded");
+      // The escort settles in the batch that loads the destination's scene (AGT-86, decision 0060
+      // F5: Odda paid twice in the narration): the opening leaves the pay to the pay's own wake.
+      const settles = lastScene >= 0 && events.slice(lastScene + 1).some((e) => e.kind === "escort_settled");
       for (const [i, event] of events.entries()) {
         if (this.table.ended) return;
         if (event.kind === "combat_over") await this.combatOver(event);
         if (event.kind === "scene_loaded" && i < lastScene) this.table.log("system", `scene ${event.scene_id} left before it opened`);
-        else if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id);
+        else if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id, settles);
         if (this.campaign) await this.roadEvent(event);
       }
     }
@@ -523,7 +528,8 @@ export class TableLoop {
 
   // --- Scenes -------------------------------------------------------------------------------------
 
-  private async sceneLoaded(sceneId: string): Promise<void> {
+  /** `payNext`: the escort is paid right after this opening, in its own wake (AGT-86). */
+  private async sceneLoaded(sceneId: string, payNext = false): Promise<void> {
     // A scene the run passes over never loads (`DmTools.loadScene` loads the next one instead).
     if (this.onScene(sceneId, this.scenes) !== "continue") {
       this.table.end(`the run stops before ${sceneId}`);
@@ -563,7 +569,9 @@ export class TableLoop {
           ]
         : []),
       `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`,
+      ...(payNext ? ["The merchant pays the Blades next, and you narrate that on its own: open the arrival here without the pay, the purse or any coin."] : []),
     );
+    this.arrivalOpened = payNext;
     await this.settle();
   }
 
@@ -702,8 +710,11 @@ export class TableLoop {
           "road",
           undefined,
           `The caravan reached ${event.destination}, and the merchant paid the Blades what they are owed: ${event.text}`,
-          "Narrate the arrival and the pay as a scene, in two to four sentences: the merchant's words, the coin changing hands. No numbers: the table sees the amounts in the engine's lines.",
+          this.arrivalOpened
+            ? "Your last narration opened the arrival: don't tell it again. Narrate the pay alone as a scene, once, in two to four sentences: the merchant's words, the coin changing hands. No numbers: the table sees the amounts in the engine's lines."
+            : "Narrate the arrival and the pay as a scene, in two to four sentences: the merchant's words, the coin changing hands. No numbers: the table sees the amounts in the engine's lines.",
         );
+        this.arrivalOpened = false;
         await this.settle();
         // The human has one last turn at the destination before the closing (B7); a table with
         // no human closes at once.
