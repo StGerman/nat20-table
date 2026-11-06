@@ -3,6 +3,15 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.42 (2026-11-02)
+- New command `start_fight{participants}` (API-34, decision 0035; protocol.md §4.4), additive: the DM starts a fight among creatures present that no authored encounter fits. Each participant must be in the scene, conscious, on the party or the hostile side and listed once, with at least one creature on each side. Initiative is rolled as for an authored fight, with no surprise, no surrender and no early end. The fight shows in the DM's `encounters` as `fight_<n>`. Result `start_fight{state}`.
+- New fixture `start_fight.jsonl` (scene `place_yard`, seed 1). It covers:
+  - a placed wolf;
+  - an unknown participant, one listed twice, and only one side;
+  - a wolf fight that starts, a second fight while it runs, and `end_combat{fled}` refused;
+  - Bren's state in the fight.
+- `errors.jsonl` lists the new command.
+
 ## 1.0.0-dev.41 (2026-11-02)
 - New command `place_creature{handle, monster, side, at, name?, carries?}` (API-33, decision 0035; protocol.md §4.10), additive: the DM places one monster the scene file doesn't list, on the nearest free spot within 10 feet of an anchor or a point. During a fight it joins with its own initiative. `carries` comes from the pack's `stat_blocks` list through the game's DM tool, never from the DM's words.
 - New event kind `creature_placed{handle, monster}` (DM only), new error code `unknown_stat_block`, new reject reason `no_room`. `errors.jsonl` lists the new command.

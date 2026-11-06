@@ -280,6 +280,7 @@ impl Server {
             } => session.steal(&actor.0, &target.0, what),
             Command::Loot { actor, from } => session.loot(&actor.0, &from.0),
             Command::PlaceCreature { .. } => session.place_creature(command, viewer),
+            Command::StartFight { participants } => session.start_fight(participants, viewer),
         }
     }
 

@@ -251,6 +251,16 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         carries: Option<Carries>,
     },
+    /// Starts a fight no authored encounter fits, among creatures present (API-34, decision
+    /// 0035; protocol §4.4). The DM's command, and the one exception to "participants come from
+    /// the scene file". Each participant must be in the scene, conscious and on the party or the
+    /// hostile side, listed once; at least one of each side. Initiative is rolled as for an
+    /// authored fight, with no surprise, no surrender condition and no early end: it ends when
+    /// a side is down. The fight is listed in the DM's `encounters` as `fight_<n>`.
+    StartFight {
+        /// Every creature in the fight, in any order.
+        participants: Vec<Handle>,
+    },
 }
 
 /// What `give` and `steal` move.
@@ -526,6 +536,11 @@ pub enum CommandResult {
     },
     /// What was taken is in `events`: one `ledger` entry for the coins and one per item.
     Loot {},
+    /// The state after initiative, in combat mode.
+    StartFight {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
     /// The state after the creature is placed.
     PlaceCreature {
         /// Projected for the request's `viewer`.

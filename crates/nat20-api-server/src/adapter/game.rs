@@ -1842,6 +1842,68 @@ impl Game {
         Ok(())
     }
 
+    /// `start_fight`: a fight among creatures present that no authored encounter fits (API-34).
+    /// It runs as a scene encounter `fight_<n>` with no surprise, no surrender condition and no
+    /// early end, added to the scene's encounters so the DM's view and `end_combat` treat it
+    /// like any other.
+    pub fn start_fight(&mut self, participants: &[Handle]) -> Result<(), ApiError> {
+        if self.running_encounter().is_some() {
+            return Err(error(ErrorCode::WrongMode, "Combat is already running."));
+        }
+        for (i, handle) in participants.iter().enumerate() {
+            if participants[..i].contains(handle) {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{} is listed twice.", handle.0),
+                ));
+            }
+            let entity = self.entity(&handle.0)?;
+            if !systems::health::is_alive(&self.engine.world, entity)
+                || life_state_name(&self.engine, entity) != "normal"
+            {
+                return Err(rejected(
+                    RejectReason::ConditionPrevents,
+                    format!("{} is down and cannot join a fight.", handle.0),
+                ));
+            }
+            if self.side_of(entity) == Some(Side::Neutral) {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{} is neutral and takes no side in a fight.", handle.0),
+                ));
+            }
+        }
+        let sides: Vec<Option<Side>> = participants
+            .iter()
+            .map(|h| self.entity(&h.0).ok().and_then(|e| self.side_of(e)))
+            .collect();
+        if !sides.contains(&Some(Side::Party)) || !sides.contains(&Some(Side::Hostile)) {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "A fight needs at least one party creature and one hostile creature.",
+            ));
+        }
+        let n = (1..)
+            .find(|n| {
+                let id = format!("fight_{n}");
+                !self.scene.encounters.iter().any(|e| e.id == id)
+            })
+            .expect("some number is free");
+        let id = format!("fight_{n}");
+        self.scene.encounters.push(Encounter {
+            id: id.clone(),
+            participants: participants.to_vec(),
+            surprise: None,
+            surrender: None,
+            end_reasons: Vec::new(),
+        });
+        let started = self.start_combat(&id);
+        if started.is_err() {
+            self.scene.encounters.pop();
+        }
+        started
+    }
+
     /// Places the creatures of the scene spawn `spawn_id`, declared `when: dm`. During a fight
     /// they join it.
     pub fn spawn(&mut self, spawn_id: &str) -> Result<Vec<Handle>, ApiError> {

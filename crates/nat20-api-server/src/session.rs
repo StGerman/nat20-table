@@ -183,6 +183,19 @@ impl Session {
         })
     }
 
+    /// Starts a fight among creatures present that no authored encounter fits (API-34).
+    pub fn start_fight(
+        &mut self,
+        participants: &[Handle],
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
+        let result = self.game_mut()?.start_fight(participants);
+        self.after_decision(result)?;
+        Ok(CommandResult::StartFight {
+            state: self.state_for(viewer)?,
+        })
+    }
+
     /// Ends the running fight for a reason its encounter allows. Outside combat, including after
     /// a fight ended by itself, there is nothing to end.
     pub fn end_combat(
