@@ -359,7 +359,10 @@ fn fight(
                     response = call(client, t, end_turn(&prompt_id));
                 }
             }
-            Awaiting::CombatOver { .. } | Awaiting::Idle | Awaiting::NoSession => return,
+            Awaiting::CombatOver { .. }
+            | Awaiting::Idle
+            | Awaiting::LevelUp { .. }
+            | Awaiting::NoSession => return,
         }
     }
     panic!("{encounter_id} never ended");

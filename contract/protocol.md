@@ -100,6 +100,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
   "options": [ { "choice": 0, "option_id": "opportunity_attack/longsword", "name": "Opportunity Attack (Longsword)" } ] }
 { "kind": "none" }                       // explore mode, nothing pending
 { "kind": "combat_over", "winner": "party", "reason": "side_down" }
+{ "kind": "level_up", "prompt_id": "l1", "actor": "maren" }   // out of combat, §4.14
 { "kind": "no_session" }
 ```
 - Every pending decision has a `prompt_id`. `submit`, `react` and `end_turn` must echo it. In combat, an old id is rejected with `stale_prompt` and changes nothing (a missing one is `bad_request`); in explore mode a command that carries one answers `wrong_mode` first. This makes late or duplicated agent decisions harmless. An explore `submit` carries no `prompt_id` (§4.8).
@@ -130,6 +131,8 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | `travel` | `actor`, `to?` (place or road id), `pace: fast\|normal\|slow` | `{leg, state}` | the caravan's driver, as itself (§4.11) |
 | `rest_night` | `actor`, `where: inn\|camp` | `{night, state}` | the caravan's driver, as itself (§4.12) |
 | `choose_card` | `actor`, `choice` | `State` | a Hired Blade or a player owner, as itself (§4.13) |
+| `level_up` | `actor` | `{choice?, state}` | the levelling character's player, as itself (§4.14) |
+| `answer_level_up` | `actor`, `prompt_id`, `picks?: string[]` | `{choice?, state}` | as above (§4.14) |
 
 ### 4.1 Moving
 
@@ -310,6 +313,17 @@ A world's deck is `worlds/<id>/deck/*.json` (API-43). Each card belongs to a zon
   - A creature with no say is `rejected`, `no_say`; a second word `already_spoke`; a choice the card lacks `unknown_choice`; no card `no_card`. In a fight the card waits: `wrong_mode`. A card nobody can speak on is settled at once by its default.
 - **What follows, in order.** `card_resolved{choice, decided}` (public), then the choice's effects in order. A group check rolls a ladder check through core for each creature named and succeeds when at least half succeed (SRD 5.1, Group Checks); its rolls and their outcome are logged as any `request_check`'s. Coin paid to or taken from the world is a `ledger` entry (reason `toll` or `reward`; a payer pays what their purse holds, up to the price). Goods gained or lost are `cargo_changed{good, change}` (public), time lost `time_lost{minutes}` (public), with the clock, core's time and the day's travel moving on. Exhaustion goes through core. A fight places each stat block hostile at the scene's first anchor (`creature_placed`, DM only) and starts a fight with the party as `start_fight` does; it always comes last.
 
+### 4.14 Experience and level-ups
+
+XP and levels are core's (ENG-31); the engine awards XP and runs core's `LevelUpSession` (API-44).
+
+- **XP.** When a fight ends with the party's side the winner (`side_down`, `fled` or `surrender`), the XP of every hostile creature in it (SRD 5.2.1, by Challenge Rating) is split evenly among the party's characters in it, rounded down, standing or not. Each gets `xp_awarded{actor, xp, total, can_level_up}` (owner and DM), logged after `combat_over`. A fight that ends by `scenario`, or that the party loses, earns nothing. The sheet's `xp` shows `points`, the `next_level` threshold and `can_level_up`.
+- **Opening.** `level_up{actor}`, as the actor itself (else `rejected`, `no_say`), out of combat (`wrong_mode`), for a character whose `xp.can_level_up` holds (`rejected`, `not_enough_xp`). One level-up is open at a time: another character's is `rejected`, `level_up_open`. Core applies the level at once (Hit Points, features, the subclass); the engine answers every prompt that has one answer (the class, a subclass with one option, a choice with as many options as picks). The result's `choice` is the first prompt left for the player; none means the level-up is done. Sent again while open, `level_up` returns the open choice unchanged.
+- **The choice** (`LevelUpChoice`) goes only to the levelling player, in the command result: `prompt_id` (`l1`, `l2`, ... per session), `level`, `label`, `picks`, `options` (each `id`, `name` and, for a spell, core's `summary`; a skill says its ability), sorted by id, and `recommended`: as many option ids as `picks`, from the pregen file's `recommended` for that level and prompt (a skill prompt is `choice.skills`), else the first options. While it is open, `awaiting` is `{kind: level_up, prompt_id, actor}` for everyone, with no options.
+- **Answering.** `answer_level_up{actor, prompt_id, picks}`; no `picks` takes `recommended`. A `prompt_id` that is not the open choice's is `stale_prompt`; no level-up open for the actor is `rejected`, `no_level_up`; picks that are not options, repeat one or miss the count are `rejected`, `bad_picks`, with the options in the message. The result carries the next choice, or none once done; then `leveled_up{actor, level}` (public) is logged.
+- **Answering.** In a fight, `answer_level_up` is `wrong_mode`; the choice waits until the fight is over.
+- **Not served yet.** A prompt for ability scores or a spell swap (from level 4) is `not_implemented`, and closes the level-up where it stopped, as an `internal` error does, so it never blocks another character's.
+
 ## 5. Visibility (projection per `viewer`)
 
 | Data | `dm` | Owner (viewer = that creature) | Other player viewer |
@@ -345,6 +359,9 @@ A world's deck is `worlds/<id>/deck/*.json` (API-43). Each card belongs to a zon
 | `world.card.id`, `world.card.zone`, the deck, the draw roll | yes | no | no |
 | `world.card` text, choices, `said`, `waiting_for` | yes | yes | yes |
 | `traveled`, `place_discovered`, `night`, `card_drawn`, `card_advice`, `card_resolved`, `cargo_changed`, `time_lost` | yes | yes | yes |
+| Sheet `xp` (points, next level, `can_level_up`) and `xp_awarded` | yes | yes | no |
+| A level-up's choice (`level_up`, `answer_level_up` results) | n/a | yes | no; `awaiting` says only whose level-up is open |
+| `leveled_up` | yes | yes | yes (the table hears that a character grew) |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
 
 The server projects; it doesn't authenticate. The engine trusts its single client. Projection exists so that a bug in the orchestrator's tool layer can't leak numbers, not to stop a hostile client.
@@ -392,6 +409,8 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `card_advice` | `actor`, `choice` (public): a Blade's advice or vote |
 | `card_resolved` | `choice`, `decided: owner\|majority\|tie\|owner_insists\|default` (public) |
 | `cargo_changed` | `good`, `change` (public): a card added or took goods from the caravan |
+| `xp_awarded` | `actor`, `xp`, `total`, `can_level_up` (owner and DM): a won fight's XP share |
+| `leveled_up` | `actor`, `level` (public) |
 | `time_lost` | `minutes` (public): a card cost the party time |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
@@ -428,7 +447,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `stale_prompt` | `prompt_id` doesn't match | true, with the new `prompt_id` |
 | `not_visible` | The viewer asked for something it may not see | false |
 | `wrong_mode` | A combat command in explore mode or the reverse | false |
-| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room`, `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded`, `no_inn`, `card_pending`, `no_card`, `no_say`, `already_spoke`, `waiting_for_advice`, `unknown_choice` | true |
+| `rejected` | The engine refused a legal-shaped decision. `reason` is one of: `out_of_range`, `no_valid_target`, `invalid_target`, `insufficient_resource`, `action_already_used`, `condition_prevents`, `not_known`, `needs_target`, `needs_point`, `needs_variant`, `no_path`, `already_attempted`, `condition_not_met`, `automatic`, `already_spawned`, `not_proficient`, `no_item_left`, `area_empty`, `not_carried`, `insufficient_funds`, `not_fallen`, `nothing_carried`, `no_room`, `not_driver`, `no_road`, `pace_too_fast`, `day_over`, `overloaded`, `no_inn`, `card_pending`, `no_card`, `no_say`, `already_spoke`, `waiting_for_advice`, `unknown_choice`, `not_enough_xp`, `level_up_open`, `no_level_up`, `bad_picks` | true |
 | `surrender_not_available` | `end_combat{surrender}` while the running encounter's surrender condition does not hold, or it declares none; nothing changed | false |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |

@@ -259,6 +259,21 @@ pub fn text(kind: &EventKind) -> String {
             }
         }
         EventKind::TimeLost { minutes } => format!("The party loses {minutes} minutes."),
+        EventKind::XpAwarded {
+            actor,
+            xp,
+            total,
+            can_level_up,
+        } => format!(
+            "{} gains {xp} XP, {total} in all{}.",
+            actor.0,
+            if *can_level_up {
+                ", enough for the next level"
+            } else {
+                ""
+            }
+        ),
+        EventKind::LeveledUp { actor, level } => format!("{} reaches level {level}.", actor.0),
         EventKind::FlagSet { flag } => format!("Flag {flag} is set."),
         EventKind::HazardTriggered { hazard_id, actor } => {
             format!("{} sets off {hazard_id}.", actor.0)

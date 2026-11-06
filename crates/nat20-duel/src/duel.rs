@@ -128,7 +128,10 @@ fn play(client: &mut Client, seed: Option<u32>) -> (String, Vec<Event>) {
                     response = call(client, &mut transcript, end_turn(prompt_id));
                 }
             }
-            Awaiting::CombatOver { .. } | Awaiting::Idle | Awaiting::NoSession => break,
+            Awaiting::CombatOver { .. }
+            | Awaiting::Idle
+            | Awaiting::LevelUp { .. }
+            | Awaiting::NoSession => break,
         }
     }
 

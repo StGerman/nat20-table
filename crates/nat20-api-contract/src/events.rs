@@ -370,6 +370,25 @@ pub enum EventKind {
         /// Units gained (positive) or lost (negative).
         change: i32,
     },
+    /// A character gained Experience Points for a fight its side won (SRD 5.2.1: the XP of the
+    /// defeated foes, split evenly). Owner and DM only.
+    XpAwarded {
+        /// The character.
+        actor: Handle,
+        /// Experience Points gained.
+        xp: u32,
+        /// Experience Points now.
+        total: u32,
+        /// It has the points for its next level.
+        can_level_up: bool,
+    },
+    /// A character reached a new level (`level_up`). Public.
+    LeveledUp {
+        /// The character.
+        actor: Handle,
+        /// The level it reached.
+        level: u8,
+    },
     /// A road card cost the party time: the clock moved on and the day's travel shrank.
     /// Public.
     TimeLost {

@@ -271,6 +271,54 @@ pub struct Sheet {
     pub features: Vec<FeatureLine>,
     /// The coins it carries.
     pub purse: Purse,
+    /// Experience Points and whether the next level is due. Absent for monsters.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub xp: Option<Experience>,
+}
+
+/// A character's Experience Points (SRD 5.2.1, Character Advancement).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct Experience {
+    /// Experience Points so far.
+    pub points: u32,
+    /// The Experience Points the next level needs. Absent at level 20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_level: Option<u32>,
+    /// The character has the points for its next level: its player may call `level_up` out of
+    /// combat.
+    pub can_level_up: bool,
+}
+
+/// One choice of a level-up, asked of the levelling creature's player only (protocol §4.14).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct LevelUpChoice {
+    /// Echo it in `answer_level_up`.
+    pub prompt_id: PromptId,
+    /// The creature levelling up.
+    pub actor: Handle,
+    /// The level it reaches.
+    pub level: u8,
+    /// What is chosen, in plain words, e.g. "Spell Selection".
+    pub label: String,
+    /// How many options to pick.
+    pub picks: u8,
+    /// The options, in a stable order.
+    pub options: Vec<LevelUpOption>,
+    /// The option ids recommended, as many as `picks`. An `answer_level_up` with no `picks`
+    /// takes them.
+    pub recommended: Vec<String>,
+}
+
+/// One option of a level-up choice.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct LevelUpOption {
+    /// Echo it in `answer_level_up.picks`, e.g. `hold_person` or `athletics`.
+    pub id: String,
+    /// Display name, e.g. "Hold Person".
+    pub name: String,
+    /// One plain line on what it does, from the rules (a spell's own summary).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
 }
 
 /// Coins by denomination (SRD 5.2.1: 1 PP = 10 GP, 1 GP = 10 SP = 100 CP, 1 EP = 50 CP). In a
@@ -688,6 +736,15 @@ pub enum Awaiting {
     /// Nothing pending: explore mode, or a session with no scene yet.
     #[serde(rename = "none")]
     Idle,
+    /// A character's level-up is open, out of combat: its player answers the choice that
+    /// `level_up` or the last `answer_level_up` returned (protocol §4.14). The choice itself
+    /// goes only to that player.
+    LevelUp {
+        /// Echo it in `answer_level_up`.
+        prompt_id: PromptId,
+        /// The creature levelling up.
+        actor: Handle,
+    },
     /// Combat ended by itself because a side is down. The scene is already back in explore mode
     /// and nothing is pending. Reported until a command changes the session (`load_scene`,
     /// `start_combat`, or any explore command that acts), after which it reads `none`; read-only

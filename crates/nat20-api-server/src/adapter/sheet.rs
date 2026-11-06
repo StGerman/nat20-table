@@ -12,9 +12,10 @@ use super::{
     names::{self, title},
 };
 use nat20_api_contract::{
-    Ability as WireAbility, AbilityLine, DeathSaves, FeatureLine, Handle, HitDicePool, ItemLine,
-    ProficiencyLevel as WireProficiency, Recharge, ResourcePool, Sheet, SheetConcentration, Side,
-    Skill as WireSkill, SkillLine, SpellLine, SpellSlots, SpellcastingLine,
+    Ability as WireAbility, AbilityLine, DeathSaves, Experience, FeatureLine, Handle, HitDicePool,
+    ItemLine, ProficiencyLevel as WireProficiency, Recharge, ResourcePool, Sheet,
+    SheetConcentration, Side, Skill as WireSkill, SkillLine, SpellLine, SpellSlots,
+    SpellcastingLine,
 };
 use nat20_core::hecs::Entity;
 use nat20_core::uom;
@@ -29,7 +30,7 @@ use nat20_core::{
             equipment::slots::EquipmentSlot,
             inventory::{Inventory, ItemContainer},
         },
-        level::CharacterLevels,
+        level::{self, CharacterLevels},
         modifier::{FlatModifiable, Modifiable, ModifierKind, ModifierSource},
         proficiency::ProficiencyLevel,
         resource::{RechargeRule, ResourceBudgetKind, ResourceMap},
@@ -58,6 +59,12 @@ pub fn sheet(
 ) -> Sheet {
     let world = &engine.world;
     let levels = world.get::<&CharacterLevels>(entity).ok();
+    let xp = levels.as_deref().map(|levels| Experience {
+        points: levels.experience(),
+        next_level: (levels.total_level() < 20)
+            .then(|| level::experience_for_level(levels.total_level() + 1)),
+        can_level_up: levels.can_level_up(),
+    });
     let (level, class, subclass) = match levels.as_deref() {
         Some(levels) => {
             // Characters in the demo have one class; the first class is the one listed.
@@ -214,6 +221,7 @@ pub fn sheet(
         equipment: equipment(engine, entity),
         features,
         purse: super::game::purse(engine, entity),
+        xp,
     }
 }
 

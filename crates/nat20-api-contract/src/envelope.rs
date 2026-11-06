@@ -4,8 +4,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, LegView, Lodging, NightView,
-    OptionId, Pace, Placement, PointFt, PromptId, RollId, Sheet, Side, Skill, State, V1, Viewer,
+    Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, LegView, LevelUpChoice, Lodging,
+    NightView, OptionId, Pace, Placement, PointFt, PromptId, RollId, Sheet, Side, Skill, State, V1,
+    Viewer,
     state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
@@ -310,6 +311,24 @@ pub enum Command {
         /// The choice id, from `world.card.choices`.
         choice: String,
     },
+    /// Opens a level-up (API-44; protocol §4.14) for a character whose sheet says
+    /// `xp.can_level_up`, out of combat. Core applies the new level and answers what has one
+    /// answer; the result carries the first choice left for the player, if any. Sent again while
+    /// the level-up is open, it returns the open choice. As the actor itself, never `dm`.
+    LevelUp {
+        /// Who levels up: the viewer's own creature.
+        actor: Handle,
+    },
+    /// Answers the open level-up choice (API-44; protocol §4.14). As the actor itself.
+    AnswerLevelUp {
+        /// The levelling creature: the viewer's own.
+        actor: Handle,
+        /// The choice's `prompt_id`.
+        prompt_id: PromptId,
+        /// Option ids, as many as the choice's `picks`. Empty takes the choice's `recommended`.
+        #[serde(default)]
+        picks: Vec<String>,
+    },
 }
 
 /// What `give` and `steal` move.
@@ -604,6 +623,22 @@ pub enum CommandResult {
     },
     /// The state after the word, with the card gone once it was decided.
     ChooseCard {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The level-up's first open choice, or none when core needed no answer from the player.
+    LevelUp {
+        /// The choice to answer with `answer_level_up`; absent once the level-up is done.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        choice: Option<LevelUpChoice>,
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The next open choice of the level-up, or none once it is done.
+    AnswerLevelUp {
+        /// The choice to answer next; absent once the level-up is done.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        choice: Option<LevelUpChoice>,
         /// Projected for the request's `viewer`.
         state: State,
     },

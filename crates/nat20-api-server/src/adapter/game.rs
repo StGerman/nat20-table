@@ -72,6 +72,7 @@ use crate::{
 };
 
 mod goods;
+mod level_up;
 mod night;
 pub use goods::purse;
 pub use night::DAYS_FOOD_QUARTER_LB;
@@ -97,6 +98,8 @@ struct SceneCreature {
     entity: Entity,
     side: Side,
     control: Control,
+    /// The pregen file it was built from, for a character.
+    pregen: Option<String>,
 }
 
 /// A target the monster policy weighs.
@@ -308,6 +311,10 @@ pub struct Game {
     listed: Option<Listed>,
     /// Set while [`Game::as_if_next_turn`] runs, so a kept option list says which it was.
     next_turn: bool,
+    /// The level-up in progress, if any (API-44); one character levels up at a time.
+    level_up: Option<level_up::OpenLevelUp>,
+    /// Level-up choices asked this session, for their prompt ids (`l1`, `l2`, ...).
+    level_up_prompts: u32,
 }
 
 /// One creature's option list, as built now or as if its next turn began (explore mode).
@@ -413,6 +420,7 @@ impl Game {
                             entity: c.entity,
                             side: c.side,
                             control: c.control,
+                            pregen: c.pregen.clone(),
                         }
                     })
                     .collect();
@@ -440,6 +448,7 @@ impl Game {
                     entity,
                     side: def.side,
                     control: def.control,
+                    pregen: def.pregen.clone(),
                 }),
                 Err(e) => {
                     rollback(&mut game, &spawned);
@@ -459,6 +468,7 @@ impl Game {
                     entity,
                     side: def.side,
                     control: def.control,
+                    pregen: def.pregen.clone(),
                 }),
                 Err(e) => {
                     failed = Some(e);
@@ -477,6 +487,7 @@ impl Game {
                     entity: c.entity,
                     side: c.side,
                     control: c.control,
+                    pregen: c.pregen.clone(),
                 })
                 .collect();
             failed = check_sides(&game.engine, &all).err();
@@ -622,6 +633,8 @@ impl Game {
             stalls: 0,
             listed: None,
             next_turn: false,
+            level_up: None,
+            level_up_prompts: 0,
         }
     }
 
@@ -1992,6 +2005,7 @@ impl Game {
                     entity,
                     side: def.side,
                     control: def.control,
+                    pregen: def.pregen.clone(),
                 }),
                 Err(e) => {
                     failed = Some(e);
@@ -2010,6 +2024,7 @@ impl Game {
                     entity: c.entity,
                     side: c.side,
                     control: c.control,
+                    pregen: c.pregen.clone(),
                 })
                 .collect();
             if find_room {
@@ -2361,6 +2376,19 @@ impl Game {
 
         let round = self.round();
         self.drain();
+        // XP is counted before the surrendered change sides and the fled leave.
+        let participants: Vec<Entity> = self
+            .engine
+            .encounter(&core_id)
+            .map(|running| {
+                running
+                    .initiative_order()
+                    .iter()
+                    .map(|(entity, _)| *entity)
+                    .collect()
+            })
+            .unwrap_or_default();
+        let xp = self.award_xp(&participants, winner);
         if reason == CombatOverReason::Surrender {
             // The creatures that gave up and the winners stop being enemies, in core too, so
             // they can share a later scene (an interrogation) without a fight. Core takes the
@@ -2425,6 +2453,7 @@ impl Game {
             .retain(|c| !fleeing.contains(&c.entity));
         self.stand_up();
         self.pending.push(combat_over(round, winner, reason));
+        self.pending.extend(xp);
         self.encounter = None;
         self.scene_encounter = None;
         self.scripted_turn = None;
@@ -3896,11 +3925,13 @@ impl Game {
         };
         let round = Some(running.round() as u32);
         self.drain();
+        let xp = self.award_xp(&participants, winner);
         self.engine.end_encounter(&encounter);
         self.drain();
         self.stand_up();
         self.pending
             .push(combat_over(round, winner, CombatOverReason::SideDown));
+        self.pending.extend(xp);
         self.winner = Some(winner);
         true
     }
@@ -4287,6 +4318,15 @@ impl Game {
             .iter()
             .find(|c| c.entity == entity)
             .map(|c| c.side)
+    }
+
+    /// The pregen file a scene character was built from.
+    fn pregen_of(&self, entity: Entity) -> Option<String> {
+        self.scene
+            .creatures
+            .iter()
+            .find(|c| c.entity == entity)
+            .and_then(|c| c.pregen.clone())
     }
 
     fn handle_of(&self, entity: Entity) -> String {
