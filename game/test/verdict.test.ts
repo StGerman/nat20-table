@@ -1,6 +1,6 @@
 // The verdict of a run folder (M7 spec §3.2, design §3.3): a pure function of the folder's files.
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -167,6 +167,7 @@ test("a living-world run is judged on the Milestone 9 exit: the contract paid by
     { request: { cmd: "choose_card" }, response: { ok: true, events: [{ kind: "combat_started" }] } },
   ];
   writeFileSync(path.join(dir, "engine-log.jsonl"), engineLog.map((l) => JSON.stringify(l)).join("\n") + "\n");
+  writeFileSync(path.join(dir, "engine-stderr.log"), "nat20-api-server listening\n");
   const v = computeVerdict(dir);
   assert.equal(v.verdict, "PASS", v.why);
   const row = (id: string) => v.rows.find((r) => r.row === id)!;
@@ -174,6 +175,7 @@ test("a living-world run is judged on the Milestone 9 exit: the contract paid by
   assert.match(row("1").detail, /settled on day 2/);
   assert.match(row("m9-journeys").detail, /wendford, wendmouth/);
   assert.match(row("m9-pay").detail, /bren 4 gp/);
+  assert.equal(row("m9-ledger").status, "pass");
   assert.match(row("m9-fight").detail, /^1 fights/, "the authored encounter doesn't count");
   assert.equal(row("m9-roster").status, "pass");
 
@@ -181,8 +183,14 @@ test("a living-world run is judged on the Milestone 9 exit: the contract paid by
   const late = [{ kind: "session_started" }, ...party.slice(1).map(wage), leg("wendford"), { kind: "night" }, { kind: "night" }, { kind: "night" }, { kind: "escort_settled", destination: "wendmouth" }];
   const bad = folder({ ...run, roster: { ...run.roster!, party: "new" } }, [], late);
   writeFileSync(path.join(bad, "engine-log.jsonl"), JSON.stringify(engineLog[0]) + "\n");
+  writeFileSync(path.join(bad, "engine-stderr.log"), "ledger: odda_vell holds 1600 cp in the world but 1800 cp in the journal\n");
   const w = computeVerdict(bad);
   const status = (id: string) => w.rows.find((r) => r.row === id)!.status;
   assert.equal(w.verdict, "FAIL");
-  assert.deepEqual(["1", "m9-journeys", "m9-pay", "m9-road", "m9-fight", "m9-roster"].map(status), ["fail", "fail", "fail", "fail", "fail", "reported"]);
+  assert.deepEqual(["1", "m9-journeys", "m9-pay", "m9-ledger", "m9-road", "m9-fight", "m9-roster"].map(status), ["fail", "fail", "fail", "fail", "fail", "fail", "reported"]);
+  assert.match(w.rows.find((r) => r.row === "m9-ledger")!.detail, /^1 mismatches, first: odda_vell holds 1600 cp/);
+
+  // No stderr in the folder: the trial balance can't be read, so the row waits.
+  rmSync(path.join(dir, "engine-stderr.log"));
+  assert.equal(computeVerdict(dir).rows.find((r) => r.row === "m9-ledger")!.status, "pending");
 });
