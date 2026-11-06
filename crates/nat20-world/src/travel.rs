@@ -18,6 +18,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
+    deck::{Deck, DeckError, DeckState, When},
+    dice::WorldDice,
     map::{MapError, Position, WorldMap},
 };
 
@@ -94,6 +96,9 @@ pub struct WorldState {
     pub caravan: Caravan,
     /// The day's travel budget spent, in 1/360 of a day's distance
     pub traveled_today: u32,
+    /// The road event deck: what is in play, the discard, the card on the table
+    #[serde(default)]
+    pub deck: DeckState,
 }
 
 /// The world: the map and goods files, the route an NPC owner follows, and the state.
@@ -105,6 +110,8 @@ pub struct World {
     pub goods: Goods,
     /// Place ids in the order an NPC owner travels them
     pub route: Vec<String>,
+    /// The road event deck; empty until [`World::with_deck`]
+    pub deck: Deck,
     /// What changes
     pub state: WorldState,
 }
@@ -208,8 +215,66 @@ impl World {
                 discovered,
                 caravan,
                 traveled_today: 0,
+                deck: DeckState::default(),
             },
+            deck: Deck::default(),
         })
+    }
+
+    /// The world with its road event deck, checked against the map.
+    pub fn with_deck(mut self, deck: Deck) -> Result<Self, DeckError> {
+        deck.validate(&self.map)?;
+        self.deck = deck;
+        Ok(self)
+    }
+
+    /// The deck zone where the caravan is: its road's zone on a road, else the place's id
+    /// (a place's own cards).
+    pub fn zone_here(&self) -> String {
+        match &self.state.at {
+            Position::OnRoad { road, .. } => self
+                .map
+                .road(road)
+                .map(|r| r.zone.clone())
+                .unwrap_or_default(),
+            Position::At { place } => place.clone(),
+        }
+    }
+
+    /// Draws a road card after a leg along `road`. Returns the card on the table, if any.
+    pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<String> {
+        let zone = self.map.road(road)?.zone.clone();
+        self.deck.draw(
+            &zone,
+            When::Road,
+            &self.state.discovered,
+            &mut self.state.deck,
+            dice,
+        )
+    }
+
+    /// Draws a night card after a night in camp where the caravan is.
+    pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<String> {
+        let zone = self.zone_here();
+        self.deck.draw(
+            &zone,
+            When::Night,
+            &self.state.discovered,
+            &mut self.state.deck,
+            dice,
+        )
+    }
+
+    /// Time lost to a road event: the clock moves on and the day's travel shrinks by as
+    /// much, an 8-hour travel day being the whole day's distance.
+    pub fn delay(&mut self, minutes: u32) {
+        self.state.clock.advance(minutes);
+        let spent = minutes.saturating_mul(DAY_BUDGET) / (8 * 60);
+        self.state.traveled_today = self
+            .state
+            .traveled_today
+            .saturating_add(spent)
+            .min(DAY_BUDGET);
     }
 
     /// Starts a new day of travel (after a night): the whole day's distance is
@@ -513,6 +578,17 @@ mod tests {
             world.state.discovered,
             BTreeSet::from(["town".to_string(), "inn".to_string()])
         );
+    }
+
+    #[test]
+    fn a_delay_takes_time_and_travel_from_the_day() {
+        let mut world = world("maren");
+        world.delay(120);
+        assert_eq!(world.state.clock, Clock::at(1, 10, 0));
+        // Two of eight travel hours: a quarter of 24 miles is gone.
+        assert_eq!(world.miles_left_today(Pace::Normal), 18);
+        world.delay(10 * 60);
+        assert_eq!(world.miles_left_today(Pace::Normal), 0);
     }
 
     #[test]
