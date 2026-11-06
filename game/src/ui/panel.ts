@@ -85,10 +85,11 @@ export function situationRows(
   if (hidden > 0) rows.push([{ text: `       +${hidden} more · /where`, style: muted }]);
   // The foes out of the fight (AGT-47 C5): `Fallen`, so `down` keeps one meaning, a dying ally.
   if (downRow) rows.push([{ text: `Fallen ${situation.down.join(", ")}`, style: muted }]);
-  // The side pane out of a fight has room for the map (AGT-79), as far as the rows go.
+  // The side pane out of a fight has room for the trip planner (AGT-83), as far as the rows go:
+  // its own header line and the blank under it are the bar's day already.
   if (pane && situation.mode === "explore" && situation.road) {
     const left = size.rows - rows.length - 1;
-    if (left > 1) rows.push([], ...situation.road.map.slice(1, 1 + left).map((line): Row => [{ text: line, style: muted }]));
+    if (left > 1) rows.push([], ...situation.road.map.slice(2, 2 + left).map((line): Row => [{ text: line, style: muted }]));
   }
   return rows;
 }

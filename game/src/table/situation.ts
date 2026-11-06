@@ -98,6 +98,6 @@ export function situationOf(state: State, turn: Handle | undefined, options?: Le
     },
     creatures,
     down,
-    ...(state.world ? { road: { where: `${dayLine(state.world)} · ${caravanAt(state.world)}`, day: dayLine(state.world), map: mapLines(state.world) } } : {}),
+    ...(state.world ? { road: { where: `${dayLine(state.world)} · ${caravanAt(state.world)}`, day: dayLine(state.world), map: mapLines(state.world, "pane") } } : {}),
   };
 }
