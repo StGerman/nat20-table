@@ -214,6 +214,7 @@ pub fn sheet(
         death_saves,
         equipment: equipment(engine, entity),
         features,
+        purse: super::game::purse(engine, entity),
     }
 }
 

@@ -263,6 +263,38 @@ pub struct Sheet {
     /// Feats, then features granted by class, subclass, species and background (as actions,
     /// e.g. Second Wind, or as lasting effects), each once.
     pub features: Vec<FeatureLine>,
+    /// The coins it carries.
+    pub purse: Purse,
+}
+
+/// Coins by denomination (SRD 5.2.1: 1 PP = 10 GP, 1 GP = 10 SP = 100 CP, 1 EP = 50 CP). In a
+/// request a denomination left out is 0.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct Coins {
+    /// Copper pieces.
+    #[serde(default)]
+    pub cp: u32,
+    /// Silver pieces.
+    #[serde(default)]
+    pub sp: u32,
+    /// Electrum pieces.
+    #[serde(default)]
+    pub ep: u32,
+    /// Gold pieces.
+    #[serde(default)]
+    pub gp: u32,
+    /// Platinum pieces.
+    #[serde(default)]
+    pub pp: u32,
+}
+
+/// What a creature's purse holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct Purse {
+    /// The coins, by denomination.
+    pub coins: Coins,
+    /// Their worth in copper pieces, computed by the engine, so nobody at the table does sums.
+    pub total_cp: u64,
 }
 
 /// One ability on a sheet.

@@ -76,7 +76,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.39"
+    "version": "1.0.0-dev.40"
   },
   "$defs": {
     "Ability": {
@@ -138,6 +138,50 @@
         "position_ft"
       ]
     },
+    "CarriedItem": {
+      "description": "Some of one item a creature carries.",
+      "type": "object",
+      "properties": {
+        "item": {
+          "description": "The item's id, as on a sheet (`potion_of_healing`).",
+          "type": "string"
+        },
+        "quantity": {
+          "description": "How many.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "item",
+        "quantity"
+      ]
+    },
+    "Carries": {
+      "description": "What a creature carries for `loot`.",
+      "type": "object",
+      "properties": {
+        "coins": {
+          "description": "Its coins.",
+          "$ref": "#/$defs/Coins",
+          "default": {
+            "cp": 0,
+            "ep": 0,
+            "gp": 0,
+            "pp": 0,
+            "sp": 0
+          }
+        },
+        "items": {
+          "description": "Its items.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CarriedItem"
+          }
+        }
+      }
+    },
     "CheckTest": {
       "description": "What a scenario check tests.",
       "oneOf": [
@@ -180,6 +224,47 @@
           ]
         }
       ]
+    },
+    "Coins": {
+      "description": "Coins by denomination (SRD 5.2.1: 1 PP = 10 GP, 1 GP = 10 SP = 100 CP, 1 EP = 50 CP). In a\nrequest a denomination left out is 0.",
+      "type": "object",
+      "properties": {
+        "cp": {
+          "description": "Copper pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "ep": {
+          "description": "Electrum pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "gp": {
+          "description": "Gold pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "pp": {
+          "description": "Platinum pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "sp": {
+          "description": "Silver pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        }
+      }
     },
     "Consequence": {
       "description": "Something the engine does after a check or a hazard save. Story-only effects (\"the reeve\nmentions the debt\") stay in the DM's notes, not here.",
@@ -580,6 +665,17 @@
         "at": {
           "description": "Where it is placed.",
           "$ref": "#/$defs/Placement"
+        },
+        "carries": {
+          "description": "Coin and items it carries beyond a pregen's own equipment and money, taken by `loot`\nonce it falls or surrenders. Players never see it before then (protocol §5).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Carries"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "control": {
           "description": "Who decides for it.",

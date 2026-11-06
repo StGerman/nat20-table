@@ -3,6 +3,14 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.40 (2026-11-02)
+- New commands `give`, `steal` and `loot` (ITM-6; protocol.md §4.9), additive. Out of combat and within 5 feet: `give` hands coin or one carried item to another creature; `steal` rolls Sleight of Hand against the target's passive Perception (core's `passive_score`, ENG-32) and moves the goods unseen on a success; `loot` takes every coin and pack item of a fallen or surrendered creature. Core moves the coin with change, all or nothing (ENG-28, core #68). Worn and wielded gear never changes hands.
+- New event kinds `ledger` (`from`, `to`, `what`, `reason`, `roll_id?`) and `theft_noticed` (`thief`, `target`), additive. Every movement of coin or items is one `ledger` event and one entry in the session's journal (`nat20-ledger`). A theft entry and its roll are the thief's and the DM's only (§5).
+- New sheet field `purse`: coins by kind and `total_cp`, owner and DM only. Every fixture that reads a sheet gains it, at the same seeds; nothing else changes (`cleric_combat`, `explore_actions`, `help_combat`, `m4_party`, `potion`, `pregens`, `rest`, `sheet`).
+- New optional scene field `carries` on a creature: the coins and pack items it holds when placed, DM-only like the rest of the scene file. Monsters have no purse otherwise.
+- New reject reasons `not_carried`, `insufficient_funds`, `not_fallen` and `nothing_carried`; new `dc_source` value `passive`. `errors.jsonl` lists the three new commands among the known ones.
+- New fixture `goods.jsonl` (scene `goods_yard`, seed 1): gifts of coin and a potion, a purse too small, a gift from too far, four thefts that go unseen and one that is noticed, Bren's view without the thefts, a goblin that can't be looted while standing, its fall, the loot, and the empty body after.
+
 ## 1.0.0-dev.39 (2026-11-02)
 - `Sheet.passive_perception` comes from core's `passive_score` (ENG-32, core #69) instead of the adapter's own sum, and now counts Advantage (+5) or Disadvantage (−5) on Perception checks, as SRD 5.2.1 says. No creature in the fixtures has either, so every fixture value stays; only the version line changes. Rule 5: the adapter no longer computes a rule.
 

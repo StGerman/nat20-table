@@ -11,7 +11,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Ability, DamageType, EndCombatReason, Handle, PointFt, Side, Skill};
+use crate::{Ability, Coins, DamageType, EndCombatReason, Handle, PointFt, Side, Skill};
 
 /// One scene: where it happens, who is there, and what the engine resolves in it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -82,6 +82,30 @@ pub struct SceneCreature {
     pub control: Control,
     /// Where it is placed.
     pub at: Placement,
+    /// Coin and items it carries beyond a pregen's own equipment and money, taken by `loot`
+    /// once it falls or surrenders. Players never see it before then (protocol §5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub carries: Option<Carries>,
+}
+
+/// What a creature carries for `loot`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct Carries {
+    /// Its coins.
+    #[serde(default)]
+    pub coins: Coins,
+    /// Its items.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<CarriedItem>,
+}
+
+/// Some of one item a creature carries.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CarriedItem {
+    /// The item's id, as on a sheet (`potion_of_healing`).
+    pub item: String,
+    /// How many.
+    pub quantity: u32,
 }
 
 /// Who decides for a creature.

@@ -70,6 +70,9 @@ use crate::{
     scene,
 };
 
+mod goods;
+pub use goods::purse;
+
 /// Where a refused variant's message starts listing the valid ids (AGT-50). Only the actor's
 /// owner and the DM may see them, so the server cuts the message here for anyone else.
 pub const VALID_VARIANTS: &str = "; send one of: ";
@@ -291,6 +294,8 @@ pub struct Game {
     /// The highest round of this scene's fights whose round spawns were looked at, so each
     /// round spawn is placed or cancelled once per scene.
     spawn_round: u32,
+    /// Creatures that surrendered this session; `loot` may take what they carry.
+    yielded: HashSet<Entity>,
     /// How many times the engine did not settle this session; each is a bug, reported on stderr.
     stalls: usize,
     /// The option list the last `legal_actions` built, kept for the `submit` that follows it
@@ -610,6 +615,7 @@ impl Game {
             walks: Vec::new(),
             provokers: None,
             spawn_round: 0,
+            yielded: HashSet::new(),
             stalls: 0,
             listed: None,
             next_turn: false,
@@ -2154,6 +2160,7 @@ impl Game {
                     }
                 });
             }
+            self.yielded.extend(surrendering.iter().copied());
             for creature in &mut self.scene.creatures {
                 if surrendering.contains(&creature.entity) {
                     creature.side = Side::Neutral;
@@ -4008,6 +4015,23 @@ pub(super) fn load_geometry(map: Option<&str>) -> WorldGeometry {
 /// or a fight could never end.
 /// Spawns one scene or spawn creature in the engine, unplaced.
 fn spawn_creature(
+    engine: &mut EngineState,
+    def: &nat20_api_contract::SceneCreature,
+    pregens: &HashMap<String, PregenFile>,
+) -> Result<Entity, ApiError> {
+    let entity = spawn_bare(engine, def, pregens)?;
+    if let Some(carries) = &def.carries {
+        goods::add_carries(engine, entity, carries).map_err(|m| {
+            error(
+                ErrorCode::BadScene,
+                format!("{}'s carries: {m}", def.handle.0),
+            )
+        })?;
+    }
+    Ok(entity)
+}
+
+fn spawn_bare(
     engine: &mut EngineState,
     def: &nat20_api_contract::SceneCreature,
     pregens: &HashMap<String, PregenFile>,

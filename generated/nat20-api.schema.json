@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.39"
+    "version": "1.0.0-dev.40"
   },
   "$defs": {
     "Ability": {
@@ -765,6 +765,47 @@
         "rolled"
       ]
     },
+    "Coins": {
+      "description": "Coins by denomination (SRD 5.2.1: 1 PP = 10 GP, 1 GP = 10 SP = 100 CP, 1 EP = 50 CP). In a\nrequest a denomination left out is 0.",
+      "type": "object",
+      "properties": {
+        "cp": {
+          "description": "Copper pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "ep": {
+          "description": "Electrum pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "gp": {
+          "description": "Gold pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "pp": {
+          "description": "Platinum pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "sp": {
+          "description": "Silver pieces.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        }
+      }
+    },
     "CombatOverReason": {
       "description": "Why combat ended.",
       "oneOf": [
@@ -1145,6 +1186,55 @@
             "cmd": {
               "type": "string",
               "const": "help"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
+          "description": "The goods changed hands; the `ledger` entry is in `events`.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "give"
+            }
+          },
+          "required": [
+            "cmd"
+          ]
+        },
+        {
+          "description": "The theft's roll and outcome.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "steal"
+            },
+            "roll_id": {
+              "description": "The Sleight of Hand roll, also in `events`.",
+              "$ref": "#/$defs/RollId"
+            },
+            "success": {
+              "description": "Whether the goods were taken unseen. The engine decides, never the caller.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "cmd",
+            "roll_id",
+            "success"
+          ]
+        },
+        {
+          "description": "What was taken is in `events`: one `ledger` entry for the coins and one per item.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "loot"
             }
           },
           "required": [
@@ -1538,6 +1628,11 @@
           "description": "The caster's spell save DC (8 + spellcasting ability modifier + Proficiency Bonus): a\nspell's save, or a class feature that uses it, such as Divine Spark.",
           "type": "string",
           "const": "spell_save_dc"
+        },
+        {
+          "description": "The target's passive score, as core computes it: passive Perception against a theft.",
+          "type": "string",
+          "const": "passive"
         }
       ]
     },
@@ -2442,6 +2537,73 @@
           ]
         },
         {
+          "description": "Coin or items changed hands: one entry of the ledger (`nat20-ledger`). Public, except a\ntheft, which only the thief and the DM see.",
+          "type": "object",
+          "properties": {
+            "from": {
+              "description": "Who gave: a creature handle, or `npc:<id>`, `wagon:<n>`, `market:<place>`, `world`.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "ledger"
+            },
+            "reason": {
+              "description": "Why it moved.",
+              "$ref": "#/$defs/LedgerReason"
+            },
+            "roll_id": {
+              "description": "The roll that decided it, for a theft.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/RollId"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "to": {
+              "description": "Who received, in the same form.",
+              "type": "string"
+            },
+            "what": {
+              "description": "What moved.",
+              "$ref": "#/$defs/LedgerGoods"
+            }
+          },
+          "required": [
+            "kind",
+            "from",
+            "to",
+            "what",
+            "reason"
+          ]
+        },
+        {
+          "description": "A theft failed: the target caught the thief, and nothing moved. Public.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "theft_noticed"
+            },
+            "target": {
+              "description": "Who caught them.",
+              "$ref": "#/$defs/Handle"
+            },
+            "thief": {
+              "description": "The thief.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "kind",
+            "thief",
+            "target"
+          ]
+        },
+        {
           "description": "A creature's life state changed.",
           "type": "object",
           "properties": {
@@ -2652,6 +2814,47 @@
         "name"
       ]
     },
+    "Goods": {
+      "description": "What `give` and `steal` move.",
+      "oneOf": [
+        {
+          "description": "Coins.",
+          "type": "object",
+          "properties": {
+            "coins": {
+              "description": "How many of each denomination.",
+              "$ref": "#/$defs/Coins"
+            },
+            "kind": {
+              "type": "string",
+              "const": "coins"
+            }
+          },
+          "required": [
+            "kind",
+            "coins"
+          ]
+        },
+        {
+          "description": "One carried item, not one worn or wielded.",
+          "type": "object",
+          "properties": {
+            "item": {
+              "description": "The item's id, as on the sheet (`potion_of_healing`).",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "item"
+            }
+          },
+          "required": [
+            "kind",
+            "item"
+          ]
+        }
+      ]
+    },
     "Handle": {
       "description": "A creature's handle in the session, e.g. `bren` or `goblin_1`. Stable for the creature's life.",
       "type": "string"
@@ -2820,6 +3023,96 @@
         "name",
         "quantity",
         "equipped"
+      ]
+    },
+    "LedgerGoods": {
+      "description": "What one ledger entry moves.",
+      "oneOf": [
+        {
+          "description": "Coins, as their worth in copper pieces.",
+          "type": "object",
+          "properties": {
+            "copper": {
+              "description": "Worth in copper pieces.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "kind": {
+              "type": "string",
+              "const": "coins"
+            }
+          },
+          "required": [
+            "kind",
+            "copper"
+          ]
+        },
+        {
+          "description": "Some of one item.",
+          "type": "object",
+          "properties": {
+            "item": {
+              "description": "The item's id, as on the sheet.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "item"
+            },
+            "quantity": {
+              "description": "How many.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "item",
+            "quantity"
+          ]
+        }
+      ]
+    },
+    "LedgerReason": {
+      "description": "Why something moved in the ledger. A closed set.",
+      "oneOf": [
+        {
+          "description": "Handed over, bought or sold.",
+          "type": "string",
+          "const": "trade"
+        },
+        {
+          "description": "A Hired Blade's pay.",
+          "type": "string",
+          "const": "wage"
+        },
+        {
+          "description": "Taken from a fallen or surrendered creature.",
+          "type": "string",
+          "const": "loot"
+        },
+        {
+          "description": "A toll.",
+          "type": "string",
+          "const": "toll"
+        },
+        {
+          "description": "An inn's fee.",
+          "type": "string",
+          "const": "inn"
+        },
+        {
+          "description": "A theft that worked.",
+          "type": "string",
+          "const": "theft"
+        },
+        {
+          "description": "A reward.",
+          "type": "string",
+          "const": "reward"
+        }
       ]
     },
     "LifeState": {
@@ -3090,6 +3383,26 @@
       "description": "A pending decision's id, e.g. `p57`. `submit`, `react` and `end_turn` echo it.",
       "type": "string"
     },
+    "Purse": {
+      "description": "What a creature's purse holds.",
+      "type": "object",
+      "properties": {
+        "coins": {
+          "description": "The coins, by denomination.",
+          "$ref": "#/$defs/Coins"
+        },
+        "total_cp": {
+          "description": "Their worth in copper pieces, computed by the engine, so nobody at the table does sums.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "coins",
+        "total_cp"
+      ]
+    },
     "ReactionOption": {
       "description": "A reaction the actor can take.",
       "type": "object",
@@ -3252,6 +3565,26 @@
           "description": "The area option's aim catches no creature, so nothing is cast and nothing is spent.",
           "type": "string",
           "const": "area_empty"
+        },
+        {
+          "description": "The creature does not carry that item, or carries it only worn or wielded.",
+          "type": "string",
+          "const": "not_carried"
+        },
+        {
+          "description": "The purse holds less than the coins asked for, counted in copper with change.",
+          "type": "string",
+          "const": "insufficient_funds"
+        },
+        {
+          "description": "`loot` of a creature that is neither down nor surrendered.",
+          "type": "string",
+          "const": "not_fallen"
+        },
+        {
+          "description": "`loot` of a creature that carries nothing.",
+          "type": "string",
+          "const": "nothing_carried"
         }
       ]
     },
@@ -3691,6 +4024,85 @@
           "required": [
             "cmd",
             "since"
+          ]
+        },
+        {
+          "description": "Hands coin or one carried item to a creature within 5 feet, in explore mode (protocol\n§4.9). The giver pays coin with change, as core makes it; the receiver gets the coins\nnamed. Logs one public `ledger` entry with reason `trade`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The giver.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "give"
+            },
+            "to": {
+              "description": "The receiver.",
+              "$ref": "#/$defs/Handle"
+            },
+            "what": {
+              "description": "What is handed over.",
+              "$ref": "#/$defs/Goods"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "to",
+            "what"
+          ]
+        },
+        {
+          "description": "Tries to take coin or one carried item from a creature within 5 feet without being seen,\nin explore mode (protocol §4.9). The engine rolls the thief's Dexterity (Sleight of Hand)\nagainst the target's passive Perception. On a success the goods move, with a `ledger`\nentry (reason `theft`) only the thief and the DM see; on a failure nothing moves and the\npublic `theft_noticed` says the target caught the thief.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The thief.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "steal"
+            },
+            "target": {
+              "description": "Whom it steals from.",
+              "$ref": "#/$defs/Handle"
+            },
+            "what": {
+              "description": "What it tries to take.",
+              "$ref": "#/$defs/Goods"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "target",
+            "what"
+          ]
+        },
+        {
+          "description": "Takes everything a fallen or surrendered creature within 5 feet carries, in explore mode\n(protocol §4.9): its coins and items, one public `ledger` entry each, reason `loot`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who takes.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "loot"
+            },
+            "from": {
+              "description": "The fallen or surrendered creature.",
+              "$ref": "#/$defs/Handle"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "from"
           ]
         }
       ],
@@ -4226,6 +4638,10 @@
           "maximum": 255,
           "minimum": 0
         },
+        "purse": {
+          "description": "The coins it carries.",
+          "$ref": "#/$defs/Purse"
+        },
         "resources": {
           "description": "Limited-use features, e.g. Second Wind, by id. Per-turn action economy (action, bonus\naction, reaction) is not listed; `legal_actions` reports it.",
           "type": "array",
@@ -4315,7 +4731,8 @@
         "life_state",
         "death_saves",
         "equipment",
-        "features"
+        "features",
+        "purse"
       ]
     },
     "SheetConcentration": {

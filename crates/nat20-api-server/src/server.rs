@@ -272,6 +272,13 @@ impl Server {
             } => session.short_rest(participants, hit_dice),
             Command::Spawn { spawn_id } => session.spawn(spawn_id, viewer),
             Command::Help { actor, help } => session.help(&actor.0, help),
+            Command::Give { actor, to, what } => session.give(&actor.0, &to.0, what),
+            Command::Steal {
+                actor,
+                target,
+                what,
+            } => session.steal(&actor.0, &target.0, what),
+            Command::Loot { actor, from } => session.loot(&actor.0, &from.0),
         }
     }
 
