@@ -123,6 +123,69 @@ test("a human who owns the caravan picks a road out of the place, each line carr
   assert.deepEqual(onRoad.map((c) => c.act), [{ kind: "travel", pace: "normal" }, { kind: "rest_night", where: "camp" }]);
 });
 
+test("the road's lines follow the engine's miles left today: none once the day is spent, and a fast line when only a fast pace gets there today", () => {
+  // Stas's run, 2026-11-05: at Wendford with 16 normal miles left and 20 to Wendmouth, only the
+  // normal pace was offered, and twice "Move on" was picked on a spent day and refused in English.
+  const world = {
+    drives: true,
+    at: { kind: "at", place: "wendford" },
+    places: [
+      { id: "wendford", name: "Wendford", kind: "village", market: true },
+      { id: "wendmouth", name: "Wendmouth", kind: "town", market: true },
+    ],
+    roads: [{ id: "river_road", from: "wendford", to: "wendmouth", miles: 20, max_pace: "fast" }],
+    unexplored: [],
+    caravan: { owner: "npc:odda_vell", wagons: [] },
+    card: null,
+    today: { fast: 20, normal: 16, slow: 12 },
+    trip: { complete: true, legs: [{ road: "river_road", to: "wendmouth", pace: "normal", miles: 20, minutes: 400, nights: 1 }] },
+  };
+  const labels = (w: object) => roadChoices(w as never, 1).map((c) => c.label);
+  assert.deepEqual(labels(world), ["Move on with the caravan", "Push on at a fast pace to reach Wendmouth today", "Make camp for the night"]);
+  assert.deepEqual(roadChoices(world as never, 1)[1]?.act, { kind: "travel", pace: "fast" });
+  assert.deepEqual(labels({ ...world, today: { fast: 30, normal: 24, slow: 18 } }), ["Move on with the caravan", "Make camp for the night"], "normal gets there today");
+  assert.deepEqual(labels({ ...world, roads: [{ ...world.roads[0], max_pace: "normal" }] }), ["Move on with the caravan", "Make camp for the night"], "the road allows no fast pace");
+  const spent = { fast: 0, normal: 0, slow: 0 };
+  assert.deepEqual(labels({ ...world, today: spent }), ["Make camp for the night"]);
+  // On the road the stretch is what is left of it, toward the road's other end.
+  const onRoad = { ...world, at: { kind: "on_road", road: "river_road", came_from: "wendford", miles_left: 4 }, trip: null };
+  assert.deepEqual(labels({ ...onRoad, today: { fast: 4, normal: 3, slow: 2 } }), ["Move on with the caravan", "Push on at a fast pace to reach Wendmouth today", "Make camp for the night"]);
+  assert.deepEqual(labels({ ...onRoad, today: spent }), ["Make camp for the night"]);
+  // A human who owns the caravan gets the fast line under the road it belongs to.
+  const owned = { ...world, caravan: { owner: "bren", wagons: [] }, trip: null };
+  assert.deepEqual(labels(owned), ["Take the road to Wendmouth (20 miles)", "Take the road to Wendmouth at a fast pace, there today (20 miles)", "Make camp for the night"]);
+  // With the normal miles spent but a few fast ones left, the day is still over: only the night.
+  assert.deepEqual(labels({ ...onRoad, today: { fast: 4, normal: 0, slow: 0 } }), ["Make camp for the night"]);
+  assert.deepEqual(labels({ ...owned, today: { fast: 20, normal: 0, slow: 0 } }), ["Make camp for the night"]);
+  // An unexplored road gets the same fast line when only a fast pace reaches its end today.
+  const unexplored = { ...owned, roads: [], unexplored: [{ id: "barrow_path", from: "wendford", miles: 20, max_pace: "fast" }] };
+  assert.deepEqual(labels(unexplored), ["Take an unexplored road (20 miles)", "Take an unexplored road at a fast pace, to its end today (20 miles)", "Make camp for the night"]);
+});
+
+test("once the day's travel is spent the DM can't propose moving on, and the human's options offer only the night", async () => {
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
+  try {
+    const ok = (r: { ok: boolean }) => assert.ok(r.ok, JSON.stringify(r));
+    ok(await t.engine.request("dm", { cmd: "load_scene", scene_id: "vale_town" }));
+    ok(await t.engine.request("dm", { cmd: "start_campaign", party: ["bren", "maren"] }));
+    ok(await t.engine.request("bren", { cmd: "travel", actor: "bren", to: "crossing_inn", pace: "fast" }));
+    for (const who of ["bren", "maren"]) ok(await t.engine.request(who, { cmd: "choose_card", actor: who, choice: "clear" }));
+    // 12 of the hills' 20 miles is all the day has left: the caravan stops on the trail.
+    ok(await t.engine.request("bren", { cmd: "travel", actor: "bren", to: "old_tower", pace: "normal" }));
+    const state = await t.engine.request("bren", { cmd: "get_state" });
+    assert.ok(state.result?.cmd === "get_state" && state.result.state.view === "player" && state.result.state.world);
+    const world = state.result.state.world;
+    assert.equal(world.at.kind, "on_road");
+    assert.equal(world.today.normal, 0);
+    assert.deepEqual(roadChoices(world, 1).map((c) => c.act?.kind), ["rest_night"]);
+    const said = await new DmTools(t.table).proposeRoad("move_on");
+    assert.ok(!said.ok && said.text.includes("spent"), said.text);
+    assert.equal(t.table.road, undefined);
+  } finally {
+    t.close();
+  }
+});
+
 /** The engine's test campaign with the caravan owned by `owner` and no escort or route: a player's own caravan. */
 function ownedPack(owner: string): string {
   const dir = mkdtempSync(path.join(tmpdir(), "owned-"));

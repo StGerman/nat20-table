@@ -903,6 +903,11 @@ export class DmTools {
     const world = (await this.dmState())?.world;
     if (!world) return notNow("there is no road in this adventure");
     if (world.card) return notNow("a road card waits for its word first");
+    // What is left of the day at a fast pace is offered on the human's own list when it gets the
+    // caravan somewhere; the DM's proposal is the ordinary pace.
+    if (step === "move_on" && world.today.normal === 0) {
+      return notNow("the day's travel is spent: propose camp, and the caravan moves on in the morning");
+    }
     if (step === "inn") {
       const here = world.at.kind === "at" ? world.places.find((p) => p.id === (world.at as { place: string }).place) : undefined;
       if (typeof here?.inn_cp !== "number") return notNow("there is no inn here: propose camp instead");
