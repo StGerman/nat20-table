@@ -171,13 +171,22 @@ function latinWordIn(text: string, shown: ReadonlySet<string>): string | undefin
  * An AI player's text guard: refuses numbers, game-stat terms and mixed-script words, and in a
  * Russian run (`language` ru) a line with no Russian in it or a word in Latin letters.
  */
-export function speechGuard(options: { shown: ReadonlySet<string>; language?: Language }): TextGuard {
+export function speechGuard(options: { shown: ReadonlySet<string>; language?: Language; dmOnly?: ReadonlySet<string> }): TextGuard {
   return (text) =>
-    numberIn(withoutShown(text, options.shown)) ??
+    // A lone handle is whom a line is said to (AGT-84: `odda_vell`, `bandit_1`), not words: it passes
+    // unless it is an id only the DM knows (Copilot on table #289).
+    HANDLE.test(text)
+      ? options.dmOnly?.has(text)
+        ? `it names ${text}, which only the DM knows`
+        : undefined
+      : numberIn(withoutShown(text, options.shown)) ??
     statTermIn(text) ??
     mixedScriptIn(text) ??
-    (options.language === "ru" ? (englishIn(text, options.shown) ?? latinWordIn(text, options.shown)) : undefined);
+      (options.language === "ru" ? (englishIn(text, options.shown) ?? latinWordIn(text, options.shown)) : undefined);
 }
+
+/** A handle as the engine and the pack write one: lowercase letters, digits and `_`, starting with a letter. */
+const HANDLE = /^[a-z][a-z0-9_]*$/;
 
 interface SceneFileIds {
   id: string;
