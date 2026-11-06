@@ -460,6 +460,20 @@
         "description": "One scene, in play order."
       },
       "description": "In play order; the first places the party, every later one carries it in."
+    },
+    "world": {
+      "description": "A living-world pack's campaign.json only (MAP-7): the engine's world block (map, start, hour, caravan, route, road_scene, scenes, escort). The engine reads and checks it; the game reads only start and scenes. Its scenes need no exits: the road joins them.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "day_limit": {
+      "description": "A living-world pack only: the last game day a run plays; the night after it ends the run.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
     }
   },
   "required": [
