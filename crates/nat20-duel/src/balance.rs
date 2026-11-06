@@ -96,7 +96,10 @@ pub fn run_chain(pack: &Path, seed: u32) -> ChainResult {
         client: Client::with_id_prefix(Server::with_data_dir(pack.to_path_buf()), "b"),
         potions: 0,
     };
-    table.dm(Command::NewSession { seed: Some(seed) });
+    table.dm(Command::NewSession {
+        seed: Some(seed),
+        roster: None,
+    });
     table.load("s1_village_green", &[]);
     table.load("s2_mill_road", &PARTY);
     table.best_check("find_tracks");

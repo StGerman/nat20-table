@@ -162,11 +162,19 @@ impl Server {
                     schema_sha256: SCHEMA_SHA256.trim().to_owned(),
                 });
             }
-            Command::NewSession { seed } => {
+            Command::NewSession { seed, roster } => {
+                if let Some(roster) = roster {
+                    check_roster(roster)?;
+                }
                 let seed = seed.unwrap_or_else(random_seed);
                 adapter::seed_dice(seed);
                 self.sessions_started += 1;
-                self.session = Some(Session::new(self.data_dir.clone(), CONTRACT_VERSION, seed));
+                self.session = Some(Session::new(
+                    self.data_dir.clone(),
+                    CONTRACT_VERSION,
+                    seed,
+                    roster.clone(),
+                ));
                 return Ok(CommandResult::NewSession {
                     session_id: format!("s{}", self.sessions_started),
                     seed,
@@ -200,6 +208,7 @@ impl Server {
                 | Command::GetState
                 | Command::GetSheet { .. }
                 | Command::Events { .. }
+                | Command::SaveRoster
         ) {
             session.forget_options();
         }
@@ -294,6 +303,7 @@ impl Server {
             }
             Command::RestNight { actor, lodging } => session.rest_night(&actor.0, *lodging, viewer),
             Command::ChooseCard { actor, choice } => session.choose_card(&actor.0, choice, viewer),
+            Command::SaveRoster => session.save_roster(viewer),
             Command::LevelUp { actor } => session.level_up(&actor.0, viewer),
             Command::AnswerLevelUp {
                 actor,
@@ -388,4 +398,32 @@ fn random_seed() -> u32 {
     std::collections::hash_map::RandomState::new()
         .build_hasher()
         .finish() as u32
+}
+
+/// A roster this engine can read: format 1, each handle once, each pregen a file it has.
+fn check_roster(roster: &nat20_api_contract::Roster) -> Result<(), nat20_api_contract::ApiError> {
+    let bad = |message: String| errors::error(ErrorCode::BadRoster, message);
+    if roster.format != nat20_api_contract::ROSTER_FORMAT {
+        return Err(bad(format!(
+            "The roster is format {}; this engine reads format {}.",
+            roster.format,
+            nat20_api_contract::ROSTER_FORMAT
+        )));
+    }
+    let mut seen = std::collections::HashSet::new();
+    for character in &roster.characters {
+        if !seen.insert(&character.handle.0) {
+            return Err(bad(format!(
+                "The roster lists {} twice.",
+                character.handle.0
+            )));
+        }
+        adapter::pregen::read(&character.pregen).map_err(|_| {
+            bad(format!(
+                "The roster's {} names pregen {}, which this engine does not have.",
+                character.handle.0, character.pregen
+            ))
+        })?;
+    }
+    Ok(())
 }

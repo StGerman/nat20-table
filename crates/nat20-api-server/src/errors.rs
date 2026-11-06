@@ -16,6 +16,7 @@ pub fn error(code: ErrorCode, message: impl Into<String>) -> ApiError {
             | ErrorCode::SurrenderNotAvailable
             | ErrorCode::NotImplemented
             | ErrorCode::BadScene
+            | ErrorCode::BadRoster
             | ErrorCode::Internal
     );
     ApiError {

@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, LegView, LevelUpChoice, Lodging,
-    NightView, OptionId, Pace, Placement, PointFt, PromptId, RollId, Sheet, Side, Skill, State, V1,
-    Viewer,
+    NightView, OptionId, Pace, Placement, PointFt, PromptId, RollId, Roster, Sheet, Side, Skill,
+    State, V1, Viewer,
     state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
@@ -41,6 +41,11 @@ pub enum Command {
         /// seed reproduces the session. Every value, 0 included, is a real seed.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         seed: Option<u32>,
+        /// The party saved by an earlier session's `save_roster` (protocol §4.15). Each scene
+        /// pregen creature whose handle is in it is rebuilt as saved, after a Long Rest; a
+        /// campaign on the same map takes up its world.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        roster: Option<Roster>,
     },
     /// Loads a scene from the scenario and enters explore mode, in the session's one engine.
     /// Creatures in `party` carry over; every other creature of the previous scene leaves.
@@ -311,6 +316,9 @@ pub enum Command {
         /// The choice id, from `world.card.choices`.
         choice: String,
     },
+    /// Saves the party for the next game session (API-45; protocol §4.15): the campaign's
+    /// party, else every party character built from a pregen, and the world. DM only.
+    SaveRoster,
     /// Opens a level-up (API-44; protocol §4.14) for a character whose sheet says
     /// `xp.can_level_up`, out of combat. Core applies the new level and answers what has one
     /// answer; the result carries the first choice left for the player, if any. Sent again while
@@ -625,6 +633,11 @@ pub enum CommandResult {
     ChooseCard {
         /// Projected for the request's `viewer`.
         state: State,
+    },
+    /// The saved party.
+    SaveRoster {
+        /// Write it to a file as is; `new_session{roster}` reads it back.
+        roster: Roster,
     },
     /// The level-up's first open choice, or none when core needed no answer from the player.
     LevelUp {

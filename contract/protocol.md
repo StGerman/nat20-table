@@ -112,7 +112,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | `cmd` | Fields | `result` | Who may call (orchestrator binding) |
 |---|---|---|---|
 | `hello` | | `{protocol:"nat20-api", version:"1.0.0", engine_rev, schema_sha256}` | orchestrator |
-| `new_session` | `seed?` | `{session_id, seed}` | orchestrator |
+| `new_session` | `seed?`, `roster?` (§4.15) | `{session_id, seed}` | orchestrator |
 | `load_scene` | `scene_id` \| `scene`, `party?` (handles carried in) | `State` | DM |
 | `get_state` | `viewer` | `State` (projected) | all |
 | `get_sheet` | `actor`, `viewer` | `Sheet` (full if `viewer` = `actor` or `dm`, else `not_visible`) | player (self), DM, UI |
@@ -131,6 +131,7 @@ A scene creature with `pregen: "<id>"` is built from `pregens/<id>.json` at the 
 | `travel` | `actor`, `to?` (place or road id), `pace: fast\|normal\|slow` | `{leg, state}` | the caravan's driver, as itself (§4.11) |
 | `rest_night` | `actor`, `where: inn\|camp` | `{night, state}` | the caravan's driver, as itself (§4.12) |
 | `choose_card` | `actor`, `choice` | `State` | a Hired Blade or a player owner, as itself (§4.13) |
+| `save_roster` | | `{roster}` | the game loop as DM (§4.15) |
 | `level_up` | `actor` | `{choice?, state}` | the levelling character's player, as itself (§4.14) |
 | `answer_level_up` | `actor`, `prompt_id`, `picks?: string[]` | `{choice?, state}` | as above (§4.14) |
 
@@ -324,6 +325,14 @@ XP and levels are core's (ENG-31); the engine awards XP and runs core's `LevelUp
 - **Answering.** In a fight, `answer_level_up` is `wrong_mode`; the choice waits until the fight is over.
 - **Not served yet.** A prompt for ability scores or a spell swap (from level 4) is `not_implemented`, and closes the level-up where it stopped, as an `internal` error does, so it never blocks another character's.
 
+### 4.15 The roster between game sessions
+
+A roster carries the party from one game session to the next (API-45). The engine writes it; the game loop keeps it as a file (`rosters/<name>.json`, outside the repository) and records its sha256 going in and coming out.
+
+- **Saving.** `save_roster` (as `dm`; another viewer is `not_visible`) returns `{format: 1, characters, world?}`. `characters` are the campaign's party in its order, else every party character of the scene, each built from a pregen (a placed stat block is not saved): `handle`, `pregen`, `level`, `xp`, the level-up `choices` made in play (`level`, `prompt_id`, `picks`), `equipment` (equipped items with their slot, then carried ones, as in a pregen file; an item in a slot a pregen file can't name is saved as carried), `purse`, and `exhaustion`, `malnutrition` and `days_without_food`. Hit Points are not saved. `world` is present once a campaign runs: the map id and the world state (clock, where the caravan is, wagons and cargo, places discovered, the deck with a card on the table), opaque to clients. `save_roster` reads only: it changes nothing and can run at any time, mid-fight included.
+- **Loading.** `new_session{roster}` checks the roster first and refuses it with `bad_roster`, leaving the running session as it was, when its `format` is not 1, a handle repeats, or a `pregen` has no file. A scene pregen creature whose handle is in the roster is then rebuilt as saved: its pregen at the pregen's level, each level since through core's level-up with the saved `choices` (prompts with one answer answer themselves, as in `level_up`), its XP, gear and coins, then one Long Rest by the rule: full Hit Points and uses, the saved Exhaustion and hunger put back through core and one level removed unless malnutrition holds it. A character the roster cannot rebuild (a missing answer, a pick that is not an option) refuses the `load_scene` with `bad_roster`, and nothing changes. `start_campaign` on the roster's map takes up its world; on another map the campaign starts fresh.
+- **Not saved yet:** Hit Points, a character's death, rumours and place NPCs (API-48).
+
 ## 5. Visibility (projection per `viewer`)
 
 | Data | `dm` | Owner (viewer = that creature) | Other player viewer |
@@ -362,6 +371,7 @@ XP and levels are core's (ENG-31); the engine awards XP and runs core's `LevelUp
 | Sheet `xp` (points, next level, `can_level_up`) and `xp_awarded` | yes | yes | no |
 | A level-up's choice (`level_up`, `answer_level_up` results) | n/a | yes | no; `awaiting` says only whose level-up is open |
 | `leveled_up` | yes | yes | yes (the table hears that a character grew) |
+| The roster (`save_roster`) | yes | no | no |
 | `text` in events | rendered for `dm` | rendered for that viewer | rendered for that viewer |
 
 The server projects; it doesn't authenticate. The engine trusts its single client. Projection exists so that a bug in the orchestrator's tool layer can't leak numbers, not to stop a hostile client.
@@ -451,6 +461,7 @@ Audit rule (demo pass criterion): every `[rN]` cited in a transcript exists with
 | `surrender_not_available` | `end_combat{surrender}` while the running encounter's surrender condition does not hold, or it declares none; nothing changed | false |
 | `not_implemented` | The command is in the contract but this engine build does not serve it yet | false |
 | `bad_scene` | The scene file, or a pregen or stat block it names, is missing or invalid; nothing changed | false |
+| `bad_roster` | `new_session`'s roster can't be read (another format, a repeated handle, a pregen with no file), or a scene's roster character can't be rebuilt; nothing changed | false |
 | `internal` | An engine bug. The request did nothing, and the engine logs details to stderr | false |
 
 `message` is one plain-English sentence written for a model or a human. It never contains Rust `Debug` output.

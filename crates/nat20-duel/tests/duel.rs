@@ -106,7 +106,13 @@ fn tampered_transcript_fails_the_audit() {
 #[test]
 fn goblin_warrior_matches_the_srd_stat_block() {
     let mut client = Client::default();
-    client.send("dm", Command::NewSession { seed: None });
+    client.send(
+        "dm",
+        Command::NewSession {
+            seed: None,
+            roster: None,
+        },
+    );
     client.send(
         "dm",
         Command::LoadScene {
