@@ -75,7 +75,7 @@ export function promptHint(prompt: HumanPrompt, handle: string): string {
     case "surrender":
       return "Accept the surrender (1), fight on (2), or say what you do.";
     case "card":
-      return "Your word on the road: a number, or Enter to go with the others.";
+      return "Your word on the road: a number, or Enter for the marked choice.";
     case "level_up":
       return "Your new level: a number, or Enter for the recommended pick.";
     case "road":

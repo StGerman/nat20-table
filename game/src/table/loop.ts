@@ -727,8 +727,9 @@ export class TableLoop {
   }
 
   /**
-   * A road card that waits for the party's word (design: card kinds): each AI player it waits for is
-   * asked first, one at a time, each hearing what was said before it; the human is asked last.
+   * A road card that waits for the party's word (design: card kinds): the human is asked first, so
+   * their word and their reasons can sway the AI Blades (Stas, 2026-11-06, AGT-87); then each AI
+   * player it waits for, one at a time, each hearing what was said before it.
    * An AI player that gives no word goes with the others. Returns whether a card was asked about.
    */
   private async cardRound(): Promise<boolean> {
@@ -744,6 +745,8 @@ export class TableLoop {
     const asked = this.cardAsked.get(card.id);
     if (asked !== undefined && asked === this.table.engine.logHead) throw new Error(`the road card ${card.id} won't settle: still waiting for ${card.waiting_for.join(", ")}`);
     await this.table.flush();
+    const human = this.table.human;
+    if (human && card.waiting_for.includes(human) && !this.table.ended) await this.humanCard(card);
     for (const handle of card.waiting_for) {
       const agent = this.agents.get(handle);
       if (!agent || this.table.ended) continue;
@@ -753,12 +756,7 @@ export class TableLoop {
       const briefing = await this.playerBriefing(handle, ...cardLines(now), "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
       await this.wakePlayer(agent, "card", briefing);
     }
-    let now = (await this.dmWorld())?.card;
-    const human = this.table.human;
-    if (now && now.id === card.id && human && now.waiting_for.includes(human) && !this.table.ended) {
-      await this.humanCard(now);
-      now = (await this.dmWorld())?.card;
-    }
+    const now = (await this.dmWorld())?.card;
     // Whoever is still silent goes with the others (a failed wake or a refusal).
     if (now && now.id === card.id && !this.table.ended) {
       const { choices, preset } = cardChoices(now);
@@ -804,10 +802,15 @@ export class TableLoop {
     await send(this.table, owner, { cmd: "choose_card", actor: owner, choice }, () => `went with the advice: ${choice}`);
   }
 
-  /** The human's word on a road card, asked last (design: the human seat): a number, or Enter to go with the others. */
+  /**
+   * The human's word on a road card (design: the human seat): a number, or Enter for the marked
+   * choice. As a Blade the human speaks first (AGT-87), so Enter takes the first choice; as the
+   * caravan's owner they call last, and Enter goes with the Blades.
+   */
   private async humanCard(card: CardDm, owner = false): Promise<void> {
     const human = this.human;
     const { choices, preset } = cardChoices(card);
+    const enter = card.said.length > 0 ? "press Enter to go with the others" : `press Enter for ${preset}`;
     for (;;) {
       if (this.table.ended) return;
       this.table.show({ kind: "info", title: "On the road", text: [card.text, owner ? "The caravan is yours: you make the call, with the Blades' advice." : card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
@@ -817,7 +820,7 @@ export class TableLoop {
       if (intent.kind === "option") {
         const picked = choices.find((c) => c.number === intent.number);
         if (!picked) {
-          this.table.show({ kind: "info", title: "No such number", text: `Pick 1 to ${choices.length}, or press Enter to go with the others.` });
+          this.table.show({ kind: "info", title: "No such number", text: `Pick 1 to ${choices.length}, or ${enter}.` });
           continue;
         }
         const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
@@ -834,7 +837,7 @@ export class TableLoop {
         await this.table.declare(human, intent.text);
         continue;
       }
-      this.table.show({ kind: "info", title: "On the road", text: "Pick a number, or press Enter to go with the others." });
+      this.table.show({ kind: "info", title: "On the road", text: `Pick a number, or ${enter}.` });
     }
   }
 

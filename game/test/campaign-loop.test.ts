@@ -1,6 +1,6 @@
 // The loop plays the living world (M9, AGT-80 step 2): it starts the campaign, the human moves the
-// caravan on and makes camp from the numbered options, a road card asks the AI players first and
-// the human last (Enter goes with the others), the DM tells the card and the night, the party is
+// caravan on and makes camp from the numbered options, a road card asks the human first and then
+// the AI players (AGT-87), the DM tells the card and the night, the party is
 // saved after the night, and the night past the day limit ends the run.
 import assert from "node:assert/strict";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -37,7 +37,7 @@ function traveller(): (prompt: HumanPrompt, seat: ScriptedSeat) => PlayerIntent 
   };
 }
 
-test("the loop starts the campaign, asks a road card of the AI players first and the human last, tells the night, saves, and stops at the day limit", async () => {
+test("the loop starts the campaign, asks a road card of the human first and then the AI players, tells the night, saves, and stops at the day limit", async () => {
   const seat = new ScriptedSeat("bren", [], traveller());
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
   try {
@@ -58,11 +58,11 @@ test("the loop starts the campaign, asks a road card of the AI players first and
     assert.deepEqual(sent.find(([c]) => c === "start_campaign"), ["start_campaign", "dm"]);
     assert.ok(sent.some(([c, v]) => c === "travel" && v === "bren"), "the human moved the caravan on");
     assert.ok(sent.some(([c, v]) => c === "rest_night" && v === "bren"), "the human made camp");
-    // A card was drawn on the road: maren was woken for it before the human gave a word.
+    // A card was drawn on the road: the human gave a word before maren was woken for it (AGT-87).
     const cards = t.requests().filter((r) => r.cmd === "choose_card").map((r) => r.viewer);
     // Seed 1 draws a card on the first leg.
-    assert.deepEqual(cards, ["maren", "bren"], "the AI player speaks first, the human last");
-    assert.ok(maren.briefings.some((b) => b.wake === "card" && /^Choices: /m.test(b.briefing)));
+    assert.deepEqual(cards, ["bren", "maren"], "the human speaks first, so their word can sway the AI player");
+    assert.ok(maren.briefings.some((b) => b.wake === "card" && /^Choices: /m.test(b.briefing) && /^Said so far: bren /m.test(b.briefing)), "the AI player hears the human's word");
     assert.ok(dm.briefings.some((b) => b.wake === "road" && b.briefing.includes("A road card was settled")));
     const word = seat.shown.find((e) => e.kind === "options" && e.title === "Your word");
     assert.ok(word?.kind === "options" && word.preset === 1, "Enter goes with the others");

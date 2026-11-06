@@ -1,6 +1,6 @@
 # 0058. In the first Living world session the human plays a Hired Blade, and one caravan owner leads
 
-- **Status:** Accepted
+- **Status:** Accepted; the "human seat is asked last" sentence is superseded by [0062](0062-human-votes-first.md) once that is accepted
 - **Date:** 2026-11-02
 - **Decided by:** Stas, on the Milestone 9 system design ("S1 - A / S2 - A / S3 - A / S4 - A Guards/Blades", Milestone 9 implementation thread, 21:12Z). The pay split was Claude's answer to his question "how do we split the contract pay?" in the same thread; Stas accepted it at 21:33Z ("2 sounds like a good start")
 

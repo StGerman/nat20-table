@@ -70,6 +70,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0059](0059-demo-run-closed.md) | The Demo Run closes on two passing runs from different builds: Stas's `play:demo` 2026-10-30T20-40-59 and the all-AI `play:unattended` 2026-11-01T23-25-02 (AGT-77); the same-build pair left open by 0051 is no longer due | Accepted | 2026-11-05 | Stas ("Close the Demo Run" thread, decision cards) |
 | [0060](0060-m9-closed.md) | Milestone 9 closes on the exit pair on table e730916: the all-AI `play:unattended` 2026-11-06T07-29-50 (no roster, counted as the pair's first run) and Stas's `play:demo` 2026-11-06T14-21-09 (roster `wend` continued, flag n28-1 dismissed) | Accepted | 2026-11-06 | Stas ("M9 exit run 2" thread) |
 | [0061](0061-time-in-a-place.md) | Time passes in a place at the DM's call: `pass_time{span}` (`short_while`, `hour`, `watch`), never past midnight, moving the clock, core's time and the day's travel as a card's lost time does (API-50, decision 0060 F2) | Proposed | 2026-11-06 | Claude, inside Stas's go-ahead for the post-M9 findings; Stas reviews in the PR |
+| [0062](0062-human-votes-first.md) | On a road card the human gives their word first as a Hired Blade, so their reasons can sway the AI Blades; a human caravan owner still calls last; supersedes the "asked last" sentence of 0058 (AGT-87) | Proposed | 2026-11-06 | Stas (post-M9 hygiene thread) |
 
 ## Open questions to watch
 
