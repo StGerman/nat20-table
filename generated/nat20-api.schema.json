@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.44"
+    "version": "1.0.0-dev.45"
   },
   "$defs": {
     "Ability": {
@@ -1428,6 +1428,29 @@
           },
           "required": [
             "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The night and the state at dawn.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "rest_night"
+            },
+            "night": {
+              "description": "The night, also in the `night` event.",
+              "$ref": "#/$defs/NightView"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "night",
             "state"
           ]
         },
@@ -3054,6 +3077,24 @@
           ]
         },
         {
+          "description": "A night passed (`rest_night`), after its `ledger`, saving throw and `rest` entries.\nPublic.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "night"
+            },
+            "night": {
+              "description": "The night.",
+              "$ref": "#/$defs/NightView"
+            }
+          },
+          "required": [
+            "kind",
+            "night"
+          ]
+        },
+        {
           "description": "The party found a place it did not know: it is in every player's `world.places` from\nnow on. Public.",
           "type": "object",
           "properties": {
@@ -3474,6 +3515,21 @@
         }
       ]
     },
+    "Lodging": {
+      "description": "Where the party spends a night.",
+      "oneOf": [
+        {
+          "description": "The inn of the place the caravan is in: each party member pays the place's `inn_cp`\nfor room and board.",
+          "type": "string",
+          "const": "inn"
+        },
+        {
+          "description": "A camp, in a place or on the road: each party member eats one day's rations from the\ncaravan while they last.",
+          "type": "string",
+          "const": "camp"
+        }
+      ]
+    },
     "MilesToday": {
       "description": "How many more miles the party can travel today at each pace. A day's distance is shared:\na mile at Fast spends 1/30 of the day, at Normal 1/24, at Slow 1/18.",
       "type": "object",
@@ -3594,6 +3650,55 @@
             "point"
           ]
         }
+      ]
+    },
+    "NightView": {
+      "description": "One night, in `rest_night`'s result and the `night` event.",
+      "type": "object",
+      "properties": {
+        "actor": {
+          "description": "Who called `rest_night`.",
+          "$ref": "#/$defs/Handle"
+        },
+        "hungry": {
+          "description": "The party members who ate less than a full day's food (no rations left).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        },
+        "lodging": {
+          "description": "Inn or camp.",
+          "$ref": "#/$defs/Lodging"
+        },
+        "minutes": {
+          "description": "How long the night lasted, in minutes: until dawn, and at least 8 hours.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "not_rested": {
+          "description": "The party members who could not take a Long Rest: at 0 Hit Points, or less than 16\nhours after their last one.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        },
+        "rested": {
+          "description": "The party members who finished a Long Rest.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        }
+      },
+      "required": [
+        "actor",
+        "lodging",
+        "minutes",
+        "rested",
+        "not_rested",
+        "hungry"
       ]
     },
     "OptionArea": {
@@ -3728,6 +3833,15 @@
           "description": "The place id.",
           "type": "string"
         },
+        "inn_cp": {
+          "description": "A night's room and board at its inn, per person, in copper pieces; absent when it has\nno inn.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
         "kind": {
           "description": "What kind of place it is (`town`, `village`, `inn`, `ruin`).",
           "type": "string"
@@ -3761,6 +3875,15 @@
         "id": {
           "description": "The place id; `travel` takes it as `to`.",
           "type": "string"
+        },
+        "inn_cp": {
+          "description": "A night's room and board at its inn, per person, in copper pieces; absent when it has\nno inn.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
         },
         "kind": {
           "description": "What kind of place it is (`town`, `village`, `inn`, `ruin`).",
@@ -4107,6 +4230,11 @@
           "description": "`travel` while a wagon carries more than its limit.",
           "type": "string",
           "const": "overloaded"
+        },
+        {
+          "description": "`rest_night{where: inn}` where the caravan is not at a place with an inn.",
+          "type": "string",
+          "const": "no_inn"
         }
       ]
     },
@@ -4748,6 +4876,29 @@
             "cmd",
             "actor",
             "pace"
+          ]
+        },
+        {
+          "description": "Spends the night (API-42; protocol §4.12): at the inn of the place the caravan is in, or\nin camp. The day ends (food and the Malnutrition save through core), the party takes a\nLong Rest through core, the clock moves to dawn and a new day of travel starts. The same\ncallers as `travel`: the caravan's driver, as itself, never `dm`.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who calls it: the viewer's own creature.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "rest_night"
+            },
+            "where": {
+              "description": "Inn or camp.",
+              "$ref": "#/$defs/Lodging"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor",
+            "where"
           ]
         }
       ],

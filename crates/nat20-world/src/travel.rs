@@ -21,6 +21,16 @@ use crate::{
     map::{MapError, Position, WorldMap},
 };
 
+/// The hour the party wakes after a night.
+pub const WAKE_HOUR: u32 = 6;
+
+/// A Long Rest lasts at least 8 hours (SRD 5.2.1).
+pub const LONG_REST_MINUTES: u32 = 8 * 60;
+
+/// The good id of rations: one unit is a day's food for one Small or Medium creature
+/// (SRD 5.2.1, Rations).
+pub const RATIONS: &str = "rations";
+
 /// A day's travel budget: the least common multiple of 30, 24 and 18 miles, so every
 /// pace spends a whole number of units per mile.
 const DAY_BUDGET: u32 = 360;
@@ -203,6 +213,19 @@ impl World {
     /// available again.
     pub fn start_travel_day(&mut self) {
         self.state.traveled_today = 0;
+    }
+
+    /// How long a night from now lasts, in minutes: until the next dawn ([`WAKE_HOUR`]),
+    /// but never shorter than a Long Rest's 8 hours (SRD 5.2.1).
+    pub fn night_minutes(&self) -> u32 {
+        let mut dawn = self.state.clock;
+        dawn.advance_to_hour(WAKE_HOUR).max(LONG_REST_MINUTES)
+    }
+
+    /// Passes a night of `minutes`: the clock moves on and a new day of travel starts.
+    pub fn pass_night(&mut self, minutes: u32) {
+        self.state.clock.advance(minutes);
+        self.start_travel_day();
     }
 
     /// The miles the party can still cover today at `pace`.
@@ -487,6 +510,22 @@ mod tests {
             world.state.discovered,
             BTreeSet::from(["town".to_string(), "inn".to_string()])
         );
+    }
+
+    #[test]
+    fn a_night_lasts_until_dawn_and_at_least_8_hours() {
+        let mut world = world("maren");
+        world.state.clock = Clock::at(1, 20, 0);
+        assert_eq!(world.night_minutes(), 10 * 60);
+        world.state.clock = Clock::at(1, 23, 30);
+        assert_eq!(world.night_minutes(), 8 * 60);
+        world.state.clock = Clock::at(2, 2, 0);
+        assert_eq!(world.night_minutes(), 8 * 60);
+        world.travel(Some("inn"), Pace::Fast, false).unwrap();
+        world.state.clock = Clock::at(1, 20, 0);
+        world.pass_night(600);
+        assert_eq!(world.state.clock, Clock::at(2, 6, 0));
+        assert_eq!(world.miles_left_today(Pace::Fast), 30);
     }
 
     #[test]

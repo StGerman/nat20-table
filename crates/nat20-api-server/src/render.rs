@@ -3,7 +3,8 @@
 
 use nat20_api_contract::{
     AgainstKind, CombatOverReason, ConcentrationEndReason, DamageType, DiceRolled, EventKind,
-    Handle, LedgerGoods, LedgerReason, LifeState, Mode, RollKind, RollOutcome, RollView, Side,
+    Handle, LedgerGoods, LedgerReason, LifeState, Lodging, Mode, RollKind, RollOutcome, RollView,
+    Side,
 };
 
 /// The sentence for one event.
@@ -221,6 +222,25 @@ pub fn text(kind: &EventKind) -> String {
             }
         }
         EventKind::PlaceDiscovered { name, .. } => format!("The party finds {name}."),
+        EventKind::Night { night } => {
+            let place = match night.lodging {
+                Lodging::Inn => "at the inn",
+                Lodging::Camp => "in camp",
+            };
+            format!(
+                "The party spends the night {place}; {} wake rested.",
+                if night.rested.is_empty() {
+                    "none".to_string()
+                } else {
+                    night
+                        .rested
+                        .iter()
+                        .map(|h| h.0.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                }
+            )
+        }
         EventKind::FlagSet { flag } => format!("Flag {flag} is set."),
         EventKind::HazardTriggered { hazard_id, actor } => {
             format!("{} sets off {hazard_id}.", actor.0)

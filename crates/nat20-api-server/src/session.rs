@@ -6,19 +6,21 @@
 
 use std::{collections::HashMap, path::PathBuf};
 
+use nat20_world as world;
+
 use nat20_ledger::{Asset, Entry, Holder, Holdings, Journal, Reason};
 
 use nat20_api_contract::{
     Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
     ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
-    Mode, MoveTarget, OptionId, Pace, PromptId, ReactionTrigger, RejectReason, RollId, RollView,
-    SceneFile, State, Visibility,
+    Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId, ReactionTrigger, RejectReason,
+    RollId, RollView, SceneFile, State, Visibility,
 };
 
 use crate::{
     adapter::{
         events::Pending,
-        game::{Game, TriggerCause, Wait},
+        game::{DAYS_FOOD_QUARTER_LB, Game, TriggerCause, Wait},
     },
     campaign::Campaign,
     errors::{error, rejected, with_awaiting},
@@ -240,15 +242,14 @@ impl Session {
         })
     }
 
-    /// Travels one leg (API-41): the world moves on, core's time with it, and the scene the
-    /// leg ends in loads with the party.
-    pub fn travel(
-        &mut self,
+    /// The checks `travel` and `rest_night` share: a campaign runs, the viewer is the actor and
+    /// drives the caravan, no fight runs, and the whole party is in the scene.
+    fn driver_check(
+        &self,
         actor: &str,
-        to: Option<&str>,
-        pace: Pace,
         viewer: &Viewer,
-    ) -> Result<CommandResult, ApiError> {
+        command: &str,
+    ) -> Result<&Campaign, ApiError> {
         let Some(campaign) = self.campaign.as_ref() else {
             return Err(error(
                 ErrorCode::NoCampaign,
@@ -258,7 +259,7 @@ impl Session {
         if *viewer != Viewer::Creature(actor.to_owned()) {
             return Err(rejected(
                 RejectReason::NotDriver,
-                "travel is the caravan's call: its driver sends it as themselves.",
+                format!("{command} is the caravan's call: its driver sends it as themselves."),
             ));
         }
         if !campaign.drives(actor) {
@@ -286,6 +287,110 @@ impl Session {
                 format!("{} of the party is not in this scene.", missing.0),
             ));
         }
+        Ok(campaign)
+    }
+
+    /// Spends the night (API-42): pays the inn or eats the caravan's rations, ends the day
+    /// through core (the Malnutrition save), takes the Long Rest through core, and moves the
+    /// clock to dawn. Nothing changes on a refusal.
+    pub fn rest_night(
+        &mut self,
+        actor: &str,
+        lodging: Lodging,
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
+        let campaign = self.driver_check(actor, viewer, "rest_night")?;
+        let party = campaign.party.clone();
+        let mut next = campaign.clone();
+        let fed = match lodging {
+            Lodging::Inn => {
+                let Some(price) = campaign.inn_here() else {
+                    return Err(rejected(
+                        RejectReason::NoInn,
+                        "There is no inn here; make camp instead.",
+                    ));
+                };
+                let game = self
+                    .game
+                    .as_ref()
+                    .ok_or_else(|| error(ErrorCode::NoScene, "Load a scene first."))?;
+                for handle in &party {
+                    if game.purse_total_cp(&handle.0)? < u64::from(price) {
+                        return Err(rejected(
+                            RejectReason::InsufficientFunds,
+                            format!(
+                                "{} cannot pay the inn's {price} cp for the night; make camp instead.",
+                                handle.0
+                            ),
+                        ));
+                    }
+                }
+                party.len()
+            }
+            Lodging::Camp => {
+                let held = campaign.world.state.caravan.total(world::RATIONS) as usize;
+                let eaten = held.min(party.len());
+                next.world
+                    .state
+                    .caravan
+                    .unload_anywhere(world::RATIONS, eaten as u32)
+                    .map_err(|e| error(ErrorCode::Internal, format!("{e:?}")))?;
+                eaten
+            }
+        };
+        let minutes = next.world.night_minutes();
+        next.world.pass_night(minutes);
+        let price = campaign.inn_here().unwrap_or(0);
+        if lodging == Lodging::Inn {
+            // One payment at a time, each logged before the next, so the coin trial balance
+            // (AGT-78) holds after every entry.
+            for handle in &party {
+                self.game_mut()?
+                    .pay_world(&handle.0, price, LedgerReason::Inn)?;
+                self.push_entries();
+            }
+        }
+        let game = self.game_mut()?;
+        let mut hungry = Vec::new();
+        for (i, handle) in party.iter().enumerate() {
+            let food = if i < fed { DAYS_FOOD_QUARTER_LB } else { 0 };
+            if !game.end_of_day(&handle.0, food)? {
+                hungry.push(handle.clone());
+            }
+        }
+        let (rested, not_rested) = game.night(&party, minutes)?;
+        self.campaign = Some(next);
+        self.push_entries();
+        let night = NightView {
+            actor: Handle(actor.to_owned()),
+            lodging,
+            minutes,
+            rested,
+            not_rested,
+            hungry,
+        };
+        self.push(Pending::public(
+            None,
+            EventKind::Night {
+                night: night.clone(),
+            },
+        ));
+        Ok(CommandResult::RestNight {
+            night,
+            state: self.state_for(viewer)?,
+        })
+    }
+
+    /// Travels one leg (API-41): the world moves on, core's time with it, and the scene the
+    /// leg ends in loads with the party.
+    pub fn travel(
+        &mut self,
+        actor: &str,
+        to: Option<&str>,
+        pace: Pace,
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
+        let campaign = self.driver_check(actor, viewer, "travel")?;
         let (next, leg) = campaign.plan_leg(to, pace)?;
         let party = campaign.party.clone();
         let mut moved = campaign.clone();

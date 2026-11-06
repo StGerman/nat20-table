@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.45 (2026-11-03)
+- New command `rest_night{actor, where: inn|camp}` (API-42, Milestone 9; protocol.md §4.12), additive. The caravan's driver ends the day: the party pays the inn (room and board, `ledger` reason `inn`) or eats the caravan's rations, each member's day ends through core's Malnutrition rules (ENG-29), those who can take a Long Rest take one through core (ENG-30: at least 1 Hit Point, 16 hours since the last), and the clock moves to dawn with a new day of travel. Result `rest_night{night, state}`.
+- New event kind `night{night}` (public), new type `NightView`, new enum `Lodging`, new reject reason `no_inn`. New optional `inn_cp` on `PlaceDm` and `PlaceKnown`. `errors.jsonl` lists the new command.
+- `Sheet.exhaustion` and the creature view's `exhaustion` now come from core (ENG-29); they were always 0.
+- New fixture `rest_night.jsonl` (scene `vale_town`, test world `test_vale`, seed 1). It covers a night before a campaign, as `dm`, at an inn where there is none, a first night at the Crossing Inn, a second one too soon for a Long Rest, a third one Maren can't pay, a camp night, and a camp night with one ration for two. The test world's inn now costs 3 gp and the test caravan carries 3 rations, so `travel.jsonl` shows both.
+
 ## 1.0.0-dev.44 (2026-11-02)
 - New commands `start_campaign{party}` and `travel{actor, to?, pace}` (API-41, Milestone 9; protocol.md §4.11), additive. `start_campaign` starts the living world from the pack's `campaign.json` world block and the world's `map.json` and `goods.json`; `travel` moves the caravan one leg along one road under the SRD 5.2.1 Travel Pace, Travel Terrain, Good Roads and Mounts and Cargo rules, moves the clock and core's time, and loads the scene the leg ends in with the party. Only the caravan's owner, or any party member when an NPC owns it, may travel, as itself; never `dm`.
 - New optional `world` in both `State` views (`WorldDm`, `WorldPlayer`; protocol.md §5): clock, position, miles left today, places, roads, caravan. A player sees discovered places only, roads to undiscovered places without where they lead, and no deck zones, route or scene ids.

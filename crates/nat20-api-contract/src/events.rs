@@ -8,8 +8,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AdvantageState, Condition, DamageType, Handle, LegView, LifeState, Mode, OptionId, PointFt,
-    RollId, Side, state::CombatOverReason,
+    AdvantageState, Condition, DamageType, Handle, LegView, LifeState, Mode, NightView, OptionId,
+    PointFt, RollId, Side, state::CombatOverReason,
 };
 
 /// One log entry.
@@ -338,6 +338,12 @@ pub enum EventKind {
     Traveled {
         /// The leg.
         leg: LegView,
+    },
+    /// A night passed (`rest_night`), after its `ledger`, saving throw and `rest` entries.
+    /// Public.
+    Night {
+        /// The night.
+        night: NightView,
     },
     /// The party found a place it did not know: it is in every player's `world.places` from
     /// now on. Public.

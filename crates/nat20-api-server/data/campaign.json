@@ -18,7 +18,7 @@
                         {"animal": "draft_horse", "capacity_lb": 540},
                         {"animal": "draft_horse", "capacity_lb": 540}
                     ],
-                    "cargo": {"wheat": 1000, "rations": 20}
+                    "cargo": {"wheat": 1000, "rations": 3}
                 }
             ]
         }

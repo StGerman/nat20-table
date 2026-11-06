@@ -21,6 +21,36 @@ pub enum Pace {
     Fast,
 }
 
+/// Where the party spends a night.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Lodging {
+    /// The inn of the place the caravan is in: each party member pays the place's `inn_cp`
+    /// for room and board.
+    Inn,
+    /// A camp, in a place or on the road: each party member eats one day's rations from the
+    /// caravan while they last.
+    Camp,
+}
+
+/// One night, in `rest_night`'s result and the `night` event.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct NightView {
+    /// Who called `rest_night`.
+    pub actor: Handle,
+    /// Inn or camp.
+    pub lodging: Lodging,
+    /// How long the night lasted, in minutes: until dawn, and at least 8 hours.
+    pub minutes: u32,
+    /// The party members who finished a Long Rest.
+    pub rested: Vec<Handle>,
+    /// The party members who could not take a Long Rest: at 0 Hit Points, or less than 16
+    /// hours after their last one.
+    pub not_rested: Vec<Handle>,
+    /// The party members who ate less than a full day's food (no rations left).
+    pub hungry: Vec<Handle>,
+}
+
 /// A part of the day, four hours long; the night is two of them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -122,6 +152,10 @@ pub struct PlaceDm {
     pub kind: String,
     /// Whether it has a market.
     pub market: bool,
+    /// A night's room and board at its inn, per person, in copper pieces; absent when it has
+    /// no inn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inn_cp: Option<u32>,
     /// Whether the party has discovered it.
     pub discovered: bool,
     /// The scene the engine loads on arrival.
@@ -139,6 +173,10 @@ pub struct PlaceKnown {
     pub kind: String,
     /// Whether it has a market.
     pub market: bool,
+    /// A night's room and board at its inn, per person, in copper pieces; absent when it has
+    /// no inn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inn_cp: Option<u32>,
 }
 
 /// A road as the DM sees it.
