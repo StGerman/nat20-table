@@ -121,7 +121,7 @@
                 },
                 {
                     "id": "sleep",
-                    "text": "It's only mist. Sleep.",
+                    "text": "Sleep.",
                     "effects": [
                         {
                             "do": "cargo",

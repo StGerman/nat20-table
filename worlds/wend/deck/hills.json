@@ -89,7 +89,7 @@
                 },
                 {
                     "id": "throw_food",
-                    "text": "Throw them a sack of food and push on while they squabble over it.",
+                    "text": "Throw them a sack of food and push on.",
                     "effects": [{"do": "cargo", "good": "rations", "change": -4}]
                 }
             ]
