@@ -92,7 +92,7 @@ export type HumanPrompt =
   | { kind: "paused" }
   /** The DM offered a surrender: accept it (1), fight on (2), or say what you do (AGT-30). */
   | { kind: "surrender" }
-  /** A road card waits for the human's word, asked last (AGT-80): a number, or Enter to go with the others. */
+  /** A road card waits for the human's word, asked first as a Blade (AGT-87) and last as the owner: a number, or Enter for the marked choice. */
   | { kind: "card" }
   /** A choice for the human's new level (AGT-80): a number, or Enter for the recommended pick. */
   | { kind: "level_up" }

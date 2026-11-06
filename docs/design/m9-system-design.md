@@ -121,7 +121,7 @@ Two places where the contract touches the protocol, not only the types. First, Â
 
 - **Caravan card** (the road, the wagons, the cargo): the owner decides after asking the party. A Hired Blade's `choose_card` on it is advice, a `card_advice` event every player sees. An AI owner reads the advice, then calls `choose_card`. An NPC owner takes the party's majority, and the card's `owner_pick` on a tie. A card may mark one choice `owner_insists` (the merchant will not risk the cargo): the NPC owner takes it whatever the advice, and the DM narrates why. The owner follows advice most of the time, so `owner_insists` stays rare; the deck linter counts it.
 - **Blade card** (the escort themselves): the Blades decide. Each Blade's `choose_card` is a vote; the majority wins, and the human seat breaks a tie.
-- **The human seat.** While a human is at the table, no card resolves without them. The engine waits for the human seat, which is asked last, after the AI Blades have spoken. The question comes in plain words with the options spelled out, and Enter means "I'll go with the others".
+- **The human seat.** While a human is at the table, no card resolves without them. The engine waits for the human seat, which is asked first, before the AI Blades, so the human's word and reasons can sway them (Stas, 2026-11-06, AGT-87; it was asked last until then). The question comes in plain words with the options spelled out, and Enter takes the first choice. A human who owns the caravan still makes the call last, after the Blades' advice, and there Enter means "I'll go with the others".
 - **Mix.** A deck for a human run holds about two Blade cards for each caravan card; the deck linter checks the ratio per zone.
 
 ## Core (fork, `demo`)
