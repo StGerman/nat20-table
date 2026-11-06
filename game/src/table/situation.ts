@@ -43,7 +43,7 @@ export interface Situation {
   /** Foes and others who are down: listed by handle only. */
   down: Handle[];
   /** In the living world (AGT-79): the day and where the caravan is, for the bar, and the `/map` sketch for the side pane. */
-  road?: { where: string; map: string[] };
+  road?: { where: string; day: string; map: string[] };
 }
 
 const SIDE_ORDER: Record<Side, number> = { hostile: 0, party: 1, neutral: 2 };
@@ -98,6 +98,6 @@ export function situationOf(state: State, turn: Handle | undefined, options?: Le
     },
     creatures,
     down,
-    ...(state.world ? { road: { where: `${dayLine(state.world)} · ${caravanAt(state.world)}`, map: mapLines(state.world) } } : {}),
+    ...(state.world ? { road: { where: `${dayLine(state.world)} · ${caravanAt(state.world)}`, day: dayLine(state.world), map: mapLines(state.world) } } : {}),
   };
 }
