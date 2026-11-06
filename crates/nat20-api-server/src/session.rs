@@ -611,6 +611,14 @@ impl Session {
                 format!("{handle}'s level-up is open; pass_time waits until it is answered."),
             ));
         }
+        // Time passes for the whole party or not at all, as on travel and rest_night (Copilot on
+        // table #295): a party member left out of the scene would keep a stale core clock.
+        if let Some(missing) = campaign.party.iter().find(|h| !game.has_creature(&h.0)) {
+            return Err(error(
+                ErrorCode::UnknownCreature,
+                format!("{} of the party is not in this scene.", missing.0),
+            ));
+        }
         let minutes = match span {
             TimeSpan::ShortWhile => 30,
             TimeSpan::Hour => 60,

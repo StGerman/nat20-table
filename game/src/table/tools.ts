@@ -47,7 +47,7 @@ function refusal(response: Response): string {
 /** Commands that change the session. The rest only read it. */
 const CHANGES = new Set<Command["cmd"]>([
   "submit", "move", "end_turn", "react", "request_check", "help", "short_rest", "start_combat", "end_combat", "spawn", "load_scene",
-  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "choose_card", "level_up", "answer_level_up",
+  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "pass_time", "choose_card", "level_up", "answer_level_up",
 ]);
 
 /**

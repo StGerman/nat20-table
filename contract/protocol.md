@@ -364,7 +364,7 @@ The party is hired to see the caravan to a place (API-47). The terms sit in `cam
 
 `pass_time{span}` lets time pass out of combat at the DM's call (API-50, decision 0061): a meal at the alehouse, a talk with the reeve, a search of a hut. Travel and nights move the clock themselves (§4.11, §4.12); nothing else did, so a whole stop in a village took no time.
 
-- **Who and when.** Only `dm` sends it; a creature viewer gets `not_visible`. Before `start_campaign` it answers `no_campaign`, in a fight `wrong_mode`, while a road card waits `rejected`, `card_pending`, and while a level-up is open `rejected`, `level_up_open`.
+- **Who and when.** Only `dm` sends it; a creature viewer gets `not_visible`. Before `start_campaign` it answers `no_campaign`, in a fight `wrong_mode`, while a road card waits `rejected`, `card_pending`, while a level-up is open `rejected`, `level_up_open`, and with a party member missing from the scene `unknown_creature`, as on `travel`.
 - **How long.** `short_while` is 30 minutes, `hour` 60, and `watch` runs until the next watch begins (0:00, 4:00, 8:00, noon, 16:00, 20:00). A span that would reach midnight is `rejected`, `night_falls`: the day ends with `rest_night`.
 - **What follows.** As a card's lost time (§4.13): the world clock and core's time move on, effects that run out end and are logged, and the day's travel shrinks by as much, an 8-hour travel day being the whole day's distance. Then `time_passed{minutes, clock}` (public).
 - The result is the `minutes` (also in the event) and the state after it.
