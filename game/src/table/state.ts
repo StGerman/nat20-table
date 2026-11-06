@@ -9,6 +9,7 @@ import type { Address } from "./floor.ts";
 import { Transcript } from "./transcript.ts";
 import type { FallbackCause, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
+
 /** Kinds of private note an AI player keeps (spec §3.6, AGT-21). */
 export const NOTE_KINDS = ["fact", "promise", "suspicion", "plan", "bond"] as const;
 export type NoteKind = (typeof NOTE_KINDS)[number];
@@ -378,13 +379,18 @@ export class TableState {
    * and out of combat the loop may hand it the floor. A line said `once` (a reaction between turns
    * in a fight, AGT-34) is dropped when it is refused, with no retry: its moment has passed.
    */
-  async speak(from: Handle, text: string, to?: Handle, once = false): Promise<ToolOutcome> {
-    if (to !== undefined && (to === from || !this.party.includes(to))) {
-      if (once) return this.dropped(from, `${to} is not a companion at the table`);
+  async speak(from: Handle, text: string, target?: Handle, once = false): Promise<ToolOutcome> {
+    // Trimmed before any check, so " torva " is torva (Copilot on table #289).
+    const to = target?.trim() || undefined;
+    if (to === from) {
+      if (once) return this.dropped(from, "a character doesn't speak to itself");
       if (this.exhausted(from)) return this.spent();
       const companions = this.party.filter((seat) => seat !== from);
-      return this.refuse(from, "speech", `${to} is not a companion at the table`, `Give one of ${companions.join(", ")} as to, or leave it out.`);
+      return this.refuse(from, "speech", "a character doesn't speak to itself", `Give one of ${companions.join(", ")} as to, or leave it out.`);
     }
+    // Anyone else present, an NPC or a foe (AGT-84, decision 0060 F3: ilsa to odda_vell): the line
+    // is said aloud, the whole table hears whom it was for, and nobody gets the floor from it.
+    if (to !== undefined && !this.party.includes(to)) return this.say(from, text, "speech", undefined, once, to);
     return this.say(from, text, "speech", to, once);
   }
 
@@ -396,18 +402,25 @@ export class TableState {
     return this.say(from, text, "intent");
   }
 
-  private async say(from: Handle, text: string, kind: "speech" | "intent", to?: Handle, once = false): Promise<ToolOutcome> {
+  /**
+   * `addressee` is the one someone else present a line is said to (AGT-84): an NPC's id or name,
+   * never a seat. It is guarded with the line, and nobody gets the floor from it.
+   */
+  private async say(from: Handle, text: string, kind: "speech" | "intent", to?: Handle, once = false, addressee?: string): Promise<ToolOutcome> {
     const human = from === this.human;
     if (!human) {
       if (!once && this.exhausted(from)) return this.spent();
-      const refused = this.speechGuard(text);
+      // The guard passes a handle-shaped addressee unless only the DM knows it, and guards a name in
+      // words like the line (review of table #289).
+      const refused = this.speechGuard(text) ?? (addressee !== undefined ? this.speechGuard(addressee) : undefined);
       if (refused && once) return this.dropped(from, refused);
       if (refused) return this.refuse(from, kind === "speech" ? "speech" : "declaration", refused, "Say it without that.");
     }
     const deliver = async () => {
       await this.flush();
-      this.transcript.add({ speaker: from, channel: "table", kind, text, human, ...(to ? { to } : {}) });
-      const line = kind === "speech" ? `${from} says${to ? ` to ${to}` : ""}: ${text}` : `${from}: ${text}`;
+      this.transcript.add({ speaker: from, channel: "table", kind, text: addressee ? `(to ${addressee}) ${text}` : text, human, ...(to ? { to } : {}) });
+      const heard = to ?? addressee;
+      const line = kind === "speech" ? `${from} says${heard ? ` to ${heard}` : ""}: ${text}` : `${from}: ${text}`;
       if (human) for (const part of line.split("\n")) this.humanLines.add(part);
       for (const player of this.players) {
         if (player !== from) this.inboxes.get(player)?.push(player === to ? `${from} says to you: ${text}` : line);
@@ -425,7 +438,7 @@ export class TableState {
         if (this.spokeThisRound.has(from)) return;
       }
       this.firstShown ??= performance.now();
-      this.show(kind === "speech" && to ? { kind, speaker: from, text, to } : { kind, speaker: from, text });
+      this.show(kind === "speech" && heard ? { kind, speaker: from, text, to: heard } : { kind, speaker: from, text });
     };
     // A reaction shows the moment it is said (decision 0042), even while the table collects.
     const queue = once ? undefined : this.collecting?.get(from);

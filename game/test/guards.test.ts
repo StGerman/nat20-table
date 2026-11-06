@@ -166,3 +166,26 @@ test("a refused line reaches no other seat and nothing in the transcript; the sp
     t.close();
   }
 });
+
+test("an AI player's line to an NPC by handle passes the Russian guard; a prose addressee is guarded (AGT-84, review of table #289)", async () => {
+  const ids = { dmOnly: new Set(["yard_fight"]), shown: new Set<string>() };
+  const t = await testTable({ seed: 1, speechGuard: speechGuard({ shown: ids.shown, language: "ru" }), narrationGuard: narrationGuard({ ids, knownRoll: () => false }) });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    assert.equal((await t.table.speak("maren", "Сколько ты хочешь за зерно?", "odda_vell")).ok, true, "a handle with no Cyrillic is not English");
+    assert.equal((await t.table.speak("maren", "Отойди с дороги.", "bandit_1")).ok, true, "a handle's digit is not a number");
+    const prose = await t.table.speak("maren", "Отойди с дороги.", "the man with 3 dogs");
+    assert.equal(prose.ok, false, "an addressee in words is guarded like the line");
+    assert.equal((await t.table.speak("maren", "Пойдём.", " maren ")).ok, false, "a padded own handle is still the speaker (Copilot on table #289)");
+  } finally {
+    t.close();
+  }
+});
+
+test("the speech guard refuses a lone DM-only id as an addressee and passes any other handle (Copilot on table #289)", () => {
+  const ids = packIds(MILL);
+  const guard = speechGuard({ shown: ids.shown, language: "ru", dmOnly: ids.dmOnly });
+  assert.match(guard("yard_fight") ?? "", /names yard_fight, which only the DM knows/);
+  assert.equal(guard("odda_vell"), undefined);
+  assert.equal(guard("bandit_1"), undefined);
+});
