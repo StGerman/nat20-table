@@ -3059,6 +3059,24 @@ fn a_pack_brings_its_own_cards_and_keeps_its_contract() {
     .unwrap();
     let mut api = Api::start(
         Server::with_data_dir(one.clone()),
+/// The destination's arrival card comes before the pay (ENG-35): the escort settles only once
+/// the card is decided, so a roster saved while it waits keeps the contract under way.
+#[test]
+fn the_destination_s_arrival_card_is_decided_before_the_pay() {
+    let dir = std::env::temp_dir().join(format!("nat20_table_arrival_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let deck_path = dir.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
+    deck["cards"].as_array_mut().unwrap().push(json!({
+        "id": "tower_gate", "zone": "old_tower", "when": "arrival", "target": "blades",
+        "text": "A crow sits on the tower gate.",
+        "choices": [{ "id": "shoo", "text": "Shoo it." }, { "id": "leave", "text": "Leave it." }]
+    }));
+    std::fs::write(&deck_path, deck.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
         json!({ "cmd": "new_session", "seed": 1 }),
     );
     let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
@@ -3110,6 +3128,49 @@ fn a_pack_brings_its_own_cards_and_keeps_its_contract() {
         "{refused}"
     );
     let _ = std::fs::remove_dir_all(&base);
+    let card = |api: &mut Api, choice: &str| -> Value {
+        let mut last = Value::Null;
+        for who in ["bren", "maren"] {
+            last = api.call(
+                who,
+                json!({ "cmd": "choose_card", "actor": who, "choice": choice }),
+            );
+            assert_eq!(last["ok"], true, "{last}");
+        }
+        last
+    };
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    ));
+    card(&mut api, "clear");
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "rest_night", "actor": "bren", "where": "camp" }),
+    ));
+    card(&mut api, "watch");
+    let last = api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "old_tower", "pace": "normal" }),
+    );
+    ok(&last);
+    let seen = kinds(&last);
+    assert!(seen.iter().any(|k| k == "card_drawn"), "{last}");
+    assert!(!seen.iter().any(|k| k == "escort_settled"), "{last}");
+    let saved = api.call("dm", json!({ "cmd": "save_roster" }));
+    let state = &saved["result"]["roster"]["world"]["state"];
+    assert_eq!(state["escort"]["done"], false, "{saved}");
+    assert_eq!(state["deck"]["pending"]["card"], "tower_gate", "{saved}");
+    let decided = card(&mut api, "shoo");
+    let dm = api.call("dm", json!({ "cmd": "events", "since": 0 }));
+    let all = kinds(&json!({ "events": dm["result"]["events"] }));
+    let resolved = all.iter().rposition(|k| k == "card_resolved").unwrap();
+    let paid = all
+        .iter()
+        .position(|k| k == "escort_settled")
+        .expect("paid after the card");
+    assert!(resolved < paid, "{decided}");
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 /// A card fight's named NPC who dies writes `killed_<npc>`, by whoever dealt the last blow
