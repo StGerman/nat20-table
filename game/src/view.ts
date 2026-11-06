@@ -1,7 +1,7 @@
 // Compact text an agent reads, made from engine responses that were already projected for that
 // agent's viewer (Rule 3: projection happens in the engine; this file only formats). Text instead
 // of raw JSON keeps every turn's input small, which is most of the latency and cost (M6 spec §7).
-import type { ActionOption, CommandResult, Event, Handle, Sheet, State, TurnBudget, WorldPlayer } from "@nat20-table/engine-client";
+import type { ActionOption, CommandResult, Event, Handle, Sheet, State, TurnBudget, WorldDm, WorldPlayer } from "@nat20-table/engine-client";
 
 /** The result of `legal_actions`. */
 export type LegalActionsResult = Extract<CommandResult, { cmd: "legal_actions" }>;
@@ -234,7 +234,34 @@ export function formatDmState(state: State): string {
     lines.push(`Spawns: ${state.spawns.map((s) => `${s.id} (${s.when.kind}${s.placed ? ", placed" : ""})`).join("; ")}.`);
   }
   if (state.flags.length > 0) lines.push(`Flags: ${state.flags.join(", ")}.`);
+  if (state.world) lines.push(...dmWorldLines(state.world));
   return lines.join("\n");
+}
+
+/** The world as the DM reads it (AGT-80): the player's lines plus the card's id and zone, the route, the merchant's purse and every place NPC. */
+export function dmWorldLines(world: WorldDm): string[] {
+  const placeName = new Map(world.places.map((p) => [p.id, p.name]));
+  const named = (id: string) => (placeName.has(id) ? `${placeName.get(id)} (${id})` : id);
+  const clock = world.clock;
+  const where = world.at.kind === "at" ? `at ${named(world.at.place)}` : `on the road ${world.at.road} out from ${named(world.at.came_from)}, ${world.at.miles_left} miles from its end`;
+  const lines = [`World: day ${clock.day}, ${clock.watch.replace(/_/g, " ")} (${String(clock.hour).padStart(2, "0")}:${String(clock.minute).padStart(2, "0")}); the caravan is ${where}.`];
+  lines.push(`Places: ${world.places.map((p) => `${p.name} (${p.id}, ${p.kind}, scene ${p.scene}${p.discovered ? "" : ", undiscovered"})`).join("; ")}.`);
+  if (world.route.length > 0) lines.push(`The merchant's route: ${world.route.map(named).join(", ")}.`);
+  const cargo = world.caravan.wagons.flatMap((w) => w.cargo.map((c) => `${c.quantity} ${c.name}`));
+  lines.push(`Caravan (${world.caravan.owner}): ${world.caravan.wagons.length} wagon${world.caravan.wagons.length === 1 ? "" : "s"}${cargo.length > 0 ? `, ${cargo.join(", ")}` : ""}.`);
+  if (world.card) {
+    const c = world.card;
+    lines.push(`Road card ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}`).join(" | ")}.${c.waiting_for.length > 0 ? ` Waiting for ${c.waiting_for.join(", ")}.` : ""}`);
+  }
+  if (world.escort) {
+    const e = world.escort;
+    lines.push(`Escort to ${named(e.contract.destination)}${e.contract.done ? ", done" : ""}; the merchant's purse holds ${coinWords(e.purse_cp)}.`);
+  }
+  const npcs = world.npcs ?? [];
+  if (npcs.length > 0) {
+    lines.push(`Place NPCs: ${npcs.map((n) => `${n.name} (${n.id}, ${n.monster}, ${n.attitude}) of ${named(n.place)}${n.alive ? "" : ", dead"}${n.met ? ", met" : ""}`).join("; ")}.`);
+  }
+  return lines;
 }
 
 /** An event as one line: its own text, after its roll id when it is a roll (`[r12] bren rolls …`). */

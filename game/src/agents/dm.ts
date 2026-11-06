@@ -215,7 +215,25 @@ export interface ModelDmConfig {
    * a `narrate` call for the whole table or the human, `undefined` to clear. Off when absent.
    */
   preview?: (text: string | undefined) => void;
+  /** Whether the pack runs the living world (M9, AGT-80): the prompt gains `DM_ROAD_PROMPT`. Default false. */
+  livingWorld?: boolean;
 }
+
+/**
+ * How the DM runs the road (M9, AGT-80), added to the prompt in a living-world pack. Generic: no
+ * pack's places, cards or contract are named here; get_state shows the world.
+ */
+export const DM_ROAD_PROMPT = [
+  "## The road",
+  "",
+  "- The party travels with a merchant's caravan between places on a map; get_state shows the world: the day and hour, where the caravan is, the places and roads, the card waiting, the escort contract, the people who live in each place.",
+  "- The players move the caravan on and end the day, never you: you have no travel, rest or card tool. When a scene loads after a journey, open it as the arrival: the road behind them in a sentence, then the place.",
+  "- \"A road card was settled\": narrate what came of it in one to three sentences. A card can bring a fight: start_fight or place_creature from your list, with a cause in the story.",
+  "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as how the characters feel, never as levels or numbers.",
+  "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. The amounts are in the engine's lines: never say them yourself.",
+  "- Money: never name a price, a wage or a sum of coin except as the engine's events show it. The merchant is a person, not a ledger.",
+  "- People of a place are still there when the party comes back, as the party left them; get_state lists them, and whether the party has met them.",
+].join("\n");
 
 export class ModelDm implements DmAgent {
   readonly systemPrompt: string;
@@ -233,7 +251,8 @@ export class ModelDm implements DmAgent {
 
   constructor(config: ModelDmConfig) {
     this.config = config;
-    this.systemPrompt = dmPrompt(config.pack, config.human, config.players, config.craft ?? "prompt", config.language);
+    const prompt = dmPrompt(config.pack, config.human, config.players, config.craft ?? "prompt", config.language);
+    this.systemPrompt = config.livingWorld ? `${prompt}\n\n${DM_ROAD_PROMPT}` : prompt;
     this.seatTools = this.defineTools();
   }
 
