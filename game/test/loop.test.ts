@@ -1525,7 +1525,7 @@ test("any line to a companion whose hand is up moves it first; the human's chara
       torva: {
         declare: async (tools, briefing) => {
           if (/You have the floor: you raised/.test(briefing)) {
-            assert.equal((await tools.say("Out of the way, goblin.", "goblin_1")).ok, false);
+            assert.equal((await tools.say("Out of the way, goblin.", "goblin_1")).ok, true, "a line to a creature present is said aloud (AGT-84)");
             await tools.say("Bren, cover me.", "bren");
             await tools.say("Ilsa, you're slow.", "ilsa");
           }
@@ -1539,9 +1539,12 @@ test("any line to a companion whose hand is up moves it first; the human's chara
   // Ilsa's remark-to moves her ahead of Maren; nobody waits on Bren; the round stays inside its bound.
   assert.deepEqual([round.handed_to, round.carried, round.floor_wakes], ["ilsa", [], 3]);
   const spoken = t.table.transcript.records.filter((r) => r.kind === "speech").map((r) => r.speaker);
-  assert.deepEqual(spoken, ["torva", "torva", "ilsa", "maren"]);
+  assert.deepEqual(spoken, ["torva", "torva", "torva", "ilsa", "maren"]);
   assert.match(players.get("ilsa")!.briefings.find((b) => b.wake === "declare")!.briefing, /You have the floor: torva spoke to you, and you raised your hand\./);
-  assert.ok(runLines(t, "retry").includes("speech refused: goblin_1 is not a companion at the table"));
+  // The line to goblin_1 reaches the table with whom it was for, and hands nobody the floor (AGT-84).
+  assert.ok(t.table.transcript.records.some((r) => r.kind === "speech" && r.text === "(to goblin_1) Out of the way, goblin." && r.to === undefined));
+  assert.ok(players.get("maren")!.briefings.some((b) => b.briefing.includes("torva says to goblin_1: Out of the way, goblin.")));
+  assert.ok(!runLines(t, "retry").some((line) => line.includes("not a companion")));
 });
 
 test("narrations wait for the next talk round out of combat, and a fight drops them", async () => {
