@@ -3,9 +3,9 @@
 // decides who is woken next. Agents act only through their bound tools and the human only through
 // the seat; every number the human picks becomes a complete command with no model call (D5).
 import type { StatBlockEntry } from "../pack/adventure.ts";
-import { EngineStopped, type CardDm, type Event, type Handle, type LevelUpChoice, type State, type WorldDm } from "@nat20-table/engine-client";
+import { EngineStopped, type CardDm, type Event, type Handle, type LevelUpChoice, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
-import { eventLine, formatOptions, formatSheet, formatState, mapLines, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
+import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, cardChoices, choiceLines, levelUpChoices, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
@@ -99,6 +99,8 @@ export interface CampaignLoop {
   dayLimit?: number;
   /** Called after every night, once the DM has told it: the run saves the party (design: "after every night"). */
   onNight?: () => Promise<void>;
+  /** Whether the run keeps the party for the next journey (a roster): the end card says so. */
+  keepsParty?: boolean;
 }
 
 /** A moment the unattended run prints a line for (M7 design §3.1). */
@@ -338,6 +340,13 @@ export class TableLoop {
   private readonly sceneTimes: SceneTime[] = [];
   private readonly usage: UsageLog | undefined;
   private readonly campaign: CampaignLoop | undefined;
+  /**
+   * The journey's end (B7): after the arrival the human has one last turn at the destination
+   * ("last_turn"), then the DM's closing narration and the end card ("closing").
+   */
+  private journeyEnd: "last_turn" | "closing" | undefined;
+  /** The human's experience when the campaign started, for what the journey earned. */
+  private startXp: number | undefined;
   /** The road cards the run has asked about, by the engine's log head when each was drawn, so a card that won't settle stops the run. */
   private cardAsked = new Map<string, number>();
   /** The human's open level-up choice, from the engine's last answer (AGT-80). */
@@ -393,6 +402,7 @@ export class TableLoop {
         const started = await send(this.table, "dm", { cmd: "start_campaign", party: [...this.campaign.party], ...(human ? { human } : {}) }, () => "the campaign started");
         if (!started.ok) throw new Error(`the campaign didn't start: ${started.text}`);
         this.table.log("system", `campaign started: ${this.campaign.party.join(", ")} with the caravan${this.campaign.dayLimit ? `, until the end of day ${this.campaign.dayLimit}` : ""}`);
+        if (human) this.startXp = (await this.humanSheet())?.xp?.points;
       }
       while (!this.table.ended) {
         if (++steps > this.maxSteps) {
@@ -470,6 +480,13 @@ export class TableLoop {
       }
     }
     if (this.table.ended) return;
+    // The human's last turn at the journey's end is over, and no fight or level-up holds the
+    // table (B7): a level-up picked on the last turn is answered first, then the journey closes.
+    if (this.journeyEnd === "closing" && !this.table.inCombat && this.table.awaiting.kind !== "level_up") {
+      const destination = (await this.dmWorld())?.escort?.contract.destination ?? "";
+      await this.closeJourney(destination);
+      return;
+    }
     // A road card waits for the party's word out of a fight (AGT-80): it is asked before anything else.
     if (this.campaign && !this.table.inCombat && (await this.cardRound())) return;
     await this.showSituation();
@@ -609,6 +626,50 @@ export class TableLoop {
     return r.result?.cmd === "get_state" && r.result.state.view === "dm" ? (r.result.state.world ?? undefined) : undefined;
   }
 
+  /** A place's name as the table knows it, for the human's lines. */
+  private async placeWords(id: string): Promise<string> {
+    return (await this.dmWorld())?.places.find((p) => p.id === id)?.name ?? id.replace(/_/g, " ");
+  }
+
+  /** The human's own sheet (owner view), or undefined. */
+  private async humanSheet(): Promise<Sheet | undefined> {
+    const human = this.table.human;
+    if (!human) return undefined;
+    const r = await this.table.engine.request(human, { cmd: "get_sheet", actor: human });
+    return r.result?.cmd === "get_sheet" ? r.result.sheet : undefined;
+  }
+
+  /**
+   * The journey's end (B7, Stas's Wend run 2026-11-05: the run stopped on an English line and read
+   * like a crash): the DM's closing narration of the road behind and what is still open, then one
+   * end card for the human with what the journey earned, then the end.
+   */
+  private async closeJourney(destination: string): Promise<void> {
+    this.journeyEnd = undefined;
+    await this.wakeDm(
+      "road",
+      undefined,
+      "The journey is over: the escort contract is done, and the story rests here.",
+      "Write the closing narration in three to five sentences: the road the party travelled, how they stand now, and what is still open in the world (a foe who got away, a promise, a road not taken). No numbers, and no new event: nothing happens after this.",
+    );
+    await this.settle();
+    const human = this.table.human;
+    if (human) {
+      const sheet = await this.humanSheet();
+      const blade = (await this.dmWorld())?.escort?.contract.blades.find((b) => b.handle === human);
+      const lines = [`The escort contract to ${await this.placeWords(destination)} is done.`];
+      const xp = sheet?.xp;
+      const gained = xp && this.startXp !== undefined ? xp.points - this.startXp : undefined;
+      const earned = [...(blade ? [`${coinPhrase(blade.paid_cp)} in wages`] : []), ...(gained ? [`${gained} experience`] : [])];
+      if (earned.length > 0) lines.push(`On this journey you earned ${earned.join(" and ")}.`);
+      if (xp?.can_level_up) lines.push("You have enough experience for your next level.");
+      else if (xp && typeof xp.next_level === "number") lines.push(`${xp.next_level - xp.points} more experience brings your next level.`);
+      if (this.campaign?.keepsParty) lines.push("Your party is kept for the next journey.");
+      this.table.show({ kind: "info", title: "Journey's end", text: lines.join("\n") });
+    }
+    this.table.end("the escort contract is done");
+  }
+
   /**
    * What the road did since the last look: a card settled, a night passed, the escort was paid.
    * The DM tells each one; a night saves the party and may end the run at its day limit; the paid
@@ -644,7 +705,12 @@ export class TableLoop {
           "Narrate the arrival and the pay as a scene, in two to four sentences: the merchant's words, the coin changing hands. No numbers: the table sees the amounts in the engine's lines.",
         );
         await this.settle();
-        this.table.end("the escort contract is done");
+        // The human has one last turn at the destination before the closing (B7); a table with
+        // no human closes at once.
+        if (this.table.human && !this.table.inCombat) {
+          this.journeyEnd = "last_turn";
+          this.table.show({ kind: "info", title: "Journey's end", text: `The contract is done. You have one last turn in ${await this.placeWords(event.destination)} before the story rests.` });
+        } else await this.closeJourney(event.destination);
         return;
     }
   }
@@ -1347,6 +1413,7 @@ export class TableLoop {
     const head = this.table.engine.logHead;
     if (human) await this.exploreRoundBody(human);
     else await this.aiRound();
+    if (this.journeyEnd === "last_turn") this.journeyEnd = "closing";
     // Out of combat the engine logs no turn bookkeeping, so a round that left the log as it was
     // changed nothing: no check, move, rest, scene or fight (M7 design §3.1).
     this.quietRounds = this.table.engine.logHead === head ? this.quietRounds + 1 : 0;
