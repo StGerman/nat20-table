@@ -395,6 +395,12 @@ pub enum EventKind {
         /// Minutes lost.
         minutes: u32,
     },
+    /// The caravan reached the escort contract's destination and the Blades' pay was settled
+    /// (API-47), after its `wage` ledger entries. Public.
+    EscortSettled {
+        /// The destination, a place id.
+        destination: String,
+    },
     /// A night passed (`rest_night`), after its `ledger`, saving throw and `rest` entries.
     /// Public.
     Night {

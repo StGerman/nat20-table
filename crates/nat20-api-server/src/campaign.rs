@@ -9,9 +9,9 @@ use std::path::{Path, PathBuf};
 
 use nat20_api_contract::{
     Ability, CaravanView, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget, CargoView,
-    CarriedItem, Carries, ClockView, Coins, ErrorCode, Handle, LegView, MilesToday, NpcAttitude,
-    NpcDm, Pace, PlaceDm, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain, WagonView,
-    Watch, WorldDm, WorldPosition,
+    CarriedItem, Carries, ClockView, Coins, ErrorCode, EscortBlade, EscortDm, EscortView, Handle,
+    LegView, MilesToday, NpcAttitude, NpcDm, Pace, PlaceDm, RejectReason, RoadDm, RosterWorld,
+    Side, Skill, Terrain, WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -38,6 +38,8 @@ pub struct Campaign {
     pub human: Option<String>,
     /// The world map's id, `worlds/<id>/`
     pub map_id: String,
+    /// Wages due and not paid yet: the escort's advance, paid once the campaign has started
+    pub due: Vec<world::Wage>,
 }
 
 impl Campaign {
@@ -109,12 +111,28 @@ impl Campaign {
         let built = built
             .with_npcs(npcs)
             .map_err(|e| bad(format!("The world {}'s NPCs: {e}.", setup.map)))?;
+        // The escort contract (API-47): the Hired Blades are the party, less a player merchant.
+        let (built, due) = match setup.escort {
+            Some(terms) => {
+                let world::Owner::Npc(_) = &built.state.caravan.owner else {
+                    return Err(bad(
+                        "The campaign's escort needs an NPC merchant (`npc:<id>`) to pay it; a player merchant pays by hand with give.".to_owned(),
+                    ));
+                };
+                let blades = party.iter().map(|h| h.0.clone()).collect();
+                built
+                    .with_escort(terms, blades)
+                    .map_err(|e| bad(format!("The campaign's escort: {e}.")))?
+            }
+            None => (built, Vec::new()),
+        };
         let campaign = Self {
             world: built,
             party,
             human,
             road_scene: setup.road_scene,
             map_id: setup.map.clone(),
+            due,
         };
         let mut scenes: Vec<&str> = campaign
             .world
@@ -185,6 +203,51 @@ impl Campaign {
                 hp: state.hp,
             })
             .collect()
+    }
+
+    /// The escort contract as the party knows it.
+    pub fn escort_view(&self) -> Option<EscortView> {
+        let terms = self.world.escort.as_ref()?;
+        let state = self.world.state.escort.as_ref()?;
+        Some(EscortView {
+            merchant: self.world.state.caravan.owner.to_string(),
+            destination: terms.destination.clone(),
+            wage_cp: terms.wage_cp,
+            advance_days: terms.advance_days,
+            blades: state
+                .blades
+                .iter()
+                .map(|b| EscortBlade {
+                    handle: Handle(b.clone()),
+                    served: state.served(b),
+                    paid_cp: state.paid(b),
+                })
+                .collect(),
+            done: state.done,
+        })
+    }
+
+    /// The merchant's purse holder (`npc:<id>`) and what it holds, when an escort runs.
+    pub fn merchant_purse(&self) -> Option<(String, u64)> {
+        let state = self.world.state.escort.as_ref()?;
+        Some((self.world.state.caravan.owner.to_string(), state.purse_cp))
+    }
+
+    /// A night passed: each Blade not dead has served one more day.
+    pub fn escort_night(&mut self, dead: impl Fn(&str) -> bool) {
+        if let Some(state) = self.world.state.escort.as_mut() {
+            state.night(|b| !dead(b));
+        }
+    }
+
+    /// The caravan arrived at `place`: the wages due at the destination, if it is that.
+    pub fn escort_arrive(&mut self, place: &str, dead: impl Fn(&str) -> bool) -> Vec<world::Wage> {
+        let (Some(terms), Some(state)) =
+            (self.world.escort.as_ref(), self.world.state.escort.as_mut())
+        else {
+            return Vec::new();
+        };
+        state.arrive(terms, place, |b| !dead(b))
     }
 
     /// Marks an NPC met: the party is in their place with them.
@@ -415,6 +478,10 @@ impl Campaign {
                 world::Owner::Player(_) => Vec::new(),
             },
             card: self.card_view(&table),
+            escort: self.escort_view().map(|contract| EscortDm {
+                contract,
+                purse_cp: state.escort.as_ref().map_or(0, |e| e.purse_cp),
+            }),
             npcs: w
                 .npcs
                 .iter()

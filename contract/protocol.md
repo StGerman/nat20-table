@@ -342,6 +342,17 @@ Townsfolk who live in one place and are there, as the party left them, when it c
 - **Coin.** While present, an NPC's coin is a creature holder like any other (`ledger` entries name their handle), so the trial balance holds across visits: they come back with what they left with.
 - **In the roster.** The world state saves each NPC as they are now, those in the scene included.
 
+### 4.17 The escort contract
+
+The party is hired to see the caravan to a place (API-47). The terms sit in `campaign.json`'s `world.escort`: `destination` (a place), `wage_cp` (per Blade per day, by default 200, the SRD 5.2.1 skilled hireling's 2 GP), `advance_days` and `purse_cp` (the merchant's purse). The caravan's owner must be an NPC (`npc:<id>`), who pays; a player merchant pays by hand with `give`. The Hired Blades are the campaign's party. There is no shared pot.
+
+- **The advance.** `start_campaign` pays each Blade `advance_days` days of wages.
+- **Days served.** Each `rest_night` adds a day for each Blade who is not dead, and arriving at the destination adds the day of arrival.
+- **Settling.** When a `travel` leg arrives at the destination, after `scene_loaded`, each Blade, a fallen one included, is paid the days served less what was paid, and `escort_settled{destination}` follows (public). It settles once.
+- **Each payment** is one `ledger` entry, reason `wage`, from the merchant's holder (`npc:<id>`) to the Blade (public), each logged before the next. The coin goes into the Blade's purse in core and out of the merchant's purse in the world. When the purse runs short, a Blade gets what is left, and the rest stays owed.
+- **Trial balance.** The journal's account for the merchant opens with what the purse held before the first payment, and after each batch it must equal the world's purse, as the creatures' accounts must equal core.
+- **In the roster.** The world state keeps the days, the pay and the purse. A campaign taken up from a roster pays no second advance.
+
 ## 5. Visibility (projection per `viewer`)
 
 | Data | `dm` | Owner (viewer = that creature) | Other player viewer |
@@ -378,6 +389,8 @@ Townsfolk who live in one place and are there, as the party left them, when it c
 | `world.card` text, choices, `said`, `waiting_for` | yes | yes | yes |
 | `traveled`, `place_discovered`, `night`, `card_drawn`, `card_advice`, `card_resolved`, `cargo_changed`, `time_lost` | yes | yes | yes |
 | `world.npcs`: every place NPC with `monster`, `attitude`, `met`, `hp` and `notes` | yes | no; met NPCs only, with `id`, `name`, `place` and `alive` | no; as the owner |
+| `world.escort`: the terms, each Blade's days served and pay, `done`; `escort_settled` | yes | yes | yes |
+| `world.escort.purse_cp` (the merchant's purse) | yes | no | no |
 | Sheet `xp` (points, next level, `can_level_up`) and `xp_awarded` | yes | yes | no |
 | A level-up's choice (`level_up`, `answer_level_up` results) | n/a | yes | no; `awaiting` says only whose level-up is open |
 | `leveled_up` | yes | yes | yes (the table hears that a character grew) |
@@ -432,6 +445,7 @@ Every event: `{ seq, kind, round?, scene?, visibility, text }` plus a kind-speci
 | `xp_awarded` | `actor`, `xp`, `total`, `can_level_up` (owner and DM): a won fight's XP share |
 | `leveled_up` | `actor`, `level` (public) |
 | `time_lost` | `minutes` (public): a card cost the party time |
+| `escort_settled` | `destination` (public): the caravan reached the escort's destination and the Blades were paid (§4.17) |
 
 `RollView` with `view: "full"`, unchanged from v0 except for the id format and the added fields (the `player` view drops `modifiers`, `against`, `dc_source` and `advantage_sources`):
 ```json

@@ -212,6 +212,7 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
             said: c.said,
             waiting_for: c.waiting_for,
         }),
+        escort: view.escort.map(|e| e.contract),
         // Met NPCs only, and only what the party can see (API-48): never Hit Points, attitude
         // or notes.
         npcs: view

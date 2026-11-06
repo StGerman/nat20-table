@@ -52,6 +52,16 @@ impl Game {
         Ok(())
     }
 
+    /// Whether a creature in the scene is dead; false for one not in it.
+    pub fn is_dead(&self, handle: &str) -> bool {
+        self.entity(handle).is_ok_and(|entity| {
+            self.engine
+                .world
+                .get::<&LifeState>(entity)
+                .is_ok_and(|l| matches!(*l, LifeState::Dead))
+        })
+    }
+
     /// A place NPC as core holds them now; none when they aren't in the scene.
     pub fn npc_now(&self, handle: &str) -> Option<NpcNow> {
         let entity = self.entity(handle).ok()?;
