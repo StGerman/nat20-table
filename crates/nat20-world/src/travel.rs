@@ -142,6 +142,131 @@ fn is_first_contract(contract: &u32) -> bool {
 /// Pace, 24 miles a day).
 pub const MILES_PER_DAY_BETWEEN: u32 = 24;
 
+/// A world state as roster format 2 saves it (API-51): the memory and the contract apart, as
+/// [`WorldState`] describes them. [`World::carry_memory`] keeps the memory and rebuilds the
+/// contract.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SavedWorld {
+    /// What outlives a contract
+    pub memory: Memory,
+    /// What the next contract rebuilds
+    pub contract: ContractState,
+}
+
+/// The world's memory (ENG-37): kept when a contract is done.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Memory {
+    /// The time
+    pub clock: Clock,
+    /// Place ids the party knows
+    pub discovered: BTreeSet<String>,
+    /// The deeds the world remembers, by id: DM-only
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub deeds: DeedBook,
+    /// The deck: chained cards added, the discard, the cards gone for the world, the soon queue
+    #[serde(default)]
+    pub deck: DeckState,
+    /// The place NPCs, by id
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub npcs: BTreeMap<String, NpcState>,
+    /// The contract under way: 1 for the first
+    #[serde(default = "first_contract", skip_serializing_if = "is_first_contract")]
+    pub contract: u32,
+}
+
+/// The contract under way (ENG-37): rebuilt from the next pack's campaign file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContractState {
+    /// Where the caravan is
+    pub at: Position,
+    /// The caravan
+    pub caravan: Caravan,
+    /// The day's travel budget spent
+    pub traveled_today: u32,
+    /// The deck's contract part: the `once: "contract"` marks, the cards offered or on the
+    /// table, the road that drew them
+    #[serde(default)]
+    pub deck: DeckState,
+    /// The escort contract
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escort: Option<EscortState>,
+    /// The pack whose contract this is
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pack: Option<String>,
+    /// Who walks ahead as the scout
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<String>,
+}
+
+impl From<WorldState> for SavedWorld {
+    fn from(state: WorldState) -> Self {
+        let deck = state.deck;
+        SavedWorld {
+            memory: Memory {
+                clock: state.clock,
+                discovered: state.discovered,
+                deeds: state.deeds,
+                deck: DeckState {
+                    added: deck.added,
+                    discard: deck.discard,
+                    gone: deck.gone,
+                    soon: deck.soon,
+                    ..DeckState::default()
+                },
+                npcs: state.npcs,
+                contract: state.contract,
+            },
+            contract: ContractState {
+                at: state.at,
+                caravan: state.caravan,
+                traveled_today: state.traveled_today,
+                deck: DeckState {
+                    gone_for_contract: deck.gone_for_contract,
+                    offered: deck.offered,
+                    pending: deck.pending,
+                    road: deck.road,
+                    ..DeckState::default()
+                },
+                escort: state.escort,
+                pack: state.pack,
+                scout: state.scout,
+            },
+        }
+    }
+}
+
+impl From<SavedWorld> for WorldState {
+    fn from(saved: SavedWorld) -> Self {
+        let SavedWorld { memory, contract } = saved;
+        WorldState {
+            clock: memory.clock,
+            at: contract.at,
+            discovered: memory.discovered,
+            caravan: contract.caravan,
+            traveled_today: contract.traveled_today,
+            deck: DeckState {
+                added: memory.deck.added,
+                discard: memory.deck.discard,
+                gone: memory.deck.gone,
+                soon: memory.deck.soon,
+                gone_for_contract: contract.deck.gone_for_contract,
+                offered: contract.deck.offered,
+                pending: contract.deck.pending,
+                road: contract.deck.road,
+            },
+            npcs: memory.npcs,
+            escort: contract.escort,
+            deeds: memory.deeds,
+            pack: contract.pack,
+            contract: memory.contract,
+            scout: contract.scout,
+        }
+    }
+}
+
 /// How a new contract took up the world a finished one left (ENG-37).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Carried {
@@ -982,5 +1107,29 @@ mod tests {
         assert!(w.draw_at_night(&mut dice).is_some());
         assert_eq!(w.state.deck.road, None);
         assert_eq!(w.scout_check(), None);
+    }
+
+    #[test]
+    fn a_saved_world_keeps_memory_and_contract_apart_and_reads_back_whole() {
+        let mut w = world("npc:tobin");
+        w.remember("paid", vec!["bren".into()]);
+        w.state.scout = Some("bren".into());
+        w.state.deck.discard.insert("mud".into());
+        w.state.deck.gone_for_contract.insert("toll".into());
+        let saved = SavedWorld::from(w.state.clone());
+        let json = serde_json::to_value(&saved).unwrap();
+        assert!(json["memory"]["deeds"]["paid"].is_object());
+        assert_eq!(
+            json["memory"]["deck"]["discard"],
+            serde_json::json!(["mud"])
+        );
+        assert_eq!(
+            json["contract"]["deck"]["gone_for_contract"],
+            serde_json::json!(["toll"])
+        );
+        assert_eq!(json["contract"]["scout"], "bren");
+        assert!(json["memory"].get("caravan").is_none());
+        let back: SavedWorld = serde_json::from_value(json).unwrap();
+        assert_eq!(WorldState::from(back), w.state);
     }
 }
