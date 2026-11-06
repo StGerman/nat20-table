@@ -442,6 +442,10 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   assert.ok(names.includes("pass_time"), names.join(", "));
   assert.match(dm.systemPrompt, /- Time in a place: .*call pass_time once for it/);
   assert.ok(!mill.includes("pass_time"));
+  // The DM's pick (AGT-88): the road's DM picks among offered cards by the rule; a pack played in order has no deck.
+  assert.ok(names.includes("pick_card"), names.join(", "));
+  assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line\./);
+  assert.ok(!mill.includes("pick_card"));
 });
 
 test("the DM speaks to the human's character as you and names everyone else; a table with no human has no such rule", () => {

@@ -433,6 +433,10 @@ export function dmWorldLines(world: WorldDm): string[] {
     const c = world.card;
     lines.push(`Road card ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}${customsTag(x)}`).join(" | ")}.${c.waiting_for.length > 0 ? ` Waiting for ${c.waiting_for.join(", ")}.` : ""}`);
   }
+  // The cards a draw offered for the DM's pick (API-53, AGT-88), and what the world remembers.
+  for (const [i, c] of (world.offered ?? []).entries()) lines.push(offeredLine(c, i + 1));
+  const deeds = world.deeds ?? [];
+  if (deeds.length > 0) lines.push(`Deeds the world remembers: ${deeds.map((d) => `${d.deed} (by ${d.by.length > 0 ? d.by.join(", ") : "nobody"}, day ${d.day})`).join("; ")}.`);
   if (world.escort) {
     const e = world.escort;
     lines.push(`Escort to ${named(e.contract.destination)}${e.contract.done ? ", done" : ""}; the merchant's purse holds ${coinWords(e.purse_cp)}.`);
@@ -509,4 +513,9 @@ export function customsTag(choice: { keeps?: string[]; breaks?: string[] }): str
     ...(choice.breaks && choice.breaks.length > 0 ? [`breaks ${choice.breaks.join(", ")}`] : []),
   ];
   return parts.length > 0 ? ` (${parts.join("; ")})` : "";
+}
+
+/** One card a draw offered, for the DM's pick (AGT-88): its place in the roll order, id, words, choices and note. */
+export function offeredLine(c: { id: string; zone: string; target: string; text: string; choices: Array<{ id: string; text: string; keeps?: string[]; breaks?: string[] }>; note?: string | null }, n: number): string {
+  return `Offered card ${n}: ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}${customsTag(x)}`).join(" | ")}.${c.note ? ` Note: ${c.note}` : ""}`;
 }

@@ -5,7 +5,7 @@
 import type { StatBlockEntry } from "../pack/adventure.ts";
 import { EngineStopped, type CardDm, type Event, type Handle, type LevelUpChoice, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
-import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
+import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, offeredLine, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, cardChoices, choiceLines, levelUpChoices, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
@@ -749,14 +749,34 @@ export class TableLoop {
    */
   private async cardRound(): Promise<boolean> {
     let world = await this.dmWorld();
-    // A draw that offered two or three cards waits for the DM's pick (API-53). Until the DM's
-    // pick tool lands (AGT-88), the table takes the first card rolled, as the engine's pick.
-    const first = world?.offered?.[0];
-    if (first && !this.table.ended) {
-      const picked = await send(this.table, "dm", { cmd: "pick_card", card: first.id, reason: "The table took the first card rolled.", fallback: true }, () => `the road card ${first.id} is on the table`);
-      // A refused pick leaves the cards offered and every road move refused: the run can't go on.
-      if (!picked.ok) throw new Error(`the table could not pick the road card ${first.id}: ${picked.text}`);
+    // A draw that offered two or three cards waits for the DM's pick (API-53, AGT-88): the DM is
+    // woken with the offered cards and the deeds the world remembers, and picks by the rule in its
+    // prompt. A failed or timed-out wake, or one that picks nothing, leaves the first card rolled
+    // to the engine's pick, which the run report counts.
+    const offered = world?.offered ?? [];
+    if (offered.length > 0 && !this.table.ended) {
+      const deeds = world?.deeds ?? [];
+      await this.wakeDm(
+        "pick",
+        undefined,
+        "Pick a road card: a draw offered these, in the order they were rolled.",
+        ...offered.map((c, i) => offeredLine(c, i + 1)),
+        deeds.length > 0 ? `Deeds the world remembers: ${deeds.map((d) => d.deed).join(", ")}.` : "The world remembers no deeds yet.",
+        "Call pick_card once, with the card's id and one line of why. Narrate nothing yet.",
+      );
       world = await this.dmWorld();
+      const first = world?.offered?.[0];
+      if (first && !this.table.ended) {
+        // A failed wake already counted its fallback; a wake that picked nothing counts here.
+        if (!this.dmWakeFailed) {
+          this.table.fallbacks += 1;
+          this.table.log("fallback", `the DM picked no road card: the table takes the first card rolled (${first.id})`, "dm", { cause: "unanswered" });
+        }
+        const picked = await send(this.table, "dm", { cmd: "pick_card", card: first.id, reason: "The table took the first card rolled.", fallback: true }, () => `the road card ${first.id} is on the table`);
+        // A refused pick leaves the cards offered and every road move refused: the run can't go on.
+        if (!picked.ok) throw new Error(`the table could not pick the road card ${first.id}: ${picked.text}`);
+        world = await this.dmWorld();
+      }
     }
     const card = world?.card;
     if (!card) return false;
