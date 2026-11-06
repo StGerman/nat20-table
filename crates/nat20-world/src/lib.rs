@@ -1,5 +1,5 @@
-//! The living world for nat20-table: the clock, the map, the caravan, the road event deck and
-//! the place NPCs.
+//! The living world for nat20-table: the clock, the map, the caravan, the road event deck, the
+//! place NPCs and the customs.
 //!
 //! The world is data plus SRD tables about the world (travel pace, travel terrain,
 //! drawn vehicles). Rules on creatures stay in core: the world never rolls a save or
@@ -14,6 +14,7 @@
 pub mod campaign;
 pub mod caravan;
 pub mod clock;
+pub mod customs;
 pub mod deck;
 pub mod dice;
 pub mod escort;
@@ -25,6 +26,7 @@ pub mod travel;
 pub use campaign::{CampaignFile, CampaignWorld};
 pub use caravan::{Caravan, CaravanError, Good, Goods, Owner, Wagon};
 pub use clock::{Clock, Watch};
+pub use customs::{Custom, CustomsError, CustomsFile};
 pub use deck::{
     Card, CardError, Choice, DC_LADDER, DRAW_DIE, Decided, Deck, DeckError, DeckFile, DeckState,
     Deed, DeedBook, Deeds, Drawn, Effect, MAX_OFFERED, Monster, Once, OnceScope, PendingCard,
