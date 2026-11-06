@@ -158,7 +158,10 @@ impl Session {
                 decided: campaign::decided(resolution.decided),
             },
         ));
-        self.run_effects(&resolution.effects, &resolution.by)
+        self.run_effects(&resolution.effects, &resolution.by)?;
+        // A destination's arrival card is decided: the escort settles now (ENG-35).
+        self.settle_if_arrived()?;
+        Ok(())
     }
 
     /// The handles an effect touches, in party order. A check rolls for those on their feet
