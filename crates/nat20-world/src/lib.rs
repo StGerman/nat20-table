@@ -36,6 +36,6 @@ pub use map::{Edge, Generate, MapError, Place, Position, Road, Terrain, WorldMap
 pub use npcs::{Attitude, NpcCarries, NpcCoins, NpcDef, NpcFile, NpcItem, NpcLeft, NpcState};
 pub use plan::{Reach, Trip, TripLeg};
 pub use travel::{
-    Carried, LONG_REST_MINUTES, Leg, MILES_PER_DAY_BETWEEN, Pace, RATIONS, TravelError, WAKE_HOUR,
-    World, WorldState,
+    Carried, ContractState, LONG_REST_MINUTES, Leg, MILES_PER_DAY_BETWEEN, Memory, Pace, RATIONS,
+    SavedWorld, TravelError, WAKE_HOUR, World, WorldState,
 };

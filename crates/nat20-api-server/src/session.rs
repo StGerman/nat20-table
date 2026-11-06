@@ -14,7 +14,8 @@ use nat20_api_contract::{
     Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
     ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
     Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId, ROSTER_FORMAT, ReactionTrigger,
-    RejectReason, RollId, RollView, Roster, RosterWorld, SceneFile, State, TimeSpan, Visibility,
+    RejectReason, RollId, RollView, Roster, RosterStart, RosterWorld, SceneFile, State, TimeSpan,
+    Visibility,
 };
 
 mod cards;
@@ -60,6 +61,9 @@ pub struct Session {
     campaign: Option<Campaign>,
     /// The party an earlier session saved, from `new_session{roster}` (API-45).
     roster: Option<Roster>,
+    /// The party and the world when the contract under way began (API-51): the roster's own,
+    /// until `start_campaign` starts a new contract and takes them as they are then.
+    contract_start: Option<RosterStart>,
     /// The place NPCs placed in the current scene (API-48), written back when it is left.
     npcs_here: Vec<String>,
     /// A card fight's named NPCs by handle, until they die (ENG-36)
@@ -90,6 +94,7 @@ impl Session {
             ledger: Journal::default(),
             ledger_mismatches: Vec::new(),
             campaign: None,
+            contract_start: roster.as_ref().and_then(|r| r.contract_start.clone()),
             roster,
             npcs_here: Vec::new(),
             card_npcs: HashMap::new(),
@@ -440,6 +445,37 @@ impl Session {
             }
         } else {
             self.npcs_arrive()?;
+        }
+        // A new contract keeps the party and the world it started from (API-51), before the
+        // advance is paid, so playing it again pays it again.
+        if let Some(campaign) = self.campaign.as_ref()
+            && !campaign.resumed
+        {
+            let characters = self
+                .game
+                .as_ref()
+                .map(|g| g.roster_characters(Some(campaign.party.as_slice())))
+                .unwrap_or_default();
+            self.contract_start = Some(RosterStart {
+                characters,
+                // A saved world of another map was not taken up (`Campaign::read`), so this
+                // contract started from its own file: keep none.
+                world: self
+                    .roster
+                    .as_ref()
+                    .and_then(|r| r.world.clone())
+                    .filter(|w| w.map == campaign.map_id),
+            });
+        }
+        // The trip from where the last contract ended, told in one line (API-51, ENG-37).
+        if let Some(carried) = self.campaign.as_ref().and_then(|c| c.carried.clone()) {
+            self.push(Pending::public(
+                None,
+                EventKind::TripToStart {
+                    from: carried.from,
+                    days: carried.days,
+                },
+            ));
         }
         // The escort's advance (API-47).
         let due = self
@@ -1103,12 +1139,14 @@ impl Session {
         let world = match &saving {
             Some(campaign) => Some(RosterWorld {
                 map: campaign.map_id.clone(),
-                state: serde_json::to_value(&campaign.world.state).map_err(|e| {
-                    error(
-                        ErrorCode::Internal,
-                        format!("The world state does not serialize: {e}."),
-                    )
-                })?,
+                // Format 2: the memory and the contract apart (API-51).
+                state: serde_json::to_value(world::SavedWorld::from(campaign.world.state.clone()))
+                    .map_err(|e| {
+                        error(
+                            ErrorCode::Internal,
+                            format!("The world state does not serialize: {e}."),
+                        )
+                    })?,
             }),
             None => None,
         };
@@ -1117,6 +1155,7 @@ impl Session {
                 format: ROSTER_FORMAT,
                 characters,
                 world,
+                contract_start: self.contract_start.clone(),
             },
         })
     }

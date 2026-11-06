@@ -23,8 +23,8 @@ export type Chain = "held" | "broken" | "unlogged";
 /** `run.json`'s `roster`: which roster the run used, and its hash in and out. */
 export interface RosterRecord {
   name: string;
-  /** `continue` played the saved party; `new` started the pack's pregens and replaces the saved one at the end. */
-  party: "continue" | "new";
+  /** `continue` played the saved party; `new` started the pack's pregens and replaces the saved one at the end; `again` played the last journey again from where it began, with the party and the world as the engine kept them then (API-51). */
+  party: "continue" | "new" | "again";
   /** The sha256 of the file the run loaded; null for a new party. */
   loaded_sha256: string | null;
   /** The chain of the file loaded; null for a new party. */
@@ -105,6 +105,28 @@ export async function saveRoster(engine: GameEngine, dir: string, name: string, 
   const roster = response.result.roster;
   if (roster.characters.length === 0) return { not_saved: "the party never reached a scene" };
   return { sha256: writeRoster(dir, name, roster, runId) };
+}
+
+/** The roster format this game plays (API-51): an older one is refused before the engine starts. */
+export const ROSTER_FORMAT = 2;
+
+/** Why a saved party can't be carried on, in one plain line; undefined when it can. */
+export function rosterRefusal(roster: Roster): string | undefined {
+  if (roster.format === ROSTER_FORMAT) return undefined;
+  if (roster.format > ROSTER_FORMAT) return "this party was saved by a newer version of the game, which this version can't read. Its file stays as it is. To play it, update the game; to play now, start a new party: add --new-party to the command.";
+  return "this party was saved by an older version of the game, which this version can't read. Its file stays as it is. To play now, start a new party: add --new-party to the command.";
+}
+
+/**
+ * The roster that plays the last journey again from where it began (API-51): the party and the
+ * world as the engine kept them at the contract's start. Undefined when the saved party has no
+ * journey behind it.
+ */
+export function replayRoster(roster: Roster): Roster | undefined {
+  const start = roster.contract_start;
+  if (!roster.world || !start) return undefined;
+  // The start goes along too, so a replay saved before its contract begins can be played again.
+  return { format: roster.format, characters: start.characters, ...(start.world ? { world: start.world } : {}), contract_start: start };
 }
 
 /** The saved party in one line for the start screen: "Torva (level 3), Maren (level 2)". */

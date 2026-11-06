@@ -11,7 +11,7 @@ import type { Roster } from "@nat20-table/engine-client";
 import { REPO } from "../src/engine.ts";
 import { rosterReport } from "../src/play/driver.ts";
 import type { RunRecord } from "../src/play/record.ts";
-import { readRoster, rosterFile, rosterLine, writeRoster } from "../src/play/roster.ts";
+import { readRoster, replayRoster, rosterFile, rosterLine, rosterRefusal, writeRoster } from "../src/play/roster.ts";
 import { partyRoster } from "../src/play/run.ts";
 import { paletteFor } from "../src/ui/palette.ts";
 import { partyKey, partyRows, pickOnScreen } from "../src/ui/pick.ts";
@@ -19,7 +19,7 @@ import { partyKey, partyRows, pickOnScreen } from "../src/ui/pick.ts";
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 
 const roster = (xp: number): Roster => ({
-  format: 1,
+  format: 2,
   characters: [
     { handle: "torva", pregen: "torva", level: 3, xp, choices: [], equipment: [], purse: { cp: 0, sp: 0, ep: 0, gp: 5, pp: 0 }, exhaustion: 0, malnutrition: 0, days_without_food: 0 },
   ],
@@ -123,6 +123,36 @@ test("the party question: continue is first and Enter takes it; the arrows and 1
   assert.equal(partyKey({ at: 0 }, { kind: "digit", digit: 2 }).state.at, 1);
   assert.equal(partyKey({ at: 1 }, { kind: "digit", digit: 7 }).state.at, 1);
   assert.equal(partyKey({ at: 1 }, { kind: "enter" }).party, "new");
+});
+
+test("a party with a journey behind it can play that journey again; one saved by an older game is refused in one line", () => {
+  const torva = roster(900).characters[0];
+  const world = { map: "wend", state: { memory: {}, contract: {} } };
+  const start = { characters: [{ ...torva, xp: 300, level: 2 }] };
+  const saved = { ...roster(900), world, contract_start: start } as unknown as Roster;
+  assert.deepEqual(replayRoster(saved), { format: 2, characters: start.characters, contract_start: start });
+  const later = { ...saved, contract_start: { ...start, world } } as unknown as Roster;
+  assert.deepEqual(replayRoster(later), { format: 2, characters: start.characters, world, contract_start: { ...start, world } });
+  assert.equal(replayRoster(roster(900)), undefined, "no journey yet");
+  assert.equal(rosterRefusal(roster(900)), undefined);
+  assert.match(rosterRefusal({ ...roster(900), format: 1 } as Roster) ?? "", /older version of the game.*stays as it is.*--new-party/);
+  assert.match(rosterRefusal({ ...roster(900), format: 3 } as Roster) ?? "", /newer version of the game.*stays as it is.*--new-party/);
+  const base = { name: "wend", loaded_sha256: "a".repeat(64), saved_sha256: "b".repeat(64), not_saved: null, chain: "held" as const };
+  assert.equal(rosterReport({ ...base, party: "again" }), `Roster: played the last journey of the party saved as wend again from where it began (sha256 ${"a".repeat(12)}); saved (sha256 ${"b".repeat(12)})`);
+});
+
+test("the party question with a journey behind it has a third answer; Enter still continues", () => {
+  assert.deepEqual(partyRows("Torva (level 3)", 2, true), [
+    "  1. Continue with your party: Torva (level 3)",
+    "  2. Start a new party (it replaces the saved one when this game ends)",
+    "❯ 3. Play the last journey again from where it began, with the party as it was then (it replaces the saved one when this game ends)",
+  ]);
+  assert.equal(partyKey({ at: 0 }, { kind: "enter" }, true).party, "continue");
+  assert.equal(partyKey({ at: 0 }, { kind: "digit", digit: 3 }, true).state.at, 2);
+  assert.equal(partyKey({ at: 0 }, { kind: "digit", digit: 3 }).state.at, 0, "no third answer without a journey");
+  assert.equal(partyKey({ at: 2 }, { kind: "down" }, true).state.at, 0);
+  assert.equal(partyKey({ at: 0 }, { kind: "up" }, true).state.at, 2);
+  assert.equal(partyKey({ at: 2 }, { kind: "enter" }, true).party, "again");
 });
 
 class FakeStdout extends EventEmitter {

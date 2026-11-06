@@ -3082,8 +3082,11 @@ fn the_destination_s_arrival_card_is_decided_before_the_pay() {
     assert!(!seen.iter().any(|k| k == "escort_settled"), "{last}");
     let saved = api.call("dm", json!({ "cmd": "save_roster" }));
     let state = &saved["result"]["roster"]["world"]["state"];
-    assert_eq!(state["escort"]["done"], false, "{saved}");
-    assert_eq!(state["deck"]["pending"]["card"], "tower_gate", "{saved}");
+    assert_eq!(state["contract"]["escort"]["done"], false, "{saved}");
+    assert_eq!(
+        state["contract"]["deck"]["pending"]["card"], "tower_gate",
+        "{saved}"
+    );
     let decided = card(&mut api, "shoo");
     let dm = api.call("dm", json!({ "cmd": "events", "since": 0 }));
     let all = kinds(&json!({ "events": dm["result"]["events"] }));
@@ -3256,7 +3259,7 @@ fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
     }
     let saved = api.call("dm", json!({ "cmd": "save_roster" }));
     ok(&saved);
-    let deed = &saved["result"]["roster"]["world"]["state"]["deeds"]["killed_grey"];
+    let deed = &saved["result"]["roster"]["world"]["state"]["memory"]["deeds"]["killed_grey"];
     let by = deed["by"]
         .as_array()
         .unwrap_or_else(|| panic!("no deed: {saved}"));

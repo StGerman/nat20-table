@@ -21,7 +21,10 @@
 // --stall-rounds N, --upload REPO, --no-upload, --zip (AGT-41), --no-preview (with --seat ink: hide the
 // DM's narration as it is written, AGT-66; on by default since `npm run spike:partial` passed on the Mac),
 // --roster NAME (API-45: play the party saved as `rosters/NAME.json` and save it again on every exit;
-// --seat ink asks "continue or new party" first), --new-party (start the pack's pregens instead),
+// --seat ink asks "continue or new party" first, and "play the last journey again" once the party
+// has one), --new-party (start the pack's pregens instead), --replay-journey (API-51: play the saved
+// party's last journey again from where it began, the start screen's third answer for a run nobody
+// sits at),
 // --rosters DIR, --suggest-model (AGT-49: the model that suggests the human's moves out of a fight
 // at the terminal, Haiku by default), --no-suggest (no suggestions; `/suggest` toggles them in play).
 import { spawn, type ChildProcess } from "node:child_process";
@@ -49,7 +52,7 @@ import { usageBlock, UsageLog } from "../usage.ts";
 import { ModelJudge, ScriptedJudge } from "../check/judge.ts";
 import { narrationCheck } from "../check/narration.ts";
 import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
-import { readRoster, ROSTER_NAME, rosterLine, saveRoster, type SavedRoster } from "./roster.ts";
+import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, suggestionLine, timingLines, type Casting, type PackParty } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
 import { uploadStage } from "./upload.ts";
@@ -157,7 +160,22 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     console.error(`--roster ${flags.roster}: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(2);
   }
-  let partyChoice: "continue" | "new" = saved && !flags["new-party"] ? "continue" : "new";
+  if (flags["replay-journey"] && (flags.roster === undefined || flags["new-party"])) {
+    console.error("--replay-journey plays a saved party's last journey again: name it with --roster, without --new-party.");
+    process.exit(2);
+  }
+  // A party saved by an older game can't be carried on (API-51): say so before anything starts.
+  const refused = saved && !flags["new-party"] ? rosterRefusal(saved.roster) : undefined;
+  if (refused) {
+    console.error(`--roster ${flags.roster}: ${refused}`);
+    process.exit(2);
+  }
+  const again = saved ? replayRoster(saved.roster) : undefined;
+  if (flags["replay-journey"] && !again) {
+    console.error(`--roster ${flags.roster}: this party has no journey to play again yet.`);
+    process.exit(2);
+  }
+  let partyChoice: "continue" | "new" | "again" = saved && !flags["new-party"] ? (flags["replay-journey"] ? "again" : "continue") : "new";
 
   if (flags["dry-run"]) {
     const dm = modelDm();
@@ -182,18 +200,26 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   let screen: Instance | undefined;
   if (flags.seat === "ink" && !flags.play && party.human) {
     const entries = partyRoster(flags.pack);
-    const ask = saved && partyChoice === "continue" ? saved : undefined;
+    const ask = saved && partyChoice !== "new" ? saved : undefined;
     const picked = await pickOnScreen(entries, party.human, {
       title: pack.adventure.title,
       ...(ask
-        ? { saved: { line: rosterLine(ask.roster, new Map(entries.map((e) => [e.handle, e.name]))), levels: new Map(ask.roster.characters.map((c) => [c.handle, c.level])) } }
+        ? {
+            saved: {
+              line: rosterLine(ask.roster, new Map(entries.map((e) => [e.handle, e.name]))),
+              levels: new Map(ask.roster.characters.map((c) => [c.handle, c.level])),
+              ...(again ? { startLevels: new Map(again.characters.map((c) => [c.handle, c.level])) } : {}),
+            },
+          }
         : {}),
     });
     screen = picked.instance;
     if (picked.party) partyChoice = picked.party;
     if (picked.handle !== party.human) party = castParty(flags.pack, { play: picked.handle });
   }
-  const loaded = partyChoice === "continue" ? saved : undefined;
+  // Playing the last journey again loads the party and the world as they stood when it began; the
+  // run still saves over the roster it named, and run.json says which answer it took.
+  const loaded = partyChoice === "continue" ? saved : partyChoice === "again" && saved && again ? { ...saved, roster: again } : undefined;
   const everyone = [...(party.human ? [party.human] : []), ...party.ai];
 
   // You at the keyboard, or a seat that fights by rule. Ctrl+C ends the table between decisions
@@ -274,7 +300,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   table.log("system", party.human ? `the human plays ${party.human}; AI players: ${party.ai.join(", ")}` : `no human; AI players: ${party.ai.join(", ")}`);
   if (record.roster) {
     const r = record.roster;
-    table.log("system", loaded ? `the party saved as ${r.name}: ${rosterLine(loaded.roster)}${r.chain === "broken" ? "; its file was changed after its last save" : ""}` : `a new party, saved as ${r.name} when the run ends`);
+    table.log("system", loaded ? `the party saved as ${r.name}${partyChoice === "again" ? ", playing its last journey again from where it began" : ""}: ${rosterLine(loaded.roster)}${r.chain === "broken" ? "; its file was changed after its last save" : ""}` : `a new party, saved as ${r.name} when the run ends`);
   }
   quit = () => table.end("the human quit", "operator");
   // Without a keyboard seat, Ctrl+C stops the run between decisions; a second one exits at once.
@@ -492,10 +518,13 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
 
 /** The report's line on the saved party. */
 export function rosterReport(r: NonNullable<RunRecord["roster"]>): string {
+  const loaded = `(sha256 ${r.loaded_sha256?.slice(0, 12)}${r.chain === "broken" ? ", changed after its last save" : r.chain === "unlogged" ? ", no save logged for it" : ""})`;
   const started =
     r.party === "continue"
-      ? `continued the party saved as ${r.name} (sha256 ${r.loaded_sha256?.slice(0, 12)}${r.chain === "broken" ? ", changed after its last save" : r.chain === "unlogged" ? ", no save logged for it" : ""})`
-      : `a new party for the roster ${r.name}`;
+      ? `continued the party saved as ${r.name} ${loaded}`
+      : r.party === "again"
+        ? `played the last journey of the party saved as ${r.name} again from where it began ${loaded}`
+        : `a new party for the roster ${r.name}`;
   const ended = r.saved_sha256 ? `saved (sha256 ${r.saved_sha256.slice(0, 12)})` : `not saved: ${r.not_saved}`;
   return `Roster: ${started}; ${ended}`;
 }

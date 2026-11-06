@@ -178,6 +178,9 @@ test("a living-world run is judged on the Milestone 9 exit: the contract paid by
   assert.equal(row("m9-ledger").status, "pass");
   assert.match(row("m9-fight").detail, /^1 fights/, "the authored encounter doesn't count");
   assert.equal(row("m9-roster").status, "pass");
+  const again = computeVerdict(folder({ ...run, roster: { ...run.roster!, party: "again" } }, [], log)).rows.find((r) => r.row === "m9-roster")!;
+  assert.equal(again.status, "reported");
+  assert.match(again.detail, /last journey played again from where it began/);
 
   // Settled after the last day, one Blade never paid, no card, no fight off the scene file, a new party.
   const late = [{ kind: "session_started" }, ...party.slice(1).map(wage), leg("wendford"), { kind: "night" }, { kind: "night" }, { kind: "night" }, { kind: "escort_settled", destination: "wendmouth" }];
