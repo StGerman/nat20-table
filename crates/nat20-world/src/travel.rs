@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
-    deck::{Deck, DeckError, DeckState, Deed, DeedBook, Drawn, PickError, When},
+    deck::{Deck, DeckError, DeckState, Deed, DeedBook, Drawn, PickError, ScoutSkill, When},
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
     map::{MapError, Position, WorldMap},
@@ -124,6 +124,10 @@ pub struct WorldState {
     /// saved state while it is 1
     #[serde(default = "first_contract", skip_serializing_if = "is_first_contract")]
     pub contract: u32,
+    /// The Hired Blade who walks ahead as the scout (API-54), until another takes the role:
+    /// part of the contract
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<String>,
 }
 
 fn first_contract() -> u32 {
@@ -272,6 +276,7 @@ impl World {
                 contract: first_contract(),
                 npcs: BTreeMap::new(),
                 escort: None,
+                scout: None,
             },
             deck: Deck::default(),
             npcs: Vec::new(),
@@ -378,6 +383,7 @@ impl World {
         let mut deck = saved.deck;
         deck.pending = None;
         deck.offered.clear();
+        deck.road = None;
         deck.gone_for_contract.clear();
         let mut discovered = saved.discovered;
         discovered.extend(std::mem::take(&mut self.state.discovered));
@@ -411,27 +417,57 @@ impl World {
     /// offered for the DM's pick (API-53); none when the zone has no card in play.
     pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
         let zone = self.map.road(road)?.zone.clone();
-        self.deck.draw(
+        let drawn = self.deck.draw(
             &zone,
             When::Road,
             &self.state.discovered,
             &self.state.deeds,
             &mut self.state.deck,
             dice,
-        )
+        );
+        if drawn.is_some() {
+            self.state.deck.road = Some(road.to_owned());
+        }
+        drawn
     }
 
     /// Draws an arrival card of `place` when a leg ends there (ENG-35): on the table, or
     /// offered for a pick (API-53).
     pub fn draw_on_arrival(&mut self, place: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
-        self.deck.draw(
+        let drawn = self.deck.draw(
             place,
             When::Arrival,
             &self.state.discovered,
             &self.state.deeds,
             &mut self.state.deck,
             dice,
-        )
+        );
+        if drawn.is_some() {
+            self.state.deck.road = None;
+        }
+        drawn
+    }
+
+    /// The scout's check for the card on the table (API-54): who rolls, with what skill, and
+    /// the Search DC of the road's terrain. None when nobody walks ahead, the card names no
+    /// `scout` skill, or it is a night or arrival card; the server also skips a scout who is
+    /// not up.
+    pub fn scout_check(&self) -> Option<(String, ScoutSkill, u32)> {
+        let scout = self.state.scout.clone()?;
+        let pending = self.state.deck.pending.as_ref()?;
+        let card = self.deck.card(&pending.card)?;
+        if card.when != When::Road {
+            return None;
+        }
+        let skill = card.scout?;
+        let road = self.map.road(self.state.deck.road.as_deref()?)?;
+        Some((scout, skill, road.terrain.search_dc()))
+    }
+
+    /// The scout's check succeeded (API-54): the card on the table opens its forewarned
+    /// choice. Returns whether the choices changed.
+    pub fn forewarn(&mut self) -> bool {
+        self.deck.forewarn(&self.state.deeds, &mut self.state.deck)
     }
 
     /// The DM picks one of the offered cards (API-53): it goes on the table.
@@ -444,14 +480,18 @@ impl World {
     /// for a pick (API-53).
     pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<Drawn> {
         let zone = self.zone_here();
-        self.deck.draw(
+        let drawn = self.deck.draw(
             &zone,
             When::Night,
             &self.state.discovered,
             &self.state.deeds,
             &mut self.state.deck,
             dice,
-        )
+        );
+        if drawn.is_some() {
+            self.state.deck.road = None;
+        }
+        drawn
     }
 
     /// Time lost to a road event: the clock moves on and the day's travel shrinks by as
@@ -898,5 +938,49 @@ mod tests {
             serde_json::from_str::<WorldState>(&json).unwrap(),
             world.state
         );
+    }
+
+    #[test]
+    fn the_scout_checks_against_the_road_s_search_dc() {
+        let deck: crate::deck::DeckFile = serde_json::from_str(
+            r#"{"cards": [
+              {"id": "willows", "zone": "hills", "target": "blades", "text": "Willows.", "scout": "survival",
+               "choices": [{"id": "on", "text": "On."}, {"id": "wait", "text": "Wait.", "unless": "scouted"},
+                           {"id": "round", "text": "Round.", "if": "scouted"}]},
+              {"id": "camp", "zone": "hills", "when": "night", "target": "blades", "text": "Wind.",
+               "choices": [{"id": "a", "text": "A."}, {"id": "b", "text": "B."}]}
+            ]}"#,
+        )
+        .unwrap();
+        let mut w = world("npc:tobin")
+            .with_deck(Deck::from_files([deck]))
+            .unwrap();
+        let mut dice = crate::dice::ListDice::new([1]);
+        assert!(w.draw_after_leg("inn_ruin", &mut dice).is_some());
+        // Nobody walks ahead: no check.
+        assert_eq!(w.scout_check(), None);
+        w.state.scout = Some("bren".into());
+        // A hill road: Search DC 15 (SRD 5.2.1, Travel Terrain).
+        assert_eq!(
+            w.scout_check(),
+            Some(("bren".to_string(), ScoutSkill::Survival, 15))
+        );
+        assert!(w.forewarn());
+        assert_eq!(
+            w.state.deck.pending.as_ref().unwrap().choices,
+            ["on", "round"]
+        );
+
+        // A night card is never scouted, even in a zone with a scout card.
+        w.state.deck.pending = None;
+        w.state.at = Position::OnRoad {
+            road: "inn_ruin".into(),
+            toward: "ruin".into(),
+            miles_left: 4,
+        };
+        let mut dice = crate::dice::ListDice::new([1]);
+        assert!(w.draw_at_night(&mut dice).is_some());
+        assert_eq!(w.state.deck.road, None);
+        assert_eq!(w.scout_check(), None);
     }
 }

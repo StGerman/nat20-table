@@ -7,7 +7,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::Handle;
+use crate::{Handle, Skill};
 
 /// How fast the party travels (SRD 5.2.1, Travel Pace).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -113,6 +113,10 @@ pub struct CardDm {
     /// What only the DM reads: the card's one oddity, to voice at every meeting (API-53).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    /// The skill the scout checked with when the card was shown (API-54); absent for a card
+    /// with nothing to find.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<Skill>,
 }
 
 /// A road card a draw offered for the DM's pick (API-53). DM only.
@@ -131,6 +135,9 @@ pub struct OfferedCard {
     /// What only the DM reads: the card's one oddity.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    /// The skill the scout would check with (API-54); absent for a card with nothing to find.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<Skill>,
 }
 
 /// How a road card came to the table (API-53).
@@ -488,6 +495,9 @@ pub struct WorldDm {
     /// ones before. DM only.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub deeds: Vec<DeedDm>,
+    /// The Hired Blade who walks ahead as the scout (API-54).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<Handle>,
 }
 
 /// A deed the world remembers, as the DM sees it (API-52).
@@ -625,6 +635,9 @@ pub struct WorldPlayer {
     /// merchant's caravan follows its route from a place on it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trip: Option<TripView>,
+    /// The Hired Blade who walks ahead as the scout (API-54).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<Handle>,
 }
 
 /// One journey leg, in `travel`'s result and the `traveled` event.

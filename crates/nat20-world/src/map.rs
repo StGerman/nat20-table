@@ -140,6 +140,20 @@ pub enum Terrain {
 }
 
 impl Terrain {
+    /// The Search DC column of the SRD 5.2.1 Travel Terrain table: the scout's DC on a road
+    /// of this terrain (API-54).
+    pub fn search_dc(self) -> u32 {
+        match self {
+            Terrain::Arctic | Terrain::Desert => 10,
+            Terrain::Coastal
+            | Terrain::Forest
+            | Terrain::Grassland
+            | Terrain::Hill
+            | Terrain::Urban => 15,
+            Terrain::Mountain | Terrain::Swamp | Terrain::Underdark => 20,
+        }
+    }
+
     /// The Maximum Pace column of the SRD 5.2.1 Travel Terrain table.
     pub fn max_pace(self) -> Pace {
         match self {
