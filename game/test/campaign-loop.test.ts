@@ -291,6 +291,12 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     assert.match(ends[1]!.text, /more experience brings your next level\.|enough experience for your next level/);
     assert.match(ends[1]!.text, /Your party is kept for the next journey\.$/);
     assert.ok(dm.briefings.some((b) => b.briefing.includes("The journey is over")), "the DM wrote the closing");
+    // The pay is told once (AGT-86, decision 0060 F5): Wendmouth's opening leaves it to the pay's own wake.
+    const opening = dm.briefings.filter((b) => b.wake === "scene_open" && b.briefing.includes("fw_wendmouth is loaded")).at(-1);
+    assert.ok(opening?.briefing.includes("open the arrival here without the pay"), opening?.briefing);
+    const pay = dm.briefings.find((b) => b.briefing.includes("the merchant paid the Blades what they are owed"));
+    assert.ok(pay?.briefing.includes("Your last narration opened the arrival: don't tell it again."), pay?.briefing);
+    assert.equal(dm.briefings.filter((b) => b.briefing.includes("without the pay")).length, 1, "only the destination's opening leaves the pay out");
     assert.ok(!seat.shown.some((e) => e.kind === "options" && e.lines.some((l) => /Move on|Make camp/.test(l)) && seat.shown.indexOf(e) > ends[0]!.i), "no road lines after the contract");
     assert.ok(report.scenes.includes("fw_wendford") && report.scenes.at(-1) === "fw_wendmouth", report.scenes.join(", "));
     const state = await t.engine.request("dm", { cmd: "get_state" });
