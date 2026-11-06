@@ -1,8 +1,8 @@
 ---
 name: vera
 description: "Vera test: reads ONLY text a player would see, as a first-time player, and reports what she understood, what she would ask aloud, and where she became a passenger. Use for: (1) new or changed card choices; (2) a DM narration sample at a milestone exit; (3) changed TUI lines (pay, road end, prompts, input errors); (4) onboarding and install steps; (5) error and recovery text (crash, aborted run, lost save). Also: the journal or summary a returning player reads, and AI player lines. Never pass design docs, rationale, rules or thread history."
-model: sonnet
-effort: medium
+model: opus
+effort: low
 tools: Read
 maxTurns: 3
 omitClaudeMd: true
