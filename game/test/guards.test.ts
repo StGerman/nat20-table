@@ -176,7 +176,16 @@ test("an AI player's line to an NPC by handle passes the Russian guard; a prose 
     assert.equal((await t.table.speak("maren", "Отойди с дороги.", "bandit_1")).ok, true, "a handle's digit is not a number");
     const prose = await t.table.speak("maren", "Отойди с дороги.", "the man with 3 dogs");
     assert.equal(prose.ok, false, "an addressee in words is guarded like the line");
+    assert.equal((await t.table.speak("maren", "Пойдём.", " maren ")).ok, false, "a padded own handle is still the speaker (Copilot on table #289)");
   } finally {
     t.close();
   }
+});
+
+test("the speech guard refuses a lone DM-only id as an addressee and passes any other handle (Copilot on table #289)", () => {
+  const ids = packIds(MILL);
+  const guard = speechGuard({ shown: ids.shown, language: "ru", dmOnly: ids.dmOnly });
+  assert.match(guard("yard_fight") ?? "", /names yard_fight, which only the DM knows/);
+  assert.equal(guard("odda_vell"), undefined);
+  assert.equal(guard("bandit_1"), undefined);
 });

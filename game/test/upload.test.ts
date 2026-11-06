@@ -75,6 +75,8 @@ test("a folder with no run.json is skipped, sends nothing and is not a failure (
     assert.equal(git(remote, "rev-parse", "--verify", "--quiet", "main").status === 0, false, "nothing was pushed");
     assert.ok(uploadRun(runDir, { repo: remote, clone }).ok, "a real run beside it still goes up");
     assert.deepEqual(remoteFiles(remote, path.basename(empty)), []);
+    const typo = uploadRun(path.join(root, "runs", "no-such-run"), { repo: remote, clone });
+    assert.ok(!typo.ok && !typo.skipped, "a path that isn't there is a failure, not a skip (Copilot on table #292)");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

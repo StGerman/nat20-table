@@ -129,6 +129,8 @@ export function uploadRun(runDir: string, options: UploadOptions): UploadResult 
     const runId = path.basename(path.resolve(runDir));
     // A run that stopped before it started leaves a folder with no run.json and nothing to read
     // (AGT-74): it is skipped, not sent and not counted as a failure.
+    // A path that isn't a folder at all is a typo, and fails as before (Copilot on table #292).
+    if (!existsSync(runDir) || !statSync(runDir).isDirectory()) return { ok: false, why: `failed: ${runDir} is not a run folder` };
     if (!existsSync(path.join(runDir, RUN_JSON))) return { ok: false, skipped: true, why: `skipped: ${runId} has no ${RUN_JSON}, so the run stopped before it started; nothing is uploaded` };
     const secret = findSecret(runDir);
     if (secret) return { ok: false, why: `refused: ${secret.file} holds what looks like ${secret.what}; remove it and run npm run runs:upload -- ${runDir}` };
