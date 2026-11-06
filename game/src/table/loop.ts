@@ -14,6 +14,7 @@ import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
 import { BarkTools, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import { usageBlock, type UsageLog } from "../usage.ts";
+import type { Suggester } from "../agents/suggest.ts";
 import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, ToolOutcome } from "./types.ts";
 
 /**
@@ -68,6 +69,26 @@ export interface LoopOptions {
   usage?: UsageLog;
   /** The living world (M9, AGT-80): the run starts a campaign and plays days on the map. Off by default. */
   campaign?: CampaignLoop;
+  /**
+   * Response suggestions for the human out of combat (AGT-49): three moves the seat offers as a
+   * picker. Only for a seat that shows them; `/suggest` turns them off and on. None by default.
+   */
+  suggester?: Suggester;
+}
+
+/** The prompts the suggester answers (S1: out of combat only, words: explore, the DM's question, a surrender). */
+const SUGGESTED: ReadonlySet<HumanPrompt["kind"]> = new Set(["explore", "answer", "surrender"]);
+
+/** What the run report counts of the suggestions (AGT-49, S4). */
+export interface SuggestionCounts {
+  /** Prompts the picker was shown for. */
+  shown: number;
+  /** Lines sent as a suggestion offered them. */
+  unchanged: number;
+  /** Lines sent from a suggestion the human edited first. */
+  edited: number;
+  /** Lines the human wrote alone while suggestions were shown. */
+  own: number;
 }
 
 /** How the loop plays the living world (M9, AGT-80). */
@@ -168,6 +189,8 @@ export interface RunReport {
   stop?: StopKind;
   /** Each scene played, with when it started and ended (M7 spec §4.1). */
   sceneTimes: SceneTime[];
+  /** The suggestions picker's counts (AGT-49); absent when the run had no suggester. */
+  suggestions?: SuggestionCounts;
 }
 
 /** Model wakes in a row that lost the connection before the run stops as `offline` (M7 design §3.1). */
@@ -319,6 +342,12 @@ export class TableLoop {
   private cardAsked = new Map<string, number>();
   /** The human's open level-up choice, from the engine's last answer (AGT-80). */
   private levelChoice: LevelUpChoice | undefined;
+  private readonly suggester: Suggester | undefined;
+  /** `/suggest` toggles it (S3: on by default). */
+  private suggestOn = true;
+  private readonly suggestions: SuggestionCounts = { shown: 0, unchanged: 0, edited: 0, own: 0 };
+  /** The last suggestion call, so the next waits for it to end (one session, one turn at a time). */
+  private suggesting: Promise<void> = Promise.resolve();
 
   constructor(options: LoopOptions) {
     this.table = options.table;
@@ -349,6 +378,7 @@ export class TableLoop {
     this.onProgress = options.onProgress ?? (() => undefined);
     this.usage = options.usage;
     this.campaign = options.campaign;
+    this.suggester = options.suggester;
   }
 
   /** Plays from `firstScene` until the adventure ends, the human quits, or the run is stopped. */
@@ -401,7 +431,7 @@ export class TableLoop {
     // When the engine is gone, the run has its transcript and the engine's request log, not the
     // session log, so the audit can't run on it (spec §6: no resume).
     await writing(() => this.table.engine.writeLog());
-    await Promise.allSettled([this.dm.close?.(), ...[...this.agents.values()].map((a) => a.close?.())]);
+    await Promise.allSettled([this.dm.close?.(), ...[...this.agents.values()].map((a) => a.close?.()), this.suggester?.close()]);
     if (failure) throw failure;
     if (unwritten) throw unwritten;
     return {
@@ -417,6 +447,7 @@ export class TableLoop {
       liftChances: [...this.liftChances],
       fight: { rounds: this.fightRounds.size, lines: this.table.fightLines },
       ...(this.table.stop ? { stop: this.table.stop } : {}),
+      ...(this.suggester ? { suggestions: { ...this.suggestions } } : {}),
       // A scene a stop cut short keeps no end time, and counts the rounds it got to.
       sceneTimes: this.sceneTimes.map((t) => ({ ...t, ...(t.ended_at ? {} : { rounds: this.roundsIn(t.id) }) })),
     };
@@ -489,6 +520,8 @@ export class TableLoop {
       for (const handle of left.left_waiting) this.table.log("hand", `left ${left.id} still waiting for the floor`, handle);
     }
     this.endScene();
+    // The suggester starts each scene from its briefings alone, so its context stays small (AGT-49).
+    await this.suggester?.close();
     this.scenes.push(sceneId);
     this.sceneTimes.push({ id: sceneId, started_at: new Date().toISOString(), rounds: 0 });
     this.onProgress({ kind: "scene_start", scene: sceneId });
@@ -1466,19 +1499,111 @@ export class TableLoop {
    * when the run ended meanwhile, or (for the paused prompt) when `/pause` was lifted.
    */
   private async ask(prompt: HumanPrompt): Promise<PlayerIntent | undefined> {
-    for (;;) {
-      if (this.table.ended) return undefined;
-      const intent = await this.seat.ask(prompt);
-      if (intent.kind === "text" || intent.kind === "option") {
-        this.table.recordInput(this.human, JSON.stringify(intent), true);
+    // One suggestion call per prompt: a slash command answered meanwhile keeps the picker.
+    let offered = this.offerSuggestions(prompt);
+    let intent: PlayerIntent | undefined;
+    try {
+      for (;;) {
+        if (this.table.ended) return undefined;
+        intent = await this.seat.ask(prompt);
+        if (intent.kind === "text" || intent.kind === "option") {
+          this.table.recordInput(this.human, JSON.stringify(intent), true);
+        }
+        if (intent.kind !== "command") return intent;
+        await this.command(intent.name);
+        // `/suggest` just turned them off, or on again.
+        if (intent.name === "suggest" && offered && !this.suggestOn) {
+          this.closeSuggestions(offered, undefined);
+          offered = undefined;
+        } else if (intent.name === "suggest" && !offered) offered = this.offerSuggestions(prompt);
+        if (prompt.kind === "paused" && !this.paused) return undefined;
       }
-      if (intent.kind !== "command") return intent;
-      await this.command(intent.name);
-      if (prompt.kind === "paused" && !this.paused) return undefined;
+    } finally {
+      if (offered) this.closeSuggestions(offered, intent);
     }
   }
 
-  private async command(name: "sheet" | "where" | "map" | "options" | "log" | "usage" | "pause" | "quit"): Promise<void> {
+  /**
+   * Starts a suggestion call for an open prompt out of combat (AGT-49), when the run has a
+   * suggester, the seat shows suggestions and `/suggest` hasn't turned them off. The rows reach the
+   * seat when they come, unless the prompt was answered first. Returns the call, or undefined.
+   */
+  private offerSuggestions(prompt: HumanPrompt): { done: Promise<void>; shown: boolean; open: boolean } | undefined {
+    const suggester = this.suggester;
+    const seat = this.table.seat;
+    if (!suggester || !seat?.suggest || !this.suggestOn || this.table.inCombat || !SUGGESTED.has(prompt.kind)) return undefined;
+    const offered = { done: Promise.resolve(), shown: false, open: true };
+    seat.suggest({ kind: "waiting", cancel: () => suggester.cancel() });
+    // One call at a time: the one before, already cancelled, ends first.
+    const before = this.suggesting;
+    offered.done = (async () => {
+      await before;
+      if (!offered.open) return;
+      const briefing = await this.suggestBriefing(prompt);
+      // Answered while the briefing was read: no call at all.
+      if (!offered.open) return;
+      this.table.recordInput(this.human, briefing);
+      const rows = await suggester.suggest(briefing);
+      if (!offered.open) return;
+      if (rows) {
+        offered.shown = true;
+        this.suggestions.shown += 1;
+        seat.suggest!({ kind: "rows", rows });
+      } else seat.suggest!({ kind: "none" });
+    })().catch(() => {
+      // No suggestions, and nothing on screen. A plan limit stops the run at the next model call
+      // the table waits on, not while the human is typing.
+      if (offered.open) seat.suggest!({ kind: "none" });
+    });
+    this.suggesting = offered.done;
+    return offered;
+  }
+
+  /**
+   * The prompt is answered: the call in flight is cancelled, never waited for, and a sent line is
+   * counted (S4).
+   */
+  private closeSuggestions(offered: { done: Promise<void>; shown: boolean; open: boolean }, intent: PlayerIntent | undefined): void {
+    offered.open = false;
+    this.suggester?.cancel();
+    this.table.seat?.suggest?.({ kind: "none" });
+    if (!offered.shown || intent?.kind !== "text") return;
+    if (!intent.suggestion) this.suggestions.own += 1;
+    else if (intent.suggestion.edited) this.suggestions.edited += 1;
+    else this.suggestions.unchanged += 1;
+  }
+
+  /**
+   * What the suggester reads (AGT-49, Rule 3): the human's own sheet, state and options, projected
+   * for the human's viewer as an AI player for the character would get them, and the story lines
+   * the human was shown. The call writes it to the inputs, where the audit's leak scan reads it.
+   */
+  private async suggestBriefing(prompt: HumanPrompt): Promise<string> {
+    const human = this.human;
+    const sheet = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
+    const state = await this.humanState();
+    const listed = this.table.observe(await this.table.engine.request(human, { cmd: "legal_actions", actor: human }));
+    const briefing = [
+      "Your character sheet:",
+      sheet.result?.cmd === "get_sheet" ? formatSheet(sheet.result.sheet) : "(not available)",
+      "",
+      "Where you are:",
+      state ? formatState(state) : "(not available)",
+      ...(listed.result?.cmd === "legal_actions" ? ["", "What the rules let you do now:", formatOptions(listed.result as LegalActionsResult)] : []),
+      "",
+      "What happened at the table lately:",
+      ...(this.table.heard.length > 0 ? this.table.heard : ["(nothing yet)"]),
+      "",
+      prompt.kind === "answer"
+        ? "The DM asked you the question above: suggest three different answers."
+        : prompt.kind === "surrender"
+          ? "Your foes offer to surrender: suggest three different things to do or say."
+          : "What could your character do or say now? Three different ideas.",
+    ].join("\n");
+    return briefing;
+  }
+
+  private async command(name: "sheet" | "where" | "map" | "options" | "log" | "usage" | "pause" | "suggest" | "quit"): Promise<void> {
     const human = this.human;
     switch (name) {
       case "sheet": {
@@ -1520,6 +1645,11 @@ export class TableLoop {
         this.paused = !this.paused;
         this.table.log("system", this.paused ? "paused" : "resumed", human);
         this.table.show({ kind: "status", text: this.paused ? "Paused: AI players wait until /pause again." : "Resumed." });
+        return;
+      case "suggest":
+        this.suggestOn = !this.suggestOn;
+        this.table.log("system", this.suggestOn ? "suggestions on" : "suggestions off", human);
+        this.table.show({ kind: "status", text: this.suggestOn ? "Suggestions on: three moves out of a fight." : "Suggestions off. /suggest turns them on again." });
         return;
       case "quit":
         this.table.end("the human quit", "operator");

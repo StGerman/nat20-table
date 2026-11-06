@@ -19,14 +19,21 @@ import type { Handle } from "@nat20-table/engine-client";
 import { Box, render, Text, useInput, useWindowSize, type Instance, type RenderOptions } from "ink";
 import { createElement as h, useEffect, useState, useSyncExternalStore } from "react";
 import type { Situation } from "../table/situation.ts";
-import type { HumanPrompt, PlayerIntent, Seat, TableEvent } from "../table/types.ts";
+import type { HumanPrompt, PlayerIntent, Seat, SuggestUpdate, TableEvent } from "../table/types.ts";
 import { edit, editFor, EMPTY, type Edit } from "./editor.ts";
-import { COMMAND_HELP, promptHint, readLine } from "./input.ts";
+import { COMMAND_HELP, promptHint, readLine, type Typed } from "./input.ts";
 import { actionRows, frameLayout, freshText, headerText, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, storyRows, storyWindow, type Scroll } from "./frame.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette, type Style } from "./palette.ts";
 import { cardRows, endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
 import { cardText, costText } from "../table/guide.ts";
+
+/** The suggestions picker's rows and cursor (AGT-49): `cursor` is a row index, `rows.length` for "Your own…". */
+export interface Suggestions {
+  rows: string[];
+  cursor: number;
+  taken?: { n: number; text: string };
+}
 
 /** The numbered options held above the prompt while they are the human's to pick from. */
 export type PinnedOptions = Extract<TableEvent, { kind: "options" }>;
@@ -66,6 +73,11 @@ export interface SeatView {
   refusal?: string;
   /** The option ↑/↓ have lit (AGT-48 Q1): Enter on an empty line plays it. */
   highlight?: number;
+  /**
+   * The suggestions picker (AGT-49, input-line design §7.5): three moves and a last row for your
+   * own words, where the cursor starts. `taken`: the suggestion Tab put in the draft.
+   */
+  suggestions?: Suggestions;
   /**
    * The run is over (screens 12 and 13): how it ended, and for a stop what to do about it, with the
    * post-run checks as they go. The table stays on screen until they finish or a key is pressed.
@@ -130,6 +142,8 @@ export class InkSeat implements Seat {
   private heldSituation: Extract<TableEvent, { kind: "situation" }> | undefined;
   /** The speaker of the message the last line belongs to; undefined after anything else. */
   private speaker: string | undefined;
+  /** Drops the suggestion call in flight: the human's first key does (§7.1). */
+  private cancelSuggest: (() => void) | undefined;
 
   constructor(handle: Handle, options: InkSeatOptions = {}) {
     this.handle = handle;
@@ -170,6 +184,37 @@ export class InkSeat implements Seat {
   preview(text: string | undefined): void {
     if (text === this.view.preview) return;
     this.update({ preview: text });
+  }
+
+  suggest(update: SuggestUpdate): void {
+    switch (update.kind) {
+      case "waiting":
+        this.cancelSuggest = update.cancel;
+        if (this.view.suggestions) this.update({ suggestions: undefined });
+        return;
+      case "rows":
+        this.cancelSuggest = undefined;
+        // Too late: the prompt was answered, or the human has started their own line.
+        if (!this.answer || this.view.draft) return;
+        this.update({ suggestions: { rows: update.rows, cursor: update.rows.length } });
+        return;
+      case "none":
+        this.cancelSuggest = undefined;
+        if (this.view.suggestions) this.update({ suggestions: undefined });
+        return;
+    }
+  }
+
+  /** Whether the picker stands in the action zone now: one list owns the digits, so options hide it (§7.5). */
+  private get picking(): Suggestions | undefined {
+    return this.view.prompt && !this.view.options ? this.view.suggestions : undefined;
+  }
+
+  /** Esc: closes the suggestions picker; false when none was open. */
+  closeSuggestions(): boolean {
+    if (!this.picking) return false;
+    this.update({ suggestions: undefined });
+    return true;
   }
 
   /**
@@ -345,8 +390,23 @@ export class InkSeat implements Seat {
 
   /** One edit to the input row (editor.ts); any key clears the notice on the row. */
   edit(change: Edit): void {
+    // The first key typed cancels a suggestion call still in flight (§7.1).
+    if (change.kind === "insert" && this.cancelSuggest) {
+      this.cancelSuggest();
+      this.cancelSuggest = undefined;
+    }
+    const picking = this.picking;
+    // Tab puts the next suggestion in the draft, while the draft is empty or still an unedited one (§7.5).
+    if (change.kind === "complete" && picking && !this.view.draft.startsWith("/") && (!this.view.draft || this.view.draft === picking.taken?.text)) {
+      const n = ((picking.taken?.n ?? 0) % picking.rows.length) + 1;
+      const text = picking.rows[n - 1];
+      this.update({ draft: text, cursor: text.length, notice: undefined, suggestions: { ...picking, cursor: n - 1, taken: { n, text } } });
+      return;
+    }
     const next = edit({ text: this.view.draft, cursor: this.view.cursor }, change);
-    this.update({ draft: next.text, cursor: next.cursor, notice: undefined });
+    // Typing is "your own": the cursor goes to the last row, and the list stays to look at.
+    const own = picking && change.kind === "insert" && !picking.taken ? { suggestions: { ...picking, cursor: picking.rows.length } } : {};
+    this.update({ draft: next.text, cursor: next.cursor, notice: undefined, ...own });
   }
 
   /** Ctrl+P (-1) and Ctrl+N (+1): an earlier or later line entered, onto the row. */
@@ -360,10 +420,22 @@ export class InkSeat implements Seat {
   }
 
   enter(): void {
+    const picking = this.picking;
+    // Enter on an empty line sends the suggestion under the cursor; on "Your own…" it sends nothing.
+    if (picking && !this.view.draft.trim() && picking.cursor < picking.rows.length) {
+      const n = picking.cursor + 1;
+      this.update({ draft: picking.rows[n - 1], suggestions: { ...picking, taken: { n, text: picking.rows[n - 1] } } });
+    }
     // Enter on an empty line plays the option ↑/↓ lit, as if its number were typed.
     if (!this.view.draft.trim() && this.view.highlight !== undefined && picksOptions(this.view.prompt)) this.update({ draft: String(this.view.highlight) });
     const draft = this.view.draft;
-    const typed = readLine(draft, this.view.prompt);
+    const read = readLine(draft, this.view.prompt);
+    // A line from a suggestion says so, and whether it was edited first (S4).
+    const taken = this.view.suggestions?.taken;
+    const typed: Typed =
+      read.kind === "intent" && read.intent.kind === "text" && taken && this.picking
+        ? { kind: "intent", intent: { ...read.intent, suggestion: { n: taken.n, edited: draft.trim() !== taken.text.trim() } } }
+        : read;
     if (typed.kind === "empty") return;
     if (typed.kind === "error") {
       // The line stays on the row to fix or send later, with what was wrong under the cursor.
@@ -390,7 +462,7 @@ export class InkSeat implements Seat {
           if (typed.intent.kind !== "command") this.update({ reaction: undefined, question: undefined, refusal: undefined, overlay: undefined });
           // Out of combat a pick or words answer the options; in a fight they stay until the turn ends.
           const done = this.view.options && !this.view.options.budget && this.view.prompt?.kind !== "pick" && (typed.intent.kind === "option" || typed.intent.kind === "text");
-          this.update({ prompt: undefined, highlight: undefined, ...(done ? { options: undefined } : {}) });
+          this.update({ prompt: undefined, highlight: undefined, ...(typed.intent.kind !== "command" ? { suggestions: undefined } : {}), ...(done ? { options: undefined } : {}) });
           answer(typed.intent);
         } else {
           this.queued.push(typed.intent);
@@ -449,6 +521,13 @@ export class InkSeat implements Seat {
    * human (AGT-48 Q1). The first press lights the first (↓) or the last (↑) option; it wraps round.
    */
   move(step: -1 | 1): void {
+    // The picker, while it stands: the cursor goes round its rows, "Your own…" included (§7.5).
+    const picking = this.picking;
+    if (picking && !this.view.draft) {
+      const rows = picking.rows.length + 1;
+      this.update({ suggestions: { ...picking, cursor: (picking.cursor + step + rows) % rows } });
+      return;
+    }
     const numbers = (this.view.options?.lines ?? []).map((line) => Number(/^(\d+)\. /.exec(line)?.[1])).filter((n) => Number.isInteger(n) && n > 0);
     if (!picksOptions(this.view.prompt) || numbers.length === 0) return;
     const at = this.view.highlight === undefined ? -1 : numbers.indexOf(this.view.highlight);
@@ -587,8 +666,8 @@ export function helpText(): string {
     "",
     "Keys:",
     "  Enter      send the line",
-    "  Tab        complete a /command",
-    "  ↑/↓        light an option; Enter plays it",
+    "  Tab        complete a /command, or put the next suggestion in the line",
+    "  ↑/↓        light an option or a suggestion; Enter plays or sends it",
     "  Esc        close this, go back from a sub-list, or clear the line",
     "  PgUp/PgDn  scroll the story, or this",
     "  End        back to the newest lines",
@@ -635,6 +714,32 @@ export function previewOption(draft: string, lines: string[] | undefined): { num
   return line ? { number, line } : undefined;
 }
 
+
+/** The picker's header (§7.5): the prompt's question. */
+export function suggestQuestion(prompt: HumanPrompt, handle: Handle): string {
+  const name = handle.charAt(0).toUpperCase() + handle.slice(1);
+  if (prompt.kind === "answer") return `What does ${name} answer?`;
+  if (prompt.kind === "surrender") return `They offer to surrender. What does ${name} do?`;
+  return `What does ${name} do or say?`;
+}
+
+/** The input row's placeholder while the suggestions picker stands (§7.5). */
+export const SUGGEST_HINT = "or type your own. ↑/↓ and Enter send one; Tab puts one in the line.";
+
+/**
+ * The suggestions picker's rows (§7.5): the prompt's question, the three moves and "Your own…",
+ * with the `❯` cursor, which needs no colour under NO_COLOR.
+ */
+export function suggestionRows(suggestions: Suggestions, question: string): Row[] {
+  const rows = [...suggestions.rows, "Your own…"];
+  return [
+    [{ text: question, style: { bold: true } }],
+    ...rows.map((text, i): Row => {
+      const at = i === suggestions.cursor;
+      return [{ text: `${at ? "❯" : " "} ${i + 1}. ${text}`, style: at ? { accent: "rust", bold: true } : i === rows.length - 1 ? { accent: "hint" } : {} }];
+    }),
+  ];
+}
 
 /** What the tiny frame says instead of the table (under 40 columns or 16 rows). */
 export const TOO_SMALL = "Window too small: make it at least 40×16. The game goes on.";
@@ -698,6 +803,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     ...(view.question && view.prompt?.kind === "answer" ? said(`DM asks you: ${view.question}`, TONE_STYLE.dm) : []),
     ...(paused ? said("Paused: the AI players wait. /pause to go on.", { accent: "hint" }) : []),
     ...(view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number) : []),
+    ...(view.suggestions && view.prompt && !view.options ? suggestionRows(view.suggestions, suggestQuestion(view.prompt, seat.handle)) : []),
     ...(view.finale ? finaleRows(view.finale, width, lastText(view.lines) === view.finale.text) : []),
   ];
   const actionRoom = Math.min(Math.floor(size.rows / 2), size.rows - below - MIN_STORY_ROWS - 2);
@@ -730,6 +836,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     if (key.pageUp) return setScroll(page(scroll, -1, story, storyH, view.lines.length));
     if (key.pageDown) return setScroll(page(scroll, 1, story, storyH, view.lines.length));
     if (key.escape && seat.closeOverlay(layout.mode === "narrow")) return;
+    if (key.escape && seat.closeSuggestions()) return;
     if (key.escape && seat.back()) return;
     if (key.return) {
       // Anything sent brings the story back to its foot.
@@ -760,6 +867,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
         ? h(Text, { key: "hint", ...textProps({ accent: "hint" }, palette) }, "Any key leaves; the checks go on after it.")
         : view.prompt && picked
           ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, `Enter plays ${picked.line}`)
+          : view.prompt && view.suggestions && !view.options
+            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, SUGGEST_HINT)
           : view.prompt
             ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, promptHint(view.prompt, seat.handle))
             : h(Waiting, { key: "wait", seat, busy: view.busy });

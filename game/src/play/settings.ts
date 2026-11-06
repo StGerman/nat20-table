@@ -35,6 +35,8 @@ export const SETTINGS = {
   seed: { kind: "int" },
   "dm-model": { kind: "string", default: "claude-opus-5-5", model: true },
   "player-model": { kind: "string", default: "claude-sonnet-5-5", model: true },
+  /** The model that suggests the human's moves out of a fight (AGT-49), at low effort. */
+  "suggest-model": { kind: "string", default: "claude-haiku-5-5", model: true },
   "dm-effort": { kind: "string", default: "medium", allowed: EFFORTS },
   effort: { kind: "string", default: "low", allowed: EFFORTS },
   craft: { kind: "string", default: "prompt", allowed: ["prompt", "skills"] },
@@ -57,6 +59,8 @@ export const SETTINGS = {
   verbose: { kind: "bool", default: false },
   /** Don't show the DM's narration as it is written (M10 S4, AGT-66). The preview is on since the spike passed on the Mac (2026-10-31). */
   "no-preview": { kind: "bool", default: false },
+  /** Don't suggest the human's moves out of a fight (AGT-49, S3: on by default at the terminal; `/suggest` toggles it in play). */
+  "no-suggest": { kind: "bool", default: false },
   "no-audit": { kind: "bool", default: false },
   /** Minutes from the first scene's load until the run stops as a fail (`time_limit`); 0 for none. */
   "time-limit-min": { kind: "int", default: 0 },
