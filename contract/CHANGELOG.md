@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.59 (2026-11-06)
+- Meaning only, no field changes (ENG-37, protocol §4.15, decision 0063): `start_campaign` on a roster whose escort contract is done keeps the world's memory instead of starting the world again. The clock goes on from the saved day (the campaign's start hour on the next day, plus the trip to its start place at 24 miles a day), and the discovered places, the road deck, the deeds and the place NPCs carry over; the caravan, its place and the escort come from `campaign.json`, and the advance is paid as before. The roster's shape is unchanged (`RosterWorld.state` stays opaque; roster format 2 is API-51).
+- `escort.jsonl`: the second contract, started from the saved roster at the Old Tower on day 2, now starts on day 5 at 8:00 in Vale Town (the day after, plus two days on the road) with the first contract's discard kept. Other fixtures, and the game's recorded session logs, change by version only.
+
 ## 1.0.0-dev.58 (2026-11-06)
 - Additive (API-50, protocol §4.18, decision 0061): `pass_time{span}`, the DM's command to let time pass out of combat in a place, so a stop in a village takes time (decision 0060 F2). `span` is a new `TimeSpan` (`short_while`, `hour`, `watch`); the result carries `minutes` and the state. A new public event `time_passed{minutes, clock}`, and a new reject reason `night_falls` for a span that would reach midnight. The clock, core's time and the day's travel move as a card's `time_lost` moves them.
 - New fixture `pass_time.jsonl`. `errors.jsonl`'s unknown-command message lists `pass_time`. Other fixtures change by version only.
