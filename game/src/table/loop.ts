@@ -1078,6 +1078,9 @@ export class TableLoop {
       case "rest_night":
         outcome = await send(this.table, human, { cmd: "rest_night", actor: human, where: act.where }, () => "the night passes");
         break;
+      case "scout":
+        outcome = await send(this.table, human, { cmd: "scout", actor: human }, () => "you walk ahead of the caravan as the scout");
+        break;
       case "level_up":
         outcome = await send(this.table, human, { cmd: "level_up", actor: human }, () => "the new level starts");
         if (outcome.ok) this.levelChoice = (outcome.data as { choice?: LevelUpChoice | null } | undefined)?.choice ?? undefined;
@@ -1361,13 +1364,17 @@ export class TableLoop {
     if (human && (owner === human || npcOwned)) {
       const state = await this.humanState();
       if (state?.view !== "player" || !state.world?.drives) return;
-      const lines = roadChoices(state.world, 1).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel"));
-      if (lines.length === 0) {
+      // Moving on, a Hired Blade may also walk ahead as the scout first (AGT-90).
+      const lines = roadChoices(state.world, 1, human).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel" || c.act?.kind === "scout"));
+      if (!lines.some((c) => c.act?.kind !== "scout")) {
         this.table.tellDm(`${human} can't ${rest ? "end the day" : "move the caravan on"} now: nothing on the road offers it. Go on in fiction.`);
         return;
       }
-      const choices: Choice[] = [...lines.map((c, i) => ({ ...c, number: i + 1 })), { number: lines.length + 1, label: "Not yet" }];
+      const numbered = (from: Choice[]): Choice[] => [...from.map((c, i) => ({ ...c, number: i + 1 })), { number: from.length + 1, label: "Not yet" }];
+      let choices = numbered(lines);
       const preset = (choices.findIndex((c) => c.act?.kind === "rest_night" && c.act.where === step) + 1) || 1;
+      // The human has seen *Walk ahead as the scout*: the AI Blades may scout now.
+      if (lines.some((c) => c.act?.kind === "scout")) this.table.scoutOffered = true;
       await this.table.flush();
       for (;;) {
         if (this.table.ended) return;
@@ -1393,6 +1400,11 @@ export class TableLoop {
         }
         this.table.log("intent", `${human} picked: ${picked.label}`, human);
         this.table.tellDm(`${human} took an option: ${picked.label}`);
+        // Walking ahead isn't moving on: the road asks again, without the scout line.
+        if (picked.act.kind === "scout") {
+          choices = numbered(choices.filter((c) => c.act !== undefined && c.act.kind !== "scout"));
+          continue;
+        }
         return;
       }
     }
@@ -1953,7 +1965,12 @@ export class TableLoop {
     this.lastOptions = listed.result as LegalActionsResult;
     this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat);
     // Out of a fight, whoever may drive the caravan can move it on or end the day (AGT-80).
-    if (!combat && state?.view === "player" && state.world) this.top = this.shown = [...this.top, ...roadChoices(state.world, this.top.length + 1)];
+    if (!combat && state?.view === "player" && state.world) {
+      const road = roadChoices(state.world, this.top.length + 1, human);
+      // The human has seen *Walk ahead as the scout*, or isn't a Blade: the AI Blades may scout now (AGT-90).
+      if (road.length > 0) this.table.scoutOffered = true;
+      this.top = this.shown = [...this.top, ...road];
+    }
     // Out of a fight, the next level when the sheet says it is due (AGT-80): a saved party can reach it in any pack.
     if (!combat) {
       const sheet = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));

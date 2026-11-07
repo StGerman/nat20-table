@@ -18,6 +18,8 @@ export type ChoiceAct =
   | { kind: "travel"; pace: Pace; to?: string }
   /** End the day at the inn or in camp (AGT-80). */
   | { kind: "rest_night"; where: Lodging }
+  /** Walk ahead of the caravan as the scout, for every leg until another Blade does (AGT-90). */
+  | { kind: "scout" }
   /** Start the next level, which the sheet says is due (AGT-80). */
   | { kind: "level_up" };
 
@@ -75,9 +77,12 @@ function tagged<T extends Item | Choice>(item: T, about: NonNullable<Choice["abo
  * one when the next stop is out of reach today at a normal pace but within it at a fast one, on a
  * road that allows it.
  */
-export function roadChoices(world: WorldPlayer, first: number): Choice[] {
+export function roadChoices(world: WorldPlayer, first: number, human?: Handle): Choice[] {
   // Once the contract is done the journey is over: the caravan goes nowhere more this run (B7).
   if (!world.drives || world.card || world.escort?.done) return [];
+  // A Hired Blade may walk ahead as the scout (AGT-90): one line for the road, not one per leg,
+  // gone once the human is the scout.
+  const scouts = human !== undefined && world.scout !== human && (world.escort?.blades.some((b) => b.handle === human) ?? false);
   const at = world.at.kind === "at" ? world.at.place : undefined;
   const here = at === undefined ? undefined : world.places.find((p) => p.id === at);
   const placeName = new Map(world.places.map((p) => [p.id, p.name]));
@@ -121,6 +126,7 @@ export function roadChoices(world: WorldPlayer, first: number): Choice[] {
     ...moves,
     { label: "Make camp for the night", act: { kind: "rest_night", where: "camp" }, about: { id: "rest_night" } },
     ...(typeof here?.inn_cp === "number" ? [{ label: `Take rooms at the inn for the night`, act: { kind: "rest_night", where: "inn" } as ChoiceAct, about: { id: "rest_night" } }] : []),
+    ...(scouts ? [{ label: "Walk ahead as the scout", act: { kind: "scout" } as ChoiceAct, about: { id: "scout" } }] : []),
   ];
   return items.map((item, i) => ({ number: first + i, ...item }));
 }
