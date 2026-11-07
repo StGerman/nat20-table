@@ -58,6 +58,8 @@ export class EngineClient {
   private readonly stderrTail: string[] = [];
   private nextId = 1;
   private stopped: EngineStopped | undefined;
+  /** Settles once the engine has exited and its stdout and stderr are read to the end. */
+  private readonly exited: Promise<void>;
   /** What the engine said about itself on `hello`: its contract version, core revision and schema hash. */
   hello!: { version: string; engine_rev: string; schema_sha256: string };
 
@@ -82,6 +84,7 @@ export class EngineClient {
     this.child.on("error", (error) => this.stop(`the engine ${binary} could not run: ${error.message}`));
     // `close` comes after the engine's stdout and stderr are read to the end, so a crash's last
     // lines are in the error and a response written just before the exit still arrives.
+    this.exited = new Promise((resolve) => this.child.on("close", () => resolve()));
     this.child.on("close", (code, signal) => this.stop(`the engine exited (${signal ?? `code ${code}`})`));
     // Writing to an engine that just died must not throw out of the event loop.
     this.child.stdin.on("error", () => undefined);
@@ -130,6 +133,15 @@ export class EngineClient {
 
   close(): void {
     this.child.stdin.end();
+  }
+
+  /**
+   * Closes the engine's input and resolves once it has exited, with every line it wrote to stderr
+   * in `stderrFile`: for a reader of that file, which `close()` alone would race.
+   */
+  async shutdown(): Promise<void> {
+    this.close();
+    await this.exited;
   }
 
   private answer(line: string): void {
