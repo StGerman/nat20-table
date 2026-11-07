@@ -2962,7 +2962,8 @@ fn a_deed_written_on_the_road_opens_a_choice_at_night() {
         .push(json!({ "do": "remember", "deed": "cleared_tree" }));
     // In place of the shipped deck's own third choice, which reads the shipped deed.
     deck["cards"][1]["choices"][2] = json!({
-        "id": "thank", "text": "Ask the farmer to sit the watch with you.", "if": "cleared_tree"
+        "id": "thank", "text": "Ask the farmer to sit the watch with you.", "if": "cleared_tree",
+        "effects": [{ "do": "remember", "deed": "watched_with_the_farmer" }]
     });
     std::fs::write(&deck_path, deck.to_string()).unwrap();
     let mut api = Api::start(
@@ -3048,7 +3049,7 @@ fn the_destination_s_arrival_card_is_decided_before_the_pay() {
     deck["cards"].as_array_mut().unwrap().push(json!({
         "id": "tower_gate", "zone": "old_tower", "when": "arrival", "target": "blades",
         "text": "A crow sits on the tower gate.",
-        "choices": [{ "id": "shoo", "text": "Shoo it." }, { "id": "leave", "text": "Leave it." }]
+        "choices": [{ "id": "shoo", "text": "Shoo it.", "effects": [{ "do": "remember", "deed": "chose_shoo" }] }, { "id": "leave", "text": "Leave it.", "effects": [{ "do": "remember", "deed": "chose_leave" }] }]
     }));
     std::fs::write(&deck_path, deck.to_string()).unwrap();
     let mut api = Api::start(
@@ -3140,7 +3141,7 @@ fn a_pack_brings_its_own_cards_and_keeps_its_contract() {
             "id": "tobin_sings", "zone": "vale_fields", "target": "blades",
             "text": "Old Tobin starts a song about the river.",
             "choices": [
-                { "id": "join", "text": "Sing along." },
+                { "id": "join", "text": "Sing along.", "effects": [{ "do": "remember", "deed": "chose_join" }] },
                 { "id": "hush", "text": "Ask him to hush.", "effects": [{ "do": "delay", "minutes": 10 }] }
             ]
         }] })
@@ -3302,12 +3303,12 @@ fn an_unattended_arrival_card_keeps_the_road_card_off_the_last_leg() {
     cards.push(json!({
         "id": "tower_gate", "zone": "old_tower", "when": "arrival", "target": "blades",
         "text": "A crow sits on the tower gate.",
-        "choices": [{ "id": "shoo", "text": "Shoo it." }, { "id": "leave", "text": "Leave it." }]
+        "choices": [{ "id": "shoo", "text": "Shoo it.", "effects": [{ "do": "remember", "deed": "chose_shoo" }] }, { "id": "leave", "text": "Leave it.", "effects": [{ "do": "remember", "deed": "chose_leave" }] }]
     }));
     cards.push(json!({
         "id": "hill_crows", "zone": "vale_hills", "target": "blades",
         "text": "Goats watch from the rocks.",
-        "choices": [{ "id": "wave", "text": "Wave." }, { "id": "pass", "text": "Pass by." }]
+        "choices": [{ "id": "wave", "text": "Wave.", "effects": [{ "do": "remember", "deed": "chose_wave" }] }, { "id": "pass", "text": "Pass by.", "effects": [{ "do": "remember", "deed": "chose_pass" }] }]
     }));
     std::fs::write(&deck_path, deck.to_string()).unwrap();
     // The human owns the caravan, with no escort, and travels alone: no Blade can speak on a

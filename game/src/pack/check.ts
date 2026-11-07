@@ -24,6 +24,8 @@ export interface PackReport {
   /** Scenes the engine loaded, in order. */
   loaded: string[];
   problems: string[];
+  /** What the engine warns of and never refuses (MAP-11): a deck's `deck: ` lines, such as a route with few fight cards. */
+  warnings: string[];
 }
 
 /** The ids a scene file declares, read as plain JSON: the engine checks the rest when it loads. */
@@ -64,7 +66,7 @@ function duplicates(ids: string[]): string[] {
  * scene in order with the party carried in.
  */
 export async function checkPack(dir: string, options: { binary?: string; pregens?: string } = {}): Promise<PackReport> {
-  const report: PackReport = { pack: dir, loaded: [], problems: [] };
+  const report: PackReport = { pack: dir, loaded: [], problems: [], warnings: [] };
   const problem = (text: string) => report.problems.push(text);
   const skeleton = skeletonFile(dir);
   const name = path.basename(skeleton);
@@ -303,6 +305,9 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   } catch (error) {
     problem(`the engine didn't start on the pack: ${(error as Error).message}`);
   } finally {
+    // The deck's warnings (MAP-11): the engine writes them on the campaign's start, long before here.
+    const stderr = path.join(runDir, "engine-stderr.log");
+    if (existsSync(stderr)) report.warnings.push(...readFileSync(stderr, "utf8").split("\n").filter((l) => l.startsWith("deck: ")).map((l) => l.slice("deck: ".length)));
     engine?.close();
     rmSync(runDir, { recursive: true, force: true });
   }

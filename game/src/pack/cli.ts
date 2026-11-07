@@ -14,13 +14,17 @@ async function check(packs: string[]): Promise<number> {
   for (const pack of packs.length > 0 ? packs : repoPacks()) {
     const report = await checkPack(pack);
     const name = path.relative(process.cwd(), path.resolve(pack)) || ".";
+    // Warnings never fail the check (MAP-11: fights are a recommendation).
+    const warnings = report.warnings.map((w) => `  - warning: ${w}`);
     if (report.problems.length === 0) {
-      console.log(`${name}: ok, ${report.title}, ${report.loaded.length} scenes load in order`);
+      console.log(`${name}: ok, ${report.title}, ${report.loaded.length} scenes load in order${warnings.length > 0 ? `; ${warnings.length} warning(s)` : ""}`);
+      for (const w of warnings) console.log(w);
       continue;
     }
     failed += 1;
     console.log(`${name}: ${report.problems.length} problem(s)`);
     for (const problem of report.problems) console.log(`  - ${problem}`);
+    for (const w of warnings) console.log(w);
   }
   return failed > 0 ? 1 : 0;
 }

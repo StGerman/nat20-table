@@ -1070,10 +1070,10 @@ mod tests {
         let deck: crate::deck::DeckFile = serde_json::from_str(
             r#"{"cards": [
               {"id": "willows", "zone": "hills", "target": "blades", "text": "Willows.", "scout": "survival",
-               "choices": [{"id": "on", "text": "On."}, {"id": "wait", "text": "Wait.", "unless": "scouted"},
-                           {"id": "round", "text": "Round.", "if": "scouted"}]},
+               "choices": [{"id": "on", "text": "On.", "effects": [{"do": "remember", "deed": "chose_on"}]}, {"id": "wait", "text": "Wait.", "unless": "scouted", "effects": [{"do": "remember", "deed": "chose_wait"}]},
+                           {"id": "round", "text": "Round.", "if": "scouted", "effects": [{"do": "remember", "deed": "chose_round"}]}]},
               {"id": "camp", "zone": "hills", "when": "night", "target": "blades", "text": "Wind.",
-               "choices": [{"id": "a", "text": "A."}, {"id": "b", "text": "B."}]}
+               "choices": [{"id": "a", "text": "A.", "effects": [{"do": "remember", "deed": "chose_a"}]}, {"id": "b", "text": "B.", "effects": [{"do": "remember", "deed": "chose_b"}]}]}
             ]}"#,
         )
         .unwrap();
