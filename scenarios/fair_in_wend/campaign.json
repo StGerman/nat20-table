@@ -95,7 +95,8 @@
         "Tam": "Тэм",
         "Mother Sedge": "матушка Седж",
         "Sister Agna": "сестра Агна",
-        "Tobin": "Тобин"
+        "Tobin": "Тобин",
+        "Rufus": "Руфус"
     },
     "glyphs": {
         "_comment": "Turn-order glyphs for the human's panel (AGT-67): party members by handle, monsters by kind or by the name the pack gives them.",

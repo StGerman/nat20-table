@@ -170,7 +170,8 @@
                     "effects": [
                         {"do": "cargo", "good": "rations", "change": -1},
                         {"do": "remember", "deed": "fed_tobin"},
-                        {"do": "remember", "deed": "knew_of_the_toll_men"}
+                        {"do": "remember", "deed": "knew_of_the_toll_men"},
+                        {"do": "add_card", "card": "old_company", "soon": true}
                     ]
                 },
                 {
@@ -200,7 +201,8 @@
                     "text": "Let him ride.",
                     "effects": [
                         {"do": "cargo", "good": "rations", "change": -1},
-                        {"do": "remember", "deed": "tam_rode"}
+                        {"do": "remember", "deed": "tam_rode"},
+                        {"do": "add_card", "card": "bel_asks", "soon": true}
                     ]
                 },
                 {
@@ -225,7 +227,8 @@
                                 {"do": "remember", "deed": "sent_tam_home"}
                             ],
                             "failure": [
-                                {"do": "remember", "deed": "tam_followed"}
+                                {"do": "remember", "deed": "tam_followed"},
+                                {"do": "add_card", "card": "bel_asks", "soon": true}
                             ]
                         }
                     ]
@@ -350,7 +353,8 @@
                     "text": "Offer her a seat on the wagon.",
                     "unless": "robbed_cairn",
                     "effects": [
-                        {"do": "remember", "deed": "gave_agna_a_seat"}
+                        {"do": "remember", "deed": "gave_agna_a_seat"},
+                        {"do": "add_card", "card": "what_agna_drew", "soon": true}
                     ]
                 },
                 {
@@ -358,7 +362,8 @@
                     "text": "Walk beside her a while.",
                     "effects": [
                         {"do": "delay", "minutes": 20},
-                        {"do": "remember", "deed": "walked_with_agna"}
+                        {"do": "remember", "deed": "walked_with_agna"},
+                        {"do": "add_card", "card": "what_agna_drew", "soon": true}
                     ]
                 },
                 {
