@@ -122,4 +122,9 @@ export class GameEngine {
   close(): void {
     this.client.close();
   }
+
+  /** Closes the engine and waits until it has exited and its stderr file is complete. */
+  shutdown(): Promise<void> {
+    return this.client.shutdown();
+  }
 }
