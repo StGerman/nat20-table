@@ -711,8 +711,8 @@ export class TableLoop {
           undefined,
           `The caravan reached ${event.destination}, and the merchant paid the Blades what they are owed: ${event.text}`,
           this.arrivalOpened
-            ? "Your last narration opened the arrival: don't tell it again. Narrate the pay alone as a scene, once, in two to four sentences: the merchant's words, the coin changing hands. Name an amount only as the engine's lines show it."
-            : "Narrate the arrival and the pay as a scene, in two to four sentences: the merchant's words, the coin changing hands. Name an amount only as the engine's lines show it.",
+            ? "Your last narration opened the arrival: don't tell it again. Narrate the pay alone as a scene, once, in two to four sentences: the merchant's words, the coin changing hands. Name an amount only as the engine's lines give it, never a sum of your own."
+            : "Narrate the arrival and the pay as a scene, in two to four sentences: the merchant's words, the coin changing hands. Name an amount only as the engine's lines give it, never a sum of your own.",
         );
         this.arrivalOpened = false;
         await this.settle();

@@ -10,7 +10,7 @@ Since Milestone 6 (spec §3.5, TASKS.md AGT-20) the narration and speech guards 
 
 The rule did two jobs:
 
-1. **Style:** the table reads as a story, not a character sheet. The storytelling bible lists it among the always-on laws as "no numbers or jargon on screen". Stas asked for it to be removed. Without it the DM can name prices, coin, distances, days and counts, and say a game word when it is the plain one.
+1. **Trust and style:** the ban came in when the engine had no coin, so any amount the DM said was the DM's own arithmetic, and nobody wanted to trust a model with sums (Stas, 2026-11-07 17:41Z). It also kept the table reading as a story, not a character sheet; the storytelling bible lists it among the always-on laws as "no numbers or jargon on screen". Since Milestone 9 the engine owns money: purses, the ledger, the escort's pay, every give, steal and loot is a `ledger` event. Stas asked for the ban to be removed. Without it the DM can name prices, coin, distances, days and counts, and say a game word when it is the plain one.
 2. **Visibility (Rule 3):** HP, AC, DCs, roll targets and stat blocks never reach a player view, free text included. The DM's `get_state` carries every creature's Hit Points and Armor Class and every check's DC, so a DM that may say any number may also say "the goblin has 3 HP left". The blanket number ban was the only thing between that and the table while the game runs; the leak scan (`crates/nat20-duel/src/leak_scan.rs`) catches it only after the run, and only in English.
 
 ## Options
@@ -34,6 +34,8 @@ The rule did two jobs:
 B. Rule 3 is in CLAUDE.md and outranks a style rule. Lifting the style half keeps every hidden value out of the table's text at run time, at the cost of one gap the old rule closed only by accident (a bare number with no stat word).
 
 ## Consequences
+
+- **The replacement rule for the DM:** every number comes from the engine, never from the DM. The DM names coin, a price, days or a distance only as an engine event, `get_state` or the scene shows it, and never adds, splits, converts or works one out ("six gold, two a day for three days" is the DM's arithmetic, so it is out). A character's purse is owner and DM data (protocol §5), so the DM names it only to that character. The guard can't check arithmetic; the prompt says it, and the narration judge and the audit's "no narration contradicts engine state" (scope §6.3) are where a wrong sum shows.
 
 - `game/src/table/guards.ts`: `numberIn` and `statTermIn` give way to `hiddenNumberIn` and `rollModifiersIn`. `hiddenNumberIn` refuses a number (digits, words, hyphenated words, glued as in AC15) within ten words of a statistic's name in the same clause. Commas and sentence marks end a clause; colons and dashes don't. "Health" and «здоровье» count as Hit Points. A bonus and "to hit" count only with a signed number (+4). `rollModifiersIn` refuses `14 + 5 = 19`, `19 (14 + 5)` and `1d20+5`.
 - The reach is a trade. Ten words catch "The Armor Class of the goblin standing by the door is 15". They also refuse some ordinary prose, such as "Hit points matter little when three wolves circle" or «Бард спел три хита», and each refusal costs the agent a rewrite. Mixed-script words, Latin words in a Russian run, DM-only ids and unknown roll citations are refused as before.
