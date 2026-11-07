@@ -217,9 +217,9 @@ test("with a saved party the start screen asks first; continuing, the list shows
     assert.ok(stdout.last.includes(`❯ 1. Bren   Human Fighter ${level} · default`), stdout.last);
     // The card: the saved purse and experience going on; a new party has the pregen's purse and no experience yet.
     if (party === "continue") {
-      assert.ok(stdout.last.includes("Purse: 61 gold pieces and 4 silver pieces") && stdout.last.includes("Experience: 940 points"), stdout.last);
+      assert.ok(stdout.last.includes("Purse: 61 gold pieces and 4 silver pieces") && stdout.last.includes("Human Fighter, level 3 - 940XP points"), stdout.last);
     } else {
-      assert.ok(stdout.last.includes("Purse: 54 gold pieces") && !stdout.last.includes("Experience:"), stdout.last);
+      assert.ok(stdout.last.includes("Purse: 54 gold pieces") && !stdout.last.includes("XP points"), stdout.last);
     }
     stdin.press("\r");
     const picked = await picking;

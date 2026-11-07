@@ -56,13 +56,14 @@ export function pickRows(roster: RosterEntry[], at: number, fallback: Handle): s
 }
 
 /**
- * The card's rows at `width`: name, what they are, their purse and experience when known, the
- * card's opening line, and the goal. No other sheet numbers.
+ * The card's rows at `width`: name, what they are (with their experience when known), their purse,
+ * the card's opening line, and the goal. No other sheet numbers.
  */
 export function cardRows(entry: RosterEntry, width: number): string[] {
-  const rows = [entry.name, `${[entry.species, entry.class].filter(Boolean).join(" ")}, level ${entry.level}`];
+  // The experience on the level line, the purse under it.
+  const xp = entry.xp === undefined ? "" : ` - ${entry.xp}XP points`;
+  const rows = [entry.name, `${[entry.species, entry.class].filter(Boolean).join(" ")}, level ${entry.level}${xp}`];
   if (entry.purseCp !== undefined) rows.push(`Purse: ${coinPhrase(entry.purseCp)}`);
-  if (entry.xp !== undefined) rows.push(`Experience: ${entry.xp} points`);
   rows.push("");
   if (entry.about) rows.push(...wrapText(entry.about, width, 0).split("\n"), "");
   if (entry.goal) rows.push("Goal", ...wrapText(entry.goal, width, 0).split("\n"));
