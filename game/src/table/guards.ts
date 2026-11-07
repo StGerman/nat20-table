@@ -48,8 +48,10 @@ const STAT_TERMS: Array<{ term: RegExp; signed?: true }> = [
   { term: /(?<![A-Za-z])HPs?(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])health(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])saving throw bonus(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])save bonus(?:es)?(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])attack bonus(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])challenge rating(?![A-Za-z])/gi },
+  { term: /(?<![A-Z])CR(?![A-Za-z])/g },
   { term: /(?<![A-Za-z])bonus(?:es)?(?![A-Za-z])/gi, signed: true },
   { term: /(?<![A-Za-z])to[- ]hit(?![A-Za-z])/gi, signed: true },
   // Russian (decision 0038): Armor Class, DC, Hit Points, health, bonuses, challenge rating.
@@ -92,10 +94,10 @@ function bareWord(word: string): string {
   return word.replace(/^[^\p{L}\p{N}+−-]+|[^\p{L}\p{N}]+$/gu, "");
 }
 
-/** A number in words, English or Russian, hyphenated parts included ("twenty-two"). */
+/** A number in words, English or Russian, hyphenated ones included ("twenty-two"). */
 function isNumberWord(word: string): boolean {
-  if (/^(?:no|any|every|some)-one$/i.test(word)) return false;
-  return word.split(/[-‑]/).some((part) => NUMBER_WORDS.test(part) || RUSSIAN_NUMBER_WORDS.test(part));
+  // Every part a number word: "twenty-two" counts, "one-eyed" and "no-one" don't.
+  return word.split(/[-‑]/).every((part) => NUMBER_WORDS.test(part) || RUSSIAN_NUMBER_WORDS.test(part));
 }
 
 /** A word that is a number: digits in it (15, 7/10), or a number in words. A die or a citation is not one. */
@@ -151,6 +153,8 @@ const ROLL_MODIFIERS = [
   /\(\s*\d+\s*[+−]\s*\d+\s*\)/,
   // After a total, an ASCII minus too, as the engine writes a negative modifier: "19 (14 - 1)".
   /\d+\s*\(\s*\d+\s*-\s*\d+\s*\)/,
+  // A roll cited and then modified: "[r7]+5", "[r12] + 5 = 19".
+  /\[r\d+\]\s*[+\-−]\s*\d+/,
   /\d*[dк]\d+\s*[+\-−]\s*\d+/iu,
 ];
 
@@ -221,7 +225,7 @@ export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) 
     const secret = tokens(bare).find((token) => options.ids.dmOnly.has(token));
     return (
       hiddenNumberIn(withoutShown(bare, options.ids.shown)) ??
-      rollModifiersIn(text.replace(CITATION, "0")) ??
+      rollModifiersIn(text) ??
       mixedScriptIn(bare) ??
       (secret ? `it names ${secret}, which only the DM knows` : undefined) ??
       (options.language === "ru" ? latinWordIn(bare, options.ids.shown) : undefined)
@@ -275,7 +279,7 @@ export function speechGuard(options: { shown: ReadonlySet<string>; language?: La
         ? `it names ${text}, which only the DM knows`
         : undefined
       : hiddenNumberIn(withoutShown(text.replace(CITATION, ""), options.shown)) ??
-    rollModifiersIn(text.replace(CITATION, "0")) ??
+    rollModifiersIn(text) ??
     mixedScriptIn(text) ??
       (options.language === "ru" ? (englishIn(text, options.shown) ?? latinWordIn(text, options.shown)) : undefined);
 }

@@ -691,7 +691,7 @@ export class TableLoop {
           "road",
           undefined,
           `A road card was settled: ${event.text}`,
-          "The engine has already applied the card: any fight it brings has started and any creature it brings is placed. Narrate what comes of it in one to three sentences; never start the fight again, never name coin or a price.",
+          "The engine has already applied the card: any fight it brings has started and any creature it brings is placed. Narrate what comes of it in one to three sentences; never start the fight again. Name coin or a price only as the engine's lines give it, never a sum of your own.",
         );
         await this.settle();
         return;
