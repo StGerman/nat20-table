@@ -571,6 +571,39 @@
                     ]
                 }
             ]
+        },
+        {
+            "id": "peddlers_mark",
+            "zone": "lowland",
+            "target": "blades",
+            "chained": true,
+            "once": true,
+            "if": "fed_tobin",
+            "text": "The peddler with the shaking hands catches up while the Blades are still getting their breath back. He saw it all from the bend, he says, and the man in the sheepskin swung first.",
+            "note": "Tobin, the valley's loudest carrier. A written account he marks with a cross and a drawing of his cart is what Osric or Brannock will believe without a check. Ilsa will offer to write it; let her. The weight of the dead is Rufus's and the chest's, never the Blades', and no choice here blames them.",
+            "choices": [
+                {
+                    "id": "mark",
+                    "text": "Ask him to put his mark on a written account.",
+                    "effects": [
+                        {"do": "remember", "deed": "peddler_testified"}
+                    ]
+                },
+                {
+                    "id": "warden",
+                    "text": "Ask him to tell the warden at Saltmouth what he saw.",
+                    "effects": [
+                        {"do": "remember", "deed": "tobin_told_the_warden"}
+                    ]
+                },
+                {
+                    "id": "let_go",
+                    "text": "Let him go his way.",
+                    "effects": [
+                        {"do": "remember", "deed": "let_tobin_go"}
+                    ]
+                }
+            ]
         }
     ]
 }
