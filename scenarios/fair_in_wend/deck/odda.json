@@ -8,15 +8,25 @@
             "target": "caravan",
             "owner_pick": "queue",
             "once": "contract",
+            "if": "crossed_millbeck",
             "text": "At the Saltmouth gate the fair warden is chalking stall places on a board. The pitches by the well are nearly gone. He looks at Odda's wheat, then at the queue of carts behind her.",
-            "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong.",
+            "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. The warden has heard about the Millbeck bridge before the wagon arrives: carters talk at the gate. If there was a fight there (toll_men_fought), he asks the Blades about it before he looks at the wheat; if they paid or were let through, he says the reeve has never had a toll on that bridge. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong.",
             "choices": [
                 {
                     "id": "sack",
                     "text": "Give the warden a sack of wheat for a pitch by the well.",
+                    "unless": "toll_men_fought",
                     "effects": [
                         {"do": "cargo", "good": "wheat", "change": -50},
                         {"do": "remember", "deed": "bought_a_pitch_by_the_well"}
+                    ]
+                },
+                {
+                    "id": "bridge_word",
+                    "text": "Tell the warden what happened at the Millbeck bridge.",
+                    "if": "toll_men_fought",
+                    "effects": [
+                        {"do": "remember", "deed": "told_the_warden_of_the_bridge"}
                     ]
                 },
                 {

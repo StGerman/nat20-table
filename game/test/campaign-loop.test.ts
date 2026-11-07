@@ -385,6 +385,65 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
   }
 });
 
+test("Fair in Wend's road always reads one of its own deeds, on the first choices or the last, whatever the dice (exit pair 2, run 1)", async () => {
+  // Pair 2's first run took the branch no later card read at every card and failed m11-thread.
+  // Here the table, the DM and the dice vary; the thread must hold on every path.
+  const party = ["bren", "torva", "maren", "ilsa"];
+  const lastOf = (briefing: string) => /^Choices: (.*)$/m.exec(briefing)?.[1]?.split(" | ").at(-1)?.split(":")[0];
+  for (const last of [false, true]) {
+    for (const seed of [3, 5, 8]) {
+      const human = blade();
+      const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+        if (last && prompt.kind === "card") return { kind: "option", number: s.choices.at(-1)?.number ?? 1 };
+        return human(prompt, s);
+      });
+      const t = await testTable({ seed, pack: path.join(REPO, "scenarios/fair_in_wend"), human: "bren", players: party.slice(1), seat });
+      try {
+        const campaign = readCampaign(path.join(REPO, "scenarios/fair_in_wend"))!;
+        const loop = new TableLoop({
+          table: t.table,
+          dm: new ScriptedDm(
+            last
+              ? {
+                  pick: async (tools, briefing) => {
+                    const ids = [...briefing.matchAll(/^Offered card \d+: ([a-z0-9_]+) /gm)].map((m) => m[1]!);
+                    await tools.pickCard(ids.at(-1)!, "The last card rolled.");
+                  },
+                }
+              : {},
+          ),
+          players: party.slice(1).map(
+            (h) =>
+              new ScriptedPlayer(
+                h,
+                last
+                  ? {
+                      card: async (tools, briefing) => {
+                        const id = lastOf(briefing);
+                        if (id) await tools.chooseCard(id);
+                      },
+                    }
+                  : {},
+              ),
+          ),
+          maxSteps: 400,
+          campaign: { party, keepsParty: true, startDay: campaign.startDay, ...(campaign.dayLimit !== undefined ? { dayLimit: campaign.dayLimit } : {}) },
+        });
+        const report = await loop.run(campaign.startScene);
+        const where = `seed ${seed}, ${last ? "last" : "first"} choices`;
+        assert.equal(report.ended, "the escort contract is done", where);
+        const log = await t.engine.request("dm", { cmd: "events", since: 0 });
+        assert.ok(log.result?.cmd === "events");
+        const rows = wordRows({ roster: { party: "new" } } as never, log.result.events as never, [], false);
+        const thread = rows.find((r) => r.row === "m11-thread");
+        assert.equal(thread?.status, "pass", `${where}: ${thread?.detail}`);
+      } finally {
+        t.close();
+      }
+    }
+  }
+});
+
 test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the saved party, where the road reads what run 1 did", async () => {
   const party = ["bren", "torva", "maren", "ilsa"];
   const play = async (pack: string, roster?: Parameters<typeof testTable>[0]["roster"]) => {
