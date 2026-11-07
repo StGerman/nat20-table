@@ -81,6 +81,9 @@ export function readCampaign(pack: string): CampaignPack | undefined {
   if (!place) throw new Error(`${file}: the start place ${start} is not on the map ${map}`);
   const dayLimit = campaign.day_limit;
   if (dayLimit !== undefined && (!Number.isInteger(dayLimit) || dayLimit < 1)) throw new Error(`${file}: day_limit is a whole number of days from 1`);
+  // The last day the run plays, on the pack's clock: never before the day it starts.
+  const startDay = campaign.world.day ?? 1;
+  if (dayLimit !== undefined && dayLimit < startDay) throw new Error(`${file}: day_limit ${dayLimit} is before the start day ${startDay}; it is the last day the run plays`);
   // The pack's own scene for the place first (MAP-7), then the map's, then the road scene.
-  return { startScene: scenes[start] ?? place.scene ?? road_scene, startDay: campaign.world.day ?? 1, ...(dayLimit !== undefined ? { dayLimit } : {}) };
+  return { startScene: scenes[start] ?? place.scene ?? road_scene, startDay, ...(dayLimit !== undefined ? { dayLimit } : {}) };
 }

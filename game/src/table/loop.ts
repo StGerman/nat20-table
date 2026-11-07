@@ -101,6 +101,12 @@ export interface CampaignLoop {
   onNight?: () => Promise<void>;
   /** Whether the run keeps the party for the next journey (a roster): the end card says so. */
   keepsParty?: boolean;
+  /**
+   * The pack's start day (`world.day`, 1 by default). `dayLimit` is the pack's last day on that
+   * clock, so a next contract, whose clock carries on from the saved day (M11, Q2), gets as many
+   * days as the pack gives: from its start day to its day limit.
+   */
+  startDay?: number;
 }
 
 /** A moment the unattended run prints a line for (M7 design §3.1). */
@@ -198,6 +204,11 @@ export interface RunReport {
    * format, never loaded; `unread` keeps an answer that was not JSON. Absent when none was asked.
    */
   suggestedCards?: SuggestedCards;
+  /**
+   * The contract's days on the world clock: its first day, and the last day the run plays (none
+   * without a day limit). Later than the pack's own on a next contract, whose clock carries on.
+   */
+  campaignDays?: { start: number; last: number | null };
 }
 
 /** The DM's suggested cards (AGT-91): up to two, each with its one-line reason. */
@@ -382,6 +393,9 @@ export class TableLoop {
   private settledLater: Event | undefined;
   /** The destination's scene opened without the pay, which the `escort_settled` wake tells next (AGT-86). */
   private arrivalOpened = false;
+  /** The last game day the contract plays, on the world clock (`dayLimit` from its first day). */
+  private lastDay: number | undefined;
+  private firstDay: number | undefined;
   /** The human's experience when the campaign started, for what the journey earned. */
   private startXp: number | undefined;
   /** The road cards the run has asked about, by the engine's log head when each was drawn, so a card that won't settle stops the run. */
@@ -438,7 +452,11 @@ export class TableLoop {
         const human = this.table.human;
         const started = await send(this.table, "dm", { cmd: "start_campaign", party: [...this.campaign.party], ...(human ? { human } : {}) }, () => "the campaign started");
         if (!started.ok) throw new Error(`the campaign didn't start: ${started.text}`);
-        this.table.log("system", `campaign started: ${this.campaign.party.join(", ")} with the caravan${this.campaign.dayLimit ? `, until the end of day ${this.campaign.dayLimit}` : ""}`);
+        // The contract's first day on the world clock: later than the pack's on a next contract.
+        // `day_limit` is the pack's last day on its own clock, so it moves by as many days.
+        this.firstDay = (await this.dmWorld())?.clock.day ?? this.campaign.startDay ?? 1;
+        if (this.campaign.dayLimit !== undefined) this.lastDay = this.campaign.dayLimit + this.firstDay - (this.campaign.startDay ?? 1);
+        this.table.log("system", `campaign started: ${this.campaign.party.join(", ")} with the caravan${this.lastDay ? `, until the end of day ${this.lastDay}` : ""}`);
         if (human) this.startXp = (await this.humanSheet())?.xp?.points;
       }
       while (!this.table.ended) {
@@ -499,6 +517,7 @@ export class TableLoop {
       ...(this.suggester ? { suggestions: { ...this.suggestions } } : {}),
       ...(suggestedCards ? { suggestedCards } : {}),
       // A scene a stop cut short keeps no end time, and counts the rounds it got to.
+      ...(this.firstDay !== undefined ? { campaignDays: { start: this.firstDay, last: this.lastDay ?? null } } : {}),
       sceneTimes: this.sceneTimes.map((t) => ({ ...t, ...(t.ended_at ? {} : { rounds: this.roundsIn(t.id) }) })),
     };
   }
@@ -773,8 +792,8 @@ export class TableLoop {
         await this.settle();
         await campaign.onNight?.();
         const day = (await this.dmWorld())?.clock.day;
-        if (campaign.dayLimit !== undefined && day !== undefined && day > campaign.dayLimit) {
-          this.table.end(`the day limit: day ${campaign.dayLimit} is over`);
+        if (this.lastDay !== undefined && day !== undefined && day > this.lastDay) {
+          this.table.end(`the day limit: day ${this.lastDay} is over`);
         }
         return;
       }

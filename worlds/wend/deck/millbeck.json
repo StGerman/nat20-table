@@ -111,7 +111,8 @@
         },
         {
             "id": "bridge_again",
-            "zone": "millbeck",
+            "zone": "millbeck_bridge",
+            "when": "arrival",
             "target": "caravan",
             "if": "crossed_millbeck",
             "once": "contract",
@@ -187,7 +188,8 @@
                         {"do": "remember", "deed": "forded_the_company_toll"}
                     ]
                 }
-            ]
+            ],
+            "_comment": "An arrival card at the bridge, not a road card of the Millbeck zone: going up, the leg that meets the bridge ends there, and on the way down the bridge's own road card comes after it only while the bridge is still in the world."
         }
     ]
 }

@@ -1,5 +1,5 @@
 {
-    "_comment": "Night cards at the Highsteads (Faces of the Road, MAP-10): the place where every Fair in Wend contract starts, at night. Our own text, CC-BY-4.0, credit 'nat20-table contributors'.",
+    "_comment": "Cards at the Highsteads (Faces of the Road, MAP-10): a night card for every contract that starts here, and an arrival card for every one that comes back up. Our own text, CC-BY-4.0, credit 'nat20-table contributors'.",
     "cards": [
         {
             "id": "roadfolk_fire",
@@ -45,6 +45,49 @@
                     "text": "Keep to your own fire.",
                     "effects": [
                         {"do": "remember", "deed": "kept_from_the_roadfolk"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "gwyn_news",
+            "zone": "highsteads",
+            "when": "arrival",
+            "target": "blades",
+            "if": "crossed_millbeck",
+            "once": "contract",
+            "text": "Gwyn the shepherd is waiting at the fold gate when the wagon comes up the last of the track. She has news, and she has been saving it for the Blades.",
+            "note": "Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. If they died (killed_col, killed_dunn), she tells it as news, not blame: the farm below the ridge stands empty, the goblins took the flock and the bridge took the boys, and Rufus's man came up with a paper for the land. If they were spared, Col is back mending the fold. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
+            "choices": [
+                {
+                    "id": "goblins",
+                    "text": "Ask about the goblins.",
+                    "effects": [
+                        {"do": "remember", "deed": "heard_of_the_low_fires"}
+                    ]
+                },
+                {
+                    "id": "farm",
+                    "text": "Ask about the farm under the ridge.",
+                    "effects": [
+                        {"do": "remember", "deed": "asked_after_the_ridge_farm"}
+                    ]
+                },
+                {
+                    "id": "cheese",
+                    "text": "Take the cheese the man from the bridge sent up for you.",
+                    "if": "toll_men_spared",
+                    "effects": [
+                        {"do": "cargo", "good": "rations", "change": 1},
+                        {"do": "remember", "deed": "took_cols_cheese"}
+                    ]
+                },
+                {
+                    "id": "listen",
+                    "text": "Just listen.",
+                    "unless": "toll_men_spared",
+                    "effects": [
+                        {"do": "remember", "deed": "listened_to_gwyn"}
                     ]
                 }
             ]
