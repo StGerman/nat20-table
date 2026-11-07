@@ -89,8 +89,17 @@
                     "effects": [
                         {"do": "cargo", "good": "rations", "change": -2}
                     ]
+                },
+                {
+                    "id": "charm",
+                    "text": "Sleep with the bog-wife's charm by the fire.",
+                    "if": "sedge_charm",
+                    "effects": [
+                        {"do": "remember", "deed": "slept_under_sedges_charm"}
+                    ]
                 }
-            ]
+            ],
+            "note": "Nothing is out there, or something small and hungry is; the DM never says which. Sedge's charm, if the Blades have it, is the one thing on this road that makes Maren sleep."
         },
         {
             "id": "night_wolves",
@@ -131,9 +140,42 @@
                                 }
                             ]
                         }
+                    ],
+                    "unless": "fed_gwyns_dog"
+                },
+                {
+                    "id": "build_fire_with_dog",
+                    "text": "Build the fire high and wait for dawn.",
+                    "if": "fed_gwyns_dog",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "survival",
+                            "dc": 5,
+                            "failure": [
+                                {
+                                    "do": "fight",
+                                    "monsters": [
+                                        "wolf"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "charm",
+                    "text": "Hang the bog-wife's charm on the horse lines.",
+                    "if": "sedge_charm",
+                    "unless": "fed_gwyns_dog",
+                    "effects": [
+                        {"do": "remember", "deed": "hung_sedges_charm"}
                     ]
                 }
-            ]
+            ],
+            "note": "Wolves are beasts, not persons: they do not yield and nobody hears of it. Gwyn's dog, if it came along, hears them long before the horses do."
         },
         {
             "id": "drovers",
@@ -154,9 +196,18 @@
                             "skill": "insight",
                             "dc": 15,
                             "failure": [
-                                {"do": "cargo", "good": "rations", "change": -2}
+                                {"do": "add_card", "card": "missing_sack", "soon": true}
                             ]
                         }
+                    ],
+                    "unless": "fed_gwyns_dog"
+                },
+                {
+                    "id": "welcome_with_dog",
+                    "text": "Make room for them at the fire.",
+                    "if": "fed_gwyns_dog",
+                    "effects": [
+                        {"do": "remember", "deed": "the_dog_growled_at_the_drovers"}
                     ]
                 },
                 {
@@ -166,7 +217,8 @@
                         {"do": "remember", "deed": "sent_the_drovers_away"}
                     ]
                 }
-            ]
+            ],
+            "note": "Rufus's men, counting Odda's sacks for him. They are friendly because friendly is cheaper. Gwyn's dog, if it came along, does not like them and says so."
         },
         {
             "id": "sedges_jar",
@@ -215,6 +267,307 @@
                     "text": "Give it back to her.",
                     "effects": [
                         {"do": "remember", "deed": "refused_sedges_jar"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "yellow_wagon",
+            "zone": "lowland",
+            "target": "caravan",
+            "owner_pick": "hold",
+            "text": "A light wagon with yellow wheels and two fresh horses comes up fast behind. Its driver, a young man in a very good coat, raises his hat and asks Odda to pull onto the verge: first wheat at the fair gets the best price.",
+            "note": "Rufus, the Saltmouth factor, buying the harvest on paper before it reaches the fair. Something learned goes out of date: Odda's twenty autumns of being first no longer work, because Rufus's buyers have already signed. If he passes, tell it at the fair as Odda's silence, never as a lesson. Joke: he hands Odda a printed calling card, and she uses it to wedge a sack. Bren admires the horses; Torva knows exactly what kind of man buys debts.",
+            "choices": [
+                {
+                    "id": "let_pass",
+                    "text": "Let him pass.",
+                    "effects": [
+                        {"do": "remember", "deed": "let_the_yellow_wagon_pass"}
+                    ]
+                },
+                {
+                    "id": "hold",
+                    "text": "Keep to the middle of the road.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "animal_handling",
+                            "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "held_the_road_against_rufus"}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 30}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "for_a_price",
+                    "text": "Ask him to pay for the way.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 15,
+                            "success": [
+                                {
+                                    "do": "gain",
+                                    "who": "blades",
+                                    "copper": 10
+                                },
+                                {"do": "remember", "deed": "sold_rufus_the_road"}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "rufus_offer",
+            "zone": "lowland",
+            "when": "night",
+            "target": "blades",
+            "once": "contract",
+            "text": "After dark a man in a very good coat finds the Blades alone by the horse lines. He is very friendly. Odda's wagon could lose a wheel somewhere quiet tomorrow, he says, and their purses would be heavier for it.",
+            "note": "Rufus. The human votes first, as on every card, and the whole table knows this one matters. A blind choice: taking the coin is what Rufus wants his due names at the fair. If Tam or Tobin is riding with the wagon, the fair has heard before Odda pays. Ilsa asks whose rights a contract protects; Bren asks how heavy. Nothing happens to the wheel unless the DM's fight or a later card says so.",
+            "choices": [
+                {
+                    "id": "tell_odda",
+                    "text": "Refuse him and tell Odda.",
+                    "keeps": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {"do": "remember", "deed": "told_odda_of_rufus"}
+                    ]
+                },
+                {
+                    "id": "say_nothing",
+                    "text": "Refuse him and say nothing.",
+                    "effects": [
+                        {"do": "remember", "deed": "refused_rufus_quietly"}
+                    ]
+                },
+                {
+                    "id": "take",
+                    "text": "Take his coin.",
+                    "breaks": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {
+                            "do": "gain",
+                            "who": "blades",
+                            "copper": 50
+                        },
+                        {"do": "remember", "deed": "took_rufus_coin"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "missing_sack",
+            "zone": "lowland",
+            "target": "caravan",
+            "chained": true,
+            "once": true,
+            "owner_pick": "tracks",
+            "text": "Odda counts the sacks twice and her face goes still: one is gone. A passing carter says what the valley always says, that there were roadfolk camped up the road.",
+            "note": "The drovers took it, for Rufus. The valley's prejudice is shown and never confirmed: a search of the roadfolk cart finds nothing, and no card makes the roadfolk the culprit. Maren objects to the search out loud. Odda won't search a family's cart on a carter's word. Let it go is Odda's line: \"Bread doesn't argue.\"",
+            "choices": [
+                {
+                    "id": "tracks",
+                    "text": "Look for tracks.",
+                    "unless": "joined_the_roadfolk_fire",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "survival",
+                            "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "tracked_the_sack"}
+                            ],
+                            "failure": [
+                                {"do": "cargo", "good": "wheat", "change": -50}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "ask_bel",
+                    "text": "Ask Bel to help you track it.",
+                    "if": "joined_the_roadfolk_fire",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "survival",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "tracked_the_sack"}
+                            ],
+                            "failure": [
+                                {"do": "cargo", "good": "wheat", "change": -50}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "let_go",
+                    "text": "Let it go.",
+                    "effects": [
+                        {"do": "cargo", "good": "wheat", "change": -50},
+                        {"do": "remember", "deed": "let_the_sack_go"}
+                    ]
+                },
+                {
+                    "id": "search",
+                    "text": "Search the roadfolk cart.",
+                    "breaks": [
+                        "road_is_free"
+                    ],
+                    "effects": [
+                        {"do": "cargo", "good": "wheat", "change": -50},
+                        {"do": "remember", "deed": "searched_the_roadfolk_cart"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "bel_asks",
+            "zone": "lowland",
+            "when": "night",
+            "target": "blades",
+            "chained": true,
+            "once": true,
+            "text": "After dark the painted roadfolk cart rattles up to the fire. Bel, the woman from the Highsteads fire, does not sit down. She asks whether anyone has seen her boy.",
+            "note": "Bel Corrin, and Tam, who is either on the wagon or hiding behind it. A word is kept: letting Tam answer means Bel lets him go to the fair if the human's character promises to look after him, and that promise is a deed later cards test. Covered for and found out, Bel tells every roadfolk fire in the valley. Maren is for the truth; Ilsa says the boy has rights too.",
+            "choices": [
+                {
+                    "id": "truth",
+                    "text": "Tell her the truth.",
+                    "effects": [
+                        {"do": "remember", "deed": "told_bel_the_truth"}
+                    ]
+                },
+                {
+                    "id": "cover",
+                    "text": "Cover for him.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "deception",
+                            "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "covered_for_tam"}
+                            ],
+                            "failure": [
+                                {"do": "remember", "deed": "lied_to_bel"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "let_tam",
+                    "text": "Let Tam answer for himself.",
+                    "keeps": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {"do": "remember", "deed": "promised_bel"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "old_company",
+            "zone": "lowland",
+            "when": "night",
+            "target": "blades",
+            "chained": true,
+            "once": true,
+            "text": "The peddler with the shaking hands catches up with the camp after dark and sees the grey lantern stitched on a Blade's sleeve, the sign of their old company. He goes quiet, then asks whether any of the company are still alive.",
+            "note": "Tobin carried a battle-mage's books in the lord's border war, the war the Grey Lanterns fought in. Told about the company and its dead, he laughs and cries in one breath and remembers a red-scaled girl with a notebook (Ilsa's hook). Read well, his hands: he froze at a breach and a fire spell went wrong; read badly, a cheerful lie. Whatever they choose, from now on he tells every alehouse the Grey Lanterns are the last honest company in the kingdom.",
+            "choices": [
+                {
+                    "id": "tell",
+                    "text": "Tell him about the company.",
+                    "effects": [
+                        {"do": "remember", "deed": "told_tobin_of_the_dead"}
+                    ]
+                },
+                {
+                    "id": "hands",
+                    "text": "Ask what happened to his hands.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "insight",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "knew_tobins_breach"}
+                            ],
+                            "failure": [
+                                {"do": "remember", "deed": "heard_tobins_lie"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "change",
+                    "text": "Change the subject.",
+                    "effects": [
+                        {"do": "remember", "deed": "kept_the_war_from_tobin"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "what_agna_drew",
+            "zone": "lowland",
+            "target": "blades",
+            "chained": true,
+            "once": true,
+            "text": "The silent pilgrim stops the Blades with a raised hand and draws in the mud with her staff: a bridge, a man in a helmet too big for him holding a notched stick, a second man with a cudgel, and a coin passing from a man in a very good coat to both of them.",
+            "note": "Sister Agna, who cannot say it. If asked, the DM says what the drawing shows and nothing more: the notched stick is Col's tally, the coat is Rufus's. Read well, the Blades know who set the toll men on the bridge, and Rufus wants his due and Odda's mark can use it. The silent witness and the loud one, Tobin, reach the same truth by different roads.",
+            "choices": [
+                {
+                    "id": "puzzle",
+                    "text": "Puzzle out the drawing.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "intelligence",
+                            "skill": "investigation",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "knew_who_set_the_toll"}
+                            ],
+                            "failure": [
+                                {"do": "remember", "deed": "agna_rubbed_it_out"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "thank",
+                    "text": "Thank her and walk on.",
+                    "effects": [
+                        {"do": "remember", "deed": "thanked_agna"}
                     ]
                 }
             ]
