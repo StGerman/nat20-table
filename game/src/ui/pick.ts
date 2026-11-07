@@ -167,11 +167,15 @@ function PartyScreen({ saved, again, title, palette, onParty }: { saved: string;
   );
 }
 
-/** One saved character as the pick screen shows it: level, Experience Points and purse in copper. */
+/**
+ * One saved character as the pick screen shows it: level, Experience Points and purse in copper.
+ * The game reads only a character's handle, pregen and level before the engine checks the rest,
+ * so a hand-edited file may lack either of the last two; the card then leaves that line out.
+ */
 export interface SavedCharacter {
   level: number;
-  xp: number;
-  purseCp: number;
+  xp?: number;
+  purseCp?: number;
 }
 
 /**
@@ -189,7 +193,16 @@ export const copperOf = (c: Coins): number => (c.cp ?? 0) + 10 * (c.sp ?? 0) + 5
 
 /** A saved roster's characters as the pick screen shows them. */
 export function savedCharacters(characters: RosterCharacter[]): Map<Handle, SavedCharacter> {
-  return new Map(characters.map((c) => [c.handle, { level: c.level, xp: c.xp, purseCp: copperOf(c.purse) }]));
+  return new Map(
+    characters.map((c) => [
+      c.handle,
+      {
+        level: c.level,
+        xp: typeof c.xp === "number" ? c.xp : undefined,
+        purseCp: c.purse && typeof c.purse === "object" ? copperOf(c.purse) : undefined,
+      },
+    ]),
+  );
 }
 
 /** The pack's party as a saved party has it: each character's saved level, experience and purse. */
