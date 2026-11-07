@@ -236,6 +236,12 @@ export function roadDm(): ScriptedDm {
     narrate: line("The moment passes as the engine says."),
     combat_over: line("The fight is over."),
     road: line("The caravan moves on along the road."),
+    // One fixed suggestion (AGT-91), so a scripted run writes the file the report reads.
+    suggest: async () =>
+      JSON.stringify({
+        cards: [{ id: "scripted_suggestion", zone: "road", when: "road", target: "blades", text: "A scripted card the DM suggests.", choices: [{ id: "one", text: "Take it." }, { id: "two", text: "Leave it." }] }],
+        why: ["a scripted run suggests one fixed card"],
+      }),
     // The first card rolled, as the briefing lists them (AGT-88): scripted runs replay byte for byte.
     pick: async (tools, briefing) => {
       const first = /^Offered card 1: ([a-z0-9_]+) /m.exec(briefing)?.[1];

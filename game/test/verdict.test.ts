@@ -5,7 +5,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { RUN_FORMAT, writeRunRecord, type RunRecord } from "../src/play/record.ts";
-import { AUDIT_JSON, computeVerdict, CONFIRMATIONS_JSON, NARRATION_CHECK, VERDICT_JSON, writeVerdict } from "../src/play/verdict.ts";
+import { AUDIT_JSON, cardsMet, computeVerdict, CONFIRMATIONS_JSON, NARRATION_CHECK, VERDICT_JSON, writeVerdict } from "../src/play/verdict.ts";
+import { SUGGESTED_CARDS, wordReport } from "../src/play/word.ts";
+import { readSuggested } from "../src/table/loop.ts";
+import { offeredLine } from "../src/view.ts";
 import type { TranscriptRecord } from "../src/table/types.ts";
 
 const SCENES = ["s1", "s2", "s3", "s4", "s5", "s6"];
@@ -147,6 +150,34 @@ test("a flag Stas adds by hand in confirmations.json counts in row 3 (M10 P2)", 
   assert.equal(computeVerdict(dir).verdict, "PASS", "a hand flag Stas dismisses again passes");
 });
 
+/** The session log's events in order, numbered as the engine numbers them. */
+const withSeq = (events: Array<Record<string, unknown>>) => events.map((e, i) => ({ seq: i + 1, ...e }));
+
+/**
+ * A contract's Milestone 11 record (AGT-91): a DM pick that reads a deed from the last contract, a
+ * deed written, a night card, a scouted card that reads that deed and comes to a fight, an arrival.
+ */
+const WORD_ON_THE_ROAD: Array<Record<string, unknown>> = [
+  { kind: "cards_offered", cards: [{ id: "roadfolk_fire" }, { id: "lame_horse" }], rolls: ["r5", "r6"] },
+  { kind: "card_picked", card: "roadfolk_fire", came: "dm_pick", reason: "it reads the toll the party paid last time" },
+  { kind: "card_shown", card: "roadfolk_fire", zone: "wend_road", when: "road", reads: [{ deed: "paid_the_toll", by: ["bren"], day: 2, contract: 1 }] },
+  { kind: "card_resolved", choice: "share" },
+  { kind: "deed_remembered", deed: "shared_bread", by: ["bren", "maren"], day: 1, contract: 2 },
+  { kind: "card_shown", card: "missing_sack", zone: "wend_road", when: "night" },
+  { kind: "card_resolved", choice: "search" },
+  { kind: "night" },
+  { kind: "scout_looked", actor: "ilsa", roll: "r9", saw: true },
+  { kind: "card_shown", card: "bog_wife", zone: "wend_road", when: "road", forewarned: "go_round", reads: [{ deed: "shared_bread", by: ["bren", "maren"], day: 1, contract: 2 }] },
+  { kind: "card_resolved", choice: "go_round" },
+  { kind: "combat_started" },
+  { kind: "round", number: 1 },
+  { kind: "round", number: 2 },
+  { kind: "life_state", target: "torva", state: "unconscious" },
+  { kind: "combat_over", reason: "no_hostiles" },
+  { kind: "card_shown", card: "boys_story", zone: "wendford", when: "arrival" },
+  { kind: "card_resolved", choice: "listen" },
+];
+
 test("a living-world run is judged on the Milestone 9 exit: the contract paid by the day limit, journeys, a road event, a fight outside a scene, the roster (AGT-81)", () => {
   const fw = ["fw_highsteads", "fw_road", "fw_wendford", "fw_wendmouth"];
   const run = runRecord({
@@ -160,7 +191,17 @@ test("a living-world run is judged on the Milestone 9 exit: the contract paid by
   const leg = (place: string) => ({ kind: "traveled", leg: { arrived: true, at: { kind: "at", place } } });
   const wage = (to: string) => ({ kind: "ledger", reason: "wage", to, from: "npc:odda_vell", what: { kind: "coins", copper: 200 } });
   const party = ["bren", "torva", "maren", "ilsa"];
-  const log = [{ kind: "session_started" }, ...party.map(wage), leg("wendford"), { kind: "card_resolved", choice: "clear" }, { kind: "night" }, leg("wendmouth"), ...party.map(wage), { kind: "escort_settled", destination: "wendmouth" }];
+  const log = withSeq([
+    { kind: "session_started" },
+    ...party.map(wage),
+    leg("wendford"),
+    { kind: "card_resolved", choice: "clear" },
+    { kind: "night" },
+    ...WORD_ON_THE_ROAD,
+    leg("wendmouth"),
+    ...party.map(wage),
+    { kind: "escort_settled", destination: "wendmouth" },
+  ]);
   const dir = folder(run, [], log);
   const engineLog = [
     { request: { cmd: "start_combat" }, response: { ok: true, events: [{ kind: "combat_started" }] } },
@@ -172,12 +213,16 @@ test("a living-world run is judged on the Milestone 9 exit: the contract paid by
   assert.equal(v.verdict, "PASS", v.why);
   const row = (id: string) => v.rows.find((r) => r.row === id)!;
   assert.match(row("1").title, /by the end of day 3/);
-  assert.match(row("1").detail, /settled on day 2/);
+  assert.match(row("1").detail, /settled on day 3/);
   assert.match(row("m9-journeys").detail, /wendford, wendmouth/);
   assert.match(row("m9-pay").detail, /bren 4 gp/);
   assert.equal(row("m9-ledger").status, "pass");
   assert.match(row("m9-fight").detail, /^1 fights/, "the authored encounter doesn't count");
   assert.equal(row("m9-roster").status, "pass");
+  assert.match(row("m11-deck").detail, /^3 road and night cards and 1 arrival cards decided; 1 DM picks, each with its reason/);
+  assert.match(row("m11-thread").detail, /bog_wife reads shared_bread/);
+  assert.equal(row("m11-story").status, "pass");
+  assert.match(row("m11-memory").detail, /roadfolk_fire reads paid_the_toll \(contract 1, day 2, by bren\)/);
   const again = computeVerdict(folder({ ...run, roster: { ...run.roster!, party: "again" } }, [], log)).rows.find((r) => r.row === "m9-roster")!;
   assert.equal(again.status, "reported");
   assert.match(again.detail, /last journey played again from where it began/);
@@ -196,4 +241,64 @@ test("a living-world run is judged on the Milestone 9 exit: the contract paid by
   // No stderr in the folder: the trial balance can't be read, so the row waits.
   rmSync(path.join(dir, "engine-stderr.log"));
   assert.equal(computeVerdict(dir).rows.find((r) => r.row === "m9-ledger")!.status, "pending");
+});
+
+test("the Milestone 11 rows: the deck at work, a thread, story-space flags, and the world remembers on a continued roster (AGT-91)", () => {
+  const run = runRecord({ campaign: { start_day: 1, day_limit: 3 }, roster: { name: "wend", party: "new" } as never });
+  const row = (dir: string, id: string) => computeVerdict(dir).rows.find((r) => r.row === id)!;
+
+  // Too few cards, a pick with no reason, no deed read later, a first run: fail, fail, reported.
+  const thin = folder(run, [], withSeq([
+    { kind: "card_picked", card: "lame_horse", came: "dm_pick", reason: " " },
+    { kind: "card_shown", card: "lame_horse", zone: "wend_road", when: "road" },
+    { kind: "card_resolved", choice: "rest" },
+    { kind: "deed_remembered", deed: "rested_the_horse", by: [], day: 1, contract: 1 },
+  ]));
+  assert.equal(row(thin, "m11-deck").status, "fail");
+  assert.match(row(thin, "m11-deck").detail, /1 without a reason \(lame_horse\)/);
+  assert.equal(row(thin, "m11-thread").status, "fail");
+  assert.match(row(thin, "m11-thread").detail, /no later card read one/);
+  assert.equal(row(thin, "m11-memory").status, "reported");
+
+  // A card that reads a deed written before this run is the world remembering; only on a continued roster does it gate.
+  const later = folder({ ...run, roster: { name: "wend", party: "continue" } as never }, [], withSeq(WORD_ON_THE_ROAD.filter((e) => e.card !== "roadfolk_fire")));
+  assert.equal(row(later, "m11-memory").status, "fail");
+  assert.match(row(later, "m11-memory").detail, /no card read a deed from an earlier contract/);
+
+  // The judge's story-space flags are the row's, not row 3's: pending until Stas answers, a fail when he confirms one.
+  const flagged = folder(run, [], withSeq(WORD_ON_THE_ROAD));
+  writeFileSync(path.join(flagged, NARRATION_CHECK), JSON.stringify({ id: "n4-1", line: 4, claim: "pleasant nothing", kind: "story_space", evidence_seq: [], text: "The road goes on." }) + "\n");
+  assert.equal(row(flagged, "m11-story").status, "pending");
+  assert.equal(row(flagged, "3").status, "pass");
+  writeFileSync(path.join(flagged, CONFIRMATIONS_JSON), JSON.stringify({ "n4-1": { answer: "confirmed" } }));
+  assert.equal(row(flagged, "m11-story").status, "fail");
+
+  // The Silent Mill has no living world, so no Milestone 11 rows.
+  assert.equal(computeVerdict(folder(runRecord())).rows.some((r) => r.row.startsWith("m11-")), false);
+});
+
+test("the run report's Word on the road lists deeds, cards, pay-offs, draw-three counts, fights, scout looks and suggested cards (AGT-91)", () => {
+  const dir = folder(runRecord({ campaign: { start_day: 1, day_limit: 3 } }), [], withSeq(WORD_ON_THE_ROAD));
+  writeFileSync(path.join(dir, SUGGESTED_CARDS), JSON.stringify(readSuggested('Here: {"cards": [{"id": "bread_returned", "text": "The roadfolk send bread back."}], "why": ["it carries on shared_bread"]}')));
+  const report = wordReport(dir).join("\n");
+  assert.match(report, /## Word on the road/);
+  assert.match(report, /- shared_bread: contract 2, day 1, by bren, maren/);
+  assert.match(report, /1\. roadfolk_fire: road; the DM picked it: it reads the toll the party paid last time; decided: share; reads paid_the_toll \(contract 1, day 2\)/);
+  assert.match(report, /2\. missing_sack: night; the only card the draw rolled; decided: search/);
+  assert.match(report, /3\. bog_wife: .*ilsa scouted \(r9\) and saw it; forewarned choice go_round taken; it came to a fight/);
+  assert.match(report, /Pay-offs \(a card that read a deed\): 2: roadfolk_fire \(paid_the_toll\); bog_wife \(shared_bread\)/);
+  assert.match(report, /Draw three: 1 draws offered cards; 1 DM picks, 1 of them a card that reads a deed; 0 draws the DM did not answer; passed over: lame_horse/);
+  assert.match(report, /- card bog_wife, choice go_round: 2 rounds; dropped: torva; ended: no_hostiles/);
+  assert.match(report, /Scout looks: 1, 1 saw it, 1 forewarned choices taken/);
+  assert.match(report, /- bread_returned: The roadfolk send bread back\. \(why: it carries on shared_bread\)/);
+  // A fight the DM starts after the road moved on is not the card's.
+  const cards = cardsMet(withSeq([{ kind: "card_shown", card: "x", zone: "z", when: "road" }, { kind: "card_resolved", choice: "a" }, { kind: "traveled", leg: {} }, { kind: "combat_started" }]) as never);
+  assert.equal(cards[0]!.fight, false);
+  // The Silent Mill writes no section; an answer that is not JSON is kept as written.
+  assert.deepEqual(wordReport(folder(runRecord())), []);
+  assert.deepEqual(readSuggested("no cards today"), { unread: "no cards today" });
+  // The DM's pick sees which offered card reads a deed (AGT-91).
+  const offered = { id: "roadfolk_fire", zone: "wend_road", target: "blades", text: "A fire.", choices: [{ id: "share", text: "Share." }] };
+  assert.match(offeredLine({ ...offered, reads: [{ deed: "paid_the_toll", day: 2, contract: 1 }] }, 1), /Choices: share: Share\.\. Reads: paid_the_toll \(contract 1, day 2\)\./);
+  assert.doesNotMatch(offeredLine(offered, 1), /Reads/);
 });

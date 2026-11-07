@@ -210,6 +210,8 @@ export type DmWake =
   | "road"
   /** A draw offered two or three road cards (AGT-88): pick one with pick_card. */
   | "pick"
+  /** The journey is over (AGT-91): suggest up to two road cards, as JSON in the final answer. */
+  | "suggest"
   | "summary";
 
 export interface DmAgent {

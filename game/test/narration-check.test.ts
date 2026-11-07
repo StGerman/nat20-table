@@ -11,7 +11,8 @@ import { REPO } from "../src/paths.ts";
 import type { SessionConfig, TurnSession } from "../src/agents/sdk-session.ts";
 import { NARRATION_DIGEST, readDigest } from "../src/check/digest.ts";
 import { batches, JUDGE_CHOICE, JUDGE_PROMPT, ModelJudge, ScriptedJudge, type JudgeFlag } from "../src/check/judge.ts";
-import { narrationCheck, PREVIOUS_CHECK } from "../src/check/narration.ts";
+import { modelJudgeFor, narrationCheck, PREVIOUS_CHECK } from "../src/check/narration.ts";
+import { RUN_FORMAT, RUN_JSON } from "../src/play/record.ts";
 import { CONFIRMATIONS_JSON, NARRATION_CHECK } from "../src/play/verdict.ts";
 import type { DigestRecord, DigestRun } from "../src/check/digest.ts";
 
@@ -190,4 +191,24 @@ test("lines said at one log head across a batch boundary carry their engine line
   assert.match(first.text, /8: goblin_1 misses bren/);
   assert.match(second.text, /Engine lines from just before[^\n]*\n {2}8: goblin_1 misses bren\nNo engine lines since the line before\./);
   assert.doesNotMatch(second.text, /3: bren hits goblin_1/, "only the lines at the same log head carry");
+});
+
+test("a living-world run's judge is also asked the story-space question about the human's character; others drop that kind (AGT-91)", async () => {
+  const s = standIn(async (tools) => {
+    await call(tools, { flags: [{ line: 1, claim: "pleasant nothing", kind: "story_space", evidence_seq: [] }] });
+  });
+  const road = new ModelJudge({ open: s.open, storySpace: { human: "bren" } });
+  assert.match(road.systemPrompt, /story_space: a line that opens a scene/);
+  assert.match(road.systemPrompt, /the human's character \(bren in the party list\)/);
+  assert.equal((await road.judge("## Line 1\nx", [1])).flags[0]!.kind, "story_space");
+  assert.match(new ModelJudge({ storySpace: {} }).systemPrompt, /any party member \(no human is at this table\)/);
+  const mill = new ModelJudge({ open: s.open });
+  assert.equal(mill.systemPrompt, JUDGE_PROMPT);
+  assert.deepEqual((await mill.judge("## Line 1\nx", [1])).flags, [], "The Silent Mill is not asked it");
+
+  // The judge for a run folder follows its run record: a campaign is asked, The Silent Mill is not.
+  const dir = mkdtempSync(path.join(tmpdir(), "judge-for-"));
+  assert.equal(modelJudgeFor(dir).systemPrompt, JUDGE_PROMPT, "no run record: the plain judge");
+  writeFileSync(path.join(dir, RUN_JSON), JSON.stringify({ run_format: RUN_FORMAT, seats: { human: "bren", ai: [] }, campaign: { start_day: 1, day_limit: 3 } }));
+  assert.match(modelJudgeFor(dir).systemPrompt, /bren in the party list/);
 });

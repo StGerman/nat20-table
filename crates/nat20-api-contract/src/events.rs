@@ -8,9 +8,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AdvantageState, CardCame, CardChoiceView, CardDecided, CardTarget, ClockView, Condition,
-    DamageType, Handle, LegView, LifeState, Mode, NightView, OfferedCard, OptionId, PointFt,
-    RollId, Side, state::CombatOverReason,
+    AdvantageState, CardCame, CardChoiceView, CardDecided, CardTarget, CardWhen, ClockView,
+    Condition, DamageType, DeedDm, Handle, LegView, LifeState, Mode, NightView, OfferedCard,
+    OptionId, PointFt, RollId, Side, state::CombatOverReason,
 };
 
 /// One log entry.
@@ -465,6 +465,25 @@ pub enum EventKind {
         /// The pick's one-line reason; absent for a soon card.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
+    },
+    /// The card that goes on the table, as the DM sees it (AGT-91), right before its
+    /// `card_drawn`, after any `card_picked` and `scout_looked`: logged for every card, so a
+    /// run's record names each card, when it came and what it paid off. DM only.
+    CardShown {
+        /// The card id.
+        card: String,
+        /// The deck zone it came from: a road zone or a place id.
+        zone: String,
+        /// When it was drawn: after a leg, after a night, or on arrival.
+        when: CardWhen,
+        /// The deeds it reads, as in `OfferedCard.reads`: a card that reads one pays off
+        /// what the party did. Empty, and left out, when it reads none.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        reads: Vec<DeedDm>,
+        /// The forewarned choice the scout's look opened (API-54), by choice id; absent when
+        /// the scout did not see it, or the card has none.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        forewarned: Option<String>,
     },
     /// The caravan reached the escort contract's destination and the Blades' pay was settled
     /// (API-47), after its `wage` ledger entries. Public.

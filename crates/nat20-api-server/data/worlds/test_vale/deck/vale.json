@@ -1,5 +1,5 @@
 {
-    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. Dragging the tree aside remembers a deed (API-52). The tower trail holds four cards that come only while the tree was not cleared (`unless`), so only the draw_three fixture meets them, and the DM picks among those a draw offers (API-53). Not shipped content; the Wend deck is MAP-6.",
+    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. Dragging the tree aside remembers a deed (API-52), and the night card's fire choice reads it (AGT-91). The tower trail holds four cards that come only while the tree was not cleared (`unless`), so only the draw_three fixture meets them, and the DM picks among those a draw offers (API-53). Not shipped content; the Wend deck is MAP-6.",
     "cards": [
         {
             "id": "fallen_tree",
@@ -51,6 +51,12 @@
                     "id": "drive_off",
                     "text": "Go out and drive them off.",
                     "effects": [{"do": "fight", "monsters": ["wolf"]}]
+                },
+                {
+                    "id": "tree_fire",
+                    "if": "cleared_the_tree",
+                    "text": "Burn the branches of the tree you dragged aside, all night.",
+                    "effects": [{"do": "remember", "deed": "kept_the_fire"}]
                 }
             ]
         },

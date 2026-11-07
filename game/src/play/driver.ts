@@ -49,8 +49,9 @@ import { InkSeat } from "../ui/ink-seat.ts";
 import { glyphsFor } from "../ui/panel.ts";
 import { pickOnScreen } from "../ui/pick.ts";
 import { usageBlock, UsageLog } from "../usage.ts";
-import { ModelJudge, ScriptedJudge } from "../check/judge.ts";
-import { narrationCheck } from "../check/narration.ts";
+import { ScriptedJudge } from "../check/judge.ts";
+import { modelJudgeFor, narrationCheck } from "../check/narration.ts";
+import { SUGGESTED_CARDS, wordReport } from "./word.ts";
 import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, suggestionLine, timingLines, type Casting, type PackParty } from "./run.ts";
@@ -466,12 +467,15 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   record.scenes = (run?.sceneTimes ?? []).map((s) => ({ ...s, target_minutes: targets.get(s.id) ?? null }));
   writeRunRecord(runDir, record);
 
+  // The DM's suggested cards (AGT-91): their own file, which the report reads and nothing loads.
+  if (run?.suggestedCards) writeFileSync(path.join(runDir, SUGGESTED_CARDS), JSON.stringify(run.suggestedCards, null, 2) + "\n");
+
   // The post-run stages (design §3.3): each reads the folder and writes its own file.
   const checked = flags["no-audit"] ? undefined : await checking(CHECK_AUDIT, () => audit(flags.pack, runDir));
   if (checked && !checked.passed) ink?.check(CHECK_AUDIT, "failed");
   if (checked) writeFileSync(path.join(runDir, AUDIT_JSON), JSON.stringify(checked, null, 2) + "\n");
   // The narration check (AGT-9): a run with a scripted DM has nothing a model judge should read.
-  const narration = flags["no-audit"] ? undefined : await checking(CHECK_NARRATION, () => narrationCheck(flags.pack, runDir, flags.dm === "model" ? new ModelJudge() : new ScriptedJudge()));
+  const narration = flags["no-audit"] ? undefined : await checking(CHECK_NARRATION, () => narrationCheck(flags.pack, runDir, flags.dm === "model" ? modelJudgeFor(runDir) : new ScriptedJudge()));
   ink?.check(CHECK_REPORT, "running");
   await breath();
 
@@ -488,6 +492,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...(run?.suggestions ? [`- ${suggestionLine(run.suggestions)}`] : []),
     ...(record.roster ? [`- ${rosterReport(record.roster)}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
+    ...wordReport(runDir),
     ...(narration ? ["", ...narration.lines] : []),
     "",
     ...timingLines(record),

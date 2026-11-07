@@ -516,6 +516,11 @@ export function customsTag(choice: { keeps?: string[]; breaks?: string[] }): str
 }
 
 /** One card a draw offered, for the DM's pick (AGT-88): its place in the roll order, id, words, choices and note. */
-export function offeredLine(c: { id: string; zone: string; target: string; text: string; choices: Array<{ id: string; text: string; keeps?: string[]; breaks?: string[] }>; note?: string | null }, n: number): string {
-  return `Offered card ${n}: ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}${customsTag(x)}`).join(" | ")}.${c.note ? ` Note: ${c.note}` : ""}`;
+export function offeredLine(
+  c: { id: string; zone: string; target: string; text: string; choices: Array<{ id: string; text: string; keeps?: string[]; breaks?: string[] }>; note?: string | null; reads?: Array<{ deed: string; day: number; contract: number }> },
+  n: number,
+): string {
+  // The deeds it reads (AGT-91): the pick rule's first test, so the DM sees it, not guesses it.
+  const reads = (c.reads ?? []).map((d) => `${d.deed} (contract ${d.contract}, day ${d.day})`);
+  return `Offered card ${n}: ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}${customsTag(x)}`).join(" | ")}.${reads.length > 0 ? ` Reads: ${reads.join(", ")}.` : ""}${c.note ? ` Note: ${c.note}` : ""}`;
 }

@@ -99,6 +99,14 @@ impl Session {
         let Some(campaign) = self.campaign.as_ref() else {
             return Ok(());
         };
+        if let Some(shown) = campaign.card_shown() {
+            self.push(Pending {
+                round: None,
+                visibility: Visibility::Dm,
+                kind: shown,
+            });
+        }
+        let campaign = self.campaign.as_ref().expect("checked above");
         let pending = campaign.world.state.deck.pending.clone();
         let Some(card) = pending
             .as_ref()

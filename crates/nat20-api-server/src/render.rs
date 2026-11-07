@@ -275,6 +275,14 @@ pub fn text(kind: &EventKind) -> String {
             CardCame::EnginePick => format!("The DM did not pick; the engine takes {card}."),
             CardCame::Soon => format!("{card} comes next, as an earlier choice set it."),
         },
+        EventKind::CardShown { card, reads, .. } => {
+            if reads.is_empty() {
+                format!("{card} goes on the table.")
+            } else {
+                let deeds: Vec<&str> = reads.iter().map(|d| d.deed.as_str()).collect();
+                format!("{card} goes on the table; it reads {}.", deeds.join(", "))
+            }
+        }
         EventKind::TripToStart { from, days } => match days {
             0 => format!("The new contract starts where the last one ended, at {from}."),
             1 => format!("The party travels one day from {from} to the new contract's start."),

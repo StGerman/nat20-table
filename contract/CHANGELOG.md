@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.66 (2026-11-06)
+- Additive (AGT-91, protocol §4.13): the card's record, DM only. A new event `card_shown{card, zone, when, reads?, forewarned?}` (`CardWhen`: `road`, `night`, `arrival`) before every `card_drawn`, so a run's session log names every card that went on the table, when it came, the remembered deeds it reads (`DeedDm` list) and the forewarned choice the scout opened. `OfferedCard.reads` carries the same deeds for each offered card. Neither is in any player view.
+- The test world's night card `yard_wolves` gains a third choice under `if: cleared_the_tree`, so `escort.jsonl`'s night card reads the deed the road card wrote, and a new DM `events` line there shows `card_shown` with `reads`. `scout.jsonl` shows `forewarned`; `draw_three.jsonl` and `road_cards.jsonl` show `card_shown` in their DM events; the other world fixtures change only by the log numbers the new event moves.
+
 ## 1.0.0-dev.65 (2026-11-06)
 - Additive (API-55, ENG-39, protocol §4.13): customs on card choices, DM only. `CardDm.choices` and `OfferedCard.choices` are now `CardChoiceDm{id, text, keeps?, breaks?}`, the ids of the world's customs a choice keeps or breaks; the wire shape only gains two optional fields. A player's `CardPlayer.choices` and `card_drawn.choices` stay `CardChoiceView{id, text}`.
 - The test world gains `customs.json` with one custom, and its `broken_cart` choices keep and break it, so `draw_three.jsonl` and `scout.jsonl` show the tags in the DM's offered cards and the player views do not. Other fixtures change by version only.

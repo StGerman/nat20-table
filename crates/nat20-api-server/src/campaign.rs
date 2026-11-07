@@ -9,10 +9,10 @@ use std::path::{Path, PathBuf};
 
 use nat20_api_contract::{
     Ability, CaravanView, CardChoiceDm, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget,
-    CargoView, CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade, EscortDm,
-    EscortView, Handle, LegView, MilesToday, NpcAttitude, NpcDm, OfferedCard, Pace, PlaceDm,
-    ReachView, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain, TripLegView, TripView,
-    WagonView, Watch, WorldDm, WorldPosition,
+    CardWhen, CargoView, CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade,
+    EscortDm, EscortView, EventKind, Handle, LegView, MilesToday, NpcAttitude, NpcDm, OfferedCard,
+    Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain, TripLegView,
+    TripView, WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -470,6 +470,36 @@ impl Campaign {
             choices: choices_dm(card, Some(&offers)),
             note: card.note.clone(),
             scout: card.scout.map(scout_skill),
+            reads: reads(card, Some(&offers), &self.world.state.deeds),
+        })
+    }
+
+    /// The card on the table as `card_shown` logs it (AGT-91): its zone, when it came, the
+    /// deeds it reads and the forewarned choice the scout's look opened. None with no card
+    /// on the table.
+    pub fn card_shown(&self) -> Option<EventKind> {
+        let pending = self.world.state.deck.pending.as_ref()?;
+        let card = self.world.deck.card(&pending.card)?;
+        let forewarned = card
+            .choices
+            .iter()
+            .find(|c| {
+                pending.offers(&c.id)
+                    && c.if_deeds
+                        .as_ref()
+                        .is_some_and(|d| d.ids().iter().any(|id| id == world::SCOUTED))
+            })
+            .map(|c| c.id.clone());
+        Some(EventKind::CardShown {
+            card: card.id.clone(),
+            zone: card.zone.clone(),
+            when: match card.when {
+                world::When::Road => CardWhen::Road,
+                world::When::Night => CardWhen::Night,
+                world::When::Arrival => CardWhen::Arrival,
+            },
+            reads: reads(card, Some(pending), &self.world.state.deeds),
+            forewarned,
         })
     }
 
@@ -862,6 +892,36 @@ pub fn choices_dm(card: &world::Card, pending: Option<&world::PendingCard>) -> V
             breaks: c.breaks.clone(),
         })
         .collect()
+}
+
+/// The remembered deeds a card reads (AGT-91): the ones its `if` names, then the ones an
+/// offered choice's `if` names, each once, never the scout's one-draw `scouted`.
+pub fn reads(
+    card: &world::Card,
+    pending: Option<&world::PendingCard>,
+    deeds: &world::DeedBook,
+) -> Vec<DeedDm> {
+    let mut out: Vec<DeedDm> = Vec::new();
+    let named = card.if_deeds.iter().chain(
+        card.choices
+            .iter()
+            .filter(|c| pending.is_none_or(|p| p.offers(&c.id)))
+            .flat_map(|c| c.if_deeds.iter()),
+    );
+    for id in named.flat_map(world::Deeds::ids) {
+        if id == world::SCOUTED || out.iter().any(|d| d.deed == *id) {
+            continue;
+        }
+        if let Some(d) = deeds.get(id) {
+            out.push(DeedDm {
+                deed: id.clone(),
+                by: d.by.iter().cloned().map(Handle).collect(),
+                day: d.day,
+                contract: d.contract,
+            });
+        }
+    }
+    out
 }
 
 /// `<pack>/worlds/<id>` when the pack carries its world, else the shared worlds directory.
