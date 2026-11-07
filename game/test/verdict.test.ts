@@ -218,6 +218,7 @@ test("a living-world run is judged on the Milestone 9 exit: the contract paid by
   assert.match(row("m9-pay").detail, /bren 4 gp/);
   assert.equal(row("m9-ledger").status, "pass");
   assert.match(row("m9-fight").detail, /^1 fights/, "the authored encounter doesn't count");
+  assert.equal(row("m9-fight").status, "reported", "fights are a recommendation, never a gate (Q6)");
   assert.equal(row("m9-roster").status, "pass");
   assert.match(row("m11-deck").detail, /^3 road and night cards and 1 arrival cards decided; 1 DM picks, each with its reason/);
   assert.match(row("m11-thread").detail, /bog_wife reads shared_bread/);
@@ -235,7 +236,7 @@ test("a living-world run is judged on the Milestone 9 exit: the contract paid by
   const w = computeVerdict(bad);
   const status = (id: string) => w.rows.find((r) => r.row === id)!.status;
   assert.equal(w.verdict, "FAIL");
-  assert.deepEqual(["1", "m9-journeys", "m9-pay", "m9-ledger", "m9-road", "m9-fight", "m9-roster"].map(status), ["fail", "fail", "fail", "fail", "fail", "fail", "reported"]);
+  assert.deepEqual(["1", "m9-journeys", "m9-pay", "m9-ledger", "m9-road", "m9-fight", "m9-roster"].map(status), ["fail", "fail", "fail", "fail", "fail", "reported", "reported"]);
   assert.match(w.rows.find((r) => r.row === "m9-ledger")!.detail, /^1 mismatches, first: odda_vell holds 1600 cp/);
 
   // No stderr in the folder: the trial balance can't be read, so the row waits.

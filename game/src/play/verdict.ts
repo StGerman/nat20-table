@@ -265,7 +265,9 @@ function campaignRows(run: RunRecord, log: Event[], engineLog: EngineLogLine[], 
 
   // A fight outside a scene: one no authored encounter started (start_fight, or a card's fight).
   const outside = engineLog.filter((l) => l.request?.cmd !== "start_combat" && l.response?.ok && (l.response.events ?? []).some((e) => e.kind === "combat_started")).length;
-  const fight: VerdictRow = { row: "m9-fight", title: "At least 1 fight outside a scene", status: outside > 0 ? "pass" : "fail", detail: `${outside} fights started by the DM or a road card` };
+  // Reported, never a gate (Milestone 11, decision 0063 Q6): fights are a recommendation. The
+  // Milestone 9 exit runs that gated on it are closed (decision 0060).
+  const fight: VerdictRow = { row: "m9-fight", title: "Fights outside a scene (reported, not a gate)", status: "reported", detail: `${outside} fights started by the DM or a road card` };
 
   // The party arrives with the previous run's roster; the pair's first run may start a new one.
   const roster = run.roster;
