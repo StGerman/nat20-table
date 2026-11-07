@@ -35,7 +35,8 @@ B. Rule 3 is in CLAUDE.md and outranks a style rule. Lifting the style half keep
 
 ## Consequences
 
-- `game/src/table/guards.ts`: `numberIn` and `statTermIn` give way to `hiddenNumberIn` (a number within four words of a statistic's name, in one clause) and `rollModifiersIn`. Mixed-script words, Latin words in a Russian run, DM-only ids and unknown roll citations are refused as before.
+- `game/src/table/guards.ts`: `numberIn` and `statTermIn` give way to `hiddenNumberIn` and `rollModifiersIn`. `hiddenNumberIn` refuses a number (digits, words, hyphenated words, glued as in AC15) within ten words of a statistic's name in the same clause. Commas and sentence marks end a clause; colons and dashes don't. "Health" and «здоровье» count as Hit Points. A bonus and "to hit" count only with a signed number (+4). `rollModifiersIn` refuses `14 + 5 = 19`, `19 (14 + 5)` and `1d20+5`.
+- The reach is a trade. Ten words catch "The Armor Class of the goblin standing by the door is 15". They also refuse some ordinary prose, such as "Hit points matter little when three wolves circle" or «Бард спел три хита», and each refusal costs the agent a rewrite. Mixed-script words, Latin words in a Russian run, DM-only ids and unknown roll citations are refused as before.
 - The DM prompt's "What the table may hear", the narrate and remember tool texts, the AI player's speak tool, the Russian lines in `game/src/agents/language.ts`, the closing, night and pay wakes in `game/src/table/loop.ts`, and *Fair in Wend*'s Saltmouth prose stop saying "no numbers"; they say which numbers stay the engine's.
 - Unchanged: Rule 3, the visibility table in `contract/protocol.md` (enemy health stays a band), the leak scan, the roll citation rule (Rule 4).
 - The storytelling bible's Guardrails list marks "no numbers or jargon on screen" as removed and keeps "hidden values never reach a player (Rule 3)".

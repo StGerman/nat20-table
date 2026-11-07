@@ -69,6 +69,18 @@ test("the narration guard refuses a number for a game statistic, a roll's modifi
     ["The wolf is at 7/10 hit points.", /\(hit points, 7\/10\)/],
     ["Its Armor Class of about 13 holds.", /\(Armor Class, 13\)/],
     ["Its AC: 15.", /\(AC, 15\)/],
+    // Review of table #326: a number glued to its statistic, a hyphenated number, a bonus, health, a far number.
+    ["AC15 at best.", /\(AC, 15\)/],
+    ["DC12 to climb.", /\(DC, 12\)/],
+    ["goblin_1 has HP3 left.", /\(HP, 3\)/],
+    ["The goblin's AC is twenty-two.", /\(AC, twenty-two\)/],
+    ["The goblin swings, +4 to hit.", /\(to hit, \+4\)/],
+    ["Its bonus is +5.", /\(bonus, \+5\)/],
+    ["The goblin has 3 health left.", /\(health, 3\)/],
+    ["The Armor Class of the goblin standing by the door is 15.", /\(Armor Class, 15\)/],
+    ["You rolled 19 (14 + 5).", /a roll's modifiers \(\(14 \+ 5\)\)/],
+    ["You rolled 1d20+5 for a 19.", /a roll's modifiers \(1d20\+5\)/],
+    ["That is 14 – 5 = 9.", /a roll's modifiers/],
     ["A goblin at two hit points crawls away.", /\(hit points, two\)/],
     ["Bren's blow, 1d20 (14) +5 = 19, lands.", /a roll's modifiers/],
     ["The total is 14 + 5 = 19.", /a roll's modifiers/],
@@ -98,6 +110,11 @@ test("the narration guard refuses a number for a game statistic, a roll's modifi
     "Maren heals you; the hit points come back with the warmth.",
     "You have advantage on this one: the wolf hasn't seen you.",
     "goblin_1 has 4 friends behind the woodpile.",
+    "No one here has hit points to spare.",
+    "Keep your AC up, 2 more goblins come!",
+    "Odda adds a bonus of two silver for the bridge.",
+    "Two to hit the left one, Torva!",
+    "The ford is 3–4 days off (2 by the old road).",
     "The goblin_12 falls.",
   ]) {
     assert.equal(guard(text), undefined, text);
@@ -113,10 +130,12 @@ test("the guards read Russian: a number in digits or words beside a game statist
     ["Гоблин держится на трёх хитах.", /\(хитах, трёх\)/],
     ["Его КД 15, не меньше.", /\(КД, 15\)/],
     ["КД у волка — 13.", /\(КД, 13\)/],
+    ["Осталось 7 здоровья.", /\(здоровья, 7\)/],
+    ["Гоблин бьёт с +3 к попаданию.", /\(к попаданию, \+3\)/],
     ["Это проверка со СЛ двенадцать.", /\(СЛ, двенадцать\)/],
     ["Класс доспеха у волка всего 13.", /\(Класс доспеха, 13\)/],
     ["У неё пять очков здоровья.", /\(очков здоровья, пять\)/],
-    ["С бонусом атаки +4 не промахнёшься.", /\(бонусом атаки, 4\)/],
+    ["С бонусом атаки +4 не промахнёшься.", /\(бонусом атаки, \+4\)/],
     ["Это уровень опасности два.", /\(уровень опасности, два\)/],
   ];
   const speech = speechGuard({ shown: packIds(MILL).shown });
@@ -137,6 +156,7 @@ test("the guards read Russian: a number in digits or words beside a game statist
     "Его КД высок: под тряпьём кольчуга.",
     "Гоблин почти без хитов.",
     "Бросок 17 на к20 [r12]. Хиты гоблина тают.",
+    "До брода дня три–четыре (два по старой дороге).",
   ]) {
     assert.equal(guard(text), undefined, text);
   }
@@ -154,6 +174,7 @@ test("the speech guard refuses an AI player's number for a game statistic, and l
   assert.equal(guard("Three gold for a bowl of soup? Robbery."), undefined);
   assert.equal(guard("I'm badly hurt. Cover me while I pull back."), undefined);
   assert.equal(guard("Torva, take goblin_2 by the woodpile!"), undefined);
+  assert.match(guard("Its AC [r3] 15, I swear.") ?? "", /\(AC, 15\)/, "a citation is not the number");
 });
 
 test("a refused line reaches no other seat and nothing in the transcript; the speaker gets the reason", async () => {

@@ -34,66 +34,104 @@ const RUSSIAN_NUMBER_WORDS =
 
 /**
  * Game statistics whose values the table never hears from an agent (Rule 3, spec §3.5): a
- * creature's Armor Class and Hit Points, a DC, an attack or save bonus, a challenge rating. The
- * word alone is fine; a number beside it is refused (`hiddenNumberIn`).
+ * creature's Armor Class and Hit Points (or health), a DC, an attack or save bonus, a challenge
+ * rating. The word alone is fine; a number beside it is refused (`hiddenNumberIn`). A `signed`
+ * term counts only a signed number (+4, −1), so "a bonus for the bridge" or "two to hit" is prose.
+ * Lookarounds instead of \b, so a number glued to the term (AC15, HP3) still counts.
  */
-const STAT_TERMS: RegExp[] = [
-  /\barmou?r class\b/gi,
-  /\bAC\b/gi,
-  /\bDCs?\b/gi,
-  /\bdifficulty class\b/gi,
-  /\bhit points?\b/gi,
-  /\bHP\b/gi,
-  /\bsaving throw bonus\b/gi,
-  /\battack bonus\b/gi,
-  /\bchallenge rating\b/gi,
-  // Russian (decision 0038): Armor Class, DC, Hit Points, bonuses, challenge rating.
-  /класс\p{L}* (?:доспех|брон)\p{L}*/giu,
-  /(?<!\p{L})КД(?!\p{L})/giu,
-  /(?<!\p{L})СЛ(?!\p{L})/giu,
-  /класс\p{L}* сложност\p{L}*/giu,
-  /(?<!\p{L})хит(?:|а|у|ом|е|ы|ов|ам|ами|ах)(?!\p{L})/giu,
-  /(?<!\p{L})хит-?поинт\p{L}*/giu,
-  /очк\p{L}* (?:здоровья|жизни)/giu,
-  /(?<!\p{L})ОЗ(?!\p{L})/gu,
-  /бонус\p{L}* (?:к )?(?:атак|спас)\p{L}*/giu,
-  /(?:показател|урове?н)\p{L}* опасности/giu,
+const STAT_TERMS: Array<{ term: RegExp; signed?: true }> = [
+  { term: /(?<![A-Za-z])armou?r class(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])AC(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])DCs?(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])difficulty class(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])hit points?(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])HP(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])health(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])saving throw bonus(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])attack bonus(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])challenge rating(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])bonus(?:es)?(?![A-Za-z])/gi, signed: true },
+  { term: /(?<![A-Za-z])to hit(?![A-Za-z])/gi, signed: true },
+  // Russian (decision 0038): Armor Class, DC, Hit Points, health, bonuses, challenge rating.
+  { term: /класс\p{L}* (?:доспех|брон)\p{L}*/giu },
+  { term: /(?<!\p{L})КД(?!\p{L})/giu },
+  { term: /(?<!\p{L})СЛ(?!\p{L})/giu },
+  { term: /класс\p{L}* сложност\p{L}*/giu },
+  { term: /(?<!\p{L})хит(?:|а|у|ом|е|ы|ов|ам|ами|ах)(?!\p{L})/giu },
+  { term: /(?<!\p{L})хит-?поинт\p{L}*/giu },
+  { term: /очк\p{L}* (?:здоровья|жизни)/giu },
+  { term: /(?<!\p{L})здоровь\p{L}*/giu },
+  { term: /(?<!\p{L})ОЗ(?!\p{L})/gu },
+  { term: /бонус\p{L}* (?:к )?(?:атак|спас)\p{L}*/giu },
+  { term: /(?:показател|урове?н)\p{L}* опасности/giu },
+  { term: /(?<!\p{L})бонус\p{L}*/giu, signed: true },
+  { term: /(?<!\p{L})к попаданию(?!\p{L})/giu, signed: true },
 ];
 
-/** How many words either side of a game statistic a number counts as its value ("Armor Class of about 15", «класс доспеха у волка всего 13»). */
-const STAT_REACH = 4;
+/**
+ * How many words either side of a game statistic a number counts as its value, inside one clause
+ * ("The Armor Class of the goblin standing by the door is 15"). Wider catches more of a model's
+ * phrasings and refuses more prose; decision 0064 records the trade.
+ */
+const STAT_REACH = 10;
 
-/** Where a sentence or clause ends: a number past it is about something else. A colon or dash doesn't ("AC: 15", «КД — 15»). */
-const CLAUSE_END = /[.!?;]/;
+/**
+ * Where a clause ends: a number past it is about something else ("Keep your AC up, 2 more goblins
+ * come!"). A colon or dash doesn't end one ("AC: 15", «КД — 13»).
+ */
+const CLAUSE_END = /[.!?;,]/;
 
 /** A die, `d20` or `2d6`: the dice of a roll are public (protocol §5), not a statistic's value. */
 const DIE = /^\d*[dк]\d+$/iu;
 
-/** The word without the punctuation around it ("15," is 15, "+4" is 4). */
+/** A roll citation as a word (r12): a reference, not a number. */
+const CITED = /^r\d+$/;
+
+/** The word without the punctuation around it ("15," is 15, "(+4)" is +4, a sign stays). */
 function bareWord(word: string): string {
-  return word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+  return word.replace(/^[^\p{L}\p{N}+−-]+|[^\p{L}\p{N}]+$/gu, "");
 }
 
-/** A word that is a number: digits in it (15, 7/10), or a number in words, English or Russian. A die is not one. */
-function isNumber(word: string): boolean {
-  return (/\d/.test(word) && !DIE.test(word)) || NUMBER_WORDS.test(word) || RUSSIAN_NUMBER_WORDS.test(word);
+/** A number in words, English or Russian, hyphenated parts included ("twenty-two"). */
+function isNumberWord(word: string): boolean {
+  return word.split(/[-‑]/).some((part) => NUMBER_WORDS.test(part) || RUSSIAN_NUMBER_WORDS.test(part));
 }
+
+/** A word that is a number: digits in it (15, 7/10), or a number in words. A die or a citation is not one. */
+function isNumber(word: string): boolean {
+  return (/\d/.test(word) && !DIE.test(word) && !CITED.test(word)) || isNumberWord(word);
+}
+
+/** A signed number: +4, -1, −1. */
+function isSigned(word: string): boolean {
+  return /^[+−-]\d/.test(word);
+}
+
+/** Words before which "one" is a pronoun, not a count: "no one", "any one", "every one". */
+const PRONOUN_ONE = /^(?:no|any|every|each|some)$/i;
 
 /**
  * A number beside a game statistic in the same clause (AGT-95, decision 0064): "AC 15", "DC
- * twelve", "has 3 HP", "7/10 hit points", «КД 15», «осталось три хита». Numbers elsewhere, coin,
- * days, distances, a roll's total, pass; so do the statistics' names alone. A hidden number said
- * without its statistic's name ("you needed a fifteen") is the prompt's job and the leak scan's.
+ * twelve", "has 3 HP", "7/10 hit points", "+4 to hit", «КД 15», «осталось три хита». Numbers
+ * elsewhere, coin, days, distances, a roll's total, pass; so do the statistics' names alone. A
+ * hidden number said without its statistic's name ("you needed a fifteen") is the prompt's job and
+ * the leak scan's.
  */
 function hiddenNumberIn(text: string): string | undefined {
   let nearest: { term: string; number: string; distance: number } | undefined;
-  for (const term of STAT_TERMS) {
+  for (const { term, signed } of STAT_TERMS) {
     for (const found of text.matchAll(term)) {
       const at = found.index ?? 0;
-      const before = text.slice(0, at).split(CLAUSE_END).at(-1)!.split(/\s+/).map(bareWord).filter(Boolean).slice(-STAT_REACH).reverse();
-      const after = text.slice(at + found[0].length).split(CLAUSE_END)[0].split(/\s+/).map(bareWord).filter(Boolean).slice(0, STAT_REACH);
-      for (const side of [before, after]) {
-        const distance = side.findIndex(isNumber);
+      const words = (part: string) => part.split(/\s+/).map(bareWord).filter(Boolean);
+      const before = words(text.slice(0, at).split(CLAUSE_END).at(-1)!);
+      const after = words(text.slice(at + found[0].length).split(CLAUSE_END)[0]);
+      const sides = [before.slice(-STAT_REACH).reverse(), after.slice(0, STAT_REACH)];
+      for (const [index, side] of sides.entries()) {
+        // The word just before side[i] in the text, to tell "no one" from a count.
+        const previous = (i: number) => (index === 0 ? before[before.length - 2 - i] : after[i - 1]) ?? "";
+        const distance = side.findIndex((word, i) =>
+          signed ? isSigned(word) : isNumber(word) && !(/^one$/i.test(word) && PRONOUN_ONE.test(previous(i))),
+        );
         if (distance >= 0 && (!nearest || distance < nearest.distance)) nearest = { term: found[0], number: side[distance], distance };
       }
     }
@@ -103,13 +141,21 @@ function hiddenNumberIn(text: string): string | undefined {
 
 /**
  * A roll written with its modifiers, as the DM's full view shows it (`1d20 (14) +5 = 19`, `14 + 5 =
- * 19`): players get a roll's dice, total and outcome only (protocol §5).
+ * 19`, `19 (14 + 5)`, `1d20+5`): players get a roll's dice, total and outcome only (protocol §5).
+ * In brackets only a plus or a minus sign counts, so «(3–4 дня)» stays prose.
  */
-const ROLL_MODIFIERS = /(?:\)|\d)\s*[+-]\s*\d+\s*=\s*\d/;
+const ROLL_MODIFIERS = [
+  /(?:\)|\d)\s*[+\-–−]\s*\d+\s*=\s*\d+/,
+  /\(\s*\d+\s*[+−]\s*\d+\s*\)/,
+  /\d*[dк]\d+\s*[+\-−]\s*\d+/iu,
+];
 
 function rollModifiersIn(text: string): string | undefined {
-  const found = ROLL_MODIFIERS.exec(text);
-  return found ? `it shows a roll's modifiers (${found[0]}): give the total only` : undefined;
+  for (const pattern of ROLL_MODIFIERS) {
+    const found = pattern.exec(text);
+    if (found) return `it shows a roll's modifiers (${found[0].trim()}): give the total only`;
+  }
+  return undefined;
 }
 
 /** Kinds of DM-only data that are no player's business by name (protocol §5): surrender triggers, a spawn's `unless`. */
@@ -224,7 +270,7 @@ export function speechGuard(options: { shown: ReadonlySet<string>; language?: La
       ? options.dmOnly?.has(text)
         ? `it names ${text}, which only the DM knows`
         : undefined
-      : hiddenNumberIn(withoutShown(text, options.shown)) ??
+      : hiddenNumberIn(withoutShown(text.replace(CITATION, ""), options.shown)) ??
     rollModifiersIn(text) ??
     mixedScriptIn(text) ??
       (options.language === "ru" ? (englishIn(text, options.shown) ?? latinWordIn(text, options.shown)) : undefined);
