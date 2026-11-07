@@ -202,12 +202,12 @@ async function until(what: string, ready: () => boolean, ms = 3000): Promise<voi
   }
 }
 
-test("with a saved party the start screen asks first; continuing, the list shows the saved levels", async () => {
+test("with a saved party the start screen asks first; continuing, the list shows the saved levels and the card the saved purse and experience (AGT-93)", async () => {
   for (const [keys, party, level] of [[["\r"], "continue", "3"], [["2", "\r"], "new", "2"]] as const) {
     const stdin = new FakeStdin();
     const stdout = new FakeStdout(120, 30);
     const render = { stdin: stdin as unknown as NodeJS.ReadStream, stdout: stdout as unknown as NodeJS.WriteStream, stderr: new FakeStdout(120, 30) as unknown as NodeJS.WriteStream, debug: true, patchConsole: false };
-    const picking = pickOnScreen(partyRoster(MILL), "bren", { title: "The Silent Mill", palette: paletteFor({ NO_COLOR: "1" }), render, saved: { line: "Bren (level 3)", levels: new Map([["bren", 3]]) } });
+    const picking = pickOnScreen(partyRoster(MILL), "bren", { title: "The Silent Mill", palette: paletteFor({ NO_COLOR: "1" }), render, saved: { line: "Bren (level 3)", characters: new Map([["bren", { level: 3, xp: 940, purseCp: 6140 }]]) } });
     await until("the party question", () => stdout.last.includes("The Silent Mill · Your party") && stdout.last.includes("❯ 1. Continue with your party: Bren (level 3)"));
     for (const key of keys) {
       stdin.press(key);
@@ -215,6 +215,12 @@ test("with a saved party the start screen asks first; continuing, the list shows
     }
     await until("the pick list", () => stdout.last.includes("Who do you play?"));
     assert.ok(stdout.last.includes(`❯ 1. Bren   Human Fighter ${level} · default`), stdout.last);
+    // The card: the saved purse and experience going on; a new party has the pregen's purse and no experience yet.
+    if (party === "continue") {
+      assert.ok(stdout.last.includes("Purse: 61 gold pieces and 4 silver pieces") && stdout.last.includes("Experience: 940 points"), stdout.last);
+    } else {
+      assert.ok(stdout.last.includes("Purse: 54 gold pieces") && !stdout.last.includes("Experience:"), stdout.last);
+    }
     stdin.press("\r");
     const picked = await picking;
     assert.equal(picked.handle, "bren");

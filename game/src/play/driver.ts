@@ -47,7 +47,7 @@ import type { DmAgent, PlayerAgent, Seat, StopKind } from "../table/types.ts";
 import type { Instance } from "ink";
 import { InkSeat } from "../ui/ink-seat.ts";
 import { glyphsFor } from "../ui/panel.ts";
-import { pickOnScreen } from "../ui/pick.ts";
+import { pickOnScreen, savedCharacters } from "../ui/pick.ts";
 import { usageBlock, UsageLog } from "../usage.ts";
 import { ScriptedJudge } from "../check/judge.ts";
 import { modelJudgeFor, narrationCheck } from "../check/narration.ts";
@@ -208,8 +208,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
         ? {
             saved: {
               line: rosterLine(ask.roster, new Map(entries.map((e) => [e.handle, e.name]))),
-              levels: new Map(ask.roster.characters.map((c) => [c.handle, c.level])),
-              ...(again ? { startLevels: new Map(again.characters.map((c) => [c.handle, c.level])) } : {}),
+              characters: savedCharacters(ask.roster.characters),
+              ...(again ? { startCharacters: savedCharacters(again.characters) } : {}),
             },
           }
         : {}),
