@@ -1,0 +1,281 @@
+{
+    "_comment": "Arrival cards at Saltmouth, the fair (Faces of the Road, MAP-10): where the road's threads come to the gate. Each reads a deed from the road. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Fights use the SRD 5.2.1 Bandit.",
+    "cards": [
+        {
+            "id": "tams_story",
+            "zone": "wendmouth",
+            "when": "arrival",
+            "target": "blades",
+            "if": "tam_rode",
+            "once": true,
+            "text": "By the time the wagon is unhitched, the roadfolk boy is standing on a barrel at the fair gate, telling a crowd how the Blades beat everything the road threw at them. The wolves are bigger each time he tells it.",
+            "note": "Tam Corrin. Humour that mocks the company: the human's character hears herself turned into a legend, and the legend is wrong in every detail that flatters. If the Blades promised Bel, the promise is due now. Rufus's men are in the crowd and grow careful. Brannock likes anyone who keeps a boy honest.",
+            "choices": [
+                {
+                    "id": "grow",
+                    "text": "Let the story grow.",
+                    "effects": [
+                        {
+                            "do": "gain",
+                            "who": "blades",
+                            "copper": 5
+                        },
+                        {"do": "remember", "deed": "tams_legend_grew"}
+                    ]
+                },
+                {
+                    "id": "correct",
+                    "text": "Correct him kindly.",
+                    "effects": [
+                        {"do": "remember", "deed": "corrected_tam"}
+                    ]
+                },
+                {
+                    "id": "to_bel",
+                    "text": "Take him to find his mother.",
+                    "unless": "promised_bel",
+                    "effects": [
+                        {"do": "remember", "deed": "took_tam_to_bel"}
+                    ]
+                },
+                {
+                    "id": "keep_promise",
+                    "text": "Take him back to his mother, as you promised.",
+                    "if": "promised_bel",
+                    "keeps": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {"do": "remember", "deed": "kept_the_promise_to_bel"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "rufus_due",
+            "zone": "wendmouth",
+            "when": "arrival",
+            "target": "blades",
+            "if": "took_rufus_coin",
+            "once": "contract",
+            "text": "Two big men in good boots find the Blades at the fair gate. The wagon arrived whole, they say, so the coin goes back.",
+            "note": "Before the choices, say in one plain sentence what happened on the road: the Blades took the coin of the man in the good coat for a wheel that never came off. The payoff of the run's blind choice; it names the deed. Rufus's bruisers: they yield the moment it stops being worth it. The warden keeps the peace for the old salt house, which does not love Rufus's new paper. If the Blades read the pilgrim's drawing, they know whose men stood on the Millbeck bridge and can say so out loud. Bren is for giving it back: pay is pay.",
+            "choices": [
+                {
+                    "id": "give_back",
+                    "text": "Give the coin back.",
+                    "keeps": [
+                        "debt_paid"
+                    ],
+                    "effects": [
+                        {
+                            "do": "pay",
+                            "who": "blades",
+                            "copper": 50
+                        },
+                        {"do": "remember", "deed": "gave_rufus_back_his_coin"}
+                    ]
+                },
+                {
+                    "id": "refuse",
+                    "text": "Refuse.",
+                    "keeps": [
+                        "mercy_to_yielded"
+                    ],
+                    "breaks": [
+                        "debt_paid"
+                    ],
+                    "effects": [
+                        {"do": "remember", "deed": "refused_rufus_his_due"},
+                        {
+                            "do": "fight",
+                            "monsters": [
+                                "bandit",
+                                "bandit"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "warden",
+                    "text": "Take it to the warden.",
+                    "unless": "knew_who_set_the_toll",
+                    "keeps": [
+                        "mercy_to_yielded"
+                    ],
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "warden_threw_out_the_bruisers"}
+                            ],
+                            "failure": [
+                                {
+                                    "do": "fight",
+                                    "monsters": [
+                                        "bandit",
+                                        "bandit"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "name_him",
+                    "text": "Tell the warden whose men stood on the Millbeck bridge.",
+                    "if": "knew_who_set_the_toll",
+                    "effects": [
+                        {"do": "remember", "deed": "named_rufus_at_the_gate"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "oddas_mark",
+            "zone": "wendmouth",
+            "when": "arrival",
+            "target": "caravan",
+            "if": "tracked_the_sack",
+            "once": true,
+            "owner_pick": "warden",
+            "text": "On a grain dealer's stall by the fair gate, under his own sacks, two sacks carry Odda's tally mark.",
+            "note": "Before the choices, say in one plain sentence what happened on the road: the Blades tracked Odda's missing sack to the drovers' camp. The stall is Rufus's. Market against custom: a factor's paper against a farmer's mark, and the warden keeps the peace for the old salt house. If the Blades read the pilgrim's drawing, one question about Col and Dunn's debt turns Rufus pale in front of his customers. Odda's line if left to her: \"Twenty autumns. He'll learn.\"",
+            "choices": [
+                {
+                    "id": "warden",
+                    "text": "Fetch the warden.",
+                    "unless": "knew_who_set_the_toll",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 10,
+                            "success": [
+                                {"do": "cargo", "good": "wheat", "change": 50}
+                            ],
+                            "failure": [
+                                {"do": "remember", "deed": "the_warden_took_the_factors_word"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "debt",
+                    "text": "Ask the dealer what Col and Dunn still owe him.",
+                    "if": "knew_who_set_the_toll",
+                    "effects": [
+                        {"do": "cargo", "good": "wheat", "change": 50},
+                        {"do": "remember", "deed": "shamed_rufus_on_his_stall"}
+                    ]
+                },
+                {
+                    "id": "face",
+                    "text": "Face the dealer down.",
+                    "keeps": [
+                        "mercy_to_yielded"
+                    ],
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "intimidation",
+                            "dc": 15,
+                            "success": [
+                                {"do": "cargo", "good": "wheat", "change": 50},
+                                {"do": "remember", "deed": "faced_rufus_down"}
+                            ],
+                            "failure": [
+                                {
+                                    "do": "fight",
+                                    "monsters": [
+                                        "bandit",
+                                        "bandit"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "odda",
+                    "text": "Let Odda settle it.",
+                    "effects": [
+                        {"do": "remember", "deed": "odda_settled_it"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "tobins_hands",
+            "zone": "wendmouth",
+            "when": "arrival",
+            "target": "blades",
+            "if": "carrying_sedges_jar",
+            "once": true,
+            "text": "The peddler's handcart is at the fair gate. He drinks half the bog-wife's jar standing up, then holds out a hand that does not shake.",
+            "note": "Tobin, for the first time in years. Asked nothing, that night he lights the sky over the fair with the one spell he still has and calls out the company's name to the crowd. Asked what he knows: the barrow rumour of the Hollow King, a hook for a later pack and nothing more; the DM never confirms it. Asked to come along, he packs the handcart in a minute; he has been waiting for someone to ask.",
+            "choices": [
+                {
+                    "id": "nothing",
+                    "text": "Ask nothing in return.",
+                    "effects": [
+                        {"do": "remember", "deed": "healed_tobins_hands"}
+                    ]
+                },
+                {
+                    "id": "knows",
+                    "text": "Ask what he knows.",
+                    "effects": [
+                        {"do": "remember", "deed": "heard_of_the_hollow_king"}
+                    ]
+                },
+                {
+                    "id": "come",
+                    "text": "Ask him to come with you.",
+                    "effects": [
+                        {"do": "remember", "deed": "tobin_follows"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "loaf_at_the_sea",
+            "zone": "wendmouth",
+            "when": "arrival",
+            "target": "blades",
+            "if": "agna_came_along",
+            "once": true,
+            "text": "Where the river meets the salt water, the silent pilgrim walks into the shallows and breaks her loaf for the gulls. Then she speaks for the first time since the hills, and her first words are the Blades' names.",
+            "note": "Sister Agna, at the end of her vow. Plain, no sermon: she says their names, thanks them, and nothing more. What she does is hearsay that Odda and Brannock repeat, and Gwyn has heard it by the next contract. Given coin, she gives it to the first beggar she passes, in plain sight. Maren cries and pretends it is the wind.",
+            "choices": [
+                {
+                    "id": "stand",
+                    "text": "Stand with her in the water.",
+                    "effects": [
+                        {"do": "remember", "deed": "stood_with_agna"}
+                    ]
+                },
+                {
+                    "id": "coin",
+                    "text": "Give her coin for the road home.",
+                    "effects": [
+                        {
+                            "do": "pay",
+                            "who": "party",
+                            "copper": 10
+                        },
+                        {"do": "remember", "deed": "gave_agna_coin"}
+                    ]
+                }
+            ]
+        }
+    ]
+}

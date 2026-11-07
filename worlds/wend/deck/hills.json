@@ -354,6 +354,7 @@
                     "unless": "robbed_cairn",
                     "effects": [
                         {"do": "remember", "deed": "gave_agna_a_seat"},
+                        {"do": "remember", "deed": "agna_came_along"},
                         {"do": "add_card", "card": "what_agna_drew", "soon": true}
                     ]
                 },
@@ -363,6 +364,7 @@
                     "effects": [
                         {"do": "delay", "minutes": 20},
                         {"do": "remember", "deed": "walked_with_agna"},
+                        {"do": "remember", "deed": "agna_came_along"},
                         {"do": "add_card", "card": "what_agna_drew", "soon": true}
                     ]
                 },
