@@ -316,7 +316,7 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
         const ids = [...briefing.matchAll(/^Offered card \d+: ([a-z0-9_]+) /gm)].map((m) => m[1]!);
         await tools.pickCard(ids.at(-1)!, "It follows from what the party did.");
       },
-      suggest: async () => 'Two cards: {"cards": [{"id": "fair_debt", "text": "A stall-keeper remembers the party."}], "why": ["it carries on the fair"]}',
+      suggest: async () => '{"cards": [{"id": "fair_debt", "text": "A stall-keeper remembers the party."}], "why": ["it carries on the fair"]}',
     });
     const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
     const report = await loop.run("fw_highsteads");
