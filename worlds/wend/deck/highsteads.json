@@ -75,7 +75,7 @@
                 },
                 {
                     "id": "cheese",
-                    "text": "Take the cheese the man from the bridge sent up for you.",
+                    "text": "Take the cheese Col sent up the track for you.",
                     "if": "col_owes_blades",
                     "effects": [
                         {"do": "cargo", "good": "rations", "change": 1},
