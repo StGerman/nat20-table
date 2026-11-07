@@ -1,0 +1,116 @@
+{
+    "id": "twb_wendmouth",
+    "description": "The Way Back, the start (MAP-12): the fair ground at Saltmouth on the fair's last evening, where Odda Vell hands the Grey Lantern company on to Fenn Lusk and his wagon of salt and iron. Every later scene carries the party in.",
+    "anchors": [
+        {
+            "id": "by_the_wagon",
+            "name": "by Fenn's wagon",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "fair_gate",
+            "name": "the town gate",
+            "position_ft": {
+                "x_ft": -25.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "odda_stall",
+            "name": "Odda's empty stall",
+            "position_ft": {
+                "x_ft": 15.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "the_quay",
+            "name": "the quay",
+            "position_ft": {
+                "x_ft": 40.0,
+                "y_ft": -10.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "creatures": [
+        {
+            "handle": "bren",
+            "pregen": "fighter_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 0.0,
+                    "y_ft": -5.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "torva",
+            "pregen": "barbarian_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": -5.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "maren",
+            "pregen": "cleric_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": -5.0,
+                    "y_ft": -5.0,
+                    "z_ft": 0.0
+                }
+            }
+        },
+        {
+            "handle": "ilsa",
+            "pregen": "wizard_l2",
+            "side": "party",
+            "control": "client",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 5.0,
+                    "z_ft": 0.0
+                }
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "read_the_river",
+            "test": {
+                "kind": "skill",
+                "skill": "survival"
+            },
+            "dc": 10,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "knows_the_rain_is_coming"
+                }
+            ]
+        }
+    ]
+}

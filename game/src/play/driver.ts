@@ -392,6 +392,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
           campaign: {
             party: everyone,
             ...(campaign.dayLimit !== undefined ? { dayLimit: campaign.dayLimit } : {}),
+            startDay: campaign.startDay,
             ...(record.roster ? { keepsParty: true } : {}),
             // The party is saved after every night too, so a crash loses at most one day (API-45).
             ...(record.roster
