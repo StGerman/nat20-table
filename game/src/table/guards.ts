@@ -41,17 +41,17 @@ const RUSSIAN_NUMBER_WORDS =
  */
 const STAT_TERMS: Array<{ term: RegExp; signed?: true }> = [
   { term: /(?<![A-Za-z])armou?r class(?![A-Za-z])/gi },
-  { term: /(?<![A-Za-z])AC(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])ACs?(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])DCs?(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])difficulty class(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])hit points?(?![A-Za-z])/gi },
-  { term: /(?<![A-Za-z])HP(?![A-Za-z])/gi },
+  { term: /(?<![A-Za-z])HPs?(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])health(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])saving throw bonus(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])attack bonus(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])challenge rating(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])bonus(?:es)?(?![A-Za-z])/gi, signed: true },
-  { term: /(?<![A-Za-z])to hit(?![A-Za-z])/gi, signed: true },
+  { term: /(?<![A-Za-z])to[- ]hit(?![A-Za-z])/gi, signed: true },
   // Russian (decision 0038): Armor Class, DC, Hit Points, health, bonuses, challenge rating.
   { term: /класс\p{L}* (?:доспех|брон)\p{L}*/giu },
   { term: /(?<!\p{L})КД(?!\p{L})/giu },
@@ -94,6 +94,7 @@ function bareWord(word: string): string {
 
 /** A number in words, English or Russian, hyphenated parts included ("twenty-two"). */
 function isNumberWord(word: string): boolean {
+  if (/^(?:no|any|every|some)-one$/i.test(word)) return false;
   return word.split(/[-‑]/).some((part) => NUMBER_WORDS.test(part) || RUSSIAN_NUMBER_WORDS.test(part));
 }
 
@@ -107,8 +108,8 @@ function isSigned(word: string): boolean {
   return /^[+−-]\d/.test(word);
 }
 
-/** Words before which "one" is a pronoun, not a count: "no one", "any one", "every one". */
-const PRONOUN_ONE = /^(?:no|any|every|each|some)$/i;
+/** Words before which "one" is a pronoun, not a count: "no one", "which one", "the one with the shield". */
+const PRONOUN_ONE = /^(?:no|any|every|each|some|which|the|this|that)$/i;
 
 /**
  * A number beside a game statistic in the same clause (AGT-95, decision 0064): "AC 15", "DC
@@ -142,11 +143,14 @@ function hiddenNumberIn(text: string): string | undefined {
 /**
  * A roll written with its modifiers, as the DM's full view shows it (`1d20 (14) +5 = 19`, `14 + 5 =
  * 19`, `19 (14 + 5)`, `1d20+5`): players get a roll's dice, total and outcome only (protocol §5).
- * In brackets only a plus or a minus sign counts, so «(3–4 дня)» stays prose.
+ * In brackets a plus or a minus sign counts, and an ASCII minus only after a total, so «(3–4 дня)»
+ * and "(3-4 days)" stay prose.
  */
 const ROLL_MODIFIERS = [
-  /(?:\)|\d)\s*[+\-–−]\s*\d+\s*=\s*\d+/,
+  /(?:\)|\d+)\s*[+\-–−]\s*\d+\s*=\s*\d+/,
   /\(\s*\d+\s*[+−]\s*\d+\s*\)/,
+  // After a total, an ASCII minus too, as the engine writes a negative modifier: "19 (14 - 1)".
+  /\d+\s*\(\s*\d+\s*-\s*\d+\s*\)/,
   /\d*[dк]\d+\s*[+\-−]\s*\d+/iu,
 ];
 
@@ -217,7 +221,7 @@ export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) 
     const secret = tokens(bare).find((token) => options.ids.dmOnly.has(token));
     return (
       hiddenNumberIn(withoutShown(bare, options.ids.shown)) ??
-      rollModifiersIn(bare) ??
+      rollModifiersIn(text.replace(CITATION, "0")) ??
       mixedScriptIn(bare) ??
       (secret ? `it names ${secret}, which only the DM knows` : undefined) ??
       (options.language === "ru" ? latinWordIn(bare, options.ids.shown) : undefined)
@@ -271,7 +275,7 @@ export function speechGuard(options: { shown: ReadonlySet<string>; language?: La
         ? `it names ${text}, which only the DM knows`
         : undefined
       : hiddenNumberIn(withoutShown(text.replace(CITATION, ""), options.shown)) ??
-    rollModifiersIn(text) ??
+    rollModifiersIn(text.replace(CITATION, "0")) ??
     mixedScriptIn(text) ??
       (options.language === "ru" ? (englishIn(text, options.shown) ?? latinWordIn(text, options.shown)) : undefined);
 }
