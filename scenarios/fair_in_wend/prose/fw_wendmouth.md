@@ -6,4 +6,4 @@
 - Watching the crowd around the wagon (the `spot_the_cutpurse` check), a character sees a thin boy working his way towards Odda's coat. Stopped, he runs; nobody gets hurt.
 - The fair warden walks the ground with a staff and an eye for trouble.
 
-**How to run it.** The end of the contract. When the wagon arrives, the engine pays each Blade what they are owed from Odda's purse and the run ends: you narrate the pay as a scene, with Odda's own words, and close with the fair around them. No numbers: the table sees the coin in the engine's lines.
+**How to run it.** The end of the contract. When the wagon arrives, the engine pays each Blade what they are owed from Odda's purse and the run ends: you narrate the pay as a scene, with Odda's own words, and close with the fair around them. Name the coin only as the engine's lines give it, never a sum of your own.

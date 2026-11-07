@@ -236,7 +236,7 @@ test("a human who owns the caravan takes a road by name, and makes the caravan's
 
 test("a campaign pack names its start scene and day limit; the DM reads the world and the road's rules", async () => {
   assert.deepEqual(readCampaign(TEST_PACK), { startScene: "vale_town", startDay: 1 });
-  assert.match(DM_ROAD_PROMPT, /never name a price, a wage or a sum of coin/);
+  assert.match(DM_ROAD_PROMPT, /name a price, a wage or a sum of coin only as the engine's events or get_state show it, never one you worked out/);
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
   try {
     await t.engine.request("dm", { cmd: "load_scene", scene_id: "vale_town" });
