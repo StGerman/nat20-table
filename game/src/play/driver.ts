@@ -466,6 +466,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   record.ended = run?.ended ?? (failure instanceof Error ? `the run failed: ${failure.message}` : String(failure));
   record.stop = run?.stop ?? table.stop ?? (failure ? "crash" : null);
   record.scenes = (run?.sceneTimes ?? []).map((s) => ({ ...s, target_minutes: targets.get(s.id) ?? null }));
+  // The days the contract played on the world clock: a next contract starts later than its pack's day.
+  if (record.campaign && run?.campaignDays) record.campaign = { start_day: run.campaignDays.start, day_limit: run.campaignDays.last };
   writeRunRecord(runDir, record);
 
   // The DM's suggested cards (AGT-91): their own file, which the report reads and nothing loads.

@@ -245,6 +245,17 @@ test("a human who owns the caravan takes a road by name, and makes the caravan's
 
 test("a campaign pack names its start scene and day limit; the DM reads the world and the road's rules", async () => {
   assert.deepEqual(readCampaign(TEST_PACK), { startScene: "vale_town", startDay: 1 });
+  // The day limit is the pack's last day on its own clock, so it never comes before its start day.
+  const early = mkdtempSync(path.join(tmpdir(), "early-limit-"));
+  try {
+    cpSync(TEST_PACK, early, { recursive: true });
+    const file = path.join(early, "campaign.json");
+    const json = JSON.parse(readFileSync(file, "utf8"));
+    writeFileSync(file, JSON.stringify({ ...json, day_limit: 3, world: { ...json.world, day: 5 } }));
+    assert.throws(() => readCampaign(early), /day_limit 3 is before the start day 5; it is the last day the run plays/);
+  } finally {
+    rmSync(early, { recursive: true, force: true });
+  }
   assert.match(DM_ROAD_PROMPT, /never name a price, a wage or a sum of coin/);
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
   try {
@@ -403,6 +414,11 @@ test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the s
   try {
     // The clock carries on from run 1, and the day limit counts from the contract's first day.
     assert.equal(run2.report.ended, "the escort contract is done", JSON.stringify(run2.t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    // Its days, as run.json records them: from the carried day, three of them (Copilot on table #321).
+    const days = run2.report.campaignDays!;
+    assert.ok(days.start > 1, JSON.stringify(days));
+    assert.equal(days.last, days.start + 2);
+    assert.deepEqual(run1.report.campaignDays, { start: 1, last: 3 });
     const log = await run2.t.engine.request("dm", { cmd: "events", since: 0 });
     assert.ok(log.result?.cmd === "events");
     // The bridge is gone for the world, so its stop meets The bridge again, which reads a run 1 deed (exit row 5).
