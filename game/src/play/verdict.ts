@@ -352,7 +352,7 @@ const deedsDone = (log: Event[]): DeedDone[] => log.flatMap((e) => (e.kind === "
  * thread inside the run (row 3), story-space (row 4, the judge's flags) and, on a run that
  * continues a roster, the world remembers (row 5).
  */
-function wordRows(run: RunRecord, log: Event[], flags: Flag[], judged: boolean): VerdictRow[] {
+export function wordRows(run: RunRecord, log: Event[], flags: Flag[], judged: boolean): VerdictRow[] {
   const cards = cardsMet(log);
   const decided = cards.filter((c) => c.decided !== undefined);
   const road = decided.filter((c) => c.when !== "arrival").length;

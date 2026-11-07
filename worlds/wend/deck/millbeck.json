@@ -111,8 +111,7 @@
         },
         {
             "id": "bridge_again",
-            "zone": "millbeck_bridge",
-            "when": "arrival",
+            "zone": "millbeck",
             "target": "caravan",
             "if": "crossed_millbeck",
             "once": "contract",
@@ -126,7 +125,7 @@
                     "keeps": [
                         "paper_is_law"
                     ],
-                    "effects": [
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
                         {
                             "do": "pay",
                             "who": "party",
@@ -139,7 +138,7 @@
                     "id": "read",
                     "text": "Ask to read the paper.",
                     "unless": "toll_men_spared",
-                    "effects": [
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
                         {
                             "do": "check",
                             "who": "blades",
@@ -163,7 +162,7 @@
                     "id": "ask_brothers",
                     "text": "Ask him what became of the two brothers.",
                     "if": "toll_men_spared",
-                    "effects": [
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
                         {"do": "remember", "deed": "asked_after_the_brothers"}
                     ]
                 },
@@ -173,7 +172,7 @@
                     "breaks": [
                         "paper_is_law"
                     ],
-                    "effects": [
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
                         {"do": "delay", "minutes": 90},
                         {
                             "do": "check",
@@ -189,7 +188,7 @@
                     ]
                 }
             ],
-            "_comment": "An arrival card at the bridge, not a road card of the Millbeck zone: going up, the leg that meets the bridge ends there, and on the way down the bridge's own road card comes after it only while the bridge is still in the world."
+            "_comment": "A road card of the Millbeck zone, as the design has it: the leg over the bridge road meets it once the bridge's own card is gone from the world, so going down on the first contract the bridge comes and this card waits; on the way back it comes on the road, on the leg from the bridge to Wendford."
         }
     ]
 }

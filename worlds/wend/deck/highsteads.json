@@ -54,10 +54,10 @@
             "zone": "highsteads",
             "when": "arrival",
             "target": "blades",
-            "if": "crossed_millbeck",
+            "if": ["crossed_millbeck", "saw_the_company_board"],
             "once": "contract",
             "text": "Gwyn the shepherd is waiting at the fold gate when the wagon comes up the last of the track. She has news, and she has been saving it for the Blades.",
-            "note": "Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. If they died (killed_col, killed_dunn), she tells it as news, not blame: the farm below the ridge stands empty, the goblins took the flock and the bridge took the boys, and Rufus's man came up with a paper for the land. If they were spared, Col is back mending the fold. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
+            "note": "Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. If they died (killed_col, killed_dunn), she tells it as news, not blame: the farm below the ridge stands empty, the goblins took the flock and the bridge took the boys, and Rufus's man came up with a paper for the land. If they were spared, Col is back mending the fold; if the Blades spoke him out of the stocks at Wendford (col_owes_blades), he sent a cheese up the track ahead of them. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
             "choices": [
                 {
                     "id": "goblins",
@@ -76,7 +76,7 @@
                 {
                     "id": "cheese",
                     "text": "Take the cheese the man from the bridge sent up for you.",
-                    "if": "toll_men_spared",
+                    "if": "col_owes_blades",
                     "effects": [
                         {"do": "cargo", "good": "rations", "change": 1},
                         {"do": "remember", "deed": "took_cols_cheese"}
@@ -85,7 +85,7 @@
                 {
                     "id": "listen",
                     "text": "Just listen.",
-                    "unless": "toll_men_spared",
+                    "unless": "col_owes_blades",
                     "effects": [
                         {"do": "remember", "deed": "listened_to_gwyn"}
                     ]

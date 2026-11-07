@@ -15,6 +15,7 @@ import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
 import { DM_ROAD_PROMPT } from "../src/agents/dm.ts";
 import { readCampaign } from "../src/pack/campaign.ts";
+import { wordRows } from "../src/play/verdict.ts";
 import { formatDmState } from "../src/view.ts";
 import { TEST_PACK, testTable } from "./helpers.ts";
 
@@ -402,8 +403,12 @@ test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the s
   };
   const run1 = await play("scenarios/fair_in_wend");
   let roster;
+  let rows1: ReturnType<typeof wordRows> = [];
   try {
     assert.equal(run1.report.ended, "the escort contract is done");
+    const log1 = await run1.t.engine.request("dm", { cmd: "events", since: 0 });
+    assert.ok(log1.result?.cmd === "events");
+    rows1 = wordRows({ roster: { party: "new" } } as never, log1.result.events as never, [], false);
     const saved = await run1.t.engine.request("dm", { cmd: "save_roster" });
     assert.ok(saved.result?.cmd === "save_roster");
     roster = saved.result.roster;
@@ -425,6 +430,14 @@ test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the s
     const drawn = log.result.events.flatMap((e) => (e.kind === "card_shown" ? [e.card] : []));
     assert.ok(drawn.includes("bridge_again") && !drawn.includes("millbeck_bridge"), drawn.join(", "));
     const shown = log.result.events.find((e) => e.kind === "card_shown" && e.card === "bridge_again");
+    const rows2 = wordRows({ roster: { party: "continue" } } as never, log.result.events as never, [], false);
+    // The M11 verdict rows the exit pair is judged on hold by construction (F6).
+    const status = (rows: typeof rows1, row: string) => rows.find((r) => r.row === row)?.status;
+    assert.equal(status(rows1, "m11-deck"), "pass", "first run: m11-deck");
+    assert.equal(status(rows1, "m11-thread"), "pass", "first run: m11-thread");
+    assert.equal(status(rows2, "m11-deck"), "pass", "second run: m11-deck");
+    assert.equal(status(rows2, "m11-thread"), "pass", "second run: m11-thread");
+    assert.equal(status(rows2, "m11-memory"), "pass", "second run: m11-memory");
     assert.ok(shown?.kind === "card_shown" && (shown.reads ?? []).some((d) => d.deed === "crossed_millbeck"), JSON.stringify(shown));
   } finally {
     run2.t.close();
