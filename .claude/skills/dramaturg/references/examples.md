@@ -2,6 +2,8 @@
 
 The repository copy of the bible's Examples tab, for the current world. The rules are in `commandments.md` beside this file; where an example and a rule disagree, the rule wins. When the world is swapped, this file is replaced with it.
 
+Some examples cite cards, deeds and files from work that is not yet on `main` (the deck of Milestone 11). An example is evidence of a rule, not of the repository: before a board row counts as paid, find its carrier under `worlds/` or `scenarios/`.
+
 What each commandment looks like when it is done, taken from our own cards, people, and narration samples where one exists, and from a borrowed mechanism where it does not. The rule is in the tab Commandments and names nothing from here; this tab shows the rule done and what was cut. Everything in it belongs to the current world and is replaced with it. The reference narration today is sample F.
 
 ## World
