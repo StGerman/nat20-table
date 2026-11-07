@@ -14,7 +14,7 @@ export const JUDGE_CHOICE: ModelChoice = { model: "claude-opus-5-5", effort: "lo
 export const BATCH_LINES = 10;
 
 /** What a flag is about. */
-export const FLAG_KINDS = ["hp", "death", "position", "condition", "action", "surrender", "inventory", "identity"] as const;
+export const FLAG_KINDS = ["hp", "death", "position", "condition", "action", "surrender", "inventory", "identity", "story_space"] as const;
 export type FlagKind = (typeof FLAG_KINDS)[number];
 
 /** One contradiction the judge reports. */
@@ -67,6 +67,17 @@ Do not report:
 
 Each flag names the line's number, the claim in a few words, its kind, and the seq numbers of the engine lines that show otherwise (none when the state block alone shows it). Lines may be in any language; judge what they say. If no line contradicts the engine, call report with an empty list of flags. Call report exactly once, and write nothing else.`;
 
+/**
+ * The story-space question (Milestone 11, AGT-91, exit row 4), asked only of a living-world run:
+ * at each scene opening and each settled road card, does the human's character have a problem to
+ * act on? A flag is a "pleasant nothing" that Stas confirms or dismisses, as with the others.
+ */
+export function storySpacePrompt(human: string | undefined): string {
+  const who = human ? `the human's character (${human} in the party list)` : "any party member (no human is at this table)";
+  return `One more kind, for this run only:
+- story_space: a line that opens a scene (its engine lines show a scene loaded, or a journey leg arriving) or narrates a road card settled (its engine lines show "The card is decided") leaves ${who} with no problem to act on: nobody wants anything of them, nothing is at stake that they can see, and no question is put to them, so the scene or the road just goes on pleasantly. Report it with the claim "pleasant nothing" and a few words on what the line offers instead. A line with a problem in it, however small or quiet, is not a flag; neither is a line that is not a scene opening or a settled card.`;
+}
+
 const reportInput = {
   flags: z
     .array(
@@ -89,11 +100,18 @@ export class ModelJudge implements Judge {
   private readonly choice: ModelChoice;
   private readonly open: (config: SessionConfig) => TurnSession;
   private readonly turnTimeoutMs: number;
+  /** The system prompt: the contradictions, and the story-space question in a living-world run. */
+  readonly systemPrompt: string;
+  private readonly storySpace: boolean;
 
-  constructor(options: { choice?: ModelChoice; open?: (config: SessionConfig) => TurnSession; turnTimeoutMs?: number } = {}) {
+  constructor(
+    options: { choice?: ModelChoice; open?: (config: SessionConfig) => TurnSession; turnTimeoutMs?: number; storySpace?: { human?: string } } = {},
+  ) {
     this.choice = options.choice ?? JUDGE_CHOICE;
     this.open = options.open ?? ((c) => new AgentSession(c));
     this.turnTimeoutMs = options.turnTimeoutMs ?? 300_000;
+    this.storySpace = options.storySpace !== undefined;
+    this.systemPrompt = options.storySpace ? `${JUDGE_PROMPT}\n\n${storySpacePrompt(options.storySpace.human)}` : JUDGE_PROMPT;
   }
 
   async judge(batch: string, lines: number[]): Promise<JudgeReport> {
@@ -102,11 +120,12 @@ export class ModelJudge implements Judge {
     for (let attempt = 1; attempt <= 2; attempt++) {
       let got: JudgeReport | undefined;
       const report = seatTool("report", "Report the contradictions in the lines given (and the untracked props). Call it exactly once.", reportInput, async (args) => {
-        const flags = args.flags.filter((f) => lines.includes(f.line));
+        // The story-space kind is asked only of a living-world run (AGT-91).
+        const flags = args.flags.filter((f) => lines.includes(f.line) && (this.storySpace || f.kind !== "story_space"));
         got = { flags, untracked: (args.untracked ?? []).filter((u) => lines.includes(u.line)) };
         return reply(`Reported ${flags.length} contradictions.`);
       });
-      const session = this.open({ agent: "judge", choice: this.choice, systemPrompt: JUDGE_PROMPT, tools: [report], turnTimeoutMs: this.turnTimeoutMs });
+      const session = this.open({ agent: "judge", choice: this.choice, systemPrompt: this.systemPrompt, tools: [report], turnTimeoutMs: this.turnTimeoutMs });
       try {
         await session.turn(batch, "narration check");
       } finally {

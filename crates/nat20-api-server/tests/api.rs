@@ -2960,12 +2960,10 @@ fn a_deed_written_on_the_road_opens_a_choice_at_night() {
         .as_array_mut()
         .unwrap()
         .push(json!({ "do": "remember", "deed": "cleared_tree" }));
-    deck["cards"][1]["choices"]
-        .as_array_mut()
-        .unwrap()
-        .push(json!({
-            "id": "thank", "text": "Ask the farmer to sit the watch with you.", "if": "cleared_tree"
-        }));
+    // In place of the shipped deck's own third choice, which reads the shipped deed.
+    deck["cards"][1]["choices"][2] = json!({
+        "id": "thank", "text": "Ask the farmer to sit the watch with you.", "if": "cleared_tree"
+    });
     std::fs::write(&deck_path, deck.to_string()).unwrap();
     let mut api = Api::start(
         Server::with_data_dir(dir.clone()),
@@ -3019,6 +3017,21 @@ fn a_deed_written_on_the_road_opens_a_choice_at_night() {
         3,
         "{dm}"
     );
+    // The DM's record names the card and the deed it reads (AGT-91).
+    let log = api.call("dm", json!({ "cmd": "events", "since": 0 }));
+    let shown: Vec<&Value> = log["result"]["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "card_shown")
+        .collect();
+    assert_eq!(shown.len(), 2, "{log}");
+    assert_eq!(shown[0]["card"], "fallen_tree");
+    assert!(shown[0].get("reads").is_none(), "{log}");
+    assert_eq!(shown[1]["card"], "yard_wolves");
+    assert_eq!(shown[1]["when"], "night");
+    assert_eq!(shown[1]["reads"][0]["deed"], "cleared_tree");
+    assert_eq!(shown[1]["reads"][0]["contract"], 1);
     let _ = std::fs::remove_dir_all(&dir);
 }
 

@@ -316,6 +316,7 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
         const ids = [...briefing.matchAll(/^Offered card \d+: ([a-z0-9_]+) /gm)].map((m) => m[1]!);
         await tools.pickCard(ids.at(-1)!, "It follows from what the party did.");
       },
+      suggest: async () => '{"cards": [{"id": "fair_debt", "text": "A stall-keeper remembers the party."}], "why": ["it carries on the fair"]}',
     });
     const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
     const report = await loop.run("fw_highsteads");
@@ -360,6 +361,13 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     assert.deepEqual(came, ["dm_pick", ...Array(wakes.length - 1).fill("engine_pick")]);
     assert.ok(log.result.events.some((e) => e.kind === "card_picked" && e.came === "dm_pick" && e.reason === "It follows from what the party did."));
     assert.equal(t.table.transcript.records.filter((r) => r.kind === "fallback" && r.text.startsWith("the DM picked no road card")).length, wakes.length - 1);
+    // Every card on the table has its DM-only record (AGT-91), and the DM suggests cards once the journey is over.
+    const shown = log.result.events.filter((e) => e.kind === "card_shown");
+    assert.equal(shown.length, log.result.events.filter((e) => e.kind === "card_drawn").length);
+    assert.deepEqual(report.suggestedCards, { cards: [{ id: "fair_debt", text: "A stall-keeper remembers the party." }], why: ["it carries on the fair"] });
+    const ask = dm.briefings.find((b) => b.wake === "suggest");
+    assert.match(ask?.briefing ?? "", /Suggest up to two new road cards/);
+    assert.equal(dm.briefings.at(-1)?.wake, "suggest", "asked last, once the journey is over");
   } finally {
     t.close();
   }

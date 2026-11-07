@@ -340,7 +340,7 @@ test("with no human at the table, the DM's prompt and tools leave the human out 
 test("the DM's scene openings, table turns and summaries get the long limit; --dm-timeout-ms sets every wake's", () => {
   const config = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).sessionConfig();
   assert.equal(config.turnTimeoutMs, DM_TURN_TIMEOUT_MS);
-  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS });
+  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS, suggest: DM_LONG_WAKE_TIMEOUT_MS });
   const flat = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE, turnTimeoutMs: 20_000 }).sessionConfig();
   assert.equal(flat.turnTimeoutMs, 20_000);
   assert.equal(flat.turnTimeoutsMs, undefined);
