@@ -658,7 +658,7 @@ export class TableLoop {
       "road",
       undefined,
       "The journey is over: the escort contract is done, and the story rests here.",
-      "Write the closing narration in three to five sentences: the road the party travelled, how they stand now, and what is still open in the world (a foe who got away, a promise, a road not taken). No numbers, and no new event: nothing happens after this.",
+      "Write the closing narration in three to five sentences: the road the party travelled, how they stand now, and what is still open in the world (a foe who got away, a promise, a road not taken). No new event: nothing happens after this.",
     );
     await this.settle();
     const human = this.table.human;
@@ -696,7 +696,7 @@ export class TableLoop {
         await this.settle();
         return;
       case "night": {
-        await this.wakeDm("road", undefined, `The night passed: ${event.text}`, "Narrate the night and the morning in one to three sentences: who slept well, who went hungry, as the engine says. No numbers.");
+        await this.wakeDm("road", undefined, `The night passed: ${event.text}`, "Narrate the night and the morning in one to three sentences: who slept well, who went hungry, as the engine says.");
         await this.settle();
         await campaign.onNight?.();
         const day = (await this.dmWorld())?.clock.day;
@@ -711,8 +711,8 @@ export class TableLoop {
           undefined,
           `The caravan reached ${event.destination}, and the merchant paid the Blades what they are owed: ${event.text}`,
           this.arrivalOpened
-            ? "Your last narration opened the arrival: don't tell it again. Narrate the pay alone as a scene, once, in two to four sentences: the merchant's words, the coin changing hands. No numbers: the table sees the amounts in the engine's lines."
-            : "Narrate the arrival and the pay as a scene, in two to four sentences: the merchant's words, the coin changing hands. No numbers: the table sees the amounts in the engine's lines.",
+            ? "Your last narration opened the arrival: don't tell it again. Narrate the pay alone as a scene, once, in two to four sentences: the merchant's words, the coin changing hands. Name an amount only as the engine's lines show it."
+            : "Narrate the arrival and the pay as a scene, in two to four sentences: the merchant's words, the coin changing hands. Name an amount only as the engine's lines show it.",
         );
         this.arrivalOpened = false;
         await this.settle();

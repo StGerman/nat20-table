@@ -1,58 +1,116 @@
-// The narration and speech guards (M6 spec §3.5, TASKS.md AGT-20): checks on free text one seat
-// writes for others, run before anyone else sees it. DM text (narration, questions, memory) may
-// hold no number outside a roll citation, no game-stat term, no DM-only id of the pack, and no
-// citation of a roll the log doesn't have. An AI player's lines may hold no number and no game-stat
-// term. Ids every player is shown (scenes, places, creature handles such as goblin_1) are names,
-// not numbers. What a filter can't catch, a secret told in plain prose, is the prompt's job and the
-// leak scan's (crates/nat20-duel/src/leak_scan.rs).
+// The narration and speech guards (M6 spec §3.5, TASKS.md AGT-20, AGT-95): checks on free text one
+// seat writes for others, run before anyone else sees it. DM text (narration, questions, memory) may
+// give no number for a game statistic (Armor Class, a DC, Hit Points, a bonus), show no roll's
+// modifiers, name no DM-only id of the pack, and cite no roll the log doesn't have. An AI player's
+// lines may give no number for a game statistic either. Other numbers and game words are fine
+// (decision 0064): coin, days, distances, a roll's total. Ids every player is shown (scenes,
+// places, creature handles such as goblin_1) are names. What a filter can't catch, a secret told in
+// plain prose, is the prompt's job and the leak scan's (crates/nat20-duel/src/leak_scan.rs).
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { skeletonFile } from "../pack/read.ts";
 import type { Language } from "../agents/language.ts";
 import type { TextGuard } from "./state.ts";
 
-/** A roll citation, `[r12]`: the only place a DM's text may hold digits. */
+/** A roll citation, `[r12]`: it must name a roll the log has. */
 const CITATION = /\[r(\d+)\]/g;
 
 /**
- * Numbers in words from ten up: the size of a DC, an AC or a Hit Point total. Small counts ("two
- * goblins", "one of them") are ordinary prose about what the characters can see, so they pass.
+ * Numbers in words: a game statistic's value said in prose ("AC fifteen", "three hit points left").
+ * They count only beside a game statistic (`hiddenNumberIn`): on their own they are ordinary prose,
+ * coin, days and distances included (AGT-95, decision 0064).
  */
 const NUMBER_WORDS =
-  /\b(ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)\b/i;
+  /^(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)$/i;
 
 /**
  * The same in Russian, for runs whose agents write Russian (decision 0038), in every case form:
- * the teens (-надцать), the tens (десять, двадцать, тридцать, сорок, пятьдесят to восемьдесят,
- * девяносто), сто, сотня, the hundreds (двести to девятьсот: двухсот, тремстам, пятьюстами) and
- * тысяча. JavaScript's \b knows only Latin letters, hence the lookarounds.
+ * one to nine (один, двух, тремя, пятью), the teens (-надцать), the tens (десять, двадцать,
+ * тридцать, сорок, пятьдесят to восемьдесят, девяносто), сто, сотня, the hundreds (двести to
+ * девятьсот: двухсот, тремстам, пятьюстами) and тысяча. Matched against one whole word.
  */
 const RUSSIAN_NUMBER_WORDS =
-  /(?<!\p{L})(?:\p{L}*(?:надцат|десят|двадцат|тридцат|девяност|тысяч)\p{L}*|сорока?|сто|ста|сотн\p{L}*|сотен|двести|триста|четыреста|(?:двух|двум|двумя|тр[её]х|трем|тремя|четыр[её]х|четыр[её]м|четырьмя|пят[ьи]|пятью|шест[ьи]|шестью|сем[ьи]|семью|восемь|восьми|восемью|восьмью|девят[ьи]|девятью)(?:сот|стам|стами|стах))(?!\p{L})/iu;
+  /^(?:\p{L}*(?:надцат|десят|двадцат|тридцат|девяност|тысяч)\p{L}*|сорока?|сто|ста|сотн\p{L}*|сотен|двести|триста|четыреста|(?:двух|двум|двумя|тр[её]х|трем|тремя|четыр[её]х|четыр[её]м|четырьмя|пят[ьи]|пятью|шест[ьи]|шестью|сем[ьи]|семью|восемь|восьми|восемью|восьмью|девят[ьи]|девятью)(?:сот|стам|стами|стах)|од(?:ин|на|но|ну|ной|ного|ному|ним|ном)|дв(?:а|е|ух|ум|умя)|тр(?:и|[её]х|[её]м|емя)|четыр(?:е|[её]х|[её]м|ьмя)|пят(?:ь|и|ью)|шест(?:ь|и|ью)|сем(?:ь|и|ью)|вос(?:емь|ьми|емью|ьмью)|девят(?:ь|и|ью))$/iu;
 
-/** Game-stat terms no narration or spoken line names (spec §3.5). */
+/**
+ * Game statistics whose values the table never hears from an agent (Rule 3, spec §3.5): a
+ * creature's Armor Class and Hit Points, a DC, an attack or save bonus, a challenge rating. The
+ * word alone is fine; a number beside it is refused (`hiddenNumberIn`).
+ */
 const STAT_TERMS: RegExp[] = [
-  /\barmou?r class\b/i,
-  /\bAC\b/i,
-  /\bDCs?\b/i,
-  /\bdifficulty class\b/i,
-  /\bhit points?\b/i,
-  /\bHP\b/i,
-  /\bsaving throw bonus\b/i,
-  /\battack bonus\b/i,
-  /\bchallenge rating\b/i,
+  /\barmou?r class\b/gi,
+  /\bAC\b/gi,
+  /\bDCs?\b/gi,
+  /\bdifficulty class\b/gi,
+  /\bhit points?\b/gi,
+  /\bHP\b/gi,
+  /\bsaving throw bonus\b/gi,
+  /\battack bonus\b/gi,
+  /\bchallenge rating\b/gi,
   // Russian (decision 0038): Armor Class, DC, Hit Points, bonuses, challenge rating.
-  /класс\p{L}* (?:доспех|брон)\p{L}*/iu,
-  /(?<!\p{L})КД(?!\p{L})/iu,
-  /(?<!\p{L})СЛ(?!\p{L})/iu,
-  /класс\p{L}* сложност\p{L}*/iu,
-  /(?<!\p{L})хит(?:|а|у|ом|е|ы|ов|ам|ами|ах)(?!\p{L})/iu,
-  /(?<!\p{L})хит-?поинт\p{L}*/iu,
-  /очк\p{L}* (?:здоровья|жизни)/iu,
-  /(?<!\p{L})ОЗ(?!\p{L})/u,
-  /бонус\p{L}* (?:к )?(?:атак|спас)\p{L}*/iu,
-  /(?:показател|урове?н)\p{L}* опасности/iu,
+  /класс\p{L}* (?:доспех|брон)\p{L}*/giu,
+  /(?<!\p{L})КД(?!\p{L})/giu,
+  /(?<!\p{L})СЛ(?!\p{L})/giu,
+  /класс\p{L}* сложност\p{L}*/giu,
+  /(?<!\p{L})хит(?:|а|у|ом|е|ы|ов|ам|ами|ах)(?!\p{L})/giu,
+  /(?<!\p{L})хит-?поинт\p{L}*/giu,
+  /очк\p{L}* (?:здоровья|жизни)/giu,
+  /(?<!\p{L})ОЗ(?!\p{L})/gu,
+  /бонус\p{L}* (?:к )?(?:атак|спас)\p{L}*/giu,
+  /(?:показател|урове?н)\p{L}* опасности/giu,
 ];
+
+/** How many words either side of a game statistic a number counts as its value ("Armor Class of about 15", «класс доспеха у волка всего 13»). */
+const STAT_REACH = 4;
+
+/** Where a sentence or clause ends: a number past it is about something else. A colon or dash doesn't ("AC: 15", «КД — 15»). */
+const CLAUSE_END = /[.!?;]/;
+
+/** A die, `d20` or `2d6`: the dice of a roll are public (protocol §5), not a statistic's value. */
+const DIE = /^\d*[dк]\d+$/iu;
+
+/** The word without the punctuation around it ("15," is 15, "+4" is 4). */
+function bareWord(word: string): string {
+  return word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+}
+
+/** A word that is a number: digits in it (15, 7/10), or a number in words, English or Russian. A die is not one. */
+function isNumber(word: string): boolean {
+  return (/\d/.test(word) && !DIE.test(word)) || NUMBER_WORDS.test(word) || RUSSIAN_NUMBER_WORDS.test(word);
+}
+
+/**
+ * A number beside a game statistic in the same clause (AGT-95, decision 0064): "AC 15", "DC
+ * twelve", "has 3 HP", "7/10 hit points", «КД 15», «осталось три хита». Numbers elsewhere, coin,
+ * days, distances, a roll's total, pass; so do the statistics' names alone. A hidden number said
+ * without its statistic's name ("you needed a fifteen") is the prompt's job and the leak scan's.
+ */
+function hiddenNumberIn(text: string): string | undefined {
+  let nearest: { term: string; number: string; distance: number } | undefined;
+  for (const term of STAT_TERMS) {
+    for (const found of text.matchAll(term)) {
+      const at = found.index ?? 0;
+      const before = text.slice(0, at).split(CLAUSE_END).at(-1)!.split(/\s+/).map(bareWord).filter(Boolean).slice(-STAT_REACH).reverse();
+      const after = text.slice(at + found[0].length).split(CLAUSE_END)[0].split(/\s+/).map(bareWord).filter(Boolean).slice(0, STAT_REACH);
+      for (const side of [before, after]) {
+        const distance = side.findIndex(isNumber);
+        if (distance >= 0 && (!nearest || distance < nearest.distance)) nearest = { term: found[0], number: side[distance], distance };
+      }
+    }
+  }
+  return nearest ? `it gives a number for a game statistic (${nearest.term}, ${nearest.number}): the table never hears those` : undefined;
+}
+
+/**
+ * A roll written with its modifiers, as the DM's full view shows it (`1d20 (14) +5 = 19`, `14 + 5 =
+ * 19`): players get a roll's dice, total and outcome only (protocol §5).
+ */
+const ROLL_MODIFIERS = /(?:\)|\d)\s*[+-]\s*\d+\s*=\s*\d/;
+
+function rollModifiersIn(text: string): string | undefined {
+  const found = ROLL_MODIFIERS.exec(text);
+  return found ? `it shows a roll's modifiers (${found[0]}): give the total only` : undefined;
+}
 
 /** Kinds of DM-only data that are no player's business by name (protocol §5): surrender triggers, a spawn's `unless`. */
 const DM_ONLY_KINDS = [
@@ -66,21 +124,6 @@ const DM_ONLY_KINDS = [
   "leader_down",
   "any_party_bloodied",
 ];
-
-function numberIn(text: string): string | undefined {
-  const digit = /\d+/.exec(text);
-  if (digit) return `it holds a number (${digit[0]})`;
-  const word = NUMBER_WORDS.exec(text) ?? RUSSIAN_NUMBER_WORDS.exec(text);
-  return word ? `it holds a number (${word[0]})` : undefined;
-}
-
-function statTermIn(text: string): string | undefined {
-  for (const term of STAT_TERMS) {
-    const found = term.exec(text);
-    if (found) return `it names a game statistic (${found[0]})`;
-  }
-  return undefined;
-}
 
 /**
  * A word that mixes Cyrillic and Latin letters, such as «Бранnок» (AGT-38): a model's slip
@@ -115,8 +158,9 @@ function withoutShown(text: string, shown: ReadonlySet<string>): string {
 }
 
 /**
- * The DM's text guard: refuses numbers, game-stat terms, mixed-script words, DM-only ids and unknown
- * roll ids, and in a Russian run (`language` ru, decision 0038) a word in Latin letters (AGT-73).
+ * The DM's text guard: refuses a number given for a game statistic, a roll's modifiers, mixed-script
+ * words, DM-only ids and unknown roll ids, and in a Russian run (`language` ru, decision 0038) a word
+ * in Latin letters (AGT-73).
  */
 export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) => boolean; language?: Language }): TextGuard {
   return (text) => {
@@ -126,8 +170,8 @@ export function narrationGuard(options: { ids: PackIds; knownRoll: (id: string) 
     const bare = text.replace(CITATION, "");
     const secret = tokens(bare).find((token) => options.ids.dmOnly.has(token));
     return (
-      numberIn(withoutShown(bare, options.ids.shown)) ??
-      statTermIn(bare) ??
+      hiddenNumberIn(withoutShown(bare, options.ids.shown)) ??
+      rollModifiersIn(bare) ??
       mixedScriptIn(bare) ??
       (secret ? `it names ${secret}, which only the DM knows` : undefined) ??
       (options.language === "ru" ? latinWordIn(bare, options.ids.shown) : undefined)
@@ -168,7 +212,8 @@ function latinWordIn(text: string, shown: ReadonlySet<string>): string | undefin
 }
 
 /**
- * An AI player's text guard: refuses numbers, game-stat terms and mixed-script words, and in a
+ * An AI player's text guard: refuses a number given for a game statistic, a roll's modifiers and
+ * mixed-script words, and in a
  * Russian run (`language` ru) a line with no Russian in it or a word in Latin letters.
  */
 export function speechGuard(options: { shown: ReadonlySet<string>; language?: Language; dmOnly?: ReadonlySet<string> }): TextGuard {
@@ -179,8 +224,8 @@ export function speechGuard(options: { shown: ReadonlySet<string>; language?: La
       ? options.dmOnly?.has(text)
         ? `it names ${text}, which only the DM knows`
         : undefined
-      : numberIn(withoutShown(text, options.shown)) ??
-    statTermIn(text) ??
+      : hiddenNumberIn(withoutShown(text, options.shown)) ??
+    rollModifiersIn(text) ??
     mixedScriptIn(text) ??
       (options.language === "ru" ? (englishIn(text, options.shown) ?? latinWordIn(text, options.shown)) : undefined);
 }

@@ -431,7 +431,7 @@ export class ModelPlayer implements PlayerAgent {
       ),
       seatTool(
         "say",
-        "Say a line aloud, in character; everyone at the table hears it. No numbers or game terms.",
+        "Say a line aloud, in character; everyone at the table hears it. Never a number for your Hit Points or Armor Class: the others see only how hurt you look.",
         {
           text: z.string(),
           to: handle.optional().describe("Whom the line is for: a companion by handle, or someone else present (an NPC) by name or id. Leave it out for the whole party."),

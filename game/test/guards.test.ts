@@ -60,14 +60,18 @@ test("in a Russian run both guards refuse a word in Latin letters beside Russian
   assert.equal(speechGuard({ shown: ids.shown, language: "ru" })("I go first."), "it is in English: say it in Russian", "a line all in English keeps its own reason");
 });
 
-test("the narration guard refuses numbers, game statistics, DM-only ids and unknown roll ids", () => {
+test("the narration guard refuses a number for a game statistic, a roll's modifiers, DM-only ids and unknown roll ids", () => {
   const guard = narrationGuard({ ids: packIds(MILL), knownRoll: (id) => id === "r12" });
   const refused: Array<[string, RegExp]> = [
-    ["The goblin has 7 left in it.", /number \(7\)/],
-    ["Fifteen goblins pour out of the mill.", /number \(Fifteen\)/],
-    ["Its AC is high.", /game statistic \(AC\)/],
-    ["The goblin is down to a few hit points.", /game statistic \(hit points\)/],
-    ["That needs a hard DC.", /game statistic \(DC\)/],
+    ["The goblins look tough, AC 15 or so.", /number for a game statistic \(AC, 15\)/],
+    ["The lock is a DC fifteen.", /\(DC, fifteen\)/],
+    ["goblin_1 has 3 HP left.", /\(HP, 3\)/],
+    ["The wolf is at 7/10 hit points.", /\(hit points, 7\/10\)/],
+    ["Its Armor Class of about 13 holds.", /\(Armor Class, 13\)/],
+    ["Its AC: 15.", /\(AC, 15\)/],
+    ["A goblin at two hit points crawls away.", /\(hit points, two\)/],
+    ["Bren's blow, 1d20 (14) +5 = 19, lands.", /a roll's modifiers/],
+    ["The total is 14 + 5 = 19.", /a roll's modifiers/],
     ["You fail reeve_insight.", /names reeve_insight/],
     ["The goblin_warrior snarls.", /names goblin_warrior/],
     ["Now yard_fight begins.", /names yard_fight/],
@@ -78,43 +82,42 @@ test("the narration guard refuses numbers, game statistics, DM-only ids and unkn
     ["The check:reeve_insight succeeds.", /names reeve_insight/],
     ["Now (yard_fight:begun) starts.", /names yard_fight/],
     ["The blade bites deep [r999].", /cites \[r999\], a roll the log doesn't have/],
-    ["goblin_1 has 4 left.", /number \(4\)/],
-    ["The goblin_12 falls.", /number \(12\)/],
   ];
   for (const [text, why] of refused) assert.match(guard(text) ?? "(let through)", why, text);
+  // Numbers and game words the table may know (AGT-95, decision 0064).
   for (const text of [
     "The blade bites deep [r12].",
     "Two goblins and a wolf wait by the mill_door; goblin_1 looks bloodied.",
     "Bren steps through the gate into s3_mill_yard.",
     "The reeve looks away when you ask about the mill.",
+    "Fifteen goblins pour out of the mill.",
+    "Odda counts out 12 gold pieces into each palm: three days of road, 2 a day, and a bonus for the bridge.",
+    "The mill is 300 feet off, past the second fence.",
+    "Bren rolls a 17 on the d20 [r12], and the goblin's AC doesn't save it.",
+    "Its AC is high: steel under the rags.",
+    "Maren heals you; the hit points come back with the warmth.",
+    "You have advantage on this one: the wolf hasn't seen you.",
+    "goblin_1 has 4 friends behind the woodpile.",
+    "The goblin_12 falls.",
   ]) {
     assert.equal(guard(text), undefined, text);
   }
 });
 
-test("the guards read Russian: numbers in words from ten up and game statistics are refused, plain Russian prose passes", () => {
+test("the guards read Russian: a number in digits or words beside a game statistic is refused, numbers elsewhere and game words alone pass", () => {
   // Runs with --lang ru (decision 0038): the DM and the AI players write Russian.
   const guard = narrationGuard({ ids: packIds(MILL), knownRoll: (id) => id === "r12" });
   const refused: Array<[string, RegExp]> = [
-    ["У гоблина осталось двенадцать хитов.", /number \(двенадцать\)/],
-    ["Двадцать гоблинов высыпают из мельницы.", /number \(Двадцать\)/],
-    ["Сто стрел летят во двор.", /number \(Сто\)/],
-    ["Волк выдержит ещё пятьдесят ударов.", /number \(пятьдесят\)/],
-    ["Его КД высок.", /game statistic \(КД\)/],
-    ["Это проверка со СЛ повыше.", /game statistic \(СЛ\)/],
-    ["Гоблин почти без хитов.", /game statistic \(хитов\)/],
-    ["Класс доспеха у волка невелик.", /game statistic \(Класс доспеха\)/],
-    ["У неё мало очков здоровья.", /game statistic \(очков здоровья\)/],
-    ["С таким бонусом атаки не промахнёшься.", /game statistic \(бонусом атаки\)/],
-    // Copilot on table #122: the bare singular, the hundreds, the nominative.
-    ["У гоблина остался один хит.", /game statistic \(хит\)/],
-    ["Он держится на последнем хите.", /game statistic \(хите\)/],
-    ["В деревне двести жителей.", /number \(двести\)/],
-    ["В деревне меньше двухсот жителей.", /number \(двухсот\)/],
-    ["Пятьсот шагов до мельницы.", /number \(Пятьсот\)/],
-    ["Сотни крыс шуршат в амбаре.", /number \(Сотни\)/],
-    ["Это низкий уровень опасности.", /game statistic \(уровень опасности\)/],
-    ["Для такого уровня опасности их маловато.", /game statistic \(уровня опасности\)/],
+    ["У гоблина осталось двенадцать хитов.", /\(хитов, двенадцать\)/],
+    ["У гоблина остался один хит.", /\(хит, один\)/],
+    ["Гоблин держится на трёх хитах.", /\(хитах, трёх\)/],
+    ["Его КД 15, не меньше.", /\(КД, 15\)/],
+    ["КД у волка — 13.", /\(КД, 13\)/],
+    ["Это проверка со СЛ двенадцать.", /\(СЛ, двенадцать\)/],
+    ["Класс доспеха у волка всего 13.", /\(Класс доспеха, 13\)/],
+    ["У неё пять очков здоровья.", /\(очков здоровья, пять\)/],
+    ["С бонусом атаки +4 не промахнёшься.", /\(бонусом атаки, 4\)/],
+    ["Это уровень опасности два.", /\(уровень опасности, два\)/],
   ];
   const speech = speechGuard({ shown: packIds(MILL).shown });
   for (const [text, why] of refused) {
@@ -128,19 +131,27 @@ test("the guards read Russian: numbers in words from ten up and game statistics 
     "Волк обходит двор с другой стороны; goblin_1 выглядит раненым.",
     "Двое гоблинов и волк ждут у mill_door, в паре шагов от ворот.",
     "Брен проходит в ворота, в s3_mill_yard стоит тишина.",
+    "Двадцать гоблинов высыпают из мельницы.",
+    "Одда отсчитывает каждому по 12 золотых: три дня дороги.",
+    "До мельницы пятьсот шагов.",
+    "Его КД высок: под тряпьём кольчуга.",
+    "Гоблин почти без хитов.",
+    "Бросок 17 на к20 [r12]. Хиты гоблина тают.",
   ]) {
     assert.equal(guard(text), undefined, text);
   }
-  assert.match(speech("У меня осталось пятнадцать хитов!") ?? "", /number \(пятнадцать\)/);
-  assert.match(speech("Мой класс доспеха их не сдержит.") ?? "", /game statistic \(класс доспеха\)/);
+  assert.match(speech("У меня осталось пятнадцать хитов!") ?? "", /\(хитов, пятнадцать\)/);
+  assert.equal(speech("Мой класс доспеха их не сдержит."), undefined, "a game word alone passes");
   assert.equal(speech("Я тяжело ранена. Прикройте меня!"), undefined);
 });
 
-test("the speech guard refuses an AI player's numbers and game statistics, and lets plain talk through", () => {
+test("the speech guard refuses an AI player's number for a game statistic, and lets numbers and game words through", () => {
   const guard = speechGuard({ shown: packIds(MILL).shown });
-  assert.match(guard("I'm at 3 HP, cover me!") ?? "", /number \(3\)/);
-  assert.match(guard("My armour class won't hold them.") ?? "", /game statistic \(armour class\)/);
-  assert.match(guard("Only twelve arrows left.") ?? "", /number \(twelve\)/);
+  assert.match(guard("I'm at 3 HP, cover me!") ?? "", /\(HP, 3\)/);
+  assert.match(guard("My armour class is 16, I'll take the front.") ?? "", /\(armour class, 16\)/);
+  assert.equal(guard("Only twelve arrows left."), undefined);
+  assert.equal(guard("My armour class won't hold them."), undefined);
+  assert.equal(guard("Three gold for a bowl of soup? Robbery."), undefined);
   assert.equal(guard("I'm badly hurt. Cover me while I pull back."), undefined);
   assert.equal(guard("Torva, take goblin_2 by the woodpile!"), undefined);
 });
@@ -152,7 +163,7 @@ test("a refused line reaches no other seat and nothing in the transcript; the sp
     t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
     const said = await t.table.speak("maren", "I'm at 3 HP and my AC is poor.");
     assert.equal(said.ok, false);
-    assert.match(said.text, /^Refused, nobody heard it: it holds a number \(3\)\. Say it without that\.$/);
+    assert.match(said.text, /^Refused, nobody heard it: it gives a number for a game statistic \(HP, 3\): the table never hears those\. Say it without that\.$/);
     const narrated = await t.table.narrate("The yard_fight begins.");
     assert.equal(narrated.ok, false);
     assert.match(narrated.text, /^Refused, nobody heard it: it names yard_fight, which only the DM knows\. Rewrite it\.$/);

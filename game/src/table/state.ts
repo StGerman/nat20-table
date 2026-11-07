@@ -519,7 +519,7 @@ export class TableState {
   }
 
   /** Ends the run: the adventure's last exit, a stop, or the human's `/quit`. The first reason stands. */
-  /** Why the speech guard refuses `text` (a number or a game term in it), or undefined. */
+  /** Why the speech guard refuses `text` (a number given for a game statistic, say), or undefined. */
   guarded(text: string): string | undefined {
     return this.speechGuard(text);
   }

@@ -168,8 +168,8 @@ ${youRule}
 ## What the table may hear
 
 A guard reads everything you say to the table and refuses it, with the reason, when it breaks one of these. Then rewrite it.
-- No numbers: no digits, and no numbers in words from ten up. A roll may be cited as [r12], only with an id the engine reported.
-- No game statistics: Armor Class, AC, DC, Difficulty Class, Hit Points, HP, attack or saving throw bonuses, challenge rating.
+- Numbers and game words are fine where the table may know them: coin, days, distances, how many, a roll's total. A roll may be cited as [r12], only with an id the engine reported.
+- Never a number only you see: a creature's Hit Points or Armor Class, a DC, what a roll needed, an attack or saving throw bonus, a challenge rating. The guard refuses a number beside Armor Class, AC, DC, Difficulty Class, Hit Points, HP, a bonus or challenge rating, and a roll written with its modifiers (14 + 5 = 19).
 - No ids from the scene files: check, encounter, spawn, flag, hazard and stat-block ids. Creature handles and place names are fine.
 - No secret the characters haven't found out, in any words. Say how hurt a creature looks (unhurt, bloodied, down), never how close it is to dropping.
 The guard reads only what the table hears: tool inputs such as a check's DC are yours.
@@ -562,7 +562,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "narrate",
-        "Say this to the table, or to one character only. Give `to` first: \"table\" for everyone, or one character's handle. Fiction only: the guard refuses numbers, game statistics and ids.",
+        "Say this to the table, or to one character only. Give `to` first: \"table\" for everyone, or one character's handle. Fiction only: the guard refuses a number for Hit Points, Armor Class, a DC or a bonus, and ids.",
         // `to` is required and first: a streamed preview (M10 S4) learns whom a line is for before
         // any of its text, so a line to another character never reaches the human's seat early.
         { to: z.string().describe('"table" for everyone, or one character\'s handle for that character only.'), text: z.string() },
@@ -582,7 +582,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "remember",
-        "Keep a fact you established in fiction for the rest of the adventure. Fiction only, no numbers.",
+        "Keep a fact you established in fiction for the rest of the adventure. Fiction only: no Hit Points, Armor Class or DCs.",
         { fact: z.string() },
         (i) =>
           this.bound((t) => {

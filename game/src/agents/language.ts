@@ -20,7 +20,7 @@ export function dmLanguage(language: Language, human = true, names: readonly str
       : "Write everything the table hears in Russian: narration, the closing narration, and your scene summaries and memory.",
     "The engine's lines, the options and the scene files are in English: tell what they mean in the fiction, in Russian, and never quote them. Tool inputs stay exactly as the tools take them: ids, handles, skills and option ids.",
     ...(human ? ["Speak to the human's character with «ты», never «вы»: «вы» is for the whole party."] : []),
-    "The guard reads Russian too: no numbers in words from ten up (десять, двадцать, сто), no game statistics (КД, класс доспеха, СЛ, хиты, очки здоровья, бонус атаки), and no word in Latin letters: every name, an NPC's turn of phrase included, in Russian letters. An id with an underscore or a digit (goblin_1) may stay as it is.",
+    "The guard reads Russian too: no number, in digits or words, beside a game statistic (КД, класс доспеха, СЛ, хиты, очки здоровья, бонус атаки), and no word in Latin letters: every name, an NPC's turn of phrase included, in Russian letters. An id with an underscore or a digit (goblin_1) may stay as it is.",
     ...russianNameLine(names),
     ...(Object.keys(glossary).length > 0
       ? [`Words in Russian: write these words of the prose as given here: ${Object.entries(glossary).map(([en, ru]) => `${en}: ${ru}`).join("; ")}.`]
@@ -39,7 +39,7 @@ export function playerLanguage(language: Language, voice?: string, names: readon
   const own = voice ? `\n\nHow your character sounds in Russian, from your card:\n\n${voice}` : "";
   return `
 
-Language: write in Russian everything you say, declare, note or summarise, and give your character's name in Russian letters. Answer a hand with SPEAK, BOTH, ACT: or PASS in Latin letters (what follows ACT: in Russian), and a declaration with just PASS, in Latin letters, when you do nothing new. Tool inputs stay exactly as the tools take them: ids, handles and option ids. The engine's lines and your options are in English; read them, and never quote them aloud. The guard reads Russian too: no numbers in words from ten up, no game statistics (КД, хиты, очки здоровья), and no word in Latin letters in what you say or declare: every name in Russian letters. Carry your card's voice by meaning, in the words a Russian speaker of your character's background would use: never translate its catchphrases or forms of address word for word, and never leave them in English.${named}${own}`;
+Language: write in Russian everything you say, declare, note or summarise, and give your character's name in Russian letters. Answer a hand with SPEAK, BOTH, ACT: or PASS in Latin letters (what follows ACT: in Russian), and a declaration with just PASS, in Latin letters, when you do nothing new. Tool inputs stay exactly as the tools take them: ids, handles and option ids. The engine's lines and your options are in English; read them, and never quote them aloud. The guard reads Russian too: no number beside a game statistic (КД, хиты, очки здоровья), and no word in Latin letters in what you say or declare: every name in Russian letters. Carry your card's voice by meaning, in the words a Russian speaker of your character's background would use: never translate its catchphrases or forms of address word for word, and never leave them in English.${named}${own}`;
 }
 
 /**
