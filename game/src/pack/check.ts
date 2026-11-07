@@ -305,10 +305,11 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   } catch (error) {
     problem(`the engine didn't start on the pack: ${(error as Error).message}`);
   } finally {
-    // The deck's warnings (MAP-11): the engine writes them on the campaign's start, long before here.
+    // The deck's warnings (MAP-11), from the engine's stderr once it has exited: stderr is its own
+    // pipe, so a warning can still be on its way after the campaign's response.
+    await engine?.shutdown();
     const stderr = path.join(runDir, "engine-stderr.log");
     if (existsSync(stderr)) report.warnings.push(...readFileSync(stderr, "utf8").split("\n").filter((l) => l.startsWith("deck: ")).map((l) => l.slice("deck: ".length)));
-    engine?.close();
     rmSync(runDir, { recursive: true, force: true });
   }
   return report;

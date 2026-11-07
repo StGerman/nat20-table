@@ -77,6 +77,8 @@ test("a living-world pack's skeleton is its campaign.json: no exits needed, and 
     assert.equal(path.basename(skeletonFile(good.pack)), "campaign.json");
     const report = await checkPack(good.pack);
     assert.deepEqual(report.problems, []);
+    // The engine's deck warnings reach the report (MAP-11): the short route meets too few fights.
+    assert.ok(report.warnings.some((w) => /^the route wendford > wendmouth meets \d+ cards? that can come to a fight/.test(w)), report.warnings.join("\n"));
   } finally {
     good.close();
   }
