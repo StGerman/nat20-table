@@ -84,8 +84,11 @@ test("the narration guard refuses a number for a game statistic, a roll's modifi
     // Second review round on table #326.
     ["Bren rolls 19 (14 - 1).", /a roll's modifiers \(19 \(14 - 1\)\)/],
     ["roll 14-1 = 13", /a roll's modifiers \(14-1 = 13\)/],
-    ["Bren rolled [r12] + 5 = 19.", /a roll's modifiers \(\[r12\] \+ 5\)/],
-    ["Bren's attack [r12]+5.", /a roll's modifiers \(\[r12\]\+5\)/],
+    ["Bren rolled [r12] + 5 = 19.", /a roll's modifiers \(\[r12\] \+ 5 = 19\)/],
+    ["Bren's attack [r12]+5.", /a roll's modifiers \(\[r12\]\+5\.\)/],
+    ["Bren rolls [r12] (14 - 1).", /a roll's modifiers \(\[r12\] \(14 - 1\)\)/],
+    ["Bren's roll [r12] – 1 = 13 misses.", /a roll's modifiers \(\[r12\] – 1 = 13\)/],
+    ["Their CRs 2 and 3 say little.", /\(CRs, 2\)/],
     ["Their ACs 15 and 13 hold.", /\(ACs, 15\)/],
     // Copilot on table #326.
     ["The goblin's save bonus is +4.", /\(save bonus, \+4\)/],
@@ -126,6 +129,8 @@ test("the narration guard refuses a number for a game statistic, a roll's modifi
     "Which one has the best AC?",
     "The one-eyed goblin has a good AC.",
     "Both blows land ([r12] + [r12]).",
+    "Bren hits [r12] - 2 goblins remain.",
+    "Bren hits [r12] + 2 more wolves come.",
     "The one with the shield has a high AC.",
     "It is 3-4 days to the ford (3-4 by the old road).",
     "Keep your AC up, 2 more goblins come!",

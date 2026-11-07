@@ -51,7 +51,7 @@ const STAT_TERMS: Array<{ term: RegExp; signed?: true }> = [
   { term: /(?<![A-Za-z])save bonus(?:es)?(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])attack bonus(?![A-Za-z])/gi },
   { term: /(?<![A-Za-z])challenge rating(?![A-Za-z])/gi },
-  { term: /(?<![A-Z])CR(?![A-Za-z])/g },
+  { term: /(?<![A-Z])CRs?(?![A-Za-z])/g },
   { term: /(?<![A-Za-z])bonus(?:es)?(?![A-Za-z])/gi, signed: true },
   { term: /(?<![A-Za-z])to[- ]hit(?![A-Za-z])/gi, signed: true },
   // Russian (decision 0038): Armor Class, DC, Hit Points, health, bonuses, challenge rating.
@@ -149,12 +149,13 @@ function hiddenNumberIn(text: string): string | undefined {
  * and "(3-4 days)" stay prose.
  */
 const ROLL_MODIFIERS = [
-  /(?:\)|\d+)\s*[+\-–−]\s*\d+\s*=\s*\d+/,
+  /(?:\)|\[r\d+\]|\d+)\s*[+\-–−]\s*\d+\s*=\s*\d+/,
   /\(\s*\d+\s*[+−]\s*\d+\s*\)/,
   // After a total, an ASCII minus too, as the engine writes a negative modifier: "19 (14 - 1)".
-  /\d+\s*\(\s*\d+\s*-\s*\d+\s*\)/,
-  // A roll cited and then modified: "[r7]+5", "[r12] + 5 = 19".
-  /\[r\d+\]\s*[+\-−]\s*\d+/,
+  /(?:\d+|\[r\d+\])\s*\(\s*\d+\s*-\s*\d+\s*\)/,
+  // A roll cited and then modified, the number ending the clause: "[r7]+5.", "[r3] – 1, a miss";
+  // "[r3] + 2 more wolves come" is prose.
+  /\[r\d+\]\s*[+\-–−]\s*\d+\s*(?:[.!?;,)]|$)/,
   /\d*[dк]\d+\s*[+\-−]\s*\d+/iu,
 ];
 
