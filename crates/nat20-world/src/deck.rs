@@ -838,6 +838,16 @@ impl Deck {
                     ));
                 }
             }
+            // The forewarned choice reads `scouted` alone, so a scout always finds it.
+            if let Some(mixed) = card.choices.iter().find(|c| {
+                let ids = c.if_deeds.iter().flat_map(Deeds::ids).collect::<Vec<_>>();
+                ids.len() > 1 && ids.iter().any(|d| *d == SCOUTED)
+            }) {
+                return bad(format!(
+                    "card {}'s choice {} reads {SCOUTED} with other deeds; a forewarned choice reads {SCOUTED} alone",
+                    card.id, mixed.id
+                ));
+            }
             check_cases(card)?;
         }
         if let Some(lost) = self
@@ -861,8 +871,12 @@ impl Deck {
     /// The warnings for a campaign's route (MAP-11, Q6): fights are a recommendation, so these
     /// never fail a build. A route that meets fewer than two cards that can come to a fight is
     /// named: the cards of its roads' zones and of its places (night and arrival cards),
-    /// chained cards included.
+    /// chained cards included. A caravan with no fixed route (a human owner picks each road) has
+    /// nothing to assess, so it is never warned of.
     pub fn route_warnings(&self, map: &WorldMap, route: &[String]) -> Vec<String> {
+        if route.is_empty() {
+            return Vec::new();
+        }
         let mut zones: BTreeSet<&str> = route.iter().map(String::as_str).collect();
         for leg in route.windows(2) {
             if let Some(road) = map
@@ -2266,6 +2280,19 @@ mod tests {
             d.validate(&map).unwrap_err().0,
             "card willows has 2 choices under if: scouted; it needs one"
         );
+        // The forewarned choice needs nothing more than the scout's look.
+        let mut d = scout_deck();
+        for c in d.cards[0]
+            .choices
+            .iter_mut()
+            .filter(|c| c.if_deeds.is_some())
+        {
+            c.if_deeds = Some(Deeds::All(vec![SCOUTED.into(), "met_peddler".into()]));
+        }
+        assert_eq!(
+            d.validate(&map).unwrap_err().0,
+            "card willows's choice flank reads scouted with other deeds; a forewarned choice reads scouted alone"
+        );
     }
 
     #[test]
@@ -2289,6 +2316,8 @@ mod tests {
             });
         }
         assert!(two.route_warnings(&map, &route).is_empty());
+        // No fixed route, no warning: the owner picks each road.
+        assert!(d.route_warnings(&map, &[]).is_empty());
 
         // Wolves are beasts; a goblin is a person, so its fight names a custom.
         let person = |m: &Monster| m.stat() != "wolf";
