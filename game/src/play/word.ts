@@ -95,9 +95,22 @@ export function wordReport(dir: string): string[] {
   out.push("", `Scout looks: ${looks.length}, ${saw.length} saw it, ${taken.length} forewarned choices taken`);
   const file = path.join(dir, SUGGESTED_CARDS);
   if (existsSync(file)) {
-    const suggested = JSON.parse(readFileSync(file, "utf8")) as { cards?: Array<{ id?: string; text?: string }>; why?: string[] };
-    out.push("", `The DM's suggested cards (not loaded; ${SUGGESTED_CARDS}): ${suggested.cards?.length ?? 0}`);
-    (suggested.cards ?? []).forEach((c, i) => out.push(`- ${c.id ?? "?"}: ${c.text ?? ""}${suggested.why?.[i] ? ` (why: ${suggested.why[i]})` : ""}`));
+    const suggested = JSON.parse(readFileSync(file, "utf8")) as { cards?: unknown[]; why?: unknown[]; unread?: unknown };
+    if (typeof suggested.unread === "string") {
+      // Not JSON: the DM's answer as written.
+      out.push("", `The DM's suggested cards (not loaded; ${SUGGESTED_CARDS}) were not JSON; as written:`, ...suggested.unread.split("\n").map((l) => `> ${l}`));
+    } else {
+      const cards = Array.isArray(suggested.cards) ? suggested.cards : [];
+      const field = (c: unknown, key: string): string => {
+        const v = c !== null && typeof c === "object" ? (c as Record<string, unknown>)[key] : undefined;
+        return typeof v === "string" ? v : "";
+      };
+      out.push("", `The DM's suggested cards (not loaded; ${SUGGESTED_CARDS}): ${cards.length}`);
+      cards.forEach((c, i) => {
+        const why = Array.isArray(suggested.why) && typeof suggested.why[i] === "string" ? ` (why: ${suggested.why[i]})` : "";
+        out.push(`- ${field(c, "id") || "?"}: ${field(c, "text")}${why}`);
+      });
+    }
   } else out.push("", "The DM's suggested cards: none written");
   return out;
 }

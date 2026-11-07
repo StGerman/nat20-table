@@ -218,12 +218,15 @@ export const SUGGEST_ASK = [
 
 /** The DM's answer to the suggest wake, as the run report keeps it. */
 export function readSuggested(answer: string): SuggestedCards {
-  const start = answer.indexOf("{");
-  const end = answer.lastIndexOf("}");
+  // The whole answer is the JSON, or it is kept as written; a code fence around it is allowed.
+  const body = answer.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/, "$1");
   try {
-    const parsed = JSON.parse(answer.slice(start, end + 1)) as { cards?: unknown; why?: unknown };
-    if (start >= 0 && Array.isArray(parsed.cards)) {
-      return { cards: parsed.cards.slice(0, 2), why: Array.isArray(parsed.why) ? parsed.why.slice(0, 2).map(String) : [] };
+    const parsed = JSON.parse(body) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const { cards, why } = parsed as { cards?: unknown; why?: unknown };
+      // Only cards that are objects: the run report reads their fields.
+      const kept = Array.isArray(cards) ? cards.filter((c) => c !== null && typeof c === "object" && !Array.isArray(c)) : [];
+      if (kept.length > 0) return { cards: kept.slice(0, 2), why: Array.isArray(why) ? why.slice(0, 2).map(String) : [] };
     }
   } catch {
     // Not JSON: kept as it came.

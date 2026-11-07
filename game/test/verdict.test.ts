@@ -279,7 +279,7 @@ test("the Milestone 11 rows: the deck at work, a thread, story-space flags, and 
 
 test("the run report's Word on the road lists deeds, cards, pay-offs, draw-three counts, fights, scout looks and suggested cards (AGT-91)", () => {
   const dir = folder(runRecord({ campaign: { start_day: 1, day_limit: 3 } }), [], withSeq(WORD_ON_THE_ROAD));
-  writeFileSync(path.join(dir, SUGGESTED_CARDS), JSON.stringify(readSuggested('Here: {"cards": [{"id": "bread_returned", "text": "The roadfolk send bread back."}], "why": ["it carries on shared_bread"]}')));
+  writeFileSync(path.join(dir, SUGGESTED_CARDS), JSON.stringify(readSuggested('```json\n{"cards": [{"id": "bread_returned", "text": "The roadfolk send bread back."}], "why": ["it carries on shared_bread"]}\n```')));
   const report = wordReport(dir).join("\n");
   assert.match(report, /## Word on the road/);
   assert.match(report, /- shared_bread: contract 2, day 1, by bren, maren/);
@@ -297,6 +297,16 @@ test("the run report's Word on the road lists deeds, cards, pay-offs, draw-three
   // The Silent Mill writes no section; an answer that is not JSON is kept as written.
   assert.deepEqual(wordReport(folder(runRecord())), []);
   assert.deepEqual(readSuggested("no cards today"), { unread: "no cards today" });
+  // Copilot on table #315: JSON inside prose is not the JSON-only answer, and a card that isn't an object is dropped.
+  const prose = 'Here: {"cards": [{"id": "a", "text": "A."}]}';
+  assert.deepEqual(readSuggested(prose), { unread: prose });
+  assert.deepEqual(readSuggested('{"cards": [null, 3, {"id": "a", "text": "A."}]}'), { cards: [{ id: "a", text: "A." }], why: [] });
+  assert.deepEqual(readSuggested('{"cards": [null]}'), { unread: '{"cards": [null]}' });
+  // The report keeps an answer that wasn't JSON as written, and reads a card without its fields.
+  writeFileSync(path.join(dir, SUGGESTED_CARDS), JSON.stringify(readSuggested("Two cards:\nthe bread comes back")));
+  assert.match(wordReport(dir).join("\n"), /were not JSON; as written:\n> Two cards:\n> the bread comes back/);
+  writeFileSync(path.join(dir, SUGGESTED_CARDS), JSON.stringify({ cards: [null, { id: 4 }], why: [7] }));
+  assert.match(wordReport(dir).join("\n"), /suggested cards \(not loaded; [^)]+\): 2\n- \?: \n- \?: /);
   // The DM's pick sees which offered card reads a deed (AGT-91).
   const offered = { id: "roadfolk_fire", zone: "wend_road", target: "blades", text: "A fire.", choices: [{ id: "share", text: "Share." }] };
   assert.match(offeredLine({ ...offered, reads: [{ deed: "paid_the_toll", day: 2, contract: 1 }] }, 1), /Choices: share: Share\.\. Reads: paid_the_toll \(contract 1, day 2\)\./);
