@@ -382,17 +382,6 @@
             "note": "The drovers took it, for Rufus. The valley's prejudice is shown and never confirmed: a search of the roadfolk cart finds nothing, and no card makes the roadfolk the culprit. Maren objects to the search out loud. Odda won't search a family's cart on a carter's word. Let it go is Odda's line: \"Bread doesn't argue.\"",
             "choices": [
                 {
-                    "id": "search",
-                    "text": "Search the roadfolk cart.",
-                    "breaks": [
-                        "road_is_free"
-                    ],
-                    "effects": [
-                        {"do": "cargo", "good": "wheat", "change": -50},
-                        {"do": "remember", "deed": "searched_the_roadfolk_cart"}
-                    ]
-                },
-                {
                     "id": "tracks",
                     "text": "Look for tracks.",
                     "unless": "joined_the_roadfolk_fire",
@@ -438,6 +427,17 @@
                     "effects": [
                         {"do": "cargo", "good": "wheat", "change": -50},
                         {"do": "remember", "deed": "let_the_sack_go"}
+                    ]
+                },
+                {
+                    "id": "search",
+                    "text": "Search the roadfolk cart.",
+                    "breaks": [
+                        "road_is_free"
+                    ],
+                    "effects": [
+                        {"do": "cargo", "good": "wheat", "change": -50},
+                        {"do": "remember", "deed": "searched_the_roadfolk_cart"}
                     ]
                 }
             ]
