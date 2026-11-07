@@ -3,6 +3,9 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.67 (2026-11-07)
+- Meaning (ENG-35, protocol §4.13): a `travel` leg that ends at a place now meets its road card first and then the place's arrival card, drawn once the road card is decided and any fight it started is over. Before, an arrival card on the table kept the road card off the leg, and the leg that settled the contract drew no road card. The pay at the destination waits for both. No wire type changes. No fixture changes either: the test world has no leg with both cards. `crates/nat20-api-server/tests/api.rs` shows the order with an attended road card before the pay, and with two unattended cards settled at once, road first.
+
 ## 1.0.0-dev.66 (2026-11-06)
 - Additive (AGT-91, protocol §4.13): the card's record, DM only. A new event `card_shown{card, zone, when, reads?, forewarned?}` (`CardWhen`: `road`, `night`, `arrival`) before every `card_drawn`, so a run's session log names every card that went on the table, when it came, the remembered deeds it reads (`DeedDm` list) and the forewarned choice the scout opened. `OfferedCard.reads` carries the same deeds for each offered card. Neither is in any player view.
 - The test world's night card `yard_wolves` gains a third choice under `if: cleared_the_tree`, so `escort.jsonl`'s night card reads the deed the road card wrote, and a new DM `events` line there shows `card_shown` with `reads`. `scout.jsonl` shows `forewarned`; `draw_three.jsonl` and `road_cards.jsonl` show `card_shown` in their DM events; the other world fixtures change only by the log numbers the new event moves.

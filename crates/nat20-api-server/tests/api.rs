@@ -2874,7 +2874,7 @@ fn copy_dir(from: &Path, to: &Path) {
 /// and a card on the table then would never be shown or resolved. The test deck gets a tower
 /// trail card that is in play once the Old Tower is known, so the settling leg would draw it.
 #[test]
-fn the_leg_that_ends_the_contract_draws_no_road_card() {
+fn the_leg_that_ends_the_contract_draws_its_road_card_before_the_pay() {
     let dir = std::env::temp_dir().join(format!("nat20_table_last_leg_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
@@ -2931,16 +2931,32 @@ fn the_leg_that_ends_the_contract_draws_no_road_card() {
         json!({ "cmd": "travel", "actor": "bren", "to": "old_tower", "pace": "normal" }),
     );
     ok(&last);
+    // The last leg's road card comes first, on the road; the pay waits for it (ENG-35).
     let seen = kinds(&last);
-    assert!(seen.iter().any(|k| k == "escort_settled"), "{last}");
+    assert!(seen.iter().any(|k| k == "card_drawn"), "{last}");
+    assert!(!seen.iter().any(|k| k == "escort_settled"), "{last}");
+    let choice = last["result"]["state"]["world"]["card"]["choices"][0]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let mut settled = Vec::new();
+    for who in ["bren", "maren"] {
+        let said = api.call(
+            who,
+            json!({ "cmd": "choose_card", "actor": who, "choice": choice }),
+        );
+        assert_eq!(said["ok"], true, "{said}");
+        settled.extend(kinds(&said));
+    }
     assert!(
-        !seen.iter().any(|k| k == "card_drawn"),
-        "no card after the contract settles: {last}"
+        settled.iter().any(|k| k == "escort_settled"),
+        "the pay once the card is decided: {settled:?}"
     );
-    assert_eq!(
-        last["result"]["state"]["world"]["card"],
-        Value::Null,
-        "{last}"
+    // After the contract, the caravan goes nowhere: no card follows the pay.
+    let after = settled.iter().position(|k| k == "escort_settled").unwrap();
+    assert!(
+        !settled[after..].iter().any(|k| k == "card_drawn"),
+        "{settled:?}"
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -3286,10 +3302,10 @@ fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// An arrival card nobody can speak on is settled at once (ENG-35), and it is still the leg's
-/// only card: no road card follows it.
+/// Cards nobody can speak on are settled at once (ENG-35), and a leg that ends at a place
+/// still meets both: its road card first, on the road, then the place's arrival card.
 #[test]
-fn an_unattended_arrival_card_keeps_the_road_card_off_the_last_leg() {
+fn unattended_cards_on_an_arriving_leg_come_road_first_then_arrival() {
     let dir = std::env::temp_dir().join(format!(
         "nat20_table_unattended_arrival_{}",
         std::process::id()
@@ -3310,6 +3326,11 @@ fn an_unattended_arrival_card_keeps_the_road_card_off_the_last_leg() {
         "text": "Goats watch from the rocks.",
         "choices": [{ "id": "wave", "text": "Wave.", "effects": [{ "do": "remember", "deed": "chose_wave" }] }, { "id": "pass", "text": "Pass by.", "effects": [{ "do": "remember", "deed": "chose_pass" }] }]
     }));
+    // The goats are the hills' only road card, so the draw puts it on the table without a pick.
+    deck["cards"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|c| c["zone"] != "vale_hills" || c["id"] == "hill_crows");
     std::fs::write(&deck_path, deck.to_string()).unwrap();
     // The human owns the caravan, with no escort, and travels alone: no Blade can speak on a
     // Blade card.
@@ -3347,14 +3368,10 @@ fn an_unattended_arrival_card_keeps_the_road_card_off_the_last_leg() {
     );
     ok(&last);
     let seen = kinds(&last);
-    assert!(
-        seen.iter().any(|k| k == "card_resolved"),
-        "settled at once: {last}"
-    );
     assert_eq!(
-        seen.iter().filter(|k| *k == "card_drawn").count(),
-        1,
-        "the arrival card alone: {last}"
+        seen.iter().filter(|k| *k == "card_resolved").count(),
+        2,
+        "both settled at once: {last}"
     );
     let text: Vec<&str> = last["events"]
         .as_array()
@@ -3363,6 +3380,13 @@ fn an_unattended_arrival_card_keeps_the_road_card_off_the_last_leg() {
         .filter(|e| e["kind"] == "card_drawn")
         .map(|e| e["card_text"].as_str().unwrap())
         .collect();
-    assert_eq!(text, ["A crow sits on the tower gate."]);
+    assert_eq!(
+        text,
+        [
+            "Goats watch from the rocks.",
+            "A crow sits on the tower gate."
+        ],
+        "the road card first, then the arrival card"
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
