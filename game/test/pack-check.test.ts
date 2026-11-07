@@ -77,10 +77,19 @@ test("a living-world pack's skeleton is its campaign.json: no exits needed, and 
     assert.equal(path.basename(skeletonFile(good.pack)), "campaign.json");
     const report = await checkPack(good.pack);
     assert.deepEqual(report.problems, []);
-    // The engine's deck warnings reach the report (MAP-11): the short route meets too few fights.
-    assert.ok(report.warnings.some((w) => /^the route wendford > wendmouth meets \d+ cards? that can come to a fight/.test(w)), report.warnings.join("\n"));
   } finally {
     good.close();
+  }
+  // The engine's deck warnings reach the report (MAP-11): a route that stays in Wendford meets no fight.
+  const short = campaignMill({ ...WEND, route: ["wendford"] }, (s) => {
+    for (const scene of s.scenes) scene.exits = [];
+  });
+  try {
+    const report = await checkPack(short.pack);
+    assert.deepEqual(report.problems, []);
+    assert.ok(report.warnings.includes("the route wendford meets 0 cards that can come to a fight; two or more are recommended"), report.warnings.join("\n"));
+  } finally {
+    short.close();
   }
   const bad = campaignMill({ ...WEND, start: "the_moon" });
   try {
