@@ -1,13 +1,13 @@
 {
-    "_comment": "The Millbeck bridge (B8, Stas 2026-11-05: the bridge as a fixed event, fitted to Faces of the Road): the only card of the Millbeck zone, the upper stretch of the river road, so the first leg down from Wendford always meets it, once. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours. The two toll men are SRD 5.2.1 Bandits. Deeds, the brothers' NPC ids and the Wendford pay-off wait for Milestone 11 (Word on the Road). Three choices, as the scope allows (2 or 3; Stas 2026-11-05 kept it at three, so no go_ready choice).",
+    "_comment": "The Millbeck bridge (B8, Stas 2026-11-05: the bridge as a fixed event, fitted to Faces of the Road): the Millbeck zone, the upper stretch of the river road, so the first leg from Wendford meets it once. Milestone 11 (MAP-10): every choice writes crossed_millbeck; the toll men are Col and Dunn; the next contract meets The bridge again. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours. The two toll men are SRD 5.2.1 Bandits. A variant replaces a choice, so every case keeps three.",
     "cards": [
         {
             "id": "millbeck_bridge",
             "zone": "millbeck",
             "target": "caravan",
             "once": true,
-            "text": "At the little bridge over the Millbeck a man in a torn sheepskin coat and a borrowed helmet holds out his cap: the reeve's toll, he says, two silver a head. His brother leans on a cudgel by a willow hut, beside a cold fire and a heap of gnawed sheep bones.",
-            "owner_pick": "argue",
+            "text": "At the little bridge over the Millbeck a man in a torn sheepskin coat and a borrowed helmet holds out his cap, a notched tally stick in his other hand: the reeve's toll, he says, two silver a head. His brother leans on a cudgel by a willow hut, beside a cold fire and a heap of gnawed sheep bones.",
+            "owner_pick": "pay",
             "choices": [
                 {
                     "id": "pay",
@@ -17,12 +17,18 @@
                             "do": "pay",
                             "who": "party",
                             "copper": 20
-                        }
+                        },
+                        {"do": "remember", "deed": "paid_the_toll"},
+                        {"do": "remember", "deed": "crossed_millbeck"}
                     ]
                 },
                 {
                     "id": "argue",
                     "text": "Tell him the reeve charges no such toll.",
+                    "unless": "knew_of_the_toll_men",
+                    "keeps": [
+                        "mercy_to_yielded"
+                    ],
                     "effects": [
                         {
                             "do": "check",
@@ -30,12 +36,25 @@
                             "ability": "charisma",
                             "skill": "persuasion",
                             "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "toll_men_spared"},
+                                {"do": "remember", "deed": "crossed_millbeck"}
+                            ],
                             "failure": [
+                                {"do": "remember", "deed": "toll_men_fought"},
+                                {"do": "remember", "deed": "crossed_millbeck"},
+                                {"do": "add_card", "card": "peddlers_mark", "soon": true},
                                 {
                                     "do": "fight",
                                     "monsters": [
-                                        "bandit",
-                                        "bandit"
+                                        {
+                                            "stat": "bandit",
+                                            "npc": "col"
+                                        },
+                                        {
+                                            "stat": "bandit",
+                                            "npc": "dunn"
+                                        }
                                     ]
                                 }
                             ]
@@ -43,13 +62,21 @@
                     ]
                 },
                 {
+                    "id": "we_know",
+                    "text": "Tell them the reeve sent nobody, and that you know why they are here.",
+                    "if": "knew_of_the_toll_men",
+                    "effects": [
+                        {"do": "remember", "deed": "toll_men_spared"},
+                        {"do": "remember", "deed": "crossed_millbeck"},
+                        {"do": "remember", "deed": "heard_of_rufus_paper"}
+                    ]
+                },
+                {
                     "id": "ford",
                     "text": "Go upstream and ford the beck.",
+                    "unless": "scouted",
                     "effects": [
-                        {
-                            "do": "delay",
-                            "minutes": 90
-                        },
+                        {"do": "delay", "minutes": 90},
                         {
                             "do": "check",
                             "who": "blades",
@@ -57,13 +84,107 @@
                             "skill": "athletics",
                             "dc": 10,
                             "failure": [
+                                {"do": "cargo", "good": "rations", "change": -2}
+                            ]
+                        },
+                        {"do": "remember", "deed": "forded_the_millbeck"},
+                        {"do": "remember", "deed": "crossed_millbeck"}
+                    ]
+                },
+                {
+                    "id": "feed",
+                    "text": "Offer them food for the road instead of a toll.",
+                    "if": "scouted",
+                    "keeps": [
+                        "bread_shared"
+                    ],
+                    "effects": [
+                        {"do": "cargo", "good": "rations", "change": -2},
+                        {"do": "remember", "deed": "fed_the_toll_men"},
+                        {"do": "remember", "deed": "toll_men_spared"},
+                        {"do": "remember", "deed": "crossed_millbeck"}
+                    ]
+                }
+            ],
+            "scout": "perception",
+            "note": "Col and Dunn, brothers from a Highsteads farm. The goblins took their flock this autumn; Rufus bought the farm's debt and set them on the bridge to slow Odda's wagon and pay him out of the toll. Osric, counting the common chest for the steward's yearly visit, had sent them away. Col counts every coin on a tally stick he cut himself, notch by notch, like a reeve. Torva's family lost a farm to debt: give her that line. In a fight the DM tells the brothers reaching for their cudgels; initiative is the engine's, and a brother who drops his cudgel has yielded. A scout who looks first sees the gnawed bones and the empty pot: these men are hungry, not hard."
+        },
+        {
+            "id": "bridge_again",
+            "zone": "millbeck",
+            "target": "caravan",
+            "if": "crossed_millbeck",
+            "once": "contract",
+            "owner_pick": "pay",
+            "text": "At the Millbeck bridge a painted board hangs on a new post, with a wax seal at the bottom. A man in a clean coat sits under it with a ledger. The toll belongs to a Saltmouth company now, he says: the same two silver a head, written down this time.",
+            "note": "Before the choices, say in one plain sentence what happened here last time: who held the bridge and what the Blades did about it. Something learned goes out of date: the brothers' false toll is now a true one, on paper, and the paper is Rufus's company's. The clerk is not a villain; he is paid by the day, like the Blades. If the brothers were spared, he has never heard of them. Bren respects a seal; Ilsa asks who gave the company the bridge.",
+            "choices": [
+                {
+                    "id": "pay",
+                    "text": "Pay the company's toll.",
+                    "keeps": [
+                        "paper_is_law"
+                    ],
+                    "effects": [
+                        {
+                            "do": "pay",
+                            "who": "party",
+                            "copper": 20
+                        },
+                        {"do": "remember", "deed": "paid_the_company"}
+                    ]
+                },
+                {
+                    "id": "read",
+                    "text": "Ask to read the paper.",
+                    "unless": "toll_men_spared",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "intelligence",
+                            "skill": "investigation",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "read_the_company_paper"}
+                            ],
+                            "failure": [
                                 {
-                                    "do": "cargo",
-                                    "good": "rations",
-                                    "change": -2
+                                    "do": "pay",
+                                    "who": "party",
+                                    "copper": 20
                                 }
                             ]
                         }
+                    ]
+                },
+                {
+                    "id": "ask_brothers",
+                    "text": "Ask him what became of the two brothers.",
+                    "if": "toll_men_spared",
+                    "effects": [
+                        {"do": "remember", "deed": "asked_after_the_brothers"}
+                    ]
+                },
+                {
+                    "id": "ford",
+                    "text": "Go upstream and ford the beck.",
+                    "breaks": [
+                        "paper_is_law"
+                    ],
+                    "effects": [
+                        {"do": "delay", "minutes": 90},
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "strength",
+                            "skill": "athletics",
+                            "dc": 10,
+                            "failure": [
+                                {"do": "cargo", "good": "rations", "change": -2}
+                            ]
+                        },
+                        {"do": "remember", "deed": "forded_the_company_toll"}
                     ]
                 }
             ]
