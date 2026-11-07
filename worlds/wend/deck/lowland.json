@@ -1,5 +1,5 @@
 {
-    "_comment": "Road cards for the Wend valley floor (MAP-6, API-43): the river road from the Millbeck bridge to Saltmouth and the mill lane. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours, not the SRD's. Checks use the SRD DC ladder; fights use SRD 5.2.1 stat blocks. Text the players read never names a DC, a number of hit points or a stat block.",
+    "_comment": "Road cards for the Wend valley floor (MAP-6, API-43): the river road from the Millbeck bridge to Saltmouth and the mill lane. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours, not the SRD's. Checks use the SRD DC ladder; fights use SRD 5.2.1 stat blocks. Text the players read never names a DC, a number of hit points or a stat block. Faces of the Road (MAP-10): the peddler moved up to the slopes, so his news comes before the bridge.",
     "cards": [
         {
             "id": "rutted_road",
@@ -19,16 +19,10 @@
                             "skill": "athletics",
                             "dc": 10,
                             "success": [
-                                {
-                                    "do": "delay",
-                                    "minutes": 20
-                                }
+                                {"do": "delay", "minutes": 20}
                             ],
                             "failure": [
-                                {
-                                    "do": "delay",
-                                    "minutes": 90
-                                }
+                                {"do": "delay", "minutes": 90}
                             ]
                         }
                     ]
@@ -37,39 +31,7 @@
                     "id": "unload",
                     "text": "Unload the heaviest sacks, roll the wagon free, and load them again.",
                     "effects": [
-                        {
-                            "do": "delay",
-                            "minutes": 60
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "peddler",
-            "zone": "lowland",
-            "target": "blades",
-            "text": "A peddler pushing a handcart falls in beside the escort. He has news from up and down the road, he says, and he has not eaten since yesterday. Two men with cudgels sit by the Millbeck bridge, he says, taking a toll the reeve never set.",
-            "choices": [
-                {
-                    "id": "share",
-                    "text": "Share your food and listen.",
-                    "effects": [
-                        {
-                            "do": "cargo",
-                            "good": "rations",
-                            "change": -1
-                        }
-                    ]
-                },
-                {
-                    "id": "send_off",
-                    "text": "Send him on his way.",
-                    "effects": [
-                        {
-                            "do": "remember",
-                            "deed": "sent_the_peddler_on"
-                        }
+                        {"do": "delay", "minutes": 60}
                     ]
                 }
             ]
@@ -84,24 +46,19 @@
                     "id": "feed",
                     "text": "Toss it a crust and let it come along.",
                     "effects": [
-                        {
-                            "do": "cargo",
-                            "good": "rations",
-                            "change": -1
-                        }
+                        {"do": "cargo", "good": "rations", "change": -1},
+                        {"do": "remember", "deed": "fed_gwyns_dog"}
                     ]
                 },
                 {
                     "id": "shoo",
                     "text": "Send it home.",
                     "effects": [
-                        {
-                            "do": "remember",
-                            "deed": "sent_the_dog_home"
-                        }
+                        {"do": "remember", "deed": "sent_the_dog_home"}
                     ]
                 }
-            ]
+            ],
+            "note": "Gwyn's sheepdog from the Highsteads, gone after her strays; Gwyn wants it back. It answers to a whistle nobody at the table knows."
         },
         {
             "id": "river_mist",
@@ -121,11 +78,7 @@
                             "skill": "perception",
                             "dc": 10,
                             "failure": [
-                                {
-                                    "do": "cargo",
-                                    "good": "rations",
-                                    "change": -2
-                                }
+                                {"do": "cargo", "good": "rations", "change": -2}
                             ]
                         }
                     ]
@@ -134,11 +87,7 @@
                     "id": "sleep",
                     "text": "Sleep.",
                     "effects": [
-                        {
-                            "do": "cargo",
-                            "good": "rations",
-                            "change": -2
-                        }
+                        {"do": "cargo", "good": "rations", "change": -2}
                     ]
                 }
             ]
@@ -205,11 +154,7 @@
                             "skill": "insight",
                             "dc": 15,
                             "failure": [
-                                {
-                                    "do": "cargo",
-                                    "good": "rations",
-                                    "change": -2
-                                }
+                                {"do": "cargo", "good": "rations", "change": -2}
                             ]
                         }
                     ]
@@ -218,10 +163,58 @@
                     "id": "send_away",
                     "text": "Tell them to find their own fire.",
                     "effects": [
+                        {"do": "remember", "deed": "sent_the_drovers_away"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "sedges_jar",
+            "zone": "lowland",
+            "target": "blades",
+            "chained": true,
+            "once": true,
+            "text": "The bog-wife is waiting at a bend of the river road. She presses a stoppered jar into one Blade's hands: for the peddler with the handcart, for his shaking hands. He will be at the fair, he always is. Don't open it.",
+            "note": "Mother Sedge's favour for the horse. Ilsa argues for opening it: who carries a stranger's jar unopened? Maren says a promise is a promise. Opened well, it is a tincture for the shakes and nothing worse; opened badly, half of it is spilled, and Sedge will hear through Gwyn that someone looked.",
+            "choices": [
+                {
+                    "id": "carry",
+                    "text": "Carry it to the fair.",
+                    "keeps": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {"do": "remember", "deed": "carrying_sedges_jar"}
+                    ]
+                },
+                {
+                    "id": "open",
+                    "text": "Open it.",
+                    "breaks": [
+                        "word_kept"
+                    ],
+                    "effects": [
                         {
-                            "do": "remember",
-                            "deed": "sent_the_drovers_away"
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "medicine",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "opened_sedges_jar"},
+                                {"do": "remember", "deed": "carrying_sedges_jar"}
+                            ],
+                            "failure": [
+                                {"do": "remember", "deed": "spilled_sedges_jar"}
+                            ]
                         }
+                    ]
+                },
+                {
+                    "id": "refuse",
+                    "text": "Give it back to her.",
+                    "effects": [
+                        {"do": "remember", "deed": "refused_sedges_jar"}
                     ]
                 }
             ]
