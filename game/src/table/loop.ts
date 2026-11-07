@@ -1364,13 +1364,17 @@ export class TableLoop {
     if (human && (owner === human || npcOwned)) {
       const state = await this.humanState();
       if (state?.view !== "player" || !state.world?.drives) return;
-      const lines = roadChoices(state.world, 1).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel"));
-      if (lines.length === 0) {
+      // Moving on, a Hired Blade may also walk ahead as the scout first (AGT-90).
+      const lines = roadChoices(state.world, 1, human).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel" || c.act?.kind === "scout"));
+      if (!lines.some((c) => c.act?.kind !== "scout")) {
         this.table.tellDm(`${human} can't ${rest ? "end the day" : "move the caravan on"} now: nothing on the road offers it. Go on in fiction.`);
         return;
       }
-      const choices: Choice[] = [...lines.map((c, i) => ({ ...c, number: i + 1 })), { number: lines.length + 1, label: "Not yet" }];
+      const numbered = (from: Choice[]): Choice[] => [...from.map((c, i) => ({ ...c, number: i + 1 })), { number: from.length + 1, label: "Not yet" }];
+      let choices = numbered(lines);
       const preset = (choices.findIndex((c) => c.act?.kind === "rest_night" && c.act.where === step) + 1) || 1;
+      // The human has seen *Walk ahead as the scout*: the AI Blades may scout now.
+      if (lines.some((c) => c.act?.kind === "scout")) this.table.scoutOffered = true;
       await this.table.flush();
       for (;;) {
         if (this.table.ended) return;
@@ -1396,6 +1400,11 @@ export class TableLoop {
         }
         this.table.log("intent", `${human} picked: ${picked.label}`, human);
         this.table.tellDm(`${human} took an option: ${picked.label}`);
+        // Walking ahead isn't moving on: the road asks again, without the scout line.
+        if (picked.act.kind === "scout") {
+          choices = numbered(choices.filter((c) => c.act !== undefined && c.act.kind !== "scout"));
+          continue;
+        }
         return;
       }
     }

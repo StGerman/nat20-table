@@ -478,6 +478,37 @@ test("the party says it moves on: the DM proposes it, and the human who drives t
   }
 });
 
+test("the road the DM proposes offers a Blade the scout's walk first, then asks again without it (AGT-90)", async () => {
+  // Copilot on table #314: the DM-driven road prompt never showed the scout line, so the AI Blades waited for good.
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "explore") return { kind: "text", text: "Right then, let's go." };
+    if (prompt.kind !== "road") return ScriptedSeat.pass(prompt, s);
+    const scout = s.choices.find((c) => c.act?.kind === "scout");
+    return scout ? { kind: "option", number: scout.number } : ScriptedSeat.pass(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    let moved = false;
+    const dm = new ScriptedDm({
+      table_turn: async (tools) => {
+        const said = await tools.proposeRoad(moved ? "camp" : "move_on");
+        assert.ok(said.ok, said.text);
+        moved = true;
+      },
+    });
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    await loop.run("vale_town");
+    const roads = seat.shown.filter((e) => e.kind === "options" && e.title === "The road");
+    assert.ok(roads[0]?.kind === "options" && roads[0].lines.some((l) => l.includes("Walk ahead as the scout")), JSON.stringify(roads[0]));
+    assert.ok(roads[1]?.kind === "options" && !roads[1].lines.some((l) => l.includes("Walk ahead as the scout")), JSON.stringify(roads[1]));
+    const sent = t.requests().filter((r) => r.cmd === "scout" || r.cmd === "travel");
+    assert.deepEqual(sent.slice(0, 2).map((r) => [r.cmd, r.actor]), [["scout", "bren"], ["travel", "bren"]], "the human walked ahead, then moved the caravan on");
+    assert.ok(t.table.scoutOffered, "the AI Blades may scout once the human has seen the line");
+  } finally {
+    t.close();
+  }
+});
+
 test("a line on screen is taken by its name typed out, and by its number while the DM's question is open", async () => {
   // Stas's run, 2026-11-04: the DM asked a question, /options listed the road, and "11" and
   // "Move on with the caravan" both reached the DM as words, so the caravan never left.
