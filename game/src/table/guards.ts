@@ -153,9 +153,10 @@ const ROLL_MODIFIERS = [
   /\(\s*\d+\s*[+−]\s*\d+\s*\)/,
   // After a total, an ASCII minus too, as the engine writes a negative modifier: "19 (14 - 1)".
   /(?:\d+|\[r\d+\])\s*\(\s*\d+\s*-\s*\d+\s*\)/,
-  // A roll cited and then modified, the number ending the clause: "[r7]+5.", "[r3] – 1, a miss";
-  // "[r3] + 2 more wolves come" is prose.
-  /\[r\d+\]\s*[+\-–−]\s*\d+\s*(?:[.!?;,)]|$)/,
+  // A roll cited and then modified: a sign glued to its number ("[r7]+5 and hits") or a minus sign
+  // anywhere, a spaced sign when the number ends the clause ("[r3] – 1, a miss"). "[r3] + 2 more
+  // wolves come" is prose.
+  /\[r\d+\](?:\s*[+\-–]\d+|\s*−\s*\d+|\s*[+\-–]\s*\d+(?=\s*(?:[.!?;:,)—–]|$)))/m,
   /\d*[dк]\d+\s*[+\-−]\s*\d+/iu,
 ];
 
