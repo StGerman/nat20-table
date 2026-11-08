@@ -74,6 +74,10 @@ pub struct Session {
     last_blow: HashMap<String, String>,
     /// The creature that took the last option (ENG-36): the blow's dealer when no roll is cited
     last_actor: Option<String>,
+    /// The place a leg just reached, whose arrival pile waits for the leg's road card to be
+    /// decided and any fight it started to be over (ENG-35). Not saved in a roster: a roster
+    /// saved with the road card on the table loses the arrival card, never the pay.
+    arrival_due: Option<String>,
 }
 
 impl Session {
@@ -98,6 +102,7 @@ impl Session {
             roster,
             npcs_here: Vec::new(),
             card_npcs: HashMap::new(),
+            arrival_due: None,
             rollers: HashMap::new(),
             last_blow: HashMap::new(),
             last_actor: None,
@@ -268,22 +273,35 @@ impl Session {
         Ok(())
     }
 
-    /// Settles the escort when the caravan stands at its destination with no card on the table
-    /// and no fight running (ENG-35): right after the arriving leg, or once the destination's
-    /// arrival card is decided and its fight is over. Returns whether this call settled it.
+    /// Once no card is on the table and no fight is running (ENG-35): draws the arrival pile of
+    /// a place the last leg reached, if it waits, and then, with that card decided too, settles
+    /// the escort when the caravan stands at its destination. Called right after the arriving
+    /// leg, and once a card is decided or its fight is over. Returns whether this call settled it.
     pub(super) fn settle_if_arrived(&mut self) -> Result<bool, ApiError> {
+        if !self.card_free() {
+            return Ok(false);
+        }
+        if let Some(place) = self.arrival_due.take() {
+            self.draw_card(|world, dice| world.draw_on_arrival(&place, dice))?;
+            if !self.card_free() {
+                return Ok(false);
+            }
+        }
         let Some(campaign) = self.campaign.as_ref() else {
             return Ok(false);
         };
-        if campaign.world.state.deck.waiting()
-            || self.game.as_ref().is_some_and(|g| g.mode() == Mode::Combat)
-        {
-            return Ok(false);
-        }
         let Some(place) = campaign.world.place_here().map(str::to_owned) else {
             return Ok(false);
         };
         self.escort_arrive(&place)
+    }
+
+    /// Whether no card is offered or on the table and no fight is running.
+    fn card_free(&self) -> bool {
+        self.campaign
+            .as_ref()
+            .is_some_and(|c| !c.world.state.deck.waiting())
+            && !self.game.as_ref().is_some_and(|g| g.mode() == Mode::Combat)
     }
 
     /// Whether the escort contract is done.
@@ -773,26 +791,20 @@ impl Session {
             ));
         }
         self.enter_scene(&scene, &party)?;
-        // A leg that ends at a place draws the place's arrival card first, in its scene and
-        // before the pay (ENG-35). At the destination the escort settles only once the card is
-        // decided and any fight it starts is over (`settle_if_arrived`), so a roster saved in
-        // between keeps the contract under way with the card on the table. A card on the table
-        // also keeps the road card off the leg, even when nobody could speak on it and it was
-        // settled at once.
-        let done_before = self.escort_done();
-        let mut arrival_card = false;
-        if leg.arrived {
-            let place = leg.toward.clone();
-            arrival_card = self.draw_card(|world, dice| world.draw_on_arrival(&place, dice))?;
+        // A leg's road card comes first, on the road; a leg that ends at a place then draws the
+        // place's arrival card, in its scene and before the pay, once the road card is decided
+        // and any fight it started is over (ENG-35, `settle_if_arrived`). At the destination the
+        // escort settles only once both are, so a roster saved in between keeps the contract
+        // under way with the card on the table. After the contract, the caravan goes nowhere.
+        if !self.escort_done() {
+            let road = leg.road.clone();
+            if leg.arrived {
+                self.arrival_due = Some(leg.toward.clone());
+            }
+            self.draw_card(|world, dice| world.draw_after_leg(&road, dice))?;
         }
         if leg.arrived {
             self.settle_if_arrived()?;
-        }
-        let settled = !done_before && self.escort_done();
-        // The leg that settles the contract ends the journey: no road card follows it.
-        if !settled && !arrival_card {
-            let road = leg.road.clone();
-            self.draw_card(|world, dice| world.draw_after_leg(&road, dice))?;
         }
         Ok(CommandResult::Travel {
             leg: view,
