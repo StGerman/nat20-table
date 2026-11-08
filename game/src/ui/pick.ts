@@ -7,10 +7,11 @@
 //
 // With a saved party (API-45, `--roster`), the screen first asks whether to go on with it or start a
 // new one; Enter at once goes on. Going on, the list shows each character at their saved level.
-import type { Handle } from "@nat20-table/engine-client";
+import type { Coins, Handle, RosterCharacter } from "@nat20-table/engine-client";
 import { Box, render, Text, useInput, useWindowSize, type Instance, type RenderOptions } from "ink";
 import { createElement as h, useState } from "react";
 import type { RosterEntry } from "../play/run.ts";
+import { coinPhrase } from "../view.ts";
 import { textProps, wrapText } from "./lines.ts";
 import { paletteFor, type Palette } from "./palette.ts";
 import type { PanelSize } from "./panel.ts";
@@ -54,9 +55,16 @@ export function pickRows(roster: RosterEntry[], at: number, fallback: Handle): s
   );
 }
 
-/** The card's rows at `width`: name, what they are, the card's opening line, and the goal. No sheet numbers. */
+/**
+ * The card's rows at `width`: name, what they are (with their experience when known), their purse,
+ * the card's opening line, and the goal. No other sheet numbers.
+ */
 export function cardRows(entry: RosterEntry, width: number): string[] {
-  const rows = [entry.name, `${[entry.species, entry.class].filter(Boolean).join(" ")}, level ${entry.level}`, ""];
+  // The experience on the level line, the purse under it.
+  const xp = entry.xp === undefined ? "" : ` - ${entry.xp}XP points`;
+  const rows = [entry.name, `${[entry.species, entry.class].filter(Boolean).join(" ")}, level ${entry.level}${xp}`];
+  if (entry.purseCp !== undefined) rows.push(`Purse: ${coinPhrase(entry.purseCp)}`);
+  rows.push("");
   if (entry.about) rows.push(...wrapText(entry.about, width, 0).split("\n"), "");
   if (entry.goal) rows.push("Goal", ...wrapText(entry.goal, width, 0).split("\n"));
   return rows;
@@ -159,19 +167,58 @@ function PartyScreen({ saved, again, title, palette, onParty }: { saved: string;
   );
 }
 
-/** A saved party on the start screen: its line, its levels, and the levels its last journey began at when it can be played again (API-51). */
+/**
+ * One saved character as the pick screen shows it: level, Experience Points and purse in copper.
+ * The game reads only a character's handle, pregen and level before the engine checks the rest,
+ * so a hand-edited file may lack either of the last two; the card then leaves that line out.
+ */
+export interface SavedCharacter {
+  level: number;
+  xp?: number;
+  purseCp?: number;
+}
+
+/**
+ * A saved party on the start screen: its line, its characters, and the characters as its last
+ * journey began when it can be played again (API-51).
+ */
 export interface SavedParty {
   line: string;
-  levels: ReadonlyMap<Handle, number>;
-  startLevels?: ReadonlyMap<Handle, number>;
+  characters: ReadonlyMap<Handle, SavedCharacter>;
+  startCharacters?: ReadonlyMap<Handle, SavedCharacter>;
+}
+
+/** Coins in copper, as the pick card reads them. */
+export const copperOf = (c: Coins): number => (c.cp ?? 0) + 10 * (c.sp ?? 0) + 50 * (c.ep ?? 0) + 100 * (c.gp ?? 0) + 1000 * (c.pp ?? 0);
+
+/** A saved roster's characters as the pick screen shows them. */
+export function savedCharacters(characters: RosterCharacter[]): Map<Handle, SavedCharacter> {
+  return new Map(
+    characters.map((c) => [
+      c.handle,
+      {
+        level: c.level,
+        xp: typeof c.xp === "number" ? c.xp : undefined,
+        purseCp: c.purse && typeof c.purse === "object" ? copperOf(c.purse) : undefined,
+      },
+    ]),
+  );
+}
+
+/** The pack's party as a saved party has it: each character's saved level, experience and purse. */
+export function savedRoster(roster: RosterEntry[], chars: ReadonlyMap<Handle, SavedCharacter>): RosterEntry[] {
+  return roster.map((r) => {
+    const c = chars.get(r.handle);
+    return c ? { ...r, level: c.level, xp: c.xp, purseCp: c.purseCp } : r;
+  });
 }
 
 /** The party question when a party is saved, then the pick list. */
 function StartScreen({ roster, fallback, title, palette, saved, onStart }: { roster: RosterEntry[]; fallback: Handle; title?: string; palette: Palette; saved: SavedParty; onStart: (party: Party | "", handle: Handle) => void }) {
   const [party, setParty] = useState<Party | undefined>(undefined);
-  if (!party) return h(PartyScreen, { saved: saved.line, again: saved.startLevels !== undefined, title, palette, onParty: (p: Party | "") => (p ? setParty(p) : onStart("", "")) });
-  const levels = party === "continue" ? saved.levels : party === "again" ? saved.startLevels : undefined;
-  const shown = levels ? roster.map((r) => ({ ...r, level: levels.get(r.handle) ?? r.level })) : roster;
+  if (!party) return h(PartyScreen, { saved: saved.line, again: saved.startCharacters !== undefined, title, palette, onParty: (p: Party | "") => (p ? setParty(p) : onStart("", "")) });
+  const chars = party === "continue" ? saved.characters : party === "again" ? saved.startCharacters : undefined;
+  const shown = chars ? savedRoster(roster, chars) : roster;
   return h(PickScreen, { roster: shown, fallback, title, palette, onPick: (handle: Handle) => onStart(party, handle) });
 }
 
