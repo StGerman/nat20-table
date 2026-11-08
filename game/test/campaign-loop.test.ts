@@ -100,6 +100,15 @@ test("the road's lines join the human's options only when the human may drive an
   ]);
   assert.deepEqual(roadChoices({ ...(world as object), drives: false } as never, 1), []);
   assert.deepEqual(roadChoices({ ...(world as object), card: { text: "x" } } as never, 1), []);
+  // A Hired Blade may walk ahead as the scout (AGT-90): one line for the road, gone once they do;
+  // a merchant or a run with no escort has none.
+  const escort = { destination: "mill", blades: [{ handle: "bren", served: 0, paid_cp: 0 }], done: false };
+  const blade = { ...(world as object), escort } as never;
+  assert.deepEqual(roadChoices(blade, 1, "bren").at(-1), { number: 4, label: "Walk ahead as the scout", act: { kind: "scout" }, about: { id: "scout" } });
+  assert.equal(roadChoices({ ...(blade as object), scout: "torva" } as never, 1, "bren").at(-1)?.label, "Walk ahead as the scout", "another Blade's turn ahead can be taken");
+  assert.ok(!roadChoices({ ...(blade as object), scout: "bren" } as never, 1, "bren").some((c) => c.act?.kind === "scout"));
+  assert.ok(!roadChoices(blade, 1, "odda").some((c) => c.act?.kind === "scout"), "not a Blade");
+  assert.ok(!roadChoices(world, 1, "bren").some((c) => c.act?.kind === "scout"), "no escort");
 });
 
 test("a human who owns the caravan picks a road out of the place, each line carrying where it goes", () => {
@@ -464,6 +473,37 @@ test("the party says it moves on: the DM proposes it, and the human who drives t
     assert.equal(t.requests().filter((r) => r.cmd === "travel")[0]?.actor, "bren", "the human moved the caravan on");
     const asked = seat.shown.find((e) => e.kind === "options" && e.title === "The road");
     assert.ok(asked?.kind === "options" && asked.lines[0]?.includes("Move on with the caravan"), JSON.stringify(asked));
+  } finally {
+    t.close();
+  }
+});
+
+test("the road the DM proposes offers a Blade the scout's walk first, then asks again without it (AGT-90)", async () => {
+  // Copilot on table #314: the DM-driven road prompt never showed the scout line, so the AI Blades waited for good.
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "explore") return { kind: "text", text: "Right then, let's go." };
+    if (prompt.kind !== "road") return ScriptedSeat.pass(prompt, s);
+    const scout = s.choices.find((c) => c.act?.kind === "scout");
+    return scout ? { kind: "option", number: scout.number } : ScriptedSeat.pass(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    let moved = false;
+    const dm = new ScriptedDm({
+      table_turn: async (tools) => {
+        const said = await tools.proposeRoad(moved ? "camp" : "move_on");
+        assert.ok(said.ok, said.text);
+        moved = true;
+      },
+    });
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    await loop.run("vale_town");
+    const roads = seat.shown.filter((e) => e.kind === "options" && e.title === "The road");
+    assert.ok(roads[0]?.kind === "options" && roads[0].lines.some((l) => l.includes("Walk ahead as the scout")), JSON.stringify(roads[0]));
+    assert.ok(roads[1]?.kind === "options" && !roads[1].lines.some((l) => l.includes("Walk ahead as the scout")), JSON.stringify(roads[1]));
+    const sent = t.requests().filter((r) => r.cmd === "scout" || r.cmd === "travel");
+    assert.deepEqual(sent.slice(0, 2).map((r) => [r.cmd, r.actor]), [["scout", "bren"], ["travel", "bren"]], "the human walked ahead, then moved the caravan on");
+    assert.ok(t.table.scoutOffered, "the AI Blades may scout once the human has seen the line");
   } finally {
     t.close();
   }

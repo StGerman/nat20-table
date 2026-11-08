@@ -446,6 +446,8 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   assert.ok(names.includes("pick_card"), names.join(", "));
   assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line\./);
   assert.ok(!mill.includes("pick_card"));
+  // Scouting at the table (AGT-90): the DM opens a scouted card on what the scout saw.
+  assert.match(dm.systemPrompt, /- The scout: .*If they saw it, open the card on what the scout saw/);
   // Story-space (AGT-89, design decision 9): five rules on the road, the human's character named in the second.
   const space = dm.systemPrompt.slice(dm.systemPrompt.indexOf("## Story-space"));
   assert.equal(space.split("\n").filter((l) => l.startsWith("- ")).length, 5, space);
