@@ -64,7 +64,13 @@
                 },
                 {
                     "id": "send_off",
-                    "text": "Send him on his way."
+                    "text": "Send him on his way.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "sent_the_peddler_on"
+                        }
+                    ]
                 }
             ]
         },
@@ -87,7 +93,13 @@
                 },
                 {
                     "id": "shoo",
-                    "text": "Send it home."
+                    "text": "Send it home.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "sent_the_dog_home"
+                        }
+                    ]
                 }
             ]
         },
@@ -204,7 +216,13 @@
                 },
                 {
                     "id": "send_away",
-                    "text": "Tell them to find their own fire."
+                    "text": "Tell them to find their own fire.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "sent_the_drovers_away"
+                        }
+                    ]
                 }
             ]
         }

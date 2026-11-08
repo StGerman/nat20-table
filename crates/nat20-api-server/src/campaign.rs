@@ -110,6 +110,15 @@ impl Campaign {
             .map_err(|e| bad(format!("The world {}'s customs: {e}.", setup.map)))?;
         deck.check_customs(&customs)
             .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
+        // Fights are a recommendation (MAP-11, Q6): what the deck lacks is written to stderr
+        // as `deck: ` lines, for the run folder, and never refuses the campaign.
+        for warning in deck
+            .route_warnings(&built.map, &built.route)
+            .into_iter()
+            .chain(deck.untagged_fight_warnings(|m| monster::is_person(m.stat())))
+        {
+            eprintln!("deck: {warning}");
+        }
         let built = built
             .with_deck(deck)
             .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;

@@ -602,7 +602,7 @@ test("an arrival card at the destination is decided before the human's last turn
           text: "A boy on the quay offers to carry the sacks.",
           choices: [
             { id: "let_him", text: "Let him carry them.", effects: [{ do: "delay", minutes: 10 }] },
-            { id: "wave_off", text: "Wave him off." },
+            { id: "wave_off", text: "Wave him off.", effects: [{ do: "remember", deed: "waved_off_the_quay_boy" }] },
           ],
         },
       ],

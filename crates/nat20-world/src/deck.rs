@@ -653,7 +653,10 @@ impl Deck {
     /// on the ladder, a fight only last in its list, `add_card` that names a chained card, every chained card added by
     /// some choice, no pile over [`MAX_PILE`] cards, and 2 or 3 choices offered in every case a
     /// card's conditions allow (ENG-33), counting [`SCOUTED`] as a case; `scouted` read only by
-    /// a choice and never remembered, and a `scout` skill only on a road card (API-54). Goods and stat blocks are the server's to check; that
+    /// a choice and never remembered, and a `scout` skill only on a road card (API-54), and
+    /// then with exactly one choice under `if: "scouted"`, which no other card has; and two of
+    /// the five card tests (MAP-11): every choice has an effect (a `remember` counts), and no two
+    /// choices offered together have the same effects. Goods and stat blocks are the server's to check; that
     /// every deed read is written is [`Deck::check_deeds_written`]'s.
     pub fn validate(&self, map: &WorldMap) -> Result<(), DeckError> {
         let bad = |s: String| Err(DeckError(s));
@@ -800,6 +803,51 @@ impl Deck {
                     card.id
                 ));
             }
+            // The second card test (MAP-11): every choice changes something later.
+            if let Some(idle) = card.choices.iter().find(|c| c.effects.is_empty()) {
+                return bad(format!(
+                    "card {}'s choice {} changes nothing: give it an effect or a deed",
+                    card.id, idle.id
+                ));
+            }
+            // A card with something to find has one forewarned choice, and only such a card
+            // (MAP-11, API-54).
+            let forewarned = card
+                .choices
+                .iter()
+                .filter(|c| c.if_deeds.iter().flat_map(Deeds::ids).any(|d| d == SCOUTED))
+                .count();
+            match (card.scout.is_some(), forewarned) {
+                (true, 1) | (false, 0) => {}
+                (true, 0) => {
+                    return bad(format!(
+                        "card {} has a scout skill but no choice under if: {SCOUTED}",
+                        card.id
+                    ));
+                }
+                (false, _) => {
+                    return bad(format!(
+                        "card {} has a choice under if: {SCOUTED} but no scout skill",
+                        card.id
+                    ));
+                }
+                (true, n) => {
+                    return bad(format!(
+                        "card {} has {n} choices under if: {SCOUTED}; it needs one",
+                        card.id
+                    ));
+                }
+            }
+            // The forewarned choice reads `scouted` alone, so a scout always finds it.
+            if let Some(mixed) = card.choices.iter().find(|c| {
+                let ids = c.if_deeds.iter().flat_map(Deeds::ids).collect::<Vec<_>>();
+                ids.len() > 1 && ids.iter().any(|d| *d == SCOUTED)
+            }) {
+                return bad(format!(
+                    "card {}'s choice {} reads {SCOUTED} with other deeds; a forewarned choice reads {SCOUTED} alone",
+                    card.id, mixed.id
+                ));
+            }
             check_cases(card)?;
         }
         if let Some(lost) = self
@@ -810,6 +858,77 @@ impl Deck {
             return bad(format!("chained card {} is never added", lost.id));
         }
         Ok(())
+    }
+
+    /// The cards whose choices can come to a fight (MAP-11): a `fight` effect anywhere in a
+    /// choice, a check's outcome included.
+    fn can_fight(card: &Card) -> bool {
+        Deck::effects(card)
+            .iter()
+            .any(|e| matches!(e, Effect::Fight { .. }))
+    }
+
+    /// The warnings for a campaign's route (MAP-11, Q6): fights are a recommendation, so these
+    /// never fail a build. A route that meets fewer than two cards that can come to a fight is
+    /// named: the cards of its roads' zones and of its places (night and arrival cards),
+    /// chained cards included. A caravan with no fixed route (a human owner picks each road) has
+    /// nothing to assess, so it is never warned of.
+    pub fn route_warnings(&self, map: &WorldMap, route: &[String]) -> Vec<String> {
+        if route.is_empty() {
+            return Vec::new();
+        }
+        let mut zones: BTreeSet<&str> = route.iter().map(String::as_str).collect();
+        for leg in route.windows(2) {
+            if let Some(road) = map
+                .roads_from(&leg[0])
+                .find(|r| r.other_end(&leg[0]) == Some(leg[1].as_str()))
+            {
+                zones.insert(road.zone.as_str());
+            }
+        }
+        let fights: Vec<&str> = self
+            .cards
+            .iter()
+            .filter(|c| zones.contains(c.zone.as_str()) && Deck::can_fight(c))
+            .map(|c| c.id.as_str())
+            .collect();
+        if fights.len() >= 2 {
+            return Vec::new();
+        }
+        vec![format!(
+            "the route {} meets {} card{} that can come to a fight{}; two or more are recommended",
+            route.join(" > "),
+            fights.len(),
+            if fights.len() == 1 { "" } else { "s" },
+            if fights.is_empty() {
+                String::new()
+            } else {
+                format!(" ({})", fights.join(", "))
+            }
+        )]
+    }
+
+    /// The warnings for fights with persons (MAP-11, ENG-39): a choice that can come to a
+    /// fight with a creature `is_person` says is a person, and names no custom it keeps or
+    /// breaks. The DM shows how people take such a choice, so it should say which customs.
+    pub fn untagged_fight_warnings(&self, is_person: impl Fn(&Monster) -> bool) -> Vec<String> {
+        let mut out = Vec::new();
+        for card in &self.cards {
+            for choice in &card.choices {
+                let mut effects = Vec::new();
+                effects_of(&choice.effects, &mut effects);
+                let with_persons = effects.iter().any(
+                    |e| matches!(e, Effect::Fight { monsters } if monsters.iter().any(&is_person)),
+                );
+                if with_persons && choice.keeps.is_empty() && choice.breaks.is_empty() {
+                    out.push(format!(
+                        "card {}'s choice {} comes to a fight with persons and names no custom it keeps or breaks",
+                        card.id, choice.id
+                    ));
+                }
+            }
+        }
+        out
     }
 
     /// Checks that every deed a card or a choice reads is written by some `remember` in this
@@ -1227,11 +1346,21 @@ fn check_cases(card: &Card) -> Result<(), DeckError> {
                     .position(|d| *d == id)
                     .is_some_and(|i| mask & (1 << i) != 0)
         };
-        let offered = card
+        let choices: Vec<&Choice> = card
             .choices
             .iter()
             .filter(|c| holds(c.if_deeds.as_ref(), c.unless.as_ref(), &known))
-            .count();
+            .collect();
+        let offered = choices.len();
+        // The first card test code can check (MAP-11): no two choices offered together alike.
+        for (i, a) in choices.iter().enumerate() {
+            if let Some(b) = choices[i + 1..].iter().find(|b| b.effects == a.effects) {
+                return bad(format!(
+                    "card {}'s choices {} and {} do the same: their effects are alike",
+                    card.id, a.id, b.id
+                ));
+            }
+        }
         if !(2..=3).contains(&offered) {
             let case: Vec<&str> = free
                 .iter()
@@ -1325,14 +1454,14 @@ mod tests {
                  "choices": [
                    {"id": "give", "text": "Give a ration.", "effects": [{"do": "cargo", "good": "rations", "change": -1},
                      {"do": "add_card", "card": "beggar_returns"}]},
-                   {"id": "refuse", "text": "Send him off."}
+                   {"id": "refuse", "text": "Send him off.", "effects": [{"do": "remember", "deed": "chose_refuse"}]}
                  ]},
                 {"id": "beggar_returns", "zone": "fields", "target": "blades", "chained": true, "once": true,
                  "text": "The beggar is back with news.",
-                 "choices": [{"id": "listen", "text": "Listen."}, {"id": "leave", "text": "Leave."}]},
+                 "choices": [{"id": "listen", "text": "Listen.", "effects": [{"do": "remember", "deed": "chose_listen"}]}, {"id": "leave", "text": "Leave.", "effects": [{"do": "remember", "deed": "chose_leave"}]}]},
                 {"id": "ruin_ghost", "zone": "hills", "when": "night", "target": "blades", "requires": "ruin",
                  "text": "Lights at the ruin.",
-                 "choices": [{"id": "look", "text": "Look."}, {"id": "sleep", "text": "Sleep."}]}
+                 "choices": [{"id": "look", "text": "Look.", "effects": [{"do": "remember", "deed": "chose_look"}]}, {"id": "sleep", "text": "Sleep.", "effects": [{"do": "remember", "deed": "chose_sleep"}]}]}
               ]
             }"#,
         )
@@ -1770,10 +1899,10 @@ mod tests {
                 {"id": "bridge_again", "zone": "fields", "target": "blades", "text": "The bridge again.",
                  "if": "paid", "unless": ["fought"],
                  "choices": [
-                   {"id": "pay_again", "text": "Pay again.", "unless": "angry"},
-                   {"id": "shout", "text": "Shout.", "if": "angry"},
+                   {"id": "pay_again", "text": "Pay again.", "unless": "angry", "effects": [{"do": "remember", "deed": "chose_pay_again"}]},
+                   {"id": "shout", "text": "Shout.", "if": "angry", "effects": [{"do": "remember", "deed": "chose_shout"}]},
                    {"id": "say_no", "text": "Say no.", "effects": [{"do": "remember", "deed": "angry"}]},
-                   {"id": "ford", "text": "Ford the beck."}
+                   {"id": "ford", "text": "Ford the beck.", "effects": [{"do": "remember", "deed": "chose_ford"}]}
                  ]}
               ]
             }"#,
@@ -1873,7 +2002,7 @@ mod tests {
     fn the_validator_checks_deeds_and_every_case() {
         let map = small_map();
         let mut d = deed_deck();
-        d.cards[0].choices[0].effects.clear();
+        d.cards[0].choices[0].effects = vec![Effect::Delay { minutes: 10 }];
         d.validate(&map).unwrap();
         assert_eq!(
             d.check_deeds_written(&BTreeSet::new()).unwrap_err().0,
@@ -2021,7 +2150,7 @@ mod tests {
                  {"id": "pay", "text": "Pay.", "effects": [{"do": "remember", "deed": "paid"}]}
                ]},
               {"id": "grave", "zone": "fields", "target": "blades", "text": "A new grave.", "if": "killed_col",
-               "choices": [{"id": "stop", "text": "Stop."}, {"id": "go", "text": "Go on."}]}
+               "choices": [{"id": "stop", "text": "Stop.", "effects": [{"do": "remember", "deed": "chose_stop"}]}, {"id": "go", "text": "Go on.", "effects": [{"do": "remember", "deed": "chose_go"}]}]}
             ]}"#,
         )
         .unwrap();
@@ -2045,9 +2174,9 @@ mod tests {
               {"id": "willows", "zone": "fields", "target": "blades", "text": "Willows crowd the road.",
                "scout": "perception",
                "choices": [
-                 {"id": "push_on", "text": "Push on."},
-                 {"id": "wait", "text": "Wait for the light.", "unless": "scouted"},
-                 {"id": "flank", "text": "Go round the men in the willows.", "if": "scouted"}
+                 {"id": "push_on", "text": "Push on.", "effects": [{"do": "remember", "deed": "chose_push_on"}]},
+                 {"id": "wait", "text": "Wait for the light.", "unless": "scouted", "effects": [{"do": "remember", "deed": "chose_wait"}]},
+                 {"id": "flank", "text": "Go round the men in the willows.", "if": "scouted", "effects": [{"do": "remember", "deed": "chose_flank"}]}
                ]}
             ]}"#,
         )
@@ -2117,6 +2246,8 @@ mod tests {
         d.cards[0].choices[1].unless = None;
         let hide = Choice {
             id: "hide".into(),
+            if_deeds: None,
+            effects: vec![Effect::Delay { minutes: 20 }],
             ..d.cards[0].choices[2].clone()
         };
         d.cards[0].choices.push(hide);
@@ -2124,5 +2255,118 @@ mod tests {
             d.validate(&map).unwrap_err().0,
             "card willows offers 4 choices when the deeds remembered are [scouted]; it needs 2 or 3"
         );
+
+        // A scout skill and a forewarned choice go together, one of each (MAP-11).
+        let mut d = scout_deck();
+        d.cards[0].scout = None;
+        assert_eq!(
+            d.validate(&map).unwrap_err().0,
+            "card willows has a choice under if: scouted but no scout skill"
+        );
+        let mut d = scout_deck();
+        d.cards[0].choices.retain(|c| c.if_deeds.is_none());
+        d.cards[0].choices[1].unless = None;
+        assert_eq!(
+            d.validate(&map).unwrap_err().0,
+            "card willows has a scout skill but no choice under if: scouted"
+        );
+        let mut d = scout_deck();
+        let again = Choice {
+            id: "again".into(),
+            ..d.cards[0].choices[2].clone()
+        };
+        d.cards[0].choices.push(again);
+        assert_eq!(
+            d.validate(&map).unwrap_err().0,
+            "card willows has 2 choices under if: scouted; it needs one"
+        );
+        // The forewarned choice needs nothing more than the scout's look.
+        let mut d = scout_deck();
+        for c in d.cards[0]
+            .choices
+            .iter_mut()
+            .filter(|c| c.if_deeds.is_some())
+        {
+            c.if_deeds = Some(Deeds::All(vec![SCOUTED.into(), "met_peddler".into()]));
+        }
+        assert_eq!(
+            d.validate(&map).unwrap_err().0,
+            "card willows's choice flank reads scouted with other deeds; a forewarned choice reads scouted alone"
+        );
+    }
+
+    #[test]
+    fn a_route_with_few_fight_cards_and_an_untagged_fight_with_persons_are_warned_of() {
+        let map = small_map();
+        let d = deck();
+        let route: Vec<String> = map.places.iter().map(|p| p.id.clone()).take(2).collect();
+        let fights = d.cards.iter().filter(|c| Deck::can_fight(c)).count();
+        let warned = d.route_warnings(&map, &route);
+        // The test deck's few fights: the route is named, and the build is not failed.
+        if fights < 2 {
+            assert_eq!(warned.len(), 1, "{warned:?}");
+            assert!(warned[0].starts_with(&format!("the route {} meets ", route.join(" > "))));
+            assert!(warned[0].ends_with("two or more are recommended"));
+        }
+        let mut two = d.clone();
+        for card in two.cards.iter_mut().take(2) {
+            card.zone = route[0].clone();
+            card.choices[0].effects.push(Effect::Fight {
+                monsters: vec![Monster::Stat("wolf".into())],
+            });
+        }
+        assert!(two.route_warnings(&map, &route).is_empty());
+        // No fixed route, no warning: the owner picks each road.
+        assert!(d.route_warnings(&map, &[]).is_empty());
+
+        // Wolves are beasts; a goblin is a person, so its fight names a custom.
+        let person = |m: &Monster| m.stat() != "wolf";
+        assert!(two.untagged_fight_warnings(person).is_empty());
+        two.cards[0].choices[0].effects = vec![Effect::Fight {
+            monsters: vec![Monster::Stat("goblin_warrior".into())],
+        }];
+        let untagged = two.untagged_fight_warnings(person);
+        assert_eq!(untagged.len(), 1);
+        assert!(
+            untagged[0]
+                .ends_with("comes to a fight with persons and names no custom it keeps or breaks")
+        );
+        two.cards[0].choices[0].breaks = vec!["no_blood_inside_gate".into()];
+        assert!(two.untagged_fight_warnings(person).is_empty());
+    }
+
+    #[test]
+    fn the_validator_checks_two_of_the_five_card_tests() {
+        let map = small_map();
+        // Every choice changes something later: an effect, or a deed.
+        let mut d = deck();
+        d.cards[0].choices[1].effects.clear();
+        let idle = d.validate(&map).unwrap_err().0;
+        assert!(
+            idle.ends_with("changes nothing: give it an effect or a deed"),
+            "{idle}"
+        );
+        // No two choices offered together alike.
+        let mut d = deck();
+        d.cards[0].choices[1].effects = d.cards[0].choices[0].effects.clone();
+        let alike = d.validate(&map).unwrap_err().0;
+        assert!(
+            alike.ends_with("do the same: their effects are alike"),
+            "{alike}"
+        );
+        // Two alike that are never offered together pass: a variant replaces its choice.
+        let mut d = deed_deck();
+        let variant = d.cards[1]
+            .choices
+            .iter()
+            .position(|c| c.unless.is_some())
+            .unwrap();
+        let other = d.cards[1]
+            .choices
+            .iter()
+            .position(|c| c.if_deeds.is_some())
+            .unwrap();
+        d.cards[1].choices[other].effects = d.cards[1].choices[variant].effects.clone();
+        d.validate(&map).unwrap();
     }
 }

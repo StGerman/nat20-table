@@ -112,7 +112,13 @@
                 },
                 {
                     "id": "pass_by",
-                    "text": "Look straight ahead and keep walking."
+                    "text": "Look straight ahead and keep walking.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "passed_the_barrow_lights"
+                        }
+                    ]
                 }
             ]
         },
@@ -130,7 +136,13 @@
                 },
                 {
                     "id": "leave",
-                    "text": "Leave them where they lie."
+                    "text": "Leave them where they lie.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "left_the_cairn_stones"
+                        }
+                    ]
                 }
             ]
         }
