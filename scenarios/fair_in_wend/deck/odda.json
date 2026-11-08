@@ -10,7 +10,7 @@
             "once": "contract",
             "if": "crossed_millbeck",
             "text": "At the Saltmouth gate the fair warden is chalking stall places on a board. The pitches by the well are nearly gone. He looks at Odda's wheat, then at the queue of carts behind her.",
-            "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. The warden has heard about the Millbeck bridge before the wagon arrives: carters talk at the gate. If there was a fight there (toll_men_fought), he asks the Blades about it before he looks at the wheat; if they paid or were let through, he says the reeve has never had a toll on that bridge. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong.",
+            "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. The warden has heard about the Millbeck bridge before the wagon arrives: carters talk at the gate. If there was a fight there (toll_men_fought), he asks the Blades about it before he looks at the wheat; if they paid or were let through, he says the reeve has never had a toll on that bridge. If Odda was told of Rufus's offer (told_odda_of_rufus), say first, in one clause, that she has been waiting all road to say it out loud; whatever the roll, nobody tells the Blades they were right to warn her. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong.",
             "choices": [
                 {
                     "id": "sack",
@@ -32,10 +32,32 @@
                 {
                     "id": "queue",
                     "text": "Wait in the queue with the other carts.",
-                    "unless": "beat_rufus_to_the_fair",
+                    "unless": ["beat_rufus_to_the_fair", "told_odda_of_rufus"],
                     "effects": [
                         {"do": "delay", "minutes": 60},
                         {"do": "remember", "deed": "waited_at_the_fair_gate"}
+                    ]
+                },
+                {
+                    "id": "odda_word",
+                    "text": "Let Odda tell the warden about the bribe you turned down on the road.",
+                    "if": "told_odda_of_rufus",
+                    "unless": "beat_rufus_to_the_fair",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "took_the_old_place"}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 60},
+                                {"do": "remember", "deed": "waited_at_the_fair_gate"}
+                            ]
+                        }
                     ]
                 },
                 {

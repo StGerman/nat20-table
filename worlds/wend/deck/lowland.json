@@ -335,7 +335,7 @@
             "target": "blades",
             "once": "contract",
             "text": "After dark a man in a very good coat finds the Blades alone by the horse lines. He is very friendly. Odda's wagon could lose a wheel somewhere quiet tomorrow, he says, and their purses would be heavier for it.",
-            "note": "Rufus. The human votes first, as on every card, and the whole table knows this one matters. A blind choice: taking the coin is what Rufus wants his due names at the fair. If Tam or Tobin is riding with the wagon, the fair has heard before Odda pays. Ilsa asks whose rights a contract protects; Bren asks how heavy. Nothing happens to the wheel unless the DM's fight or a later card says so.",
+            "note": "Rufus. The human votes first, as on every card, and the whole table knows this one matters. A blind choice: taking the coin is what Rufus wants his due names at the fair. If Tam or Tobin is riding with the wagon, the fair has heard before Odda pays. Ilsa asks whose rights a contract protects; Bren asks how heavy. Nothing happens to the wheel unless the DM's fight or a later card says so. Told, Odda says thank you once, sits up by the wheels with a lantern, and at first light has the Blades check every pin and spoke with her: that is the hour lost. She means to say it to the warden at the fair gate.",
             "choices": [
                 {
                     "id": "tell_odda",
@@ -344,6 +344,7 @@
                         "word_kept"
                     ],
                     "effects": [
+                        {"do": "delay", "minutes": 60},
                         {"do": "remember", "deed": "told_odda_of_rufus"}
                     ]
                 },
