@@ -76,6 +76,29 @@ test("the loop starts the campaign, asks a road card of the human first and then
   }
 });
 
+test("words on a road card are said at the table, and the table says the card still waits for a number, without the card again (AGT-96)", async () => {
+  const walk = traveller();
+  let spoke = 0;
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "card" && spoke++ < 2) return { kind: "text", text: "Ask him for the papers that let him take a toll." };
+    return walk(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    await loop.run("vale_town");
+    const roadInfo = seat.shown.filter((e) => e.kind === "info" && e.title === "On the road");
+    assert.equal(roadInfo.length, 1, "the card's words are shown once");
+    const said = seat.shown.filter((e) => e.kind === "info" && e.title === "Said at the table");
+    assert.equal(said.length, 2);
+    assert.ok(said[0]?.kind === "info" && /still waits for your word: pick one of the choices, 1 to \d/.test(said[0].text), JSON.stringify(said[0]));
+    assert.equal(seat.shown.filter((e) => e.kind === "options" && e.title === "Your word").length, 3, "the choices again after each word");
+    assert.ok(t.requests().some((r) => r.cmd === "choose_card" && r.viewer === "bren"), "the number gives the word");
+  } finally {
+    t.close();
+  }
+});
+
 test("a road card's choices for the human: Enter takes what most of the others said", () => {
   const card = { choices: [{ id: "clear", text: "Clear the road" }, { id: "around", text: "Go around" }], said: [{ actor: "maren", choice: "around" }] };
   const { choices, preset } = cardChoices(card);
