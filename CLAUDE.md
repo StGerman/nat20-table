@@ -12,7 +12,7 @@ This file holds the rules and points to everything else. When it disagrees with 
 |---|---|
 | What we are building and what "done" means | `docs/scope/demo-run-scope.md` (the Demo Run, frozen); `docs/scope/living-world-scope.md` (Milestone 9 on) |
 | How the system is split and why | `docs/design/system-design.md` |
-| What to do next: task list and milestone status | `TASKS.md` (open rows); closed rows in `docs/tasks-done.md` |
+| What to do next: task list and milestone status | `TASKS.md` (open rows); closed rows in `docs/tasks-done.md`; order, gates and cost per milestone in `docs/roadmap.md` |
 | Contract v1 behaviour (commands, events, errors, visibility) | `contract/protocol.md` |
 | Why a decision was made, what was rejected, when to revisit | `docs/decisions/README.md` |
 
@@ -57,7 +57,7 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 
 Milestone 8 (upstream proposal) was dropped on 2026-10-18: upstream declines AI-authored contributions (`docs/decisions/0023-long-lived-fork.md`).
 
-After Milestone 7 the order is 10, then 9. Milestone 10, Speed and polish, was done on 2026-11-01, closed on a `play:cheap` run with Stas at the table (`docs/decisions/0056-m10-closed-on-cheap-run.md`). Milestone 9, Living world (was Improvised play), was done on 2026-11-06, closed on two exit runs of *Fair in Wend* on one build, one all AI and one with Stas as a Hired Blade (`docs/decisions/0060-m9-closed.md`; scope `docs/scope/living-world-scope.md`, design `docs/design/m9-system-design.md`). Milestone 11, Word on the road, is next: the road remembers what the party did, within a contract and across contracts (scope `docs/scope/living-world-scope.md` §8, spec and design `docs/design/m11-system-design.md`, decision 0063).
+After Milestone 7 the order is 10, then 9. Milestone 10, Speed and polish, was done on 2026-11-01, closed on a `play:cheap` run with Stas at the table (`docs/decisions/0056-m10-closed-on-cheap-run.md`). Milestone 9, Living world (was Improvised play), was done on 2026-11-06, closed on two exit runs of *Fair in Wend* on one build, one all AI and one with Stas as a Hired Blade (`docs/decisions/0060-m9-closed.md`; scope `docs/scope/living-world-scope.md`, design `docs/design/m9-system-design.md`). Milestone 11, Word on the road, was done on 2026-11-08: the road remembers what the party did, within a contract and across contracts (scope `docs/scope/living-world-scope.md` §8, spec and design `docs/design/m11-system-design.md`, decision 0063). Milestone 12, Not a passenger, is next; order and cost in `docs/roadmap.md`.
 
 ## Design in brief
 
@@ -114,6 +114,7 @@ Run `check:contract`, the cargo checks above (fmt, clippy, test, doc, deny) and 
 | `docs/scope/` | Demo Run scope (accepted by Stas) | Only with Stas's agreement |
 | `TASKS.md` | Task list and milestone status | Yes, per Rule 8 |
 | `docs/tasks-done.md` | Closed TASKS.md rows (done, won't do) and the change log before 2026-11-08, moved unchanged | Yes, by moving closed rows in |
+| `docs/roadmap.md` | Milestone order, each gate, what waits on Stas, and the delivery numbers against the Milestone 11 baseline (decision 0065) | Yes, by Yan's `roadmap` |
 
 ## Architecture
 
