@@ -1,6 +1,6 @@
 # 0061. Time passes in a place at the DM's call
 
-- **Status:** Proposed (accepted when Stas merges table: API-50)
+- **Status:** Accepted (table #295, merged by Stas 2026-11-06)
 - **Date:** 2026-11-06
 - **Decided by:** Claude, choosing the recommended option inside Stas's go-ahead for the post-M9 findings (card 5, option A, Faces of the Road thread, 2026-11-06 15:25Z); Stas reviews it in the PR
 
