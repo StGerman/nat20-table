@@ -1,6 +1,6 @@
 # 0038. The agents write the table's prose in the run's language; the engine and the UI stay English
 
-- **Status:** Accepted
+- **Status:** Accepted; its "the engine and the UI stay English" half superseded by [0067](0067-one-language-at-the-seat.md) when Stas merges table #336
 - **Date:** 2026-10-27
 - **Decided by:** Stas, on a decision card in the Milestone 6 implementation thread ("Agents speak Russian")
 

@@ -1,6 +1,6 @@
 # 0064. Numbers and game words at the table; hidden values still never
 
-- **Status:** Proposed (accepted when Stas merges table: AGT-95)
+- **Status:** Accepted (table #326, merged by Stas 2026-11-08)
 - **Date:** 2026-11-07
 - **Decided by:** Stas, in the storytelling bible thread, 2026-11-07 17:22Z ("create a task to remove 'no numbers or jargon on screen'"). How far the removal goes (option B, keeping hidden values out) is Claude's reading of Rule 3, for Stas to confirm in the PR.
 
