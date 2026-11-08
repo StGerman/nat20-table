@@ -1,0 +1,43 @@
+{
+    "_comment": "Fair in Wend's own cards (Faces of the Road, MAP-10, ENG-38): they join the world's deck only while this pack's contract runs. Our own text, CC-BY-4.0, credit 'nat20-table contributors'.",
+    "cards": [
+        {
+            "id": "meadow_track",
+            "zone": "lowland",
+            "target": "caravan",
+            "owner_pick": "take",
+            "once": "contract",
+            "text": "Odda stands up on the wagon's seat and looks across the water meadows. There is a track over them, she says, that would put the wagon at the fair half a day ahead of anyone on the river road.",
+            "note": "Odda wants to beat Rufus to the fair, as she did for twenty autumns. The track crosses the valley's common meadow, which everyone may use and nobody may rut; Torva says so. A failure loses the half day and more, and the wagon comes out of the meadows plastered to the axles. Keeping to the road lets Rufus get ahead, and his cards know it.",
+            "choices": [
+                {
+                    "id": "take",
+                    "text": "Take the meadow track.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "survival",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "beat_rufus_to_the_fair"}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 240},
+                                {"do": "remember", "deed": "lost_in_the_meadows"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "keep",
+                    "text": "Keep to the river road.",
+                    "effects": [
+                        {"do": "remember", "deed": "rufus_got_ahead"}
+                    ]
+                }
+            ]
+        }
+    ]
+}

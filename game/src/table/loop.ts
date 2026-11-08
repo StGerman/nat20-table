@@ -536,7 +536,7 @@ export class TableLoop {
         if (this.table.ended) return;
         if (event.kind === "combat_over") await this.combatOver(event);
         if (event.kind === "scene_loaded" && i < lastScene) this.table.log("system", `scene ${event.scene_id} left before it opened`);
-        else if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id, settles);
+        else if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id, settles || (Boolean(this.campaign) && (await this.payWaits())));
         if (this.campaign) await this.roadEvent(event);
       }
     }
@@ -591,7 +591,17 @@ export class TableLoop {
 
   // --- Scenes -------------------------------------------------------------------------------------
 
-  /** `payNext`: the escort is paid right after this opening, in its own wake (AGT-86). */
+  /**
+   * The caravan stands at the escort's destination and the pay waits for its arrival card
+   * (ENG-35, MAP-10): the opening still leaves the pay out, so the arrival is told once.
+   */
+  private async payWaits(): Promise<boolean> {
+    const world = await this.dmWorld();
+    const escort = world?.escort;
+    return Boolean(escort && !escort.contract.done && world.at.kind === "at" && world.at.place === escort.contract.destination);
+  }
+
+  /** `payNext`: the escort is paid after this opening, in its own wake (AGT-86). */
   private async sceneLoaded(sceneId: string, payNext = false): Promise<void> {
     // A scene the run passes over never loads (`DmTools.loadScene` loads the next one instead).
     if (this.onScene(sceneId, this.scenes) !== "continue") {
