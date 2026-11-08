@@ -1,0 +1,53 @@
+{
+    "_comment": "Night cards at the Highsteads (Faces of the Road, MAP-10): the place where every Fair in Wend contract starts, at night. Our own text, CC-BY-4.0, credit 'nat20-table contributors'.",
+    "cards": [
+        {
+            "id": "roadfolk_fire",
+            "zone": "highsteads",
+            "when": "night",
+            "target": "blades",
+            "once": true,
+            "text": "A painted roadfolk cart stands by the Highsteads wall, kettles clinking on its hooks. The small woman mending a pot by its fire calls over that there is room on her bench, and the boy behind her cannot take his eyes off the Blades' swords.",
+            "note": "Bel Corrin, halfling roadfolk, and her son Tam. Bel takes no coin: a seat at a roadfolk fire costs a story, because the road is free. Asked for news, she says the men at the Millbeck bridge are nobody's men, only two Highsteads brothers with a debt; she says it as gossip, never as a warning. Ilsa likes them; Bren counts the kettles. Joke: Tam asks the human's character how many dragons they have killed and will not accept none.",
+            "choices": [
+                {
+                    "id": "join",
+                    "text": "Sit down at their fire.",
+                    "keeps": [
+                        "road_is_free"
+                    ],
+                    "effects": [
+                        {"do": "remember", "deed": "joined_the_roadfolk_fire"},
+                        {"do": "add_card", "card": "boy_on_tailboard", "soon": true}
+                    ]
+                },
+                {
+                    "id": "news",
+                    "text": "Ask what news they have of the road.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "knew_of_the_toll_men"}
+                            ],
+                            "failure": [
+                                {"do": "add_card", "card": "boy_on_tailboard", "soon": true}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "keep_apart",
+                    "text": "Keep to your own fire.",
+                    "effects": [
+                        {"do": "remember", "deed": "kept_from_the_roadfolk"}
+                    ]
+                }
+            ]
+        }
+    ]
+}
