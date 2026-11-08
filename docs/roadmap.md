@@ -10,7 +10,6 @@ As of 2026-11-08, main 3472982. Kept by Yan (decision 0065); numbers from `git l
 | — | Dramaturg mechanism: the engine carries the story from one quest to the next. Its other half, the role, is done: Zoya, table #328 | no spec yet; input: the dramaturg design of 2026-11-07, carriers A (a scene's `remember`) and B (`if`/`unless` with a `problem` block), quests as `kind: errand`, fronts and clocks | after 12 (Stas in chat 2026-11-07 19:34Z, "the dramaturg whole"; no record) |
 | — | Arachas plus glue | no spec yet | after the Dramaturg mechanism (same) |
 | — | The Silent Mill plus glue | no spec yet | after Arachas (same) |
-| — | Later, unordered: the player as merchant; Telegram; a smarter table | no spec yet | not ordered |
 | 11 | Word on the road | — | done 2026-11-08: pair 3 on 2294ef6 PASS and PASS; table #299 to #325 merged 21:00Z; no exit record |
 | 10 | Speed and polish | — | done 2026-11-01 (0056) |
 | 9 | Living world | — | done 2026-11-06 (0060) |
@@ -22,6 +21,14 @@ As of 2026-11-08, main 3472982. Kept by Yan (decision 0065); numbers from `git l
 | 2 | Repo split and contract v1 | — | done 2026-10-17 (Stas 2026-11-08, table #334); UPS-1 still open |
 | 1 | Fighter vs Goblin Warrior | — | done 2026-10-16 |
 | 8 | Upstream proposal | — | dropped 2026-10-18 (0023) |
+
+## Backlog milestones
+
+Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08).
+
+- The player as a merchant (maybe the shop that `docs/scope/living-world-scope.md` §4 and decision 0057 number M17)
+- Telegram
+- A smarter table
 
 ## Waiting on Stas
 
