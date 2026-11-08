@@ -1,6 +1,6 @@
 # 0067. A player's seat shows one language: the run's
 
-- **Status:** Proposed (accepted when Stas merges table #336)
+- **Status:** Accepted (table #336, 2026-11-08)
 - **Date:** 2026-11-08
 - **Decided by:** Stas, in the planning thread, 2026-11-08 22:24Z, answering question 2 of the M12 scope: «Переводим строки стола на язык прогона - Да. Вера читает но оба языка вмешаны ломает вайб» ("Yes, translate the table's lines into the run's language. Vera reads both, but mixing the two breaks the mood").
 - **Supersedes:** [0038](0038-agents-write-the-run-language.md), in its "the engine and the UI stay English" half. The agents keep writing the run's language, as 0038 decided.

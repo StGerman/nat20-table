@@ -1,7 +1,7 @@
 # Milestone 12, Not a passenger («Не пассажир»): scope
 
-Status: Proposed, 2026-11-08, for Stas. Drafted by Yan Metsuyan (decision 0065). Award: cut 1 of 3, Stas 2026-11-08 21:15Z («звучит отлично»); ENG-21 added 22:01Z (sweep question 7, «ок по всем»); the voice flag 22:02Z; AGT-94 with AGT-76, ENG-41, AGT-13 (partial), MAP-15 and MAP-17 22:07Z («Все ок + MAP-15, MAP-17»); the phase order 22:09Z; the answers to §9 22:24Z, among them one language at the seat (decision 0067).
-Companion documents: the system design (not written yet; the implementing thread writes it into this PR, §9 answer 4); decisions 0066 (Milestone 11 closed; the order after it) and 0067 (one language at the seat), both in this PR; the own move note, project files `engine/m11/own-move-on-a-card.md`, variant B (Stas 20:39Z: «Да делаем обязательно own move»). This file sits beside `docs/scope/living-world-scope.md` and does not edit it; the Milestone 11 rows it reuses are that file's §8.3.
+Status: Accepted by Stas (table #336, 2026-11-08 22:35Z). Drafted by Yan Metsuyan (decision 0065). Award: cut 1 of 3, Stas 2026-11-08 21:15Z («звучит отлично»); ENG-21 added 22:01Z (sweep question 7, «ок по всем»); the voice flag 22:02Z; AGT-94 with AGT-76, ENG-41, AGT-13 (partial), MAP-15 and MAP-17 22:07Z («Все ок + MAP-15, MAP-17»); the phase order 22:09Z; the answers to §9 22:24Z, among them one language at the seat (decision 0067).
+Companion documents: the system design, `docs/design/m12-system-design.md`; decisions 0066 (Milestone 11 closed; the order after it) and 0067 (one language at the seat), both merged with this scope in table #336; the own move note, project files `engine/m11/own-move-on-a-card.md`, variant B (Stas 20:39Z: «Да делаем обязательно own move»). This file sits beside `docs/scope/living-world-scope.md` and does not edit it; the Milestone 11 rows it reuses are that file's §8.3.
 
 ## 1. Goal
 
@@ -109,7 +109,7 @@ Target (decision 0065, half the baseline): 17.7 USD, 33 min of Stas at the table
 1. The AI half also decides a card by an own move: yes. The path is proven on the build before Stas sits down.
 2. The table's lines in the run's language: yes («Вера читает но оба языка вмешаны ломает вайб»). Decision 0067, in this PR, supersedes 0038's English half; Yan had recommended no.
 3. Plain against Fireside: A, one Fireside `play:unattended` beside the pair (§4, Reported).
-4. The scope, the system design and the rows land in one docs PR: yes. This PR stays open until the design and the rows join it.
+4. The scope, the system design and the rows land in one docs PR: yes. Stas merged the scope alone, table #336 at 22:35Z; the system design follows in its own PR, and the rows join that PR once Stas accepts the design.
 
 ## 10. Amendments proposed
 
