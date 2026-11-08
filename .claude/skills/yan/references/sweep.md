@@ -19,6 +19,8 @@ Goal: every status in TASKS.md is true on main today, and nothing dead sits in s
 | It belongs to a closed milestone and nobody needs it now | ask: won't do with the reason, or move to a later milestone |
 | Waits on Stas (his settings, his Mac) | keep, status says so |
 
+Unused stock: from the last milestone's runs in nat20-runs (`runs/<id>/`, chosen by `run.json` `build.table_commit`), count the event kinds in `session-log.jsonl` and the tools in `usage.jsonl`. A command, tool, card or deed that shipped and appears in none of them is unused stock: list it with what it costs to keep (files, tests) and the move (cut it, or a row that gets it played).
+
 Also list: open PRs with no row (Dependabot excepted), and milestones whose last row closed and whose exit criterion holds (propose marking them done with the date; never mark a milestone done that has no exit evidence).
 
 ## Move closed rows
