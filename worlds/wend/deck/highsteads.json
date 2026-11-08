@@ -99,7 +99,7 @@
             "target": "blades",
             "if": ["crossed_millbeck", "saw_the_company_board", "col_owes_blades"],
             "once": "contract",
-            "text": "Gwyn the shepherd meets the wagon at the fold gate with a round cheese in a cloth. Col sent it up for the Blades, she says, for speaking up for him at Wendford. She has news as well.",
+            "text": "Gwyn the shepherd meets the wagon at the fold gate with a round cheese in a cloth. Col sent it up for the Blades, she says, for speaking up for him at Wendford, and she cuts it for them there at the gate. She has news as well.",
             "note": "The card for when the Blades spoke Col out of the stocks at Wendford (col_owes_blades); otherwise gwyn_news. Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. Col is back mending the fold, and the cheese is his thanks for the stocks; Gwyn cuts it at the fold gate and it is eaten there, so it never goes on the wagon. If they fed her dog on the river road (fed_gwyns_dog), it came home ahead of them, fat and pleased with itself, and she knows who fed it. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
             "choices": [
                 {

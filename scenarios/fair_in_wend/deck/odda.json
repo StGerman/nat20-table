@@ -1,5 +1,5 @@
 {
-    "_comment": "Fair in Wend's own cards (Faces of the Road, MAP-10, ENG-38): they join the world's deck only while this pack's contract runs. Our own text, CC-BY-4.0, credit 'nat20-table contributors'.",
+    "_comment": "Fair in Wend's own cards (Faces of the Road, MAP-10, ENG-38): they join the world's deck only while this pack's contract runs. Rufus's offer moved here from the lowland deck (MAP-17): Odda must be on the road for its choices to make sense. Our own text, CC-BY-4.0, credit 'nat20-table contributors'.",
     "cards": [
         {
             "id": "the_fair_gate",
@@ -10,7 +10,7 @@
             "once": "contract",
             "if": "crossed_millbeck",
             "text": "At the Saltmouth gate the fair warden is chalking stall places on a board. The pitches by the well are nearly gone. He looks at Odda's wheat, then at the queue of carts behind her.",
-            "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. The warden has heard about the Millbeck bridge before the wagon arrives: carters talk at the gate. If there was a fight there (toll_men_fought), he asks the Blades about it before he looks at the wheat; if they paid or were let through, he says the reeve has never had a toll on that bridge. If Odda was told of Rufus's offer (told_odda_of_rufus), say first, in one clause, that she has been waiting all road to say it out loud; whatever the roll, nobody tells the Blades they were right to warn her. On a success the warden gives Odda her old place by the well, and if Rufus's cart stands there he has it moved. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong.",
+            "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. The warden has heard about the Millbeck bridge before the wagon arrives: carters talk at the gate. If there was a fight there (toll_men_fought), he asks the Blades about it before he looks at the wheat; if they paid or were let through, he says the reeve has never had a toll on that bridge. If Odda was told of Rufus's offer (told_odda_of_rufus), say in one clause, after the warden's question about the bridge if he asks one, that she has been waiting all road to say it out loud. If the Blades stand by her, whatever the roll, nobody tells them they were right to warn her: on a success the warden gives Odda her old place by the well, and if Rufus's cart stands there he has it moved; on a failure the warden shrugs, and the wagon joins the queue. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong.",
             "choices": [
                 {
                     "id": "odda_word",
@@ -104,6 +104,50 @@
                     "text": "Keep to the river road.",
                     "effects": [
                         {"do": "remember", "deed": "rufus_got_ahead"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "rufus_offer",
+            "zone": "lowland",
+            "when": "night",
+            "target": "blades",
+            "once": "contract",
+            "text": "After dark a man in a very good coat finds the Blades alone by the horse lines. He is very friendly. Odda's wagon could lose a wheel somewhere quiet tomorrow, he says, and their purses would be heavier for it.",
+            "note": "Rufus. The human votes first, as on every card, and the whole table knows this one matters. A blind choice: taking the coin is what Rufus wants his due names at the fair. If Tam or Tobin is riding with the wagon, the fair has heard before Odda pays. Ilsa asks whose rights a contract protects; Bren asks how heavy. Nothing happens to the wheel unless the DM's fight or a later card says so. Told, Odda says thank you once, sits up by the wheels with a lantern, and at first light has the Blades check every pin and spoke with her: that is the hour lost. She means to say it to the warden at the fair gate.",
+            "choices": [
+                {
+                    "id": "tell_odda",
+                    "text": "Refuse him and tell Odda.",
+                    "keeps": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {"do": "delay", "minutes": 60},
+                        {"do": "remember", "deed": "told_odda_of_rufus"}
+                    ]
+                },
+                {
+                    "id": "say_nothing",
+                    "text": "Refuse him and say nothing.",
+                    "effects": [
+                        {"do": "remember", "deed": "refused_rufus_quietly"}
+                    ]
+                },
+                {
+                    "id": "take",
+                    "text": "Take his coin.",
+                    "breaks": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {
+                            "do": "gain",
+                            "who": "blades",
+                            "copper": 50
+                        },
+                        {"do": "remember", "deed": "took_rufus_coin"}
                     ]
                 }
             ]
