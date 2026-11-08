@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.63"
+    "version": "1.0.0-dev.64"
   },
   "$defs": {
     "Ability": {
@@ -3908,6 +3908,31 @@
           ]
         },
         {
+          "description": "A new contract took up the world the last one left (API-51, ENG-37), right after\n`start_campaign`'s own lines: the party traveled from where the last contract ended to\nthis one's start. The DM tells the trip in one line. Public.",
+          "type": "object",
+          "properties": {
+            "days": {
+              "description": "The days the trip took at a normal pace: 0 when the party was already there.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "from": {
+              "description": "The place the party was in when the last contract ended.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "trip_to_start"
+            }
+          },
+          "required": [
+            "kind",
+            "from",
+            "days"
+          ]
+        },
+        {
           "description": "A Hired Blade walks ahead of the caravan as the scout (API-54), from now until another\ntakes the role. Public.",
           "type": "object",
           "properties": {
@@ -6969,8 +6994,19 @@
             "$ref": "#/$defs/RosterCharacter"
           }
         },
+        "contract_start": {
+          "description": "The party and the world as they stood when the contract under way, or the last one,\nbegan (API-51): the roster that `start_campaign` started it from. A client plays that\ncontract again from its start with a roster of these characters and this world,\n`format` as above and no `contract_start`. Absent when no campaign ran. Opaque like\n`world`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RosterStart"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "format": {
-          "description": "Format version, 1. Another is refused.",
+          "description": "Format version, 2 (API-51). Another is refused: a format 1 roster was saved before the\nworld kept its memory apart from the contract, and is not converted.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0
@@ -7100,16 +7136,44 @@
         "picks"
       ]
     },
+    "RosterStart": {
+      "description": "The party and the world at a contract's start (API-51).",
+      "type": "object",
+      "properties": {
+        "characters": {
+          "description": "The characters, in party order, as the contract found them.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RosterCharacter"
+          }
+        },
+        "world": {
+          "description": "The world the contract took up; absent when it started a new world.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RosterWorld"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "characters"
+      ]
+    },
     "RosterWorld": {
       "description": "The world part of a roster.",
       "type": "object",
       "properties": {
         "map": {
-          "description": "The world map's id, e.g. `wend`. A campaign on another map starts fresh, and so does one\nwhose saved escort contract is done: the party keep their characters and take the\ncampaign's contract again from its start.",
+          "description": "The world map's id, e.g. `wend`. A campaign on another map starts fresh. One on this\nmap whose saved escort contract is done keeps the world's memory and starts its own\ncontract (ENG-37).",
           "type": "string"
         },
         "state": {
-          "description": "The world's state, as the engine wrote it."
+          "description": "The world's state, as the engine wrote it: `{memory, contract}` (API-51), the part that\noutlives a contract and the part the next one rebuilds."
         }
       },
       "additionalProperties": false,

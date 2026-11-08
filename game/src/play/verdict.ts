@@ -272,7 +272,7 @@ function campaignRows(run: RunRecord, log: Event[], engineLog: EngineLogLine[], 
   const carried: VerdictRow =
     roster?.party === "continue"
       ? { row: "m9-roster", title: "The party arrives with the previous run's roster", status: "pass", detail: `${roster.name}, loaded ${roster.loaded_sha256?.slice(0, 12) ?? "?"}` }
-      : { row: "m9-roster", title: "The party arrives with the previous run's roster", status: "reported", detail: roster ? `a new party for ${roster.name}: the next run must continue it` : "no --roster: nothing carried or saved" };
+      : { row: "m9-roster", title: "The party arrives with the previous run's roster", status: "reported", detail: roster?.party === "again" ? `${roster.name}'s last journey played again from where it began: the next run must continue it` : roster ? `a new party for ${roster.name}: the next run must continue it` : "no --roster: nothing carried or saved" };
   return [row1, journeys, pay, ledger, road, fight, carried];
 }
 

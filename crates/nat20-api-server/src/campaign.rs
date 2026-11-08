@@ -41,9 +41,12 @@ pub struct Campaign {
     pub map_id: String,
     /// Wages due and not paid yet: the escort's advance, paid once the campaign has started
     pub due: Vec<world::Wage>,
-    /// How this contract took up the world the last one left, when it did (ENG-37); the DM
-    /// tells the trip in one line once API-51 puts it on the wire
+    /// How this contract took up the world the last one left, when it did (ENG-37): logged
+    /// as `trip_to_start` (API-51) for the DM to tell in one line
     pub carried: Option<world::Carried>,
+    /// The roster's contract was under way and goes on; false when this campaign starts a
+    /// contract of its own (API-51)
+    pub resumed: bool,
 }
 
 impl Campaign {
@@ -105,14 +108,17 @@ impl Campaign {
         // contract starts from it (ENG-37): the clock goes on, the deeds and the deck are kept,
         // and the party travels to the start if it stands elsewhere.
         let mut carried = None;
+        let mut resumed = false;
         if let Some(saved) = saved.filter(|w| w.map == setup.map) {
-            let state: world::WorldState =
+            // Roster format 2 saves the memory and the contract apart (API-51).
+            let state: world::SavedWorld =
                 serde_json::from_value(saved.state.clone()).map_err(|e| {
                     error(
                         ErrorCode::BadRoster,
                         format!("The roster's world does not read: {e}."),
                     )
                 })?;
+            let state = world::WorldState::from(state);
             if !state.escort.as_ref().is_some_and(|e| e.done) {
                 // A contract under way is its own pack's: another pack on this map can't open
                 // it (ENG-38). A roster saved before packs were remembered names none.
@@ -143,6 +149,7 @@ impl Campaign {
                     ));
                 }
                 built.state = state;
+                resumed = true;
             } else {
                 carried = Some(built.carry_memory(state, setup.hour));
             }
@@ -188,6 +195,7 @@ impl Campaign {
             map_id: setup.map.clone(),
             due,
             carried,
+            resumed,
         };
         let mut scenes: Vec<&str> = campaign
             .world
