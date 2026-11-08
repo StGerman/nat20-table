@@ -1,5 +1,5 @@
 {
-    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. Not shipped content; the Wend deck is MAP-6.",
+    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. Dragging the tree aside remembers a deed (API-52). Not shipped content; the Wend deck is MAP-6.",
     "cards": [
         {
             "id": "fallen_tree",
@@ -12,6 +12,7 @@
                     "id": "clear",
                     "text": "Drag the tree aside.",
                     "effects": [
+                        {"do": "remember", "deed": "cleared_the_tree"},
                         {
                             "do": "check", "who": "blades", "ability": "strength", "skill": "athletics", "dc": 10,
                             "success": [{"do": "delay", "minutes": 30}],

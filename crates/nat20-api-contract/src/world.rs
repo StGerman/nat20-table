@@ -447,6 +447,23 @@ pub struct WorldDm {
     /// The escort contract, when the party is hired on one (API-47).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub escort: Option<EscortDm>,
+    /// Every deed the world remembers, by id (Milestone 11, API-52): this contract's and the
+    /// ones before. DM only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deeds: Vec<DeedDm>,
+}
+
+/// A deed the world remembers, as the DM sees it (API-52).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct DeedDm {
+    /// The deed id.
+    pub deed: String,
+    /// Who did it; empty when nobody spoke.
+    pub by: Vec<Handle>,
+    /// The day it was done.
+    pub day: u32,
+    /// The contract it was done in: 1 for a party's first.
+    pub contract: u32,
 }
 
 /// The escort contract as the DM sees it.

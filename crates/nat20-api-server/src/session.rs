@@ -1384,7 +1384,7 @@ impl Session {
             }
             _ => {}
         }
-        self.follow_blows(&kind);
+        let death = self.follow_blows(&kind);
         self.log.push(Event {
             seq,
             round: pending.round,
@@ -1393,6 +1393,10 @@ impl Session {
             text: render::text(&kind),
             kind,
         });
+        // A named NPC's death writes its deed right after the death (ENG-36, API-52).
+        if let Some((deed, by)) = death {
+            self.remember(&deed, by);
+        }
     }
 }
 
