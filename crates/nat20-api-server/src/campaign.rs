@@ -416,7 +416,7 @@ impl Campaign {
             zone: card.zone.clone(),
             target: target(card.target),
             text: card.text.clone(),
-            choices: choices(card),
+            choices: choices(card, Some(pending)),
             said: pending
                 .said
                 .iter()
@@ -744,10 +744,11 @@ pub fn target(target: world::Target) -> CardTarget {
     }
 }
 
-/// A card's choices, on the wire.
-pub fn choices(card: &world::Card) -> Vec<CardChoiceView> {
+/// A card's choices on the wire: the ones offered when it went on the table, else all.
+pub fn choices(card: &world::Card, pending: Option<&world::PendingCard>) -> Vec<CardChoiceView> {
     card.choices
         .iter()
+        .filter(|c| pending.is_none_or(|p| p.offers(&c.id)))
         .map(|c| CardChoiceView {
             id: c.id.clone(),
             text: c.text.clone(),

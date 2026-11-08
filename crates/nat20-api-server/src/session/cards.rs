@@ -48,6 +48,7 @@ impl Session {
         let mut dice = SessionDice::default();
         let drawn = draw(&mut campaign.world, &mut dice);
         let card = drawn.and_then(|id| campaign.world.deck.card(&id).cloned());
+        let offered = campaign.world.state.deck.pending.clone();
         for (sides, value, why) in dice.rolls {
             self.push(Pending {
                 round: None,
@@ -65,7 +66,7 @@ impl Session {
             EventKind::CardDrawn {
                 target: campaign::target(card.target),
                 card_text: card.text.clone(),
-                choices: campaign::choices(&card),
+                choices: campaign::choices(&card, offered.as_ref()),
             },
         ));
         let table = self.table();
@@ -157,7 +158,7 @@ impl Session {
                 decided: campaign::decided(resolution.decided),
             },
         ));
-        self.run_effects(&resolution.effects)
+        self.run_effects(&resolution.effects, &resolution.by)
     }
 
     /// The handles an effect touches, in party order. A check rolls for those on their feet
@@ -187,14 +188,16 @@ impl Session {
         }
     }
 
-    fn run_effects(&mut self, effects: &[world::Effect]) -> Result<(), ApiError> {
+    /// Runs a choice's effects in order. `by` is who did them, for a `remember`: the seats
+    /// that made the call, or inside a check the ones who rolled it.
+    fn run_effects(&mut self, effects: &[world::Effect], by: &[String]) -> Result<(), ApiError> {
         for effect in effects {
-            self.run_effect(effect)?;
+            self.run_effect(effect, by)?;
         }
         Ok(())
     }
 
-    fn run_effect(&mut self, effect: &world::Effect) -> Result<(), ApiError> {
+    fn run_effect(&mut self, effect: &world::Effect, by: &[String]) -> Result<(), ApiError> {
         match effect {
             world::Effect::Check {
                 who,
@@ -226,7 +229,7 @@ impl Session {
                 }
                 // SRD 5.1, Group Checks: the group succeeds when at least half succeed.
                 let group = !rollers.is_empty() && passed * 2 >= rollers.len();
-                self.run_effects(if group { success } else { failure })
+                self.run_effects(if group { success } else { failure }, &rollers)
             }
             world::Effect::Fight { monsters } => self.card_fight(monsters),
             world::Effect::Pay { who, copper } => {
@@ -301,6 +304,12 @@ impl Session {
                 let campaign = self.campaign.as_mut().expect("a card needs a campaign");
                 let world = &mut campaign.world;
                 world.deck.add(&mut world.state.deck, card);
+                Ok(())
+            }
+            // DM-only bookkeeping (ENG-33); `deed_remembered` reaches the wire with API-52.
+            world::Effect::Remember { deed } => {
+                let campaign = self.campaign.as_mut().expect("a card needs a campaign");
+                campaign.world.remember(deed, by.to_vec());
                 Ok(())
             }
         }

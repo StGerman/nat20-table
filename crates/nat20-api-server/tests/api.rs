@@ -2944,3 +2944,80 @@ fn the_leg_that_ends_the_contract_draws_no_road_card() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// A deed written by one card's choice changes what a later card offers (ENG-33): the test
+/// deck's tree card remembers `cleared_tree` when the Blades drag it aside, and the inn's
+/// night card offers a third choice only then.
+#[test]
+fn a_deed_written_on_the_road_opens_a_choice_at_night() {
+    let dir = std::env::temp_dir().join(format!("nat20_table_deeds_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let deck_path = dir.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
+    deck["cards"][0]["choices"][0]["effects"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({ "do": "remember", "deed": "cleared_tree" }));
+    deck["cards"][1]["choices"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+            "id": "thank", "text": "Ask the farmer to sit the watch with you.", "if": "cleared_tree"
+        }));
+    std::fs::write(&deck_path, deck.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    ));
+    let drawn_choices = |r: &Value| -> Vec<String> {
+        r["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["kind"] == "card_drawn")
+            .unwrap_or_else(|| panic!("no card drawn: {r}"))["choices"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["id"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    let first = api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    );
+    assert_eq!(drawn_choices(&first), ["clear", "around"]);
+    for who in ["bren", "maren"] {
+        ok(&api.call(
+            who,
+            json!({ "cmd": "choose_card", "actor": who, "choice": "clear" }),
+        ));
+    }
+    let night = api.call(
+        "bren",
+        json!({ "cmd": "rest_night", "actor": "bren", "where": "camp" }),
+    );
+    ok(&night);
+    assert_eq!(drawn_choices(&night), ["watch", "drive_off", "thank"]);
+    let dm = api.call("dm", json!({ "cmd": "get_state" }));
+    assert_eq!(
+        dm["result"]["state"]["world"]["card"]["choices"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3,
+        "{dm}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
