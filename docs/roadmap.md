@@ -7,7 +7,7 @@ As of 2026-11-08, main 3472982. Kept by Yan (decision 0065); numbers from `git l
 | # | Milestone | Gate (one line) | Status |
 |---|---|---|---|
 | 12 | Not a passenger: phase 1 MAP-15, MAP-17; phase 2 Own move, the readable table (AGT-97, AGT-98, AGT-94 with AGT-76, AGT-13 partial, MAP-14), ENG-21, ENG-40..42 and a Plain or Fireside voice flag (Stas 2026-11-08) | Proposed: Vera (fallback) asks about no engine line in a DM narration sample; one own move decides a card in the played run; Stas plays only after the all-AI half on the same build has passed (0065); the voice comparison reported, not gated | next; scope PR being written; phase 1 rows can start now |
-| — | Dramaturg mechanism | no spec yet | after 12 (Stas in chat; no record) |
+| — | Dramaturg mechanism: the engine carries the story from one quest to the next. Its other half, the role, is done: Zoya, table #328 | no spec yet; input: the dramaturg design of 2026-11-07, carriers A (a scene's `remember`) and B (`if`/`unless` with a `problem` block), quests as `kind: errand`, fronts and clocks | after 12 (Stas in chat 2026-11-07 19:34Z, "the dramaturg whole"; no record) |
 | — | Arachas plus glue | no spec yet | after the Dramaturg mechanism (same) |
 | — | The Silent Mill plus glue | no spec yet | after Arachas (same) |
 | — | Later, unordered: the player as merchant; Telegram; a smarter table | no spec yet | not ordered |
