@@ -99,7 +99,7 @@ test("the DM's prompt holds the rules, the craft guidance and the whole pack; it
 test("in skills mode the craft guidance is the plugin's skills, named in the prompt, not pasted into it", async () => {
   const { dm, sessions } = standInDm(async () => "", "skills");
   const skills = craftSkills();
-  assert.deepEqual(skills.map((s) => s.name), ["checks", "narration", "pacing", "social-scenes"]);
+  assert.deepEqual(skills.map((s) => s.name), ["checks", "narration", "pacing", "social-scenes", "voice"]);
   for (const skill of skills) {
     assert.ok(!dm.systemPrompt.includes(skill.body), `the ${skill.name} text is not pasted`);
     assert.ok(dm.systemPrompt.includes(`nat20-dm-craft:${skill.name} (${skill.description})`));
