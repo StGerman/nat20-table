@@ -511,3 +511,48 @@ test("the DM can't propose the inn where there is none, and the night's line is 
     t.close();
   }
 });
+
+test("an arrival card at the destination is decided before the human's last turn and the closing (ENG-35)", async () => {
+  // Fair in Wend with its world carried in the pack, and one arrival card at Saltmouth.
+  const pack = mkdtempSync(path.join(tmpdir(), "arrival-"));
+  cpSync(path.join(REPO, "scenarios/fair_in_wend"), pack, { recursive: true });
+  cpSync(path.join(REPO, "worlds/wend"), path.join(pack, "worlds/wend"), { recursive: true });
+  writeFileSync(
+    path.join(pack, "worlds/wend/deck/arrival.json"),
+    JSON.stringify({
+      cards: [
+        {
+          id: "test_quay",
+          zone: "wendmouth",
+          when: "arrival",
+          target: "blades",
+          text: "A boy on the quay offers to carry the sacks.",
+          choices: [
+            { id: "let_him", text: "Let him carry them.", effects: [{ do: "delay", minutes: 10 }] },
+            { id: "wave_off", text: "Wave him off." },
+          ],
+        },
+      ],
+    }),
+  );
+  const seat = new ScriptedSeat("bren", [], blade());
+  const t = await testTable({ seed: 3, pack, human: "bren", players: ["torva", "maren", "ilsa"], seat });
+  try {
+    const party = ["bren", "torva", "maren", "ilsa"];
+    const dm = new ScriptedDm({});
+    const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
+    const report = await loop.run("fw_highsteads");
+    assert.equal(report.ended, "the escort contract is done", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    const quay = seat.shown.findIndex((e) => e.kind === "options" && e.title === "Your word" && e.lines.some((l) => l.includes("Let him carry them")));
+    const end = seat.shown.findIndex((e) => e.kind === "info" && e.title === "Journey's end");
+    assert.ok(quay >= 0, "the human was asked about the arrival card");
+    assert.ok(quay < end, "the arrival card comes before the journey's last turn");
+    const settled = dm.briefings.findIndex((b) => b.wake === "road" && b.briefing.includes("A road card was settled"));
+    const paid = dm.briefings.findIndex((b) => b.briefing.includes("the merchant paid the Blades what they are owed"));
+    const closing = dm.briefings.findIndex((b) => b.briefing.includes("The journey is over"));
+    assert.ok(settled >= 0 && settled < paid && paid < closing, "the DM told the card, then the pay, then the closing");
+  } finally {
+    t.close();
+    rmSync(pack, { recursive: true, force: true });
+  }
+});
