@@ -966,7 +966,14 @@ export class TableLoop {
       if (intent.kind === "text") {
         // Words are said at the table; the card still waits for a number, and the table says so.
         await this.table.declare(human, intent.text);
-        this.table.show({ kind: "info", title: "Said at the table", text: `The others heard you. The road still waits for your word: pick one of the choices, 1 to ${choices.length}, or ${enter}.` });
+        // The people in the scene answer the words; the card itself stays the table's to decide.
+        await this.wakeDm(
+          "road",
+          undefined,
+          `While the road card waits, ${human} says or does: "${intent.text}"`,
+          "Answer it in one or two sentences, as the people in the scene would: what they say, show or do. The card is not decided: never decide it, never tell how a choice turns out, no numbers. It waits for the table's word.",
+        );
+        this.table.show({ kind: "info", title: "Said at the table", text: `The road still waits for your word: pick one of the choices, 1 to ${choices.length}, or ${enter}.` });
         continue;
       }
       this.table.show({ kind: "info", title: "On the road", text: `Pick a number, or ${enter}.` });

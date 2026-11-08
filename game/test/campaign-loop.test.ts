@@ -76,7 +76,7 @@ test("the loop starts the campaign, asks a road card of the human first and then
   }
 });
 
-test("words on a road card are said at the table, and the table says the card still waits for a number, without the card again (AGT-96)", async () => {
+test("words on a road card are said at the table, the DM answers them in the scene, and the card waits for a number without being shown again (AGT-96)", async () => {
   const walk = traveller();
   let spoke = 0;
   const seat = new ScriptedSeat("bren", [], (prompt, s) => {
@@ -85,8 +85,13 @@ test("words on a road card are said at the table, and the table says the card st
   });
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
   try {
-    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    const dm = new ScriptedDm({});
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
     await loop.run("vale_town");
+    // The DM answers the words in the scene, and is told the card is not its to decide.
+    const answer = dm.briefings.filter((b) => b.wake === "road" && b.briefing.includes("Ask him for the papers that let him take a toll."));
+    assert.equal(answer.length, 2, "the DM answers each time");
+    assert.match(answer[0]!.briefing, /never decide it/);
     const roadInfo = seat.shown.filter((e) => e.kind === "info" && e.title === "On the road");
     assert.equal(roadInfo.length, 1, "the card's words are shown once");
     const said = seat.shown.filter((e) => e.kind === "info" && e.title === "Said at the table");
