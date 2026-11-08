@@ -193,6 +193,39 @@ export interface RunReport {
   sceneTimes: SceneTime[];
   /** The suggestions picker's counts (AGT-49); absent when the run had no suggester. */
   suggestions?: SuggestionCounts;
+  /**
+   * The DM's suggested road cards after a living-world run (AGT-91, decision 4), in the deck file's
+   * format, never loaded; `unread` keeps an answer that was not JSON. Absent when none was asked.
+   */
+  suggestedCards?: SuggestedCards;
+}
+
+/** The DM's suggested cards (AGT-91): up to two, each with its one-line reason. */
+export type SuggestedCards = { cards: unknown[]; why: string[] } | { unread: string };
+
+/** The ask at a living world's end (AGT-91). Our own words; the cards are for Stas to read, never loaded. */
+export const SUGGEST_ASK = [
+  "The journey is over. Suggest up to two new road cards that would carry on what this party did on it: a deed they wrote, a person they met, a choice that cost them. Stas reads them after the run; they are never loaded into play.",
+  "Each card follows the deck file's format and the card tests: someone wants something, the stake is visible, two or three choices that each name an action and never its outcome, each choice different in what it changes.",
+  'Your final answer is only this JSON, nothing else, and call no tool: {"cards": [{"id": "snake_case_id", "zone": "a road zone or a place id", "when": "road", "target": "blades", "text": "what the players read", "choices": [{"id": "snake_case", "text": "an action"}]}], "why": ["one line per card: what it carries on"]}',
+].join("\n");
+
+/** The DM's answer to the suggest wake, as the run report keeps it. */
+export function readSuggested(answer: string): SuggestedCards {
+  // The whole answer is the JSON, or it is kept as written; a code fence around it is allowed.
+  const body = answer.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/, "$1");
+  try {
+    const parsed = JSON.parse(body) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const { cards, why } = parsed as { cards?: unknown; why?: unknown };
+      // Only cards that are objects: the run report reads their fields.
+      const kept = Array.isArray(cards) ? cards.filter((c) => c !== null && typeof c === "object" && !Array.isArray(c)) : [];
+      if (kept.length > 0) return { cards: kept.slice(0, 2), why: Array.isArray(why) ? why.slice(0, 2).map(String) : [] };
+    }
+  } catch {
+    // Not JSON: kept as it came.
+  }
+  return { unread: answer };
 }
 
 /** Model wakes in a row that lost the connection before the run stops as `offline` (M7 design §3.1). */
@@ -427,6 +460,8 @@ export class TableLoop {
     // A reaction still in flight has nothing left to react to.
     await Promise.all([...this.barks.values()].map((bark) => (bark.cut(), bark.done)));
     const ended = this.table.ended ?? "ended";
+    // A living world that ended in play: the DM suggests up to two cards for later (AGT-91).
+    const suggestedCards = this.campaign && !this.table.stop && !failure ? await this.suggestCards() : undefined;
     // A stopped engine leaves the run's record short, and the run says why it stopped. Any other
     // failure to write the record (a full disk, a folder it can't write) fails the run, once the
     // agents are closed: the audit needs that record.
@@ -462,9 +497,28 @@ export class TableLoop {
       fight: { rounds: this.fightRounds.size, lines: this.table.fightLines },
       ...(this.table.stop ? { stop: this.table.stop } : {}),
       ...(this.suggester ? { suggestions: { ...this.suggestions } } : {}),
+      ...(suggestedCards ? { suggestedCards } : {}),
       // A scene a stop cut short keeps no end time, and counts the rounds it got to.
       sceneTimes: this.sceneTimes.map((t) => ({ ...t, ...(t.ended_at ? {} : { rounds: this.roundsIn(t.id) }) })),
     };
+  }
+
+  /**
+   * The DM's suggested cards (AGT-91), asked once the journey is over. Not a decision of the run:
+   * a failure is logged and counts no fallback, and the run report says none were written.
+   */
+  private async suggestCards(): Promise<SuggestedCards | undefined> {
+    try {
+      const answer = await this.dm.wake("suggest", SUGGEST_ASK, this.dmTools);
+      if (typeof answer !== "string" || !answer.trim()) return undefined;
+      const suggested = readSuggested(answer);
+      this.table.log("system", "unread" in suggested ? "the DM's suggested cards were not JSON; kept as written" : `the DM suggested ${suggested.cards.length} cards`);
+      return suggested;
+    } catch (error) {
+      if (stopsTheRun(error)) return undefined;
+      this.table.log("error", `dm (suggest) failed: ${error instanceof Error ? error.message : String(error)}`, "dm");
+      return undefined;
+    }
   }
 
   /** One decision: whatever the engine waits on next. */

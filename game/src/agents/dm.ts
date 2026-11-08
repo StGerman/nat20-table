@@ -29,7 +29,7 @@ export const DM_TURN_TIMEOUT_MS = 12_000;
  * summary. A timeout there drops a scene's beats, such as its rest, not just a line of narration.
  */
 export const DM_LONG_WAKE_TIMEOUT_MS = 30_000;
-const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary"];
+const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary", "suggest"];
 
 /**
  * The wakes a successful `narrate` ends for the loop (M10 S2, decision 0053): the model's closing
@@ -298,7 +298,7 @@ export class ModelDm implements DmAgent {
       const seed = this.session ? undefined : this.seed(await tools.getState());
       this.session ??= this.openSession();
       const result = await this.session.turn(seed ? `${seed}\n\n${briefing}` : briefing, wake);
-      if (wake === "summary") return result.final;
+      if (wake === "summary" || wake === "suggest") return result.final;
     } catch (error) {
       // As for a player: a timed-out session goes on, a plan limit stops the run, and after any
       // other failure the next wake starts a fresh session from the seed.

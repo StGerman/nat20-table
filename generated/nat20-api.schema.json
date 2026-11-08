@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.65"
+    "version": "1.0.0-dev.66"
   },
   "$defs": {
     "Ability": {
@@ -917,6 +917,26 @@
           "description": "The escort themselves: the Hired Blades vote.",
           "type": "string",
           "const": "blades"
+        }
+      ]
+    },
+    "CardWhen": {
+      "description": "When a road card is drawn (AGT-91), as the deck file's `when` says.",
+      "oneOf": [
+        {
+          "description": "After a journey leg.",
+          "type": "string",
+          "const": "road"
+        },
+        {
+          "description": "After a night.",
+          "type": "string",
+          "const": "night"
+        },
+        {
+          "description": "When a leg ends in the card's place: the place's pay-offs (ENG-35).",
+          "type": "string",
+          "const": "arrival"
         }
       ]
     },
@@ -4041,6 +4061,48 @@
           ]
         },
         {
+          "description": "The card that goes on the table, as the DM sees it (AGT-91), right before its\n`card_drawn`, after any `card_picked` and `scout_looked`: logged for every card, so a\nrun's record names each card, when it came and what it paid off. DM only.",
+          "type": "object",
+          "properties": {
+            "card": {
+              "description": "The card id.",
+              "type": "string"
+            },
+            "forewarned": {
+              "description": "The forewarned choice the scout's look opened (API-54), by choice id; absent when\nthe scout did not see it, or the card has none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "const": "card_shown"
+            },
+            "reads": {
+              "description": "The deeds it reads, as in `OfferedCard.reads`: a card that reads one pays off\nwhat the party did. Empty, and left out, when it reads none.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/DeedDm"
+              }
+            },
+            "when": {
+              "description": "When it was drawn: after a leg, after a night, or on arrival.",
+              "$ref": "#/$defs/CardWhen"
+            },
+            "zone": {
+              "description": "The deck zone it came from: a road zone or a place id.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "card",
+            "zone",
+            "when"
+          ]
+        },
+        {
           "description": "The caravan reached the escort contract's destination and the Blades' pay was settled\n(API-47), after its `wage` ledger entries. Public.",
           "type": "object",
           "properties": {
@@ -4920,6 +4982,13 @@
             "string",
             "null"
           ]
+        },
+        "reads": {
+          "description": "The deeds it reads (AGT-91): the remembered deeds its `if`, or an offered choice's\n`if`, names, with their records. A card that reads one continues what the party did.\nEmpty, and left out, when it reads none.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DeedDm"
+          }
         },
         "scout": {
           "description": "The skill the scout would check with (API-54); absent for a card with nothing to find.",

@@ -156,6 +156,23 @@ pub struct OfferedCard {
     /// The skill the scout would check with (API-54); absent for a card with nothing to find.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scout: Option<Skill>,
+    /// The deeds it reads (AGT-91): the remembered deeds its `if`, or an offered choice's
+    /// `if`, names, with their records. A card that reads one continues what the party did.
+    /// Empty, and left out, when it reads none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reads: Vec<DeedDm>,
+}
+
+/// When a road card is drawn (AGT-91), as the deck file's `when` says.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CardWhen {
+    /// After a journey leg.
+    Road,
+    /// After a night.
+    Night,
+    /// When a leg ends in the card's place: the place's pay-offs (ENG-35).
+    Arrival,
 }
 
 /// How a road card came to the table (API-53).

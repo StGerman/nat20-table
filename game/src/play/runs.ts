@@ -9,8 +9,7 @@
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { REPO } from "../paths.ts";
-import { narrationCheck } from "../check/narration.ts";
-import { ModelJudge } from "../check/judge.ts";
+import { modelJudgeFor, narrationCheck } from "../check/narration.ts";
 import { packOfRun, readRunRecord } from "./record.ts";
 import { audit, refuseApiKey, timingLines } from "./run.ts";
 import { UPLOAD_SETUP, uploadRun, uploadTarget } from "./upload.ts";
@@ -46,7 +45,7 @@ if (stage === "finish" && !existsSync(path.join(dir, AUDIT_JSON))) {
 if (stage === "finish" && !existsSync(path.join(dir, NARRATION_CHECK))) {
   console.log(`Running the narration check over ${dir}`);
   refuseApiKey();
-  for (const line of (await narrationCheck(pack, dir, new ModelJudge())).lines) console.log(line);
+  for (const line of (await narrationCheck(pack, dir, modelJudgeFor(dir))).lines) console.log(line);
 }
 if (stage === "finish" && !existsSync(path.join(dir, "report.md"))) {
   // The run stopped before its report: the timing table from run.json stands in for it. The

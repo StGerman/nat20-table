@@ -276,6 +276,130 @@ function campaignRows(run: RunRecord, log: Event[], engineLog: EngineLogLine[], 
   return [row1, journeys, pay, ledger, road, fight, carried];
 }
 
+/** One card that went on the table in a run (AGT-91), from its `card_shown` and what followed. */
+export interface CardMet {
+  seq: number;
+  card: string;
+  when: "road" | "night" | "arrival";
+  /** The deeds it read, with their records. */
+  reads: Array<{ deed: string; by: Handle[]; day: number; contract: number }>;
+  /** How it came: a pick, a fallback, a soon card, or the only card the draw rolled. */
+  came: "dm_pick" | "engine_pick" | "soon" | "only";
+  reason?: string;
+  /** The choice it was decided by; absent while it waited at the run's end. */
+  decided?: string;
+  /** The scout's look before it: whether they saw it, and the forewarned choice it opened. */
+  scout?: { actor: Handle; saw: boolean; roll: string };
+  forewarned?: string;
+  /** It started a fight. */
+  fight: boolean;
+}
+
+/** The cards a run met, in order (AGT-91): each `card_shown` with its pick, scout look, choice and fight. */
+export function cardsMet(log: Event[]): CardMet[] {
+  const out: CardMet[] = [];
+  let picked: { came: CardMet["came"]; reason?: string } | undefined;
+  let scout: CardMet["scout"];
+  // The card just settled: a fight that starts before the road moves on is the card's (its `fight` effect).
+  let settled: CardMet | undefined;
+  for (const e of log) {
+    if (e.kind === "card_picked") picked = { came: e.came, ...(e.reason ? { reason: e.reason } : {}) };
+    else if (e.kind === "scout_looked") scout = { actor: e.actor, saw: e.saw, roll: e.roll };
+    else if (e.kind === "card_shown") {
+      out.push({
+        seq: e.seq,
+        card: e.card,
+        when: e.when,
+        reads: e.reads ?? [],
+        came: picked?.came ?? "only",
+        ...(picked?.reason ? { reason: picked.reason } : {}),
+        ...(scout ? { scout } : {}),
+        ...(e.forewarned ? { forewarned: e.forewarned } : {}),
+        fight: false,
+      });
+      picked = undefined;
+      scout = undefined;
+      settled = undefined;
+    } else if (e.kind === "card_resolved") {
+      const card = out.at(-1);
+      if (card && card.decided === undefined) {
+        card.decided = e.choice;
+        settled = card;
+      }
+    } else if (e.kind === "combat_started" && settled) {
+      settled.fight = true;
+      settled = undefined;
+    } else if (e.kind === "traveled" || e.kind === "night" || e.kind === "scene_loaded") settled = undefined;
+  }
+  return out;
+}
+
+/** A deed written in this run (AGT-91). */
+interface DeedDone {
+  seq: number;
+  deed: string;
+  by: Handle[];
+  day: number;
+  contract: number;
+}
+
+const deedsDone = (log: Event[]): DeedDone[] => log.flatMap((e) => (e.kind === "deed_remembered" ? [{ seq: e.seq, deed: e.deed, by: e.by, day: e.day, contract: e.contract }] : []));
+
+/**
+ * The Milestone 11 exit rows (design "Exit criterion", AGT-91): the deck at work (row 2), a
+ * thread inside the run (row 3), story-space (row 4, the judge's flags) and, on a run that
+ * continues a roster, the world remembers (row 5).
+ */
+function wordRows(run: RunRecord, log: Event[], flags: Flag[], judged: boolean): VerdictRow[] {
+  const cards = cardsMet(log);
+  const decided = cards.filter((c) => c.decided !== undefined);
+  const road = decided.filter((c) => c.when !== "arrival").length;
+  const arrival = decided.filter((c) => c.when === "arrival").length;
+  const picks = cards.filter((c) => c.came === "dm_pick");
+  const unreasoned = picks.filter((c) => !c.reason?.trim());
+  const deck: VerdictRow = {
+    row: "m11-deck",
+    title: "The deck at work: 3 road cards and 1 arrival card decided, every DM pick with its reason",
+    status: road >= 3 && arrival >= 1 && unreasoned.length === 0 ? "pass" : "fail",
+    detail: `${road} road and night cards and ${arrival} arrival cards decided; ${picks.length} DM picks${unreasoned.length > 0 ? `, ${unreasoned.length} without a reason (${unreasoned.map((c) => c.card).join(", ")})` : ", each with its reason"}`,
+  };
+
+  // A thread: a deed written in this run, then a later card in this run that reads it.
+  const done = deedsDone(log);
+  const paid = cards.flatMap((c) => c.reads.filter((d) => done.some((x) => x.deed === d.deed && x.seq < c.seq)).map((d) => `${c.card} reads ${d.deed}`));
+  const thread: VerdictRow = {
+    row: "m11-thread",
+    title: "A thread inside the run: a deed written, and a later card that reads it",
+    status: done.length > 0 && paid.length > 0 ? "pass" : "fail",
+    detail: `${done.length} deeds written${done.length > 0 ? ` (${done.map((d) => d.deed).join(", ")})` : ""}; ${paid.length > 0 ? paid.join("; ") : "no later card read one"}`,
+  };
+
+  const mine = flags.filter((f) => f.row === "m11-story");
+  const confirmed = mine.filter((f) => f.answer === "confirmed").length;
+  const open = mine.filter((f) => !f.answer).length;
+  const story: VerdictRow = !judged
+    ? { row: "m11-story", title: "Story-space: no pleasant nothing that Stas confirms", status: "pending", detail: "the narration check hasn't run" }
+    : {
+        row: "m11-story",
+        title: "Story-space: no pleasant nothing that Stas confirms",
+        status: confirmed > 0 ? "fail" : open > 0 ? "pending" : "pass",
+        detail: `${mine.length} flags: ${confirmed} confirmed, ${mine.length - confirmed - open} dismissed, ${open} to confirm`,
+      };
+
+  // The world remembers: a card reads a deed this run did not write, so an earlier contract did.
+  const remembered = cards.flatMap((c) => c.reads.filter((d) => !done.some((x) => x.deed === d.deed)).map((d) => `${c.card} reads ${d.deed} (contract ${d.contract}, day ${d.day}${d.by.length > 0 ? `, by ${d.by.join(", ")}` : ""})`));
+  const continues = run.roster?.party === "continue";
+  const memory: VerdictRow = continues
+    ? {
+        row: "m11-memory",
+        title: "The world remembers: a card reads a deed from the last contract",
+        status: remembered.length > 0 ? "pass" : "fail",
+        detail: remembered.length > 0 ? remembered.join("; ") : "no card read a deed from an earlier contract",
+      }
+    : { row: "m11-memory", title: "The world remembers: a card reads a deed from the last contract", status: "reported", detail: `the pair's first run: ${remembered.length > 0 ? remembered.join("; ") : "nothing earlier to read"}` };
+  return [deck, thread, story, memory];
+}
+
 /** Row 4: latency, measured and reported only (D1). */
 function latencyRow(usage: UsageRecord[]): VerdictRow {
   const p95 = (agent: (u: UsageRecord) => boolean) => percentile(usage.filter(agent).map(waitedMs), 95);
@@ -304,7 +428,8 @@ export function computeVerdict(dir: string): Verdict {
   // An untracked prop is listed, not flagged (spec §4.3): Stas has nothing to answer for it.
   const narrationFlags: Flag[] = readLines<{ id: string; line?: number; claim?: string; kind?: string; untracked?: boolean }>(path.join(dir, NARRATION_CHECK)).filter((f) => !f.untracked).map((f) => {
     const answer = answers[f.id]?.answer;
-    return { id: f.id, row: "3", text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
+    // The story-space kind is the Milestone 11 row's (AGT-91), not row 3's.
+    return { id: f.id, row: f.kind === "story_space" ? "m11-story" : "3", text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
   });
   // Lines Stas ruled himself, which the judge missed (M10 P2): flags of row 3 like the judge's.
   const handFlags: Flag[] = (Array.isArray(added) ? (added as HandFlag[]) : []).map((f) => ({
@@ -317,7 +442,8 @@ export function computeVerdict(dir: string): Verdict {
   narrationFlags.push(...handFlags);
   const retries = retryRows(run, transcript, answers);
   const progress = run.campaign ? campaignRows(run, log, readLines<EngineLogLine>(path.join(dir, ENGINE_LOG)), readText(path.join(dir, ENGINE_STDERR))) : [timeRow(run)];
-  const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
+  const word = run.campaign ? wordRows(run, log, narrationFlags, existsSync(path.join(dir, NARRATION_CHECK))) : [];
+  const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...word, ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
   const flags = [...narrationFlags, ...retries.flags];
   const not_eligible = [
     ...(run.build.dirty ? ["the checkout had changes"] : []),
