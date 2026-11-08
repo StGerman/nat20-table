@@ -4,8 +4,8 @@
 
 use nat20_api_contract::{
     AdvantageState, ApiError, CheckSpec, CommandResult, DiceRolled, ErrorCode, EventKind, Handle,
-    LedgerReason, Mode, Placement, RejectReason, RollId, RollKind, RollOutcome, RollView, Side,
-    Visibility,
+    LedgerReason, LifeState, Mode, Placement, RejectReason, RollId, RollKind, RollOutcome,
+    RollView, Side, Visibility,
 };
 use nat20_world as world;
 
@@ -309,18 +309,61 @@ impl Session {
                 world.deck.add(&mut world.state.deck, card, *soon);
                 Ok(())
             }
-            // DM-only bookkeeping (ENG-33); `deed_remembered` reaches the wire with API-52.
             world::Effect::Remember { deed } => {
-                let campaign = self.campaign.as_mut().expect("a card needs a campaign");
-                campaign.world.remember(deed, by.to_vec());
+                self.remember(deed, by.to_vec());
                 Ok(())
             }
         }
     }
 
+    /// The world remembers a deed (ENG-33). DM-only bookkeeping: `deed_remembered` reaches
+    /// the wire with API-52.
+    pub(super) fn remember(&mut self, deed: &str, by: Vec<String>) {
+        if let Some(campaign) = self.campaign.as_mut() {
+            campaign.world.remember(deed, by);
+        }
+    }
+
+    /// Follows the blows of a fight for the death deed (ENG-36): who rolled each roll, who dealt
+    /// the last damage to each creature, and, when a card fight's named NPC dies, the deed
+    /// `killed_<npc>` by the one who dealt the last blow.
+    pub(super) fn follow_blows(&mut self, kind: &EventKind) {
+        match kind {
+            EventKind::Action { actor, .. } => self.last_actor = Some(actor.0.clone()),
+            EventKind::Roll {
+                roll: RollView::Full { id, roller, .. },
+            } => {
+                self.rollers.insert(id.0.clone(), roller.0.clone());
+            }
+            EventKind::DamageTaken {
+                target,
+                source_roll,
+                ..
+            } => {
+                let by = source_roll
+                    .as_ref()
+                    .and_then(|r| self.rollers.get(&r.0).cloned())
+                    .or_else(|| self.last_actor.clone());
+                if let Some(by) = by {
+                    self.last_blow.insert(target.0.clone(), by);
+                }
+            }
+            EventKind::LifeState {
+                target,
+                state: LifeState::Dead,
+            } => {
+                if let Some(npc) = self.card_npcs.remove(&target.0) {
+                    let by = self.last_blow.get(&target.0).cloned().into_iter().collect();
+                    self.remember(&world::killed_deed(&npc), by);
+                }
+            }
+            _ => {}
+        }
+    }
+
     /// A card's fight: each stat block placed hostile at the scene's first anchor under a
     /// fresh handle, then a fight between them and the party members who are up.
-    fn card_fight(&mut self, monsters: &[String]) -> Result<(), ApiError> {
+    fn card_fight(&mut self, monsters: &[world::Monster]) -> Result<(), ApiError> {
         let mut fighters: Vec<Handle> = self
             .who(world::Who::Party, true)
             .into_iter()
@@ -333,14 +376,16 @@ impl Session {
                 "The road scene has no anchor to place a card's fight at.",
             ));
         };
+        let mut named = Vec::new();
         for monster in monsters {
+            let stat = monster.stat();
             let handle = (1..)
-                .map(|n| Handle(format!("{monster}_{n}")))
+                .map(|n| Handle(format!("{stat}_{n}")))
                 .find(|h| !game.has_creature(&h.0))
                 .expect("some handle is free");
             game.place_creature(
                 &handle,
-                monster,
+                stat,
                 Side::Hostile,
                 &Placement::Anchor {
                     anchor: anchor.clone(),
@@ -348,8 +393,12 @@ impl Session {
                 None,
                 None,
             )?;
+            if let Some(npc) = monster.npc() {
+                named.push((handle.0.clone(), npc.to_owned()));
+            }
             fighters.push(handle);
         }
+        self.card_npcs.extend(named);
         let result = self.game_mut()?.start_fight(&fighters);
         self.after_decision(result)
     }
