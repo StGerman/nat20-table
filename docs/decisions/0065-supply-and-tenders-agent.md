@@ -33,12 +33,12 @@ D. Yan Metsuyan, supply and tenders (`.claude/agents/yan.md`, skill `/yan` with 
 1. TASKS.md stays a file, moves into the repo (CON-1), and keeps only open rows and the milestone table; closed rows and the change log move unchanged to `docs/tasks-done.md`.
 2. The roadmap lives in `docs/roadmap.md`, with a Delivery table whose first row is the Milestone 11 baseline.
 3. The target is the same milestones twice as cheap and twice as fast, measured against that baseline at every milestone exit.
-4. Stas plays his half of an exit pair only after the all-AI half on the same build has passed. This adds an order to the same-build pair of 0043; it does not change what the pair must pass.
-5. The next milestone is M12 "Not a passenger" (Own move plus the readable-table findings); Yan drafts its scope, the implementing thread writes its system design.
+
+Decided in the same thread and recorded where they apply: M12 "Not a passenger" is the next milestone, and Stas plays his half of an exit pair only after the all-AI half on the same build has passed; both go into the M12 scope.
 
 ## Consequences
 
-- CLAUDE.md gains a short section for Yan. CON-1 and the M12 scope come next, each in its own PR.
+- CLAUDE.md gains a short section for Yan, and the dramaturg's agent and skill are renamed `zoya` to match `vera`. CON-1 and the M12 scope come next, each in its own PR; CON-1 adds the two new files to CLAUDE.md's layout table.
 - A PR that edits a planning file outside a sweep is still allowed; the next sweep reconciles it.
 
 ## Revisit when
