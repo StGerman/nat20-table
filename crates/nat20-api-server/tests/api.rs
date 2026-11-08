@@ -3096,6 +3096,96 @@ fn the_destination_s_arrival_card_is_decided_before_the_pay() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A pack's own deck joins the world's while its contract runs, and a roster whose contract
+/// is under way in one pack is refused by another on the same map (ENG-38).
+#[test]
+fn a_pack_brings_its_own_cards_and_keeps_its_contract() {
+    let base = std::env::temp_dir().join(format!("nat20_table_pack_deck_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    let (one, two) = (base.join("one"), base.join("two"));
+    for (dir, id) in [(&one, "pack_one"), (&two, "pack_two")] {
+        copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), dir);
+        let file = dir.join("campaign.json");
+        let mut campaign: Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+        campaign["id"] = json!(id);
+        std::fs::write(&file, campaign.to_string()).unwrap();
+    }
+    // Pack one's merchant has a card of his own on the Vale road, in place of the world's.
+    let world_deck = one.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&world_deck).unwrap()).unwrap();
+    deck["cards"].as_array_mut().unwrap().remove(0);
+    std::fs::write(&world_deck, deck.to_string()).unwrap();
+    std::fs::create_dir_all(one.join("deck")).unwrap();
+    std::fs::write(
+        one.join("deck/merchant.json"),
+        json!({ "cards": [{
+            "id": "tobin_sings", "zone": "vale_fields", "target": "blades",
+            "text": "Old Tobin starts a song about the river.",
+            "choices": [
+                { "id": "join", "text": "Sing along." },
+                { "id": "hush", "text": "Ask him to hush.", "effects": [{ "do": "delay", "minutes": 10 }] }
+            ]
+        }] })
+        .to_string(),
+    )
+    .unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(one.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    ));
+    let first = api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    );
+    let drawn = first["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["kind"] == "card_drawn")
+        .unwrap_or_else(|| panic!("no card: {first}"))
+        .clone();
+    assert_eq!(
+        drawn["card_text"],
+        "Old Tobin starts a song about the river."
+    );
+    let saved = api.call("dm", json!({ "cmd": "save_roster" }));
+    ok(&saved);
+    // The same party in pack two: the contract under way is pack one's.
+    let mut other = Api::start(
+        Server::with_data_dir(two.clone()),
+        json!({ "cmd": "new_session", "seed": 1, "roster": saved["result"]["roster"] }),
+    );
+    ok(&other.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    let refused = other.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    );
+    assert_eq!(refused["ok"], false, "{refused}");
+    assert_eq!(refused["error"]["code"], "bad_roster", "{refused}");
+    assert!(
+        refused["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("still on the road in pack_one"),
+        "{refused}"
+    );
+    let _ = std::fs::remove_dir_all(&base);
+}
+
 /// An arrival card nobody can speak on is settled at once (ENG-35), and it is still the leg's
 /// only card: no road card follows it.
 #[test]

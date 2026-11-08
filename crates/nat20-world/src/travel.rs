@@ -88,8 +88,8 @@ impl Pace {
 ///
 /// Two parts (ENG-37, decision 0063): the **memory** (the clock, the discovered places, the
 /// deeds, the deck but the card on the table and the `once: "contract"` marks, the place NPCs,
-/// the contract count) outlives a contract; the **contract** (where the caravan is, the
-/// caravan, the day's travel, the escort, the card on the table) is rebuilt from the next
+/// the contract count) outlives a contract; the **contract** (its pack, where the caravan is,
+/// the caravan, the day's travel, the escort, the card on the table) is rebuilt from the next
 /// pack's campaign file by [`World::carry_memory`]. Roster format 2 (API-51) saves them apart.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -116,6 +116,10 @@ pub struct WorldState {
     /// The deeds the world remembers, by id (ENG-33): DM-only
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub deeds: DeedBook,
+    /// The pack whose contract this is, by its campaign file's `id` (ENG-38): part of the
+    /// contract, so a roster with a contract under way opens only that pack
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pack: Option<String>,
     /// The contract under way: 1 for the first, the number a deed records; left out of the
     /// saved state while it is 1
     #[serde(default = "first_contract", skip_serializing_if = "is_first_contract")]
@@ -264,6 +268,7 @@ impl World {
                 traveled_today: 0,
                 deck: DeckState::default(),
                 deeds: DeedBook::new(),
+                pack: None,
                 contract: first_contract(),
                 npcs: BTreeMap::new(),
                 escort: None,

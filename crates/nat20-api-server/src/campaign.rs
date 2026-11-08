@@ -92,12 +92,14 @@ impl Campaign {
             world::Clock::at(setup.day, setup.hour, 0),
         )
         .map_err(|e| bad(format!("The campaign's world {}: {e}.", setup.map)))?;
-        let deck = read_deck(&dir)?;
+        // A pack's own cards join the world's deck while its contract runs (ENG-38, Q7).
+        let deck = read_deck(&dir)?.join(read_deck(data_dir)?);
         check_effects(&deck, &built.goods)?;
         let built = built
             .with_deck(deck)
             .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
         let mut built = built;
+        built.state.pack = file.id.clone();
         // A roster from a campaign on this map takes up the world where it was left (API-45).
         // When its contract is done, the world's memory carries over and this campaign's
         // contract starts from it (ENG-37): the clock goes on, the deeds and the deck are kept,
@@ -112,7 +114,23 @@ impl Campaign {
                     )
                 })?;
             if !state.escort.as_ref().is_some_and(|e| e.done) {
+                // A contract under way is its own pack's: another pack on this map can't open
+                // it (ENG-38). A roster saved before packs were remembered names none.
+                if let (Some(saved_pack), Some(this)) = (&state.pack, &file.id)
+                    && saved_pack != this
+                {
+                    return Err(error(
+                        ErrorCode::BadRoster,
+                        format!(
+                            "The party is still on the road in {saved_pack}; finish that journey first."
+                        ),
+                    ));
+                }
                 // A contract under way is the saved party's: another party can't take it up.
+                let mut state = state;
+                if state.pack.is_none() {
+                    state.pack = file.id.clone();
+                }
                 if let Some(escort) = &state.escort
                     && escort.blades != party.iter().map(|h| h.0.clone()).collect::<Vec<_>>()
                 {

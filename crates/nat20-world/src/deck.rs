@@ -520,9 +520,9 @@ impl Deck {
     /// `owner_pick` that names a choice, at most one `owner_insists` and only on caravan
     /// cards, zones that are a road zone or a place (a road card's a road zone), `requires` that names a place, DCs
     /// on the ladder, a fight only last in its list, `add_card` that names a chained card, every chained card added by
-    /// some choice, no pile over [`MAX_PILE`] cards, every deed a card or a choice reads
-    /// written by some `remember`, and 2 or 3 choices offered in every case a card's
-    /// conditions allow (ENG-33). Goods and stat blocks are the server's to check.
+    /// some choice, no pile over [`MAX_PILE`] cards, and 2 or 3 choices offered in every case a
+    /// card's conditions allow (ENG-33). Goods and stat blocks are the server's to check; that
+    /// every deed read is written is [`Deck::check_deeds_written`]'s.
     pub fn validate(&self, map: &WorldMap) -> Result<(), DeckError> {
         let bad = |s: String| Err(DeckError(s));
         let road_zones: BTreeSet<&str> = map.roads.iter().map(|r| r.zone.as_str()).collect();
@@ -638,6 +638,24 @@ impl Deck {
                 }
             }
         }
+        for card in &self.cards {
+            check_cases(card)?;
+        }
+        if let Some(lost) = self
+            .cards
+            .iter()
+            .find(|c| c.chained && !added.contains(c.id.as_str()))
+        {
+            return bad(format!("chained card {} is never added", lost.id));
+        }
+        Ok(())
+    }
+
+    /// Checks that every deed a card or a choice reads is written by some `remember` in this
+    /// deck or in `elsewhere` (ENG-33, ENG-38). A world's deck and its packs' decks are
+    /// checked together, since a pack's card may write a deed a world card reads; at play time
+    /// a card whose deed nothing in this contract writes is simply never in play.
+    pub fn check_deeds_written(&self, elsewhere: &BTreeSet<String>) -> Result<(), DeckError> {
         let written = self.deeds_written();
         for card in &self.cards {
             let reads = card
@@ -651,23 +669,21 @@ impl Deck {
                 )
                 .flat_map(Deeds::ids);
             for deed in reads {
-                if !written.contains(deed.as_str()) {
-                    return bad(format!(
+                if !written.contains(deed.as_str()) && !elsewhere.contains(deed) {
+                    return Err(DeckError(format!(
                         "card {} reads deed {deed}, which nothing writes",
                         card.id
-                    ));
+                    )));
                 }
             }
-            check_cases(card)?;
-        }
-        if let Some(lost) = self
-            .cards
-            .iter()
-            .find(|c| c.chained && !added.contains(c.id.as_str()))
-        {
-            return bad(format!("chained card {} is never added", lost.id));
         }
         Ok(())
+    }
+
+    /// This deck with another's cards after its own: a pack's deck joins the world's (ENG-38).
+    pub fn join(mut self, other: Deck) -> Self {
+        self.cards.extend(other.cards);
+        self
     }
 
     /// Every deed some choice of the deck can write.
@@ -1478,10 +1494,13 @@ mod tests {
         let map = small_map();
         let mut d = deed_deck();
         d.cards[0].choices[0].effects.clear();
+        d.validate(&map).unwrap();
         assert_eq!(
-            d.validate(&map).unwrap_err().0,
+            d.check_deeds_written(&BTreeSet::new()).unwrap_err().0,
             "card bridge_again reads deed paid, which nothing writes"
         );
+        d.check_deeds_written(&BTreeSet::from(["paid".to_string()]))
+            .unwrap();
 
         // Without `say_no`, a party that is not angry has only two choices left, and an
         // angry one too: still fine. Without `ford` as well, one choice is left.
