@@ -1,8 +1,8 @@
 # Storytelling bible: Commandments
 
-The rules every place, person and story in a world of this game is built on. Each rule shown done, with what was cut, is in `examples.md` beside this file; the reasons behind them are in the tab Why of the producer's bible doc. Where the two differ, this file wins and Why gets fixed.
+The rules every place, person and story in a world of this game is built on. Each rule shown done, with what was cut, is in `examples.md` beside this file; the reasons behind them are in the tab Why of the producer's bible doc. Where this file and either of those differ, this file wins and the other gets fixed.
 
-This file is the repository copy of the bible's Commandments tab. The producer edits the bible; a changed bible reaches this file only through a pull request. It names nothing from `worlds/` or `scenarios/`, so it survives a full world swap: concrete names live in `examples.md`, which is replaced with the world.
+This file is the repository copy of the bible's Commandments tab. The producer edits the bible; a changed bible reaches this file only through a pull request. It names nothing from `worlds/` or `scenarios/`, so it survives a full world swap: concrete names live in the world-specific references beside it (`examples.md`, `compass-<world>.md`, `reference-narration.md`), which are replaced with the world.
 
 ## Thesis
 
@@ -21,7 +21,7 @@ Every rule below serves this line. It is the brief for authors and never reaches
 
 ## The compass: placing peoples and persons
 
-The world's politics fit on one picture: the 9x9 grid of the political-compass meme, redrawn in the world's own words. Each cell parodies the meme's ideology in the same place.
+The world's politics fit on one picture: the 9x9 grid of the political-compass meme, redrawn in the world's own words. Each cell parodies the meme's ideology in the same place. The current world's grid, outlines and persons are in `compass-<world>.md` beside this file.
 
 **The axes.** Left to right, how a people gets and shares its living: Custom (shared, at a just price) on the left, Market (traded, at a moving price) on the right. Top to bottom, who stands above it: Tribute (a master who takes) at the top, Freedom (nobody above the family) at the bottom.
 
@@ -30,7 +30,7 @@ Placing a people or a faction:
 1. **Ask how it lives:** by custom, by trade, or both. That picks the columns.
 2. **Ask who takes from it, and whom it takes from.** That picks the rows.
 3. **Draw an outline over two to six cells, never a point.** A people holds more than one view.
-4. **Give it a fair face and a dark one,** and a nickname for each neighbour, in the neighbour's own words.
+4. **Give it a fair face and a dark one,** and a nickname for each neighbour, in its own words.
 5. **Leave the cells nobody holds empty.** They are ideas that have not reached this world yet; a change by the road can bring one in.
 
 Placing a person:
@@ -47,7 +47,7 @@ Placing a person:
 1. **Never a passenger.** The human's character stands in every problem and decides first, and what they decide stays in the world, not in the DM's memory.
 2. **Every scene is a problem that resists.** It can be acted on, and a fight is never the only way through.
 3. **A choice names the action, never its outcome, and no choice is free.** Every way forward costs someone something.
-4. **The voice: dark in what happens, plain and short in the telling, made bearable by jokes.** About 120 words a beat, with the current reference narration (named in `examples.md`) as the model. The darkness comes from the situation, never from a withheld fact.
+4. **The voice: dark in what happens, plain and short in the telling, made bearable by jokes.** About 120 words a beat, with the current reference narration (`reference-narration.md` beside this file) as the model. The darkness comes from the situation, never from a withheld fact.
 5. **The DM narrates reactions, never verdicts,** and never what the human's character feels.
 6. **Funny in the people.** Jokes come from people, details, and surprising consequences. Everyone gets mocked, the human's character too, for what they do, never for what they feel.
 7. **Handrails.** Every detail can be asked about, and a companion speaks at every hard choice.

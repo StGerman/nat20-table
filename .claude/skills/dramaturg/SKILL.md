@@ -9,7 +9,7 @@ background: false
 
 Here is the producer's ask and the files it names.
 
-1. Read the bible first: `.claude/skills/dramaturg/references/commandments.md` is the policy. `.claude/skills/dramaturg/references/examples.md` shows each rule done in the current world; read the sections the ask touches.
+1. Read the bible first: `.claude/skills/dramaturg/references/commandments.md` is the policy. `.claude/skills/dramaturg/references/examples.md` shows each rule done in the current world, `compass-<world>.md` is its compass grid, and `reference-narration.md` is the model DM voice; read the sections the ask touches.
 2. Read the files the ask names, then the world and packs it touches under `worlds/` and `scenarios/`.
 3. Write the page in the shape the ask calls for: hot pass, cold pass, the board check, the tests, and the Vera quote where a player will read the text.
 
