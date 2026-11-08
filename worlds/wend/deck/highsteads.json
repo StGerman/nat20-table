@@ -58,7 +58,7 @@
             "unless": "col_owes_blades",
             "once": "contract",
             "text": "Gwyn the shepherd is waiting at the fold gate when the wagon comes up the last of the track. She has news, and she has been saving it for the Blades.",
-            "note": "Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. If they died (killed_col, killed_dunn), she tells it as news, not blame: the farm below the ridge stands empty, the goblins took the flock and the bridge took the boys, and Rufus's man came up with a paper for the land. If they were spared, Col is back mending the fold. If they fed her dog on the river road (fed_gwyns_dog), it came home ahead of them, fat and pleased with itself, and she knows who fed it. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
+            "note": "Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. If they died (killed_col, killed_dunn), she tells it as news, not blame: the farm below the ridge stands empty, the goblins took the flock and the bridge took the boys, and Rufus's man came up with a paper for the land. If they were spared, Col is back mending the fold. If they fed her dog on the river road (fed_gwyns_dog), she knows who fed it: if it came up with the wagon it runs to her, and if not it came home ahead of them, fat and pleased with itself. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
             "choices": [
                 {
                     "id": "goblins",
@@ -76,7 +76,7 @@
                 },
                 {
                     "id": "dog",
-                    "text": "Ask whether her dog found its way home.",
+                    "text": "Ask Gwyn about her dog.",
                     "if": "fed_gwyns_dog",
                     "effects": [
                         {"do": "remember", "deed": "listened_to_gwyn"}
@@ -100,7 +100,7 @@
             "if": ["crossed_millbeck", "saw_the_company_board", "col_owes_blades"],
             "once": "contract",
             "text": "Gwyn the shepherd meets the wagon at the fold gate with a round cheese in a cloth. Col sent it up for the Blades, she says, for speaking up for him at Wendford, and she cuts it for them there at the gate. She has news as well.",
-            "note": "The card for when the Blades spoke Col out of the stocks at Wendford (col_owes_blades); otherwise gwyn_news. Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. Col is back mending the fold, and the cheese is his thanks for the stocks; Gwyn cuts it at the fold gate and it is eaten there, so it never goes on the wagon. If they fed her dog on the river road (fed_gwyns_dog), it came home ahead of them, fat and pleased with itself, and she knows who fed it. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
+            "note": "The card for when the Blades spoke Col out of the stocks at Wendford (col_owes_blades); otherwise gwyn_news. Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. Col is back mending the fold, and the cheese is his thanks for the stocks; Gwyn cuts it at the fold gate and it is eaten there, so it never goes on the wagon. If they fed her dog on the river road (fed_gwyns_dog), she knows who fed it: if it came up with the wagon it runs to her, and if not it came home ahead of them, fat and pleased with itself. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
             "choices": [
                 {
                     "id": "goblins",
@@ -118,7 +118,7 @@
                 },
                 {
                     "id": "dog",
-                    "text": "Ask whether her dog found its way home.",
+                    "text": "Ask Gwyn about her dog.",
                     "if": "fed_gwyns_dog",
                     "effects": [
                         {"do": "remember", "deed": "listened_to_gwyn"}
