@@ -14,7 +14,8 @@ use nat20_api_contract::{
     Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
     ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
     Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId, ROSTER_FORMAT, ReactionTrigger,
-    RejectReason, RollId, RollView, Roster, RosterWorld, SceneFile, State, TimeSpan, Visibility,
+    RejectReason, RollId, RollView, Roster, RosterStart, RosterWorld, SceneFile, State, TimeSpan,
+    Visibility,
 };
 
 mod cards;
@@ -60,8 +61,23 @@ pub struct Session {
     campaign: Option<Campaign>,
     /// The party an earlier session saved, from `new_session{roster}` (API-45).
     roster: Option<Roster>,
+    /// The party and the world when the contract under way began (API-51): the roster's own,
+    /// until `start_campaign` starts a new contract and takes them as they are then.
+    contract_start: Option<RosterStart>,
     /// The place NPCs placed in the current scene (API-48), written back when it is left.
     npcs_here: Vec<String>,
+    /// A card fight's named NPCs by handle, until they die (ENG-36)
+    card_npcs: HashMap<String, String>,
+    /// Who rolled each logged roll, by roll id (ENG-36)
+    rollers: HashMap<String, String>,
+    /// Who dealt the last damage to each creature, by handle (ENG-36)
+    last_blow: HashMap<String, String>,
+    /// The creature that took the last option (ENG-36): the blow's dealer when no roll is cited
+    last_actor: Option<String>,
+    /// The place a leg just reached, whose arrival pile waits for the leg's road card to be
+    /// decided and any fight it started to be over (ENG-35). Not saved in a roster: a roster
+    /// saved with the road card on the table loses the arrival card, never the pay.
+    arrival_due: Option<String>,
 }
 
 impl Session {
@@ -82,8 +98,14 @@ impl Session {
             ledger: Journal::default(),
             ledger_mismatches: Vec::new(),
             campaign: None,
+            contract_start: roster.as_ref().and_then(|r| r.contract_start.clone()),
             roster,
             npcs_here: Vec::new(),
+            card_npcs: HashMap::new(),
+            arrival_due: None,
+            rollers: HashMap::new(),
+            last_blow: HashMap::new(),
+            last_actor: None,
         };
         session.push(Pending {
             round: None,
@@ -205,6 +227,11 @@ impl Session {
         self.push_entries();
         // Roll keys are per scene; the old scene's rolls are never cited again.
         self.roll_keys.clear();
+        // So are creature handles: a card fight's named NPC who lived through it stays behind,
+        // and a new creature with the same handle here is not them (ENG-36).
+        self.card_npcs.clear();
+        self.last_blow.clear();
+        self.last_actor = None;
         self.decided = true;
         self.push(Pending::public(
             None,
@@ -244,6 +271,45 @@ impl Session {
         }
         self.check_merchant();
         Ok(())
+    }
+
+    /// Once no card is on the table and no fight is running (ENG-35): draws the arrival pile of
+    /// a place the last leg reached, if it waits, and then, with that card decided too, settles
+    /// the escort when the caravan stands at its destination. Called right after the arriving
+    /// leg, and once a card is decided or its fight is over. Returns whether this call settled it.
+    pub(super) fn settle_if_arrived(&mut self) -> Result<bool, ApiError> {
+        if !self.card_free() {
+            return Ok(false);
+        }
+        if let Some(place) = self.arrival_due.take() {
+            self.draw_card(|world, dice| world.draw_on_arrival(&place, dice))?;
+            if !self.card_free() {
+                return Ok(false);
+            }
+        }
+        let Some(campaign) = self.campaign.as_ref() else {
+            return Ok(false);
+        };
+        let Some(place) = campaign.world.place_here().map(str::to_owned) else {
+            return Ok(false);
+        };
+        self.escort_arrive(&place)
+    }
+
+    /// Whether no card is offered or on the table and no fight is running.
+    fn card_free(&self) -> bool {
+        self.campaign
+            .as_ref()
+            .is_some_and(|c| !c.world.state.deck.waiting())
+            && !self.game.as_ref().is_some_and(|g| g.mode() == Mode::Combat)
+    }
+
+    /// Whether the escort contract is done.
+    fn escort_done(&self) -> bool {
+        self.campaign
+            .as_ref()
+            .and_then(|c| c.world.state.escort.as_ref())
+            .is_some_and(|e| e.done)
     }
 
     /// The caravan arrived at `place`: at the escort's destination, the Blades are paid what
@@ -398,6 +464,37 @@ impl Session {
         } else {
             self.npcs_arrive()?;
         }
+        // A new contract keeps the party and the world it started from (API-51), before the
+        // advance is paid, so playing it again pays it again.
+        if let Some(campaign) = self.campaign.as_ref()
+            && !campaign.resumed
+        {
+            let characters = self
+                .game
+                .as_ref()
+                .map(|g| g.roster_characters(Some(campaign.party.as_slice())))
+                .unwrap_or_default();
+            self.contract_start = Some(RosterStart {
+                characters,
+                // A saved world of another map was not taken up (`Campaign::read`), so this
+                // contract started from its own file: keep none.
+                world: self
+                    .roster
+                    .as_ref()
+                    .and_then(|r| r.world.clone())
+                    .filter(|w| w.map == campaign.map_id),
+            });
+        }
+        // The trip from where the last contract ended, told in one line (API-51, ENG-37).
+        if let Some(carried) = self.campaign.as_ref().and_then(|c| c.carried.clone()) {
+            self.push(Pending::public(
+                None,
+                EventKind::TripToStart {
+                    from: carried.from,
+                    days: carried.days,
+                },
+            ));
+        }
         // The escort's advance (API-47).
         let due = self
             .campaign
@@ -428,6 +525,14 @@ impl Session {
             return Err(rejected(
                 RejectReason::NotDriver,
                 format!("{command} is the caravan's call: its driver sends it as themselves."),
+            ));
+        }
+        if !campaign.world.state.deck.offered.is_empty() {
+            return Err(rejected(
+                RejectReason::CardPending,
+                format!(
+                    "A road card is being chosen; {command} waits until the DM picks it (pick_card)."
+                ),
             ));
         }
         if campaign.world.state.deck.pending.is_some() {
@@ -588,10 +693,10 @@ impl Session {
                 "No campaign is running; the game starts one with start_campaign.",
             ));
         };
-        if campaign.world.state.deck.pending.is_some() {
+        if campaign.world.state.deck.waiting() {
             return Err(rejected(
                 RejectReason::CardPending,
-                "A road card waits for its decision; time passes once every seat has spoken (choose_card).",
+                "A road card waits for its decision; time passes once it is picked (pick_card) and every seat has spoken (choose_card).",
             ));
         }
         let clock = campaign.world.state.clock;
@@ -686,11 +791,20 @@ impl Session {
             ));
         }
         self.enter_scene(&scene, &party)?;
-        let settled = leg.arrived && self.escort_arrive(&leg.toward)?;
-        // The leg that settles the contract ends the journey: no road card follows it.
-        if !settled {
+        // A leg's road card comes first, on the road; a leg that ends at a place then draws the
+        // place's arrival card, in its scene and before the pay, once the road card is decided
+        // and any fight it started is over (ENG-35, `settle_if_arrived`). At the destination the
+        // escort settles only once both are, so a roster saved in between keeps the contract
+        // under way with the card on the table. After the contract, the caravan goes nowhere.
+        if !self.escort_done() {
             let road = leg.road.clone();
+            if leg.arrived {
+                self.arrival_due = Some(leg.toward.clone());
+            }
             self.draw_card(|world, dice| world.draw_after_leg(&road, dice))?;
+        }
+        if leg.arrived {
+            self.settle_if_arrived()?;
         }
         Ok(CommandResult::Travel {
             leg: view,
@@ -1037,12 +1151,14 @@ impl Session {
         let world = match &saving {
             Some(campaign) => Some(RosterWorld {
                 map: campaign.map_id.clone(),
-                state: serde_json::to_value(&campaign.world.state).map_err(|e| {
-                    error(
-                        ErrorCode::Internal,
-                        format!("The world state does not serialize: {e}."),
-                    )
-                })?,
+                // Format 2: the memory and the contract apart (API-51).
+                state: serde_json::to_value(world::SavedWorld::from(campaign.world.state.clone()))
+                    .map_err(|e| {
+                        error(
+                            ErrorCode::Internal,
+                            format!("The world state does not serialize: {e}."),
+                        )
+                    })?,
             }),
             None => None,
         };
@@ -1051,6 +1167,7 @@ impl Session {
                 format: ROSTER_FORMAT,
                 characters,
                 world,
+                contract_start: self.contract_start.clone(),
             },
         })
     }
@@ -1231,6 +1348,8 @@ impl Session {
         self.push_entries();
         if result.is_ok() {
             self.decided = true;
+            // A fight a destination's arrival card started is over: the pay comes now (ENG-35).
+            self.settle_if_arrived()?;
         }
         result
     }
@@ -1324,6 +1443,7 @@ impl Session {
             }
             _ => {}
         }
+        let death = self.follow_blows(&kind);
         self.log.push(Event {
             seq,
             round: pending.round,
@@ -1332,6 +1452,10 @@ impl Session {
             text: render::text(&kind),
             kind,
         });
+        // A named NPC's death writes its deed right after the death (ENG-36, API-52).
+        if let Some((deed, by)) = death {
+            self.remember(&deed, by);
+        }
     }
 }
 

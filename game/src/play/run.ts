@@ -49,6 +49,24 @@ interface PregenSheet {
   species: string;
   class: string;
   level: number;
+  /** The coins it starts with, e.g. "54 GP". */
+  money?: string;
+}
+
+/** A pregen's money, e.g. "54 GP" or "3 GP 5 SP", in copper; undefined when it doesn't read as coins. */
+export function moneyCopper(money: string | undefined): number | undefined {
+  if (!money?.trim()) return undefined;
+  const worth: Record<string, number> = { CP: 1, SP: 10, EP: 50, GP: 100, PP: 1000 };
+  const parts = money.trim().toUpperCase().split(/\s+/);
+  if (parts.length % 2 !== 0) return undefined;
+  let copper = 0;
+  for (let i = 0; i < parts.length; i += 2) {
+    const n = Number(parts[i]);
+    const each = worth[parts[i + 1]!];
+    if (!Number.isInteger(n) || n < 0 || each === undefined) return undefined;
+    copper += n * each;
+  }
+  return copper;
 }
 
 /** Each party member's pregen sheet, from the pack's first scene; a member with no pregen there has none. */
@@ -111,6 +129,10 @@ export interface RosterEntry {
   goal: string;
   /** The first sentence of the card's opening paragraph: who they are, without numbers (the pick screen's card). */
   about: string;
+  /** The coins in their purse, in copper: the pregen's, or the saved party's. */
+  purseCp?: number;
+  /** Their Experience Points: known only for a saved party, before the engine starts. */
+  xp?: number;
 }
 
 /**
@@ -129,7 +151,7 @@ export function partyRoster(pack: string, pregens = process.env.NAT20_PREGENS_DI
     // The opening paragraph's first sentence: the rest of it speaks to an AI player, not to the human picking.
     const opening = /^# [^\n]*\n+([^#\n][^\n]*)/m.exec(card)?.[1].trim() ?? "";
     const about = /^.*?[.!?](?=\s|$)/.exec(opening)?.[0] ?? opening;
-    return { handle: p.handle, name: cardName(p.handle, card), species: sheet ? named(sheet.species) : "", class: sheet ? named(sheet.class) : "", level: sheet?.level ?? 0, goal, about };
+    return { handle: p.handle, name: cardName(p.handle, card), species: sheet ? named(sheet.species) : "", class: sheet ? named(sheet.class) : "", level: sheet?.level ?? 0, goal, about, ...(moneyCopper(sheet?.money) !== undefined ? { purseCp: moneyCopper(sheet?.money) } : {}) };
   });
 }
 

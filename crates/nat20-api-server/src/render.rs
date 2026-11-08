@@ -2,9 +2,9 @@
 //! text can never carry a number the view type left out (CLAUDE.md Rule 3).
 
 use nat20_api_contract::{
-    AgainstKind, CombatOverReason, ConcentrationEndReason, DamageType, DiceRolled, EventKind,
-    Handle, LedgerGoods, LedgerReason, LifeState, Lodging, Mode, RollKind, RollOutcome, RollView,
-    Side,
+    AgainstKind, CardCame, CombatOverReason, ConcentrationEndReason, DamageType, DiceRolled,
+    EventKind, Handle, LedgerGoods, LedgerReason, LifeState, Lodging, Mode, RollKind, RollOutcome,
+    RollView, Side,
 };
 
 /// The sentence for one event.
@@ -266,6 +266,46 @@ pub fn text(kind: &EventKind) -> String {
             clock.day,
             snake_words(&clock.watch)
         ),
+        EventKind::CardsOffered { cards, .. } => {
+            let ids: Vec<&str> = cards.iter().map(|c| c.id.as_str()).collect();
+            format!("The road offers {}; the DM picks one.", ids.join(", "))
+        }
+        EventKind::CardPicked { card, came, .. } => match came {
+            CardCame::DmPick => format!("The DM picks {card}."),
+            CardCame::EnginePick => format!("The DM did not pick; the engine takes {card}."),
+            CardCame::Soon => format!("{card} comes next, as an earlier choice set it."),
+        },
+        EventKind::CardShown { card, reads, .. } => {
+            if reads.is_empty() {
+                format!("{card} goes on the table.")
+            } else {
+                let deeds: Vec<&str> = reads.iter().map(|d| d.deed.as_str()).collect();
+                format!("{card} goes on the table; it reads {}.", deeds.join(", "))
+            }
+        }
+        EventKind::TripToStart { from, days } => match days {
+            0 => format!("The new contract starts where the last one ended, at {from}."),
+            1 => format!("The party travels one day from {from} to the new contract's start."),
+            n => format!("The party travels {n} days from {from} to the new contract's start."),
+        },
+        EventKind::ScoutAhead { actor } => {
+            format!("{} walks ahead of the caravan as the scout.", actor.0)
+        }
+        EventKind::ScoutLooked { actor, saw, .. } => {
+            if *saw {
+                format!("{} spots what waits ahead.", actor.0)
+            } else {
+                format!("{} looks ahead and misses what waits there.", actor.0)
+            }
+        }
+        EventKind::DeedRemembered { deed, by, .. } => {
+            if by.is_empty() {
+                format!("The world remembers {deed}.")
+            } else {
+                let by: Vec<&str> = by.iter().map(|h| h.0.as_str()).collect();
+                format!("The world remembers {deed}, by {}.", by.join(", "))
+            }
+        }
         EventKind::EscortSettled { destination } => {
             format!("The caravan reaches {destination}; the Blades are paid what they are owed.")
         }

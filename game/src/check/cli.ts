@@ -7,8 +7,8 @@ import { refuseApiKey } from "../play/run.ts";
 import { packOfRun } from "../play/record.ts";
 import { writeVerdict } from "../play/verdict.ts";
 import { NARRATION_DIGEST } from "./digest.ts";
-import { ModelJudge, ScriptedJudge } from "./judge.ts";
-import { narrationCheck } from "./narration.ts";
+import { ScriptedJudge } from "./judge.ts";
+import { modelJudgeFor, narrationCheck } from "./narration.ts";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -22,7 +22,7 @@ if (!dir || !existsSync(dir) || !["model", "scripted"].includes(values.judge!)) 
 if (values.judge === "model") refuseApiKey();
 // A digest from an older build is replayed again only when asked: it is the engine's word for that run.
 if (values["new-digest"]) rmSync(path.join(dir, NARRATION_DIGEST), { force: true });
-const check = await narrationCheck(values.pack ?? packOfRun(dir), dir, values.judge === "scripted" ? new ScriptedJudge() : new ModelJudge());
+const check = await narrationCheck(values.pack ?? packOfRun(dir), dir, values.judge === "scripted" ? new ScriptedJudge() : modelJudgeFor(dir));
 for (const line of check.lines) console.log(line);
 const verdict = writeVerdict(dir);
 console.log(`Verdict: ${verdict.verdict}: ${verdict.why}`);

@@ -314,6 +314,12 @@ impl Server {
             Command::RestNight { actor, lodging } => session.rest_night(&actor.0, *lodging, viewer),
             Command::PassTime { span } => session.pass_time(*span, viewer),
             Command::ChooseCard { actor, choice } => session.choose_card(&actor.0, choice, viewer),
+            Command::PickCard {
+                card,
+                reason,
+                fallback,
+            } => session.pick_card(card, reason, *fallback, viewer),
+            Command::Scout { actor } => session.scout(&actor.0, viewer),
             Command::SaveRoster => session.save_roster(viewer),
             Command::LevelUp { actor } => session.level_up(&actor.0, viewer),
             Command::AnswerLevelUp {
@@ -411,9 +417,15 @@ fn random_seed() -> u32 {
         .finish() as u32
 }
 
-/// A roster this engine can read: format 1, each handle once, each pregen a file it has.
+/// A roster this engine can read: format 2 (a format 1 roster is refused in one plain line,
+/// API-51), each handle once, each pregen a file it has, at the contract's start too.
 fn check_roster(roster: &nat20_api_contract::Roster) -> Result<(), nat20_api_contract::ApiError> {
     let bad = |message: String| errors::error(ErrorCode::BadRoster, message);
+    if roster.format == 1 {
+        return Err(bad(
+            "This party was saved before the road learned to remember, and this engine cannot read it. Start a new party.".to_owned(),
+        ));
+    }
     if roster.format != nat20_api_contract::ROSTER_FORMAT {
         return Err(bad(format!(
             "The roster is format {}; this engine reads format {}.",
@@ -421,8 +433,19 @@ fn check_roster(roster: &nat20_api_contract::Roster) -> Result<(), nat20_api_con
             nat20_api_contract::ROSTER_FORMAT
         )));
     }
+    if let Some(start) = &roster.contract_start {
+        check_characters(&start.characters)?;
+    }
+    check_characters(&roster.characters)
+}
+
+/// Each handle once, each pregen a file this engine has.
+fn check_characters(
+    characters: &[nat20_api_contract::RosterCharacter],
+) -> Result<(), nat20_api_contract::ApiError> {
+    let bad = |message: String| errors::error(ErrorCode::BadRoster, message);
     let mut seen = std::collections::HashSet::new();
-    for character in &roster.characters {
+    for character in characters {
         if !seen.insert(&character.handle.0) {
             return Err(bad(format!(
                 "The roster lists {} twice.",

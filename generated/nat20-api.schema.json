@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.58"
+    "version": "1.0.0-dev.67"
   },
   "$defs": {
     "Ability": {
@@ -675,6 +675,58 @@
         "wagons"
       ]
     },
+    "CardCame": {
+      "description": "How a road card came to the table (API-53).",
+      "oneOf": [
+        {
+          "description": "The DM picked it among the offered (`pick_card`).",
+          "type": "string",
+          "const": "dm_pick"
+        },
+        {
+          "description": "The game loop picked the first card rolled because the DM did not answer.",
+          "type": "string",
+          "const": "engine_pick"
+        },
+        {
+          "description": "An earlier choice queued it (`add_card` with `soon`): no roll, no pick.",
+          "type": "string",
+          "const": "soon"
+        }
+      ]
+    },
+    "CardChoiceDm": {
+      "description": "One choice on a road card, as the DM sees it (API-55): the players' words and the\ncustoms taking it keeps or breaks. DM only; players see [`CardChoiceView`].",
+      "type": "object",
+      "properties": {
+        "breaks": {
+          "description": "The customs taking it breaks, by id from the world's customs (ENG-39). Empty when it\ntouches none.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "id": {
+          "description": "The choice id; `choose_card` takes it.",
+          "type": "string"
+        },
+        "keeps": {
+          "description": "The customs taking it keeps, by id from the world's customs (ENG-39): the DM narrates\nwho reacts, never a verdict. Empty when it touches none.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "description": "What the players read.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
     "CardChoiceView": {
       "description": "One choice on a road card.",
       "type": "object",
@@ -728,15 +780,22 @@
       "type": "object",
       "properties": {
         "choices": {
-          "description": "The choices.",
+          "description": "The choices, with the customs each keeps or breaks (API-55).",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/CardChoiceView"
+            "$ref": "#/$defs/CardChoiceDm"
           }
         },
         "id": {
           "description": "The card id in the world's deck.",
           "type": "string"
+        },
+        "note": {
+          "description": "What only the DM reads: the card's one oddity, to voice at every meeting (API-53).",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "said": {
           "description": "What each Blade has said so far.",
@@ -744,6 +803,17 @@
           "items": {
             "$ref": "#/$defs/CardSaid"
           }
+        },
+        "scout": {
+          "description": "The skill the scout checked with when the card was shown (API-54); absent for a card\nwith nothing to find.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Skill"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "target": {
           "description": "Who decides it.",
@@ -847,6 +917,26 @@
           "description": "The escort themselves: the Hired Blades vote.",
           "type": "string",
           "const": "blades"
+        }
+      ]
+    },
+    "CardWhen": {
+      "description": "When a road card is drawn (AGT-91), as the deck file's `when` says.",
+      "oneOf": [
+        {
+          "description": "After a journey leg.",
+          "type": "string",
+          "const": "road"
+        },
+        {
+          "description": "After a night.",
+          "type": "string",
+          "const": "night"
+        },
+        {
+          "description": "When a leg ends in the card's place: the place's pay-offs (ENG-35).",
+          "type": "string",
+          "const": "arrival"
         }
       ]
     },
@@ -1648,6 +1738,42 @@
           ]
         },
         {
+          "description": "The state with the picked card on the table, or already decided when nobody could\nspeak on it.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "pick_card"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The state with the new scout in the world.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "scout"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
           "description": "The saved party.",
           "type": "object",
           "properties": {
@@ -2211,6 +2337,41 @@
       "required": [
         "successes",
         "failures"
+      ]
+    },
+    "DeedDm": {
+      "description": "A deed the world remembers, as the DM sees it (API-52).",
+      "type": "object",
+      "properties": {
+        "by": {
+          "description": "Who did it; empty when nobody spoke.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        },
+        "contract": {
+          "description": "The contract it was done in: 1 for a party's first.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "day": {
+          "description": "The day it was done.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "deed": {
+          "description": "The deed id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "deed",
+        "by",
+        "day",
+        "contract"
       ]
     },
     "DiceRolled": {
@@ -3730,6 +3891,218 @@
           ]
         },
         {
+          "description": "The world remembered a deed (Milestone 11, API-52): a road card's choice wrote it, or a\ncard fight's named NPC died. DM only: deeds never reach a player view, prompt or line\n(Rule 3); the players remember what they did through the story.",
+          "type": "object",
+          "properties": {
+            "by": {
+              "description": "Who did it: the seats whose word made the choice, the handles that rolled the check it\nsits under, or the creature that dealt the last blow; empty when nobody spoke.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            },
+            "contract": {
+              "description": "The contract it was done in: 1 for a party's first.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "day": {
+              "description": "The day it was done.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "deed": {
+              "description": "The deed id, in snake_case, as the deck names it (`killed_<npc>` for a death).",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "deed_remembered"
+            }
+          },
+          "required": [
+            "kind",
+            "deed",
+            "by",
+            "day",
+            "contract"
+          ]
+        },
+        {
+          "description": "A draw offered two or three road cards for the DM's pick (API-53), after their draw\nrolls. DM only: the players never learn which cards were passed over.",
+          "type": "object",
+          "properties": {
+            "cards": {
+              "description": "The cards, in roll order: the first is the one the engine takes when the DM does\nnot pick.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/OfferedCard"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "cards_offered"
+            },
+            "rolls": {
+              "description": "The draw roll behind each card, in the same order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RollId"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "cards",
+            "rolls"
+          ]
+        },
+        {
+          "description": "A new contract took up the world the last one left (API-51, ENG-37), right after\n`start_campaign`'s own lines: the party traveled from where the last contract ended to\nthis one's start. The DM tells the trip in one line. Public.",
+          "type": "object",
+          "properties": {
+            "days": {
+              "description": "The days the trip took at a normal pace: 0 when the party was already there.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "from": {
+              "description": "The place the party was in when the last contract ended.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "trip_to_start"
+            }
+          },
+          "required": [
+            "kind",
+            "from",
+            "days"
+          ]
+        },
+        {
+          "description": "A Hired Blade walks ahead of the caravan as the scout (API-54), from now until another\ntakes the role. Public.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The scout.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "scout_ahead"
+            }
+          },
+          "required": [
+            "kind",
+            "actor"
+          ]
+        },
+        {
+          "description": "The scout looked ahead before a road card was shown (API-54): after the scout's check\nroll, right before `card_drawn`. On a success the card offers its forewarned choice.\nPublic, like the roll.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "The scout.",
+              "$ref": "#/$defs/Handle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "scout_looked"
+            },
+            "roll": {
+              "description": "The check roll.",
+              "$ref": "#/$defs/RollId"
+            },
+            "saw": {
+              "description": "The check succeeded: the party meets the card forewarned.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "actor",
+            "roll",
+            "saw"
+          ]
+        },
+        {
+          "description": "How the next card came to the table (API-53), right before its `card_drawn`. DM only.\nNot logged for a zone's only card, whose draw roll alone shows it.",
+          "type": "object",
+          "properties": {
+            "came": {
+              "description": "How it came.",
+              "$ref": "#/$defs/CardCame"
+            },
+            "card": {
+              "description": "The card id.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "card_picked"
+            },
+            "reason": {
+              "description": "The pick's one-line reason; absent for a soon card.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "card",
+            "came"
+          ]
+        },
+        {
+          "description": "The card that goes on the table, as the DM sees it (AGT-91), right before its\n`card_drawn`, after any `card_picked` and `scout_looked`: logged for every card, so a\nrun's record names each card, when it came and what it paid off. DM only.",
+          "type": "object",
+          "properties": {
+            "card": {
+              "description": "The card id.",
+              "type": "string"
+            },
+            "forewarned": {
+              "description": "The forewarned choice the scout's look opened (API-54), by choice id; absent when\nthe scout did not see it, or the card has none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "const": "card_shown"
+            },
+            "reads": {
+              "description": "The deeds it reads, as in `OfferedCard.reads`: a card that reads one pays off\nwhat the party did. Empty, and left out, when it reads none.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/DeedDm"
+              }
+            },
+            "when": {
+              "description": "When it was drawn: after a leg, after a night, or on arrival.",
+              "$ref": "#/$defs/CardWhen"
+            },
+            "zone": {
+              "description": "The deck zone it came from: a road zone or a place id.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "card",
+            "zone",
+            "when"
+          ]
+        },
+        {
           "description": "The caravan reached the escort contract's destination and the Blades' pay was settled\n(API-47), after its `wage` ledger entries. Public.",
           "type": "object",
           "properties": {
@@ -4588,6 +4961,67 @@
         "alive"
       ]
     },
+    "OfferedCard": {
+      "description": "A road card a draw offered for the DM's pick (API-53). DM only.",
+      "type": "object",
+      "properties": {
+        "choices": {
+          "description": "The choices it would offer, with the customs each keeps or breaks (API-55).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardChoiceDm"
+          }
+        },
+        "id": {
+          "description": "The card id: what `pick_card` names.",
+          "type": "string"
+        },
+        "note": {
+          "description": "What only the DM reads: the card's one oddity.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reads": {
+          "description": "The deeds it reads (AGT-91): the remembered deeds its `if`, or an offered choice's\n`if`, names, with their records. A card that reads one continues what the party did.\nEmpty, and left out, when it reads none.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DeedDm"
+          }
+        },
+        "scout": {
+          "description": "The skill the scout would check with (API-54); absent for a card with nothing to find.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Skill"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target": {
+          "description": "Who would decide it.",
+          "$ref": "#/$defs/CardTarget"
+        },
+        "text": {
+          "description": "What the players would read.",
+          "type": "string"
+        },
+        "zone": {
+          "description": "The deck zone it came from: a road zone or a place id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "zone",
+        "target",
+        "text",
+        "choices"
+      ]
+    },
     "OptionArea": {
       "description": "The area an option fills, and a preview of each aim.",
       "type": "object",
@@ -5196,17 +5630,22 @@
           "const": "no_inn"
         },
         {
-          "description": "`travel` or `rest_night` while a road card waits for its decision.",
+          "description": "`travel`, `rest_night`, `pass_time` or `scout` while a road card waits for its\ndecision, or while a draw's cards wait for the DM's pick (API-53).",
           "type": "string",
           "const": "card_pending"
         },
         {
-          "description": "`choose_card` with no card on the table.",
+          "description": "`choose_card` with no card on the table, also while a draw's cards wait for the DM's\npick.",
           "type": "string",
           "const": "no_card"
         },
         {
-          "description": "`choose_card` by a creature with no say on this card, or `choose_card`, `level_up` or\n`answer_level_up` not sent as the actor itself.",
+          "description": "`pick_card` when no cards are offered, or with a card that is not one of them (API-53).",
+          "type": "string",
+          "const": "card_not_offered"
+        },
+        {
+          "description": "`choose_card` by a creature with no say on this card, `scout` by a creature that is\nnot a Hired Blade, or `choose_card`, `scout`, `level_up` or `answer_level_up` not sent\nas the actor itself.",
           "type": "string",
           "const": "no_say"
         },
@@ -5979,6 +6418,52 @@
           ]
         },
         {
+          "description": "Puts one of the offered road cards on the table (API-53; protocol §4.13): the DM's pick\namong the two or three cards a draw offered (`world.offered`). DM only.",
+          "type": "object",
+          "properties": {
+            "card": {
+              "description": "The card id, from `world.offered`.",
+              "type": "string"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "pick_card"
+            },
+            "fallback": {
+              "description": "The game loop picked the first card rolled because the DM did not answer: the\npick is the engine's, not the DM's.",
+              "type": "boolean",
+              "default": false
+            },
+            "reason": {
+              "description": "Why this card, in one line: kept in the session log and the run report, DM only.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "cmd",
+            "card",
+            "reason"
+          ]
+        },
+        {
+          "description": "Walks ahead of the caravan as the scout (API-54; protocol §4.13): a Hired Blade takes\nthe role for every leg until another Blade takes it. When a leg's road card names a\nskill to scout with, the scout's Wisdom check comes before the card is shown, and a\nsuccess opens the card's forewarned choice. As the actor itself, never `dm`; never the\ncaravan's owner.",
+          "type": "object",
+          "properties": {
+            "actor": {
+              "description": "Who walks ahead: the viewer's own creature, a Hired Blade.",
+              "$ref": "#/$defs/Handle"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "scout"
+            }
+          },
+          "required": [
+            "cmd",
+            "actor"
+          ]
+        },
+        {
           "description": "Saves the party for the next game session (API-45; protocol §4.15): the campaign's\nparty, else every party character built from a pregen, and the world. DM only.",
           "type": "object",
           "properties": {
@@ -6610,8 +7095,19 @@
             "$ref": "#/$defs/RosterCharacter"
           }
         },
+        "contract_start": {
+          "description": "The party and the world as they stood when the contract under way, or the last one,\nbegan (API-51): the roster that `start_campaign` started it from. A client plays that\ncontract again from its start with a roster of these characters and this world,\n`format` as above and no `contract_start`. Absent when no campaign ran. Opaque like\n`world`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RosterStart"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "format": {
-          "description": "Format version, 1. Another is refused.",
+          "description": "Format version, 2 (API-51). Another is refused: a format 1 roster was saved before the\nworld kept its memory apart from the contract, and is not converted.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0
@@ -6741,16 +7237,44 @@
         "picks"
       ]
     },
+    "RosterStart": {
+      "description": "The party and the world at a contract's start (API-51).",
+      "type": "object",
+      "properties": {
+        "characters": {
+          "description": "The characters, in party order, as the contract found them.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RosterCharacter"
+          }
+        },
+        "world": {
+          "description": "The world the contract took up; absent when it started a new world.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RosterWorld"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "characters"
+      ]
+    },
     "RosterWorld": {
       "description": "The world part of a roster.",
       "type": "object",
       "properties": {
         "map": {
-          "description": "The world map's id, e.g. `wend`. A campaign on another map starts fresh, and so does one\nwhose saved escort contract is done: the party keep their characters and take the\ncampaign's contract again from its start.",
+          "description": "The world map's id, e.g. `wend`. A campaign on another map starts fresh. One on this\nmap whose saved escort contract is done keeps the world's memory and starts its own\ncontract (ENG-37).",
           "type": "string"
         },
         "state": {
-          "description": "The world's state, as the engine wrote it."
+          "description": "The world's state, as the engine wrote it: `{memory, contract}` (API-51), the part that\noutlives a contract and the part the next one rebuilds."
         }
       },
       "additionalProperties": false,
@@ -7990,6 +8514,13 @@
           "description": "The time.",
           "$ref": "#/$defs/ClockView"
         },
+        "deeds": {
+          "description": "Every deed the world remembers, by id (Milestone 11, API-52): this contract's and the\nones before. DM only.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DeedDm"
+          }
+        },
         "escort": {
           "description": "The escort contract, when the party is hired on one (API-47).",
           "anyOf": [
@@ -8006,6 +8537,13 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/NpcDm"
+          }
+        },
+        "offered": {
+          "description": "The cards a draw offered, in roll order, waiting for the DM's `pick_card` (API-53);\n`travel`, `rest_night`, `pass_time` and `choose_card` wait for the pick.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OfferedCard"
           }
         },
         "places": {
@@ -8028,6 +8566,17 @@
           "items": {
             "type": "string"
           }
+        },
+        "scout": {
+          "description": "The Hired Blade who walks ahead as the scout (API-54).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Handle"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "today": {
           "description": "Miles the party can still travel today.",
@@ -8106,6 +8655,17 @@
           "items": {
             "$ref": "#/$defs/RoadKnown"
           }
+        },
+        "scout": {
+          "description": "The Hired Blade who walks ahead as the scout (API-54).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Handle"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "today": {
           "description": "Miles the party can still travel today.",

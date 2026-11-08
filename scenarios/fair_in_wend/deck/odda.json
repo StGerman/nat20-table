@@ -1,0 +1,90 @@
+{
+    "_comment": "Fair in Wend's own cards (Faces of the Road, MAP-10, ENG-38): they join the world's deck only while this pack's contract runs. Our own text, CC-BY-4.0, credit 'nat20-table contributors'.",
+    "cards": [
+        {
+            "id": "the_fair_gate",
+            "zone": "wendmouth",
+            "when": "arrival",
+            "target": "caravan",
+            "owner_pick": "queue",
+            "once": "contract",
+            "if": "crossed_millbeck",
+            "text": "At the Saltmouth gate the fair warden is chalking stall places on a board. The pitches by the well are nearly gone. He looks at Odda's wheat, then at the queue of carts behind her.",
+            "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. The warden has heard about the Millbeck bridge before the wagon arrives: carters talk at the gate. If there was a fight there (toll_men_fought), he asks the Blades about it before he looks at the wheat; if they paid or were let through, he says the reeve has never had a toll on that bridge. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong.",
+            "choices": [
+                {
+                    "id": "sack",
+                    "text": "Give the warden a sack of wheat for a pitch by the well.",
+                    "unless": "toll_men_fought",
+                    "effects": [
+                        {"do": "cargo", "good": "wheat", "change": -50},
+                        {"do": "remember", "deed": "bought_a_pitch_by_the_well"}
+                    ]
+                },
+                {
+                    "id": "bridge_word",
+                    "text": "Tell the warden what happened at the Millbeck bridge.",
+                    "if": "toll_men_fought",
+                    "effects": [
+                        {"do": "remember", "deed": "told_the_warden_of_the_bridge"}
+                    ]
+                },
+                {
+                    "id": "queue",
+                    "text": "Wait in the queue with the other carts.",
+                    "unless": "beat_rufus_to_the_fair",
+                    "effects": [
+                        {"do": "delay", "minutes": 60},
+                        {"do": "remember", "deed": "waited_at_the_fair_gate"}
+                    ]
+                },
+                {
+                    "id": "old_place",
+                    "text": "Take the pitch Odda has every year, while it is still free.",
+                    "if": "beat_rufus_to_the_fair",
+                    "effects": [
+                        {"do": "remember", "deed": "took_the_old_place"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "meadow_track",
+            "zone": "lowland",
+            "target": "caravan",
+            "owner_pick": "take",
+            "once": "contract",
+            "text": "Odda stands up on the wagon's seat and looks across the water meadows. There is a track over them, she says, that would put the wagon at the fair half a day ahead of anyone on the river road.",
+            "note": "Odda wants to beat Rufus to the fair, as she did for twenty autumns. The track crosses the valley's common meadow, which everyone may use and nobody may rut; Torva says so. A failure loses the half day and more, and the wagon comes out of the meadows plastered to the axles. Keeping to the road lets Rufus get ahead, and his cards know it.",
+            "choices": [
+                {
+                    "id": "take",
+                    "text": "Take the meadow track.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "survival",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "beat_rufus_to_the_fair"}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 240},
+                                {"do": "remember", "deed": "lost_in_the_meadows"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "keep",
+                    "text": "Keep to the river road.",
+                    "effects": [
+                        {"do": "remember", "deed": "rufus_got_ahead"}
+                    ]
+                }
+            ]
+        }
+    ]
+}

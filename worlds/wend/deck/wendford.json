@@ -1,0 +1,179 @@
+{
+    "_comment": "Arrival cards at Wendford (Faces of the Road, MAP-10): the reeve's village, which the next contract up the valley meets again. Each reads what the Blades did at the Millbeck bridge. Our own text, CC-BY-4.0, credit 'nat20-table contributors'.",
+    "cards": [
+        {
+            "id": "toll_man_stocks",
+            "zone": "wendford",
+            "when": "arrival",
+            "target": "blades",
+            "if": "toll_men_spared",
+            "once": true,
+            "text": "On the green, the reeve has the man from the Millbeck bridge in the stocks, borrowed helmet and all, his tally stick at his feet.",
+            "note": "Before the choices, say in one plain sentence what happened last time: the Blades talked the two toll men off the bridge. Col is in the stocks; Dunn has gone home to the farm. The goblins took their flock, and Col sat on the bridge to pay Rufus a farm debt. Osric is careful and proud, and he was the one who sent them away from the common chest. Three threads meet here: the bridge, the reeve's anger, and Rufus's debts. Maren speaks for Col.",
+            "choices": [
+                {
+                    "id": "speak",
+                    "text": "Speak for him.",
+                    "keeps": [
+                        "mercy_to_yielded"
+                    ],
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "col_owes_blades"}
+                            ],
+                            "failure": [
+                                {"do": "remember", "deed": "offended_osric"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "fine",
+                    "text": "Pay his fine.",
+                    "keeps": [
+                        "debt_paid"
+                    ],
+                    "effects": [
+                        {
+                            "do": "pay",
+                            "who": "party",
+                            "copper": 10
+                        },
+                        {"do": "remember", "deed": "paid_cols_fine"}
+                    ]
+                },
+                {
+                    "id": "leave",
+                    "text": "Leave him to the reeve.",
+                    "effects": [
+                        {"do": "remember", "deed": "left_col_in_the_stocks"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "osric_hears",
+            "zone": "wendford",
+            "when": "arrival",
+            "target": "blades",
+            "if": "toll_men_fought",
+            "once": true,
+            "text": "The reeve meets the wagon at the ford with the common chest's tally sticks under his arm. He has heard about the Millbeck bridge, and he wants to hear it again from the Blades.",
+            "note": "Before the choices, say in one plain sentence what happened last time: the toll men at the Millbeck bridge fought the Blades, and how it ended. Shown Tobin's marked account, Osric goes grey and tells them who the men were: Col and Dunn from the Highsteads, Rufus's debt, and that he sent them away from the chest himself. Custom bent by tribute: he was saving the chest for the steward's visit. No choice blames the Blades and no pay is withheld; the weight is Osric's. Bren speaks: they swung first.",
+            "choices": [
+                {
+                    "id": "show_mark",
+                    "text": "Show him the peddler's mark.",
+                    "if": "peddler_testified",
+                    "effects": [
+                        {"do": "remember", "deed": "showed_osric_the_paper"}
+                    ]
+                },
+                {
+                    "id": "tell",
+                    "text": "Tell it in your own words.",
+                    "unless": "peddler_testified",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "told_osric"}
+                            ],
+                            "failure": [
+                                {"do": "remember", "deed": "osric_kept_his_counsel"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "ask",
+                    "text": "Ask him who the men were.",
+                    "effects": [
+                        {"do": "remember", "deed": "asked_osric_who_they_were"}
+                    ]
+                },
+                {
+                    "id": "say_nothing",
+                    "text": "Say nothing.",
+                    "effects": [
+                        {"do": "remember", "deed": "kept_the_bridge_from_osric"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "toll_paid_word",
+            "zone": "wendford",
+            "when": "arrival",
+            "target": "blades",
+            "if": "paid_the_toll",
+            "unless": "toll_men_spared",
+            "once": true,
+            "text": "The reeve stops the Blades by the well. Word has come up the river that they paid a toll at the Millbeck bridge to men he never sent.",
+            "note": "Before the choices, say in one plain sentence what happened last time: the Blades paid the two men at the bridge and crossed. Osric is angry at the toll, not at the Blades, and ashamed of what he guesses. Torva asks him who the men were; he knows.",
+            "choices": [
+                {
+                    "id": "describe",
+                    "text": "Tell him who took it.",
+                    "effects": [
+                        {"do": "remember", "deed": "told_osric_of_the_toll"}
+                    ]
+                },
+                {
+                    "id": "peace",
+                    "text": "Tell him you paid to keep the peace.",
+                    "effects": [
+                        {"do": "remember", "deed": "kept_the_peace_at_the_bridge"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "ford_mud",
+            "zone": "wendford",
+            "when": "arrival",
+            "target": "blades",
+            "if": "forded_the_millbeck",
+            "once": true,
+            "text": "The reeve is at the upper ford of the Millbeck with his sleeves rolled up. Somebody's wagon churned it to mud last week, and now the sheep will not cross.",
+            "note": "Before the choices, say in one plain sentence what happened last time: the Blades went round the toll men and forded the beck upstream. Osric does not know whose wagon it was unless they tell him. Joke: the sheep have opinions. Maren will tell the truth if nobody else does.",
+            "choices": [
+                {
+                    "id": "help",
+                    "text": "Help him mend the ford.",
+                    "effects": [
+                        {"do": "delay", "minutes": 60},
+                        {"do": "remember", "deed": "mended_the_ford"}
+                    ]
+                },
+                {
+                    "id": "own_up",
+                    "text": "Tell him it was your wagon.",
+                    "keeps": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {"do": "remember", "deed": "owned_up_to_the_ford"}
+                    ]
+                },
+                {
+                    "id": "walk_on",
+                    "text": "Wish him luck and walk on.",
+                    "effects": [
+                        {"do": "remember", "deed": "left_osric_in_the_mud"}
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,64 @@
+{
+    "id": "twb_wendford",
+    "description": "The Way Back (MAP-12): Wendford, the reeve's village, on the way up. The wagon stands on the green by the well; the alehouse has rooms; the reeve keeps his porch.",
+    "anchors": [
+        {
+            "id": "by_the_wagon",
+            "name": "by the wagon on the green",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "the_well",
+            "name": "the well",
+            "position_ft": {
+                "x_ft": 10.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "alehouse_door",
+            "name": "the alehouse door",
+            "position_ft": {
+                "x_ft": -20.0,
+                "y_ft": 10.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "the_ford",
+            "name": "the ford",
+            "position_ft": {
+                "x_ft": 40.0,
+                "y_ft": -5.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "by_the_wagon",
+        "the_well",
+        "alehouse_door",
+        "the_ford"
+    ],
+    "checks": [
+        {
+            "id": "price_talk",
+            "test": {
+                "kind": "skill",
+                "skill": "persuasion"
+            },
+            "dc": 10,
+            "on_success": [
+                {
+                    "kind": "flag",
+                    "flag": "heard_why_salt_is_dear"
+                }
+            ]
+        }
+    ]
+}

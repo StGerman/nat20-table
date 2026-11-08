@@ -10,8 +10,9 @@
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { NARRATION_DIGEST, readDigest, runDigest } from "./digest.ts";
-import { judgeRun, type CheckLine, type Judge } from "./judge.ts";
+import { judgeRun, ModelJudge, type CheckLine, type Judge } from "./judge.ts";
 import { CONFIRMATIONS_JSON, NARRATION_CHECK } from "../play/verdict.ts";
+import { readRunRecord, RUN_JSON } from "../play/record.ts";
 
 /** An earlier check, moved aside while a new one runs: its answers carry over only to the same flags. */
 export const PREVIOUS_CHECK = "narration-check.previous.jsonl";
@@ -21,6 +22,15 @@ export interface NarrationCheck {
   ok: boolean;
   /** What to print and put in the report. */
   lines: string[];
+}
+
+/**
+ * The model judge for the run in `dir`: a living-world run (its run record names a campaign) is
+ * also asked the story-space question about the human's character (AGT-91).
+ */
+export function modelJudgeFor(dir: string): ModelJudge {
+  const run = existsSync(path.join(dir, RUN_JSON)) ? readRunRecord(dir) : undefined;
+  return new ModelJudge(run?.campaign ? { storySpace: run.seats.human ? { human: run.seats.human } : {} } : {});
 }
 
 /**

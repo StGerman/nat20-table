@@ -1,0 +1,13 @@
+{
+  "_comment": "The customs of the Wend world (ENG-39, storytelling bible \"Ethics\"). A card choice names the ones it keeps or breaks; only those who saw or heard react. CC-BY-4.0.",
+  "customs": [
+    {"id": "bread_shared", "people": "valley_folk", "text": "Bread is shared."},
+    {"id": "debt_paid", "people": "valley_folk", "text": "A debt is paid."},
+    {"id": "word_kept", "people": "valley_folk", "text": "A word is kept."},
+    {"id": "no_blood_inside_gate", "people": "valley_folk", "text": "No blood inside the gate."},
+    {"id": "mercy_to_yielded", "people": "valley_folk", "text": "Mercy to one who yields."},
+    {"_comment": "Saltmouth's new money: Rufus holds it.", "id": "paper_is_law", "people": "saltmouth", "text": "A signed paper is the law."},
+    {"_comment": "The hill bands.", "id": "kin_before_strangers", "people": "hill_bands", "text": "Kin before strangers."},
+    {"_comment": "The roadfolk: nobody above the family.", "id": "road_is_free", "people": "roadfolk", "text": "The road is free."}
+  ]
+}

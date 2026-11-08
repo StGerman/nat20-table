@@ -35,6 +35,10 @@ Vera Sokolova, 54, is a literary translator with a MacBook Air (Apple Silicon) a
 
 Run the Vera test in the `vera` subagent (`.claude/agents/vera.md`; `/vera <file or text>`) with only the text a player would see: never a design doc, rationale or thread history. Required for new or changed card choices, a DM narration sample at each milestone exit, and changed TUI lines; recommended for onboarding and install steps, error and recovery text, the journal, and AI player lines. Quote her answer verbatim in the PR or thread. Cloud threads don't load repo `.claude/agents/` or `.claude/skills/`: there, run a general-purpose subagent whose prompt is the body of `vera.md` plus the text, and say the verdict came from the fallback, which may still see CLAUDE.md.
 
+## Dramaturg: Zoya Katz
+
+Zoya keeps the quests connected and on the storytelling bible (`.claude/agents/dramaturg.md`; `/dramaturg board <world> | read <pack> | cards <pack> | …`). Run her before a new or changed pack, scene or card goes to Stas, and quote her board check in the PR or thread. Her bible is `.claude/skills/dramaturg/references/`, changed only by PR. Cloud threads: use the fallback described for Vera, with the body of `dramaturg.md`.
+
 ## Milestones
 
 Status, exit criteria and task ids for each milestone are in `TASKS.md` § Milestones. Work one milestone at a time, in order, unless the task list says a row is independent.

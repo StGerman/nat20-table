@@ -340,7 +340,7 @@ test("with no human at the table, the DM's prompt and tools leave the human out 
 test("the DM's scene openings, table turns and summaries get the long limit; --dm-timeout-ms sets every wake's", () => {
   const config = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).sessionConfig();
   assert.equal(config.turnTimeoutMs, DM_TURN_TIMEOUT_MS);
-  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS });
+  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS, suggest: DM_LONG_WAKE_TIMEOUT_MS });
   const flat = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE, turnTimeoutMs: 20_000 }).sessionConfig();
   assert.equal(flat.turnTimeoutMs, 20_000);
   assert.equal(flat.turnTimeoutsMs, undefined);
@@ -442,6 +442,24 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   assert.ok(names.includes("pass_time"), names.join(", "));
   assert.match(dm.systemPrompt, /- Time in a place: .*call pass_time once for it/);
   assert.ok(!mill.includes("pass_time"));
+  // The DM's pick (AGT-88): the road's DM picks among offered cards by the rule; a pack played in order has no deck.
+  assert.ok(names.includes("pick_card"), names.join(", "));
+  assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line\./);
+  assert.ok(!mill.includes("pick_card"));
+  // Scouting at the table (AGT-90): the DM opens a scouted card on what the scout saw.
+  assert.match(dm.systemPrompt, /- The scout: .*If they saw it, open the card on what the scout saw/);
+  // Story-space (AGT-89, design decision 9): five rules on the road, the human's character named in the second.
+  const space = dm.systemPrompt.slice(dm.systemPrompt.indexOf("## Story-space"));
+  assert.equal(space.split("\n").filter((l) => l.startsWith("- ")).length, 5, space);
+  assert.match(space, /- Open every scene on its problem/);
+  assert.match(space, /- Put bren in that problem/);
+  assert.match(space, /co-writers: .*never decide for them/);
+  assert.match(space, /- Tie every consequence to a deed or a roll/);
+  assert.match(space, /- No "pleasant nothing"/);
+  const noHuman = new ModelDm({ pack: wend, players: ["bren", "torva", "maren", "ilsa"], choice: CHOICE, livingWorld: true }).systemPrompt;
+  assert.match(noHuman, /- Put one of the party in that problem/);
+  assert.doesNotMatch(noHuman, /undefined/);
+  assert.doesNotMatch(new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).systemPrompt, /## Story-space/, "The Silent Mill keeps its prompt");
 });
 
 test("the DM speaks to the human's character as you and names everyone else; a table with no human has no such rule", () => {

@@ -8,9 +8,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AdvantageState, CardChoiceView, CardDecided, CardTarget, ClockView, Condition, DamageType,
-    Handle, LegView, LifeState, Mode, NightView, OptionId, PointFt, RollId, Side,
-    state::CombatOverReason,
+    AdvantageState, CardCame, CardChoiceView, CardDecided, CardTarget, CardWhen, ClockView,
+    Condition, DamageType, DeedDm, Handle, LegView, LifeState, Mode, NightView, OfferedCard,
+    OptionId, PointFt, RollId, Side, state::CombatOverReason,
 };
 
 /// One log entry.
@@ -405,6 +405,85 @@ pub enum EventKind {
         minutes: u32,
         /// The world's time after it.
         clock: ClockView,
+    },
+    /// The world remembered a deed (Milestone 11, API-52): a road card's choice wrote it, or a
+    /// card fight's named NPC died. DM only: deeds never reach a player view, prompt or line
+    /// (Rule 3); the players remember what they did through the story.
+    DeedRemembered {
+        /// The deed id, in snake_case, as the deck names it (`killed_<npc>` for a death).
+        deed: String,
+        /// Who did it: the seats whose word made the choice, the handles that rolled the check it
+        /// sits under, or the creature that dealt the last blow; empty when nobody spoke.
+        by: Vec<Handle>,
+        /// The day it was done.
+        day: u32,
+        /// The contract it was done in: 1 for a party's first.
+        contract: u32,
+    },
+    /// A draw offered two or three road cards for the DM's pick (API-53), after their draw
+    /// rolls. DM only: the players never learn which cards were passed over.
+    CardsOffered {
+        /// The cards, in roll order: the first is the one the engine takes when the DM does
+        /// not pick.
+        cards: Vec<OfferedCard>,
+        /// The draw roll behind each card, in the same order.
+        rolls: Vec<RollId>,
+    },
+    /// A new contract took up the world the last one left (API-51, ENG-37), right after
+    /// `start_campaign`'s own lines: the party traveled from where the last contract ended to
+    /// this one's start. The DM tells the trip in one line. Public.
+    TripToStart {
+        /// The place the party was in when the last contract ended.
+        from: String,
+        /// The days the trip took at a normal pace: 0 when the party was already there.
+        days: u32,
+    },
+    /// A Hired Blade walks ahead of the caravan as the scout (API-54), from now until another
+    /// takes the role. Public.
+    ScoutAhead {
+        /// The scout.
+        actor: Handle,
+    },
+    /// The scout looked ahead before a road card was shown (API-54): after the scout's check
+    /// roll, right before `card_drawn`. On a success the card offers its forewarned choice.
+    /// Public, like the roll.
+    ScoutLooked {
+        /// The scout.
+        actor: Handle,
+        /// The check roll.
+        roll: RollId,
+        /// The check succeeded: the party meets the card forewarned.
+        saw: bool,
+    },
+    /// How the next card came to the table (API-53), right before its `card_drawn`. DM only.
+    /// Not logged for a zone's only card, whose draw roll alone shows it.
+    CardPicked {
+        /// The card id.
+        card: String,
+        /// How it came.
+        came: CardCame,
+        /// The pick's one-line reason; absent for a soon card.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+    },
+    /// The card that goes on the table, as the DM sees it (AGT-91), right before its
+    /// `card_drawn`, after any `card_picked` and `scout_looked`: logged for every card, so a
+    /// run's record names each card, when it came and what it paid off. DM only.
+    CardShown {
+        /// The card id.
+        card: String,
+        /// The deck zone it came from: a road zone or a place id.
+        zone: String,
+        /// When it was drawn: after a leg, after a night, or on arrival.
+        when: CardWhen,
+        /// The deeds it reads, as in `OfferedCard.reads`: a card that reads one pays off
+        /// what the party did. Empty, and left out, when it reads none.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        reads: Vec<DeedDm>,
+        /// The forewarned choice the scout's look opened (API-54), by choice id; absent when
+        /// the scout did not see it, or the card has none.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        forewarned: Option<String>,
     },
     /// The caravan reached the escort contract's destination and the Blades' pay was settled
     /// (API-47), after its `wage` ledger entries. Public.

@@ -17,6 +17,10 @@ use crate::{
 /// A campaign file as the engine reads it: only its `world` block.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CampaignFile {
+    /// The pack's id: a contract under way remembers it, so a roster opens only its own pack
+    /// (ENG-38)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
     /// The world block
     pub world: CampaignWorld,
 }

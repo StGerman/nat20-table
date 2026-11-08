@@ -7,7 +7,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::Handle;
+use crate::{Handle, Skill};
 
 /// How fast the party travels (SRD 5.2.1, Travel Pace).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -84,6 +84,24 @@ pub struct CardChoiceView {
     pub text: String,
 }
 
+/// One choice on a road card, as the DM sees it (API-55): the players' words and the
+/// customs taking it keeps or breaks. DM only; players see [`CardChoiceView`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CardChoiceDm {
+    /// The choice id; `choose_card` takes it.
+    pub id: String,
+    /// What the players read.
+    pub text: String,
+    /// The customs taking it keeps, by id from the world's customs (ENG-39): the DM narrates
+    /// who reacts, never a verdict. Empty when it touches none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keeps: Vec<String>,
+    /// The customs taking it breaks, by id from the world's customs (ENG-39). Empty when it
+    /// touches none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub breaks: Vec<String>,
+}
+
 /// One seat's word on the card on the table: a Blade's advice or vote.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct CardSaid {
@@ -104,12 +122,69 @@ pub struct CardDm {
     pub target: CardTarget,
     /// What the players read.
     pub text: String,
-    /// The choices.
-    pub choices: Vec<CardChoiceView>,
+    /// The choices, with the customs each keeps or breaks (API-55).
+    pub choices: Vec<CardChoiceDm>,
     /// What each Blade has said so far.
     pub said: Vec<CardSaid>,
     /// The Blades who still have to speak.
     pub waiting_for: Vec<Handle>,
+    /// What only the DM reads: the card's one oddity, to voice at every meeting (API-53).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    /// The skill the scout checked with when the card was shown (API-54); absent for a card
+    /// with nothing to find.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<Skill>,
+}
+
+/// A road card a draw offered for the DM's pick (API-53). DM only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct OfferedCard {
+    /// The card id: what `pick_card` names.
+    pub id: String,
+    /// The deck zone it came from: a road zone or a place id.
+    pub zone: String,
+    /// Who would decide it.
+    pub target: CardTarget,
+    /// What the players would read.
+    pub text: String,
+    /// The choices it would offer, with the customs each keeps or breaks (API-55).
+    pub choices: Vec<CardChoiceDm>,
+    /// What only the DM reads: the card's one oddity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    /// The skill the scout would check with (API-54); absent for a card with nothing to find.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<Skill>,
+    /// The deeds it reads (AGT-91): the remembered deeds its `if`, or an offered choice's
+    /// `if`, names, with their records. A card that reads one continues what the party did.
+    /// Empty, and left out, when it reads none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reads: Vec<DeedDm>,
+}
+
+/// When a road card is drawn (AGT-91), as the deck file's `when` says.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CardWhen {
+    /// After a journey leg.
+    Road,
+    /// After a night.
+    Night,
+    /// When a leg ends in the card's place: the place's pay-offs (ENG-35).
+    Arrival,
+}
+
+/// How a road card came to the table (API-53).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CardCame {
+    /// The DM picked it among the offered (`pick_card`).
+    DmPick,
+    /// The game loop picked the first card rolled because the DM did not answer.
+    EnginePick,
+    /// An earlier choice queued it (`add_card` with `soon`): no roll, no pick.
+    Soon,
 }
 
 /// The road card on the table, as a player sees it: no card id, zone or deck.
@@ -441,12 +516,36 @@ pub struct WorldDm {
     /// The road card waiting for its decision; `travel` and `rest_night` wait for it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card: Option<CardDm>,
+    /// The cards a draw offered, in roll order, waiting for the DM's `pick_card` (API-53);
+    /// `travel`, `rest_night`, `pass_time` and `choose_card` wait for the pick.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub offered: Vec<OfferedCard>,
     /// Every place NPC, alive or dead, met or not, in the world file's order (API-48).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub npcs: Vec<NpcDm>,
     /// The escort contract, when the party is hired on one (API-47).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub escort: Option<EscortDm>,
+    /// Every deed the world remembers, by id (Milestone 11, API-52): this contract's and the
+    /// ones before. DM only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deeds: Vec<DeedDm>,
+    /// The Hired Blade who walks ahead as the scout (API-54).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<Handle>,
+}
+
+/// A deed the world remembers, as the DM sees it (API-52).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct DeedDm {
+    /// The deed id.
+    pub deed: String,
+    /// Who did it; empty when nobody spoke.
+    pub by: Vec<Handle>,
+    /// The day it was done.
+    pub day: u32,
+    /// The contract it was done in: 1 for a party's first.
+    pub contract: u32,
 }
 
 /// The escort contract as the DM sees it.
@@ -571,6 +670,9 @@ pub struct WorldPlayer {
     /// merchant's caravan follows its route from a place on it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trip: Option<TripView>,
+    /// The Hired Blade who walks ahead as the scout (API-54).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<Handle>,
 }
 
 /// One journey leg, in `travel`'s result and the `traveled` event.
