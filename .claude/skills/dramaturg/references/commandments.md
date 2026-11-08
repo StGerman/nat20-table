@@ -47,7 +47,7 @@ Placing a person:
 1. **Never a passenger.** The human's character stands in every problem and decides first, and what they decide stays in the world, not in the DM's memory.
 2. **Every scene is a problem that resists.** It can be acted on, and a fight is never the only way through.
 3. **A choice names the action, never its outcome, and no choice is free.** Every way forward costs someone something.
-4. **The voice: dark in what happens, plain and short in the telling, made bearable by jokes.** About 120 words a beat, with the current reference narration (`reference-narration.md` beside this file) as the model; the same file holds a second, storyteller voice for the same beat. The darkness comes from the situation, never from a withheld fact.
+4. **The voice: dark in what happens, plain and short in the telling, made bearable by jokes.** About 120 words a beat, with the current reference narration (`reference-narration.md` beside this file) as the model: the Plain voice by default, and Fireside, a storyteller's telling of the same beat, as the second voice. The darkness comes from the situation, never from a withheld fact.
 5. **The DM narrates reactions, never verdicts,** and never what the human's character feels.
 6. **Funny in the people.** Jokes come from people, details, and surprising consequences. Everyone gets mocked, the human's character too, for what they do, never for what they feel.
 7. **Handrails.** Every detail can be asked about, and a companion speaks at every hard choice.
