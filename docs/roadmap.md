@@ -6,11 +6,11 @@ As of 2026-11-08, main 3472982. Kept by Yan (decision 0065); numbers from `git l
 
 | # | Milestone | Gate (one line) | Status |
 |---|---|---|---|
-| 12 | Not a passenger: phase 1 MAP-15, MAP-17; phase 2 Own move, the readable table (AGT-97, AGT-98, AGT-94 with AGT-76, AGT-13 partial, MAP-14), ENG-21, ENG-40..42 and a Plain or Fireside voice flag (Stas 2026-11-08) | Proposed: Vera (fallback) asks about no engine line in a DM narration sample; one own move decides a card in the played run; Stas plays only after the all-AI half on the same build has passed (0065); the voice comparison reported, not gated | next; scope PR being written; phase 1 rows can start now |
-| — | Dramaturg mechanism: the engine carries the story from one quest to the next. Its other half, the role, is done: Zoya, table #328 | no spec yet; input: the dramaturg design of 2026-11-07, carriers A (a scene's `remember`) and B (`if`/`unless` with a `problem` block), quests as `kind: errand`, fronts and clocks | after 12 (Stas in chat 2026-11-07 19:34Z, "the dramaturg whole"; no record) |
+| 12 | Not a passenger: phase 1 MAP-15, MAP-17; phase 2 Own move, the readable table (AGT-97, AGT-98, AGT-94 with AGT-76, AGT-13 partial, MAP-14), ENG-21, ENG-40..42, a Plain or Fireside voice flag and one language at the seat (0067) (Stas 2026-11-08) | Proposed: Vera (fallback) asks about no engine line in a DM narration sample; one own move decides a card in each run; the Russian seat shows no English line; Stas plays only after the all-AI half on the same build has passed (0065); the voice comparison reported, not gated | next; scope PR being written; phase 1 rows can start now |
+| — | Dramaturg mechanism: the engine carries the story from one quest to the next. Its other half, the role, is done: Zoya, table #328 | no spec yet; input: the dramaturg design of 2026-11-07, carriers A (a scene's `remember`) and B (`if`/`unless` with a `problem` block), quests as `kind: errand`, fronts and clocks | after 12 (Stas 2026-11-07 19:34Z, "the dramaturg whole"; 0066 in table #336) |
 | — | Arachas plus glue | no spec yet | after the Dramaturg mechanism (same) |
 | — | The Silent Mill plus glue | no spec yet | after Arachas (same) |
-| 11 | Word on the road | — | done 2026-11-08: pair 3 on 2294ef6 PASS and PASS; table #299 to #325 merged 21:00Z; no exit record |
+| 11 | Word on the road | — | done 2026-11-08: pair 3 on 2294ef6 PASS and PASS; table #299 to #325 merged 21:00Z; record 0066 in table #336 |
 | 10 | Speed and polish | — | done 2026-11-01 (0056) |
 | 9 | Living world | — | done 2026-11-06 (0060) |
 | 7 | Demo acceptance | — | done 2026-11-05 (0059) |
@@ -32,12 +32,10 @@ Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08).
 
 ## Waiting on Stas
 
-- M12 scope PR (being written): award the gate above, the pre-flight rule and the phase order.
+- table #336: the M12 scope with your answers of 22:24Z, decisions 0066 (M11 closed; the order after it) and 0067 (one language at the seat), and 0061, 0062, 0064 marked accepted. It stays open until the system design and rows join it.
 - This PR: the roadmap itself, with the M11 baseline and five amendments.
 - nat20-runs #3: your flag answers for the Mill run 20-38-39, open since 2026-11-03. Merge or close.
-- Decisions 0061, 0062, 0064 still say "Proposed (accepted when Stas merges ...)", and table #295, #296 and #326 merged. A status-only edit in the M12 scope PR, unless something is missing.
 - UPS-1 (P0, open since 2026-10-19): the fork still allows squash merge (repos API, 2026-11-08; rebase is off). One setting.
-- Milestone 11 has no exit record (M7, M9 and M10 have 0059, 0060 and 0056). Question 1 in the thread.
 
 ## Delivery
 
@@ -61,5 +59,5 @@ Cheapest saving for M12: Stas plays only after the all-AI half on the same build
 - A milestone gets a number only when TASKS.md § Milestones has its row; later work is listed unnumbered, in Stas's order, with its source. Why: numbers in accepted records (the shop as M17, scope §4 and 0057) have drifted from the order.
 - "PRs" counts merged table and core PRs that carry the milestone's rows, its scope PR included; fixes stacked on top after the exit pair count to the next milestone. Why: one rule for every row, so ratios compare like with like.
 - "Run cost" counts every run whose `build.table_commit` is in a milestone PR (`GET commits/<sha>/pulls`), failed runs and lone halves included. Why: stack builds are squashed away and never reach main.
-- "Days scope→exit" ends at the exit record; with none, at the last merge of the milestone's PRs. Why: M11 has no exit record.
+- "Days scope→exit" ends at the exit record; with none, at the last merge of the milestone's PRs. Why: M11 had no exit record until 0066 (table #336), which keeps the last merge as its end.
 - A pair counts as played once its all-AI half has run. Why: pair 2 cost 8.82 USD with no human half.
