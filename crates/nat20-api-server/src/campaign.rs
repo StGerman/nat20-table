@@ -41,6 +41,9 @@ pub struct Campaign {
     pub map_id: String,
     /// Wages due and not paid yet: the escort's advance, paid once the campaign has started
     pub due: Vec<world::Wage>,
+    /// How this contract took up the world the last one left, when it did (ENG-37); the DM
+    /// tells the trip in one line once API-51 puts it on the wire
+    pub carried: Option<world::Carried>,
 }
 
 impl Campaign {
@@ -95,9 +98,11 @@ impl Campaign {
             .with_deck(deck)
             .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
         let mut built = built;
-        // A roster from a campaign on this map takes up the world where it was left (API-45),
-        // unless its contract is done: then the party, who keep their characters, take the
-        // campaign's contract again from its start, and the advance is paid again.
+        // A roster from a campaign on this map takes up the world where it was left (API-45).
+        // When its contract is done, the world's memory carries over and this campaign's
+        // contract starts from it (ENG-37): the clock goes on, the deeds and the deck are kept,
+        // and the party travels to the start if it stands elsewhere.
+        let mut carried = None;
         if let Some(saved) = saved.filter(|w| w.map == setup.map) {
             let state: world::WorldState =
                 serde_json::from_value(saved.state.clone()).map_err(|e| {
@@ -120,6 +125,8 @@ impl Campaign {
                     ));
                 }
                 built.state = state;
+            } else {
+                carried = Some(built.carry_memory(state, setup.hour));
             }
         }
         // The place NPCs (API-48), after the state: a roster's NPCs keep what happened to them.
@@ -162,6 +169,7 @@ impl Campaign {
             road_scene: setup.road_scene,
             map_id: setup.map.clone(),
             due,
+            carried,
         };
         let mut scenes: Vec<&str> = campaign
             .world
