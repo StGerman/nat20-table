@@ -137,7 +137,6 @@
                 {
                     "id": "read",
                     "text": "Ask to read the paper.",
-                    "unless": "toll_men_spared",
                     "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
                         {
                             "do": "check",
@@ -169,6 +168,7 @@
                 {
                     "id": "ford",
                     "text": "Go upstream and ford the beck.",
+                    "unless": "toll_men_spared",
                     "breaks": [
                         "paper_is_law"
                     ],
