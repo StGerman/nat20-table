@@ -938,9 +938,12 @@ export class TableLoop {
     const human = this.human;
     const { choices, preset } = cardChoices(card);
     const enter = card.said.length > 0 ? "press Enter to go with the others" : `press Enter for ${preset}`;
+    // The card's words once; after words said at the table only the choices again (AGT-96).
+    let showCard = true;
     for (;;) {
       if (this.table.ended) return;
-      this.table.show({ kind: "info", title: "On the road", text: [card.text, owner ? "The caravan is yours: you make the call, with the Blades' advice." : card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
+      if (showCard) this.table.show({ kind: "info", title: "On the road", text: [card.text, owner ? "The caravan is yours: you make the call, with the Blades' advice." : card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
+      showCard = false;
       this.table.show({ kind: "options", title: "Your word", lines: choiceLines(choices), choices, preset });
       const intent = await this.ask({ kind: "card" });
       if (!intent) return;
@@ -953,6 +956,7 @@ export class TableLoop {
         const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
         if (!outcome.ok) {
           await this.humanRejected(outcome);
+          showCard = true;
           continue;
         }
         this.table.log("intent", `${human} on the road card: ${picked.label}`, human);
@@ -960,8 +964,16 @@ export class TableLoop {
         return;
       }
       if (intent.kind === "text") {
-        // Words are said at the table; the card still waits for a number.
+        // Words are said at the table; the card still waits for a number, and the table says so.
         await this.table.declare(human, intent.text);
+        // The people in the scene answer the words; the card itself stays the table's to decide.
+        await this.wakeDm(
+          "road",
+          undefined,
+          `While the road card waits, ${human} says or does: "${intent.text}"`,
+          "Answer it in one or two sentences, as the people in the scene would: what they say, show or do. The card is not decided: never decide it, never tell how a choice turns out, no numbers. It waits for the table's word.",
+        );
+        this.table.show({ kind: "info", title: "Said at the table", text: `The road still waits for your word: pick one of the choices, 1 to ${choices.length}, or ${enter}.` });
         continue;
       }
       this.table.show({ kind: "info", title: "On the road", text: `Pick a number, or ${enter}.` });
