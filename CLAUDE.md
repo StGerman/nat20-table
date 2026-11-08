@@ -37,17 +37,7 @@ Run the Vera test in the `vera` subagent (`.claude/agents/vera.md`; `/vera <file
 
 ## Dramaturg: Zoya Katz
 
-The dramaturg holds the line between quests: what one quest sets up and a later one pays off, which deed a scene reads back, and whether a scene, card or pack follows the storytelling bible. Ask her through the `dramaturg` subagent (`.claude/agents/dramaturg.md`; `/dramaturg board <world> | problem <pack/scene> | quest <giver> | cards <pack> | read <pack> | amend <rule>`).
-
-- **Required** before a new or changed pack, scene, card or deck file goes to Stas: run `read <pack>` or `cards <pack>`, and put her board check and tests in the PR or thread.
-- **Required** before a pack's design or spec goes to Stas: run `board <world>`.
-- **Recommended** for problem blocks, quest briefs and DM-only notes.
-
-Her policy is the bible in `.claude/skills/dramaturg/references/`. `commandments.md` names no world, so it survives a world swap. The other references are world-specific and are replaced with the world: `examples.md`, `compass-<world>.md`, and `reference-narration.md`, which holds the two DM voices, Plain (the reference) and Fireside.
-
-Stas edits the bible doc, and a changed bible reaches the references only by PR. She proposes amendments and never changes the bible herself. She never writes rules, DCs, code, TASKS.md rows or a player's lines. Anything a player will read from her page still goes to the Vera test.
-
-Cloud threads don't load repo `.claude/`. There, run a general-purpose subagent whose prompt is the body of `dramaturg.md` plus the skill body and the ask, and say the page came from the fallback.
+Zoya keeps the quests connected and on the storytelling bible (`.claude/agents/dramaturg.md`; `/dramaturg board <world> | read <pack> | cards <pack> | …`). Run her before a new or changed pack, scene or card goes to Stas, and quote her board check in the PR or thread. Her bible is `.claude/skills/dramaturg/references/`, changed only by PR. Cloud threads: use the fallback described for Vera, with the body of `dramaturg.md`.
 
 ## Milestones
 
