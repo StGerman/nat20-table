@@ -37,7 +37,11 @@ Run the Vera test in the `vera` subagent (`.claude/agents/vera.md`; `/vera <file
 
 ## Dramaturg: Zoya Katz
 
-Zoya keeps the quests connected and on the storytelling bible (`.claude/agents/dramaturg.md`; `/dramaturg board <world> | read <pack> | cards <pack> | …`). Run her before a new or changed pack, scene or card goes to Stas, and quote her board check in the PR or thread. Her bible is `.claude/skills/dramaturg/references/`, changed only by PR. Cloud threads: use the fallback described for Vera, with the body of `dramaturg.md`.
+Zoya keeps the quests connected and on the storytelling bible (`.claude/agents/zoya.md`; `/zoya board <world> | read <pack> | cards <pack> | …`). Run her before a new or changed pack, scene or card goes to Stas, and quote her board check in the PR or thread. Her bible is `.claude/skills/zoya/references/`, changed only by PR. Cloud threads: use the fallback described for Vera, with the body of `zoya.md`.
+
+## Supply and tenders: Yan Metsuyan
+
+Yan keeps the plan and what it costs: `TASKS.md`, `docs/tasks-done.md`, `docs/roadmap.md`, scope and decision drafts, and edits nothing else (`.claude/agents/yan.md`; `/yan sweep | tender | scope <milestone> | roadmap`; decision 0065). Run a sweep before a milestone opens or closes and quote it in the PR. Cloud threads: use the fallback described for Vera, with the body of `yan.md`.
 
 ## Milestones
 
