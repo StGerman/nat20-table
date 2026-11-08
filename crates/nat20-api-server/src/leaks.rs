@@ -32,6 +32,12 @@ pub const HIDDEN_KEYS: &[&str] = &[
     "zone",
     "route",
     "discovered",
+    // The customs a card choice keeps or breaks (API-55): the DM narrates who reacts.
+    "keeps",
+    "breaks",
+    // The deeds a card reads and the forewarned choice the scout opened (AGT-91): DM data.
+    "reads",
+    "forewarned",
 ];
 
 /// Keys a player view carries only for the viewer's own creature.

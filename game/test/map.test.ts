@@ -114,6 +114,17 @@ test("the panel's bar says the day and where the caravan is, and the side pane d
     assert.match(text(situationRows(situation, { columns: 80, rows: 30 }))[0], /^Day 1, .* · Vale Town/);
     const pane = text(situationRows(situation, { columns: 140, rows: 40 }, { pane: true }));
     assert.ok(pane.some((l) => l.startsWith("▶ Vale Town")), pane.join("\n"));
+    // Who walks ahead of the caravan (AGT-90), on the bar: nobody yet, then Maren, then you.
+    assert.doesNotMatch(situation.road?.where ?? "", /ahead/);
+    const ahead = async (actor: string) => {
+      const r = await t.engine.request(actor, { cmd: "scout", actor });
+      assert.ok(r.ok, JSON.stringify(r));
+      const s = await t.engine.request("bren", { cmd: "get_state" });
+      assert.ok(s.result?.cmd === "get_state");
+      return text(situationRows(situationOf(s.result.state, undefined)!, { columns: 80, rows: 30 }))[0];
+    };
+    assert.match(await ahead("maren"), /^Day 1, .* · Vale Town · Maren walks ahead/);
+    assert.match(await ahead("bren"), /^Day 1, .* · Vale Town · you walk ahead/);
 
     // /map at the table: the human's own map, as an info card.
     const seat = new ScriptedSeat("bren", [{ kind: "command", name: "map" }, { kind: "command", name: "quit" }]);

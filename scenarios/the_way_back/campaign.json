@@ -1,0 +1,275 @@
+{
+    "$schema": "../../game/schema/adventure.schema.json",
+    "_comment": "The Way Back's skeleton and campaign (MAP-12, Milestone 11, design \"The Way Back\"): the second contract in the Wend world, salt and iron from Saltmouth up to the Highsteads for Fenn Lusk. One file, the adventure.json format plus the engine's world block and the run's day limit, counted from the contract's first day. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. The escort pays the SRD 5.2.1 skilled-hireling wage, 2 GP a day per Blade (decision 0058).",
+    "format_version": 2,
+    "id": "the_way_back",
+    "title": "The Way Back",
+    "licence": "CC-BY-4.0",
+    "credit": "nat20-table contributors",
+    "prose": [
+        "prose/adventure.md"
+    ],
+    "lore": [
+        "../../lore/the_wend_valley.md"
+    ],
+    "party": [
+        {
+            "handle": "bren",
+            "seat": "human",
+            "card": "cards/bren.md",
+            "names": [
+                "Bren",
+                "Брен",
+                "Брена",
+                "Брену",
+                "Бреном",
+                "Брене"
+            ],
+            "name_ru": "Брен",
+            "_comment": "The human's seat by default; the card is for runs where an AI plays Bren."
+        },
+        {
+            "handle": "torva",
+            "seat": "ai",
+            "card": "cards/torva.md",
+            "pronouns": "she/her",
+            "names": [
+                "Torva",
+                "Торва",
+                "Торвы",
+                "Торве",
+                "Торву",
+                "Торвой"
+            ],
+            "name_ru": "Торва",
+            "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped."
+        },
+        {
+            "handle": "maren",
+            "seat": "ai",
+            "card": "cards/maren.md",
+            "pronouns": "she/her",
+            "names": [
+                "Maren",
+                "Марен",
+                "Мэрен",
+                "Марена",
+                "Марене",
+                "Марену",
+                "Мареной"
+            ],
+            "name_ru": "Марен"
+        },
+        {
+            "handle": "ilsa",
+            "seat": "ai",
+            "card": "cards/ilsa.md",
+            "pronouns": "she/her",
+            "names": [
+                "Ilsa",
+                "Ильса",
+                "Ильсы",
+                "Ильсе",
+                "Ильсу",
+                "Ильсой",
+                "Ильза",
+                "Ильзы",
+                "Ильзе",
+                "Ильзу",
+                "Ильзой"
+            ],
+            "name_ru": "Ильза"
+        }
+    ],
+    "npcs": [
+        {
+            "id": "fenn_lusk",
+            "name": "Fenn Lusk, the salt dealer",
+            "name_ru": "торговец солью Фенн Ласк",
+            "prose": "prose/npcs/fenn_lusk.md"
+        },
+        {
+            "id": "odda_vell",
+            "name": "Odda Vell, the grain factor",
+            "name_ru": "торговка зерном Одда Велл",
+            "prose": "prose/npcs/odda_vell.md"
+        }
+    ],
+    "glossary_ru": {
+        "oilskin coat": "промасленный плащ",
+        "Bel Corrin": "Бел Коррин",
+        "Tam": "Тэм",
+        "Mother Sedge": "матушка Седж",
+        "Sister Agna": "сестра Агна",
+        "Tobin": "Тобин",
+        "Rufus": "Руфус",
+        "Col": "Кол",
+        "Dunn": "Данн",
+        "Fenn Lusk": "Фенн Ласк",
+        "Nell Hale": "Нелл Хейл",
+        "clipboard": "дощечка для записей"
+    },
+    "glyphs": {
+        "_comment": "Turn-order glyphs for the human's panel (AGT-67): party members by handle, monsters by kind or by the name the pack gives them.",
+        "bren": "🪖",
+        "torva": "🪓",
+        "maren": "📿",
+        "ilsa": "🔮",
+        "Wolf": "🐺",
+        "Grey wolf": "🐺",
+        "Goblin Warrior": "👺",
+        "Hill goblin": "👺"
+    },
+    "stat_blocks": [
+        {
+            "id": "road_wolf",
+            "monster": "wolf",
+            "side": "hostile",
+            "name": "Grey wolf"
+        },
+        {
+            "id": "hill_goblin",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "name": "Hill goblin"
+        },
+        {
+            "id": "road_bandit",
+            "monster": "bandit",
+            "side": "hostile",
+            "name": "Cudgel man",
+            "carries": {
+                "coins": {
+                    "sp": 6
+                }
+            }
+        },
+        {
+            "id": "townsfolk",
+            "monster": "commoner",
+            "side": "neutral",
+            "name": "Townsfolk"
+        },
+        {
+            "id": "iron_thief",
+            "monster": "bandit",
+            "side": "hostile",
+            "name": "Iron thief",
+            "carries": {
+                "coins": {
+                    "sp": 3
+                }
+            }
+        }
+    ],
+    "scenes": [
+        {
+            "id": "twb_wendmouth",
+            "title": "Saltmouth, the fair's last evening",
+            "beat": "social",
+            "target_minutes": 10,
+            "prose": "prose/twb_wendmouth.md",
+            "npcs": [
+                "fenn_lusk",
+                "odda_vell"
+            ],
+            "checks": [
+                {
+                    "check": "read_the_river",
+                    "intent": "Reading the weather up the river, or asking the boatmen about it."
+                }
+            ],
+            "exits": []
+        },
+        {
+            "id": "twb_road",
+            "title": "On the road",
+            "beat": "exploration",
+            "target_minutes": 15,
+            "prose": "prose/twb_road.md",
+            "npcs": [
+                "fenn_lusk"
+            ],
+            "exits": []
+        },
+        {
+            "id": "twb_wendford",
+            "title": "Wendford",
+            "beat": "social",
+            "target_minutes": 10,
+            "prose": "prose/twb_wendford.md",
+            "npcs": [
+                "fenn_lusk"
+            ],
+            "checks": [
+                {
+                    "check": "price_talk",
+                    "intent": "Asking around the green or the alehouse what salt costs this year, and why."
+                }
+            ],
+            "exits": []
+        },
+        {
+            "id": "twb_highsteads",
+            "title": "The Highsteads",
+            "beat": "narrative",
+            "target_minutes": 10,
+            "prose": "prose/twb_highsteads.md",
+            "npcs": [
+                "fenn_lusk"
+            ],
+            "exits": []
+        }
+    ],
+    "day_limit": 3,
+    "world": {
+        "_comment": "The engine's world block. Fenn Lusk owns the wagon (an NPC owner): any Blade moves it on along his route and calls the night. The contract is made on the fair's last evening at Saltmouth; the route goes up the river road (twelve miles to the Millbeck bridge, eight more to Wendford, a long day) and then the slope track to the Highsteads (eight miles of hill). With the night at Saltmouth and one on the way, the wagon reaches the Highsteads on the contract's third day. On a next contract the clock carries on from the saved day and the day limit counts from the contract's first day.",
+        "map": "wend",
+        "start": "wendmouth",
+        "day": 1,
+        "hour": 16,
+        "road_scene": "twb_road",
+        "scenes": {
+            "wendmouth": "twb_wendmouth",
+            "wendford": "twb_wendford",
+            "highsteads": "twb_highsteads"
+        },
+        "route": [
+            "wendmouth",
+            "millbeck_bridge",
+            "wendford",
+            "highsteads"
+        ],
+        "caravan": {
+            "owner": "npc:fenn_lusk",
+            "wagons": [
+                {
+                    "n": 1,
+                    "vehicle": "wagon",
+                    "vehicle_lb": 400,
+                    "team": [
+                        {
+                            "animal": "draft_horse",
+                            "capacity_lb": 540
+                        },
+                        {
+                            "animal": "draft_horse",
+                            "capacity_lb": 540
+                        }
+                    ],
+                    "cargo": {
+                        "salt": 500,
+                        "iron": 400,
+                        "rations": 20
+                    }
+                }
+            ]
+        },
+        "escort": {
+            "_comment": "2 GP a day per Blade, one day paid ahead at Saltmouth, the rest on arrival at the Highsteads, from Fenn's purse of 40 GP.",
+            "destination": "highsteads",
+            "advance_days": 1,
+            "purse_cp": 4000
+        }
+    }
+}

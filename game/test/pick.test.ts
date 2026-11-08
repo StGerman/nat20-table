@@ -7,10 +7,10 @@ import path from "node:path";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
-import { castParty, partyRoster } from "../src/play/run.ts";
+import { castParty, moneyCopper, partyRoster } from "../src/play/run.ts";
 import { InkSeat } from "../src/ui/ink-seat.ts";
 import { paletteFor } from "../src/ui/palette.ts";
-import { cardRows, pickKey, pickOnScreen, pickRows } from "../src/ui/pick.ts";
+import { cardRows, pickKey, pickOnScreen, pickRows, savedCharacters, savedRoster } from "../src/ui/pick.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 
@@ -70,13 +70,22 @@ test("the pick list shows each character's name, species, class and level, the d
     "  4. Ilsa   Dragonborn Wizard 2",
   ]);
   const bren = cardRows(roster[0], 72);
-  assert.deepEqual(bren.slice(0, 3), ["Bren", "Human Fighter, level 2", ""]);
+  assert.deepEqual(bren.slice(0, 4), ["Bren", "Human Fighter, level 2", "Purse: 54 gold pieces", ""]);
   // Only the opening sentence: the rest of the paragraph speaks to an AI player.
   assert.ok(bren.join(" ").includes("The company's sergeant"), bren.join("\n"));
   assert.ok(!bren.join(" ").includes("This card is for an AI"), bren.join("\n"));
   assert.deepEqual(bren.slice(-3), ["Goal", "Keep the four of you together, fed and paid until something better than", "guard work comes along."]);
-  // No sheet numbers on the card.
+  // No other sheet numbers on the card.
   assert.ok(!/\bHP\b|\bAC\b/.test(bren.join(" ")));
+  // A saved character's experience and purse, in words (AGT-93).
+  const saved = savedRoster(roster, savedCharacters([{ handle: "bren", pregen: "fighter_l2", level: 3, xp: 940, equipment: [], purse: { gp: 12, sp: 3, cp: 5 } }] as never));
+  assert.deepEqual(cardRows(saved[0]!, 72).slice(0, 4), ["Bren", "Human Fighter, level 3 - 940XP points", "Purse: 12 gold pieces, 3 silver pieces and 5 copper pieces", ""]);
+  assert.equal(saved[1]!.xp, undefined, "a character the save doesn't hold keeps the pack's");
+  // A hand-edited save without experience or purse opens the screen and leaves those lines out.
+  const bare = savedRoster(roster, savedCharacters([{ handle: "bren", pregen: "fighter_l2", level: 3, equipment: [] }] as never));
+  assert.deepEqual(cardRows(bare[0]!, 72).slice(0, 3), ["Bren", "Human Fighter, level 3", ""]);
+  assert.equal(moneyCopper("3 GP 5 SP"), 350);
+  assert.equal(moneyCopper("a few coins"), undefined);
 });
 
 test("arrows move the highlight round the list, a number jumps to its character, one past the list is ignored, and Enter picks", () => {

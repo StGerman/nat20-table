@@ -456,6 +456,12 @@ export class ModelPlayer implements PlayerAgent {
         (input) => this.bound((t) => t.restNight(input.where)),
       ),
       seatTool(
+        "scout",
+        "Walk ahead of the caravan as the scout, out of a fight: for every stretch of road until another Blade takes it. When a road card comes, you look first, and what you see may give the party another way. Hired Blades only.",
+        {},
+        () => this.bound((t) => t.scout()),
+      ),
+      seatTool(
         "choose_card",
         "Give your word on the road card waiting (look shows it): advice to the merchant on a caravan card, or your vote on a card the Blades decide. Use a choice id.",
         { choice: z.string().describe("A choice id from the card.") },

@@ -140,6 +140,20 @@ pub enum Terrain {
 }
 
 impl Terrain {
+    /// The Search DC column of the SRD 5.2.1 Travel Terrain table: the scout's DC on a road
+    /// of this terrain (API-54).
+    pub fn search_dc(self) -> u32 {
+        match self {
+            Terrain::Arctic | Terrain::Desert => 10,
+            Terrain::Coastal
+            | Terrain::Forest
+            | Terrain::Grassland
+            | Terrain::Hill
+            | Terrain::Urban => 15,
+            Terrain::Mountain | Terrain::Swamp | Terrain::Underdark => 20,
+        }
+    }
+
     /// The Maximum Pace column of the SRD 5.2.1 Travel Terrain table.
     pub fn max_pace(self) -> Pace {
         match self {
@@ -286,6 +300,31 @@ impl WorldMap {
             return Err(MapError(format!("no road reaches {lost} from {start}")));
         }
         Ok(())
+    }
+
+    /// The miles of the shortest way by road between two places, if one leads there.
+    pub fn miles_between(&self, from: &str, to: &str) -> Option<u32> {
+        // Dijkstra over the roads; the maps are small, so a plain scan finds the nearest.
+        let mut best: BTreeMap<&str, u32> = BTreeMap::from([(from, 0)]);
+        let mut done: BTreeSet<&str> = BTreeSet::new();
+        loop {
+            let (&here, &miles) = best
+                .iter()
+                .filter(|(p, _)| !done.contains(*p))
+                .min_by_key(|(_, m)| **m)?;
+            if here == to {
+                return Some(miles);
+            }
+            done.insert(here);
+            for road in self.roads_from(here) {
+                if let Some(next) = road.other_end(here) {
+                    let via = miles + road.miles;
+                    if best.get(next).is_none_or(|m| via < *m) {
+                        best.insert(next, via);
+                    }
+                }
+            }
+        }
     }
 
     /// The place with this id.

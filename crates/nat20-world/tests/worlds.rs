@@ -3,7 +3,9 @@
 
 use std::path::{Path, PathBuf};
 
-use nat20_world::{Caravan, Clock, Deck, DeckFile, Goods, Pace, Target, World, WorldMap};
+use nat20_world::{
+    Caravan, Clock, CustomsFile, Deck, DeckFile, Goods, Pace, Target, World, WorldMap,
+};
 
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -48,10 +50,55 @@ fn every_world_validates() {
                 road.id
             );
         }
-        deck(&dir)
+        let world_deck = deck(&dir);
+        world_deck
             .validate(&map)
             .unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
+        // Each pack's own cards join the world's deck while its contract runs (ENG-38): every
+        // pair validates, and card ids are unique across the world and all its packs, whose
+        // deeds the world's cards may read.
+        let packs = packs_on(dir.file_name().unwrap().to_str().unwrap());
+        let mut all = world_deck.clone();
+        for pack in &packs {
+            let joined = world_deck.clone().join(deck(pack));
+            joined
+                .validate(&map)
+                .unwrap_or_else(|e| panic!("{} with {}: {e}", dir.display(), pack.display()));
+            all = all.join(deck(pack));
+        }
+        all.validate(&map)
+            .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
+        all.check_deeds_written(&Default::default())
+            .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
+        // Every choice's customs are the world's (ENG-39); a world without the file has none.
+        let customs_file = dir.join("customs.json");
+        let customs: CustomsFile = if customs_file.exists() {
+            read(&customs_file)
+        } else {
+            CustomsFile::default()
+        };
+        customs
+            .validate()
+            .unwrap_or_else(|e| panic!("{}: {e}", customs_file.display()));
+        all.check_customs(&customs)
+            .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
     }
+}
+
+/// The scenario packs whose campaign plays on world `id`: the shipped packs and the server's
+/// test pack.
+fn packs_on(id: &str) -> Vec<PathBuf> {
+    let mut dirs = vec![repo().join("crates/nat20-api-server/data")];
+    for entry in std::fs::read_dir(repo().join("scenarios")).unwrap() {
+        dirs.push(entry.unwrap().path());
+    }
+    dirs.sort();
+    dirs.into_iter()
+        .filter(|d| {
+            let file = d.join("campaign.json");
+            file.exists() && read::<serde_json::Value>(&file)["world"]["map"].as_str() == Some(id)
+        })
+        .collect()
 }
 
 /// A world's deck, files in name order, as the server reads it.
@@ -123,7 +170,11 @@ fn the_first_leg_down_from_wendford_always_meets_the_millbeck_toll_once() {
     // The Millbeck zone holds the toll card alone: any roll draws it.
     let mut dice = nat20_world::ListDice::new([100]);
     let card = world.draw_after_leg("bridge_road", &mut dice).unwrap();
-    assert_eq!(card, "millbeck_bridge");
+    assert_eq!(
+        card.table(),
+        Some("millbeck_bridge"),
+        "a pile of one: no pick"
+    );
     world.state.deck.pending = None;
     // It is `once`: the stretch draws nothing after it, either way.
     world.travel(Some("wendford"), Pace::Normal, false).unwrap();
@@ -139,9 +190,15 @@ fn the_river_road_below_the_bridge_draws_a_lowland_card() {
     world
         .travel(Some("wendmouth"), Pace::Normal, false)
         .unwrap();
-    let mut dice = nat20_world::ListDice::new([1]);
-    let card = world.draw_after_leg("river_road", &mut dice).unwrap();
-    assert_eq!(world.deck.card(&card).unwrap().zone, "lowland");
+    let mut dice = nat20_world::ListDice::new([1, 1, 1]);
+    let nat20_world::Drawn::Offered(cards) = world.draw_after_leg("river_road", &mut dice).unwrap()
+    else {
+        panic!("the lowland pile offers cards for a pick");
+    };
+    assert!(cards.len() > 1 && cards.len() <= nat20_world::MAX_OFFERED);
+    for card in &cards {
+        assert_eq!(world.deck.card(card).unwrap().zone, "lowland");
+    }
 }
 
 #[test]

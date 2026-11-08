@@ -7,7 +7,7 @@
 
 use nat20_core::hecs::Entity;
 use nat20_core::{
-    components::{ai::PlayerControlledTag, id::MonsterId},
+    components::{ai::PlayerControlledTag, id::MonsterId, species::CreatureType},
     engine::engine_state::EngineState,
     registry::registry::MonstersRegistry,
     systems,
@@ -42,6 +42,16 @@ pub fn check(monster: &str) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+/// Whether a stat block is a person (MAP-11, the storytelling bible's "who is a person"): any
+/// creature type but a beast, by its stat block in core's registry. An unknown block counts as
+/// a person, so a warning errs toward asking for a custom.
+pub fn is_person(monster: &str) -> bool {
+    monster_id(monster)
+        .ok()
+        .and_then(|id| MonstersRegistry::get(&id))
+        .is_none_or(|m| m.creature_type != CreatureType::Beast)
 }
 
 /// Spawns the monster, unplaced. Nothing is left in the world if spawning fails.
@@ -256,5 +266,19 @@ mod tests {
         assert!(check("goblin_king").is_err());
         assert!(spawn(&mut engine, "goblin_king").is_err());
         assert_eq!(engine.world.len(), before);
+    }
+
+    /// Who is a person (MAP-11): goblins can yield and be spoken to, wolves and rats can't.
+    #[test]
+    fn beasts_are_not_persons() {
+        let _engine = EngineState::new(load_geometry(None));
+        assert!(!is_person("wolf"));
+        assert!(!is_person("giant_rat"));
+        assert!(is_person("goblin_warrior"));
+        assert!(is_person("goblin_boss"));
+        assert!(
+            is_person("goblin_king"),
+            "an unknown block errs toward a person"
+        );
     }
 }

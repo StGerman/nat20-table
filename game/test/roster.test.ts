@@ -11,7 +11,7 @@ import type { Roster } from "@nat20-table/engine-client";
 import { REPO } from "../src/engine.ts";
 import { rosterReport } from "../src/play/driver.ts";
 import type { RunRecord } from "../src/play/record.ts";
-import { readRoster, rosterFile, rosterLine, writeRoster } from "../src/play/roster.ts";
+import { readRoster, replayRoster, rosterFile, rosterLine, rosterRefusal, writeRoster } from "../src/play/roster.ts";
 import { partyRoster } from "../src/play/run.ts";
 import { paletteFor } from "../src/ui/palette.ts";
 import { partyKey, partyRows, pickOnScreen } from "../src/ui/pick.ts";
@@ -19,7 +19,7 @@ import { partyKey, partyRows, pickOnScreen } from "../src/ui/pick.ts";
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 
 const roster = (xp: number): Roster => ({
-  format: 1,
+  format: 2,
   characters: [
     { handle: "torva", pregen: "torva", level: 3, xp, choices: [], equipment: [], purse: { cp: 0, sp: 0, ep: 0, gp: 5, pp: 0 }, exhaustion: 0, malnutrition: 0, days_without_food: 0 },
   ],
@@ -125,6 +125,36 @@ test("the party question: continue is first and Enter takes it; the arrows and 1
   assert.equal(partyKey({ at: 1 }, { kind: "enter" }).party, "new");
 });
 
+test("a party with a journey behind it can play that journey again; one saved by an older game is refused in one line", () => {
+  const torva = roster(900).characters[0];
+  const world = { map: "wend", state: { memory: {}, contract: {} } };
+  const start = { characters: [{ ...torva, xp: 300, level: 2 }] };
+  const saved = { ...roster(900), world, contract_start: start } as unknown as Roster;
+  assert.deepEqual(replayRoster(saved), { format: 2, characters: start.characters, contract_start: start });
+  const later = { ...saved, contract_start: { ...start, world } } as unknown as Roster;
+  assert.deepEqual(replayRoster(later), { format: 2, characters: start.characters, world, contract_start: { ...start, world } });
+  assert.equal(replayRoster(roster(900)), undefined, "no journey yet");
+  assert.equal(rosterRefusal(roster(900)), undefined);
+  assert.match(rosterRefusal({ ...roster(900), format: 1 } as Roster) ?? "", /older version of the game.*stays as it is.*--new-party/);
+  assert.match(rosterRefusal({ ...roster(900), format: 3 } as Roster) ?? "", /newer version of the game.*stays as it is.*--new-party/);
+  const base = { name: "wend", loaded_sha256: "a".repeat(64), saved_sha256: "b".repeat(64), not_saved: null, chain: "held" as const };
+  assert.equal(rosterReport({ ...base, party: "again" }), `Roster: played the last journey of the party saved as wend again from where it began (sha256 ${"a".repeat(12)}); saved (sha256 ${"b".repeat(12)})`);
+});
+
+test("the party question with a journey behind it has a third answer; Enter still continues", () => {
+  assert.deepEqual(partyRows("Torva (level 3)", 2, true), [
+    "  1. Continue with your party: Torva (level 3)",
+    "  2. Start a new party (it replaces the saved one when this game ends)",
+    "❯ 3. Play the last journey again from where it began, with the party as it was then (it replaces the saved one when this game ends)",
+  ]);
+  assert.equal(partyKey({ at: 0 }, { kind: "enter" }, true).party, "continue");
+  assert.equal(partyKey({ at: 0 }, { kind: "digit", digit: 3 }, true).state.at, 2);
+  assert.equal(partyKey({ at: 0 }, { kind: "digit", digit: 3 }).state.at, 0, "no third answer without a journey");
+  assert.equal(partyKey({ at: 2 }, { kind: "down" }, true).state.at, 0);
+  assert.equal(partyKey({ at: 0 }, { kind: "up" }, true).state.at, 2);
+  assert.equal(partyKey({ at: 2 }, { kind: "enter" }, true).party, "again");
+});
+
 class FakeStdout extends EventEmitter {
   readonly frames: string[] = [];
   readonly columns: number;
@@ -172,12 +202,12 @@ async function until(what: string, ready: () => boolean, ms = 3000): Promise<voi
   }
 }
 
-test("with a saved party the start screen asks first; continuing, the list shows the saved levels", async () => {
+test("with a saved party the start screen asks first; continuing, the list shows the saved levels and the card the saved purse and experience (AGT-93)", async () => {
   for (const [keys, party, level] of [[["\r"], "continue", "3"], [["2", "\r"], "new", "2"]] as const) {
     const stdin = new FakeStdin();
     const stdout = new FakeStdout(120, 30);
     const render = { stdin: stdin as unknown as NodeJS.ReadStream, stdout: stdout as unknown as NodeJS.WriteStream, stderr: new FakeStdout(120, 30) as unknown as NodeJS.WriteStream, debug: true, patchConsole: false };
-    const picking = pickOnScreen(partyRoster(MILL), "bren", { title: "The Silent Mill", palette: paletteFor({ NO_COLOR: "1" }), render, saved: { line: "Bren (level 3)", levels: new Map([["bren", 3]]) } });
+    const picking = pickOnScreen(partyRoster(MILL), "bren", { title: "The Silent Mill", palette: paletteFor({ NO_COLOR: "1" }), render, saved: { line: "Bren (level 3)", characters: new Map([["bren", { level: 3, xp: 940, purseCp: 6140 }]]) } });
     await until("the party question", () => stdout.last.includes("The Silent Mill · Your party") && stdout.last.includes("❯ 1. Continue with your party: Bren (level 3)"));
     for (const key of keys) {
       stdin.press(key);
@@ -185,6 +215,12 @@ test("with a saved party the start screen asks first; continuing, the list shows
     }
     await until("the pick list", () => stdout.last.includes("Who do you play?"));
     assert.ok(stdout.last.includes(`❯ 1. Bren   Human Fighter ${level} · default`), stdout.last);
+    // The card: the saved purse and experience going on; a new party has the pregen's purse and no experience yet.
+    if (party === "continue") {
+      assert.ok(stdout.last.includes("Purse: 61 gold pieces and 4 silver pieces") && stdout.last.includes("Human Fighter, level 3 - 940XP points"), stdout.last);
+    } else {
+      assert.ok(stdout.last.includes("Purse: 54 gold pieces") && !stdout.last.includes("XP points"), stdout.last);
+    }
     stdin.press("\r");
     const picked = await picking;
     assert.equal(picked.handle, "bren");

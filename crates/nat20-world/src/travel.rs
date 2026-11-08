@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
-    deck::{Deck, DeckError, DeckState, When},
+    deck::{Deck, DeckError, DeckState, Deed, DeedBook, Drawn, PickError, ScoutSkill, When},
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
     map::{MapError, Position, WorldMap},
@@ -85,6 +85,12 @@ impl Pace {
 
 /// What the world remembers between calls, and what a roster saves: the time, where the
 /// caravan is, what the party has discovered, the caravan, and the day's travel so far.
+///
+/// Two parts (ENG-37, decision 0063): the **memory** (the clock, the discovered places, the
+/// deeds, the deck but the card on the table and the `once: "contract"` marks, the place NPCs,
+/// the contract count) outlives a contract; the **contract** (its pack, where the caravan is,
+/// the caravan, the day's travel, the escort, the card on the table) is rebuilt from the next
+/// pack's campaign file by [`World::carry_memory`]. Roster format 2 (API-51) saves them apart.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct WorldState {
@@ -107,6 +113,168 @@ pub struct WorldState {
     /// The escort contract: days served, pay so far, the merchant's purse (API-47)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub escort: Option<EscortState>,
+    /// The deeds the world remembers, by id (ENG-33): DM-only
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub deeds: DeedBook,
+    /// The pack whose contract this is, by its campaign file's `id` (ENG-38): part of the
+    /// contract, so a roster with a contract under way opens only that pack
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pack: Option<String>,
+    /// The contract under way: 1 for the first, the number a deed records; left out of the
+    /// saved state while it is 1
+    #[serde(default = "first_contract", skip_serializing_if = "is_first_contract")]
+    pub contract: u32,
+    /// The Hired Blade who walks ahead as the scout (API-54), until another takes the role:
+    /// part of the contract
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<String>,
+}
+
+fn first_contract() -> u32 {
+    1
+}
+
+fn is_first_contract(contract: &u32) -> bool {
+    *contract == 1
+}
+
+/// The miles a party travels in a day between contracts: a normal pace (SRD 5.2.1 Travel
+/// Pace, 24 miles a day).
+pub const MILES_PER_DAY_BETWEEN: u32 = 24;
+
+/// A world state as roster format 2 saves it (API-51): the memory and the contract apart, as
+/// [`WorldState`] describes them. [`World::carry_memory`] keeps the memory and rebuilds the
+/// contract.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SavedWorld {
+    /// What outlives a contract
+    pub memory: Memory,
+    /// What the next contract rebuilds
+    pub contract: ContractState,
+}
+
+/// The world's memory (ENG-37): kept when a contract is done.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Memory {
+    /// The time
+    pub clock: Clock,
+    /// Place ids the party knows
+    pub discovered: BTreeSet<String>,
+    /// The deeds the world remembers, by id: DM-only
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub deeds: DeedBook,
+    /// The deck: chained cards added, the discard, the cards gone for the world, the soon queue
+    #[serde(default)]
+    pub deck: DeckState,
+    /// The place NPCs, by id
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub npcs: BTreeMap<String, NpcState>,
+    /// The contract under way: 1 for the first
+    #[serde(default = "first_contract", skip_serializing_if = "is_first_contract")]
+    pub contract: u32,
+}
+
+/// The contract under way (ENG-37): rebuilt from the next pack's campaign file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContractState {
+    /// Where the caravan is
+    pub at: Position,
+    /// The caravan
+    pub caravan: Caravan,
+    /// The day's travel budget spent
+    pub traveled_today: u32,
+    /// The deck's contract part: the `once: "contract"` marks, the cards offered or on the
+    /// table, the road that drew them
+    #[serde(default)]
+    pub deck: DeckState,
+    /// The escort contract
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escort: Option<EscortState>,
+    /// The pack whose contract this is
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pack: Option<String>,
+    /// Who walks ahead as the scout
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<String>,
+}
+
+impl From<WorldState> for SavedWorld {
+    fn from(state: WorldState) -> Self {
+        let deck = state.deck;
+        SavedWorld {
+            memory: Memory {
+                clock: state.clock,
+                discovered: state.discovered,
+                deeds: state.deeds,
+                deck: DeckState {
+                    added: deck.added,
+                    discard: deck.discard,
+                    gone: deck.gone,
+                    soon: deck.soon,
+                    ..DeckState::default()
+                },
+                npcs: state.npcs,
+                contract: state.contract,
+            },
+            contract: ContractState {
+                at: state.at,
+                caravan: state.caravan,
+                traveled_today: state.traveled_today,
+                deck: DeckState {
+                    gone_for_contract: deck.gone_for_contract,
+                    offered: deck.offered,
+                    pending: deck.pending,
+                    road: deck.road,
+                    ..DeckState::default()
+                },
+                escort: state.escort,
+                pack: state.pack,
+                scout: state.scout,
+            },
+        }
+    }
+}
+
+impl From<SavedWorld> for WorldState {
+    fn from(saved: SavedWorld) -> Self {
+        let SavedWorld { memory, contract } = saved;
+        WorldState {
+            clock: memory.clock,
+            at: contract.at,
+            discovered: memory.discovered,
+            caravan: contract.caravan,
+            traveled_today: contract.traveled_today,
+            deck: DeckState {
+                added: memory.deck.added,
+                discard: memory.deck.discard,
+                gone: memory.deck.gone,
+                soon: memory.deck.soon,
+                gone_for_contract: contract.deck.gone_for_contract,
+                offered: contract.deck.offered,
+                pending: contract.deck.pending,
+                road: contract.deck.road,
+            },
+            npcs: memory.npcs,
+            escort: contract.escort,
+            deeds: memory.deeds,
+            pack: contract.pack,
+            contract: memory.contract,
+            scout: contract.scout,
+        }
+    }
+}
+
+/// How a new contract took up the world a finished one left (ENG-37).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Carried {
+    /// The place the party was in when the last contract ended
+    pub from: String,
+    /// The days the trip to the new contract's start took, at a normal pace: 0 when the party
+    /// was already there
+    pub days: u32,
 }
 
 /// The world: the map and goods files, the route an NPC owner follows, and the state.
@@ -228,8 +396,12 @@ impl World {
                 caravan,
                 traveled_today: 0,
                 deck: DeckState::default(),
+                deeds: DeedBook::new(),
+                pack: None,
+                contract: first_contract(),
                 npcs: BTreeMap::new(),
                 escort: None,
+                scout: None,
             },
             deck: Deck::default(),
             npcs: Vec::new(),
@@ -313,28 +485,138 @@ impl World {
         }
     }
 
-    /// Draws a road card after a leg along `road`. Returns the card on the table, if any.
-    pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<String> {
+    /// Takes up the memory of the world a finished contract left, for a world just built
+    /// from the next contract's campaign file (ENG-37, decision 0063 Q1 and Q2): the clock,
+    /// the discovered places, the deeds, the deck (but the card on the table and the
+    /// `once: "contract"` marks) and the place NPCs come from `saved`; the caravan, where it
+    /// stands and the day's travel stay this world's. The contract count goes up by one. The
+    /// clock never goes back: the contract starts at `start_hour` on the day after the saved
+    /// day, plus the days the trip from where the party was takes at a normal pace (one day per
+    /// [`MILES_PER_DAY_BETWEEN`] miles by the shortest road, rounded up).
+    pub fn carry_memory(&mut self, saved: WorldState, start_hour: u32) -> Carried {
+        let from = match &saved.at {
+            Position::At { place } => place.clone(),
+            Position::OnRoad { toward, .. } => toward.clone(),
+        };
+        let start = self.place_here().unwrap_or_default().to_string();
+        let left = match &saved.at {
+            Position::OnRoad { miles_left, .. } => *miles_left,
+            Position::At { .. } => 0,
+        };
+        let miles = left + self.map.miles_between(&from, &start).unwrap_or(0);
+        let days = miles.div_ceil(MILES_PER_DAY_BETWEEN);
+        let mut deck = saved.deck;
+        deck.pending = None;
+        deck.offered.clear();
+        deck.road = None;
+        deck.gone_for_contract.clear();
+        let mut discovered = saved.discovered;
+        discovered.extend(std::mem::take(&mut self.state.discovered));
+        self.state.clock = Clock::at(saved.clock.day + 1 + days, start_hour, 0);
+        self.state.discovered = discovered;
+        self.state.deeds = saved.deeds;
+        self.state.deck = deck;
+        self.state.npcs = saved.npcs;
+        self.state.contract = saved.contract + 1;
+        Carried { from, days }
+    }
+
+    /// Remembers a deed done today by `by` in the contract under way. A deed done again
+    /// keeps its first record. Returns whether it is new.
+    pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
+        if self.state.deeds.contains_key(deed) {
+            return false;
+        }
+        self.state.deeds.insert(
+            deed.to_string(),
+            Deed {
+                by,
+                day: self.state.clock.day,
+                contract: self.state.contract,
+            },
+        );
+        true
+    }
+
+    /// Draws after a leg along `road`. Returns what the draw did: a card on the table, or cards
+    /// offered for the DM's pick (API-53); none when the zone has no card in play.
+    pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
         let zone = self.map.road(road)?.zone.clone();
-        self.deck.draw(
+        let drawn = self.deck.draw(
             &zone,
             When::Road,
             &self.state.discovered,
+            &self.state.deeds,
             &mut self.state.deck,
             dice,
-        )
+        );
+        if drawn.is_some() {
+            self.state.deck.road = Some(road.to_owned());
+        }
+        drawn
     }
 
-    /// Draws a night card after a night in camp where the caravan is.
-    pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<String> {
+    /// Draws an arrival card of `place` when a leg ends there (ENG-35): on the table, or
+    /// offered for a pick (API-53).
+    pub fn draw_on_arrival(&mut self, place: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
+        let drawn = self.deck.draw(
+            place,
+            When::Arrival,
+            &self.state.discovered,
+            &self.state.deeds,
+            &mut self.state.deck,
+            dice,
+        );
+        if drawn.is_some() {
+            self.state.deck.road = None;
+        }
+        drawn
+    }
+
+    /// The scout's check for the card on the table (API-54): who rolls, with what skill, and
+    /// the Search DC of the road's terrain. None when nobody walks ahead, the card names no
+    /// `scout` skill, or it is a night or arrival card; the server also skips a scout who is
+    /// not up.
+    pub fn scout_check(&self) -> Option<(String, ScoutSkill, u32)> {
+        let scout = self.state.scout.clone()?;
+        let pending = self.state.deck.pending.as_ref()?;
+        let card = self.deck.card(&pending.card)?;
+        if card.when != When::Road {
+            return None;
+        }
+        let skill = card.scout?;
+        let road = self.map.road(self.state.deck.road.as_deref()?)?;
+        Some((scout, skill, road.terrain.search_dc()))
+    }
+
+    /// The scout's check succeeded (API-54): the card on the table opens its forewarned
+    /// choice. Returns whether the choices changed.
+    pub fn forewarn(&mut self) -> bool {
+        self.deck.forewarn(&self.state.deeds, &mut self.state.deck)
+    }
+
+    /// The DM picks one of the offered cards (API-53): it goes on the table.
+    pub fn pick_card(&mut self, card: &str) -> Result<(), PickError> {
+        self.deck
+            .pick(card, &self.state.deeds, &mut self.state.deck)
+    }
+
+    /// Draws a night card after a night in camp where the caravan is: on the table, or offered
+    /// for a pick (API-53).
+    pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<Drawn> {
         let zone = self.zone_here();
-        self.deck.draw(
+        let drawn = self.deck.draw(
             &zone,
             When::Night,
             &self.state.discovered,
+            &self.state.deeds,
             &mut self.state.deck,
             dice,
-        )
+        );
+        if drawn.is_some() {
+            self.state.deck.road = None;
+        }
+        drawn
     }
 
     /// Time lost to a road event: the clock moves on and the day's travel shrinks by as
@@ -497,6 +779,83 @@ mod tests {
             Clock::at(1, 8, 0),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn the_next_contract_keeps_the_memory_and_starts_after_the_saved_day() {
+        let mut done = world("maren");
+        done.remember("helped_farmer", vec!["bren".into()]);
+        done.state.deck.gone.insert("ghost".into());
+        done.state
+            .deck
+            .gone_for_contract
+            .insert("fair_crowd".into());
+        done.state.deck.discard.insert("mud".into());
+        done.state.discovered.insert("ruin".into());
+        done.state.at = Position::At {
+            place: "inn".into(),
+        };
+        done.state.clock = Clock::at(2, 20, 0);
+        // The next contract starts in town at 9:00: 12 miles from the inn is one day's trip.
+        let mut next = world("maren");
+        next.state.clock = Clock::at(1, 9, 0);
+        let carried = next.carry_memory(done.state.clone(), 9);
+        assert_eq!(
+            carried,
+            Carried {
+                from: "inn".into(),
+                days: 1
+            }
+        );
+        assert_eq!(next.state.clock, Clock::at(4, 9, 0));
+        assert_eq!(next.place_here(), Some("town"));
+        assert_eq!(next.state.contract, 2);
+        assert!(next.state.deeds.contains_key("helped_farmer"));
+        assert!(
+            next.state.deck.gone.contains("ghost"),
+            "once is for the world"
+        );
+        assert!(
+            next.state.deck.gone_for_contract.is_empty(),
+            "once: contract comes back"
+        );
+        assert!(next.state.deck.discard.contains("mud"));
+        assert!(next.state.discovered.contains("ruin"));
+        // A deed written now records the second contract.
+        next.remember("paid_toll", vec![]);
+        assert_eq!(next.state.deeds["paid_toll"].contract, 2);
+        // From the start place itself, no trip: the day after.
+        let mut again = world("maren");
+        let mut at_start = done.state;
+        at_start.at = Position::At {
+            place: "town".into(),
+        };
+        assert_eq!(again.carry_memory(at_start, 9).days, 0);
+        assert_eq!(again.state.clock, Clock::at(3, 9, 0));
+    }
+
+    #[test]
+    fn a_deed_keeps_its_first_record() {
+        let mut world = world("maren");
+        assert!(world.remember("paid_toll", vec!["bren".into()]));
+        world.delay(24 * 60);
+        assert!(!world.remember("paid_toll", vec!["maren".into()]));
+        assert_eq!(
+            world.state.deeds["paid_toll"],
+            Deed {
+                by: vec!["bren".into()],
+                day: 1,
+                contract: 1,
+            }
+        );
+        // A roster saved before deeds reads as the first contract with none.
+        let mut saved = serde_json::to_value(&world.state).unwrap();
+        let fields = saved.as_object_mut().unwrap();
+        fields.remove("deeds");
+        fields.remove("contract");
+        let back: WorldState = serde_json::from_value(saved).unwrap();
+        assert!(back.deeds.is_empty());
+        assert_eq!(back.contract, 1);
     }
 
     #[test]
@@ -704,5 +1063,73 @@ mod tests {
             serde_json::from_str::<WorldState>(&json).unwrap(),
             world.state
         );
+    }
+
+    #[test]
+    fn the_scout_checks_against_the_road_s_search_dc() {
+        let deck: crate::deck::DeckFile = serde_json::from_str(
+            r#"{"cards": [
+              {"id": "willows", "zone": "hills", "target": "blades", "text": "Willows.", "scout": "survival",
+               "choices": [{"id": "on", "text": "On.", "effects": [{"do": "remember", "deed": "chose_on"}]}, {"id": "wait", "text": "Wait.", "unless": "scouted", "effects": [{"do": "remember", "deed": "chose_wait"}]},
+                           {"id": "round", "text": "Round.", "if": "scouted", "effects": [{"do": "remember", "deed": "chose_round"}]}]},
+              {"id": "camp", "zone": "hills", "when": "night", "target": "blades", "text": "Wind.",
+               "choices": [{"id": "a", "text": "A.", "effects": [{"do": "remember", "deed": "chose_a"}]}, {"id": "b", "text": "B.", "effects": [{"do": "remember", "deed": "chose_b"}]}]}
+            ]}"#,
+        )
+        .unwrap();
+        let mut w = world("npc:tobin")
+            .with_deck(Deck::from_files([deck]))
+            .unwrap();
+        let mut dice = crate::dice::ListDice::new([1]);
+        assert!(w.draw_after_leg("inn_ruin", &mut dice).is_some());
+        // Nobody walks ahead: no check.
+        assert_eq!(w.scout_check(), None);
+        w.state.scout = Some("bren".into());
+        // A hill road: Search DC 15 (SRD 5.2.1, Travel Terrain).
+        assert_eq!(
+            w.scout_check(),
+            Some(("bren".to_string(), ScoutSkill::Survival, 15))
+        );
+        assert!(w.forewarn());
+        assert_eq!(
+            w.state.deck.pending.as_ref().unwrap().choices,
+            ["on", "round"]
+        );
+
+        // A night card is never scouted, even in a zone with a scout card.
+        w.state.deck.pending = None;
+        w.state.at = Position::OnRoad {
+            road: "inn_ruin".into(),
+            toward: "ruin".into(),
+            miles_left: 4,
+        };
+        let mut dice = crate::dice::ListDice::new([1]);
+        assert!(w.draw_at_night(&mut dice).is_some());
+        assert_eq!(w.state.deck.road, None);
+        assert_eq!(w.scout_check(), None);
+    }
+
+    #[test]
+    fn a_saved_world_keeps_memory_and_contract_apart_and_reads_back_whole() {
+        let mut w = world("npc:tobin");
+        w.remember("paid", vec!["bren".into()]);
+        w.state.scout = Some("bren".into());
+        w.state.deck.discard.insert("mud".into());
+        w.state.deck.gone_for_contract.insert("toll".into());
+        let saved = SavedWorld::from(w.state.clone());
+        let json = serde_json::to_value(&saved).unwrap();
+        assert!(json["memory"]["deeds"]["paid"].is_object());
+        assert_eq!(
+            json["memory"]["deck"]["discard"],
+            serde_json::json!(["mud"])
+        );
+        assert_eq!(
+            json["contract"]["deck"]["gone_for_contract"],
+            serde_json::json!(["toll"])
+        );
+        assert_eq!(json["contract"]["scout"], "bren");
+        assert!(json["memory"].get("caravan").is_none());
+        let back: SavedWorld = serde_json::from_value(json).unwrap();
+        assert_eq!(WorldState::from(back), w.state);
     }
 }

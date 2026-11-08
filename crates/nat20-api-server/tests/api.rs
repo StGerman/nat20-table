@@ -2874,7 +2874,7 @@ fn copy_dir(from: &Path, to: &Path) {
 /// and a card on the table then would never be shown or resolved. The test deck gets a tower
 /// trail card that is in play once the Old Tower is known, so the settling leg would draw it.
 #[test]
-fn the_leg_that_ends_the_contract_draws_no_road_card() {
+fn the_leg_that_ends_the_contract_draws_its_road_card_before_the_pay() {
     let dir = std::env::temp_dir().join(format!("nat20_table_last_leg_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
@@ -2931,16 +2931,462 @@ fn the_leg_that_ends_the_contract_draws_no_road_card() {
         json!({ "cmd": "travel", "actor": "bren", "to": "old_tower", "pace": "normal" }),
     );
     ok(&last);
+    // The last leg's road card comes first, on the road; the pay waits for it (ENG-35).
     let seen = kinds(&last);
-    assert!(seen.iter().any(|k| k == "escort_settled"), "{last}");
+    assert!(seen.iter().any(|k| k == "card_drawn"), "{last}");
+    assert!(!seen.iter().any(|k| k == "escort_settled"), "{last}");
+    let choice = last["result"]["state"]["world"]["card"]["choices"][0]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let mut settled = Vec::new();
+    for who in ["bren", "maren"] {
+        let said = api.call(
+            who,
+            json!({ "cmd": "choose_card", "actor": who, "choice": choice }),
+        );
+        assert_eq!(said["ok"], true, "{said}");
+        settled.extend(kinds(&said));
+    }
     assert!(
-        !seen.iter().any(|k| k == "card_drawn"),
-        "no card after the contract settles: {last}"
+        settled.iter().any(|k| k == "escort_settled"),
+        "the pay once the card is decided: {settled:?}"
     );
+    // After the contract, the caravan goes nowhere: no card follows the pay.
+    let after = settled.iter().position(|k| k == "escort_settled").unwrap();
+    assert!(
+        !settled[after..].iter().any(|k| k == "card_drawn"),
+        "{settled:?}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A deed written by one card's choice changes what a later card offers (ENG-33): the test
+/// deck's tree card remembers `cleared_tree` when the Blades drag it aside, and the inn's
+/// night card offers a third choice only then.
+#[test]
+fn a_deed_written_on_the_road_opens_a_choice_at_night() {
+    let dir = std::env::temp_dir().join(format!("nat20_table_deeds_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let deck_path = dir.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
+    deck["cards"][0]["choices"][0]["effects"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({ "do": "remember", "deed": "cleared_tree" }));
+    // In place of the shipped deck's own third choice, which reads the shipped deed.
+    deck["cards"][1]["choices"][2] = json!({
+        "id": "thank", "text": "Ask the farmer to sit the watch with you.", "if": "cleared_tree",
+        "effects": [{ "do": "remember", "deed": "watched_with_the_farmer" }]
+    });
+    std::fs::write(&deck_path, deck.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    ));
+    let drawn_choices = |r: &Value| -> Vec<String> {
+        r["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["kind"] == "card_drawn")
+            .unwrap_or_else(|| panic!("no card drawn: {r}"))["choices"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["id"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    let first = api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    );
+    assert_eq!(drawn_choices(&first), ["clear", "around"]);
+    for who in ["bren", "maren"] {
+        ok(&api.call(
+            who,
+            json!({ "cmd": "choose_card", "actor": who, "choice": "clear" }),
+        ));
+    }
+    let night = api.call(
+        "bren",
+        json!({ "cmd": "rest_night", "actor": "bren", "where": "camp" }),
+    );
+    ok(&night);
+    assert_eq!(drawn_choices(&night), ["watch", "drive_off", "thank"]);
+    let dm = api.call("dm", json!({ "cmd": "get_state" }));
     assert_eq!(
-        last["result"]["state"]["world"]["card"],
-        Value::Null,
-        "{last}"
+        dm["result"]["state"]["world"]["card"]["choices"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3,
+        "{dm}"
+    );
+    // The DM's record names the card and the deed it reads (AGT-91).
+    let log = api.call("dm", json!({ "cmd": "events", "since": 0 }));
+    let shown: Vec<&Value> = log["result"]["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "card_shown")
+        .collect();
+    assert_eq!(shown.len(), 2, "{log}");
+    assert_eq!(shown[0]["card"], "fallen_tree");
+    assert!(shown[0].get("reads").is_none(), "{log}");
+    assert_eq!(shown[1]["card"], "yard_wolves");
+    assert_eq!(shown[1]["when"], "night");
+    assert_eq!(shown[1]["reads"][0]["deed"], "cleared_tree");
+    assert_eq!(shown[1]["reads"][0]["contract"], 1);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The destination's arrival card comes before the pay (ENG-35): the escort settles only once
+/// the card is decided, so a roster saved while it waits keeps the contract under way.
+#[test]
+fn the_destination_s_arrival_card_is_decided_before_the_pay() {
+    let dir = std::env::temp_dir().join(format!("nat20_table_arrival_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let deck_path = dir.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
+    deck["cards"].as_array_mut().unwrap().push(json!({
+        "id": "tower_gate", "zone": "old_tower", "when": "arrival", "target": "blades",
+        "text": "A crow sits on the tower gate.",
+        "choices": [{ "id": "shoo", "text": "Shoo it.", "effects": [{ "do": "remember", "deed": "chose_shoo" }] }, { "id": "leave", "text": "Leave it.", "effects": [{ "do": "remember", "deed": "chose_leave" }] }]
+    }));
+    std::fs::write(&deck_path, deck.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    ));
+    let card = |api: &mut Api, choice: &str| -> Value {
+        let mut last = Value::Null;
+        for who in ["bren", "maren"] {
+            last = api.call(
+                who,
+                json!({ "cmd": "choose_card", "actor": who, "choice": choice }),
+            );
+            assert_eq!(last["ok"], true, "{last}");
+        }
+        last
+    };
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    ));
+    card(&mut api, "clear");
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "rest_night", "actor": "bren", "where": "camp" }),
+    ));
+    card(&mut api, "watch");
+    let last = api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "old_tower", "pace": "normal" }),
+    );
+    ok(&last);
+    let seen = kinds(&last);
+    assert!(seen.iter().any(|k| k == "card_drawn"), "{last}");
+    assert!(!seen.iter().any(|k| k == "escort_settled"), "{last}");
+    let saved = api.call("dm", json!({ "cmd": "save_roster" }));
+    let state = &saved["result"]["roster"]["world"]["state"];
+    assert_eq!(state["contract"]["escort"]["done"], false, "{saved}");
+    assert_eq!(
+        state["contract"]["deck"]["pending"]["card"], "tower_gate",
+        "{saved}"
+    );
+    let decided = card(&mut api, "shoo");
+    let dm = api.call("dm", json!({ "cmd": "events", "since": 0 }));
+    let all = kinds(&json!({ "events": dm["result"]["events"] }));
+    let resolved = all.iter().rposition(|k| k == "card_resolved").unwrap();
+    let paid = all
+        .iter()
+        .position(|k| k == "escort_settled")
+        .expect("paid after the card");
+    assert!(resolved < paid, "{decided}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A pack's own deck joins the world's while its contract runs, and a roster whose contract
+/// is under way in one pack is refused by another on the same map (ENG-38).
+#[test]
+fn a_pack_brings_its_own_cards_and_keeps_its_contract() {
+    let base = std::env::temp_dir().join(format!("nat20_table_pack_deck_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    let (one, two) = (base.join("one"), base.join("two"));
+    for (dir, id) in [(&one, "pack_one"), (&two, "pack_two")] {
+        copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), dir);
+        let file = dir.join("campaign.json");
+        let mut campaign: Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+        campaign["id"] = json!(id);
+        std::fs::write(&file, campaign.to_string()).unwrap();
+    }
+    // Pack one's merchant has a card of his own on the Vale road, in place of the world's.
+    let world_deck = one.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&world_deck).unwrap()).unwrap();
+    deck["cards"].as_array_mut().unwrap().remove(0);
+    std::fs::write(&world_deck, deck.to_string()).unwrap();
+    std::fs::create_dir_all(one.join("deck")).unwrap();
+    std::fs::write(
+        one.join("deck/merchant.json"),
+        json!({ "cards": [{
+            "id": "tobin_sings", "zone": "vale_fields", "target": "blades",
+            "text": "Old Tobin starts a song about the river.",
+            "choices": [
+                { "id": "join", "text": "Sing along.", "effects": [{ "do": "remember", "deed": "chose_join" }] },
+                { "id": "hush", "text": "Ask him to hush.", "effects": [{ "do": "delay", "minutes": 10 }] }
+            ]
+        }] })
+        .to_string(),
+    )
+    .unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(one.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    ));
+    let first = api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    );
+    let drawn = first["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["kind"] == "card_drawn")
+        .unwrap_or_else(|| panic!("no card: {first}"))
+        .clone();
+    assert_eq!(
+        drawn["card_text"],
+        "Old Tobin starts a song about the river."
+    );
+    let saved = api.call("dm", json!({ "cmd": "save_roster" }));
+    ok(&saved);
+    // The same party in pack two: the contract under way is pack one's.
+    let mut other = Api::start(
+        Server::with_data_dir(two.clone()),
+        json!({ "cmd": "new_session", "seed": 1, "roster": saved["result"]["roster"] }),
+    );
+    ok(&other.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    let refused = other.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    );
+    assert_eq!(refused["ok"], false, "{refused}");
+    assert_eq!(refused["error"]["code"], "bad_roster", "{refused}");
+    assert!(
+        refused["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("still on the road in pack_one"),
+        "{refused}"
+    );
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+/// A card fight's named NPC who dies writes `killed_<npc>`, by whoever dealt the last blow
+/// (ENG-36). The deed is DM-only; the saved roster's world shows it.
+#[test]
+fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
+    let dir = std::env::temp_dir().join(format!("nat20_table_death_deed_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let deck_path = dir.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
+    deck["cards"][1]["choices"][1]["effects"][0]["monsters"] =
+        json!([{ "stat": "wolf", "npc": "grey" }]);
+    std::fs::write(&deck_path, deck.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    ));
+    let both = |api: &mut Api, choice: &str| -> Value {
+        let mut last = Value::Null;
+        for who in ["bren", "maren"] {
+            last = api.call(
+                who,
+                json!({ "cmd": "choose_card", "actor": who, "choice": choice }),
+            );
+            assert_eq!(last["ok"], true, "{last}");
+        }
+        last
+    };
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    ));
+    both(&mut api, "clear");
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "rest_night", "actor": "bren", "where": "camp" }),
+    ));
+    let mut last = both(&mut api, "drive_off");
+    let weapon = |who: &str| if who == "bren" { "longsword" } else { "mace" };
+    for _ in 0..300 {
+        if last["awaiting"]["kind"] != "action" {
+            break;
+        }
+        let who = last["awaiting"]["actor"].as_str().unwrap().to_owned();
+        let prompt = last["awaiting"]["prompt_id"].clone();
+        let attack = api.call(
+            "dm",
+            json!({ "cmd": "submit", "actor": who, "prompt_id": prompt,
+                    "option_id": format!("melee_attack/{}", weapon(&who)), "targets": ["wolf_1"] }),
+        );
+        last = if attack["ok"] == true {
+            attack
+        } else {
+            api.call(
+                "dm",
+                json!({ "cmd": "end_turn", "actor": who, "prompt_id": prompt }),
+            )
+        };
+    }
+    let saved = api.call("dm", json!({ "cmd": "save_roster" }));
+    ok(&saved);
+    let deed = &saved["result"]["roster"]["world"]["state"]["memory"]["deeds"]["killed_grey"];
+    let by = deed["by"]
+        .as_array()
+        .unwrap_or_else(|| panic!("no deed: {saved}"));
+    assert_eq!(by.len(), 1, "{deed}");
+    assert!(
+        ["bren", "maren"].contains(&by[0].as_str().unwrap()),
+        "{deed}"
+    );
+    assert_eq!(deed["contract"], 1, "{deed}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Cards nobody can speak on are settled at once (ENG-35), and a leg that ends at a place
+/// still meets both: its road card first, on the road, then the place's arrival card.
+#[test]
+fn unattended_cards_on_an_arriving_leg_come_road_first_then_arrival() {
+    let dir = std::env::temp_dir().join(format!(
+        "nat20_table_unattended_arrival_{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let deck_path = dir.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
+    let cards = deck["cards"].as_array_mut().unwrap();
+    cards.push(json!({
+        "id": "tower_gate", "zone": "old_tower", "when": "arrival", "target": "blades",
+        "text": "A crow sits on the tower gate.",
+        "choices": [{ "id": "shoo", "text": "Shoo it.", "effects": [{ "do": "remember", "deed": "chose_shoo" }] }, { "id": "leave", "text": "Leave it.", "effects": [{ "do": "remember", "deed": "chose_leave" }] }]
+    }));
+    cards.push(json!({
+        "id": "hill_crows", "zone": "vale_hills", "target": "blades",
+        "text": "Goats watch from the rocks.",
+        "choices": [{ "id": "wave", "text": "Wave.", "effects": [{ "do": "remember", "deed": "chose_wave" }] }, { "id": "pass", "text": "Pass by.", "effects": [{ "do": "remember", "deed": "chose_pass" }] }]
+    }));
+    // The goats are the hills' only road card, so the draw puts it on the table without a pick.
+    deck["cards"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|c| c["zone"] != "vale_hills" || c["id"] == "hill_crows");
+    std::fs::write(&deck_path, deck.to_string()).unwrap();
+    // The human owns the caravan, with no escort, and travels alone: no Blade can speak on a
+    // Blade card.
+    let campaign_path = dir.join("campaign.json");
+    let mut campaign: Value =
+        serde_json::from_str(&std::fs::read_to_string(&campaign_path).unwrap()).unwrap();
+    campaign["world"]["caravan"]["owner"] = json!("bren");
+    campaign["world"].as_object_mut().unwrap().remove("escort");
+    std::fs::write(&campaign_path, campaign.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call("dm", json!({ "cmd": "start_campaign", "party": ["bren"] })));
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    ));
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "choose_card", "actor": "bren", "choice": "around" }),
+    ));
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "rest_night", "actor": "bren", "where": "camp" }),
+    ));
+    let last = api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "old_tower", "pace": "normal" }),
+    );
+    ok(&last);
+    let seen = kinds(&last);
+    assert_eq!(
+        seen.iter().filter(|k| *k == "card_resolved").count(),
+        2,
+        "both settled at once: {last}"
+    );
+    let text: Vec<&str> = last["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "card_drawn")
+        .map(|e| e["card_text"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        text,
+        [
+            "Goats watch from the rocks.",
+            "A crow sits on the tower gate."
+        ],
+        "the road card first, then the arrival card"
     );
     let _ = std::fs::remove_dir_all(&dir);
 }

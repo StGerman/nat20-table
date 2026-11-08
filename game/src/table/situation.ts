@@ -2,7 +2,7 @@
 // character perceives, made from the human's own `get_state` and `legal_actions`, both projected
 // for the human's viewer (Rule 3). Nothing here comes from the DM's view or the scenario, so the
 // panel can't show anything `/where`, `/options` and `/sheet` don't.
-import type { Condition, Handle, HealthBand, LifeState, Side, State } from "@nat20-table/engine-client";
+import type { Condition, Handle, HealthBand, LifeState, Side, State, WorldPlayer } from "@nat20-table/engine-client";
 import { caravanAt, dayLine, mapLines, type LegalActionsResult } from "../view.ts";
 
 /** Another creature as the panel lists it. */
@@ -43,7 +43,7 @@ export interface Situation {
   /** Foes and others who are down: listed by handle only. */
   down: Handle[];
   /** In the living world (AGT-79): the day and where the caravan is, for the bar, and the `/map` sketch for the side pane. */
-  road?: { where: string; day: string; map: string[] };
+  road?: { where: string; day: string; map: string[]; scout?: string };
 }
 
 const SIDE_ORDER: Record<Side, number> = { hostile: 0, party: 1, neutral: 2 };
@@ -98,6 +98,16 @@ export function situationOf(state: State, turn: Handle | undefined, options?: Le
     },
     creatures,
     down,
-    ...(state.world ? { road: { where: `${dayLine(state.world)} · ${caravanAt(state.world)}`, day: dayLine(state.world), map: mapLines(state.world, "pane") } } : {}),
+    ...(state.world ? { road: roadOf(state.world, me, creatures) } : {}),
   };
+}
+
+/**
+ * The bar's road: the day, where the caravan is, and who walks ahead as the scout (AGT-90), in
+ * English like every panel line: "Day 1, morning · Vale Town · Maren walks ahead".
+ */
+function roadOf(world: WorldPlayer, me: { handle: Handle }, creatures: SituationCreature[]): NonNullable<Situation["road"]> {
+  const scout = world.scout ? (world.scout === me.handle ? "you" : (creatures.find((c) => c.handle === world.scout)?.name ?? world.scout)) : undefined;
+  const ahead = scout === undefined ? "" : scout === "you" ? " · you walk ahead" : ` · ${scout} walks ahead`;
+  return { where: `${dayLine(world)} · ${caravanAt(world)}${ahead}`, day: dayLine(world), map: mapLines(world, "pane"), ...(scout === undefined ? {} : { scout }) };
 }

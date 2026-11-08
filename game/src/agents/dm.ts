@@ -29,14 +29,14 @@ export const DM_TURN_TIMEOUT_MS = 12_000;
  * summary. A timeout there drops a scene's beats, such as its rest, not just a line of narration.
  */
 export const DM_LONG_WAKE_TIMEOUT_MS = 30_000;
-const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary"];
+const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary", "suggest"];
 
 /**
  * The wakes a successful `narrate` ends for the loop (M10 S2, decision 0053): the model's closing
  * call drains in the background. Not `scene_open`, `table_turn` or `summary`, which go on with
  * tools after narrating (`load_scene`, `request_check`, `short_rest`).
  */
-export const DM_SETTLE_ON: Partial<Record<DmWake, readonly string[]>> = { narrate: ["narrate"], combat_over: ["narrate"] };
+export const DM_SETTLE_ON: Partial<Record<DmWake, readonly string[]>> = { narrate: ["narrate"], combat_over: ["narrate"], pick: ["pick_card"] };
 
 /** The DM's craft guidance (D10): our own text, one skill per file, for the DM session only. */
 export const CRAFT_PLUGIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../dm-craft");
@@ -241,6 +241,9 @@ export const DM_ROAD_PROMPT = [
   "- The party travels with a merchant's caravan between places on a map; get_state shows the world: the day and hour, where the caravan is, the places and roads, the card waiting, the escort contract, the people who live in each place.",
   "- The players move the caravan on and end the day, never you: you have no travel, rest or card tool. When the party says in the story that they move on, or settles down for the night (they make camp, go to sleep, set a watch, take rooms), call propose_road: the table asks whoever drives the caravan at once, and the caravan moves or the night passes only if they agree. Never tell a player to find or pick a line on a panel: propose_road puts it in front of them. When a scene loads after a journey, open it as the arrival: the road behind them in a sentence, then the place.",
   "- \"A road card was settled\": narrate what came of it in one to three sentences. A card can bring a fight: start_fight or place_creature from your list, with a cause in the story.",
+  "- A card's choice may say which customs it keeps or breaks (\"keeps word_kept\"). When that choice is taken, show how the people who saw or heard it take it, in a look, a word or a silence, never a judgement from you. Never say the custom's id at the table.",
+  "- \"Pick a road card\": a draw offered two or three cards. Pick with pick_card, by this rule, in order: the card that continues what the party did (it reads a deed, or follows from one); failing that, the card that gives the human's character the clearest problem to act on; between two that do equally well, the one that can come to a fight. Never pick a card to spare the party a fight. Say why in one line. Narrate nothing yet: the table hears the card next.",
+  "- The scout: a Hired Blade may walk ahead of the caravan. When a road card comes, the engine rolls the scout's look first (scout_looked). If they saw it, open the card on what the scout saw, ahead of the others, and let the scout speak first; if they missed it, the card meets the whole party at once. Never say the roll or the skill.",
   "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as what shows.",
   "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. Name an amount only as the engine's lines give it, never a sum of your own.",
   "- Time in a place: the journey and the nights move the clock, and nothing else does. When the party spends time where they are (a meal, a long talk, a search, a wait), call pass_time once for it, with the span the story took: short_while, hour, or watch (until the next part of the day). Time in a place shortens the day's road. Never past midnight: the night is the players' call.",
@@ -248,6 +251,24 @@ export const DM_ROAD_PROMPT = [
   "- People of a place are still there when the party comes back, as the party left them; get_state lists them, and whether the party has met them.",
   "- Where the craft notes above speak of a scene's exits, loading the next scene or end_adventure, read the road instead: the journey moves the party on, and the run ends on its own when the escort is paid or the days run out.",
 ].join("\n");
+
+/**
+ * Story-space (Milestone 11, AGT-89, design decision 9): five rules that make every scene and
+ * every card a problem the party acts on. English here, spoken in the run's language (decision 0038).
+ */
+export function storySpacePrompt(human: Handle | undefined): string {
+  return [
+    "## Story-space",
+    "",
+    "- Open every scene on its problem: who wants what here, and what stands in the way, in the first lines.",
+    human
+      ? `- Put ${human} in that problem: someone asks ${human}, looks to ${human}, or stands in ${human}'s way.`
+      : "- Put one of the party in that problem: someone asks them, looks to them, or stands in their way.",
+    "- The players are co-writers: offer them a problem and its stakes, never decide for them what their characters do, feel or say.",
+    "- Tie every consequence to a deed or a roll: something the party did, or a roll the engine made. Nothing happens to them from nowhere.",
+    "- No \"pleasant nothing\": a scene or a stop that asks nothing of the party is told in one or two sentences and left behind.",
+  ].join("\n");
+}
 
 export class ModelDm implements DmAgent {
   readonly systemPrompt: string;
@@ -266,7 +287,7 @@ export class ModelDm implements DmAgent {
   constructor(config: ModelDmConfig) {
     this.config = config;
     const prompt = dmPrompt(config.pack, config.human, config.players, config.craft ?? "prompt", config.language);
-    this.systemPrompt = config.livingWorld ? `${prompt.replace(SCENES_LINE, ROAD_SCENES_LINE)}\n\n${DM_ROAD_PROMPT}` : prompt;
+    this.systemPrompt = config.livingWorld ? `${prompt.replace(SCENES_LINE, ROAD_SCENES_LINE)}\n\n${DM_ROAD_PROMPT}\n\n${storySpacePrompt(config.human)}` : prompt;
     this.seatTools = this.defineTools();
   }
 
@@ -277,7 +298,7 @@ export class ModelDm implements DmAgent {
       const seed = this.session ? undefined : this.seed(await tools.getState());
       this.session ??= this.openSession();
       const result = await this.session.turn(seed ? `${seed}\n\n${briefing}` : briefing, wake);
-      if (wake === "summary") return result.final;
+      if (wake === "summary" || wake === "suggest") return result.final;
     } catch (error) {
       // As for a player: a timed-out session goes on, a plan limit stops the run, and after any
       // other failure the next wake starts a fresh session from the seed.
@@ -430,6 +451,12 @@ export class ModelDm implements DmAgent {
           ]),
       // Time in a place (API-50): any living-world pack, whatever its format; outside one the tool
       // list drops it with the scenes-only tools (Copilot on table #295).
+      seatTool(
+        "pick_card",
+        "A draw offered two or three road cards: put one on the table, by its id, with one line of why. The others stay in the deck for later. The table hears only the card you pick.",
+        { card: z.string().describe("The offered card's id."), reason: z.string().describe("One line: why this card now.") },
+        (i) => this.bound((t) => t.pickCard(i.card, i.reason)),
+      ),
       seatTool(
         "pass_time",
         "Out of combat, let time pass where the party is (a meal, a long talk, a search, a wait): short_while is half an hour, hour an hour, watch until the next part of the day begins. Never past midnight: the night is the players' call.",
@@ -602,7 +629,7 @@ export class ModelDm implements DmAgent {
     const humanOnly = new Set(["offer_surrender", "legal_actions", "submit", "end_turn", "ask_human"]);
     // On the road the journey loads the scenes and the contract or the days end the run (AGT-80):
     // a DM that loaded a scene would move the party off the map, and one that ended the adventure would end the run early.
-    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : ["propose_road", "pass_time"]);
+    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : ["propose_road", "pass_time", "pick_card"]);
     return tools.filter((tool) => (human || !humanOnly.has(tool.name)) && !scenesOnly.has(tool.name));
   }
 }

@@ -8,13 +8,13 @@ import { ModelPlayer, ROAD_PROMPT } from "../src/agents/player.ts";
 import { REPO } from "../src/engine.ts";
 import { castParty } from "../src/play/run.ts";
 import { BarkTools, duration, formatLevelUpChoice, HandTools, PlayerTools, ReactionFloor } from "../src/table/tools.ts";
-import { formatState } from "../src/view.ts";
+import { customsTag, formatState } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 const CHOICE = { model: "claude-sonnet-5-5", effort: "low" } as const;
 const SEAT = ["my_sheet", "look", "legal_actions", "submit_decision", "move", "end_turn", "react", "say"];
-const ROAD = ["travel", "rest_night", "choose_card", "level_up", "answer_level_up"];
+const ROAD = ["travel", "rest_night", "scout", "choose_card", "level_up", "answer_level_up"];
 
 test("the road and level-up tools join a player's seat only in a living-world pack, before note", () => {
   const party = castParty(MILL);
@@ -124,6 +124,33 @@ test("the road waits for the floor and for an open level-up: a hand or bark wake
     assert.match((await bren.restNight("camp")).text, /until maren's level-up is done/);
     assert.match((await new PlayerTools("maren", t.table).travel("normal")).text, /once your level-up is done/);
     assert.equal(t.requests().length, before, "still nothing reached the engine");
+  } finally {
+    t.close();
+  }
+});
+
+test("the DM reads which customs a card choice keeps or breaks; a choice that touches none reads as before (API-55)", () => {
+  assert.equal(customsTag({}), "");
+  assert.equal(customsTag({ keeps: [], breaks: [] }), "");
+  assert.equal(customsTag({ keeps: ["word_kept"] }), " (keeps word_kept)");
+  assert.equal(customsTag({ keeps: ["bread_shared"], breaks: ["debt_paid", "word_kept"] }), " (keeps bread_shared; breaks debt_paid, word_kept)");
+});
+
+test("the scout's walk is a change: an open surrender holds it, and the engine never sees it (AGT-90)", async () => {
+  // Copilot on table #314: `scout` was missing from the changes, so it skipped the surrender hold and the retry budget.
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
+  try {
+    await t.engine.request("dm", { cmd: "load_scene", scene_id: "vale_town" });
+    await t.engine.request("dm", { cmd: "start_campaign", party: ["bren", "maren"], human: "bren" });
+    t.table.scoutOffered = true;
+    t.table.surrender = { handles: ["goblin_1"], words: false };
+    const before = t.requests().filter((r) => r.cmd === "scout").length;
+    const held = await new PlayerTools("maren", t.table).scout();
+    assert.ok(!held.ok && held.text.includes("surrender"), held.text);
+    assert.equal(t.requests().filter((r) => r.cmd === "scout").length, before);
+    t.table.surrender = undefined;
+    const walked = await new PlayerTools("maren", t.table).scout();
+    assert.ok(walked.ok, walked.text);
   } finally {
     t.close();
   }

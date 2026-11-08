@@ -1,5 +1,5 @@
-//! The living world for nat20-table: the clock, the map, the caravan, the road event deck and
-//! the place NPCs.
+//! The living world for nat20-table: the clock, the map, the caravan, the road event deck, the
+//! place NPCs and the customs.
 //!
 //! The world is data plus SRD tables about the world (travel pace, travel terrain,
 //! drawn vehicles). Rules on creatures stay in core: the world never rolls a save or
@@ -14,6 +14,7 @@
 pub mod campaign;
 pub mod caravan;
 pub mod clock;
+pub mod customs;
 pub mod deck;
 pub mod dice;
 pub mod escort;
@@ -25,9 +26,11 @@ pub mod travel;
 pub use campaign::{CampaignFile, CampaignWorld};
 pub use caravan::{Caravan, CaravanError, Good, Goods, Owner, Wagon};
 pub use clock::{Clock, Watch};
+pub use customs::{Custom, CustomsError, CustomsFile};
 pub use deck::{
     Card, CardError, Choice, DC_LADDER, DRAW_DIE, Decided, Deck, DeckError, DeckFile, DeckState,
-    Effect, PendingCard, Resolution, Table, Target, When, Who,
+    Deed, DeedBook, Deeds, Drawn, Effect, MAX_OFFERED, Monster, Once, OnceScope, PendingCard,
+    PickError, Resolution, SCOUTED, ScoutSkill, Table, Target, When, Who, killed_deed,
 };
 pub use dice::{ListDice, WorldDice};
 pub use escort::{EscortState, EscortTerms, SKILLED_WAGE_CP, Wage};
@@ -35,5 +38,6 @@ pub use map::{Edge, Generate, MapError, Place, Position, Road, Terrain, WorldMap
 pub use npcs::{Attitude, NpcCarries, NpcCoins, NpcDef, NpcFile, NpcItem, NpcLeft, NpcState};
 pub use plan::{Reach, Trip, TripLeg};
 pub use travel::{
-    LONG_REST_MINUTES, Leg, Pace, RATIONS, TravelError, WAKE_HOUR, World, WorldState,
+    Carried, ContractState, LONG_REST_MINUTES, Leg, MILES_PER_DAY_BETWEEN, Memory, Pace, RATIONS,
+    SavedWorld, TravelError, WAKE_HOUR, World, WorldState,
 };

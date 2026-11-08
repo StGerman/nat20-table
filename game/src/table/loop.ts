@@ -5,7 +5,7 @@
 import type { StatBlockEntry } from "../pack/adventure.ts";
 import { EngineStopped, type CardDm, type Event, type Handle, type LevelUpChoice, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
-import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
+import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, offeredLine, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, cardChoices, choiceLines, levelUpChoices, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
@@ -101,6 +101,12 @@ export interface CampaignLoop {
   onNight?: () => Promise<void>;
   /** Whether the run keeps the party for the next journey (a roster): the end card says so. */
   keepsParty?: boolean;
+  /**
+   * The pack's start day (`world.day`, 1 by default). `dayLimit` is the pack's last day on that
+   * clock, so a next contract, whose clock carries on from the saved day (M11, Q2), gets as many
+   * days as the pack gives: from its start day to its day limit.
+   */
+  startDay?: number;
 }
 
 /** A moment the unattended run prints a line for (M7 design §3.1). */
@@ -193,6 +199,44 @@ export interface RunReport {
   sceneTimes: SceneTime[];
   /** The suggestions picker's counts (AGT-49); absent when the run had no suggester. */
   suggestions?: SuggestionCounts;
+  /**
+   * The DM's suggested road cards after a living-world run (AGT-91, decision 4), in the deck file's
+   * format, never loaded; `unread` keeps an answer that was not JSON. Absent when none was asked.
+   */
+  suggestedCards?: SuggestedCards;
+  /**
+   * The contract's days on the world clock: its first day, and the last day the run plays (none
+   * without a day limit). Later than the pack's own on a next contract, whose clock carries on.
+   */
+  campaignDays?: { start: number; last: number | null };
+}
+
+/** The DM's suggested cards (AGT-91): up to two, each with its one-line reason. */
+export type SuggestedCards = { cards: unknown[]; why: string[] } | { unread: string };
+
+/** The ask at a living world's end (AGT-91). Our own words; the cards are for Stas to read, never loaded. */
+export const SUGGEST_ASK = [
+  "The journey is over. Suggest up to two new road cards that would carry on what this party did on it: a deed they wrote, a person they met, a choice that cost them. Stas reads them after the run; they are never loaded into play.",
+  "Each card follows the deck file's format and the card tests: someone wants something, the stake is visible, two or three choices that each name an action and never its outcome, each choice different in what it changes.",
+  'Your final answer is only this JSON, nothing else, and call no tool: {"cards": [{"id": "snake_case_id", "zone": "a road zone or a place id", "when": "road", "target": "blades", "text": "what the players read", "choices": [{"id": "snake_case", "text": "an action"}]}], "why": ["one line per card: what it carries on"]}',
+].join("\n");
+
+/** The DM's answer to the suggest wake, as the run report keeps it. */
+export function readSuggested(answer: string): SuggestedCards {
+  // The whole answer is the JSON, or it is kept as written; a code fence around it is allowed.
+  const body = answer.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/, "$1");
+  try {
+    const parsed = JSON.parse(body) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const { cards, why } = parsed as { cards?: unknown; why?: unknown };
+      // Only cards that are objects: the run report reads their fields.
+      const kept = Array.isArray(cards) ? cards.filter((c) => c !== null && typeof c === "object" && !Array.isArray(c)) : [];
+      if (kept.length > 0) return { cards: kept.slice(0, 2), why: Array.isArray(why) ? why.slice(0, 2).map(String) : [] };
+    }
+  } catch {
+    // Not JSON: kept as it came.
+  }
+  return { unread: answer };
 }
 
 /** Model wakes in a row that lost the connection before the run stops as `offline` (M7 design §3.1). */
@@ -345,8 +389,13 @@ export class TableLoop {
    * ("last_turn"), then the DM's closing narration and the end card ("closing").
    */
   private journeyEnd: "last_turn" | "closing" | undefined;
+  /** The escort's settling, held while the destination's arrival card waits (ENG-35). */
+  private settledLater: Event | undefined;
   /** The destination's scene opened without the pay, which the `escort_settled` wake tells next (AGT-86). */
   private arrivalOpened = false;
+  /** The last game day the contract plays, on the world clock (`dayLimit` from its first day). */
+  private lastDay: number | undefined;
+  private firstDay: number | undefined;
   /** The human's experience when the campaign started, for what the journey earned. */
   private startXp: number | undefined;
   /** The road cards the run has asked about, by the engine's log head when each was drawn, so a card that won't settle stops the run. */
@@ -403,7 +452,11 @@ export class TableLoop {
         const human = this.table.human;
         const started = await send(this.table, "dm", { cmd: "start_campaign", party: [...this.campaign.party], ...(human ? { human } : {}) }, () => "the campaign started");
         if (!started.ok) throw new Error(`the campaign didn't start: ${started.text}`);
-        this.table.log("system", `campaign started: ${this.campaign.party.join(", ")} with the caravan${this.campaign.dayLimit ? `, until the end of day ${this.campaign.dayLimit}` : ""}`);
+        // The contract's first day on the world clock: later than the pack's on a next contract.
+        // `day_limit` is the pack's last day on its own clock, so it moves by as many days.
+        this.firstDay = (await this.dmWorld())?.clock.day ?? this.campaign.startDay ?? 1;
+        if (this.campaign.dayLimit !== undefined) this.lastDay = this.campaign.dayLimit + this.firstDay - (this.campaign.startDay ?? 1);
+        this.table.log("system", `campaign started: ${this.campaign.party.join(", ")} with the caravan${this.lastDay ? `, until the end of day ${this.lastDay}` : ""}`);
         if (human) this.startXp = (await this.humanSheet())?.xp?.points;
       }
       while (!this.table.ended) {
@@ -425,6 +478,8 @@ export class TableLoop {
     // A reaction still in flight has nothing left to react to.
     await Promise.all([...this.barks.values()].map((bark) => (bark.cut(), bark.done)));
     const ended = this.table.ended ?? "ended";
+    // A living world that ended in play: the DM suggests up to two cards for later (AGT-91).
+    const suggestedCards = this.campaign && !this.table.stop && !failure ? await this.suggestCards() : undefined;
     // A stopped engine leaves the run's record short, and the run says why it stopped. Any other
     // failure to write the record (a full disk, a folder it can't write) fails the run, once the
     // agents are closed: the audit needs that record.
@@ -460,9 +515,29 @@ export class TableLoop {
       fight: { rounds: this.fightRounds.size, lines: this.table.fightLines },
       ...(this.table.stop ? { stop: this.table.stop } : {}),
       ...(this.suggester ? { suggestions: { ...this.suggestions } } : {}),
+      ...(suggestedCards ? { suggestedCards } : {}),
       // A scene a stop cut short keeps no end time, and counts the rounds it got to.
+      ...(this.firstDay !== undefined ? { campaignDays: { start: this.firstDay, last: this.lastDay ?? null } } : {}),
       sceneTimes: this.sceneTimes.map((t) => ({ ...t, ...(t.ended_at ? {} : { rounds: this.roundsIn(t.id) }) })),
     };
+  }
+
+  /**
+   * The DM's suggested cards (AGT-91), asked once the journey is over. Not a decision of the run:
+   * a failure is logged and counts no fallback, and the run report says none were written.
+   */
+  private async suggestCards(): Promise<SuggestedCards | undefined> {
+    try {
+      const answer = await this.dm.wake("suggest", SUGGEST_ASK, this.dmTools);
+      if (typeof answer !== "string" || !answer.trim()) return undefined;
+      const suggested = readSuggested(answer);
+      this.table.log("system", "unread" in suggested ? "the DM's suggested cards were not JSON; kept as written" : `the DM suggested ${suggested.cards.length} cards`);
+      return suggested;
+    } catch (error) {
+      if (stopsTheRun(error)) return undefined;
+      this.table.log("error", `dm (suggest) failed: ${error instanceof Error ? error.message : String(error)}`, "dm");
+      return undefined;
+    }
   }
 
   /** One decision: whatever the engine waits on next. */
@@ -480,11 +555,20 @@ export class TableLoop {
         if (this.table.ended) return;
         if (event.kind === "combat_over") await this.combatOver(event);
         if (event.kind === "scene_loaded" && i < lastScene) this.table.log("system", `scene ${event.scene_id} left before it opened`);
-        else if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id, settles);
+        else if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id, settles || (Boolean(this.campaign) && (await this.payWaits())));
         if (this.campaign) await this.roadEvent(event);
       }
     }
     if (this.table.ended) return;
+    // A road card waits for the party's word out of a fight (AGT-80): it is asked before anything else.
+    if (this.campaign && !this.table.inCombat && (await this.cardRound())) return;
+    // The destination's arrival card is settled and its fight, if any, is over: the pay comes now (ENG-35).
+    if (this.settledLater && !this.table.inCombat && !(await this.dmWorld())?.card) {
+      const settled = this.settledLater;
+      this.settledLater = undefined;
+      await this.roadEvent(settled);
+      return;
+    }
     // The human's last turn at the journey's end is over, and no fight or level-up holds the
     // table (B7): a level-up picked on the last turn is answered first, then the journey closes.
     if (this.journeyEnd === "closing" && !this.table.inCombat && this.table.awaiting.kind !== "level_up") {
@@ -492,8 +576,6 @@ export class TableLoop {
       await this.closeJourney(destination);
       return;
     }
-    // A road card waits for the party's word out of a fight (AGT-80): it is asked before anything else.
-    if (this.campaign && !this.table.inCombat && (await this.cardRound())) return;
     await this.showSituation();
     const awaiting = this.table.awaiting;
     // A fight drops the requests the talk before it carried or left pending (party talk §4.4).
@@ -528,7 +610,17 @@ export class TableLoop {
 
   // --- Scenes -------------------------------------------------------------------------------------
 
-  /** `payNext`: the escort is paid right after this opening, in its own wake (AGT-86). */
+  /**
+   * The caravan stands at the escort's destination and the pay waits for its arrival card
+   * (ENG-35, MAP-10): the opening still leaves the pay out, so the arrival is told once.
+   */
+  private async payWaits(): Promise<boolean> {
+    const world = await this.dmWorld();
+    const escort = world?.escort;
+    return Boolean(escort && !escort.contract.done && world.at.kind === "at" && world.at.place === escort.contract.destination);
+  }
+
+  /** `payNext`: the escort is paid after this opening, in its own wake (AGT-86). */
   private async sceneLoaded(sceneId: string, payNext = false): Promise<void> {
     // A scene the run passes over never loads (`DmTools.loadScene` loads the next one instead).
     if (this.onScene(sceneId, this.scenes) !== "continue") {
@@ -700,12 +792,18 @@ export class TableLoop {
         await this.settle();
         await campaign.onNight?.();
         const day = (await this.dmWorld())?.clock.day;
-        if (campaign.dayLimit !== undefined && day !== undefined && day > campaign.dayLimit) {
-          this.table.end(`the day limit: day ${campaign.dayLimit} is over`);
+        if (this.lastDay !== undefined && day !== undefined && day > this.lastDay) {
+          this.table.end(`the day limit: day ${this.lastDay} is over`);
         }
         return;
       }
       case "escort_settled":
+        // The destination's arrival card is on the table (ENG-35): the party decides it first,
+        // and the pay, the last turn and the closing follow once it is settled.
+        if ((await this.dmWorld())?.card) {
+          this.settledLater = event;
+          return;
+        }
         await this.wakeDm(
           "road",
           undefined,
@@ -733,7 +831,36 @@ export class TableLoop {
    * An AI player that gives no word goes with the others. Returns whether a card was asked about.
    */
   private async cardRound(): Promise<boolean> {
-    const world = await this.dmWorld();
+    let world = await this.dmWorld();
+    // A draw that offered two or three cards waits for the DM's pick (API-53, AGT-88): the DM is
+    // woken with the offered cards and the deeds the world remembers, and picks by the rule in its
+    // prompt. A failed or timed-out wake, or one that picks nothing, leaves the first card rolled
+    // to the engine's pick, which the run report counts.
+    const offered = world?.offered ?? [];
+    if (offered.length > 0 && !this.table.ended) {
+      const deeds = world?.deeds ?? [];
+      await this.wakeDm(
+        "pick",
+        undefined,
+        "Pick a road card: a draw offered these, in the order they were rolled.",
+        ...offered.map((c, i) => offeredLine(c, i + 1)),
+        deeds.length > 0 ? `Deeds the world remembers: ${deeds.map((d) => d.deed).join(", ")}.` : "The world remembers no deeds yet.",
+        "Call pick_card once, with the card's id and one line of why. Narrate nothing yet.",
+      );
+      world = await this.dmWorld();
+      const first = world?.offered?.[0];
+      if (first && !this.table.ended) {
+        // A failed wake already counted its fallback; a wake that picked nothing counts here.
+        if (!this.dmWakeFailed) {
+          this.table.fallbacks += 1;
+          this.table.log("fallback", `the DM picked no road card: the table takes the first card rolled (${first.id})`, "dm", { cause: "unanswered" });
+        }
+        const picked = await send(this.table, "dm", { cmd: "pick_card", card: first.id, reason: "The table took the first card rolled.", fallback: true }, () => `the road card ${first.id} is on the table`);
+        // A refused pick leaves the cards offered and every road move refused: the run can't go on.
+        if (!picked.ok) throw new Error(`the table could not pick the road card ${first.id}: ${picked.text}`);
+        world = await this.dmWorld();
+      }
+    }
     const card = world?.card;
     if (!card) return false;
     // A player owner makes the caravan's call after every Blade's advice (S2): the card waits for them
@@ -811,9 +938,12 @@ export class TableLoop {
     const human = this.human;
     const { choices, preset } = cardChoices(card);
     const enter = card.said.length > 0 ? "press Enter to go with the others" : `press Enter for ${preset}`;
+    // The card's words once; after words said at the table only the choices again (AGT-96).
+    let showCard = true;
     for (;;) {
       if (this.table.ended) return;
-      this.table.show({ kind: "info", title: "On the road", text: [card.text, owner ? "The caravan is yours: you make the call, with the Blades' advice." : card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
+      if (showCard) this.table.show({ kind: "info", title: "On the road", text: [card.text, owner ? "The caravan is yours: you make the call, with the Blades' advice." : card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
+      showCard = false;
       this.table.show({ kind: "options", title: "Your word", lines: choiceLines(choices), choices, preset });
       const intent = await this.ask({ kind: "card" });
       if (!intent) return;
@@ -826,6 +956,7 @@ export class TableLoop {
         const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
         if (!outcome.ok) {
           await this.humanRejected(outcome);
+          showCard = true;
           continue;
         }
         this.table.log("intent", `${human} on the road card: ${picked.label}`, human);
@@ -833,8 +964,16 @@ export class TableLoop {
         return;
       }
       if (intent.kind === "text") {
-        // Words are said at the table; the card still waits for a number.
+        // Words are said at the table; the card still waits for a number, and the table says so.
         await this.table.declare(human, intent.text);
+        // The people in the scene answer the words; the card itself stays the table's to decide.
+        await this.wakeDm(
+          "road",
+          undefined,
+          `While the road card waits, ${human} says or does: "${intent.text}"`,
+          "Answer it in one or two sentences, as the people in the scene would: what they say, show or do. The card is not decided: never decide it, never tell how a choice turns out, no number of your own. It waits for the table's word.",
+        );
+        this.table.show({ kind: "info", title: "Said at the table", text: `The road still waits for your word: pick one of the choices, 1 to ${choices.length}, or ${enter}.` });
         continue;
       }
       this.table.show({ kind: "info", title: "On the road", text: `Pick a number, or ${enter}.` });
@@ -1033,6 +1172,9 @@ export class TableLoop {
         break;
       case "rest_night":
         outcome = await send(this.table, human, { cmd: "rest_night", actor: human, where: act.where }, () => "the night passes");
+        break;
+      case "scout":
+        outcome = await send(this.table, human, { cmd: "scout", actor: human }, () => "you walk ahead of the caravan as the scout");
         break;
       case "level_up":
         outcome = await send(this.table, human, { cmd: "level_up", actor: human }, () => "the new level starts");
@@ -1317,13 +1459,17 @@ export class TableLoop {
     if (human && (owner === human || npcOwned)) {
       const state = await this.humanState();
       if (state?.view !== "player" || !state.world?.drives) return;
-      const lines = roadChoices(state.world, 1).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel"));
-      if (lines.length === 0) {
+      // Moving on, a Hired Blade may also walk ahead as the scout first (AGT-90).
+      const lines = roadChoices(state.world, 1, human).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel" || c.act?.kind === "scout"));
+      if (!lines.some((c) => c.act?.kind !== "scout")) {
         this.table.tellDm(`${human} can't ${rest ? "end the day" : "move the caravan on"} now: nothing on the road offers it. Go on in fiction.`);
         return;
       }
-      const choices: Choice[] = [...lines.map((c, i) => ({ ...c, number: i + 1 })), { number: lines.length + 1, label: "Not yet" }];
+      const numbered = (from: Choice[]): Choice[] => [...from.map((c, i) => ({ ...c, number: i + 1 })), { number: from.length + 1, label: "Not yet" }];
+      let choices = numbered(lines);
       const preset = (choices.findIndex((c) => c.act?.kind === "rest_night" && c.act.where === step) + 1) || 1;
+      // The human has seen *Walk ahead as the scout*: the AI Blades may scout now.
+      if (lines.some((c) => c.act?.kind === "scout")) this.table.scoutOffered = true;
       await this.table.flush();
       for (;;) {
         if (this.table.ended) return;
@@ -1349,6 +1495,11 @@ export class TableLoop {
         }
         this.table.log("intent", `${human} picked: ${picked.label}`, human);
         this.table.tellDm(`${human} took an option: ${picked.label}`);
+        // Walking ahead isn't moving on: the road asks again, without the scout line.
+        if (picked.act.kind === "scout") {
+          choices = numbered(choices.filter((c) => c.act !== undefined && c.act.kind !== "scout"));
+          continue;
+        }
         return;
       }
     }
@@ -1909,7 +2060,12 @@ export class TableLoop {
     this.lastOptions = listed.result as LegalActionsResult;
     this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat);
     // Out of a fight, whoever may drive the caravan can move it on or end the day (AGT-80).
-    if (!combat && state?.view === "player" && state.world) this.top = this.shown = [...this.top, ...roadChoices(state.world, this.top.length + 1)];
+    if (!combat && state?.view === "player" && state.world) {
+      const road = roadChoices(state.world, this.top.length + 1, human);
+      // The human has seen *Walk ahead as the scout*, or isn't a Blade: the AI Blades may scout now (AGT-90).
+      if (road.length > 0) this.table.scoutOffered = true;
+      this.top = this.shown = [...this.top, ...road];
+    }
     // Out of a fight, the next level when the sheet says it is due (AGT-80): a saved party can reach it in any pack.
     if (!combat) {
       const sheet = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));

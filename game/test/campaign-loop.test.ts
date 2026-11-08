@@ -15,6 +15,7 @@ import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
 import { DM_ROAD_PROMPT } from "../src/agents/dm.ts";
 import { readCampaign } from "../src/pack/campaign.ts";
+import { wordRows } from "../src/play/verdict.ts";
 import { formatDmState } from "../src/view.ts";
 import { TEST_PACK, testTable } from "./helpers.ts";
 
@@ -75,6 +76,34 @@ test("the loop starts the campaign, asks a road card of the human first and then
   }
 });
 
+test("words on a road card are said at the table, the DM answers them in the scene, and the card waits for a number without being shown again (AGT-96)", async () => {
+  const walk = traveller();
+  let spoke = 0;
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "card" && spoke++ < 2) return { kind: "text", text: "Ask him for the papers that let him take a toll." };
+    return walk(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    const dm = new ScriptedDm({});
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    await loop.run("vale_town");
+    // The DM answers the words in the scene, and is told the card is not its to decide.
+    const answer = dm.briefings.filter((b) => b.wake === "road" && b.briefing.includes("Ask him for the papers that let him take a toll."));
+    assert.equal(answer.length, 2, "the DM answers each time");
+    assert.match(answer[0]!.briefing, /never decide it/);
+    const roadInfo = seat.shown.filter((e) => e.kind === "info" && e.title === "On the road");
+    assert.equal(roadInfo.length, 1, "the card's words are shown once");
+    const said = seat.shown.filter((e) => e.kind === "info" && e.title === "Said at the table");
+    assert.equal(said.length, 2);
+    assert.ok(said[0]?.kind === "info" && /still waits for your word: pick one of the choices, 1 to \d/.test(said[0].text), JSON.stringify(said[0]));
+    assert.equal(seat.shown.filter((e) => e.kind === "options" && e.title === "Your word").length, 3, "the choices again after each word");
+    assert.ok(t.requests().some((r) => r.cmd === "choose_card" && r.viewer === "bren"), "the number gives the word");
+  } finally {
+    t.close();
+  }
+});
+
 test("a road card's choices for the human: Enter takes what most of the others said", () => {
   const card = { choices: [{ id: "clear", text: "Clear the road" }, { id: "around", text: "Go around" }], said: [{ actor: "maren", choice: "around" }] };
   const { choices, preset } = cardChoices(card);
@@ -100,6 +129,15 @@ test("the road's lines join the human's options only when the human may drive an
   ]);
   assert.deepEqual(roadChoices({ ...(world as object), drives: false } as never, 1), []);
   assert.deepEqual(roadChoices({ ...(world as object), card: { text: "x" } } as never, 1), []);
+  // A Hired Blade may walk ahead as the scout (AGT-90): one line for the road, gone once they do;
+  // a merchant or a run with no escort has none.
+  const escort = { destination: "mill", blades: [{ handle: "bren", served: 0, paid_cp: 0 }], done: false };
+  const blade = { ...(world as object), escort } as never;
+  assert.deepEqual(roadChoices(blade, 1, "bren").at(-1), { number: 4, label: "Walk ahead as the scout", act: { kind: "scout" }, about: { id: "scout" } });
+  assert.equal(roadChoices({ ...(blade as object), scout: "torva" } as never, 1, "bren").at(-1)?.label, "Walk ahead as the scout", "another Blade's turn ahead can be taken");
+  assert.ok(!roadChoices({ ...(blade as object), scout: "bren" } as never, 1, "bren").some((c) => c.act?.kind === "scout"));
+  assert.ok(!roadChoices(blade, 1, "odda").some((c) => c.act?.kind === "scout"), "not a Blade");
+  assert.ok(!roadChoices(world, 1, "bren").some((c) => c.act?.kind === "scout"), "no escort");
 });
 
 test("a human who owns the caravan picks a road out of the place, each line carrying where it goes", () => {
@@ -236,6 +274,17 @@ test("a human who owns the caravan takes a road by name, and makes the caravan's
 
 test("a campaign pack names its start scene and day limit; the DM reads the world and the road's rules", async () => {
   assert.deepEqual(readCampaign(TEST_PACK), { startScene: "vale_town", startDay: 1 });
+  // The day limit is the pack's last day on its own clock, so it never comes before its start day.
+  const early = mkdtempSync(path.join(tmpdir(), "early-limit-"));
+  try {
+    cpSync(TEST_PACK, early, { recursive: true });
+    const file = path.join(early, "campaign.json");
+    const json = JSON.parse(readFileSync(file, "utf8"));
+    writeFileSync(file, JSON.stringify({ ...json, day_limit: 3, world: { ...json.world, day: 5 } }));
+    assert.throws(() => readCampaign(early), /day_limit 3 is before the start day 5; it is the last day the run plays/);
+  } finally {
+    rmSync(early, { recursive: true, force: true });
+  }
   assert.match(DM_ROAD_PROMPT, /name a price, a wage or a sum of coin only as the engine's events or get_state show it, never one you worked out/);
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
   try {
@@ -298,7 +347,17 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
   const t = await testTable({ seed: 3, pack, human: "bren", players: ["torva", "maren", "ilsa"], seat });
   try {
     const party = ["bren", "torva", "maren", "ilsa"];
-    const dm = new ScriptedDm({});
+    // The DM picks the last card offered at the first draw that offers some, and picks nothing
+    // after, so the run shows both the DM's pick and the table's (AGT-88).
+    let picked = 0;
+    const dm = new ScriptedDm({
+      pick: async (tools, briefing) => {
+        if (picked++ > 0) return;
+        const ids = [...briefing.matchAll(/^Offered card \d+: ([a-z0-9_]+) /gm)].map((m) => m[1]!);
+        await tools.pickCard(ids.at(-1)!, "It follows from what the party did.");
+      },
+      suggest: async () => '{"cards": [{"id": "fair_debt", "text": "A stall-keeper remembers the party."}], "why": ["it carries on the fair"]}',
+    });
     const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
     const report = await loop.run("fw_highsteads");
     assert.equal(report.ended, "the escort contract is done", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
@@ -326,8 +385,149 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     // Every Blade is paid at least the advance and the day of arrival, from Odda's purse.
     for (const blade of escort.contract.blades) assert.ok(blade.paid_cp >= 400, `${blade.handle} paid ${blade.paid_cp}`);
     assert.ok(state.result.state.world!.clock.day <= 3, "within the day limit");
+    // Wend's road piles hold more than one card, so draws offer cards (API-53). The DM is woken
+    // to pick with the offered cards and the deeds (AGT-88); a wake that picks nothing leaves the
+    // first card rolled to the table, counted as a fallback.
+    const wakes = dm.briefings.filter((b) => b.wake === "pick");
+    assert.ok(wakes.length >= 2, `${wakes.length} pick wakes`);
+    assert.ok(wakes.every((b) => /^Offered card 1: /m.test(b.briefing) && /^Offered card 2: /m.test(b.briefing) && /deeds/i.test(b.briefing)), wakes[0]?.briefing);
+    const picks = t.requests().filter((r) => r.cmd === "pick_card");
+    assert.equal(picks.length, wakes.length, "one pick a draw");
+    assert.ok(picks.every((r) => r.viewer === "dm"));
+    assert.equal(picks.filter((r) => (r as { fallback?: boolean }).fallback === true).length, wakes.length - 1, "every pick after the first is the table's");
+    const log = await t.engine.request("dm", { cmd: "events", since: 0 });
+    assert.ok(log.result?.cmd === "events");
+    const came = log.result.events.flatMap((e) => (e.kind === "card_picked" && e.came !== "soon" ? [e.came] : []));
+    assert.deepEqual(came, ["dm_pick", ...Array(wakes.length - 1).fill("engine_pick")]);
+    assert.ok(log.result.events.some((e) => e.kind === "card_picked" && e.came === "dm_pick" && e.reason === "It follows from what the party did."));
+    assert.equal(t.table.transcript.records.filter((r) => r.kind === "fallback" && r.text.startsWith("the DM picked no road card")).length, wakes.length - 1);
+    // Every card on the table has its DM-only record (AGT-91), and the DM suggests cards once the journey is over.
+    const shown = log.result.events.filter((e) => e.kind === "card_shown");
+    assert.equal(shown.length, log.result.events.filter((e) => e.kind === "card_drawn").length);
+    assert.deepEqual(report.suggestedCards, { cards: [{ id: "fair_debt", text: "A stall-keeper remembers the party." }], why: ["it carries on the fair"] });
+    const ask = dm.briefings.find((b) => b.wake === "suggest");
+    assert.match(ask?.briefing ?? "", /Suggest up to two new road cards/);
+    assert.equal(dm.briefings.at(-1)?.wake, "suggest", "asked last, once the journey is over");
   } finally {
     t.close();
+  }
+});
+
+test("Fair in Wend's road always reads one of its own deeds, on the first choices or the last, whatever the dice (exit pair 2, run 1)", async () => {
+  // Pair 2's first run took the branch no later card read at every card and failed m11-thread.
+  // Here the table, the DM and the dice vary; the thread must hold on every path.
+  const party = ["bren", "torva", "maren", "ilsa"];
+  const lastOf = (briefing: string) => /^Choices: (.*)$/m.exec(briefing)?.[1]?.split(" | ").at(-1)?.split(":")[0];
+  for (const last of [false, true]) {
+    for (const seed of [3, 5, 8]) {
+      const human = blade();
+      const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+        if (last && prompt.kind === "card") return { kind: "option", number: s.choices.at(-1)?.number ?? 1 };
+        return human(prompt, s);
+      });
+      const t = await testTable({ seed, pack: path.join(REPO, "scenarios/fair_in_wend"), human: "bren", players: party.slice(1), seat });
+      try {
+        const campaign = readCampaign(path.join(REPO, "scenarios/fair_in_wend"))!;
+        const loop = new TableLoop({
+          table: t.table,
+          dm: new ScriptedDm(
+            last
+              ? {
+                  pick: async (tools, briefing) => {
+                    const ids = [...briefing.matchAll(/^Offered card \d+: ([a-z0-9_]+) /gm)].map((m) => m[1]!);
+                    await tools.pickCard(ids.at(-1)!, "The last card rolled.");
+                  },
+                }
+              : {},
+          ),
+          players: party.slice(1).map(
+            (h) =>
+              new ScriptedPlayer(
+                h,
+                last
+                  ? {
+                      card: async (tools, briefing) => {
+                        const id = lastOf(briefing);
+                        if (id) await tools.chooseCard(id);
+                      },
+                    }
+                  : {},
+              ),
+          ),
+          maxSteps: 400,
+          campaign: { party, keepsParty: true, startDay: campaign.startDay, ...(campaign.dayLimit !== undefined ? { dayLimit: campaign.dayLimit } : {}) },
+        });
+        const report = await loop.run(campaign.startScene);
+        const where = `seed ${seed}, ${last ? "last" : "first"} choices`;
+        assert.equal(report.ended, "the escort contract is done", where);
+        const log = await t.engine.request("dm", { cmd: "events", since: 0 });
+        assert.ok(log.result?.cmd === "events");
+        const rows = wordRows({ roster: { party: "new" } } as never, log.result.events as never, [], false);
+        const thread = rows.find((r) => r.row === "m11-thread");
+        assert.equal(thread?.status, "pass", `${where}: ${thread?.detail}`);
+      } finally {
+        t.close();
+      }
+    }
+  }
+});
+
+test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the saved party, where the road reads what run 1 did", async () => {
+  const party = ["bren", "torva", "maren", "ilsa"];
+  const play = async (pack: string, roster?: Parameters<typeof testTable>[0]["roster"]) => {
+    const seat = new ScriptedSeat("bren", [], blade());
+    const t = await testTable({ seed: 3, pack: path.join(REPO, pack), human: "bren", players: party.slice(1), seat, ...(roster ? { roster } : {}) });
+    const campaign = readCampaign(path.join(REPO, pack))!;
+    const loop = new TableLoop({
+      table: t.table,
+      dm: new ScriptedDm({}),
+      players: party.slice(1).map((h) => new ScriptedPlayer(h)),
+      maxSteps: 400,
+      campaign: { party, keepsParty: true, startDay: campaign.startDay, ...(campaign.dayLimit !== undefined ? { dayLimit: campaign.dayLimit } : {}) },
+    });
+    const report = await loop.run(campaign.startScene);
+    return { t, report };
+  };
+  const run1 = await play("scenarios/fair_in_wend");
+  let roster;
+  let rows1: ReturnType<typeof wordRows> = [];
+  try {
+    assert.equal(run1.report.ended, "the escort contract is done");
+    const log1 = await run1.t.engine.request("dm", { cmd: "events", since: 0 });
+    assert.ok(log1.result?.cmd === "events");
+    rows1 = wordRows({ roster: { party: "new" } } as never, log1.result.events as never, [], false);
+    const saved = await run1.t.engine.request("dm", { cmd: "save_roster" });
+    assert.ok(saved.result?.cmd === "save_roster");
+    roster = saved.result.roster;
+  } finally {
+    run1.t.close();
+  }
+  const run2 = await play("scenarios/the_way_back", roster);
+  try {
+    // The clock carries on from run 1, and the day limit counts from the contract's first day.
+    assert.equal(run2.report.ended, "the escort contract is done", JSON.stringify(run2.t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    // Its days, as run.json records them: from the carried day, three of them (Copilot on table #321).
+    const days = run2.report.campaignDays!;
+    assert.ok(days.start > 1, JSON.stringify(days));
+    assert.equal(days.last, days.start + 2);
+    assert.deepEqual(run1.report.campaignDays, { start: 1, last: 3 });
+    const log = await run2.t.engine.request("dm", { cmd: "events", since: 0 });
+    assert.ok(log.result?.cmd === "events");
+    // The bridge is gone for the world, so its stop meets The bridge again, which reads a run 1 deed (exit row 5).
+    const drawn = log.result.events.flatMap((e) => (e.kind === "card_shown" ? [e.card] : []));
+    assert.ok(drawn.includes("bridge_again") && !drawn.includes("millbeck_bridge"), drawn.join(", "));
+    const shown = log.result.events.find((e) => e.kind === "card_shown" && e.card === "bridge_again");
+    const rows2 = wordRows({ roster: { party: "continue" } } as never, log.result.events as never, [], false);
+    // The M11 verdict rows the exit pair is judged on hold by construction (F6).
+    const status = (rows: typeof rows1, row: string) => rows.find((r) => r.row === row)?.status;
+    assert.equal(status(rows1, "m11-deck"), "pass", "first run: m11-deck");
+    assert.equal(status(rows1, "m11-thread"), "pass", "first run: m11-thread");
+    assert.equal(status(rows2, "m11-deck"), "pass", "second run: m11-deck");
+    assert.equal(status(rows2, "m11-thread"), "pass", "second run: m11-thread");
+    assert.equal(status(rows2, "m11-memory"), "pass", "second run: m11-memory");
+    assert.ok(shown?.kind === "card_shown" && (shown.reads ?? []).some((d) => d.deed === "crossed_millbeck"), JSON.stringify(shown));
+  } finally {
+    run2.t.close();
   }
 });
 
@@ -444,6 +644,37 @@ test("the party says it moves on: the DM proposes it, and the human who drives t
   }
 });
 
+test("the road the DM proposes offers a Blade the scout's walk first, then asks again without it (AGT-90)", async () => {
+  // Copilot on table #314: the DM-driven road prompt never showed the scout line, so the AI Blades waited for good.
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "explore") return { kind: "text", text: "Right then, let's go." };
+    if (prompt.kind !== "road") return ScriptedSeat.pass(prompt, s);
+    const scout = s.choices.find((c) => c.act?.kind === "scout");
+    return scout ? { kind: "option", number: scout.number } : ScriptedSeat.pass(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    let moved = false;
+    const dm = new ScriptedDm({
+      table_turn: async (tools) => {
+        const said = await tools.proposeRoad(moved ? "camp" : "move_on");
+        assert.ok(said.ok, said.text);
+        moved = true;
+      },
+    });
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    await loop.run("vale_town");
+    const roads = seat.shown.filter((e) => e.kind === "options" && e.title === "The road");
+    assert.ok(roads[0]?.kind === "options" && roads[0].lines.some((l) => l.includes("Walk ahead as the scout")), JSON.stringify(roads[0]));
+    assert.ok(roads[1]?.kind === "options" && !roads[1].lines.some((l) => l.includes("Walk ahead as the scout")), JSON.stringify(roads[1]));
+    const sent = t.requests().filter((r) => r.cmd === "scout" || r.cmd === "travel");
+    assert.deepEqual(sent.slice(0, 2).map((r) => [r.cmd, r.actor]), [["scout", "bren"], ["travel", "bren"]], "the human walked ahead, then moved the caravan on");
+    assert.ok(t.table.scoutOffered, "the AI Blades may scout once the human has seen the line");
+  } finally {
+    t.close();
+  }
+});
+
 test("a line on screen is taken by its name typed out, and by its number while the DM's question is open", async () => {
   // Stas's run, 2026-11-04: the DM asked a question, /options listed the road, and "11" and
   // "Move on with the caravan" both reached the DM as words, so the caravan never left.
@@ -509,5 +740,50 @@ test("the DM can't propose the inn where there is none, and the night's line is 
     assert.deepEqual(t.requests().filter((r) => r.cmd === "rest_night").map((r) => [r.actor, r.where]), [["bren", "camp"]]);
   } finally {
     t.close();
+  }
+});
+
+test("an arrival card at the destination is decided before the human's last turn and the closing (ENG-35)", async () => {
+  // Fair in Wend with its world carried in the pack, and one arrival card at Saltmouth.
+  const pack = mkdtempSync(path.join(tmpdir(), "arrival-"));
+  cpSync(path.join(REPO, "scenarios/fair_in_wend"), pack, { recursive: true });
+  cpSync(path.join(REPO, "worlds/wend"), path.join(pack, "worlds/wend"), { recursive: true });
+  writeFileSync(
+    path.join(pack, "worlds/wend/deck/arrival.json"),
+    JSON.stringify({
+      cards: [
+        {
+          id: "test_quay",
+          zone: "wendmouth",
+          when: "arrival",
+          target: "blades",
+          text: "A boy on the quay offers to carry the sacks.",
+          choices: [
+            { id: "let_him", text: "Let him carry them.", effects: [{ do: "delay", minutes: 10 }] },
+            { id: "wave_off", text: "Wave him off.", effects: [{ do: "remember", deed: "waved_off_the_quay_boy" }] },
+          ],
+        },
+      ],
+    }),
+  );
+  const seat = new ScriptedSeat("bren", [], blade());
+  const t = await testTable({ seed: 3, pack, human: "bren", players: ["torva", "maren", "ilsa"], seat });
+  try {
+    const party = ["bren", "torva", "maren", "ilsa"];
+    const dm = new ScriptedDm({});
+    const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
+    const report = await loop.run("fw_highsteads");
+    assert.equal(report.ended, "the escort contract is done", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    const quay = seat.shown.findIndex((e) => e.kind === "options" && e.title === "Your word" && e.lines.some((l) => l.includes("Let him carry them")));
+    const end = seat.shown.findIndex((e) => e.kind === "info" && e.title === "Journey's end");
+    assert.ok(quay >= 0, "the human was asked about the arrival card");
+    assert.ok(quay < end, "the arrival card comes before the journey's last turn");
+    const settled = dm.briefings.findIndex((b) => b.wake === "road" && b.briefing.includes("A road card was settled"));
+    const paid = dm.briefings.findIndex((b) => b.briefing.includes("the merchant paid the Blades what they are owed"));
+    const closing = dm.briefings.findIndex((b) => b.briefing.includes("The journey is over"));
+    assert.ok(settled >= 0 && settled < paid && paid < closing, "the DM told the card, then the pay, then the closing");
+  } finally {
+    t.close();
+    rmSync(pack, { recursive: true, force: true });
   }
 });

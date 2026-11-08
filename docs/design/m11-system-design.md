@@ -160,6 +160,14 @@ Scout at the draw (Stas, 17:55Z): the scout rolls when the leg's card is drawn, 
 - No roll: a card with no `scout` field (nothing to find: a flock, a dog, a friendly peddler), a night card (the watch is the card itself), an arrival card, or a party with no scout.
 - The roll is public like any check and comes in the same answer as `card_drawn`, a line before it, so its skill hints at nothing the card does not show at once. The scout changes how the party meets a card, never which card comes: the draw and the pick come first.
 
+### Customs on choices (ENG-39, API-55)
+
+Stas, 2026-11-06 23:00Z, answering the card plan from the storytelling bible: the field now, not with the ethics build.
+
+- A world's `customs.json` lists its peoples' customs by id, each with its `people` and its line. Wend's are Embra's five for the valley folk (`bread_shared`, `debt_paid`, `word_kept`, `no_blood_inside_gate`, `mercy_to_yielded`) plus one each for Saltmouth (`paper_is_law`), the hill bands (`kin_before_strangers`) and the roadfolk (`road_is_free`).
+- A card choice may name the customs it `keeps` and `breaks`. The validator refuses an id the world does not list, and a custom named twice on one choice (kept and broken included). A world with no file has no customs, so any tag is refused there.
+- The tags are DM-only on the wire (API-55): the DM narrates who reacts, never a verdict. Who saw or heard a deed, and how attitudes move one step, is the ethics build's, after Milestone 11.
+
 ## Wire contract and visibility
 
 Every change below goes in Rule 1 order in its own PR: the contract crate, `contract/protocol.md`, a fixture, a `CHANGELOG.md` line, `npm run gen`, then the server. Contract versions start at 1.0.0-dev.59, after the hygiene stack's dev.58.
@@ -220,6 +228,7 @@ The card text rule (decision 11) is the other half: a choice names the action, a
 - **New verdict rows:** `m11-deck` (exit row 2), `m11-thread` (row 3), `m11-memory` (row 5, run 2 only); story-space flags go through the narration judge (row 4), and Stas confirms them as in Milestone 9.
 - **The judge's new question:** for each scene opening and each settled card, does the human's character have a problem to act on?
 - **The report adds:** every deed (run, day, `by`), every pick with its reason, every pay-off (a draw or arrival that read a deed), the draw-three counts, every fight, every scout roll and whether the forewarned choice was taken, and up to two cards the DM suggests after the run (decision 4), in the deck file format but not loaded.
+- **Built (AGT-91):** the session log names every card that goes on the table in a DM-only `card_shown{card, zone, when, reads, forewarned}` (contract 1.0.0-dev.66), because a pile of one logs no `card_picked` and the public `card_drawn` has no card id. `reads` is the remembered deeds the card's `if`, or an offered choice's `if`, names; `OfferedCard.reads` carries the same, so the DM's pick sees which card continues the party's deeds rather than guessing it. The verdict's rows are `m11-deck`, `m11-thread`, `m11-story` (the judge's `story_space` flags, asked only of a living-world run) and `m11-memory` (gating only on a run that continues a roster; a card that reads a deed this run's log did not write is the world remembering). The report's "Word on the road" section lists the rest. The DM's suggestions come from one last DM wake (`suggest`) once a journey ends in play: its final answer is JSON, kept in `suggested-cards.json` and never loaded; a failed wake counts no fallback.
 
 ## Content
 
@@ -234,7 +243,7 @@ The deck doc names 23 cards. Milestone 11 builds 22 of them; Tobin's fortune wai
 | The way back and the merchants | The Way Back pack (campaign.json, Fenn, four scenes and their prose); *Wet salt*, *Salt on credit*, *Men at the iron* (Fenn's, in The Way Back's deck); *The meadow track* (Odda's, in Fair in Wend's deck); *The bridge again* (world deck) | pack decks, deeds, memory across contracts |
 
 - **Scout fields.** A card with something to find names its skill in `scout` and has one forewarned choice under `if: "scouted"` that replaces one of its choices; a card with nothing to find has neither. In the M9 runs 8 of the 14 leg cards drawn had something to find (the Millbeck bridge, the goblins on the ridge and the peddler's warning of men in the willows for Perception; the mud and the landslide for Survival); the flock, the sheepdog and the peddler himself had nothing.
-- **The five card tests.** The validator checks the two that code can check: no two choices of a card alike (their effects differ), and every choice changes something later (it has an effect or writes a deed). The other three (someone wants something, the stake is visible, the text names the action and not the outcome) are checked in review: each content PR lists every card it adds against the five tests, and the judge's story-space question catches the rest in play. On fights the validator only warns (Q6, a recommendation): a route that meets fewer than two cards with a choice that can come to a fight is named in its output, and the build stays green.
+- **The five card tests.** The validator checks the two that code can check: no two choices of a card alike (their effects differ), and every choice changes something later (it has an effect or writes a deed). The other three (someone wants something, the stake is visible, the text names the action and not the outcome) are checked in review: each content PR lists every card it adds against the five tests, and the judge's story-space question catches the rest in play. On fights the validator only warns (Q6, a recommendation): a route that meets fewer than two cards with a choice that can come to a fight is named in its output, and the build stays green. Built (MAP-11): the two tests and the scout pairing fail a deck in `Deck::validate`; the warnings (`Deck::route_warnings` on a campaign's `route`, and `Deck::untagged_fight_warnings` for a fight with persons that names no custom, a person being any stat block core does not type a beast) go to the engine's stderr as `deck: ` lines when a campaign starts, so `npm run pack:check` lists them and a run folder's `engine-stderr.log` keeps them. Five Wend choices that changed nothing (pass the barrow lights, leave the cairn, send the peddler, the dog and the drovers on) now each remember a deed, which a later card may read.
 - **The cast's Russian names** (Tobin, Bel and Tam Corrin, Mother Sedge, Rufus, Sister Agna, Col, Dunn, Fenn Lusk) go into the Russian glossary that the hygiene stack added (AGT-85), with their declined forms, so the DM and the players never improvise them.
 - **One anachronism each**, as the deck doc lists them, in a new optional card field `note` that only the DM sees, so the DM voices it at every meeting.
 - **The roadfolk rule holds:** no card makes the roadfolk the culprit.
@@ -253,15 +262,17 @@ The rows are in `TASKS.md` § Milestones, row 11 (the project copy is the live o
 | 1 | ENG-36 | The death deed: a fight monster may name an NPC; its death writes `killed_<npc>` with `by` | S |
 | 1 | ENG-37 | Memory across contracts: the state split, the next contract's start, `once` for the world | M |
 | 1 | ENG-38 | Pack decks: a pack's own deck folder joins the world's deck while its contract runs; card ids unique across the world and its packs; a roster under way refuses another pack | S |
+| 1b | ENG-39 | Customs on choices: the world's `customs.json`, `keeps` and `breaks` on a choice, the validator | S |
 | 2. Contract and server | API-51 | Roster format 2 (format 1 refused); the world at the contract's start kept beside the world now, and the start question's third answer, *play the last contract again* (the TUI line and the unattended flag) | S–M |
 | 2 | API-52 | Deeds on the wire: `deed_remembered`, `WorldDm.deeds` | S |
 | 2 | API-53 | Draw three: `cards_offered`, `WorldDm.offered`, `pick_card`, the card's `note` | M |
 | 2 | API-54 | Scouting at the draw: `scout` (who walks ahead), the card's `scout` skill, the SRD Search DC by terrain, the roll before `card_drawn`, the draw-only `scouted` condition | S |
+| 2b | API-55 | Customs on the wire, DM only: a choice's `keeps` and `breaks` in the DM's card views | S |
 | 3. Table | AGT-88 | The DM's pick: the wake, the tool, the pick rule, the scripted and the timeout pick | S–M |
 | 3 | AGT-89 | The five story-space rules in the DM prompt | S |
 | 3 | AGT-90 | Scouting at the table: the AI tool, *Walk ahead as the scout* in `/options`, who walks ahead in the situation panel | S |
 | 3 | AGT-91 | Run report and verdict: `m11-*` rows, the judge's question, deeds, picks, pay-offs, counts, fights, suggested cards | M |
-| 4. Content | MAP-10 | 29 cards: 22 from the deck doc, two new Wendford arrivals, *The bridge again* and the merchants' four; chain D, the cast's notes and Russian names; one PR per group | L |
+| 4. Content | MAP-10 | 30 cards: 22 from the deck doc, two new Wendford arrivals, *The bridge again*, the merchants' four and *The fair price*; every choice tagged with its customs; chain D, the cast's notes and Russian names; one PR per group | L |
 | 4 | MAP-11 | The validator's static card tests: two of the five tests, a `scout` field only with an `if: "scouted"` choice and the other way round, and a warning for a route with fewer than two fight cards | S |
 | 4 | MAP-12 | The Way Back pack: campaign.json (route, Fenn's wagon and cargo, escort), Fenn's prose and Russian names, four scenes and their prose, the README | M |
 | 5. Exit | AGT-92 | The exit pair (card 3): *Fair in Wend*, then *The Way Back* on the same roster | S |

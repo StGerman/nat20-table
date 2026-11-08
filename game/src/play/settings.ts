@@ -55,6 +55,8 @@ export const SETTINGS = {
   rosters: { kind: "string", default: path.join(REPO, "rosters") },
   /** With --roster, start the pack's pregens instead of the saved party; the saved one is replaced when the run ends. */
   "new-party": { kind: "bool", default: false },
+  /** With --roster, play the saved party's last journey again from where it began (API-51): the start screen's third answer, for a run nobody sits at. */
+  "replay-journey": { kind: "bool", default: false },
   "max-steps": { kind: "int", default: 2000 },
   verbose: { kind: "bool", default: false },
   /** Don't show the DM's narration as it is written (M10 S4, AGT-66). The preview is on since the spike passed on the Mac (2026-10-31). */

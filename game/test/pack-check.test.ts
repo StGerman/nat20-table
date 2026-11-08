@@ -38,6 +38,9 @@ test("every pack in scenarios/ passes the pack check and loads every scene", asy
     assert.deepEqual(report.problems, [], pack);
     const skeleton = readJson(skeletonFile(pack)) as Adventure;
     assert.deepEqual(report.loaded, skeleton.scenes.map((s) => s.id));
+    // The deck's warnings are listed and never fail the check (MAP-11): The Silent Mill has no deck.
+    if (pack === MILL) assert.deepEqual(report.warnings, []);
+    else assert.ok(report.warnings.every((w) => /two or more are recommended$|names no custom it keeps or breaks$/.test(w)), report.warnings.join("\n"));
   }
 });
 
@@ -76,6 +79,17 @@ test("a living-world pack's skeleton is its campaign.json: no exits needed, and 
     assert.deepEqual(report.problems, []);
   } finally {
     good.close();
+  }
+  // The engine's deck warnings reach the report (MAP-11): a route that stays in Wendford meets no fight.
+  const short = campaignMill({ ...WEND, route: ["wendford"] }, (s) => {
+    for (const scene of s.scenes) scene.exits = [];
+  });
+  try {
+    const report = await checkPack(short.pack);
+    assert.deepEqual(report.problems, []);
+    assert.ok(report.warnings.includes("the route wendford meets 0 cards that can come to a fight; two or more are recommended"), report.warnings.join("\n"));
+  } finally {
+    short.close();
   }
   const bad = campaignMill({ ...WEND, start: "the_moon" });
   try {

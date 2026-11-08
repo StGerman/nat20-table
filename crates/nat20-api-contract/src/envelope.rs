@@ -324,6 +324,27 @@ pub enum Command {
         /// The choice id, from `world.card.choices`.
         choice: String,
     },
+    /// Puts one of the offered road cards on the table (API-53; protocol §4.13): the DM's pick
+    /// among the two or three cards a draw offered (`world.offered`). DM only.
+    PickCard {
+        /// The card id, from `world.offered`.
+        card: String,
+        /// Why this card, in one line: kept in the session log and the run report, DM only.
+        reason: String,
+        /// The game loop picked the first card rolled because the DM did not answer: the
+        /// pick is the engine's, not the DM's.
+        #[serde(default)]
+        fallback: bool,
+    },
+    /// Walks ahead of the caravan as the scout (API-54; protocol §4.13): a Hired Blade takes
+    /// the role for every leg until another Blade takes it. When a leg's road card names a
+    /// skill to scout with, the scout's Wisdom check comes before the card is shown, and a
+    /// success opens the card's forewarned choice. As the actor itself, never `dm`; never the
+    /// caravan's owner.
+    Scout {
+        /// Who walks ahead: the viewer's own creature, a Hired Blade.
+        actor: Handle,
+    },
     /// Saves the party for the next game session (API-45; protocol §4.15): the campaign's
     /// party, else every party character built from a pregen, and the world. DM only.
     SaveRoster,
@@ -639,6 +660,17 @@ pub enum CommandResult {
     },
     /// The state after the word, with the card gone once it was decided.
     ChooseCard {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The state with the picked card on the table, or already decided when nobody could
+    /// speak on it.
+    PickCard {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The state with the new scout in the world.
+    Scout {
         /// Projected for the request's `viewer`.
         state: State,
     },

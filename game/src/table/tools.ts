@@ -47,7 +47,7 @@ function refusal(response: Response): string {
 /** Commands that change the session. The rest only read it. */
 const CHANGES = new Set<Command["cmd"]>([
   "submit", "move", "end_turn", "react", "request_check", "help", "short_rest", "start_combat", "end_combat", "spawn", "load_scene",
-  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "pass_time", "choose_card", "level_up", "answer_level_up",
+  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "pass_time", "choose_card", "level_up", "answer_level_up", "scout",
 ]);
 
 /**
@@ -270,6 +270,16 @@ export class PlayerTools {
     return a.actor === this.me ? "your level-up" : `${a.actor}'s level-up`;
   }
 
+  /**
+   * Walks ahead of the caravan as the scout (AGT-90, API-54): for every leg until another Blade
+   * does. Waits until the human was offered it first.
+   */
+  scout(): Promise<ToolOutcome> {
+    if (this.table.inCombat) return this.answer(notNow("the scout walks ahead once the fight is over"));
+    if (this.table.human && !this.table.scoutOffered) return this.answer(notNow(`${this.table.human} is asked first who walks ahead; ask again on the road`));
+    return this.answer(send(this.table, this.me, { cmd: "scout", actor: this.me }, () => "you walk ahead of the caravan as the scout; when a card comes on the road, you look first"));
+  }
+
   /** Gives this character's word on the road card waiting: advice, a vote or the owner's call. */
   chooseCard(choice: string): Promise<ToolOutcome> {
     return this.answer(send(this.table, this.me, { cmd: "choose_card", actor: this.me, choice }, () => `you said: ${choice}`));
@@ -355,6 +365,10 @@ export class HandTools extends PlayerTools {
   }
 
   override chooseCard(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override scout(): Promise<ToolOutcome> {
     return this.wait();
   }
 
@@ -790,6 +804,20 @@ export class DmTools {
       const clock = r.result?.cmd === "pass_time" && r.result.state.view === "dm" ? r.result.state.world?.clock : undefined;
       return clock ? `time passed; it is now day ${clock.day}, ${clock.watch.replace(/_/g, " ")}` : "time passed";
     });
+  }
+
+  /**
+   * Puts one of the offered road cards on the table (AGT-88, API-53), with one line of why.
+   * Only while a draw's cards wait for the pick.
+   */
+  async pickCard(card: string, reason: string): Promise<ToolOutcome> {
+    if (this.table.exhausted("dm")) return this.table.spent();
+    const world = (await this.dmState())?.world;
+    const offered = world?.offered ?? [];
+    if (offered.length === 0) return notNow("no road cards wait for your pick");
+    if (!offered.some((c) => c.id === card)) return notNow(`${card} is not one of the offered cards: ${offered.map((c) => c.id).join(", ")}`);
+    if (!reason.trim()) return notNow("say why in one line");
+    return send(this.table, "dm", { cmd: "pick_card", card, reason: reason.trim() }, () => `${card} is on the table; the table hears it next`);
   }
 
   /** Out of combat: one creature hands another, within 5 feet, coin or one carried item (ITM-6). */

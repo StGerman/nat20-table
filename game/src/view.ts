@@ -431,8 +431,12 @@ export function dmWorldLines(world: WorldDm): string[] {
   lines.push(`Caravan (${world.caravan.owner}): ${world.caravan.wagons.length} wagon${world.caravan.wagons.length === 1 ? "" : "s"}${cargo.length > 0 ? `, ${cargo.join(", ")}` : ""}.`);
   if (world.card) {
     const c = world.card;
-    lines.push(`Road card ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}`).join(" | ")}.${c.waiting_for.length > 0 ? ` Waiting for ${c.waiting_for.join(", ")}.` : ""}`);
+    lines.push(`Road card ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}${customsTag(x)}`).join(" | ")}.${c.waiting_for.length > 0 ? ` Waiting for ${c.waiting_for.join(", ")}.` : ""}`);
   }
+  // The cards a draw offered for the DM's pick (API-53, AGT-88), and what the world remembers.
+  for (const [i, c] of (world.offered ?? []).entries()) lines.push(offeredLine(c, i + 1));
+  const deeds = world.deeds ?? [];
+  if (deeds.length > 0) lines.push(`Deeds the world remembers: ${deeds.map((d) => `${d.deed} (by ${d.by.length > 0 ? d.by.join(", ") : "nobody"}, day ${d.day})`).join("; ")}.`);
   if (world.escort) {
     const e = world.escort;
     lines.push(`Escort to ${named(e.contract.destination)}${e.contract.done ? ", done" : ""}; the merchant's purse holds ${coinWords(e.purse_cp)}.`);
@@ -500,4 +504,23 @@ export function tellable(events: Event[], deaths: Deaths): Event[] {
     if (e.kind !== "turn_start" && e.kind !== "turn_end") return true;
     return !dead(e.actor, e.seq);
   });
+}
+
+/** The customs a choice keeps or breaks, for the DM (API-55): " (keeps word_kept; breaks debt_paid)", or nothing. */
+export function customsTag(choice: { keeps?: string[]; breaks?: string[] }): string {
+  const parts = [
+    ...(choice.keeps && choice.keeps.length > 0 ? [`keeps ${choice.keeps.join(", ")}`] : []),
+    ...(choice.breaks && choice.breaks.length > 0 ? [`breaks ${choice.breaks.join(", ")}`] : []),
+  ];
+  return parts.length > 0 ? ` (${parts.join("; ")})` : "";
+}
+
+/** One card a draw offered, for the DM's pick (AGT-88): its place in the roll order, id, words, choices and note. */
+export function offeredLine(
+  c: { id: string; zone: string; target: string; text: string; choices: Array<{ id: string; text: string; keeps?: string[]; breaks?: string[] }>; note?: string | null; reads?: Array<{ deed: string; day: number; contract: number }> },
+  n: number,
+): string {
+  // The deeds it reads (AGT-91): the pick rule's first test, so the DM sees it, not guesses it.
+  const reads = (c.reads ?? []).map((d) => `${d.deed} (contract ${d.contract}, day ${d.day})`);
+  return `Offered card ${n}: ${c.id} (${c.zone}, ${c.target}): ${c.text} Choices: ${c.choices.map((x) => `${x.id}: ${x.text}${customsTag(x)}`).join(" | ")}.${reads.length > 0 ? ` Reads: ${reads.join(", ")}.` : ""}${c.note ? ` Note: ${c.note}` : ""}`;
 }

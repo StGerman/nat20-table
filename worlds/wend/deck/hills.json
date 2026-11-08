@@ -1,5 +1,5 @@
 {
-    "_comment": "Road cards for the slopes and the barrows under the Hollin Hills (MAP-6, API-43). Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2). Checks use the SRD DC ladder; fights use SRD 5.2.1 stat blocks.",
+    "_comment": "Road cards for the slopes and the barrows under the Hollin Hills (MAP-6, API-43; Faces of the Road, MAP-10). Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2). Checks use the SRD DC ladder; fights use SRD 5.2.1 stat blocks.",
     "cards": [
         {
             "id": "sheep_on_track",
@@ -12,18 +12,30 @@
                     "text": "Herd them through the gap in the wall.",
                     "effects": [
                         {
-                            "do": "check", "who": "blades", "ability": "wisdom", "skill": "animal_handling", "dc": 10,
-                            "success": [{"do": "delay", "minutes": 15}],
-                            "failure": [{"do": "delay", "minutes": 60}]
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "animal_handling",
+                            "dc": 10,
+                            "success": [
+                                {"do": "delay", "minutes": 15},
+                                {"do": "remember", "deed": "herded_gwyns_sheep"}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 60}
+                            ]
                         }
                     ]
                 },
                 {
                     "id": "wait",
                     "text": "Sit on the wall and wait for them to move.",
-                    "effects": [{"do": "delay", "minutes": 45}]
+                    "effects": [
+                        {"do": "delay", "minutes": 45}
+                    ]
                 }
-            ]
+            ],
+            "note": "Gwyn's strays from the Highsteads: she keeps every flock on these ridges and will hear who brought them home. Joke: one ewe has a bell and a temper, and she leads."
         },
         {
             "id": "washed_out",
@@ -37,9 +49,17 @@
                     "text": "Dig the track wider first.",
                     "effects": [
                         {
-                            "do": "check", "who": "blades", "ability": "strength", "skill": "athletics", "dc": 15,
-                            "success": [{"do": "delay", "minutes": 60}],
-                            "failure": [{"do": "delay", "minutes": 150}]
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "strength",
+                            "skill": "athletics",
+                            "dc": 15,
+                            "success": [
+                                {"do": "delay", "minutes": 60}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 150}
+                            ]
                         }
                     ]
                 },
@@ -48,9 +68,18 @@
                     "text": "Lead the horses across by the bridle.",
                     "effects": [
                         {
-                            "do": "check", "who": "blades", "ability": "wisdom", "skill": "animal_handling", "dc": 10,
-                            "success": [{"do": "delay", "minutes": 20}],
-                            "failure": [{"do": "delay", "minutes": 90}, {"do": "cargo", "good": "rations", "change": -3}]
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "animal_handling",
+                            "dc": 10,
+                            "success": [
+                                {"do": "delay", "minutes": 20}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 90},
+                                {"do": "cargo", "good": "rations", "change": -3}
+                            ]
                         }
                     ]
                 }
@@ -65,14 +94,28 @@
                 {
                     "id": "chase",
                     "text": "Go up and drive them off.",
-                    "effects": [{"do": "fight", "monsters": ["goblin_warrior", "goblin_warrior"]}]
+                    "effects": [
+                        {
+                            "do": "fight",
+                            "monsters": [
+                                "goblin_warrior",
+                                "goblin_warrior"
+                            ]
+                        }
+                    ],
+                    "keeps": [
+                        "mercy_to_yielded"
+                    ]
                 },
                 {
                     "id": "ignore",
                     "text": "Keep moving and keep an eye on them.",
-                    "effects": [{"do": "add_card", "card": "goblin_ambush"}]
+                    "effects": [
+                        {"do": "add_card", "card": "goblin_ambush"}
+                    ]
                 }
-            ]
+            ],
+            "note": "Snitt's hungry band, down out of the hills because something higher up is squeezing them; nobody in the valley knows what. They watch to see whether the wagon is worth it. A goblin who drops its spear has yielded. Bren says goblins are pay, not people; Maren says they are hungry."
         },
         {
             "id": "goblin_ambush",
@@ -85,12 +128,252 @@
                 {
                     "id": "fight",
                     "text": "Close ranks around the wagon and fight.",
-                    "effects": [{"do": "fight", "monsters": ["goblin_warrior", "goblin_warrior", "goblin_warrior"]}]
+                    "effects": [
+                        {
+                            "do": "fight",
+                            "monsters": [
+                                "goblin_warrior",
+                                "goblin_warrior",
+                                "goblin_warrior"
+                            ]
+                        }
+                    ],
+                    "keeps": [
+                        "mercy_to_yielded"
+                    ]
                 },
                 {
                     "id": "throw_food",
                     "text": "Throw them a sack of food and push on.",
-                    "effects": [{"do": "cargo", "good": "rations", "change": -4}]
+                    "effects": [
+                        {"do": "cargo", "good": "rations", "change": -4}
+                    ],
+                    "keeps": [
+                        "bread_shared"
+                    ]
+                }
+            ],
+            "note": "The same band, hungrier. A goblin who drops its spear has yielded, and the valley will hear how the Blades treated it. Food thrown to them is a way of speaking: they take it and go."
+        },
+        {
+            "id": "peddler",
+            "zone": "slopes",
+            "target": "blades",
+            "text": "A peddler pushing a handcart falls in beside the escort, his hands shaking on the shafts. He has news from up and down the road, he says, and he has not eaten since yesterday.",
+            "choices": [
+                {
+                    "id": "share",
+                    "text": "Share your food and listen.",
+                    "keeps": [
+                        "bread_shared"
+                    ],
+                    "effects": [
+                        {"do": "cargo", "good": "rations", "change": -1},
+                        {"do": "remember", "deed": "fed_tobin"},
+                        {"do": "remember", "deed": "knew_of_the_toll_men"},
+                        {"do": "add_card", "card": "old_company", "soon": true}
+                    ]
+                },
+                {
+                    "id": "send_off",
+                    "text": "Send him on his way.",
+                    "breaks": [
+                        "bread_shared"
+                    ],
+                    "effects": [
+                        {"do": "remember", "deed": "turned_tobin_away"}
+                    ]
+                }
+            ],
+            "note": "Tobin, named once met: a battle-mage's assistant in the lord's border war, the war the Grey Lanterns fought in; his spells mostly fizzle. Fed, he tells of two men with cudgels at the Millbeck bridge taking a toll the reeve never set, and says it like a man who has seen it before. He is the valley's loudest carrier: what is done in front of him reaches the fair. Turned away, he tells Wendford the Grey Lanterns would not spare a crust. Joke: he sells a charm against goblins and admits it has never been tested."
+        },
+        {
+            "id": "boy_on_tailboard",
+            "zone": "slopes",
+            "target": "blades",
+            "chained": true,
+            "once": true,
+            "text": "A mile down the track the roadfolk boy from last night is sitting on the wagon's tailboard as if he had been hired. He wants to see the fair, to get a sword, and to learn from the one Blade he has picked.",
+            "note": "Tam Corrin, about ten, Bel's son. A consequence on the young. Bren speaks first: another mouth and no pay. Tam has already named the near horse, and the name is wrong. If he is told to go home and does not go, he follows the wagon at a distance and thinks nobody sees him. Never harm him on screen.",
+            "choices": [
+                {
+                    "id": "ride",
+                    "text": "Let him ride.",
+                    "effects": [
+                        {"do": "cargo", "good": "rations", "change": -1},
+                        {"do": "remember", "deed": "tam_rode"},
+                        {"do": "add_card", "card": "bel_asks", "soon": true}
+                    ]
+                },
+                {
+                    "id": "walk_back",
+                    "text": "Walk him back to his mother's cart.",
+                    "effects": [
+                        {"do": "delay", "minutes": 60},
+                        {"do": "remember", "deed": "walked_tam_home"}
+                    ]
+                },
+                {
+                    "id": "send_home",
+                    "text": "Tell him to go home.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "sent_tam_home"}
+                            ],
+                            "failure": [
+                                {"do": "remember", "deed": "tam_followed"},
+                                {"do": "add_card", "card": "bel_asks", "soon": true}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "bog_wifes_toll",
+            "zone": "slopes",
+            "target": "blades",
+            "text": "An old woman the hill folk call the bog-wife sits on the milestone where the track skirts the moss, a basket of knotted charms on her knees and a crow on her shoulder. She asks each traveller for a crust, a coin or a true word, and pays in charms.",
+            "note": "Mother Sedge, the bog-wife. She talks only to Gwyn the shepherd, so what the Blades do here reaches the Highsteads and nobody else. The charm is a knot of rowan and red thread. For a true word she asks the human's character first, and says one true thing back about the road. If they walk past, her crow follows the wagon for a mile. Maren gives bread; Ilsa thinks the charm is nonsense and says so politely.",
+            "choices": [
+                {
+                    "id": "bread",
+                    "text": "Give her bread.",
+                    "keeps": [
+                        "bread_shared"
+                    ],
+                    "effects": [
+                        {"do": "cargo", "good": "rations", "change": -1},
+                        {"do": "remember", "deed": "sedge_charm"}
+                    ]
+                },
+                {
+                    "id": "true_word",
+                    "text": "Tell her something true.",
+                    "effects": [
+                        {"do": "remember", "deed": "sedge_charm"},
+                        {"do": "remember", "deed": "told_sedge_a_true_word"}
+                    ]
+                },
+                {
+                    "id": "walk_past",
+                    "text": "Walk past her.",
+                    "breaks": [
+                        "bread_shared"
+                    ],
+                    "effects": [
+                        {"do": "remember", "deed": "snubbed_sedge"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "lame_horse",
+            "zone": "slopes",
+            "target": "caravan",
+            "owner_pick": "rest",
+            "text": "One of the horses comes up lame on the steep bit, holding a forefoot off the stones.",
+            "note": "Odda would rather lose an hour than a horse. If the Blades gave the bog-wife something, she is already coming up the track as if she knew, and she wants a favour back. If they walked past her, say first, in one plain sentence, that the old woman on the milestone is the only one in these hills who knows horses.",
+            "choices": [
+                {
+                    "id": "rest",
+                    "text": "Rest it and go slow.",
+                    "effects": [
+                        {"do": "delay", "minutes": 90}
+                    ]
+                },
+                {
+                    "id": "push",
+                    "text": "Push on.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "animal_handling",
+                            "dc": 15,
+                            "success": [
+                                {"do": "delay", "minutes": 20}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 120}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "send_sedge",
+                    "text": "Send back up the track for the bog-wife.",
+                    "if": "sedge_charm",
+                    "effects": [
+                        {"do": "remember", "deed": "owes_sedge_a_favour"},
+                        {"do": "add_card", "card": "sedges_jar", "soon": true}
+                    ]
+                },
+                {
+                    "id": "go_back",
+                    "text": "Go back up the track and ask the bog-wife.",
+                    "if": "snubbed_sedge",
+                    "unless": "sedge_charm",
+                    "effects": [
+                        {"do": "delay", "minutes": 60},
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "sedge_forgave"}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 60}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "barefoot_pilgrim",
+            "zone": "slopes",
+            "target": "caravan",
+            "owner_pick": "seat",
+            "text": "A woman in the grey of Embra's pilgrims walks barefoot down the track ahead, a round loaf wrapped under her arm. She bows to the wagon and says nothing at all.",
+            "note": "Sister Agna, under a vow of silence until she reaches the sea at Saltmouth. Embra's pilgrims walk to the sea this year because the hill shrines have gone cold; she does not explain, and nobody on screen says why. Odda keeps Embra's shrines and wants her on the wagon. She will not ride a wagon that carries grave coins. Joke: she is the only person on this road who asks the Blades for nothing.",
+            "choices": [
+                {
+                    "id": "seat",
+                    "text": "Offer her a seat on the wagon.",
+                    "unless": "robbed_cairn",
+                    "effects": [
+                        {"do": "remember", "deed": "gave_agna_a_seat"},
+                        {"do": "remember", "deed": "agna_came_along"},
+                        {"do": "add_card", "card": "what_agna_drew", "soon": true}
+                    ]
+                },
+                {
+                    "id": "walk",
+                    "text": "Walk beside her a while.",
+                    "effects": [
+                        {"do": "delay", "minutes": 20},
+                        {"do": "remember", "deed": "walked_with_agna"},
+                        {"do": "remember", "deed": "agna_came_along"},
+                        {"do": "add_card", "card": "what_agna_drew", "soon": true}
+                    ]
+                },
+                {
+                    "id": "nod",
+                    "text": "Pass her with a nod.",
+                    "effects": [
+                        {"do": "remember", "deed": "passed_agna_by"}
+                    ]
                 }
             ]
         },
@@ -105,16 +388,38 @@
                     "text": "Go and see what they are.",
                     "effects": [
                         {
-                            "do": "check", "who": "blades", "ability": "intelligence", "skill": "religion", "dc": 15,
-                            "failure": [{"do": "exhaustion", "who": "blades", "levels": 1}]
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "intelligence",
+                            "skill": "religion",
+                            "dc": 15,
+                            "failure": [
+                                {
+                                    "do": "exhaustion",
+                                    "who": "blades",
+                                    "levels": 1
+                                }
+                            ]
                         }
                     ]
                 },
                 {
                     "id": "pass_by",
-                    "text": "Look straight ahead and keep walking."
+                    "text": "Look straight ahead and keep walking.",
+                    "effects": [
+                        {"do": "remember", "deed": "passed_the_barrow_lights"}
+                    ]
+                },
+                {
+                    "id": "charm",
+                    "text": "Go and look, with the bog-wife's charm in your hand.",
+                    "if": "sedge_charm",
+                    "effects": [
+                        {"do": "remember", "deed": "saw_the_barrow_lights"}
+                    ]
                 }
-            ]
+            ],
+            "note": "Nobody knows what the lights are, and the DM never says. Sedge and Agna both know the barrows; Sedge's charm lets a Blade walk up to them without the cold getting in."
         },
         {
             "id": "old_cairn",
@@ -126,13 +431,24 @@
                 {
                     "id": "take",
                     "text": "Take them. The dead don't spend.",
-                    "effects": [{"do": "gain", "who": "party", "copper": 8}]
+                    "effects": [
+                        {
+                            "do": "gain",
+                            "who": "party",
+                            "copper": 8
+                        },
+                        {"do": "remember", "deed": "robbed_cairn"}
+                    ]
                 },
                 {
                     "id": "leave",
-                    "text": "Leave them where they lie."
+                    "text": "Leave them where they lie.",
+                    "effects": [
+                        {"do": "remember", "deed": "left_the_cairn_stones"}
+                    ]
                 }
-            ]
+            ],
+            "note": "Graves are older than Embra's customs, and nobody in the valley takes from a cairn. Sedge and Agna both come to know if the coins were taken. Torva asks what the dead were going to buy."
         }
     ]
 }

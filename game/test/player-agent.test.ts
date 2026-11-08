@@ -230,7 +230,7 @@ test("a campaign's place NPCs get their Russian names in the DM's name line, nev
   const dm = dmPrompt(pack, "bren", party.ai, "prompt", "ru");
   assert.match(dm, /odda_vell: торговка зерном Одда Велл; shepherd_gwyn: пастушка Гвин; osric_hale: староста Осрик Хейл; warden_brannock: смотритель ярмарки Браннок; wendmouth: Солтмут;/);
   // The pack's glossary reaches the DM's Russian prompt alone (AGT-85, F4 «оилскиновый плащ»).
-  assert.match(dm, /Words in Russian: write these words of the prose as given here: oilskin coat: промасленный плащ\./);
+  assert.match(dm, /Words in Russian: write these words of the prose as given here: oilskin coat: промасленный плащ; Bel Corrin: Бел Коррин;/);
   assert.ok(!dmPrompt(pack, "bren", party.ai, "prompt", "en").includes("Words in Russian"));
   const player = playerPrompt("maren", party.cards.get("maren")!, "cleric", "ru", true, party.russianNames);
   for (const npc of ["Гвин", "Браннок"]) assert.ok(!player.includes(npc), npc);

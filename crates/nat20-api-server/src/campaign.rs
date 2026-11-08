@@ -8,11 +8,11 @@
 use std::path::{Path, PathBuf};
 
 use nat20_api_contract::{
-    Ability, CaravanView, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget, CargoView,
-    CarriedItem, Carries, ClockView, Coins, ErrorCode, EscortBlade, EscortDm, EscortView, Handle,
-    LegView, MilesToday, NpcAttitude, NpcDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm,
-    RosterWorld, Side, Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm,
-    WorldPosition,
+    Ability, CaravanView, CardChoiceDm, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget,
+    CardWhen, CargoView, CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade,
+    EscortDm, EscortView, EventKind, Handle, LegView, MilesToday, NpcAttitude, NpcDm, OfferedCard,
+    Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain, TripLegView,
+    TripView, WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -41,6 +41,12 @@ pub struct Campaign {
     pub map_id: String,
     /// Wages due and not paid yet: the escort's advance, paid once the campaign has started
     pub due: Vec<world::Wage>,
+    /// How this contract took up the world the last one left, when it did (ENG-37): logged
+    /// as `trip_to_start` (API-51) for the DM to tell in one line
+    pub carried: Option<world::Carried>,
+    /// The roster's contract was under way and goes on; false when this campaign starts a
+    /// contract of its own (API-51)
+    pub resumed: bool,
 }
 
 impl Campaign {
@@ -89,25 +95,69 @@ impl Campaign {
             world::Clock::at(setup.day, setup.hour, 0),
         )
         .map_err(|e| bad(format!("The campaign's world {}: {e}.", setup.map)))?;
-        let deck = read_deck(&dir)?;
+        // A pack's own cards join the world's deck while its contract runs (ENG-38, Q7).
+        let deck = read_deck(&dir)?.join(read_deck(data_dir)?);
         check_effects(&deck, &built.goods)?;
+        // The customs a choice keeps or breaks are the world's (ENG-39).
+        let customs_file = dir.join("customs.json");
+        let customs: world::CustomsFile = if customs_file.exists() {
+            read_json(&customs_file, "customs file")?
+        } else {
+            world::CustomsFile::default()
+        };
+        customs
+            .validate()
+            .map_err(|e| bad(format!("The world {}'s customs: {e}.", setup.map)))?;
+        deck.check_customs(&customs)
+            .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
+        // Fights are a recommendation (MAP-11, Q6): what the deck lacks is written to stderr
+        // as `deck: ` lines, for the run folder, and never refuses the campaign.
+        for warning in deck
+            .route_warnings(&built.map, &built.route)
+            .into_iter()
+            .chain(deck.untagged_fight_warnings(|m| monster::is_person(m.stat())))
+        {
+            eprintln!("deck: {warning}");
+        }
         let built = built
             .with_deck(deck)
             .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
         let mut built = built;
-        // A roster from a campaign on this map takes up the world where it was left (API-45),
-        // unless its contract is done: then the party, who keep their characters, take the
-        // campaign's contract again from its start, and the advance is paid again.
+        built.state.pack = file.id.clone();
+        // A roster from a campaign on this map takes up the world where it was left (API-45).
+        // When its contract is done, the world's memory carries over and this campaign's
+        // contract starts from it (ENG-37): the clock goes on, the deeds and the deck are kept,
+        // and the party travels to the start if it stands elsewhere.
+        let mut carried = None;
+        let mut resumed = false;
         if let Some(saved) = saved.filter(|w| w.map == setup.map) {
-            let state: world::WorldState =
+            // Roster format 2 saves the memory and the contract apart (API-51).
+            let state: world::SavedWorld =
                 serde_json::from_value(saved.state.clone()).map_err(|e| {
                     error(
                         ErrorCode::BadRoster,
                         format!("The roster's world does not read: {e}."),
                     )
                 })?;
+            let state = world::WorldState::from(state);
             if !state.escort.as_ref().is_some_and(|e| e.done) {
+                // A contract under way is its own pack's: another pack on this map can't open
+                // it (ENG-38). A roster saved before packs were remembered names none.
+                if let (Some(saved_pack), Some(this)) = (&state.pack, &file.id)
+                    && saved_pack != this
+                {
+                    return Err(error(
+                        ErrorCode::BadRoster,
+                        format!(
+                            "The party is still on the road in {saved_pack}; finish that journey first."
+                        ),
+                    ));
+                }
                 // A contract under way is the saved party's: another party can't take it up.
+                let mut state = state;
+                if state.pack.is_none() {
+                    state.pack = file.id.clone();
+                }
                 if let Some(escort) = &state.escort
                     && escort.blades != party.iter().map(|h| h.0.clone()).collect::<Vec<_>>()
                 {
@@ -120,6 +170,9 @@ impl Campaign {
                     ));
                 }
                 built.state = state;
+                resumed = true;
+            } else {
+                carried = Some(built.carry_memory(state, setup.hour));
             }
         }
         // The place NPCs (API-48), after the state: a roster's NPCs keep what happened to them.
@@ -162,6 +215,8 @@ impl Campaign {
             road_scene: setup.road_scene,
             map_id: setup.map.clone(),
             due,
+            carried,
+            resumed,
         };
         let mut scenes: Vec<&str> = campaign
             .world
@@ -407,6 +462,56 @@ impl Campaign {
         }
     }
 
+    /// An offered card, as the DM sees it (API-53): the choices it would offer with the
+    /// deeds the world remembers now.
+    pub fn offered_card(&self, id: &str) -> Option<OfferedCard> {
+        let card = self.world.deck.card(id)?;
+        let offers = world::PendingCard {
+            card: card.id.clone(),
+            choices: world::Deck::offer_ids(card, &self.world.state.deeds),
+            said: Default::default(),
+        };
+        Some(OfferedCard {
+            id: card.id.clone(),
+            zone: card.zone.clone(),
+            target: target(card.target),
+            text: card.text.clone(),
+            choices: choices_dm(card, Some(&offers)),
+            note: card.note.clone(),
+            scout: card.scout.map(scout_skill),
+            reads: reads(card, Some(&offers), &self.world.state.deeds),
+        })
+    }
+
+    /// The card on the table as `card_shown` logs it (AGT-91): its zone, when it came, the
+    /// deeds it reads and the forewarned choice the scout's look opened. None with no card
+    /// on the table.
+    pub fn card_shown(&self) -> Option<EventKind> {
+        let pending = self.world.state.deck.pending.as_ref()?;
+        let card = self.world.deck.card(&pending.card)?;
+        let forewarned = card
+            .choices
+            .iter()
+            .find(|c| {
+                pending.offers(&c.id)
+                    && c.if_deeds
+                        .as_ref()
+                        .is_some_and(|d| d.ids().iter().any(|id| id == world::SCOUTED))
+            })
+            .map(|c| c.id.clone());
+        Some(EventKind::CardShown {
+            card: card.id.clone(),
+            zone: card.zone.clone(),
+            when: match card.when {
+                world::When::Road => CardWhen::Road,
+                world::When::Night => CardWhen::Night,
+                world::When::Arrival => CardWhen::Arrival,
+            },
+            reads: reads(card, Some(pending), &self.world.state.deeds),
+            forewarned,
+        })
+    }
+
     /// The card on the table, as the DM sees it.
     fn card_view(&self, table: &world::Table) -> Option<CardDm> {
         let pending = self.world.state.deck.pending.as_ref()?;
@@ -416,7 +521,7 @@ impl Campaign {
             zone: card.zone.clone(),
             target: target(card.target),
             text: card.text.clone(),
-            choices: choices(card),
+            choices: choices_dm(card, Some(pending)),
             said: pending
                 .said
                 .iter()
@@ -431,6 +536,8 @@ impl Campaign {
                 .filter(|b| !pending.said.contains_key(*b))
                 .map(|b| Handle(b.clone()))
                 .collect(),
+            note: card.note.clone(),
+            scout: card.scout.map(scout_skill),
         })
     }
 
@@ -551,6 +658,23 @@ impl Campaign {
                 world::Owner::Player(_) => Vec::new(),
             },
             card: self.card_view(&table),
+            offered: state
+                .deck
+                .offered
+                .iter()
+                .filter_map(|id| self.offered_card(id))
+                .collect(),
+            scout: state.scout.clone().map(Handle),
+            deeds: state
+                .deeds
+                .iter()
+                .map(|(id, d)| DeedDm {
+                    deed: id.clone(),
+                    by: d.by.iter().cloned().map(Handle).collect(),
+                    day: d.day,
+                    contract: d.contract,
+                })
+                .collect(),
             escort: self.escort_view().map(|contract| EscortDm {
                 contract,
                 purse_cp: state.escort.as_ref().map_or(0, |e| e.purse_cp),
@@ -704,7 +828,7 @@ fn check_effects(
                 },
                 world::Effect::Fight { monsters } => monsters
                     .iter()
-                    .find_map(|m| crate::adapter::monster::check(m).err()),
+                    .find_map(|m| crate::adapter::monster::check(m.stat()).err()),
                 world::Effect::Cargo { good, .. } if goods.get(good).is_none() => {
                     Some(format!("there is no good {good}"))
                 }
@@ -723,6 +847,14 @@ pub fn parse_check(ability: &str, skill: &str) -> Option<(Ability, Skill)> {
     let ability = serde_json::from_value(serde_json::Value::String(ability.to_owned())).ok()?;
     let skill = serde_json::from_value(serde_json::Value::String(skill.to_owned())).ok()?;
     Some((ability, skill))
+}
+
+/// The skill a card is scouted with, on the wire (API-54).
+pub fn scout_skill(skill: world::ScoutSkill) -> Skill {
+    match skill {
+        world::ScoutSkill::Perception => Skill::Perception,
+        world::ScoutSkill::Survival => Skill::Survival,
+    }
 }
 
 /// How a card was decided, on the wire.
@@ -744,15 +876,61 @@ pub fn target(target: world::Target) -> CardTarget {
     }
 }
 
-/// A card's choices, on the wire.
-pub fn choices(card: &world::Card) -> Vec<CardChoiceView> {
+/// A card's choices on the wire: the ones offered when it went on the table, else all.
+pub fn choices(card: &world::Card, pending: Option<&world::PendingCard>) -> Vec<CardChoiceView> {
     card.choices
         .iter()
+        .filter(|c| pending.is_none_or(|p| p.offers(&c.id)))
         .map(|c| CardChoiceView {
             id: c.id.clone(),
             text: c.text.clone(),
         })
         .collect()
+}
+
+/// A card's choices as the DM sees them (API-55): the offered ones, else all, with the customs
+/// each keeps or breaks.
+pub fn choices_dm(card: &world::Card, pending: Option<&world::PendingCard>) -> Vec<CardChoiceDm> {
+    card.choices
+        .iter()
+        .filter(|c| pending.is_none_or(|p| p.offers(&c.id)))
+        .map(|c| CardChoiceDm {
+            id: c.id.clone(),
+            text: c.text.clone(),
+            keeps: c.keeps.clone(),
+            breaks: c.breaks.clone(),
+        })
+        .collect()
+}
+
+/// The remembered deeds a card reads (AGT-91): the ones its `if` names, then the ones an
+/// offered choice's `if` names, each once, never the scout's one-draw `scouted`.
+pub fn reads(
+    card: &world::Card,
+    pending: Option<&world::PendingCard>,
+    deeds: &world::DeedBook,
+) -> Vec<DeedDm> {
+    let mut out: Vec<DeedDm> = Vec::new();
+    let named = card.if_deeds.iter().chain(
+        card.choices
+            .iter()
+            .filter(|c| pending.is_none_or(|p| p.offers(&c.id)))
+            .flat_map(|c| c.if_deeds.iter()),
+    );
+    for id in named.flat_map(world::Deeds::ids) {
+        if id == world::SCOUTED || out.iter().any(|d| d.deed == *id) {
+            continue;
+        }
+        if let Some(d) = deeds.get(id) {
+            out.push(DeedDm {
+                deed: id.clone(),
+                by: d.by.iter().cloned().map(Handle).collect(),
+                day: d.day,
+                contract: d.contract,
+            });
+        }
+    }
+    out
 }
 
 /// `<pack>/worlds/<id>` when the pack carries its world, else the shared worlds directory.

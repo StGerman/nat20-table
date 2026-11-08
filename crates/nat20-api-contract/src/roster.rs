@@ -8,13 +8,14 @@ use serde::{Deserialize, Serialize};
 use crate::{Coins, Handle, PregenItem};
 
 /// The roster's format version this contract writes and reads.
-pub const ROSTER_FORMAT: u32 = 1;
+pub const ROSTER_FORMAT: u32 = 2;
 
 /// A party saved between game sessions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Roster {
-    /// Format version, 1. Another is refused.
+    /// Format version, 2 (API-51). Another is refused: a format 1 roster was saved before the
+    /// world kept its memory apart from the contract, and is not converted.
     pub format: u32,
     /// The party's characters, in party order.
     pub characters: Vec<RosterCharacter>,
@@ -23,17 +24,36 @@ pub struct Roster {
     /// back unchanged.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub world: Option<RosterWorld>,
+    /// The party and the world as they stood when the contract under way, or the last one,
+    /// began (API-51): the roster that `start_campaign` started it from. A client plays that
+    /// contract again from its start with a roster of these characters and this world,
+    /// `format` as above and no `contract_start`. Absent when no campaign ran. Opaque like
+    /// `world`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contract_start: Option<RosterStart>,
+}
+
+/// The party and the world at a contract's start (API-51).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RosterStart {
+    /// The characters, in party order, as the contract found them.
+    pub characters: Vec<RosterCharacter>,
+    /// The world the contract took up; absent when it started a new world.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub world: Option<RosterWorld>,
 }
 
 /// The world part of a roster.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RosterWorld {
-    /// The world map's id, e.g. `wend`. A campaign on another map starts fresh, and so does one
-    /// whose saved escort contract is done: the party keep their characters and take the
-    /// campaign's contract again from its start.
+    /// The world map's id, e.g. `wend`. A campaign on another map starts fresh. One on this
+    /// map whose saved escort contract is done keeps the world's memory and starts its own
+    /// contract (ENG-37).
     pub map: String,
-    /// The world's state, as the engine wrote it.
+    /// The world's state, as the engine wrote it: `{memory, contract}` (API-51), the part that
+    /// outlives a contract and the part the next one rebuilds.
     pub state: serde_json::Value,
 }
 
