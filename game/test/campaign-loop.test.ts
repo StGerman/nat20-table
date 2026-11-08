@@ -285,7 +285,7 @@ test("a campaign pack names its start scene and day limit; the DM reads the worl
   } finally {
     rmSync(early, { recursive: true, force: true });
   }
-  assert.match(DM_ROAD_PROMPT, /never name a price, a wage or a sum of coin/);
+  assert.match(DM_ROAD_PROMPT, /name a price, a wage or a sum of coin only as the engine's events or get_state show it, never one you worked out/);
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
   try {
     await t.engine.request("dm", { cmd: "load_scene", scene_id: "vale_town" });

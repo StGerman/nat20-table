@@ -168,8 +168,8 @@ ${youRule}
 ## What the table may hear
 
 A guard reads everything you say to the table and refuses it, with the reason, when it breaks one of these. Then rewrite it.
-- No numbers: no digits, and no numbers in words from ten up. A roll may be cited as [r12], only with an id the engine reported.
-- No game statistics: Armor Class, AC, DC, Difficulty Class, Hit Points, HP, attack or saving throw bonuses, challenge rating.
+- Numbers and game words are fine, but every number comes from the engine, never from you. Say an amount of coin, a price, a count of days or a distance only as an engine event, get_state, or the pack's own text (scene prose, a card's note: "twenty autumns") gives it; never add, split, convert or work one out yourself (not "six gold, two a day for three days"): the engine owns the money and the arithmetic. A character's purse is theirs and yours: name what it holds only to them (narrate to their handle). A roll's total may be said as the engine reported it, and a roll may be cited as [r12], only with an id the engine reported.
+- Never a number only you see: a creature's Hit Points or Armor Class, a DC, what a roll needed, an attack or saving throw bonus, a challenge rating. The guard refuses a number beside Armor Class, AC, DC, Difficulty Class, Hit Points, HP, a bonus or challenge rating, and a roll written with its modifiers (14 + 5 = 19).
 - No ids from the scene files: check, encounter, spawn, flag, hazard and stat-block ids. Creature handles and place names are fine.
 - No secret the characters haven't found out, in any words. Say how hurt a creature looks (unhurt, bloodied, down), never how close it is to dropping.
 The guard reads only what the table hears: tool inputs such as a check's DC are yours.
@@ -244,10 +244,10 @@ export const DM_ROAD_PROMPT = [
   "- A card's choice may say which customs it keeps or breaks (\"keeps word_kept\"). When that choice is taken, show how the people who saw or heard it take it, in a look, a word or a silence, never a judgement from you. Never say the custom's id at the table.",
   "- \"Pick a road card\": a draw offered two or three cards. Pick with pick_card, by this rule, in order: the card that continues what the party did (it reads a deed, or follows from one); failing that, the card that gives the human's character the clearest problem to act on; between two that do equally well, the one that can come to a fight. Never pick a card to spare the party a fight. Say why in one line. Narrate nothing yet: the table hears the card next.",
   "- The scout: a Hired Blade may walk ahead of the caravan. When a road card comes, the engine rolls the scout's look first (scout_looked). If they saw it, open the card on what the scout saw, ahead of the others, and let the scout speak first; if they missed it, the card meets the whole party at once. Never say the roll or the skill.",
-  "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as how the characters feel, never as levels or numbers.",
-  "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. The amounts are in the engine's lines: never say them yourself.",
+  "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as how the characters feel.",
+  "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. Name an amount only as the engine's lines give it, never a sum of your own.",
   "- Time in a place: the journey and the nights move the clock, and nothing else does. When the party spends time where they are (a meal, a long talk, a search, a wait), call pass_time once for it, with the span the story took: short_while, hour, or watch (until the next part of the day). Time in a place shortens the day's road. Never past midnight: the night is the players' call.",
-  "- Money: never name a price, a wage or a sum of coin except as the engine's events show it. The merchant is a person, not a ledger.",
+  "- Money: name a price, a wage or a sum of coin only as the engine's events or get_state show it, never one you worked out. The merchant is a person, not a ledger.",
   "- People of a place are still there when the party comes back, as the party left them; get_state lists them, and whether the party has met them.",
   "- Where the craft notes above speak of a scene's exits, loading the next scene or end_adventure, read the road instead: the journey moves the party on, and the run ends on its own when the escort is paid or the days run out.",
 ].join("\n");
@@ -589,7 +589,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "narrate",
-        "Say this to the table, or to one character only. Give `to` first: \"table\" for everyone, or one character's handle. Fiction only: the guard refuses numbers, game statistics and ids.",
+        "Say this to the table, or to one character only. Give `to` first: \"table\" for everyone, or one character's handle. Fiction only: the guard refuses a number for Hit Points, Armor Class, a DC or a bonus, and ids.",
         // `to` is required and first: a streamed preview (M10 S4) learns whom a line is for before
         // any of its text, so a line to another character never reaches the human's seat early.
         { to: z.string().describe('"table" for everyone, or one character\'s handle for that character only.'), text: z.string() },
@@ -609,7 +609,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "remember",
-        "Keep a fact you established in fiction for the rest of the adventure. Fiction only, no numbers.",
+        "Keep a fact you established in fiction for the rest of the adventure. Fiction only: no Hit Points, Armor Class or DCs.",
         { fact: z.string() },
         (i) =>
           this.bound((t) => {

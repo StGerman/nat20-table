@@ -6,4 +6,4 @@
 - The hill folk come down to the yard for their salt and iron, and some of them pay and some of them don't, and Fenn writes both kinds down.
 - Gwyn the shepherd is at the fold gate. She has news.
 
-**How to run it.** The end of the contract. An arrival card may come first; once it is settled, the engine pays each Blade what they are owed from Fenn's purse and the run ends. Narrate the pay as a scene, with Fenn's own words, and close with the hills going dark. No numbers: the table sees the coin in the engine's lines.
+**How to run it.** The end of the contract. An arrival card may come first; once it is settled, the engine pays each Blade what they are owed from Fenn's purse and the run ends. Narrate the pay as a scene, with Fenn's own words, and close with the hills going dark. Name the coin only as the engine's lines give it, never a sum of your own.

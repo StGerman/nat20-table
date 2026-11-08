@@ -128,11 +128,11 @@ test("the DM runs the yard through its tools; its memory and a refused narration
       opened.push(message);
       const refused = await call("narrate", { text: "The goblins look tough, AC fifteen or so." });
       assert.equal(refused.isError, true);
-      assert.match(refused.text, /^Refused, nobody heard it: it holds a number \(fifteen\)\. Rewrite it\.$/);
+      assert.match(refused.text, /^Refused, nobody heard it: it gives a number for a game statistic \(AC, fifteen\): the table never hears those\. Rewrite it\.$/);
       assert.deepEqual(await call("remember", { fact: `The miller's old dog answers to ${SENTINEL}.` }), { text: "remembered", isError: false });
       const numbered = await call("remember", { fact: "goblin_1 has 7 hit points left." });
       assert.equal(numbered.isError, true);
-      assert.match(numbered.text, /^Not remembered: it holds a number \(7\)\. Memory holds fiction only\.$/);
+      assert.match(numbered.text, /^Not remembered: it gives a number for a game statistic \(hit points, 7\): the table never hears those\. Memory holds fiction only\.$/);
       await call("narrate", { text: "Goblins crouch behind the woodpile, and wolves pace by the kennel." });
       const started = await call("start_combat", { encounter_id: "yard_fight" });
       assert.equal(started.isError, false, started.text);
