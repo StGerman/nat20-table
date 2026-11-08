@@ -16,7 +16,7 @@ Group rows by the problem they solve, not by prefix. A bid that fixes one experi
 | --- | --- |
 | Contains | row ids and no-row findings, one line |
 | Exit criterion | one sentence, testable on a run |
-| Size | sum of S/M/L, as days |
+| Size | a range in days from TASKS.md's Size legend (S under 1, M 1 to 3, L over 3); elapsed days come from dates in `roadmap`, never from sizes |
 | Stas's review | the number of PRs he must read |
 | Exit runs | pairs, at about two hours of Stas each; one pair per milestone is the target |
 | Run load | runs at their profile, from the last milestone's `usage.jsonl` |

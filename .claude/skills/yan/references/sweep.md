@@ -6,7 +6,7 @@ Goal: every status in TASKS.md is true on main today, and nothing dead sits in s
 
 - `TASKS.md` at the repo root. Until CON-1 merges it is not there and the project's working copy is the live one: read that copy, report, and edit nothing, unless the caller says this sweep is the CON-1 move itself; then write the result at the repo root for that PR. Never edit the working copy.
 - `git log origin/main --format='%h %ad %s' --date=short`: our squash-merged PR titles end in `(#N)`, so a row's PR is merged when its number appears here.
-- Open PRs: `gh api -X GET repos/StGerman/nat20-table/pulls -f state=open --jq '.[]|[.number,.title,.updated_at]'`, and the same for `StGerman/nat20` when a row's Dest is Fork.
+- Open PRs: `gh api -X GET --paginate repos/StGerman/nat20-table/pulls -f state=open --jq '.[]|[.number,.title,.updated_at]'`, and the same for `StGerman/nat20` when a row's Dest is Fork.
 - A PR a row cites: `gh api -X GET repos/StGerman/<repo>/pulls/<n> --jq '[.state,.merged_at]'`.
 
 ## Classify every open row (todo, partial)
