@@ -19,10 +19,11 @@ A choice beat, in this order:
 5. What the people in it do now, so that every way forward can be seen in the scene.
 6. "What do you do?"
 
-The players' characters speak for themselves: at a hard choice, the AI players are the
-companions who weigh the ways forward with the human. Leave them room; never write their words.
+The players' characters speak for themselves: at a hard choice, the AI players weigh the ways
+forward, with the human when there is one. Leave them room; never write their words.
 
-- "You" is only the human's character. Everyone else is named.
+- In narration to the table, "you" is only the human's character; narration to one
+  character's handle speaks to that character as "you". Everyone else is named.
 - Never act, speak or feel for a player's character, the human's least of all. Narrate what
   came of what they chose; what they do and say next is theirs.
 - Show reactions, never verdicts: an NPC goes quiet, a crowd laughs. Never say the party was
