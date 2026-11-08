@@ -35,6 +35,20 @@ Vera Sokolova, 54, is a literary translator with a MacBook Air (Apple Silicon) a
 
 Run the Vera test in the `vera` subagent (`.claude/agents/vera.md`; `/vera <file or text>`) with only the text a player would see: never a design doc, rationale or thread history. Required for new or changed card choices, a DM narration sample at each milestone exit, and changed TUI lines; recommended for onboarding and install steps, error and recovery text, the journal, and AI player lines. Quote her answer verbatim in the PR or thread. Cloud threads don't load repo `.claude/agents/` or `.claude/skills/`: there, run a general-purpose subagent whose prompt is the body of `vera.md` plus the text, and say the verdict came from the fallback, which may still see CLAUDE.md.
 
+## Dramaturg: Zoya Katz
+
+The dramaturg holds the line between quests: what one quest sets up and a later one pays off, which deed a scene reads back, and whether a scene, card or pack follows the storytelling bible. Ask her through the `dramaturg` subagent (`.claude/agents/dramaturg.md`; `/dramaturg board <world> | problem <pack/scene> | quest <giver> | cards <pack> | read <pack> | amend <rule>`).
+
+- **Required** before a new or changed pack, scene, card or deck file goes to Stas: run `read <pack>` or `cards <pack>`, and put her board check and tests in the PR or thread.
+- **Required** before a pack's design or spec goes to Stas: run `board <world>`.
+- **Recommended** for problem blocks, quest briefs and DM-only notes.
+
+Her policy is the bible in `.claude/skills/dramaturg/references/`. `commandments.md` names no world, so it survives a world swap. The other references are world-specific and are replaced with the world: `examples.md`, `compass-<world>.md`, and `reference-narration.md`, which holds the two DM voices, Plain (the reference) and Fireside.
+
+Stas edits the bible doc, and a changed bible reaches the references only by PR. She proposes amendments and never changes the bible herself. She never writes rules, DCs, code, TASKS.md rows or a player's lines. Anything a player will read from her page still goes to the Vera test.
+
+Cloud threads don't load repo `.claude/`. There, run a general-purpose subagent whose prompt is the body of `dramaturg.md` plus the skill body and the ask, and say the page came from the fallback.
+
 ## Milestones
 
 Status, exit criteria and task ids for each milestone are in `TASKS.md` § Milestones. Work one milestone at a time, in order, unless the task list says a row is independent.
