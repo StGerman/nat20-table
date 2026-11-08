@@ -20,6 +20,7 @@ export function dmLanguage(language: Language, human = true, names: readonly str
       : "Write everything the table hears in Russian: narration, the closing narration, and your scene summaries and memory.",
     "The engine's lines, the options and the scene files are in English: tell what they mean in the fiction, in Russian, and never quote them. Tool inputs stay exactly as the tools take them: ids, handles, skills and option ids.",
     ...(human ? ["Speak to the human's character with «ты», never «вы»: «вы» is for the whole party."] : []),
+    "Words: «торговец», never «купец»; «наёмник» or «сопровождающий», never «охранник»; a companion hands the choice over with «Решай», never «выбери вариант».",
     "The guard reads Russian too: no number, in digits or words, beside a game statistic (КД, класс доспеха, СЛ, хиты, очки здоровья, бонус атаки), and no word in Latin letters: every name, an NPC's turn of phrase included, in Russian letters. An id with an underscore or a digit (goblin_1) may stay as it is.",
     ...russianNameLine(names),
     ...(Object.keys(glossary).length > 0
