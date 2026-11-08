@@ -792,6 +792,20 @@ export class DmTools {
     });
   }
 
+  /**
+   * Puts one of the offered road cards on the table (AGT-88, API-53), with one line of why.
+   * Only while a draw's cards wait for the pick.
+   */
+  async pickCard(card: string, reason: string): Promise<ToolOutcome> {
+    if (this.table.exhausted("dm")) return this.table.spent();
+    const world = (await this.dmState())?.world;
+    const offered = world?.offered ?? [];
+    if (offered.length === 0) return notNow("no road cards wait for your pick");
+    if (!offered.some((c) => c.id === card)) return notNow(`${card} is not one of the offered cards: ${offered.map((c) => c.id).join(", ")}`);
+    if (!reason.trim()) return notNow("say why in one line");
+    return send(this.table, "dm", { cmd: "pick_card", card, reason: reason.trim() }, () => `${card} is on the table; the table hears it next`);
+  }
+
   /** Out of combat: one creature hands another, within 5 feet, coin or one carried item (ITM-6). */
   async give(actor: string, to: string, what: Goods): Promise<ToolOutcome> {
     return (await this.inScene(actor)) ?? send(this.table, "dm", { cmd: "give", actor, to, what }, () => `handed over; the ledger entry is in the events`);
