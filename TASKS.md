@@ -10,7 +10,7 @@ This file lives at the root of `StGerman/nat20-table` since 2026-11-08 (CON-1, d
 | **Pri** | **P0** a demo run cannot finish without it · **P1** needed to pass an acceptance criterion (scope §6), workaround exists · **P2** optional / nice to have |
 | **Dest** | **Fork** = fork branch `demo` (our engine) · **Ours** = nat20-table, outside the fork. Since 2026-10-18 upstream takes no contributions (nat20-table decision 0023), so older **Up** and **Up?** rows read as Fork |
 | **Gate** | Retired 2026-10-18 with Milestone 8 (decision 0023); old Y/N values are history only |
-| **Size** | S < 1 day · M 1-3 days · L > 3 days |
+| **Size** | XS a few hours · S < 1 day · M 1-3 days · L > 3 days |
 | **Status** | todo · partial · done · won't do (closed, with the reason) |
 
 Gate rule used: every item that goes upstream must be finished and tested on `demo` first (Stas: close demo gaps before proposing a merge). "Ours" items and pure product work do not gate upstream.

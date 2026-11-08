@@ -11,7 +11,7 @@ Vera test (CLAUDE.md): in pair 3 she pressed a button she did not want after her
 
 ## 2. In
 
-1. **Own move** (no row yet; note variant B). Every card the party decides gains a last line, "Something else: say it in your own words." The DM turns the words into a check from the SRD DC ladder (or the pack's DC) and names which of the card's existing choices a success and a failure bring. The engine rolls and decides (Rule 4). The world writes the deed `own_move:<card>`. One new DM command, additive. When no choice fits, the DM says so and the card waits (AGT-96, table #329). On a caravan card the owner still decides; an own move is a Blade's advice the owner can take.
+1. **Own move** (no row yet; note variant B). Every card the party decides gains a last line, "Something else: say it in your own words." The DM turns the words into a check from the SRD DC ladder (or the pack's DC) and names which of the card's existing choices a success and a failure bring. The engine rolls and decides (Rule 4). The world writes a deed that the party found its own way on that card; its id is design question 4 (deed ids are snake_case, ENG-33, and the note's `own_move:<card>` has a colon). One new DM command, additive. When no choice fits, the DM says so and the card waits (AGT-96, table #329). On a caravan card the owner still decides; an own move is a Blade's advice the owner can take.
 2. **No variant replaces the obvious move** (M11 lesson; note "Also"): a variant may replace a choice only if that choice is not the card's question or plea; the deck validator tests it.
 3. **The card comes after its narration** (no row; finding). Stas's run: `toll_man_stocks` reached the seat with no narration (transcript line 157; the DM wake timed out) and `sheep_on_track` one line before its narration (lines 227-229). AI half, Vera: cards arrive after the narration has moved on (the night card after «ночь прошла тихо»). Cause: decision 0041 shows held lines at once when a decision comes up, and a card is a decision.
 4. **The marked choice is marked** (no row; finding). The prompt says "a number, or Enter for the marked choice" (`game/src/ui/input.ts:78`); the list marks none (Vera, twice, per the note).
@@ -43,8 +43,8 @@ A fail in run 1 means a fix, a new build and run 1 again; Stas does not play tha
 
 Each run passes:
 
-1. The Milestone 11 rows that still apply (§8.3 rows 1 to 3; in run 2 also row 5).
-2. **Own move:** in run 2, at least one card decided by Stas's own move: the roll cited, the card decided by the choice named for that result, `own_move:<card>` in the world's deeds. In run 1 too, by an AI player, if Stas accepts question 1.
+1. The Milestone 11 rows that still apply: §8.3 rows 1 to 3; row 4's narration judge half, no story-space flag that Stas confirms (its Vera half becomes item 3); in run 2 also row 5.
+2. **Own move:** in run 2, at least one card decided by Stas's own move: the roll cited, the card decided by the choice named for that result, the own-move deed in the world's deeds. In run 1 too, by an AI player, if Stas accepts question 1.
 3. **Readable:** the Vera fallback reads the scene opening and one card (the own-move card where there is one) with its narration, as a player's seat shows them (narration, engine lines, the card and its prompt line), and asks about no engine line. In run 2 she also reads Stas's `/options` and `/sheet` output (AGT-13). Her answer is quoted verbatim.
 4. **In order:** no card reaches the seat before the narration that frames it, except after a logged DM fallback; no wake is logged as timed out after its narrate call returned (AGT-97).
 
@@ -63,7 +63,7 @@ Two phases (Stas, 2026-11-08 22:09Z), then the exit pair on the build that carri
 1. **Contract (Rule 1):** the `own_move` fields (`actor`, `text`, the check, `success`, `failure`), which are required, whether the check reuses `request_check`'s `{kind: "scenario" | "ladder"}` shape, the error reasons (card not waiting, choice not on the card, actor not on the card), the event that decides the card (a new `came` value or a new event), the fixture, the CHANGELOG line.
 2. **Visibility (Rule 3):** the visibility-table row for the player's words, the skill, the DC, the success and failure choices and the deed. The DC and `against` never reach a player view; are the success and failure choices DM only until the roll?
 3. **Who rolls (Rule 4):** the actor's check through core, Advantage only from what the engine tracks; the DC from the ladder (5, 10, 15, 20, 25, 30) or the pack. The note's example "Persuasion DC 12 (Medium)" is not on the ladder: Medium is 15. One own move per card, or a retry after a failure?
-4. **The deed:** `own_move:<card>` against the ENG-33 deed id grammar; whether it carries the result; whether it outlives the contract (ENG-37); who reads it (`if`, `unless`, the run report).
+4. **The deed:** its id under the ENG-33 snake_case grammar (the note's `own_move:<card>` does not fit); whether it carries the result; whether it outlives the contract (ENG-37); who reads it (`if`, `unless`, the run report).
 5. **The line:** where "Something else: say it in your own words." lives (TUI string, deck data or the card view); its language under 0038; its Vera test (required for a new card line) and Zoya's board check.
 6. **Who may use it:** the human (votes first, decision 0062), the AI players (a tool and a prompt line; question 1), Blades on a caravan card, arrival cards (ENG-35), a forewarned choice opened by scouting (API-54).
 7. **No fitting choice:** the DM prompt rule and its test; the card waits as AGT-96 built.
@@ -76,7 +76,7 @@ Two phases (Stas, 2026-11-08 22:09Z), then the exit pair on the build that carri
 
 ## 7. Rows that would follow (after spec and design merge)
 
-- ENG-43 (M): an own move decides a card with the named choice's effects and writes `own_move:<card>`.
+- ENG-43 (M): an own move decides a card with the named choice's effects and writes the own-move deed.
 - API-56 (M): `own_move` on the wire: contract, fixture, CHANGELOG, server.
 - AGT-99 (M): own move at the table: the DM tool and prompt rule, the human's and the AI players' move, the card line.
 - MAP-18 (S): variants never replace a card's question or plea: the validator rule, the line in both packs, Zoya's board check.
@@ -92,7 +92,7 @@ No bid was priced before the award; priced here.
 
 | Field | M12 | M11 baseline |
 | --- | --- | --- |
-| Size | 4 M, 11 S, 4 XS: 10 to 25 days of thread work | 19 rows in row 11's Tasks |
+| Size | 4 M, 12 S, 4 XS: 11 to 25 days of thread work | 19 rows in row 11's Tasks |
 | Stas's review | 18 PRs: 1 docs (question 4), 1 core, 1 pin, 15 table (ENG-40 to ENG-42 in one, AGT-94 with AGT-76 in one) | 27: table #298 and #299 to #325 (no #301) |
 | Exit runs | 1 pair, AI half first | 3 pairs to pass 1: 5 runs (pair 2 stopped after its AI half) |
 | Run load | AI half about 7.9 USD and 12 min; Stas's half about 5.2 USD and 27 min; one Fireside run about 7.9 USD (question 3 A) | 35.45 USD; Stas 65.6 min at the table, 39.1 of them on be5e650, whose AI half had failed |
@@ -111,7 +111,7 @@ Target (decision 0065, half the baseline): 17.7 USD, 33 min of Stas at the table
 ## 10. Amendments proposed
 
 1. Every exit pair from M12 on plays the all-AI half first, and Stas plays only after it passed on the same build, with its flags ruled. Why: 0065 records the rule only in this scope, so the next scope would lose it.
-2. TASKS.md's Size legend gains XS (a few hours). Why: ENG-40, ENG-41 and ENG-42 use it and the legend has no XS.
+2. TASKS.md's Size legend gains XS (a few hours), applied in this PR. Why: ENG-40, ENG-41, ENG-42 and CON-7 use it and the legend had no XS.
 3. An award with no priced bid gets its price in the scope's cost line, marked "priced here". Why: the scope procedure carries a bid's price over, and this award had none.
 
 ## Sources
