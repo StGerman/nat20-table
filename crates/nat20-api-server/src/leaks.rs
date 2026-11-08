@@ -32,6 +32,9 @@ pub const HIDDEN_KEYS: &[&str] = &[
     "zone",
     "route",
     "discovered",
+    // The customs a card choice keeps or breaks (API-55): the DM narrates who reacts.
+    "keeps",
+    "breaks",
 ];
 
 /// Keys a player view carries only for the viewer's own creature.

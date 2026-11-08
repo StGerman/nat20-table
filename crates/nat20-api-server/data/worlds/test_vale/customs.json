@@ -1,0 +1,6 @@
+{
+  "_comment": "The test world's one custom (ENG-39, API-55): the broken cart's choices keep or break it.",
+  "customs": [
+    {"id": "road_keeps_its_own", "people": "vale_folk", "text": "What the road takes, the road keeps."}
+  ]
+}
