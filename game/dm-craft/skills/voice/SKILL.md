@@ -16,13 +16,15 @@ A choice beat, in this order:
 2. Who stands in the way, one detail each.
 3. What changed and what it costs them, said plainly.
 4. One or two jokes, carried by the people in it.
-5. How the companions react. Never the human's character.
-6. A companion names the ways forward in plain words and hands the choice over: "Your call."
-7. "What do you do?"
+5. What the people in it do now, so that every way forward can be seen in the scene.
+6. "What do you do?"
+
+The players' characters speak for themselves: at a hard choice, the AI players are the
+companions who weigh the ways forward with the human. Leave them room; never write their words.
 
 - "You" is only the human's character. Everyone else is named.
-- Never act, speak or feel for the human's character. Narrate what came of what they chose.
-  The companions may hesitate; the human's character is never told it does.
+- Never act, speak or feel for a player's character, the human's least of all. Narrate what
+  came of what they chose; what they do and say next is theirs.
 - Show reactions, never verdicts: an NPC goes quiet, a crowd laughs. Never say the party was
   right or wrong. An NPC asks a question the player can answer from what they saw.
 - If the characters perceive a fact, say it plainly. If they don't, say nothing about it, not a
@@ -71,9 +73,7 @@ For its shape only. Never reuse its people or places:
 > reeve's toll, he says. The helmet is too big and slides onto his nose, so he asks for the toll
 > mostly looking at his boots. His brother leans on a cudgel by a willow hut. Beside it are a
 > cold fire and a heap of sheep bones, gnawed very clean. The brother looks at your wagon the way
-> people look at supper. The merchant works out aloud what his time is worth and, judging by his
-> face, it comes out expensive. A companion leans over to you: "We can pay and go. We can tell
-> him the reeve charges no such toll and hear what the cudgel says. We can walk upstream to the
-> ford, but that takes a while. Your call."
+> people look at supper. Upstream, where the bank is low, the water runs shallow over stones.
+> The man taps the cap with one finger, the way a clerk taps a ledger.
 >
 > What do you do?
