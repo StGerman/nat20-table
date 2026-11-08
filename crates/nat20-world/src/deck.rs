@@ -25,7 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{caravan::Owner, dice::WorldDice, map::WorldMap};
+use crate::{caravan::Owner, customs::CustomsFile, dice::WorldDice, map::WorldMap};
 
 /// The die a draw rolls: card `i` of a pile of `n` takes the faces from `i * 100 / n + 1`.
 pub const DRAW_DIE: u32 = 100;
@@ -263,6 +263,13 @@ pub struct Choice {
     /// What happens, in order
     #[serde(default)]
     pub effects: Vec<Effect>,
+    /// The customs taking it keeps, by id from the world's `customs.json` (ENG-39): the DM
+    /// narrates who reacts, never a verdict
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keeps: Vec<String>,
+    /// The customs taking it breaks, by id from the world's `customs.json` (ENG-39)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub breaks: Vec<String>,
 }
 
 /// Who an effect touches.
@@ -834,6 +841,31 @@ impl Deck {
         Ok(())
     }
 
+    /// Checks every choice's `keeps` and `breaks` against the world's customs (ENG-39): each id
+    /// a custom the file lists, each once on the choice, and none both kept and broken by it.
+    pub fn check_customs(&self, customs: &CustomsFile) -> Result<(), DeckError> {
+        for card in &self.cards {
+            for choice in &card.choices {
+                let mut seen = BTreeSet::new();
+                for id in choice.keeps.iter().chain(&choice.breaks) {
+                    if customs.get(id).is_none() {
+                        return Err(DeckError(format!(
+                            "card {} choice {} names custom {id}, which the world's customs don't list",
+                            card.id, choice.id
+                        )));
+                    }
+                    if !seen.insert(id.as_str()) {
+                        return Err(DeckError(format!(
+                            "card {} choice {} names custom {id} twice, or both keeps and breaks it",
+                            card.id, choice.id
+                        )));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// This deck with another's cards after its own: a pack's deck joins the world's (ENG-38).
     pub fn join(mut self, other: Deck) -> Self {
         self.cards.extend(other.cards);
@@ -1306,6 +1338,40 @@ mod tests {
         )
         .unwrap();
         Deck::from_files([file])
+    }
+
+    #[test]
+    fn a_choice_names_only_customs_the_world_lists_and_never_keeps_and_breaks_one() {
+        let customs: CustomsFile = serde_json::from_str(
+            r#"{"customs": [
+              {"id": "bread_shared", "people": "valley_folk", "text": "Bread is shared."},
+              {"id": "debt_paid", "people": "valley_folk", "text": "A debt is paid."}
+            ]}"#,
+        )
+        .unwrap();
+        let mut d = deck();
+        d.check_customs(&customs).unwrap();
+        let give = &mut d.cards[1].choices[0];
+        give.keeps = vec!["bread_shared".into()];
+        d.check_customs(&customs).unwrap();
+        // The tags read back from a card file and are left out when empty.
+        let json = serde_json::to_value(&d.cards[1].choices[0]).unwrap();
+        assert_eq!(json["keeps"], serde_json::json!(["bread_shared"]));
+        assert!(json.get("breaks").is_none());
+        d.cards[1].choices[1].breaks = vec!["mercy_to_yielded".into()];
+        assert!(
+            d.check_customs(&customs)
+                .unwrap_err()
+                .0
+                .contains("custom mercy_to_yielded, which the world's customs don't list")
+        );
+        d.cards[1].choices[1].breaks = vec!["bread_shared".into()];
+        d.cards[1].choices[0].breaks = vec!["bread_shared".into()];
+        assert!(
+            d.check_customs(&customs).unwrap_err().0.contains(
+                "choice give names custom bread_shared twice, or both keeps and breaks it"
+            )
+        );
     }
 
     fn known() -> BTreeSet<String> {

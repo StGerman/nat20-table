@@ -3,7 +3,9 @@
 
 use std::path::{Path, PathBuf};
 
-use nat20_world::{Caravan, Clock, Deck, DeckFile, Goods, Pace, Target, World, WorldMap};
+use nat20_world::{
+    Caravan, Clock, CustomsFile, Deck, DeckFile, Goods, Pace, Target, World, WorldMap,
+};
 
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -67,6 +69,18 @@ fn every_world_validates() {
         all.validate(&map)
             .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
         all.check_deeds_written(&Default::default())
+            .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
+        // Every choice's customs are the world's (ENG-39); a world without the file has none.
+        let customs_file = dir.join("customs.json");
+        let customs: CustomsFile = if customs_file.exists() {
+            read(&customs_file)
+        } else {
+            CustomsFile::default()
+        };
+        customs
+            .validate()
+            .unwrap_or_else(|e| panic!("{}: {e}", customs_file.display()));
+        all.check_customs(&customs)
             .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
     }
 }

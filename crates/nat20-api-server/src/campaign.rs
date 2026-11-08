@@ -98,6 +98,18 @@ impl Campaign {
         // A pack's own cards join the world's deck while its contract runs (ENG-38, Q7).
         let deck = read_deck(&dir)?.join(read_deck(data_dir)?);
         check_effects(&deck, &built.goods)?;
+        // The customs a choice keeps or breaks are the world's (ENG-39).
+        let customs_file = dir.join("customs.json");
+        let customs: world::CustomsFile = if customs_file.exists() {
+            read_json(&customs_file, "customs file")?
+        } else {
+            world::CustomsFile::default()
+        };
+        customs
+            .validate()
+            .map_err(|e| bad(format!("The world {}'s customs: {e}.", setup.map)))?;
+        deck.check_customs(&customs)
+            .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
         let built = built
             .with_deck(deck)
             .map_err(|e| bad(format!("The world {}'s deck: {e}.", setup.map)))?;
