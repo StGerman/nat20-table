@@ -245,6 +245,17 @@ test("a human who owns the caravan takes a road by name, and makes the caravan's
 
 test("a campaign pack names its start scene and day limit; the DM reads the world and the road's rules", async () => {
   assert.deepEqual(readCampaign(TEST_PACK), { startScene: "vale_town", startDay: 1 });
+  // The day limit is the pack's last day on its own clock, so it never comes before its start day.
+  const early = mkdtempSync(path.join(tmpdir(), "early-limit-"));
+  try {
+    cpSync(TEST_PACK, early, { recursive: true });
+    const file = path.join(early, "campaign.json");
+    const json = JSON.parse(readFileSync(file, "utf8"));
+    writeFileSync(file, JSON.stringify({ ...json, day_limit: 3, world: { ...json.world, day: 5 } }));
+    assert.throws(() => readCampaign(early), /day_limit 3 is before the start day 5; it is the last day the run plays/);
+  } finally {
+    rmSync(early, { recursive: true, force: true });
+  }
   assert.match(DM_ROAD_PROMPT, /never name a price, a wage or a sum of coin/);
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"] });
   try {
@@ -370,6 +381,53 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     assert.equal(dm.briefings.at(-1)?.wake, "suggest", "asked last, once the journey is over");
   } finally {
     t.close();
+  }
+});
+
+test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the saved party, where the road reads what run 1 did", async () => {
+  const party = ["bren", "torva", "maren", "ilsa"];
+  const play = async (pack: string, roster?: Parameters<typeof testTable>[0]["roster"]) => {
+    const seat = new ScriptedSeat("bren", [], blade());
+    const t = await testTable({ seed: 3, pack: path.join(REPO, pack), human: "bren", players: party.slice(1), seat, ...(roster ? { roster } : {}) });
+    const campaign = readCampaign(path.join(REPO, pack))!;
+    const loop = new TableLoop({
+      table: t.table,
+      dm: new ScriptedDm({}),
+      players: party.slice(1).map((h) => new ScriptedPlayer(h)),
+      maxSteps: 400,
+      campaign: { party, keepsParty: true, startDay: campaign.startDay, ...(campaign.dayLimit !== undefined ? { dayLimit: campaign.dayLimit } : {}) },
+    });
+    const report = await loop.run(campaign.startScene);
+    return { t, report };
+  };
+  const run1 = await play("scenarios/fair_in_wend");
+  let roster;
+  try {
+    assert.equal(run1.report.ended, "the escort contract is done");
+    const saved = await run1.t.engine.request("dm", { cmd: "save_roster" });
+    assert.ok(saved.result?.cmd === "save_roster");
+    roster = saved.result.roster;
+  } finally {
+    run1.t.close();
+  }
+  const run2 = await play("scenarios/the_way_back", roster);
+  try {
+    // The clock carries on from run 1, and the day limit counts from the contract's first day.
+    assert.equal(run2.report.ended, "the escort contract is done", JSON.stringify(run2.t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
+    // Its days, as run.json records them: from the carried day, three of them (Copilot on table #321).
+    const days = run2.report.campaignDays!;
+    assert.ok(days.start > 1, JSON.stringify(days));
+    assert.equal(days.last, days.start + 2);
+    assert.deepEqual(run1.report.campaignDays, { start: 1, last: 3 });
+    const log = await run2.t.engine.request("dm", { cmd: "events", since: 0 });
+    assert.ok(log.result?.cmd === "events");
+    // The bridge is gone for the world, so its stop meets The bridge again, which reads a run 1 deed (exit row 5).
+    const drawn = log.result.events.flatMap((e) => (e.kind === "card_shown" ? [e.card] : []));
+    assert.ok(drawn.includes("bridge_again") && !drawn.includes("millbeck_bridge"), drawn.join(", "));
+    const shown = log.result.events.find((e) => e.kind === "card_shown" && e.card === "bridge_again");
+    assert.ok(shown?.kind === "card_shown" && (shown.reads ?? []).some((d) => d.deed === "crossed_millbeck"), JSON.stringify(shown));
+  } finally {
+    run2.t.close();
   }
 });
 

@@ -1,0 +1,222 @@
+{
+    "_comment": "The Way Back's own cards (MAP-10, MAP-12, ENG-38): Fenn Lusk's three and The fair price. They join the world's deck only while this pack's contract runs. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Fights use the SRD 5.2.1 Bandit.",
+    "cards": [
+        {
+            "id": "wet_salt",
+            "zone": "lowland",
+            "target": "caravan",
+            "owner_pick": "willows",
+            "once": "contract",
+            "text": "Rain comes up the river in a grey wall, and the salt sacks on the wagon start to darken at the seams.",
+            "note": "Failure as content: whatever they choose, the contract goes on. Fenn ticks the sacks on his clipboard with the rain running off his nose. Salt melts; a wet Blade only shivers. Bren says salt is Fenn's problem; Maren gives up her cloak first.",
+            "choices": [
+                {
+                    "id": "cloaks",
+                    "text": "Throw your cloaks over the sacks.",
+                    "effects": [
+                        {
+                            "do": "exhaustion",
+                            "who": "blades",
+                            "levels": 1
+                        },
+                        {"do": "remember", "deed": "gave_their_cloaks_to_the_salt"}
+                    ]
+                },
+                {
+                    "id": "willows",
+                    "text": "Pull in under the willows and wait.",
+                    "effects": [
+                        {"do": "delay", "minutes": 240}
+                    ]
+                },
+                {
+                    "id": "push",
+                    "text": "Push on through the rain.",
+                    "effects": [
+                        {"do": "cargo", "good": "salt", "change": -100},
+                        {"do": "remember", "deed": "lost_salt_to_the_rain"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "men_at_the_iron",
+            "zone": "wendford",
+            "when": "night",
+            "target": "blades",
+            "once": "contract",
+            "text": "In the dark two men with a handcart are at the wagon, lifting the iron bars off it one by one, very quietly.",
+            "note": "Two Wendford men with nothing to plough with this spring: the goblins took the oxen and the price of iron went up. Persons, not beasts: they yield the moment they are caught, and a man who drops his bar has yielded. Fights stay a recommendation. Ilsa wants to know whose iron it was before it was Fenn's.",
+            "choices": [
+                {
+                    "id": "go",
+                    "text": "Go at them.",
+                    "keeps": [
+                        "mercy_to_yielded"
+                    ],
+                    "effects": [
+                        {
+                            "do": "fight",
+                            "monsters": [
+                                "bandit",
+                                "bandit"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "shout",
+                    "text": "Shout and wake the camp.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "intimidation",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "scared_off_the_iron_thieves"}
+                            ],
+                            "failure": [
+                                {"do": "cargo", "good": "iron", "change": -40}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "track",
+                    "text": "Let them go and track them at first light.",
+                    "effects": [
+                        {"do": "cargo", "good": "iron", "change": -40},
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "survival",
+                            "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "tracked_the_iron"}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "the_fair_price",
+            "zone": "wendford",
+            "when": "arrival",
+            "target": "caravan",
+            "owner_pick": "talk",
+            "once": "contract",
+            "text": "A crowd stands in front of Fenn's wagon on the Wendford green. A woman with a basket says what they all think: salt is dear this year, dearer than anyone remembers, and they want Fenn's salt here, at their price, before it goes up the hill.",
+            "note": "Price is the signal of change, and its cause is off the map: nobody on the green knows why salt is dear, only that it is. Market against custom: Fenn has sold at his price for years, the valley thinks a fair price is the one it always paid, and neither is right. It is Fenn's salt, so Fenn decides with the Blades' advice; he says \"Decide it between you\" and means it. Nell Hale, the reeve's niece, about eight, sits on the rim of the well with a slate and does the crowd's sums for them, out loud and wrong on purpose. Nobody is hurt: making way means pushing through people, never the wagon over them.",
+            "choices": [
+                {
+                    "id": "sell",
+                    "text": "Sell the salt at their price.",
+                    "keeps": [
+                        "bread_shared"
+                    ],
+                    "effects": [
+                        {"do": "cargo", "good": "salt", "change": -100},
+                        {"do": "remember", "deed": "sold_salt_at_their_price"}
+                    ]
+                },
+                {
+                    "id": "make_way",
+                    "text": "Make way through the crowd.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "intimidation",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "made_way_through_wendford"}
+                            ],
+                            "failure": [
+                                {"do": "delay", "minutes": 60},
+                                {"do": "remember", "deed": "wendford_turned_cold"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "talk",
+                    "text": "Talk them down.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 15,
+                            "success": [
+                                {"do": "remember", "deed": "talked_wendford_down"}
+                            ],
+                            "failure": [
+                                {"do": "cargo", "good": "salt", "change": -50},
+                                {"do": "remember", "deed": "sold_salt_at_their_price"}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "salt_on_credit",
+            "zone": "slopes",
+            "target": "caravan",
+            "owner_pick": "walk",
+            "once": "contract",
+            "text": "Below the ridge a woman in a man's coat stops the wagon. She wants a winter's salt for the farm, and she cannot pay for it until spring. A boy in a bobble hat holds her hand and looks at the horses, not at the salt.",
+            "note": "The farm under the ridge, Col and Dunn's. The goblins took the flock, so there is no wool in spring to pay with, and Fenn won't give credit to a farm with no sheep. If the brothers died at the bridge (killed_col, killed_dunn), she is in black and Fenn knows why; say it plainly. A blind choice and a consequence on the young: what the Blades do here, Gwyn hears by the next contract. Maren speaks first. The boy's look is told as perception, never as a threat.",
+            "choices": [
+                {
+                    "id": "pay",
+                    "text": "Pay for her salt yourselves.",
+                    "keeps": [
+                        "bread_shared"
+                    ],
+                    "effects": [
+                        {
+                            "do": "pay",
+                            "who": "party",
+                            "copper": 40
+                        },
+                        {"do": "remember", "deed": "paid_for_the_ridge_salt"}
+                    ]
+                },
+                {
+                    "id": "talk_fenn",
+                    "text": "Talk Fenn round.",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 15,
+                            "success": [
+                                {"do": "cargo", "good": "salt", "change": -30},
+                                {"do": "remember", "deed": "fenn_gave_credit"}
+                            ],
+                            "failure": [
+                                {"do": "remember", "deed": "fenn_said_no"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "walk",
+                    "text": "Walk on.",
+                    "effects": [
+                        {"do": "remember", "deed": "passed_the_ridge_farm"}
+                    ]
+                }
+            ]
+        }
+    ]
+}
