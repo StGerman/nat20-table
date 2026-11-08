@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
-    deck::{Deck, DeckError, DeckState, Deed, DeedBook, When},
+    deck::{Deck, DeckError, DeckState, Deed, DeedBook, Drawn, PickError, When},
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
     map::{MapError, Position, WorldMap},
@@ -377,6 +377,7 @@ impl World {
         let days = miles.div_ceil(MILES_PER_DAY_BETWEEN);
         let mut deck = saved.deck;
         deck.pending = None;
+        deck.offered.clear();
         deck.gone_for_contract.clear();
         let mut discovered = saved.discovered;
         discovered.extend(std::mem::take(&mut self.state.discovered));
@@ -406,8 +407,9 @@ impl World {
         true
     }
 
-    /// Draws a road card after a leg along `road`. Returns the card on the table, if any.
-    pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<String> {
+    /// Draws after a leg along `road`. Returns what the draw did: a card on the table, or cards
+    /// offered for the DM's pick (API-53); none when the zone has no card in play.
+    pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
         let zone = self.map.road(road)?.zone.clone();
         self.deck.draw(
             &zone,
@@ -419,8 +421,9 @@ impl World {
         )
     }
 
-    /// Draws an arrival card of `place` when a leg ends there (ENG-35).
-    pub fn draw_on_arrival(&mut self, place: &str, dice: &mut impl WorldDice) -> Option<String> {
+    /// Draws an arrival card of `place` when a leg ends there (ENG-35): on the table, or
+    /// offered for a pick (API-53).
+    pub fn draw_on_arrival(&mut self, place: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
         self.deck.draw(
             place,
             When::Arrival,
@@ -431,8 +434,15 @@ impl World {
         )
     }
 
-    /// Draws a night card after a night in camp where the caravan is.
-    pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<String> {
+    /// The DM picks one of the offered cards (API-53): it goes on the table.
+    pub fn pick_card(&mut self, card: &str) -> Result<(), PickError> {
+        self.deck
+            .pick(card, &self.state.deeds, &mut self.state.deck)
+    }
+
+    /// Draws a night card after a night in camp where the caravan is: on the table, or offered
+    /// for a pick (API-53).
+    pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<Drawn> {
         let zone = self.zone_here();
         self.deck.draw(
             &zone,

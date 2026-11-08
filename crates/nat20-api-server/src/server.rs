@@ -314,6 +314,11 @@ impl Server {
             Command::RestNight { actor, lodging } => session.rest_night(&actor.0, *lodging, viewer),
             Command::PassTime { span } => session.pass_time(*span, viewer),
             Command::ChooseCard { actor, choice } => session.choose_card(&actor.0, choice, viewer),
+            Command::PickCard {
+                card,
+                reason,
+                fallback,
+            } => session.pick_card(card, reason, *fallback, viewer),
             Command::SaveRoster => session.save_roster(viewer),
             Command::LevelUp { actor } => session.level_up(&actor.0, viewer),
             Command::AnswerLevelUp {

@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.61"
+    "version": "1.0.0-dev.62"
   },
   "$defs": {
     "Ability": {
@@ -675,6 +675,26 @@
         "wagons"
       ]
     },
+    "CardCame": {
+      "description": "How a road card came to the table (API-53).",
+      "oneOf": [
+        {
+          "description": "The DM picked it among the offered (`pick_card`).",
+          "type": "string",
+          "const": "dm_pick"
+        },
+        {
+          "description": "The game loop picked the first card rolled because the DM did not answer.",
+          "type": "string",
+          "const": "engine_pick"
+        },
+        {
+          "description": "An earlier choice queued it (`add_card` with `soon`): no roll, no pick.",
+          "type": "string",
+          "const": "soon"
+        }
+      ]
+    },
     "CardChoiceView": {
       "description": "One choice on a road card.",
       "type": "object",
@@ -737,6 +757,13 @@
         "id": {
           "description": "The card id in the world's deck.",
           "type": "string"
+        },
+        "note": {
+          "description": "What only the DM reads: the card's one oddity, to voice at every meeting (API-53).",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "said": {
           "description": "What each Blade has said so far.",
@@ -1636,6 +1663,24 @@
             "cmd": {
               "type": "string",
               "const": "choose_card"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The state with the picked card on the table, or already decided when nobody could\nspeak on it.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "pick_card"
             },
             "state": {
               "description": "Projected for the request's `viewer`.",
@@ -3805,6 +3850,65 @@
           ]
         },
         {
+          "description": "A draw offered two or three road cards for the DM's pick (API-53), after their draw\nrolls. DM only: the players never learn which cards were passed over.",
+          "type": "object",
+          "properties": {
+            "cards": {
+              "description": "The cards, in roll order: the first is the one the engine takes when the DM does\nnot pick.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/OfferedCard"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "const": "cards_offered"
+            },
+            "rolls": {
+              "description": "The draw roll behind each card, in the same order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RollId"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "cards",
+            "rolls"
+          ]
+        },
+        {
+          "description": "How the next card came to the table (API-53), right before its `card_drawn`. DM only.\nNot logged for a zone's only card, whose draw roll alone shows it.",
+          "type": "object",
+          "properties": {
+            "came": {
+              "description": "How it came.",
+              "$ref": "#/$defs/CardCame"
+            },
+            "card": {
+              "description": "The card id.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "card_picked"
+            },
+            "reason": {
+              "description": "The pick's one-line reason; absent for a soon card.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "card",
+            "came"
+          ]
+        },
+        {
           "description": "The caravan reached the escort contract's destination and the Blades' pay was settled\n(API-47), after its `wage` ledger entries. Public.",
           "type": "object",
           "properties": {
@@ -4663,6 +4767,49 @@
         "alive"
       ]
     },
+    "OfferedCard": {
+      "description": "A road card a draw offered for the DM's pick (API-53). DM only.",
+      "type": "object",
+      "properties": {
+        "choices": {
+          "description": "The choices it would offer.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardChoiceView"
+          }
+        },
+        "id": {
+          "description": "The card id: what `pick_card` names.",
+          "type": "string"
+        },
+        "note": {
+          "description": "What only the DM reads: the card's one oddity.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target": {
+          "description": "Who would decide it.",
+          "$ref": "#/$defs/CardTarget"
+        },
+        "text": {
+          "description": "What the players would read.",
+          "type": "string"
+        },
+        "zone": {
+          "description": "The deck zone it came from: a road zone or a place id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "zone",
+        "target",
+        "text",
+        "choices"
+      ]
+    },
     "OptionArea": {
       "description": "The area an option fills, and a preview of each aim.",
       "type": "object",
@@ -5271,14 +5418,19 @@
           "const": "no_inn"
         },
         {
-          "description": "`travel` or `rest_night` while a road card waits for its decision.",
+          "description": "`travel`, `rest_night` or `pass_time` while a road card waits for its decision, or\nwhile a draw's cards wait for the DM's pick (API-53).",
           "type": "string",
           "const": "card_pending"
         },
         {
-          "description": "`choose_card` with no card on the table.",
+          "description": "`choose_card` with no card on the table, also while a draw's cards wait for the DM's\npick.",
           "type": "string",
           "const": "no_card"
+        },
+        {
+          "description": "`pick_card` when no cards are offered, or with a card that is not one of them (API-53).",
+          "type": "string",
+          "const": "card_not_offered"
         },
         {
           "description": "`choose_card` by a creature with no say on this card, or `choose_card`, `level_up` or\n`answer_level_up` not sent as the actor itself.",
@@ -6051,6 +6203,34 @@
             "cmd",
             "actor",
             "choice"
+          ]
+        },
+        {
+          "description": "Puts one of the offered road cards on the table (API-53; protocol §4.13): the DM's pick\namong the two or three cards a draw offered (`world.offered`). DM only.",
+          "type": "object",
+          "properties": {
+            "card": {
+              "description": "The card id, from `world.offered`.",
+              "type": "string"
+            },
+            "cmd": {
+              "type": "string",
+              "const": "pick_card"
+            },
+            "fallback": {
+              "description": "The game loop picked the first card rolled because the DM did not answer: the\npick is the engine's, not the DM's.",
+              "type": "boolean",
+              "default": false
+            },
+            "reason": {
+              "description": "Why this card, in one line: kept in the session log and the run report, DM only.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "cmd",
+            "card",
+            "reason"
           ]
         },
         {
@@ -8088,6 +8268,13 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/NpcDm"
+          }
+        },
+        "offered": {
+          "description": "The cards a draw offered, in roll order, waiting for the DM's `pick_card` (API-53);\n`travel`, `rest_night`, `pass_time` and `choose_card` wait for the pick.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OfferedCard"
           }
         },
         "places": {

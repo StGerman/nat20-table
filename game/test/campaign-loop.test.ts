@@ -326,6 +326,14 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     // Every Blade is paid at least the advance and the day of arrival, from Odda's purse.
     for (const blade of escort.contract.blades) assert.ok(blade.paid_cp >= 400, `${blade.handle} paid ${blade.paid_cp}`);
     assert.ok(state.result.state.world!.clock.day <= 3, "within the day limit");
+    // Wend's road piles hold more than one card, so draws offer cards; until the DM's pick tool
+    // (AGT-88) the table takes the first card rolled, as the engine's pick (API-53).
+    const picks = t.requests().filter((r) => r.cmd === "pick_card");
+    assert.ok(picks.length > 0, "a draw offered cards and the table picked one");
+    assert.ok(picks.every((r) => r.viewer === "dm" && (r as { fallback?: boolean }).fallback === true));
+    const log = await t.engine.request("dm", { cmd: "events", since: 0 });
+    assert.ok(log.result?.cmd === "events");
+    assert.ok(log.result.events.some((e) => e.kind === "card_picked" && e.came === "engine_pick"));
   } finally {
     t.close();
   }

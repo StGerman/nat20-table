@@ -110,6 +110,39 @@ pub struct CardDm {
     pub said: Vec<CardSaid>,
     /// The Blades who still have to speak.
     pub waiting_for: Vec<Handle>,
+    /// What only the DM reads: the card's one oddity, to voice at every meeting (API-53).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+/// A road card a draw offered for the DM's pick (API-53). DM only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct OfferedCard {
+    /// The card id: what `pick_card` names.
+    pub id: String,
+    /// The deck zone it came from: a road zone or a place id.
+    pub zone: String,
+    /// Who would decide it.
+    pub target: CardTarget,
+    /// What the players would read.
+    pub text: String,
+    /// The choices it would offer.
+    pub choices: Vec<CardChoiceView>,
+    /// What only the DM reads: the card's one oddity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+/// How a road card came to the table (API-53).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CardCame {
+    /// The DM picked it among the offered (`pick_card`).
+    DmPick,
+    /// The game loop picked the first card rolled because the DM did not answer.
+    EnginePick,
+    /// An earlier choice queued it (`add_card` with `soon`): no roll, no pick.
+    Soon,
 }
 
 /// The road card on the table, as a player sees it: no card id, zone or deck.
@@ -441,6 +474,10 @@ pub struct WorldDm {
     /// The road card waiting for its decision; `travel` and `rest_night` wait for it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card: Option<CardDm>,
+    /// The cards a draw offered, in roll order, waiting for the DM's `pick_card` (API-53);
+    /// `travel`, `rest_night`, `pass_time` and `choose_card` wait for the pick.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub offered: Vec<OfferedCard>,
     /// Every place NPC, alive or dead, met or not, in the world file's order (API-48).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub npcs: Vec<NpcDm>,
