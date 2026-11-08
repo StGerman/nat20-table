@@ -12,7 +12,7 @@ This file holds the rules and points to everything else. When it disagrees with 
 |---|---|
 | What we are building and what "done" means | `docs/scope/demo-run-scope.md` (the Demo Run, frozen); `docs/scope/living-world-scope.md` (Milestone 9 on) |
 | How the system is split and why | `docs/design/system-design.md` |
-| What to do next: task list and milestone status | `TASKS.md`; until it moves here (CON-1), the project copy at `/mnt/project-files/engine/TASKS.md` is the only live one |
+| What to do next: task list and milestone status | `TASKS.md` (open rows); closed rows in `docs/tasks-done.md` |
 | Contract v1 behaviour (commands, events, errors, visibility) | `contract/protocol.md` |
 | Why a decision was made, what was rejected, when to revisit | `docs/decisions/README.md` |
 
@@ -113,6 +113,7 @@ Run `check:contract`, the cargo checks above (fmt, clippy, test, doc, deny) and 
 | `docs/decisions/` | Decision records: one file per decision, index in `README.md` | Yes; never rewrite an accepted one, supersede it |
 | `docs/scope/` | Demo Run scope (accepted by Stas) | Only with Stas's agreement |
 | `TASKS.md` | Task list and milestone status | Yes, per Rule 8 |
+| `docs/tasks-done.md` | Closed TASKS.md rows (done, won't do) and the change log before 2026-11-08, moved unchanged | Yes, by moving closed rows in |
 
 ## Architecture
 
