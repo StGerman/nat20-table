@@ -37,6 +37,10 @@ pub const DC_LADDER: [u32; 6] = [5, 10, 15, 20, 25, 30];
 /// draw die.
 pub const MAX_PILE: usize = DRAW_DIE as usize;
 
+/// The condition a forewarned choice reads (API-54): true for one draw when the scout's
+/// check succeeds. It is not a deed: nothing remembers it, and no card asks for it.
+pub const SCOUTED: &str = "scouted";
+
 /// One deck file, `worlds/<id>/deck/<name>.json`. A world's deck is every file together.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -116,6 +120,21 @@ pub struct Card {
     /// What only the DM reads: the card's one oddity, voiced at every meeting (API-53)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    /// The skill the scout checks with when the card is drawn after a leg (API-54): a card
+    /// with something to find ahead; none for a card with nothing to find
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scout: Option<ScoutSkill>,
+}
+
+/// What the scout looks for (API-54), from the SRD 5.2.1 Search table: Wisdom (Perception)
+/// finds a concealed creature or object, Wisdom (Survival) finds tracks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScoutSkill {
+    /// A creature or a person waiting on the road
+    Perception,
+    /// Tracks, a trail or a hazard
+    Survival,
 }
 
 /// How long a drawn card stays out of the game.
@@ -441,6 +460,10 @@ pub struct DeckState {
     /// The card on the table, waiting for its decision
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pending: Option<PendingCard>,
+    /// The road whose leg drew the cards offered or on the table (API-54): its terrain sets
+    /// the scout's DC; none after a night or an arrival draw
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub road: Option<String>,
 }
 
 impl DeckState {
@@ -622,7 +645,8 @@ impl Deck {
     /// cards, zones that are a road zone or a place (a road card's a road zone), `requires` that names a place, DCs
     /// on the ladder, a fight only last in its list, `add_card` that names a chained card, every chained card added by
     /// some choice, no pile over [`MAX_PILE`] cards, and 2 or 3 choices offered in every case a
-    /// card's conditions allow (ENG-33). Goods and stat blocks are the server's to check; that
+    /// card's conditions allow (ENG-33), counting [`SCOUTED`] as a case; `scouted` read only by
+    /// a choice and never remembered, and a `scout` skill only on a road card (API-54). Goods and stat blocks are the server's to check; that
     /// every deed read is written is [`Deck::check_deeds_written`]'s.
     pub fn validate(&self, map: &WorldMap) -> Result<(), DeckError> {
         let bad = |s: String| Err(DeckError(s));
@@ -740,6 +764,35 @@ impl Deck {
             }
         }
         for card in &self.cards {
+            // `scouted` holds for one draw only: a choice reads it, a card never does, and
+            // nothing remembers it (API-54).
+            if card
+                .if_deeds
+                .iter()
+                .chain(&card.unless)
+                .flat_map(Deeds::ids)
+                .any(|d| d == SCOUTED)
+            {
+                return bad(format!(
+                    "card {} reads {SCOUTED}, which only a choice may read",
+                    card.id
+                ));
+            }
+            if Deck::effects(card)
+                .iter()
+                .any(|e| matches!(e, Effect::Remember { deed } if deed == SCOUTED))
+            {
+                return bad(format!(
+                    "card {} remembers {SCOUTED}, which is not a deed",
+                    card.id
+                ));
+            }
+            if card.scout.is_some() && card.when != When::Road {
+                return bad(format!(
+                    "card {} has a scout skill, but only a road card is scouted",
+                    card.id
+                ));
+            }
             check_cases(card)?;
         }
         if let Some(lost) = self
@@ -770,7 +823,7 @@ impl Deck {
                 )
                 .flat_map(Deeds::ids);
             for deed in reads {
-                if !written.contains(deed) && !elsewhere.contains(deed) {
+                if deed != SCOUTED && !written.contains(deed) && !elsewhere.contains(deed) {
                     return Err(DeckError(format!(
                         "card {} reads deed {deed}, which nothing writes",
                         card.id
@@ -931,6 +984,35 @@ impl Deck {
     /// The choice ids a card would offer with these deeds; empty when it offers all.
     pub fn offer_ids(card: &Card, deeds: &DeedBook) -> Vec<String> {
         offered_ids(card, deeds)
+    }
+
+    /// The scout saw what waits ahead (API-54): the card on the table offers its choices as
+    /// if [`SCOUTED`] were remembered, so its forewarned choice replaces the one it stands
+    /// for. Only before anyone speaks; returns whether the choices changed.
+    pub fn forewarn(&self, deeds: &DeedBook, state: &mut DeckState) -> bool {
+        let Some(pending) = state.pending.as_mut() else {
+            return false;
+        };
+        let Some(card) = self.card(&pending.card) else {
+            return false;
+        };
+        if !pending.said.is_empty() {
+            return false;
+        }
+        let known = |id: &str| id == SCOUTED || deeds.contains_key(id);
+        let offered: Vec<&Choice> = card
+            .choices
+            .iter()
+            .filter(|c| holds(c.if_deeds.as_ref(), c.unless.as_ref(), &known))
+            .collect();
+        let choices = if offered.len() == card.choices.len() {
+            Vec::new()
+        } else {
+            offered.iter().map(|c| c.id.clone()).collect()
+        };
+        let changed = choices != pending.choices;
+        pending.choices = choices;
+        changed
     }
 
     /// A drawn card goes on the table with the choices its deeds offer, and to the discard,
@@ -1889,5 +1971,92 @@ mod tests {
             ("bandit", Some("col"))
         );
         assert_eq!((monsters[1].stat(), monsters[1].npc()), ("bandit", None));
+    }
+
+    fn scout_deck() -> Deck {
+        let file: DeckFile = serde_json::from_str(
+            r#"{"cards": [
+              {"id": "willows", "zone": "fields", "target": "blades", "text": "Willows crowd the road.",
+               "scout": "perception",
+               "choices": [
+                 {"id": "push_on", "text": "Push on."},
+                 {"id": "wait", "text": "Wait for the light.", "unless": "scouted"},
+                 {"id": "flank", "text": "Go round the men in the willows.", "if": "scouted"}
+               ]}
+            ]}"#,
+        )
+        .unwrap();
+        Deck::from_files([file])
+    }
+
+    #[test]
+    fn a_scouted_card_opens_its_forewarned_choice_for_one_draw() {
+        let d = scout_deck();
+        d.validate(&small_map()).unwrap();
+        d.check_deeds_written(&BTreeSet::new()).unwrap();
+        assert_eq!(d.cards[0].scout, Some(ScoutSkill::Perception));
+        let mut state = DeckState::default();
+        let mut dice = ListDice::new([1]);
+        let drawn = draw_one(&d, "fields", When::Road, &known(), &mut state, &mut dice);
+        assert_eq!(drawn.as_deref(), Some("willows"));
+        let pending = state.pending.clone().unwrap();
+        assert_eq!(pending.choices, ["push_on", "wait"]);
+
+        assert!(d.forewarn(&DeedBook::new(), &mut state));
+        assert_eq!(
+            state.pending.as_ref().unwrap().choices,
+            ["push_on", "flank"]
+        );
+        // Forewarned once is enough; a word spoken fixes the card.
+        assert!(!d.forewarn(&DeedBook::new(), &mut state));
+
+        // The next draw of the same card is not forewarned by the old scout.
+        state.pending = None;
+        let mut dice = ListDice::new([1]);
+        draw_one(&d, "fields", When::Road, &known(), &mut state, &mut dice);
+        assert_eq!(state.pending.as_ref().unwrap().choices, ["push_on", "wait"]);
+        state
+            .pending
+            .as_mut()
+            .unwrap()
+            .said
+            .insert("bren".into(), "push_on".into());
+        assert!(!d.forewarn(&DeedBook::new(), &mut state));
+    }
+
+    #[test]
+    fn the_validator_keeps_scouted_to_choices_and_road_cards() {
+        let map = small_map();
+        let mut d = scout_deck();
+        d.cards[0].unless = Some(Deeds::One(SCOUTED.into()));
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("only a choice may read")
+        );
+
+        let mut d = scout_deck();
+        d.cards[0].choices[0].effects.push(Effect::Remember {
+            deed: SCOUTED.into(),
+        });
+        assert!(d.validate(&map).unwrap_err().0.contains("is not a deed"));
+
+        let mut d = scout_deck();
+        d.cards[0].when = When::Night;
+        assert!(d.validate(&map).unwrap_err().0.contains("only a road card"));
+
+        // `scouted` is a case like a deed: a forewarned choice that makes four fails.
+        let mut d = scout_deck();
+        d.cards[0].choices[1].unless = None;
+        let hide = Choice {
+            id: "hide".into(),
+            ..d.cards[0].choices[2].clone()
+        };
+        d.cards[0].choices.push(hide);
+        assert_eq!(
+            d.validate(&map).unwrap_err().0,
+            "card willows offers 4 choices when the deeds remembered are [scouted]; it needs 2 or 3"
+        );
     }
 }

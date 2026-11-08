@@ -275,6 +275,16 @@ pub fn text(kind: &EventKind) -> String {
             CardCame::EnginePick => format!("The DM did not pick; the engine takes {card}."),
             CardCame::Soon => format!("{card} comes next, as an earlier choice set it."),
         },
+        EventKind::ScoutAhead { actor } => {
+            format!("{} walks ahead of the caravan as the scout.", actor.0)
+        }
+        EventKind::ScoutLooked { actor, saw, .. } => {
+            if *saw {
+                format!("{} spots what waits ahead.", actor.0)
+            } else {
+                format!("{} looks ahead and misses what waits there.", actor.0)
+            }
+        }
         EventKind::DeedRemembered { deed, by, .. } => {
             if by.is_empty() {
                 format!("The world remembers {deed}.")

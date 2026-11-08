@@ -3,9 +3,9 @@
 //! coin and exhaustion run through core by way of the adapter.
 
 use nat20_api_contract::{
-    AdvantageState, ApiError, CardCame, CheckSpec, CommandResult, DiceRolled, ErrorCode, EventKind,
-    Handle, LedgerReason, LifeState, Mode, Placement, RejectReason, RollId, RollKind, RollOutcome,
-    RollView, Side, Visibility,
+    Ability, AdvantageState, ApiError, CardCame, CheckSpec, CommandResult, DiceRolled, ErrorCode,
+    EventKind, Handle, LedgerReason, LifeState, Mode, Placement, RejectReason, RollId, RollKind,
+    RollOutcome, RollView, Side, Visibility,
 };
 use nat20_world as world;
 
@@ -92,9 +92,10 @@ impl Session {
         }
     }
 
-    /// Logs the card on the table (`card_drawn`, public). A card nobody can speak on is
-    /// settled at once.
+    /// Logs the card on the table (`card_drawn`, public), after the scout's look ahead when
+    /// the card has something to find (API-54). A card nobody can speak on is settled at once.
     fn show_card(&mut self) -> Result<(), ApiError> {
+        self.scout_look()?;
         let Some(campaign) = self.campaign.as_ref() else {
             return Ok(());
         };
@@ -120,6 +121,101 @@ impl Session {
             self.resolve_card(resolution)?;
         }
         Ok(())
+    }
+
+    /// The scout's look ahead at the card on the table (API-54): a Wisdom check with the
+    /// card's `scout` skill against the road terrain's Search DC, through core, then
+    /// `scout_looked` (public); a success opens the card's forewarned choice. Nothing when
+    /// nobody walks ahead, the scout is not up, the card has nothing to find, or it is a night
+    /// or arrival card.
+    fn scout_look(&mut self) -> Result<(), ApiError> {
+        let Some((scout, skill, dc)) = self.campaign.as_ref().and_then(|c| c.world.scout_check())
+        else {
+            return Ok(());
+        };
+        let up = self
+            .game
+            .as_ref()
+            .is_some_and(|g| g.has_creature(&scout) && g.is_up(&scout) && g.mode() != Mode::Combat);
+        if !up {
+            return Ok(());
+        }
+        let spec = CheckSpec::Ladder {
+            ability: Ability::Wisdom,
+            skill: Some(campaign::scout_skill(skill)),
+            dc: u8::try_from(dc).unwrap_or(u8::MAX),
+        };
+        let outcome = self.game_mut()?.request_check(&scout, &spec);
+        self.push_entries();
+        let outcome = outcome?;
+        let roll = self
+            .roll_keys
+            .get(&outcome.key)
+            .cloned()
+            .expect("the check's roll was logged");
+        if outcome.success {
+            let campaign = self.campaign.as_mut().expect("checked above");
+            campaign.world.forewarn();
+        }
+        self.push(Pending::public(
+            None,
+            EventKind::ScoutLooked {
+                actor: Handle(scout),
+                roll,
+                saw: outcome.success,
+            },
+        ));
+        Ok(())
+    }
+
+    /// `scout`: a Hired Blade walks ahead of the caravan as the scout (API-54), for every leg
+    /// until another Blade takes the role.
+    pub fn scout(&mut self, actor: &str, viewer: &Viewer) -> Result<CommandResult, ApiError> {
+        if *viewer != Viewer::Creature(actor.to_owned()) {
+            return Err(rejected(
+                RejectReason::NoSay,
+                "scout is a Blade's own word: send it as your own creature.",
+            ));
+        }
+        let Some(campaign) = self.campaign.as_ref() else {
+            return Err(error(
+                ErrorCode::NoCampaign,
+                "No campaign is running; the game starts one with start_campaign.",
+            ));
+        };
+        if campaign.world.state.deck.waiting() {
+            return Err(rejected(
+                RejectReason::CardPending,
+                "A road card waits; the scout can change places once it is decided.",
+            ));
+        }
+        if self.game_mut()?.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "A fight is running; nobody walks ahead until it is over.",
+            ));
+        }
+        if !self.table().blades.iter().any(|b| b == actor) {
+            return Err(rejected(
+                RejectReason::NoSay,
+                format!(
+                    "Only a Hired Blade on their feet walks ahead as the scout; {actor} cannot."
+                ),
+            ));
+        }
+        let campaign = self.campaign.as_mut().expect("checked above");
+        if campaign.world.state.scout.as_deref() != Some(actor) {
+            campaign.world.state.scout = Some(actor.to_owned());
+            self.push(Pending::public(
+                None,
+                EventKind::ScoutAhead {
+                    actor: Handle(actor.to_owned()),
+                },
+            ));
+        }
+        Ok(CommandResult::Scout {
+            state: self.state_for(viewer)?,
+        })
     }
 
     /// `pick_card`: the DM's pick among the offered cards (API-53). The card goes on the table

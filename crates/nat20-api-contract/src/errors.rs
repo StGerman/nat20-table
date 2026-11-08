@@ -160,16 +160,17 @@ pub enum RejectReason {
     Overloaded,
     /// `rest_night{where: inn}` where the caravan is not at a place with an inn.
     NoInn,
-    /// `travel`, `rest_night` or `pass_time` while a road card waits for its decision, or
-    /// while a draw's cards wait for the DM's pick (API-53).
+    /// `travel`, `rest_night`, `pass_time` or `scout` while a road card waits for its
+    /// decision, or while a draw's cards wait for the DM's pick (API-53).
     CardPending,
     /// `choose_card` with no card on the table, also while a draw's cards wait for the DM's
     /// pick.
     NoCard,
     /// `pick_card` when no cards are offered, or with a card that is not one of them (API-53).
     CardNotOffered,
-    /// `choose_card` by a creature with no say on this card, or `choose_card`, `level_up` or
-    /// `answer_level_up` not sent as the actor itself.
+    /// `choose_card` by a creature with no say on this card, `scout` by a creature that is
+    /// not a Hired Blade, or `choose_card`, `scout`, `level_up` or `answer_level_up` not sent
+    /// as the actor itself.
     NoSay,
     /// `choose_card` by a seat that already spoke on this card.
     AlreadySpoke,

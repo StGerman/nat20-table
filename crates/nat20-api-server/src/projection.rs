@@ -244,6 +244,7 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
         }),
         escort: view.escort.map(|e| e.contract),
         trip,
+        scout: view.scout,
         // Met NPCs only, and only what the party can see (API-48): never Hit Points, attitude
         // or notes.
         npcs: view
