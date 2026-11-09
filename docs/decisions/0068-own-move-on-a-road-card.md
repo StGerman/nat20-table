@@ -24,7 +24,7 @@ The move joins the card as the choice `own_move`, with the proposer's word given
 - Con: 8 of the 43 cards keep fewer than two choices without a check, so they would get no own move.
 
 ### A downed proposer (within A)
-- Fail with no roll (chosen): the server builds the roller list (the proposer, if up) and shares the deck check's success test, which fails an empty list; `own_move_ran` records `roll: null`; one seeded fixture case. Con: the move fails for a reason the words did not cause.
+- Fail with no roll (chosen): the server rolls only if the proposer is up, as it does for the scout's look; `own_move_ran` records `roll: null`; one seeded fixture case. Con: the move fails for a reason the words did not cause.
 - Withdraw the move when its proposer goes down: con, a new public event and a check on every card call, and the views show a dead move until then.
 - Refuse fights while a card waits: con, it refuses scene and arrival fights that start with a card already drawn.
 
