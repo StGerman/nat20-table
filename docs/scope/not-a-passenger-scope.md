@@ -107,9 +107,10 @@ Target (decision 0065, half the baseline): 17.7 USD, 33 min of Stas at the table
 ## 9. Decided by Stas (2026-11-08 22:24Z)
 
 1. The AI half also decides a card by an own move: yes. The path is proven on the build before Stas sits down.
-2. The table's lines in the run's language: yes («Вера читает но оба языка вмешаны ломает вайб»). Decision 0067, in this PR, supersedes 0038's English half; Yan had recommended no.
+2. The table's lines in the run's language: yes («Вера читает но оба языка вмешаны ломает вайб»). Decision 0067, in table #336, supersedes 0038's English half; Yan had recommended no.
 3. Plain against Fireside: A, one Fireside `play:unattended` beside the pair (§4, Reported).
-4. The scope, the system design and the rows land in one docs PR: yes. Stas merged the scope alone, table #336 at 22:35Z; the system design follows in its own PR, and the rows join that PR once Stas accepts the design.
+4. The scope, the system design and the rows land in one docs PR: yes. This PR stays open until the design and the rows join it.
+   - Note, 2026-11-09: Stas merged the scope alone (table #336, 22:35Z). The design and the rows follow in one docs PR of their own.
 
 ## 10. Amendments proposed
 
