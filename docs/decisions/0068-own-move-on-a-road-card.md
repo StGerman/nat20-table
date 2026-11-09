@@ -23,6 +23,11 @@ The move joins the card as the choice `own_move`, with the proposer's word given
 - Pro: one roll per own move.
 - Con: 8 of the 43 cards keep fewer than two choices without a check, so they would get no own move.
 
+### A downed proposer (within A)
+- Fail with no roll (chosen): the deck check code already sends an empty roller list to the failure branch; one fixture line. Con: the move fails for a reason the words did not cause.
+- Withdraw the move when its proposer goes down: con, a new public event and a check on every card call, and the views show a dead move until then.
+- Refuse fights while a card waits: con, it refuses scene and arrival fights that start with a card already drawn.
+
 ## Decision
 
 A. The move is a choice the table votes on. The success and failure choices must be two different choices offered on the card; a failure may not name a choice that breaks a custom (the engine refuses it) or a deliberate act the words did not ask for (the DM prompt). The named choice runs in full, its own check included. One own move per card, no retry. The world writes the deed `own_move_<card>`, with no result and no words in it.
@@ -31,7 +36,7 @@ A. The move is a choice the table votes on. The success and failure choices must
 
 - The next contract version (dev.68 if API-56 lands first): the DM command `own_move`, the event `card_own_move`, `CardDm.own_move` and `CardPlayer.own_move`, reject reasons `own_move_taken` and `bad_own_move`, and the DM-only event `own_move_set` (TASKS.md API-56).
 - The success and failure choices stay DM-only (card test 5). Zoya's board check asks to show them before the vote; the design records that as open for Stas.
-- A proposer who is down when the card is decided rolls nothing, and the failure choice runs: the shared deck check code already fails a check with no one up to roll, so this is no new rule.
+- A proposer who is down when the card is decided rolls nothing, and the failure choice runs (design §1.1 step 5).
 - `own_move_<card>` has no reader in Milestone 12. Zoya's board lists it as an owed pay-off until the dramaturg mechanism gives it words.
 
 ## Revisit when
