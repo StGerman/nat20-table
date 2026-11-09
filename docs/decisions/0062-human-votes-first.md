@@ -1,6 +1,6 @@
 # 0062. The human gives their word on a road card first
 
-- **Status:** Proposed (accepted when Stas merges table: AGT-87)
+- **Status:** Accepted (table #296, merged by Stas 2026-11-06)
 - **Date:** 2026-11-06
 - **Decided by:** Stas, in the post-M9 hygiene thread, 2026-11-06 16:10Z ("always ask the human first, so the player can sway the others; asked last, the decision is mostly made already"). It supersedes the "asked last" sentence of [0058](0058-human-plays-hired-blade.md) only; the rest of 0058 stands.
 
