@@ -32,7 +32,7 @@ All in one PR (API-56), in Rule 1 order. The next free contract version when it 
 | --- | --- | --- |
 | `actor` | yes | The seat whose words these are: one with a say on the card that has not spoken yet (a Blade, or a player owner once the Blades have advised). |
 | `text` | yes | The words as said, 1 to 300 characters. The game loop fills it from what the seat said, cut at a word to 300 characters (the transcript keeps them whole); the DM tool has no text field, so the DM can never be refused for the words. |
-| `ability`, `skill`, `dc` | yes | The check, from the SRD DC ladder, with the same fields and rules as a deck file's `check` effect, where `skill` is required (unlike `request_check`'s `ladder`). A scenario check is not offered: road cards carry ladder checks only. |
+| `ability`, `skill`, `dc` | yes | The check, from the SRD DC ladder, typed as `request_check`'s `ladder` types (`Ability`, `Skill`, the DC as there), but with `skill` required, as a deck file's `check` effect has it. A scenario check is not offered: road cards carry ladder checks only. |
 | `success` | yes | A choice id offered on this card. |
 | `failure` | yes | Another choice id offered on this card. |
 
@@ -48,7 +48,7 @@ All in one PR (API-56), in Rule 1 order. The next free contract version when it 
 | `actor` is a player owner and a Blade has not advised yet | `waiting_for_advice` (existing) |
 | the card already has an own move | `own_move_taken` (new) |
 | `success` equals `failure`, or `failure` names a choice that `breaks` a custom | `bad_own_move` (new), with a message the DM can correct against |
-| a DC off the ladder; a skill that is not the ability's | the error codes `request_check`'s `ladder` answers today (`bad_request`; `not_implemented`), checked when `own_move` arrives, never at the roll |
+| a DC off the ladder; a skill that is not the ability's | `bad_request`, as `request_check`'s `ladder` answers today (a missing skill is refused by the schema), checked when `own_move` arrives, never at the roll |
 
 **State.** The own move joins the card's `choices` in the views as `{id: "own_move", text}`, the words held once. `choose_card {choice: "own_move"}` then works for every seat with no new command. `own_move` is a reserved choice id; the deck validator refuses it in a deck file. The card's 2-or-3 rule is about deck files, so a card on the table may carry four choices.
 - `CardDm.own_move: {actor, ability, skill, dc, success, failure}` (optional, new).
