@@ -48,7 +48,7 @@ All in one PR (API-56), in Rule 1 order. The next free contract version when it 
 | `actor` is a player owner and a Blade has not advised yet | `waiting_for_advice` (existing) |
 | the card already has an own move | `own_move_taken` (new) |
 | `success` equals `failure`, or `failure` names a choice that `breaks` a custom | `bad_own_move` (new), with a message the DM can correct against |
-| a DC off the ladder; a skill that is not the ability's | `bad_request`, as `request_check`'s `ladder` answers today (a missing skill is refused by the schema), checked when `own_move` arrives, never at the roll |
+| a DC off the ladder; a skill that is not the ability's | what `request_check`'s `ladder` answers today: `bad_request` for the DC, `not_implemented` for a skill of another ability (a missing skill is refused by the schema), checked when `own_move` arrives, never at the roll |
 
 **State.** The own move joins the card's `choices` in the views as `{id: "own_move", text}`, the words held once. `choose_card {choice: "own_move"}` then works for every seat with no new command. `own_move` is a reserved choice id; the deck validator refuses it in a deck file. The card's 2-or-3 rule is about deck files, so a card on the table may carry four choices.
 - `CardDm.own_move: {actor, ability, skill, dc, success, failure}` (optional, new).
