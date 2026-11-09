@@ -29,7 +29,7 @@ A. The move is a choice the table votes on. The success and failure choices must
 
 ## Consequences
 
-- Contract 1.0.0-dev.68: the DM command `own_move`, the event `card_own_move`, `CardDm.own_move` and `CardPlayer.own_move`, reject reasons `own_move_taken` and `bad_own_move`, and the DM-only event `own_move_set` (TASKS.md API-56).
+- The next contract version (dev.68 if API-56 lands first): the DM command `own_move`, the event `card_own_move`, `CardDm.own_move` and `CardPlayer.own_move`, reject reasons `own_move_taken` and `bad_own_move`, and the DM-only event `own_move_set` (TASKS.md API-56).
 - The success and failure choices stay DM-only (card test 5). Zoya's board check asks to show them before the vote; the design records that as open for Stas.
 - `own_move_<card>` has no reader in Milestone 12. Zoya's board lists it as an owed pay-off until the dramaturg mechanism gives it words.
 
