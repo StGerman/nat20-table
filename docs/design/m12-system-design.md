@@ -16,7 +16,7 @@ Status: Proposed, 2026-11-08, for Stas. Written for phase 2 of the scope, accept
 
 1. A card is on the table. The seat shows its choices and, last and unnumbered, the own-move line (§1.6).
 2. A player says something else: the human types words, or an AI player calls its `own_move` tool with one sentence. The human's words take today's path (AGT-96, table #329: `humanCard` declares them and wakes the DM). An AI player's tool only records its words; when its card wake returns, the loop runs the same step for it. Both go through one loop function, `cardWords(handle, words)`, and one DM wake, `card_words`.
-3. In that wake the DM has one tool for the answer, `own_move_or_answer` (§1.8). With an own move it names the check and the two choices and gives the narration in the same call; without one it gives only the narration. The words come from the loop, not the DM. One call ends the wake, so nothing drains after it and the seat cannot act before the move is on the card.
+3. In that wake the DM has one tool for the answer, `own_move_or_answer` (§1.8). With an own move it names the check and the two choices and gives the narration in the same call; without one it gives only the narration. The words come from the loop, not the DM. The wake settles on that call, so the seat cannot act before the move is on the card; a DM tool call that comes after its wake settled is refused (§2), so nothing lands late.
 4. The card now has the choice `own_move`, and the proposer's word is given for it. On a Blade card or a caravan card with an NPC owner, the seats still to speak advise or vote as on any choice (the human first, decision 0062). Seats that spoke before the move was made keep their word. A player owner may make an own move only once every Blade has advised, as for any call, and it decides the card at once.
 5. If the card is decided on another choice, nothing is rolled and the own move is gone with the card.
 6. If the card is decided on `own_move`, `card_resolved` names `own_move`. The engine then rolls the proposer's check through core and runs the success or failure choice's effects in full, as if that choice had won. The roll's outcome says which ran.
@@ -44,10 +44,11 @@ All in one PR (API-56), in Rule 1 order. Version 1.0.0-dev.68. Phase 1 changes n
 | `success` or `failure` not offered on this card | `unknown_choice` (existing) |
 | `actor` has no say on the card | `no_say` (existing) |
 | `actor` already spoke on the card | `already_spoke` (existing) |
+| a fight is running | `wrong_mode` (existing, as for `choose_card`) |
 | `actor` is a player owner and a Blade has not advised yet | `waiting_for_advice` (existing) |
 | the card already has an own move | `own_move_taken` (new) |
 | `success` equals `failure`, or `failure` names a choice that `breaks` a custom | `bad_own_move` (new), with a message the DM can correct against |
-| a DC off the ladder, or a skill that is not the ability's | `bad_request` (existing, as for `request_check`) |
+| a DC off the ladder; a skill that is not the ability's | the error codes `request_check`'s `ladder` answers today (`bad_request`; `not_implemented`), checked when `own_move` arrives, never at the roll |
 
 **State.** The own move joins the card's `choices` in the views as `{id: "own_move", text}`, the words held once. `choose_card {choice: "own_move"}` then works for every seat with no new command. `own_move` is a reserved choice id; the deck validator refuses it in a deck file. The card's 2-or-3 rule is about deck files, so a card on the table may carry four choices.
 - `CardDm.own_move: {actor, ability, skill, dc, success, failure}` (optional, new).
@@ -62,7 +63,8 @@ All in one PR (API-56), in Rule 1 order. Version 1.0.0-dev.68. Phase 1 changes n
 
 **Events.**
 - `card_own_move {actor, text, skill}`, public. It is logged when the DM puts the move on the card.
-- `card_resolved` is unchanged: it names `choice: "own_move"`, as it names any choice. The roll follows it in the log, then the branch's effects. Which named choice ran is the roll's outcome against the own move in the DM view; the verdict and the report read it from there, so the event needs no new field.
+- `own_move_set {card, actor, ability, skill, dc, success, failure}`, DM only, logged beside it, as `card_shown` sits beside `card_drawn` (AGT-91). It is the run record's copy of the mapping, which the DM view loses when the card is resolved.
+- `card_resolved` is unchanged: it names `choice: "own_move"`, as it names any choice. The roll follows it in the log, then the branch's effects. Which named choice ran is the roll's outcome against `own_move_set`; the verdict and the report read it from the log, so the event needs no new field.
 - No new `CardDecided` value: that enum says how the vote went (owner, majority, tie), and it still applies. No new `CardCame` value: `came` says how a card reached the table, not how it left.
 
 **Fixture** `contract/fixtures/own_move.jsonl`, seeded:
@@ -72,7 +74,7 @@ All in one PR (API-56), in Rule 1 order. Version 1.0.0-dev.68. Phase 1 changes n
 - a player owner's own move after the Blades' advice, deciding at once;
 - one line for each refusal above.
 
-**CHANGELOG:** `1.0.0-dev.68: own_move (DM): a seat's own words on a road card, with a ladder check and two of the card's choices for success and failure; card_own_move event; CardDm/CardPlayer.own_move; reject reasons own_move_taken and bad_own_move.` Additive, so `check-breaking` lists nothing.
+**CHANGELOG:** `1.0.0-dev.68: own_move (DM): a seat's own words on a road card, with a ladder check and two of the card's choices for success and failure; card_own_move (public) and own_move_set (DM only) events; CardDm/CardPlayer.own_move; reject reasons own_move_taken and bad_own_move.` Additive, so `check-breaking` lists nothing.
 
 The world crate holds the card's decision (`crates/nat20-world/src/deck.rs`), so the own move's resolution and its deed are part of the same PR. That is why ENG-43 folds into API-56 (§9).
 
@@ -133,8 +135,8 @@ A new block for `contract/protocol.md` §5:
 ### 1.8 No fitting choice (question 7)
 
 - **The rule**, in the `card_words` wake's prompt: "A player's words on the road card. If they are a move, answer with own_move_or_answer giving the check the words call for, two different choices of the card for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits."
-- **The DM tool** `own_move_or_answer {narration, check?}` binds `actor` to the seat whose words woke it and fills `text` from those words. With `check` it sends `own_move`, then shows the narration; without it, only the narration. The wake settles on that one call. The DM cannot make an own move for a seat that said nothing.
-- **The card waits** exactly as AGT-96 built it; the seat keeps the own-move line.
+- **The DM tool** `own_move_or_answer {narration, move?: {ability, skill, dc, success, failure}}` binds `actor` to the seat whose words woke it and fills `text` from those words. With `move` it sends `own_move`, then shows the narration; without it, only the narration. The wake settles on that one call. The DM cannot make an own move for a seat that said nothing.
+- **The card waits** exactly as AGT-96 built it for the human; the seat keeps the own-move line. An AI seat whose move found no fit is asked once more, with the DM's answer, for a `choose_card`, before today's "goes with the others" fallback. An AI seat that calls both `choose_card` and `own_move` in one wake has spoken: its `own_move` words are kept as speech and no move is made.
 - **When the words simply are a choice** on the card, the DM says so in the scene and the card waits for that number: the DM never decides a card for a seat.
 - **A success may land on a fight** only when the words asked for one; a named choice with its own check means a second roll, which the DM's narration explains.
 - **Tests:**
@@ -163,6 +165,7 @@ MAP-18 also:
 
 **Change, all in the game loop:**
 - The pick wake's DM tool becomes `pick_and_open {card, reason, narration}`: the tool sends `pick_card`, then shows the narration of the picked card's opening. One call, so the pick can never drain behind a narration, and the wake settles on it. That is no new DM call. A wake that never calls it falls back to the first card rolled, as today.
+- `DmTools` refuses any call that comes after its wake settled ("this wake is over"), so a call draining in the background never lands after the loop moved on. This guard covers every settling wake, the 0053 ones included.
 - A card that comes with no pick (a soon card, a zone's only card) gets a `card` wake to frame it, unless the narration that just ran was told the card's `card_drawn`. That is at most one more DM call per such card: about two a run in pair 3.
 - The night wake, when a card is offered or on the table, is told: "A road card follows: do not close the night." The card's own wake then opens it.
 - `DM_SETTLE_ON` gains `road: ["narrate"]`, `card: ["narrate"]` and `card_words: ["own_move_or_answer"]`, and `pick` settles on `pick_and_open`. This is AGT-97. The prompts for those wakes already ask for narration last; `card_words` has one call (§1.8). The words on a card leave the `road` wake for `card_words`, so no own move can drain after the road wake has settled.
@@ -170,10 +173,10 @@ MAP-18 also:
 
 **Decision 0041 stands as written.** It says lines still held when a decision comes up show at once. The change raises the decision later, after the narration, so the rule is untouched. No record.
 
-**Check for exit row 4**, in `game/src/play/verdict.ts`, from `transcript.jsonl`, so it works in both runs:
+**Check for exit row 4**, in `game/src/play/verdict.ts`, from `transcript.jsonl` joined with `engine-log.jsonl` by `log_head`, so it works in both runs:
 - `cardRound` logs one `system` line, `card <id> goes to the seats`, as it starts asking the seats;
-- that line follows a DM narration logged after the card's `card_drawn`, or a DM fallback logged between the two;
-- no `fallback` with cause `timeout` follows a `narrate` that returned in the same wake.
+- that line follows a DM narration logged after the card's `card_shown` (which names the card id), or a DM fallback logged between the two;
+- the loop's `error` and `fallback` lines for a DM wake gain `wake` and `settled` fields (the loop's own record, not the wire). No line may have cause `timeout` with `settled: true`; with the settle rule above it cannot, so a hit is a bug.
 
 ## 3. The marked choice (question 9)
 
@@ -204,7 +207,7 @@ MAP-18 also:
 | `bren picked: Make camp for the night` (a road step the loop takes) | say who did it | «Отряд встаёт лагерем…», never "bren picked" |
 | `bren says: willows` (a choice id) | translate | «Брен советует: Свернуть под ивы.», the choice's text, not its id |
 | `The party loses 240 minutes` | translate | «Отряд теряет четыре часа.» (hours in words, 0038's number words) |
-| `[r56] … 1d20 (10) = 13, failure` | explain | «Брен, Убеждение: получилось. На кости 14, с навыком 16. [r57]» The outcome first; the roll id stays (Rule 4), last and dim; no DC, as today. Vera stopped reading at the id and the two numbers in the first draft, so this line gets its own Vera read in the AGT-98 PR |
+| `[r56] … 1d20 (10) = 13, failure` | explain | «<имя>, <навык>: не вышло. На кости 10, с навыком 13. [r56]» The same roll, outcome first; the roll id stays (Rule 4), last and dim; no DC, as today. Vera stopped reading at the id and the two numbers in the first draft, so this line gets its own Vera read in the AGT-98 PR |
 | `Blades` | translate | «наёмники» |
 | English card and choice text | translate | the pack's `text_ru` (below) |
 
@@ -212,7 +215,7 @@ MAP-18 also:
 
 **Seat strings.** The TUI's own lines move into `game/src/table/words.ts` as `Record<Key, {en, ru}>`, so a missing Russian string fails `tsc`. The English values are today's strings, copied byte for byte. AI players' briefings stay English, as 0038 has them: they are prompts, not the seat.
 
-**The language scan**, an exit row 5 check in `verdict.ts`, reads `seat.jsonl` in a Russian run. It reports every Latin word except roll ids (`r\d+`), key names (Enter, Esc, PgUp, PgDn, Shift, Ctrl), `/commands`, and ids that every player is shown (none today). 0067 extends AGT-73's Latin-word rule to table lines; this check is that extension.
+**The language scan**, an exit row 5 check in `verdict.ts`, reads `seat.jsonl` in a Russian run. It reports every Latin word except roll ids (`r\d+`), key names (Enter, Esc, PgUp, PgDn, Shift, Ctrl), `/commands`, and ids that every player is shown (none today). Key names and `/commands` are what the keyboard and the command line take, so they cannot be translated; scope §4 row 5 allows only ids and roll ids, so this widening is Stas's to accept (§10). 0067 extends AGT-73's Latin-word rule to table lines; this check is that extension.
 
 ## 5. The voice flag (question 11)
 
@@ -248,7 +251,7 @@ AGT-76 is done when the full `check:ts` is green on Stas's Mac. Same PR as AGT-9
 - **`seat.jsonl`**, new, beside `transcript.jsonl` in a run with a human at the seat. One line per thing the seat drew, in order: `{at, kind, text}` where `kind` is `narration | speech | engine | card | options | prompt | info | command`. Written by the seat's own renderer, so it is what the screen showed, in the run's language. Uploaded with the run like the other files (`npm run runs:upload`).
 - **An all-AI run** has no seat and writes no `seat.jsonl`. For run 1's Vera read, the analysis takes the scene opening and one card from the transcript and passes them through the seat's own pure functions (`seatLine`, the card panel) in a small script. Nothing new goes into the run record, and there is no second seat to keep in step.
 - **New verdict rows:**
-  - `m12-own-move`: a card decided on `own_move` with its roll cited and the named choice's effects in the log, and the deed written; by an AI in run 1, by the human in run 2.
+  - `m12-own-move`: a card decided on `own_move` with its roll cited, the branch `own_move_set` names for that outcome run, and `own_move_<card>` in the world's deeds at the run's end (read from the deed book, because a deed carried from an earlier run logs nothing when written again); by an AI in run 1, by the human in run 2.
   - `m12-order`: the §2 check.
   - `m12-language`: the §4 scan, run 2 only.
   - `m12-readable`: manual. The Vera quote goes in `verdict.json` as text and its verdict is Stas's.
@@ -298,8 +301,9 @@ Thirteen phase-2 PRs, the core PR and the pin included. With the two docs PRs (t
 9. A failure may not land on a choice that breaks a custom.
    Decisions 1 to 4 and 9 are recorded in decision 0068, in this PR; the others are implementation inside accepted decisions or rows.
 10. Mouse-wheel reporting on, at the cost of Option-drag to select text.
-11. The own move rolls through the deck's existing `check` effect with a new `Who::Seat`, so the server gains no roll path.
-12. ENG-43 folds into API-56; AGT-97 shares AGT-100's PR; AGT-101 shares AGT-99's.
+11. The own move rolls in the server beside the deck `check` effect's code; `Who` and the deck file format do not change.
+12. The language scan lets key names and `/commands` through (a widening of scope §4 row 5, for Stas).
+13. ENG-43 folds into API-56; AGT-97 shares AGT-100's PR; AGT-101 shares AGT-99's.
 
 ## 11. Risks, without sugar
 
