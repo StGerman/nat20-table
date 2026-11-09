@@ -25,11 +25,11 @@ The move joins the card as the choice `own_move`, with the proposer's word given
 
 ## Decision
 
-A. The move is a choice the table votes on. The success and failure choices must be two different choices offered on the card; a failure may not name a choice that breaks a custom (the engine refuses it) or a deliberate act the words did not ask for (the DM prompt). The named choice runs in full, its own check included. One own move per card, no retry. No fight starts while a card waits (`card_pending`), so the proposer is still a Blade when the card is decided. The world writes the deed `own_move_<card>`, with no result and no words in it.
+A. The move is a choice the table votes on. The success and failure choices must be two different choices offered on the card; a failure may not name a choice that breaks a custom (the engine refuses it) or a deliberate act the words did not ask for (the DM prompt). The named choice runs in full, its own check included. One own move per card, no retry. A proposer who is down when the card is decided rolls nothing, and the failure choice runs. The world writes the deed `own_move_<card>`, with no result and no words in it.
 
 ## Consequences
 
-- The next contract version (dev.68 if API-56 lands first): the DM command `own_move`, the event `card_own_move`, `CardDm.own_move` and `CardPlayer.own_move`, reject reasons `own_move_taken` and `bad_own_move`, the DM-only event `own_move_set`, and `card_pending` on `start_combat` and `start_fight` (TASKS.md API-56).
+- The next contract version (dev.68 if API-56 lands first): the DM command `own_move`, the event `card_own_move`, `CardDm.own_move` and `CardPlayer.own_move`, reject reasons `own_move_taken` and `bad_own_move`, and the DM-only event `own_move_set` (TASKS.md API-56).
 - The success and failure choices stay DM-only (card test 5). Zoya's board check asks to show them before the vote; the design records that as open for Stas.
 - `own_move_<card>` has no reader in Milestone 12. Zoya's board lists it as an owed pay-off until the dramaturg mechanism gives it words.
 
