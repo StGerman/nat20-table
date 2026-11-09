@@ -88,12 +88,12 @@ A new block for `contract/protocol.md` §5:
 | its skill | yes | yes | yes |
 | its ability and DC (`check`), the roll's `against` | yes | no | no |
 | `success` and `failure` before the roll | yes | no | no |
-| which choice ran: the roll's outcome, after the roll | yes | yes | yes |
+| the choice the roll brought, as a choice id | yes | no | no |
 | the roll: dice, total, outcome | yes | yes | yes |
 | the deed `own_move_<card>` | yes | no | no |
 
 - The words were said aloud, so they are public. The skill is public for the same reason the scout's is: the party sees what is tried.
-- `success` and `failure` stay DM-only until the roll. Showing them would tell the outcome before the choice, which the card text rule forbids (card test 5).
+- `success` and `failure` stay DM-only, before and after the roll. Showing them would tell the outcome before the choice, which the card text rule forbids (card test 5). After the roll the players see what came of it the way they see any card: the effects' own public lines and the DM's narration.
 - The game loop briefs AI players from the DM view today (`cardLines(CardDm)` in `game/src/table/loop.ts`). AGT-99 moves that briefing to the seat's own player view (`CardPlayer`, read as that seat), so the DC, `success`, `failure`, `keeps` and `breaks` cannot reach it at all (Rule 3). That is one more state read per briefing.
 
 ### 1.4 The roll (question 3)
@@ -110,12 +110,12 @@ A new block for `contract/protocol.md` §5:
 - It carries no result. The result is in the roll, and in the deeds the named choice writes.
 - `by` is the seats that voted for `own_move`, as for any choice, and so are the `by` of the deeds the named choice writes. The day and the contract are recorded as for any deed.
 - It outlives the contract like every deed (ENG-37).
-- Readers in M12: the run report and the verdict row `m12-own-move` (§8). `if` and `unless` may read it, but no card does in M12. The validator rule "every deed read is written somewhere" holds; a deed nobody reads is allowed, as today.
+- Readers in M12: the run report and the verdict row `m12-own-move` (§8). `if` and `unless` may read it, but no card does in M12. So that a later card can, API-56 adds `own_move_<card>` for every card id to the deeds the validator counts as written (`deeds_written` in `deck.rs`). A deed nobody reads is allowed, as today.
 - Zoya (§12): the report is not a reader, so the deed is an owed row on the board. A reader must say the cause aloud, and a bare id has no words to say. Carrying the player's words in the deed is the dramaturg mechanism's question, not M12's; M12 keeps the bare id and the board lists it as owed (decision 4 below).
 
 ### 1.6 The line (question 5)
 
-- The line lives in the seat's strings (`game/src/table/words.ts`, §4), not in the deck data and not on the wire. Every card has it, so it belongs to the table, not the card.
+- The line lives in the seat's strings, `game/src/table/words.ts`, not in the deck data and not on the wire. Every card has it, so it belongs to the table, not the card. AGT-99's PR creates `words.ts` with its own lines in both languages (the own-move line, the prompt, the marked choice); AGT-98 then moves the rest of the seat's strings into it.
 - The words: English "Something else: say it in your own words."; Russian «Или что-то своё: скажите своими словами.» The line has no number, comes after the last choice, and is the same on every card.
 - The card's prompt line changes with it: "A choice's number, or your own words." («Номер выбора или своими словами.»), with ", Enter for the marked one" («, Enter для отмеченного») only when a choice is marked (§3). The list's heading becomes "Choices" («Выборы»): Vera heard "Your word" three times in four lines.
 - Once the own move is on the card, the seat shows it as a numbered choice in the player's own words, never the DM's paraphrase, with the skill: «Ваш ход: «Пусть сначала покажет, кто дал право» (Убеждение)», or «Ход Брена: …» for another seat. The line never says "card": Vera saw no card on the screen.
@@ -165,7 +165,7 @@ MAP-18 also:
 
 **Change, all in the game loop:**
 - The pick wake's DM tool becomes `pick_and_open {card, reason, narration}`: the tool sends `pick_card`, then shows the narration of the picked card's opening. One call, so the pick can never drain behind a narration, and the wake settles on it. That is no new DM call. A wake that never calls it falls back to the first card rolled, as today.
-- `DmTools` refuses any call that comes after its wake settled ("this wake is over"), so a call draining in the background never lands after the loop moved on. This guard covers every settling wake, the 0053 ones included.
+- The existing guard in `game/src/agents/dm.ts` (decision 0053: a call from a wake that has settled answers "not now: that wake is over") covers the new settling wakes too, so a late call is refused, never raced. The cost is that a late call is lost; §11 says where that bites.
 - A card that comes with no pick (a soon card, a zone's only card) gets a `card` wake to frame it, unless the narration that just ran was told the card's `card_drawn`. That is at most one more DM call per such card: about two a run in pair 3.
 - The night wake, when a card is offered or on the table, is told: "A road card follows: do not close the night." The card's own wake then opens it.
 - `DM_SETTLE_ON` gains `road: ["narrate"]`, `card: ["narrate"]` and `card_words: ["own_move_or_answer"]`, and `pick` settles on `pick_and_open`. This is AGT-97. The prompts for those wakes already ask for narration last; `card_words` has one call (§1.8). The words on a card leave the `road` wake for `card_words`, so no own move can drain after the road wake has settled.
@@ -176,14 +176,14 @@ MAP-18 also:
 **Check for exit row 4**, in `game/src/play/verdict.ts`, from `transcript.jsonl` joined with `engine-log.jsonl` by `log_head`, so it works in both runs:
 - `cardRound` logs one `system` line, `card <id> goes to the seats`, as it starts asking the seats;
 - that line follows a DM narration logged after the card's `card_shown` (which names the card id), or a DM fallback logged between the two;
-- the loop's `error` and `fallback` lines for a DM wake gain `wake` and `settled` fields (the loop's own record, not the wire). No line may have cause `timeout` with `settled: true`; with the settle rule above it cannot, so a hit is a bug.
+- the loop's `error` and `fallback` lines for a DM wake gain `wake` and `narrated` fields (the loop's own record, not the wire): `narrated` is true once a `narrate` or a narration-carrying tool returned in that wake. No line may have cause `timeout` with `narrated: true`, for any wake, settling or not (scope §4 row 4).
 
 ## 3. The marked choice (question 9)
 
 - Today Enter takes the others' choice when one leads, else choice 1 (`cardChoices` in `game/src/table/choices.ts`). As a Blade the human speaks first (0062), so Enter usually means choice 1, a choice nobody made. Vera, in both languages, was afraid of paying the toll by pressing Enter.
 - Change: `cardChoices` returns `marked` beside today's `preset`. `marked` is set only when the others lead with a choice. The seat marks that line with "(Enter)" at its end, and the prompt names Enter only then. With nothing marked, Enter on an empty line does nothing. "Enter" is the key's name, so it stays Latin in Russian (§4).
 - `preset` stays as it is, because the loop's fallbacks for a silent AI seat or owner use it ("goes with the others"). An unattended run is unchanged.
-- The same mark goes on the level-up list's recommended line and the road list's first line, whose prompts promise the same thing.
+- The same mark goes on whatever line Enter takes in the other lists whose prompts promise it: the level-up list's recommended line, and on the road list the step the DM proposed (`answerRoad`'s preset), which falls back to the first line only when the DM proposed none.
 - Vera read below. This is AGT-101, in AGT-99's PR: both change the same card panel and its prompt line, and share one Vera read.
 
 ## 4. One language at the seat (question 10, AGT-98, decision 0067)
@@ -192,7 +192,7 @@ MAP-18 also:
 
 **What 0067's rendering leaves byte for byte in an English run:** the wire, every fixture, `transcript.jsonl`, the engine and session logs, and every agent prompt. Other rows change some of these on purpose, and say so: the card wakes and the pick prompt (§2), the order line in the transcript (§2), the AI players' own-move line (§1.7). The seat's own lines may change in both languages where AGT-98 decides a line is unreadable, and each changed line gets a Vera read.
 
-**Engine lines.** `TableState` shows an engine line in one place (`game/src/table/state.ts`, `text: mine ?? event.text`). That call becomes `seatLine(event, language, names)`, in a new `game/src/table/seat-lines.ts`:
+**Engine lines.** `TableState` turns an engine event into a seat line in two places (`game/src/table/state.ts`): the line it shows (`text: mine ?? event.text`) and the copy it keeps for `/log` (`recent`). Both become `seatLine(event, language, names)`, in a new `game/src/table/seat-lines.ts`:
 - `en`: returns `event.text`, as today, except the lines AGT-98 changes.
 - `ru`: an exhaustive `switch` over the generated `EventKind` union. Each kind returns a Russian line from the event's fields, or `null`, which hides it from the seat. A new event kind without a case fails `tsc`, so no English line can slip in silently.
 - Names come from data that exists: the roster's `name_ru` for party handles, `npcs.json` `name_ru` for `npc:<id>`, `map.json` `name_ru` for places. Goods gain `name_ru` in `goods.json` (MAP-19).
@@ -212,6 +212,11 @@ MAP-18 also:
 | English card and choice text | translate | the pack's `text_ru` (below) |
 
 **Card text per language.** Card and choice gain `text_ru` beside `text`, as `map.json` places carry `name_ru`. The world crate accepts the field and never projects it: it is not on the wire. The loop has the card id from the DM view, reads the deck file, and the seat shows `text_ru` in a Russian run. The pack validator requires `text_ru` on every card and choice of every deck: the Silent Mill has none, and both road packs play in Russian. This is MAP-19.
+
+**Engine words the seat shows outside events.** Three more sources reach the seat, and each gets a Russian rendering in AGT-98:
+- option names and summaries in `/options` and the turn lists (`buildChoices` in `choices.ts`, from the engine's `option.name` and `summary`): a table-side `game/src/table/ru/options.json` keyed by option id, with a test that every option the pregens and the road packs can offer has an entry;
+- refusals (`humanRejected` in `loop.ts`, which shows the engine's `message`): one Russian line per `RejectReason` in `words.ts`, an exhaustive record, so a new reason fails `tsc`;
+- `/sheet`: rendered from the sheet's fields with Russian labels, as `/sheet` already renders from fields in English.
 
 **Seat strings.** The TUI's own lines move into `game/src/table/words.ts` as `Record<Key, {en, ru}>`, so a missing Russian string fails `tsc`. The English values are today's strings, copied byte for byte. AI players' briefings stay English, as 0038 has them: they are prompts, not the seat.
 
@@ -240,9 +245,9 @@ MAP-18 also:
 **AGT-76, the five Ink tests.** The fix starts from the cause, not a longer wait:
 - reproduce under load in CI-like conditions: `check:ts` with the test files in parallel, and CPU contention;
 - record which frame each test saw;
-- replace fixed sleeps with waits on a frame predicate, a helper in `panel.test.ts` that resolves when the last frame contains the expected text, with a cap.
+- replace fixed sleeps with waits on a frame predicate: one helper in the seat tests' shared test file, used by the four tests in `panel.test.ts` and the one in `ui.test.ts`, that resolves when the last frame contains the expected text, with a cap.
 
-AGT-76 is done when the full `check:ts` is green on Stas's Mac. Same PR as AGT-94, since both live in `panel.test.ts` and the seat.
+AGT-76 is done when the full `check:ts` is green on Stas's Mac. Same PR as AGT-94: both are the seat and its tests.
 
 **AGT-13, the `/options` and `/sheet` read.** The seat writes what it shows into `seat.jsonl` (§8), commands' output included, so Vera reads Stas's `/options` and `/sheet` exactly as his screen showed them. No screen copying. The row stays partial until Friends and Family testing.
 
@@ -251,7 +256,7 @@ AGT-76 is done when the full `check:ts` is green on Stas's Mac. Same PR as AGT-9
 - **`seat.jsonl`**, new, beside `transcript.jsonl` in a run with a human at the seat. One line per thing the seat drew, in order: `{at, kind, text}` where `kind` is `narration | speech | engine | card | options | prompt | info | command`. Written by the seat's own renderer, so it is what the screen showed, in the run's language. Uploaded with the run like the other files (`npm run runs:upload`).
 - **An all-AI run** has no seat and writes no `seat.jsonl`. For run 1's Vera read, the analysis takes the scene opening and one card from the transcript and passes them through the seat's own pure functions (`seatLine`, the card panel) in a small script. Nothing new goes into the run record, and there is no second seat to keep in step.
 - **New verdict rows:**
-  - `m12-own-move`: a card decided on `own_move` with its roll cited, the branch `own_move_set` names for that outcome run, and `own_move_<card>` in the world's deeds at the run's end (read from the deed book, because a deed carried from an earlier run logs nothing when written again); by an AI in run 1, by the human in run 2.
+  - `m12-own-move`: in this run's log, an `own_move_set`, then `card_resolved` on `own_move`, its roll cited, and the branch `own_move_set` names for that outcome run; and `own_move_<card>` in the deed book with this run's contract number. When the deed was already held from an earlier contract (a deed done again keeps its first record), the report says so and the row rests on the log; by an AI in run 1, by the human in run 2.
   - `m12-order`: the §2 check.
   - `m12-language`: the §4 scan, run 2 only.
   - `m12-readable`: manual. The Vera quote goes in `verdict.json` as text and its verdict is Stas's.
@@ -276,7 +281,7 @@ The scope's §7 rows, with three changes for Stas's review load:
 | 2 | AGT-99 with AGT-101: own move at the table (DM tool and rule, the human and AI players, the line); the marked choice | M + XS | 1 |
 | 3 | MAP-18: `asked` choices, the validator rule, the five cards, Zoya | S | - |
 | 4 | AGT-100 with AGT-97: card after its narration; wakes end on their narration | S | 2 (the `card_words` wake) |
-| 5 | AGT-98: one language at the seat (`seat-lines.ts`, `words.ts`, the per-line table) | L | 2 |
+| 5 | AGT-98: one language at the seat (`seat-lines.ts`, the rest of `words.ts`, option names, refusals, `/sheet`, the per-line table) | L | 2 |
 | 6 | MAP-19: `text_ru` on every card and choice; goods `name_ru` | M | 3, 5, 12 (the card text it translates) |
 | 7 | AGT-102: voice flag | S | - |
 | 8 | ENG-40, ENG-41, ENG-42 | XS each | - |
@@ -309,7 +314,7 @@ Thirteen phase-2 PRs, the core PR and the pin included. With the two docs PRs (t
 
 - **Run 1 may see no AI own move.** AI players took a written choice on every card in pair 3. One prompt line invites the own move; it does not force one, because a forced move would prove nothing. A run with none fails `m12-own-move`, and run 1 goes again with a changed prompt: about 7.9 USD and a day. A late AI seat's own move also counts only the seats still to speak, so it seldom wins a vote; on an NPC-owned caravan card the first Blade asked is the likeliest to carry one.
 - **The DM can map words badly.** It might pick a soft DC, or name a success the words do not earn. The engine guards only the shape: ladder DC, two different choices offered on the card. The judge does not check the mapping. Stas's run 2 is the only real test of it.
-- **Settling `road` on `narrate`** lets any tool call after the narration drain in the background, as 0053 accepted for `narrate` wakes. A road wake that proposes a road step after narrating would race the loop. The road prompt already asks for narration last, and `answerRoad` reads state after the wake. This is still the place to look if run 1 shows a lost road step.
+- **Settling `road` on `narrate`** means a road step the DM proposes after narrating is refused by the existing "not now" guard and lost, not raced. The road prompt already asks for narration last; the run report counts "not now" refusals by wake, so a lost road step shows up in run 1.
 - **AGT-98 is the largest row.** Every event kind needs a Russian line, and so does every TUI string. `tsc` makes "forgot one" a build failure, not a run failure. But the Russian itself is only as good as the Vera reads, and Vera is a fallback model, not a person.
 - **Mouse reporting** can surprise Stas when he tries to copy a line from the seat. `/help` says Option-drag, and `/log` still prints the lines.
 
@@ -417,5 +422,5 @@ Her "(Persuasion)" point ("I didn't try to persuade him, I demanded") is the DM'
 Taken: conditions 2 and 3 (§1.2, §1.4), `asked` and the twin rule, her four cards plus `bridge_again`, whose `read` is already always offered since table #330 and is only marked (§1.9), `owner_pick` and `tell` (§1.9), the owed deed (§1.5). The success-on-a-fight and two-rolls points go into the DM prompt rule in AGT-99.
 
 Not taken, for Stas to rule:
-- **Condition 1, the two choices named before the vote.** The design shows the skill and keeps `success` and `failure` DM-only until the roll (§1.3), because naming them tells the outcome before the choice, against card test 5. Zoya says card test 2 (the stake visible) then holds only through the DM's narration of the move. The design takes that cost; if Stas prefers Zoya's reading, `success` and `failure` move to `CardPlayer.own_move`, a one-field change in API-56.
+- **Condition 1, the two choices named before the vote.** The design shows the skill and keeps `success` and `failure` DM-only (§1.3), because naming them tells the outcome before the choice, against card test 5. Zoya says card test 2 (the stake visible) then holds only through the DM's narration of the move. The design takes that cost; if Stas prefers Zoya's reading, `success` and `failure` move to `CardPlayer.own_move`, a one-field change in API-56.
 - **"The card is decided on A, with no check"** when the words simply are A. The DM never decides a card for a seat, so it says the words are choice A and the card waits for that number (§1.8).
