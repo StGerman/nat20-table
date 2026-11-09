@@ -44,7 +44,7 @@ All in one PR (API-56), in Rule 1 order. Version 1.0.0-dev.68. Phase 1 changes n
 | `success` or `failure` not offered on this card | `unknown_choice` (existing) |
 | `actor` has no say on the card | `no_say` (existing) |
 | `actor` already spoke on the card | `already_spoke` (existing) |
-| a fight is running | `wrong_mode` (existing, as for `choose_card`) |
+| a fight is running | the error code `wrong_mode` (existing, no reason; as `choose_card` answers) |
 | `actor` is a player owner and a Blade has not advised yet | `waiting_for_advice` (existing) |
 | the card already has an own move | `own_move_taken` (new) |
 | `success` equals `failure`, or `failure` names a choice that `breaks` a custom | `bad_own_move` (new), with a message the DM can correct against |
@@ -66,6 +66,8 @@ All in one PR (API-56), in Rule 1 order. Version 1.0.0-dev.68. Phase 1 changes n
 - `own_move_set {card, actor, ability, skill, dc, success, failure}`, DM only, logged beside it, as `card_shown` sits beside `card_drawn` (AGT-91). It is the run record's copy of the mapping, which the DM view loses when the card is resolved.
 - `card_resolved` is unchanged: it names `choice: "own_move"`, as it names any choice. The roll follows it in the log, then the branch's effects. Which named choice ran is the roll's outcome against `own_move_set`; the verdict and the report read it from the log, so the event needs no new field.
 - No new `CardDecided` value: that enum says how the vote went (owner, majority, tie), and it still applies. No new `CardCame` value: `came` says how a card reached the table, not how it left.
+
+**`contract/protocol.md`**: §5 gains the visibility block below, and §4.13 the own move's lifecycle: a card on the table may carry the extra choice `own_move` (four choices); `card_own_move` and `own_move_set` are logged together; after `card_resolved` on `own_move` come the roll, then the branch's effects.
 
 **Fixture** `contract/fixtures/own_move.jsonl`, seeded:
 - a Blade card; the human's own move goes on it; two AI votes; the roll succeeds and the success choice's effects and deeds follow, with `own_move_<card>`;
@@ -120,7 +122,8 @@ A new block for `contract/protocol.md` §5:
 - The card's prompt line changes with it: "A choice's number, or your own words." («Номер выбора или своими словами.»), with ", Enter for the marked one" («, Enter для отмеченного») only when a choice is marked (§3). The list's heading becomes "Choices" («Выборы»): Vera heard "Your word" three times in four lines.
 - Once the own move is on the card, the seat shows it as a numbered choice in the player's own words, never the DM's paraphrase, with the skill: «Ваш ход: «Пусть сначала покажет, кто дал право» (Убеждение)», or «Ход Брена: …» for another seat. The line never says "card": Vera saw no card on the screen.
 - The framing narration must not retell the card's text, which follows it at once (Vera heard the paragraph twice). The card wake's prompt says: open on what the people do; the card's words come next.
-- AI players see the same choice in their card briefing, and an `own_move` tool with one field, `words`.
+- Once the card has an own move, the own-move line is gone from it, for every seat: a second move would be refused (`own_move_taken`), so the seat never offers one.
+- AI players see the same choice in their card briefing, and an `own_move` tool with one field, `words`, while the card has no own move.
 
 ### 1.7 Who may use it (question 6)
 
@@ -164,7 +167,7 @@ MAP-18 also:
 - `road` wakes do not settle on `narrate`. So the closing empty call runs into the 12 s cap, and the log says the wake was skipped when it was not (AGT-97: 4 of 5 timeouts in Stas's run).
 
 **Change, all in the game loop:**
-- The pick wake asks for `pick_card`, then `narrate` of the card's opening, and settles on `narrate`. In a pick wake, `narrate` before `pick_card` is refused ("pick the card first"), so the pick can never drain behind a narration, and the narration is written after `pick_card` returned, with the scout's look and the card as drawn in its result. That is no new DM call. A wake that never picks falls back to the first card rolled, as today.
+- The pick wake asks for `pick_card`, then `narrate` of the card's opening, and settles on `narrate`. In a pick wake, `narrate` before `pick_card` is refused ("pick the card first"), so the pick can never drain behind a narration, and the narration is written after `pick_card` returned, with the scout's look and the card as drawn in its result. Today the DM tool's result is only "<card> is on the table" (`tools.ts`), so AGT-100 extends that table-side result with the card's text and choices as drawn and the scout's line; the wire does not change. That is no new DM call. A wake that never picks falls back to the first card rolled, as today.
 - The existing guard in `game/src/agents/dm.ts` (decision 0053: a call from a wake that has settled answers "not now: that wake is over") covers the new settling wakes too, so a late call is refused, never raced. The cost is that a late call is lost; §11 says where that bites.
 - A card that comes with no pick (a soon card, a zone's only card) gets a `card` wake to frame it, unless the narration that just ran was told the card's `card_drawn`. That is at most one more DM call per such card: about two a run in pair 3. The `card` wake is new (today `card` is only a player wake), so AGT-100 writes its prompt: "A road card is on the table: open it in two to four sentences, on what the people in it do and want; do not retell the card's words, which the table shows next; do not decide it or tell how a choice turns out; narrate last."
 - The night wake, when a card is offered or on the table, is told: "A road card follows: do not close the night." The card's own wake then opens it.
@@ -183,7 +186,7 @@ MAP-18 also:
 - Today Enter takes the others' choice when one leads, else choice 1 (`cardChoices` in `game/src/table/choices.ts`). As a Blade the human speaks first (0062), so Enter usually means choice 1, a choice nobody made. Vera, in both languages, was afraid of paying the toll by pressing Enter.
 - Change: `cardChoices` returns `marked` beside today's `preset`. `marked` is set only when the others lead with a choice. The seat marks that line with "(Enter)" at its end, and the prompt names Enter only then. With nothing marked, Enter on an empty line does nothing. "Enter" is the key's name, so it stays Latin in Russian (§4).
 - `preset` stays as it is, because the loop's fallbacks for a silent AI seat or owner use it ("goes with the others"). An unattended run is unchanged.
-- The same mark goes on whatever line Enter takes in the other lists whose prompts promise it: the level-up list's recommended line, and on the road list the step the DM proposed (`answerRoad`'s preset), which falls back to the first line only when the DM proposed none.
+- The same mark goes on whatever line Enter takes in the other lists whose prompts promise it: the level-up list's recommended line, and on the road list the step the DM proposed (`answerRoad`'s preset), which falls back to the first line only when the DM proposed none. The road prompt changes with it, from "Enter for the first line" to "Enter for the marked line" (`promptHint` in `input.ts`).
 - Vera read below. This is AGT-101, in AGT-99's PR: both change the same card panel and its prompt line, and share one Vera read.
 
 ## 4. One language at the seat (question 10, AGT-98, decision 0067)
@@ -308,8 +311,11 @@ Thirteen phase-2 PRs, the core PR and the pin included. With the two docs PRs (t
 9. A failure may not land on a choice that breaks a custom.
    Decisions 1 to 4 and 9 are recorded in decision 0068, in this PR; the others are implementation inside accepted decisions or rows.
 10. Mouse-wheel reporting on, at the cost of Option-drag to select text.
-11. The own move rolls in the server beside the deck `check` effect's code; `Who` and the deck file format do not change.
-12. The language scan lets key names and `/commands` through (a widening of scope §4 row 5, for Stas).
+11. The own move rolls in the server beside the deck `check` effect's code; `Who` does not change. The deck file format does change, in three rows: `asked` (MAP-18), `text_ru` on cards and choices (MAP-19; the world crate's structs gain the field in that PR, since they refuse unknown fields), and `own_move` as a reserved choice id (API-56).
+12. Departures from the accepted scope, for Stas to accept:
+    - the language scan lets key names and `/commands` through (scope §4 row 5 allows only ids and roll ids);
+    - row 4 gates the wakes that settle on their narration; in the long wakes (`scene_open`, `table_turn`) a cut after the narration is counted, not gated (scope §4 row 4 names every wake);
+    - the own move's DC comes from the ladder only, not the pack (scope §2 item 1 allows either): road cards carry ladder checks only, so a pack DC has nothing to name today.
 13. ENG-43 folds into API-56; AGT-97 shares AGT-100's PR; AGT-101 shares AGT-99's.
 
 ## 11. Risks, without sugar
