@@ -75,10 +75,10 @@ export function promptHint(prompt: HumanPrompt, handle: string): string {
     case "surrender":
       return "Accept the surrender (1), fight on (2), or say what you do.";
     case "card":
-      return "Your word on the road: a number, or Enter for the marked choice.";
+      return prompt.line ?? "A choice's number, or your own words.";
     case "level_up":
       return "Your new level: a number, or Enter for the recommended pick.";
     case "road":
-      return "The caravan waits on you: Enter for the first line, or a number.";
+      return "The caravan waits on you: Enter for the marked line, or a number.";
   }
 }

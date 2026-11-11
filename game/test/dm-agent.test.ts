@@ -340,7 +340,8 @@ test("with no human at the table, the DM's prompt and tools leave the human out 
 test("the DM's scene openings, table turns and summaries get the long limit; --dm-timeout-ms sets every wake's", () => {
   const config = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).sessionConfig();
   assert.equal(config.turnTimeoutMs, DM_TURN_TIMEOUT_MS);
-  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS, suggest: DM_LONG_WAKE_TIMEOUT_MS });
+  // A player's words on a card get their own 30 s (AGT-99): a refused own move and its retry rewrite the narration.
+  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS, suggest: DM_LONG_WAKE_TIMEOUT_MS, card_words: 30_000 });
   const flat = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE, turnTimeoutMs: 20_000 }).sessionConfig();
   assert.equal(flat.turnTimeoutMs, 20_000);
   assert.equal(flat.turnTimeoutsMs, undefined);
@@ -446,6 +447,9 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   assert.ok(names.includes("pick_card"), names.join(", "));
   assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line\./);
   assert.ok(!mill.includes("pick_card"));
+  // Own move (AGT-99): the road's DM answers a player's words on a card with own_move_or_answer, by the rule.
+  assert.ok(names.includes("own_move_or_answer") && !mill.includes("own_move_or_answer"));
+  assert.match(dm.systemPrompt, /- "A player's words on the road card": .*If no two choices fit, give only the narration.*A failure never brings a choice that breaks a custom, or a deliberate act the words did not ask for; a success brings a fight only when the words asked for one/);
   // Scouting at the table (AGT-90): the DM opens a scouted card on what the scout saw.
   assert.match(dm.systemPrompt, /- The scout: .*If they saw it, open the card on what the scout saw/);
   // Story-space (AGT-89, design decision 9): five rules on the road, the human's character named in the second.

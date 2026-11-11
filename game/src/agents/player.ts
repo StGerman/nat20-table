@@ -106,7 +106,7 @@ export const ROAD_PROMPT = [
   "## On the road",
   "Between the places of the adventure the party travels with a merchant's caravan. look shows the day, where the caravan is, the known places and roads, any road card waiting and the escort contract.",
   "Only whoever may drive the caravan moves it on (travel) and ends the day (rest_night); look says when that is you.",
-  "When a road card waits for your word, give it with choose_card: on the caravan's card it is advice to the merchant, who decides; on a card for the Blades it is your vote. Choose as your character would, and say why in one line if they would.",
+  "When a road card waits for your word, give it with choose_card: on the caravan's card it is advice to the merchant, who decides; on a card for the Blades it is your vote. Choose as your character would, and say why in one line if they would. If none of the choices is what your character would do, say what they do with own_move, in one sentence.",
   "When your sheet says you can level up, out of a fight, call level_up and answer each choice with answer_level_up. Take the recommended pick unless your card gives your character a clear reason not to.",
 ].join("\n");
 
@@ -466,6 +466,12 @@ export class ModelPlayer implements PlayerAgent {
         "Give your word on the road card waiting (look shows it): advice to the merchant on a caravan card, or your vote on a card the Blades decide. Use a choice id.",
         { choice: z.string().describe("A choice id from the card.") },
         (input) => this.bound((t) => t.chooseCard(input.choice)),
+      ),
+      seatTool(
+        "own_move",
+        "When none of the road card's choices is what your character would do: say in one sentence what they do instead. The DM may make it a choice on the card, with a check; then everyone gives their word on it. Not when the card already has one.",
+        { words: z.string().describe("One sentence: what your character does, in their own words.") },
+        (input) => this.bound((t) => t.ownMove(input.words)),
       ),
       seatTool(
         "level_up",

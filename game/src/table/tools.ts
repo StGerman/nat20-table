@@ -4,6 +4,7 @@
 // comes from the engine's current `awaiting`. No tool input has a viewer, actor or prompt id field,
 // and the commands are built from named fields only, so extra input fields go nowhere.
 import type {
+  Ability,
   Aim,
   CheckSpec,
   Command,
@@ -18,6 +19,7 @@ import type {
   MoveTarget,
   Placement,
   Response,
+  Skill,
   State,
   TimeSpan,
   Viewer,
@@ -47,7 +49,7 @@ function refusal(response: Response): string {
 /** Commands that change the session. The rest only read it. */
 const CHANGES = new Set<Command["cmd"]>([
   "submit", "move", "end_turn", "react", "request_check", "help", "short_rest", "start_combat", "end_combat", "spawn", "load_scene",
-  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "pass_time", "choose_card", "level_up", "answer_level_up", "scout",
+  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "pass_time", "choose_card", "own_move", "level_up", "answer_level_up", "scout",
 ]);
 
 /**
@@ -282,7 +284,40 @@ export class PlayerTools {
 
   /** Gives this character's word on the road card waiting: advice, a vote or the owner's call. */
   chooseCard(choice: string): Promise<ToolOutcome> {
+    this.chose = true;
     return this.answer(send(this.table, this.me, { cmd: "choose_card", actor: this.me, choice }, () => `you said: ${choice}`));
+  }
+
+  /** Whether this seat called `choose_card` since the loop last took its words. */
+  private chose = false;
+  /** Its own words on the road card, for the loop to take to the DM once the wake returns (AGT-99). */
+  private ownWords: string | undefined;
+
+  /**
+   * Says what this character does on the road card instead of a listed choice (AGT-99): the words
+   * are only kept here; once the wake returns the loop takes them to the DM, who may make them an
+   * own move on the card. Refused while the card already has one.
+   */
+  async ownMove(words: string): Promise<ToolOutcome> {
+    const r = this.table.observe(await this.table.engine.request(this.me, { cmd: "get_state" }));
+    const card = r.result?.cmd === "get_state" && r.result.state.view === "player" ? r.result.state.world?.card : undefined;
+    if (!card) return this.answer(notNow("no road card waits for your word"));
+    if (card.own_move) return this.answer(notNow("the card already has an own move: give your word on it with choose_card"));
+    if (!words.trim()) return this.answer(notNow("say in one sentence what your character does"));
+    this.ownWords = words.trim();
+    return this.answer({ ok: true, text: "your words are said; the table answers them next" });
+  }
+
+  /**
+   * The words this seat gave with `own_move` since the loop last asked, and whether it also called
+   * `choose_card`, and forgets both. A seat that did both has spoken: its words are only speech
+   * (design §1.8).
+   */
+  takeOwnMove(): { words: string; chose: boolean } | undefined {
+    const taken = this.ownWords === undefined ? undefined : { words: this.ownWords, chose: this.chose };
+    this.ownWords = undefined;
+    this.chose = false;
+    return taken;
   }
 
   /** Opens a level-up when the sheet says it can (M9, AGT-80); the answer is the first choice, if any. */
@@ -365,6 +400,10 @@ export class HandTools extends PlayerTools {
   }
 
   override chooseCard(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override ownMove(): Promise<ToolOutcome> {
     return this.wait();
   }
 
@@ -584,6 +623,10 @@ export class DmTools {
   private loadedThisWake = false;
   /** The DM's last line to the whole table, for the next scene's opening to continue from (M10 P1). */
   lastLine: string | undefined;
+  /** A player's words on the road card a `card_words` wake answers (AGT-99): the loop sets them for the wake. */
+  cardWords: { actor: Handle; words: string } | undefined;
+  /** The own move the wake put on the card, if one did. */
+  ownMoveMade = false;
 
   constructor(table: TableState, passes?: ScenePasses) {
     this.table = table;
@@ -969,6 +1012,28 @@ export class DmTools {
     }
     this.table.grants.add(actor);
     return { ok: true, text: `${actor} may take one action now` };
+  }
+
+  /**
+   * The `card_words` wake's one answer (AGT-99, design §1.8): with `move`, the words of the seat
+   * that woke it become an own move on the card, and the narration shows once the engine took it;
+   * a refusal shows nothing and answers with the engine's reason, so the DM can correct it. Without
+   * `move`, only the narration.
+   */
+  async ownMoveOrAnswer(narration: string, move?: { ability: Ability; skill: Skill; dc: number; success: string; failure: string }): Promise<ToolOutcome> {
+    const words = this.cardWords;
+    if (!words) return notNow("no player's words on a road card wait for your answer");
+    if (move && !this.ownMoveMade) {
+      const made = await send(
+        this.table,
+        "dm",
+        { cmd: "own_move", actor: words.actor, text: words.words, ability: move.ability, skill: move.skill, dc: move.dc, success: move.success, failure: move.failure },
+        () => `${words.actor}'s own move is on the card`,
+      );
+      if (!made.ok) return made;
+      this.ownMoveMade = true;
+    }
+    return this.narrate(narration);
   }
 
   async narrate(text: string, to?: string): Promise<ToolOutcome> {

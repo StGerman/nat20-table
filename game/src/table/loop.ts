@@ -3,7 +3,7 @@
 // decides who is woken next. Agents act only through their bound tools and the human only through
 // the seat; every number the human picks becomes a complete command with no model call (D5).
 import type { StatBlockEntry } from "../pack/adventure.ts";
-import { EngineStopped, type CardDm, type Event, type Handle, type LevelUpChoice, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
+import { EngineStopped, type CardDm, type CardPlayer, type Event, type Handle, type LevelUpChoice, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, offeredLine, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, cardChoices, choiceLines, levelUpChoices, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
@@ -14,6 +14,8 @@ import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
 import { BarkTools, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import { usageBlock, type UsageLog } from "../usage.ts";
+import type { Language } from "../agents/language.ts";
+import { SEAT_WORDS, type SeatWords } from "./words.ts";
 import type { Suggester } from "../agents/suggest.ts";
 import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, ToolOutcome } from "./types.ts";
 
@@ -42,6 +44,8 @@ export interface LoopOptions {
   rests?: string[];
   /** The pack's `stat_blocks` list: the creatures the DM may place beyond the scene files (AGT-24). None by default. */
   statBlocks?: readonly StatBlockEntry[];
+  /** The run's language (decision 0067): the words the table itself shows the human's seat. Default `en`. */
+  language?: Language;
   /** Loop steps before the run is stopped: a safety net for scripted runs. Default 5000. */
   maxSteps?: number;
   /**
@@ -323,6 +327,8 @@ export class TableLoop {
   /** Each AI player's tools for a hand wake: they answer in text only (party talk §4.3). */
   private readonly handTools = new Map<Handle, HandTools>();
   private readonly names: ReadonlyMap<Handle, readonly string[]>;
+  /** The words the table itself shows the human's seat, in the run's language. */
+  private readonly words: SeatWords;
   private readonly dmTools: DmTools;
   private readonly onScene: (sceneId: string, played: readonly string[]) => SceneChoice;
   private readonly maxSteps: number;
@@ -418,6 +424,7 @@ export class TableLoop {
       this.handTools.set(agent.handle, new HandTools(agent.handle, this.table));
     }
     this.names = options.names ?? new Map();
+    this.words = SEAT_WORDS[options.language ?? "en"];
     this.reactionGraceMs = options.reactionGraceMs ?? REACTION_GRACE_MS;
     this.barkTimeoutMs = options.barkTimeoutMs ?? BARK_TIMEOUT_MS;
     this.dmTools = new DmTools(this.table, {
@@ -879,9 +886,7 @@ export class TableLoop {
       if (!agent || this.table.ended) continue;
       const now = (await this.dmWorld())?.card;
       if (!now || now.id !== card.id || !now.waiting_for.includes(handle)) continue;
-      this.table.resetRetries(handle);
-      const briefing = await this.playerBriefing(handle, ...cardLines(now), "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
-      await this.wakePlayer(agent, "card", briefing);
+      await this.aiCard(agent, "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
     }
     const now = (await this.dmWorld())?.card;
     // Whoever is still silent goes with the others (a failed wake or a refusal).
@@ -916,9 +921,7 @@ export class TableLoop {
     if (owner === human) {
       await this.humanCard(now, true);
     } else if (agent) {
-      this.table.resetRetries(owner);
-      const briefing = await this.playerBriefing(owner, ...cardLines(now, true), "Make the caravan's call with choose_card, with a choice id. Say why in one line with say, if your character would.");
-      await this.wakePlayer(agent, "card", briefing);
+      await this.aiCard(agent, "Make the caravan's call with choose_card, with a choice id. Say why in one line with say, if your character would.", true);
     }
     now = await ready();
     if (!now) return;
@@ -930,27 +933,102 @@ export class TableLoop {
   }
 
   /**
-   * The human's word on a road card (design: the human seat): a number, or Enter for the marked
-   * choice. As a Blade the human speaks first (AGT-87), so Enter takes the first choice; as the
-   * caravan's owner they call last, and Enter goes with the Blades.
+   * An AI player's word on a road card, from its own view of the card (design §1.7). Its
+   * `own_move` words go to the DM once the wake returns; when they make no move, it is asked once
+   * more, with the DM's answer, for a `choose_card`, before the loop's fallback.
+   */
+  private async aiCard(agent: PlayerAgent, ask: string, owner = false): Promise<void> {
+    const handle = agent.handle;
+    const tools = this.tools.get(handle)!;
+    this.table.resetRetries(handle);
+    const card = await this.playerCard(handle);
+    if (!card) return;
+    tools.takeOwnMove();
+    await this.wakePlayer(agent, "card", await this.playerBriefing(handle, ...cardLines(card, owner), ask));
+    const said = tools.takeOwnMove();
+    if (!said) return;
+    // A seat that also gave its word has spoken: its words were only said aloud.
+    if (said.chose) return void (await this.table.declare(handle, said.words));
+    if (await this.cardWords(handle, said.words)) return;
+    const now = await this.playerCard(handle);
+    if (!now || !now.waiting_for.includes(handle) || this.table.ended) return;
+    this.table.resetRetries(handle);
+    const answer = this.dmTools.lastLine;
+    await this.wakePlayer(
+      agent,
+      "card",
+      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner), "Your words made no choice of the card. Give your word with choose_card, with a choice id."),
+    );
+    // Words a second time are only said aloud: the card wants a choice now.
+    const again = tools.takeOwnMove();
+    if (again) await this.table.declare(handle, again.words);
+  }
+
+  /** The road card as `handle` sees it (Rule 3: an AI player's briefing comes from its own view). */
+  private async playerCard(handle: Handle): Promise<CardPlayer | undefined> {
+    const r = this.table.observe(await this.table.engine.request(handle, { cmd: "get_state" }));
+    return r.result?.cmd === "get_state" && r.result.state.view === "player" ? (r.result.state.world?.card ?? undefined) : undefined;
+  }
+
+  /**
+   * A player's own words on the road card (API-56, design §1.1, §1.8): said aloud, then one
+   * `card_words` wake, in which the DM makes them an own move on the card or only answers them.
+   * Engine lines wait under the DM's narration, so a roll from a move that decided the card at once
+   * never shows above it. Returns whether an own move went on the card.
+   */
+  private async cardWords(handle: Handle, words: string): Promise<boolean> {
+    const said = await this.table.declare(handle, words);
+    if (!said.ok) return false;
+    const card = (await this.dmWorld())?.card;
+    if (!card || this.table.ended) return false;
+    await this.table.flush();
+    const head = this.table.engine.logHead;
+    this.dmTools.cardWords = { actor: handle, words };
+    this.dmTools.ownMoveMade = false;
+    this.table.hold = (e) => e.seq > head;
+    try {
+      await this.wakeDm(
+        "card_words",
+        undefined,
+        `A player's words on the road card: ${handle} says or does: "${words}"`,
+        `The card: ${card.text}`,
+        `Its choices: ${card.choices.map((c) => `${c.id}: ${c.text}${c.keeps?.length ? ` (keeps ${c.keeps.join(", ")})` : ""}${c.breaks?.length ? ` (breaks ${c.breaks.join(", ")})` : ""}`).join(" | ")}`,
+        "If the words are a move, call own_move_or_answer with the check they call for, two different choices for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits. Answer the attempt only, never how it turns out.",
+      );
+    } finally {
+      this.table.hold = undefined;
+      this.dmTools.cardWords = undefined;
+    }
+    await this.table.flush();
+    const made = this.dmTools.ownMoveMade;
+    // The run report counts words a card took no move from (design §1.8).
+    if (!made) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
+    return made;
+  }
+
+  /**
+   * The human's word on a road card (design: the human seat): a number, Enter for the marked choice
+   * when the others lead with one (AGT-101), or their own words (AGT-99), which the DM may make an
+   * own move on the card. As a Blade the human speaks first (AGT-87); as the caravan's owner they
+   * call last.
    */
   private async humanCard(card: CardDm, owner = false): Promise<void> {
     const human = this.human;
-    const { choices, preset } = cardChoices(card);
-    const enter = card.said.length > 0 ? "press Enter to go with the others" : `press Enter for ${preset}`;
+    const words = this.words;
     // The card's words once; after words said at the table only the choices again (AGT-96).
     let showCard = true;
     for (;;) {
       if (this.table.ended) return;
+      const { choices, marked } = cardChoices(card, words, human);
       if (showCard) this.table.show({ kind: "info", title: "On the road", text: [card.text, owner ? "The caravan is yours: you make the call, with the Blades' advice." : card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
       showCard = false;
-      this.table.show({ kind: "options", title: "Your word", lines: choiceLines(choices), choices, preset });
-      const intent = await this.ask({ kind: "card" });
+      this.table.show({ kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(card.own_move ? [] : [words.ownMoveLine])], choices, ...(marked ? { preset: marked } : {}) });
+      const intent = await this.ask({ kind: "card", line: words.cardPrompt(marked !== undefined) });
       if (!intent) return;
       if (intent.kind === "option") {
         const picked = choices.find((c) => c.number === intent.number);
         if (!picked) {
-          this.table.show({ kind: "info", title: "No such number", text: `Pick 1 to ${choices.length}, or ${enter}.` });
+          this.table.show({ kind: "info", title: "No such number", text: words.stillWaits(choices.length, marked !== undefined) });
           continue;
         }
         const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
@@ -964,19 +1042,17 @@ export class TableLoop {
         return;
       }
       if (intent.kind === "text") {
-        // Words are said at the table; the card still waits for a number, and the table says so.
-        await this.table.declare(human, intent.text);
-        // The people in the scene answer the words; the card itself stays the table's to decide.
-        await this.wakeDm(
-          "road",
-          undefined,
-          `While the road card waits, ${human} says or does: "${intent.text}"`,
-          "Answer it in one or two sentences, as the people in the scene would: what they say, show or do. The card is not decided: never decide it, never tell how a choice turns out, no number of your own. It waits for the table's word.",
-        );
-        this.table.show({ kind: "info", title: "Said at the table", text: `The road still waits for your word: pick one of the choices, 1 to ${choices.length}, or ${enter}.` });
+        // Words on the card: the DM makes them an own move, the human's word, or answers them in
+        // the scene and the card still waits for a choice (AGT-96, AGT-99).
+        if (await this.cardWords(human, intent.text)) {
+          this.table.log("intent", `${human} on the road card: own move "${intent.text}"`, human);
+          return;
+        }
+        card = (await this.dmWorld())?.card ?? card;
+        this.table.show({ kind: "info", title: "Said at the table", text: words.stillWaits(choices.length, marked !== undefined) });
         continue;
       }
-      this.table.show({ kind: "info", title: "On the road", text: `Pick a number, or ${enter}.` });
+      this.table.show({ kind: "info", title: "On the road", text: words.stillWaits(choices.length, marked !== undefined) });
     }
   }
 
@@ -1473,14 +1549,16 @@ export class TableLoop {
       await this.table.flush();
       for (;;) {
         if (this.table.ended) return;
-        this.table.show({ kind: "options", title: rest ? "The night" : "The road", lines: choiceLines(choices), choices, preset });
+        // The line Enter takes ends in the mark (AGT-101).
+        const lines = choiceLines(choices.map((c) => (c.number === preset ? { ...c, label: `${c.label} ${this.words.marked}` } : c)));
+        this.table.show({ kind: "options", title: rest ? "The night" : "The road", lines, choices, preset });
         const intent = await this.ask({ kind: "road" });
         if (!intent) return;
         // A line's own text typed out is that line, as in the round's options.
         const typed = intent.kind === "text" ? choices.find((c) => c.label.toLowerCase() === intent.text.trim().replace(/[.!]+$/, "").toLowerCase()) : undefined;
         const picked = intent.kind === "option" ? choices.find((c) => c.number === intent.number) : typed;
         if (!picked) {
-          this.table.show({ kind: "info", title: rest ? "The night" : "The road", text: `Pick 1 to ${choices.length}, or press Enter for the one shown.` });
+          this.table.show({ kind: "info", title: rest ? "The night" : "The road", text: `Pick 1 to ${choices.length}, or press Enter for the marked one.` });
           continue;
         }
         if (!picked.act) {
@@ -2343,15 +2421,17 @@ export class TableLoop {
 }
 
 /** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said. */
-function cardLines(card: CardDm, owner = false): string[] {
+function cardLines(card: CardPlayer, owner = false): string[] {
   const whose = owner
     ? "the caravan's, and the caravan is yours: you make the call after the Blades' advice"
     : card.target === "caravan"
       ? "the caravan's: the merchant decides, and your word is advice"
       : "the Blades': you vote, and most votes win";
+  const move = card.own_move;
   return [
     `A road card waits for your word (${whose}): ${card.text}`,
-    `Choices: ${card.choices.map((c) => `${c.id}: ${c.text}`).join(" | ")}`,
+    `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === "own_move" && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
+    ...(move ? [] : ["If none of these is what your character would do, say what they do with own_move, in one sentence."]),
   ];
 }
