@@ -1,6 +1,6 @@
 # Milestone 12, Not a passenger («Не пассажир»): system design
 
-Status: Accepted (table #339, 2026-11-11). Written for phase 2 of the scope, accepted in table #336 (`docs/scope/not-a-passenger-scope.md` §5); phase 1 (MAP-15, MAP-17) ran on its own rows (table #338) and is not designed here. It answers the 13 questions of the scope's §6. Stas merged the design before its rows joined it, so the §7 rows went into `TASKS.md` in table #341, with the changes marked "amended with the rows" below: the planning check's item 11 (§4, §9) and item 12 (§8), the audit update moved to AGT-100 (§10 item 7), and the PR count, 16 planned and 17 with the rows PR (Summary, §9). Decision 0068 records the own move's shape.
+Status: Accepted (table #339, 2026-11-11). Written for phase 2 of the scope, accepted in table #336 (`docs/scope/not-a-passenger-scope.md` §5); phase 1 (MAP-15, MAP-17) ran on its own rows (table #338) and is not designed here. It answers the 13 questions of the scope's §6. Stas merged the design before its rows joined it, so the §7 rows went into `TASKS.md` in table #341, with these changes: the planning check's item 11 (§4, §9) and item 12 (§8), the audit update moved to AGT-100 (§10 item 7), and the PR count, 16 planned and 17 with the rows PR (Summary, §9). Decision 0068 records the own move's shape.
 
 ## Summary
 
