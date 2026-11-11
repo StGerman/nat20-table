@@ -630,10 +630,10 @@ pub struct Resolution {
 pub struct OwnMoveRun {
     /// The move: who rolls (the seat whose words it was) and the check
     pub mv: OwnMove,
-    /// The choice a success brings, and its effects after `remember own_move_<card>`
-    pub success: (String, Vec<Effect>),
-    /// The choice a failure brings, and its effects after `remember own_move_<card>`
-    pub failure: (String, Vec<Effect>),
+    /// The effects of `mv.success`'s choice, after `remember own_move_<card>`
+    pub success: Vec<Effect>,
+    /// The effects of `mv.failure`'s choice, after `remember own_move_<card>`
+    pub failure: Vec<Effect>,
 }
 
 /// Why a card choice was refused.
@@ -1428,7 +1428,7 @@ fn resolve(
                     deed: own_move_deed(&card.id),
                 }];
                 effects.extend(effects_of(id));
-                (id.to_owned(), effects)
+                effects
             };
             OwnMoveRun {
                 mv: mv.clone(),
@@ -1436,13 +1436,6 @@ fn resolve(
                 failure: branch(&mv.failure),
             }
         });
-    // The proposer's word was the own move, whether or not they are still up to be counted.
-    let mut by = by;
-    if let Some(run) = &own_move
-        && !by.contains(&run.mv.actor)
-    {
-        by.insert(0, run.mv.actor.clone());
-    }
     Resolution {
         card: card.id.clone(),
         choice: choice.to_string(),
@@ -2149,16 +2142,18 @@ mod tests {
         assert!(done.effects.is_empty());
         let run = done.own_move.unwrap();
         assert_eq!((run.mv.actor.as_str(), run.mv.dc), ("bren", 10));
-        assert_eq!(run.success.0, "give");
         assert_eq!(
-            run.success.1[0],
+            run.success[0],
             Effect::Remember {
                 deed: own_move_deed("beggar")
             }
         );
-        assert!(matches!(run.success.1[1], Effect::Cargo { .. }));
-        assert_eq!(run.failure.0, "refuse");
-        assert_eq!(run.failure.1.len(), 2);
+        assert!(matches!(run.success[1], Effect::Cargo { .. }));
+        assert_eq!(
+            (run.mv.success.as_str(), run.mv.failure.as_str()),
+            ("give", "refuse")
+        );
+        assert_eq!(run.failure.len(), 2);
         assert!(state.pending.is_none());
     }
 

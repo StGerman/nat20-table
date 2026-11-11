@@ -526,7 +526,11 @@ impl Session {
         } else {
             (None, false)
         };
-        let (choice, effects) = if success { &run.success } else { &run.failure };
+        let (choice, effects) = if success {
+            (&mv.success, &run.success)
+        } else {
+            (&mv.failure, &run.failure)
+        };
         self.push(Pending {
             round: None,
             visibility: Visibility::Dm,
