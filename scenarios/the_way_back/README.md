@@ -20,7 +20,7 @@ Everything in this folder is for the DM. Players see only what the DM narrates, 
 - `prose/`: the premise and truth, one file per scene, and Fenn Lusk in `prose/npcs/`. Odda Vell's is a copy of *Fair in Wend*'s.
 - `deck/`: Fenn's three cards (*Wet salt*, *Men at the iron*, *Salt on credit*) and *The fair price*. They join the world's deck only while this contract runs.
 - `cards/`: the four pregens' personality cards, the same as *Fair in Wend*'s.
-- The map, the world's road cards (among them *The bridge again* and *Gwyn's news*) and the people of each place are the world's: `worlds/wend/`.
+- The map, the world's road cards (among them *The bridge again* and *Gwyn's news*, or *Gwyn's cheese* when the Blades spoke Col out of the stocks) and the people of each place are the world's: `worlds/wend/`.
 
 ## Play and check it
 

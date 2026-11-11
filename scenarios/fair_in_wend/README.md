@@ -18,6 +18,7 @@ Everything in this folder is for the DM. Players see only what the DM narrates, 
 - `campaign.json`: the skeleton and the campaign in one file, the adventure.json format plus the engine's `world` block (map, start, route, caravan, escort, each place's scene) and the run's `day_limit`. Its schema is `game/schema/adventure.schema.json`.
 - `scenes/`: the engine's scene files: anchors and checks. Every place scene has a `by_the_wagon` anchor, where the world's place NPCs stand.
 - `prose/`: the premise and truth, one file per scene, and Odda Vell in `prose/npcs/`.
+- `deck/`: Odda's cards (*The fair gate*, *The meadow track*) and *Rufus's offer*. They join the world's deck only while this contract runs.
 - `cards/`: the four pregens' personality cards, the same as *The Silent Mill*'s.
 - The map, the road cards and the people of each place are the world's: `worlds/wend/`.
 

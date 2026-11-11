@@ -55,9 +55,10 @@
             "when": "arrival",
             "target": "blades",
             "if": ["crossed_millbeck", "saw_the_company_board"],
+            "unless": "col_owes_blades",
             "once": "contract",
             "text": "Gwyn the shepherd is waiting at the fold gate when the wagon comes up the last of the track. She has news, and she has been saving it for the Blades.",
-            "note": "Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. If they died (killed_col, killed_dunn), she tells it as news, not blame: the farm below the ridge stands empty, the goblins took the flock and the bridge took the boys, and Rufus's man came up with a paper for the land. If they were spared, Col is back mending the fold; if the Blades spoke him out of the stocks at Wendford (col_owes_blades), he sent a cheese up the track ahead of them. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
+            "note": "Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. If they died (killed_col, killed_dunn), she tells it as news, not blame: the farm below the ridge stands empty, the goblins took the flock and the bridge took the boys, and Rufus's man came up with a paper for the land. If they were spared, Col is back mending the fold. If they fed her dog on the river road (fed_gwyns_dog), she knows who fed it: if it came up with the wagon it runs to her, and if not it came home ahead of them, fat and pleased with itself. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
             "choices": [
                 {
                     "id": "goblins",
@@ -74,18 +75,59 @@
                     ]
                 },
                 {
-                    "id": "cheese",
-                    "text": "Take the cheese Col sent up the track for you.",
-                    "if": "col_owes_blades",
+                    "id": "dog",
+                    "text": "Ask Gwyn about her dog.",
+                    "if": "fed_gwyns_dog",
                     "effects": [
-                        {"do": "cargo", "good": "rations", "change": 1},
-                        {"do": "remember", "deed": "took_cols_cheese"}
+                        {"do": "remember", "deed": "listened_to_gwyn"}
                     ]
                 },
                 {
                     "id": "listen",
                     "text": "Just listen.",
-                    "unless": "col_owes_blades",
+                    "unless": "fed_gwyns_dog",
+                    "effects": [
+                        {"do": "remember", "deed": "listened_to_gwyn"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "gwyn_cheese",
+            "zone": "highsteads",
+            "when": "arrival",
+            "target": "blades",
+            "if": ["crossed_millbeck", "saw_the_company_board", "col_owes_blades"],
+            "once": "contract",
+            "text": "Gwyn the shepherd meets the wagon at the fold gate with a round cheese in a cloth. Col sent it up for the Blades, she says, for speaking up for him at Wendford, and she cuts it for them there at the gate. She has news as well.",
+            "note": "The card for when the Blades spoke Col out of the stocks at Wendford (col_owes_blades); otherwise gwyn_news. Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. Col is back mending the fold, and the cheese is his thanks for the stocks; Gwyn cuts it at the fold gate and it is eaten there, so it never goes on the wagon. If they fed her dog on the river road (fed_gwyns_dog), she knows who fed it: if it came up with the wagon it runs to her, and if not it came home ahead of them, fat and pleased with itself. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
+            "choices": [
+                {
+                    "id": "goblins",
+                    "text": "Ask about the goblins.",
+                    "effects": [
+                        {"do": "remember", "deed": "heard_of_the_low_fires"}
+                    ]
+                },
+                {
+                    "id": "farm",
+                    "text": "Ask about the farm under the ridge.",
+                    "effects": [
+                        {"do": "remember", "deed": "asked_after_the_ridge_farm"}
+                    ]
+                },
+                {
+                    "id": "dog",
+                    "text": "Ask Gwyn about her dog.",
+                    "if": "fed_gwyns_dog",
+                    "effects": [
+                        {"do": "remember", "deed": "listened_to_gwyn"}
+                    ]
+                },
+                {
+                    "id": "listen",
+                    "text": "Just listen.",
+                    "unless": "fed_gwyns_dog",
                     "effects": [
                         {"do": "remember", "deed": "listened_to_gwyn"}
                     ]
