@@ -8,7 +8,7 @@ Status: Accepted (table #339, 2026-11-11). Written for phase 2 of the scope, acc
 - **Card order and AGT-97** need no record: the card waits on the seat for the wake that frames it, and a wake ends when its narration returns. Both are in the game loop; decision 0041 stands as written.
 - **One language at the seat** confirms decision 0067, option C: the table renders the seat's lines from event fields, the packs carry `text_ru` beside `text`, as `map.json` already carries `name_ru`, and the wire, fixtures, transcript and prompts stay English byte for byte.
 - **The run records what the seat showed** in a new `seat.jsonl` when a human sits at it. Exit row 5 and AGT-13's read come from it, not from the transcript, which never held the seat's panels. Exit row 4 reads the transcript, with a few loop fields added (§2), in both runs.
-- **16 PRs, not 19**: ENG-43 folds into API-56, AGT-97 shares AGT-100's PR, and AGT-101 shares AGT-99's (§9).
+- **17 PRs, not 19** (16 planned; the rows took a docs PR of their own after the design merged): ENG-43 folds into API-56, AGT-97 shares AGT-100's PR, and AGT-101 shares AGT-99's (§9).
 
 ## 1. Own move (questions 1 to 7)
 
@@ -298,7 +298,7 @@ The scope's §7 rows, with three changes for Stas's review load:
 | 12 | MAP-14: bridge card at the bridge | S | - |
 | 13 | AGT-103 with AGT-13 (partial): `seat.jsonl`, report, verdict, the exit pair's reads | S | all above |
 
-Thirteen phase-2 PRs, the core PR and the pin included. With the two docs PRs (table #336 and this one) and phase 1's one PR, that is 16 for the milestone, against the scope's 19 (which had one docs PR and phase 1 as two). The stack is 1 → 2 → 4 and 2 → 5 → 6; 6 also waits on 3 and 12, whose card text it translates; 10 waits on 9; 13 goes last; 7, 8, 11 stand alone.
+Thirteen phase-2 PRs, the core PR and the pin included. With the docs PRs (table #336, #339 and the rows in #341, which joined after the design merged) and phase 1's one PR, that is 17 for the milestone, against the scope's 19 (which had one docs PR and phase 1 as two). The stack is 1 → 2 → 4 and 2 → 5; 6 waits on 3 and 12, whose card text it translates, and runs beside 5 (amended with the rows); 10 waits on 9; 13 goes last; 7, 8, 11 stand alone.
 
 ## 10. Decisions in this design (for Stas)
 
@@ -308,7 +308,7 @@ Thirteen phase-2 PRs, the core PR and the pin included. With the two docs PRs (t
 4. The deed is `own_move_<card>`, with no result and no words in it; Zoya lists it as an owed pay-off until the dramaturg mechanism gives it words.
 5. 0067's C is confirmed: `text_ru` in deck files, rendering in the table, no contract change.
 6. No record for the card order: 0041 is untouched.
-7. `seat.jsonl`, written only with a human at the seat, is the source of the language row and AGT-13's read. The order row reads the transcript, which gains a `system` line per card, a `wake` field on narration, `wake` and `narrated` on DM error and fallback lines, and the fallback cause `cut_after_narration` (the audit and acceptance 5 read that union, so AGT-103 updates them).
+7. `seat.jsonl`, written only with a human at the seat, is the source of the language row and AGT-13's read. The order row reads the transcript, which gains a `system` line per card, a `wake` field on narration, `wake` and `narrated` on DM error and fallback lines, and the fallback cause `cut_after_narration` (the audit and acceptance 5 read that union, so AGT-100 updates them in the PR that adds the fields, amended with the rows).
 8. Nothing is marked, and Enter does nothing, until the others lead with a choice.
 9. A failure may not land on a choice that breaks a custom.
    Decisions 1 to 4 and 9 are recorded in decision 0068, in this PR; the others are implementation inside accepted decisions or rows.
