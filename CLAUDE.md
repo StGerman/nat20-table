@@ -43,6 +43,10 @@ Zoya keeps the quests connected and on the storytelling bible (`.claude/agents/z
 
 Yan keeps the plan and what it costs: `TASKS.md`, `docs/tasks-done.md`, `docs/roadmap.md`, scope and decision drafts, and edits nothing else (`.claude/agents/yan.md`; `/yan sweep | tender | scope <milestone> | roadmap`; decision 0065). Run a sweep before a milestone opens or closes and quote it in the PR. Cloud threads: use the fallback described for Vera, with the body of `yan.md`.
 
+## Game designer: Lev Neiman
+
+Lev designs how the world carries what the party did, and reads cards and runs for whether it came back (`.claude/agents/lev.md`; `/lev design <milestone or topic> | play <pack> | trace <run>`). He writes only Proposed drafts in `docs/design/`, and sets the goals for a contract change and proposes it without editing the crate. He never grades his own design: Vera, the narration judge and Stas's verdict stay independent of him. Cloud threads: use the fallback described for Vera, with the body of `lev.md`.
+
 ## Milestones
 
 Status, exit criteria and task ids for each milestone are in `TASKS.md` § Milestones. Work one milestone at a time, in order, unless the task list says a row is independent.
