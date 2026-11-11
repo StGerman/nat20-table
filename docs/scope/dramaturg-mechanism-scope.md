@@ -1,7 +1,7 @@
 # Milestone 13, Dramaturg mechanism: scope
 
 Status: Proposed. Drafted by Yan Metsuyan (0065), 2026-11-11, main a739abd. No bid was tendered; priced here.
-Inputs: the campaign line and the dramaturg design (2026-11-07); 0066, order item 2. The system design is Lev Neiman's (table #345, decision 0069 on its branch): it waits for #345 to merge, or runs as the cloud fallback with the body of `lev.md`.
+Inputs: the campaign line and the dramaturg design (2026-11-07); 0066, order item 2. The system design is Lev Neiman's (table #345, decision 0069 on its branch): it waits for table #345 to merge, or runs as the cloud fallback with the body of `lev.md`.
 
 ## 1. Goal
 
@@ -16,8 +16,8 @@ Two carriers only: the road's `remember` and `if`/`unless`, extended from cards 
 1. **Carrier A: a scene writes a deed** (gap A, links 1, 3, 4). A scene can `remember` a deed beside `flag`, on outcomes the engine records: a check's consequence, a fight's end and its reason (`end_combat`, a surrender the DM calls under the scene's stated condition included, which the engine checks and records), a named creature's death (`killed_<npc>`). A deed is never written on the DM's word alone, with no engine event behind it (Rule 4). Why: the Mill writes nothing that outlives the session.
 2. **Carrier B: a scene reads a deed** (gap B, links 10 to 13). A scene's DM text can hold a variant under `if` or `unless`, as a card's choice can, and the DM is told the cause in one clause and says it aloud. Why: no scene reads a deed today.
 3. **A pack with no campaign joins the world's memory.** *The Silent Mill* names its world (`worlds/wend` already has `pells_mill`) and its deeds go into the roster, so a later contract reads them. Why: otherwise A writes into a session that ends.
-4. **Content, link 1 carried:** the Mill's scenes write deeds only on engine-recorded outcomes (the design fixes ids): the Scene 3 fight writes one of two deeds, the party took a goblin prisoner (`snitt_yielded`, only when the creature that yielded is a goblin; the yard's surrender condition counts the wolves too) or did not (`yard_to_the_end`), so every run that leaves the yard has an outcome deed. `wenna_saved` is a marker every win writes; `killed_gritch` is one too until MAP-13 lets Gritch yield. Scene 4's two interrogation checks write no deed in M13 (both can run in one scene, so their deeds could contradict). Wendford's greeting for any Mill party (`fw_wendford.md`, "the village knows them") becomes a variant on `wenna_saved` and stays; one variant per Scene 3 deed adds a problem: the village heard a goblin was taken alive and asks the party what they did with it, or heard the yard ran red and asks whether more will come. The DM narrates the village's question, never Snitt's fate, which no deed records. Osric's note in `worlds/wend/npcs.json` loses its "if they played The Silent Mill" clause, since the scene variant now carries that fact (NPC notes take no `if`; a conditional note is out). Zoya's board check; Vera.
-5. **An outcome reader beside `m11-thread`** (0066 asks for a real one): a new M13 verdict row counts only a deed that tells outcomes apart, never a marker every path writes (`crossed_millbeck`, `wenna_saved`, `killed_gritch` until MAP-13); `m11-thread` itself stays as written.
+4. **Content, link 1 carried:** the Mill's scenes write deeds only on engine-recorded outcomes (the design fixes ids): the Scene 3 fight writes one of two deeds, the party took a goblin prisoner (`snitt_yielded`, only when the creature that yielded is a goblin; the yard's surrender condition counts the wolves too) or did not (`yard_to_the_end`), so every run that leaves the yard has an outcome deed. `wenna_saved` is a marker every win writes; `killed_gritch` is one too until MAP-13 lets Gritch yield. Scene 4's two interrogation checks write no deed in M13 (both can run in one scene, so their deeds could contradict). Wendford's greeting (`fw_wendford.md`, "the village knows them") becomes a variant on `wenna_saved`, so it greets a party that brought Wenna back and no other; one variant per Scene 3 deed adds a problem: the village heard a goblin was taken alive and asks the party what they did with it, or heard the yard ran red and asks whether more will come. The DM narrates the village's question, never Snitt's fate, which no deed records. Osric's note in `worlds/wend/npcs.json` loses its sentence "Knows the Grey Lantern company if they played The Silent Mill.", since the scene variant now carries that fact (NPC notes take no `if`; a conditional note is out). The Wendford opening keeps to about 120 words with its variants (MAP-16 names it at 177). Zoya's board check; Vera.
+5. **An outcome reader beside `m11-thread`** (0066 asks for a real one): a new M13 verdict row counts only a deed that tells outcomes apart, by amendment 3's rule checked from the pack data (another outcome of the same scene or card writes a different deed), never a marker every path writes (today `crossed_millbeck`, `wenna_saved`, `killed_gritch`); `m11-thread` itself stays as written.
 
 A before MAP-13 is the cheap order: `gritch_spared` then needs no converter.
 
@@ -64,9 +64,9 @@ Checked by CI: a seeded fixture where the Wendford scene reads a Mill roster's d
 
 ## 6. Rows that would follow (after spec and design merge)
 
-- API-57 (S): scene deeds: `remember` on scene outcomes, `if`/`unless` on scene variants, the death deed for a scene's named creature, the validator; contract, fixture, CHANGELOG, server.
-- ENG-45 (S): a pack with no campaign writes into its world's memory; a Mill roster continues into a road contract.
-- MAP-20 (S): the Mill's outcome deeds, the Wendford variants (the greeting on `wenna_saved`, one problem per Scene 3 deed), Osric's note without its Mill clause; Zoya, Vera. Waits for the bible PR of amendment 3.
+- API-57 (M): scene deeds: `remember` on scene outcomes, `if`/`unless` on scene variants, the death deed for a scene's named creature, the validator; contract, fixture, CHANGELOG, server.
+- ENG-44 (S): a pack with no campaign writes into its world's memory; a Mill roster continues into a road contract.
+- MAP-20 (S): the Mill's outcome deeds, the Wendford variants (the greeting on `wenna_saved`, one problem per Scene 3 deed) within about 120 words, Osric's Mill sentence removed; Zoya, Vera. Waits for the bible PR of amendment 3.
 - AGT-104 (XS): the DM prompt line for a scene variant's cause.
 - AGT-105 (S): the M13 verdict rows (written, carried with the outcome reader of In 5, readable), `m11-memory` reported and not gating when a scene, not a card, reads the earlier contract's deed, the report's lines and the exit pair.
 - The rows PR also edits MAP-13: after carrier A, before the Arachas pack.
@@ -75,13 +75,13 @@ Checked by CI: a seeded fixture where the Wendford scene reads a Mill roster's d
 
 | Field | M13 plan | M12 plan | M11 baseline |
 | --- | --- | --- | --- |
-| Size | 4 S, 1 XS: about 3 to 5 days of thread work, plus Zoya's bible PR | 1 L, 4 M, 12 S, 4 XS | 19 rows |
+| Size | 1 M, 3 S, 1 XS: about 4 to 6 days of thread work, plus Zoya's bible PR | 1 L, 4 M, 12 S, 4 XS | 19 rows |
 | Stas's review | 8 PRs: 1 scope, 1 design, 1 rows, 1 bible (amendment 3), 4 code and content (AGT-104 joins AGT-105) | 17 | 27 |
 | Exit runs | 1 pair, AI half first | 1 pair | 3 pairs to pass 1 |
-| Run load, USD | Mill all AI about 15.5 (the last all-AI Mill PASS; re-measure); Stas's *Fair in Wend* half about 7.9 (pair 3's Fair run): 23.4 | 20.9 | 35.45 |
-| Stas at the table, min | 27 (pair 3's human half) | 27 | 65.6 |
+| Run load, USD | Mill all AI about 15.5 (the last all-AI Mill PASS; re-measure); Stas's *Fair in Wend* half about 7.9 (an estimate: pair 3's all-AI Fair run; no human Fair run measured since M9): 23.4 | 20.9 | 35.45 |
+| Stas at the table, min | about 26 (M9's human *Fair in Wend*, 0060) | 27 | 65.6 |
 
-Target (0065, half the baseline): 17.73 USD, 33 min, 1 pair, 13.5 PRs, 1.06 days. Planned days: 3 to 5 of thread work, over the 1.06 target; the code also waits for M12's exit pair. Planned: 23.4 USD, 5.7 over (a Mill all-AI run costs two road runs); 27 min, plus starting run 1 and about 10 min of quotes; 1 pair; 8 PRs, 0.30 of the baseline. A failed run 1 costs a day and 15.5 USD and none of Stas's table time; a failed run 2 costs about 2 hours of Stas, a day and 23.4 USD.
+Target (0065, half the baseline): 17.73 USD, 33 min, 1 pair, 13.5 PRs, 1.06 days. Planned days: 4 to 6 of thread work, over the 1.06 target; the code also waits for M12's exit pair. Planned: 23.4 USD, 5.7 over (a Mill all-AI run costs two road runs); 27 min, plus starting run 1 and about 10 min of quotes; 1 pair; 8 PRs, 0.30 of the baseline. A failed run 1 costs a day and 15.5 USD and none of Stas's table time; a failed run 2 costs about 2 hours of Stas, a day and 23.4 USD.
 
 **M12 dependencies.** Under 0043 as amendment 1 reads it: no M13 code or content PR merges before M12's exit pair has passed on its build.
 
@@ -94,12 +94,12 @@ Target (0065, half the baseline): 17.73 USD, 33 min, 1 pair, 13.5 PRs, 1.06 days
 
 ## 8. Questions for Stas
 
-1. **The exit pair.** (a) *The Silent Mill* all AI on a new roster, then *Fair in Wend* on its roster with Stas: carries link 1, the one that is prose today; about 23.4 USD and 27 min of Stas, 5.7 USD over target; recommended. (b) Road only: *Fair in Wend* all AI, then *The Way Back* with Stas, a scene reading a Fair deed: about 13.0 USD (pair 3), under target, but on a link the cards already carry. (c) (a) plus *Fair in Wend* all AI on the Mill roster before Stas plays, so the cross-quest read is proven before he sits: about 31.3 USD, 13.6 over.
+1. **The exit pair.** (a) *The Silent Mill* all AI on a new roster, then *Fair in Wend* on its roster with Stas: carries link 1, the one that is prose today; about 23.4 USD and 26 min of Stas, 5.7 USD over target; recommended. (b) Road only: *Fair in Wend* all AI, then *The Way Back* with Stas, a scene reading a Fair deed: about 13.0 USD (pair 3), under target, but on a link the cards already carry; it needs a *The Way Back* content row more, and In 3 and In 4 (the Mill in the world's memory) ship with no run that plays them. (c) (a) plus *Fair in Wend* all AI on the Mill roster before Stas plays, so the cross-quest read is proven before he sits: about 31.3 USD, 13.6 over.
 2. **Quests as `kind: errand`, and fronts and clocks.** (a) Both out, to Arachas plus glue, where Q6 and the new moon are their first cases; recommended. (b) Errand in, with Q1 as its case (the reeve's chest pays through the ledger): about 1 M and 2 PRs more. (c) Both in: about 2 M and 4 PRs more, and the exit needs a run that plays a clock.
 3. **Witnesses and the attitude step (gap E).** (a) Out, to Arachas plus glue, whose scenes are its first readers; recommended. (b) Only the `saw` field on the deed record now, no attitude step: XS and a fixture, no reader until Arachas; Zoya would take this now (Consequence 2), since Arachas needs it. (c) Both in: about 1 M and 2 PRs more.
 4. **Words in the own-move deed.** (a) Out: `own_move_<card>` stays a bare id, owed on Zoya's board until a pack reads one; recommended. (b) In: the deed keeps the player's words as its DM-only cause: XS, and it waits for API-56 to merge. Zoya: the bible (Story-space 1) leans to (b); (a) only with the deed listed as owed.
 5. **MAP-13, the Mill's goblins can yield.** (a) Out of M13: its own row, after carrier A and before Arachas (the rows PR writes "after A" into the row; today it says only "before the Arachas pack"); recommended. (b) In: Gritch and the cellar band can yield and `gritch_spared` is written from the start: S and 1 PR more, and run 1 may play it.
-6. **Carrier B now or with Arachas.** (a) In: scenes read deeds from this milestone, so Arachas plus glue starts with its reader and carries content only; the Arachas concept already names its scene reads (scene 1 on the hill-farm deeds, the finale on `heard_of_the_hollow_king`); recommended. (b) Out: link 1 is carried by a Wendford arrival card with `if`; the contract change shrinks to carrier A, the PR count stays 8; scene reading moves to Arachas plus glue.
+6. **Carrier B now or with Arachas.** (a) In: scenes read deeds from this milestone, so Arachas plus glue starts with its reader and carries content only; the Arachas concept already names its scene reads (scene 1 on the hill-farm deeds, the finale on `heard_of_the_hollow_king`); recommended. (b) Out: link 1 is carried by a Wendford arrival card with `if`; the contract change shrinks to carrier A, AGT-104 goes (a card already carries its cause), `m11-memory` stays gating (a card reads the earlier contract's deed), and API-57 drops to S: 7 PRs; scene reading moves to Arachas plus glue.
 
 ## 9. Amendments proposed
 
