@@ -337,6 +337,31 @@ pub enum Command {
         #[serde(default)]
         fallback: bool,
     },
+    /// Puts a seat's own move on the road card on the table (API-56; protocol §4.13): the seat
+    /// said something else than the card's choices, and the DM turns the words into a ladder
+    /// check and names two of the card's offered choices, one a success brings and one a
+    /// failure. The move joins the card as the choice `own_move`, and the actor's word is
+    /// given for it; the other seats vote on it like any choice. If the card is decided on it,
+    /// the engine rolls the actor's check and runs the named choice's effects. One own move per
+    /// card. DM only.
+    OwnMove {
+        /// The seat whose words these are: one with a say on the card that has not spoken yet
+        /// (a Hired Blade, or a player owner once every Blade has advised).
+        actor: Handle,
+        /// The words as said, 1 to 300 characters.
+        text: String,
+        /// The check's ability; it must be the skill's own.
+        ability: Ability,
+        /// The check's skill.
+        skill: Skill,
+        /// The DC: one of 5, 10, 15, 20, 25, 30; anything else is a `bad_request`.
+        dc: u8,
+        /// The choice a success brings: an id from `world.card.choices`.
+        success: String,
+        /// The choice a failure brings: another id from `world.card.choices`, never one that
+        /// breaks a custom.
+        failure: String,
+    },
     /// Walks ahead of the caravan as the scout (API-54; protocol §4.13): a Hired Blade takes
     /// the role for every leg until another Blade takes it. When a leg's road card names a
     /// skill to scout with, the scout's Wisdom check comes before the card is shown, and a
@@ -667,6 +692,12 @@ pub enum CommandResult {
     /// The state with the picked card on the table, or already decided when nobody could
     /// speak on it.
     PickCard {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The state with the own move on the card, or the card decided when the actor's word
+    /// settled it.
+    OwnMove {
         /// Projected for the request's `viewer`.
         state: State,
     },

@@ -3,6 +3,10 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.69 (2026-11-11)
+- Additive (API-56, protocol §4.13 and §5, decision 0068): the own move. New DM-only command `own_move{actor, text, ability, skill, dc, success, failure}` (result `State`) puts a seat's own words on the card on the table as the choice `own_move`, voted on like any choice. New reasons `own_move_taken` and `bad_own_move`. New events `card_own_move{actor, words, skill}` (public), `own_move_set{card, actor, ability, skill, dc, success, failure}` and `own_move_ran{card, choice, roll?}` (DM only). `world.card.own_move` is `OwnMoveDm{actor, ability, skill, dc, success, failure}` for the DM and `OwnMovePlayer{actor, ability, skill}` for a player, left out when there is none, and both views' `world.card.choices` list `own_move` last once proposed. A card decided on it rolls the proposer's check through core, or brings the failure with no roll when the proposer is down, and writes the deed `own_move_<card>`.
+- New fixture `own_move.jsonl`: every refusal, an own move that succeeds on a caravan card, and one whose proposer dies in a fight before the vote, so the failure comes without a roll. `errors.jsonl`'s unknown-command message lists `own_move`. Other fixtures change by version only.
+
 ## 1.0.0-dev.68 (2026-11-11)
 - Meaning (ENG-42, protocol §4.13): `pick_card{fallback: true}` must name the first card in `world.offered`, the one the game loop's fallback takes; any other is refused with `card_not_offered`, so a session log's `came: engine_pick` is always the first card rolled. No wire type changes. Fixture: a new line in `draw_three.jsonl` before the fallback pick.
 
