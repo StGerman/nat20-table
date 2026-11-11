@@ -283,9 +283,11 @@ export class PlayerTools {
   }
 
   /** Gives this character's word on the road card waiting: advice, a vote or the owner's call. */
-  chooseCard(choice: string): Promise<ToolOutcome> {
-    this.chose = true;
-    return this.answer(send(this.table, this.me, { cmd: "choose_card", actor: this.me, choice }, () => `you said: ${choice}`));
+  async chooseCard(choice: string): Promise<ToolOutcome> {
+    const given = await send(this.table, this.me, { cmd: "choose_card", actor: this.me, choice }, () => `you said: ${choice}`);
+    // Only a word the engine took is a word given: a refused one leaves the seat's own words standing.
+    if (given.ok) this.chose = true;
+    return this.answer(given);
   }
 
   /** Whether this seat called `choose_card` since the loop last took its words. */
@@ -303,6 +305,7 @@ export class PlayerTools {
     const card = r.result?.cmd === "get_state" && r.result.state.view === "player" ? r.result.state.world?.card : undefined;
     if (!card) return this.answer(notNow("no road card waits for your word"));
     if (card.own_move) return this.answer(notNow("the card already has an own move: give your word on it with choose_card"));
+    if (card.said.some((s) => s.actor === this.me)) return this.answer(notNow("you have already given your word on this card"));
     if (!words.trim()) return this.answer(notNow("say in one sentence what your character does"));
     this.ownWords = words.trim();
     return this.answer({ ok: true, text: "your words are said; the table answers them next" });
@@ -627,6 +630,8 @@ export class DmTools {
   cardWords: { actor: Handle; words: string } | undefined;
   /** The own move the wake put on the card, if one did. */
   ownMoveMade = false;
+  /** The narration that answered the words, once one showed. */
+  cardAnswer: string | undefined;
 
   constructor(table: TableState, passes?: ScenePasses) {
     this.table = table;
@@ -1023,6 +1028,8 @@ export class DmTools {
   async ownMoveOrAnswer(narration: string, move?: { ability: Ability; skill: Skill; dc: number; success: string; failure: string }): Promise<ToolOutcome> {
     const words = this.cardWords;
     if (!words) return notNow("no player's words on a road card wait for your answer");
+    // One move per wake: once it is on the card, a retry only rewrites the narration.
+    const already = move !== undefined && this.ownMoveMade;
     if (move && !this.ownMoveMade) {
       const made = await send(
         this.table,
@@ -1033,7 +1040,10 @@ export class DmTools {
       if (!made.ok) return made;
       this.ownMoveMade = true;
     }
-    return this.narrate(narration);
+    const said = await this.narrate(narration);
+    if (!said.ok) return said;
+    this.cardAnswer = narration;
+    return already ? { ...said, text: `${said.text}; the own move you made first stays on the card, this move is not sent` } : said;
   }
 
   async narrate(text: string, to?: string): Promise<ToolOutcome> {

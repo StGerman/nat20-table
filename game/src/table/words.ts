@@ -3,6 +3,7 @@
 // move, the card's prompt and the marked choice; AGT-98 moves the rest of the seat's strings here.
 import type { Skill } from "@nat20-table/engine-client";
 import type { Language } from "../agents/language.ts";
+import { titled } from "../view.ts";
 
 export interface SeatWords {
   /** The card's last line, unnumbered: a player may answer in their own words. */
@@ -42,14 +43,6 @@ const SKILLS_RU: Record<Skill, string> = {
   survival: "Выживание",
 };
 
-/** A skill as the SRD names it in English: `animal_handling` is "Animal Handling". */
-function skillEn(skill: Skill): string {
-  return skill
-    .split("_")
-    .map((w) => (w === "of" ? w : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(" ");
-}
-
 export const SEAT_WORDS: Record<Language, SeatWords> = {
   en: {
     ownMoveLine: "Something else: say it in your own words.",
@@ -57,7 +50,7 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     cardPrompt: (marked) => `A choice's number, or your own words${marked ? ", Enter for the marked one" : ""}.`,
     marked: "(Enter)",
     othersChoice: "(the others' choice)",
-    ownMoveChoice: (mine, name, words, skill) => `${mine ? "Your move" : `${name}'s move`}: "${words}" (${skillEn(skill)})`,
+    ownMoveChoice: (mine, name, words, skill) => `${mine ? "Your move" : `${name}'s move`}: "${words}" (${titled(skill)})`,
     stillWaits: (count, marked) => `The road still waits for your word: a choice, 1 to ${count}${marked ? ", or Enter for the marked one" : ""}, or your own words.`,
   },
   ru: {

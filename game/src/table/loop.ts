@@ -6,7 +6,7 @@ import type { StatBlockEntry } from "../pack/adventure.ts";
 import { EngineStopped, type CardDm, type CardPlayer, type Event, type Handle, type LevelUpChoice, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, offeredLine, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
-import { buildChoices, cardChoices, choiceLines, levelUpChoices, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
+import { buildChoices, cardChoices, choiceLines, levelUpChoices, OWN_MOVE, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
@@ -949,11 +949,14 @@ export class TableLoop {
     if (!said) return;
     // A seat that also gave its word has spoken: its words were only said aloud.
     if (said.chose) return void (await this.table.declare(handle, said.words));
-    if (await this.cardWords(handle, said.words)) return;
+    const answered = await this.cardWords(handle, said.words);
+    if (answered.made) return;
     const now = await this.playerCard(handle);
-    if (!now || !now.waiting_for.includes(handle) || this.table.ended) return;
+    // A Blade is asked again while the card waits for it; an owner, while the card waits for its call.
+    const waits = owner ? now?.text === card.text && now.waiting_for.length === 0 : now?.waiting_for.includes(handle);
+    if (!now || !waits || this.table.ended) return;
     this.table.resetRetries(handle);
-    const answer = this.dmTools.lastLine;
+    const answer = answered.answer;
     await this.wakePlayer(
       agent,
       "card",
@@ -976,15 +979,18 @@ export class TableLoop {
    * Engine lines wait under the DM's narration, so a roll from a move that decided the card at once
    * never shows above it. Returns whether an own move went on the card.
    */
-  private async cardWords(handle: Handle, words: string): Promise<boolean> {
+  private async cardWords(handle: Handle, words: string): Promise<{ made: boolean; answer?: string }> {
     const said = await this.table.declare(handle, words);
-    if (!said.ok) return false;
+    if (!said.ok) return { made: false };
     const card = (await this.dmWorld())?.card;
-    if (!card || this.table.ended) return false;
+    if (!card || this.table.ended) return { made: false };
+    // The engine takes an own move's words as said only when they reach every player cleanly.
+    const movable = [...words].length <= OWN_MOVE_MAX_CHARS && !/(^|[^A-Za-z0-9])(AC|DC) \d/.test(words);
     await this.table.flush();
     const head = this.table.engine.logHead;
     this.dmTools.cardWords = { actor: handle, words };
     this.dmTools.ownMoveMade = false;
+    this.dmTools.cardAnswer = undefined;
     this.table.hold = (e) => e.seq > head;
     try {
       await this.wakeDm(
@@ -993,7 +999,9 @@ export class TableLoop {
         `A player's words on the road card: ${handle} says or does: "${words}"`,
         `The card: ${card.text}`,
         `Its choices: ${card.choices.map((c) => `${c.id}: ${c.text}${c.keeps?.length ? ` (keeps ${c.keeps.join(", ")})` : ""}${c.breaks?.length ? ` (breaks ${c.breaks.join(", ")})` : ""}`).join(" | ")}`,
-        "If the words are a move, call own_move_or_answer with the check they call for, two different choices for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits. Answer the attempt only, never how it turns out.",
+        movable
+          ? "If the words are a move, call own_move_or_answer with the check they call for, two different choices for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits. Answer the attempt only, never how it turns out."
+          : "These words can't go on the card as they are said: call own_move_or_answer with your narration only, one or two sentences, and the card waits.",
       );
     } finally {
       this.table.hold = undefined;
@@ -1001,9 +1009,10 @@ export class TableLoop {
     }
     await this.table.flush();
     const made = this.dmTools.ownMoveMade;
+    const answer = this.dmTools.cardAnswer;
     // The run report counts words a card took no move from (design §1.8).
     if (!made) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
-    return made;
+    return { made, ...(answer ? { answer } : {}) };
   }
 
   /**
@@ -1044,7 +1053,7 @@ export class TableLoop {
       if (intent.kind === "text") {
         // Words on the card: the DM makes them an own move, the human's word, or answers them in
         // the scene and the card still waits for a choice (AGT-96, AGT-99).
-        if (await this.cardWords(human, intent.text)) {
+        if ((await this.cardWords(human, intent.text)).made) {
           this.table.log("intent", `${human} on the road card: own move "${intent.text}"`, human);
           return;
         }
@@ -2421,6 +2430,9 @@ export class TableLoop {
 }
 
 /** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said. */
+/** The engine's limit on an own move's words (API-56). */
+const OWN_MOVE_MAX_CHARS = 300;
+
 function cardLines(card: CardPlayer, owner = false): string[] {
   const whose = owner
     ? "the caravan's, and the caravan is yours: you make the call after the Blades' advice"
@@ -2430,7 +2442,7 @@ function cardLines(card: CardPlayer, owner = false): string[] {
   const move = card.own_move;
   return [
     `A road card waits for your word (${whose}): ${card.text}`,
-    `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === "own_move" && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
+    `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === OWN_MOVE && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
     ...(move ? [] : ["If none of these is what your character would do, say what they do with own_move, in one sentence."]),
   ];
