@@ -332,7 +332,8 @@ pub enum Command {
         /// Why this card, in one line: kept in the session log and the run report, DM only.
         reason: String,
         /// The game loop picked the first card rolled because the DM did not answer: the
-        /// pick is the engine's, not the DM's.
+        /// pick is the engine's, not the DM's. Only the first card in `world.offered` may be
+        /// picked so; any other is refused with `card_not_offered`.
         #[serde(default)]
         fallback: bool,
     },

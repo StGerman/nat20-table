@@ -250,8 +250,14 @@ impl From<SavedWorld> for WorldState {
             deck: DeckState {
                 added: memory.deck.added,
                 discard: memory.deck.discard,
+                // A gone card in the queue is a dead id: rosters saved before ENG-40 can hold one.
+                soon: memory
+                    .deck
+                    .soon
+                    .into_iter()
+                    .filter(|c| !memory.deck.gone.contains(c))
+                    .collect(),
                 gone: memory.deck.gone,
-                soon: memory.deck.soon,
                 gone_for_contract: contract.deck.gone_for_contract,
                 offered: contract.deck.offered,
                 pending: contract.deck.pending,
@@ -492,18 +498,35 @@ impl World {
     /// stands and the day's travel stay this world's. The contract count goes up by one. The
     /// clock never goes back: the contract starts at `start_hour` on the day after the saved
     /// day, plus the days the trip from where the party was takes at a normal pace (one day per
-    /// [`MILES_PER_DAY_BETWEEN`] miles by the shortest road, rounded up).
+    /// [`MILES_PER_DAY_BETWEEN`] miles by the shortest road, rounded up). A party saved on a
+    /// road starts from whichever end of it is nearer, and `from` names that end.
     pub fn carry_memory(&mut self, saved: WorldState, start_hour: u32) -> Carried {
-        let from = match &saved.at {
-            Position::At { place } => place.clone(),
-            Position::OnRoad { toward, .. } => toward.clone(),
-        };
         let start = self.place_here().unwrap_or_default().to_string();
-        let left = match &saved.at {
-            Position::OnRoad { miles_left, .. } => *miles_left,
-            Position::At { .. } => 0,
+        let via = |end: &str, left: u32| {
+            (
+                left + self.map.miles_between(end, &start).unwrap_or(0),
+                end.to_string(),
+            )
         };
-        let miles = left + self.map.miles_between(&from, &start).unwrap_or(0);
+        let (miles, from) = match &saved.at {
+            Position::At { place } => via(place, 0),
+            // On a road, the party goes on or turns back, whichever end is nearer the start
+            // (ENG-41).
+            Position::OnRoad {
+                road,
+                toward,
+                miles_left,
+            } => {
+                let on = via(toward, *miles_left);
+                match self.map.road(road).and_then(|r| {
+                    let back = r.other_end(toward)?;
+                    Some(via(back, r.miles.saturating_sub(*miles_left)))
+                }) {
+                    Some(back) if back.0 < on.0 => back,
+                    _ => on,
+                }
+            }
+        };
         let days = miles.div_ceil(MILES_PER_DAY_BETWEEN);
         let mut deck = saved.deck;
         deck.pending = None;
@@ -832,6 +855,43 @@ mod tests {
         };
         assert_eq!(again.carry_memory(at_start, 9).days, 0);
         assert_eq!(again.state.clock, Clock::at(3, 9, 0));
+    }
+
+    #[test]
+    fn a_saved_queue_drops_cards_gone_for_the_world() {
+        let mut state = world("maren").state;
+        state.deck.gone.insert("ghost".into());
+        state.deck.soon = vec!["ghost".into(), "beggar".into()];
+        let loaded = WorldState::from(SavedWorld::from(state));
+        assert_eq!(loaded.deck.soon, ["beggar"]);
+    }
+
+    #[test]
+    fn a_party_on_a_road_turns_back_when_that_end_is_nearer() {
+        // A mile out of the inn toward the ruin: back through the inn to town is 1 + 12 miles,
+        // one day; on to the ruin and back would be 19 + 20 + 12.
+        let mut done = world("maren");
+        done.state.at = Position::OnRoad {
+            road: "inn_ruin".into(),
+            toward: "ruin".into(),
+            miles_left: 19,
+        };
+        let mut next = world("maren");
+        assert_eq!(
+            next.carry_memory(done.state.clone(), 9),
+            Carried {
+                from: "inn".into(),
+                days: 1
+            }
+        );
+        // A mile short of the inn heading for it: going on is nearer, as before.
+        done.state.at = Position::OnRoad {
+            road: "inn_ruin".into(),
+            toward: "inn".into(),
+            miles_left: 1,
+        };
+        let mut next = world("maren");
+        assert_eq!(next.carry_memory(done.state, 9).from, "inn");
     }
 
     #[test]

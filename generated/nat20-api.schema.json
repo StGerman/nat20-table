@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.67"
+    "version": "1.0.0-dev.68"
   },
   "$defs": {
     "Ability": {
@@ -6430,7 +6430,7 @@
               "const": "pick_card"
             },
             "fallback": {
-              "description": "The game loop picked the first card rolled because the DM did not answer: the\npick is the engine's, not the DM's.",
+              "description": "The game loop picked the first card rolled because the DM did not answer: the\npick is the engine's, not the DM's. Only the first card in `world.offered` may be\npicked so; any other is refused with `card_not_offered`.",
               "type": "boolean",
               "default": false
             },
