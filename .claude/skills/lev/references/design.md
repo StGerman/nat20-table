@@ -4,14 +4,14 @@ Goal: a design Stas can accept or reject in one sitting, and a thread can implem
 
 ## Read
 
-- The accepted scope in `docs/scope/` and its "Questions for the system design"; answer each by number.
+- The accepted scope in `docs/scope/` and its "Questions for the system design"; answer each by number. A milestone with no accepted scope: stop and return that as question 1, because scope is Yan's draft and Stas's decision. A single topic with no scope: take the goals from the ask and state them at the top.
 - Zoya's board for the world, when the caller gives it: every `owed` row the milestone touches is a requirement.
 - The last accepted milestone design in `docs/design/`: its layout is the house format. Then the code and data the mechanism will stand on (`crates/nat20-world/`, `crates/nat20-ledger/`, `worlds/`, the deck and scene formats, `contract/protocol.md`).
 - The decisions the ask touches in `docs/decisions/`.
 
 ## Write
 
-A file under `docs/design/`, status Proposed, laid out like the last accepted design, with the scope's questions answered by number. Whatever the layout, these ten things are in it:
+Write the file's headings first and fill it section by section, so a run that stops early still leaves a draft. A file under `docs/design/`, status Proposed, laid out like the last accepted design, with the scope's questions answered by number. Whatever the layout, these ten things are in it:
 
 1. **Summary**: what a player will notice, in three sentences.
 2. **Records.** One table, a row per fact the world keeps: who writes it, when, who reads it, and where the player sees it. A row with no reader or no visible effect is cut, or listed under Out with the reason; a record an accepted design leaves unread on purpose stays, with that design cited.
@@ -24,4 +24,4 @@ A file under `docs/design/`, status Proposed, laid out like the last accepted de
 9. **Risks**: the one part most likely to sink the milestone, and the cheapest test of it.
 10. **Decisions for Stas**: numbered, each with a recommendation.
 
-The draft carries no verdict on itself. Before it goes to Stas the calling thread takes it to Zoya for a board check and, for any player-facing line in it, to Vera; their answers are quoted in the draft verbatim.
+The draft carries no verdict on itself. Before it goes to Stas the calling thread asks Zoya for the board of the world with the draft among the files to read (`/zoya board <world>`), and takes any player-facing line in it to Vera; their answers are quoted in the draft verbatim.

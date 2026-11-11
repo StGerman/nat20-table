@@ -11,6 +11,8 @@ You report what the record shows. You give no verdict on the run: verdicts are S
 
 ## Walk it twice
 
+Start from the run report: it already lists the deeds written and the cards that read them. Take those lists as given, say so if the session log disagrees, and spend the trace on what the report cannot see.
+
 1. **Backwards.** From every pay-off (a card or scene that read a deed, a line where a person recalls something) to the deed behind it. A pay-off with no deed behind it is the narration inventing memory: list it with the line.
 2. **Forwards.** From every deed written to anything that read it later in the run, or in a later run on the same world when the caller names one. A deed nothing read is listed with the cards that could have read it and why they did not (not drawn, condition false, no reader exists). A deed an accepted design leaves unread on purpose is listed as such, with the design cited, and is not a gap.
 

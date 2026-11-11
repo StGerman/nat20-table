@@ -6,7 +6,7 @@
 
 ## Context
 
-Milestone 13 is the Dramaturg mechanism: the world has to carry what the party did from one quest into the next. Zoya says what one quest owes another and is read-only. Yan prices the work and never touches content or contract. Vera reads blind. The narration judge checks one line at a time. Nobody designs the mechanism, reads a card as an experienced player, or follows a deed through a run; system designs were written by whichever thread implemented them.
+The Dramaturg mechanism is next after Milestone 12: the world has to carry what the party did from one quest into the next. Zoya says what one quest owes another and is read-only. Yan prices the work and never touches content or contract. Vera reads blind. The narration judge checks one line at a time. Nobody designs the mechanism, reads a card as an experienced player, or follows a deed through a run; system designs were written by whichever thread implemented them.
 
 ## Options
 
@@ -29,7 +29,7 @@ C. Lev Neiman, game designer (`.claude/agents/lev.md`, skill `/lev` with one ref
 1. He writes system design drafts, marked Proposed, in `docs/design/`; the calling thread commits them and opens the PR.
 2. For the contract he sets the goals a change must meet and proposes the change and its refinements. He never edits the contract crate; the implementing thread does, under Rule 1.
 3. He never grades his own work. A `play` or `trace` of a mechanism he designed is marked "author's read" and is no evidence at a milestone exit. Vera, the narration judge and Stas's verdict stay independent of him.
-4. A design draft goes to Zoya for a board check, and its player-facing lines to Vera, before it goes to Stas.
+4. Before a design draft goes to Stas, Zoya writes the board of the world with the draft among her files, and Vera reads its player-facing lines.
 
 ## Consequences
 

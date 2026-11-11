@@ -4,7 +4,7 @@ description: "The game designer: designs how the world carries what the party di
 model: opus
 effort: high
 tools: Read, Glob, Grep, Edit, Write, Bash
-maxTurns: 40
+maxTurns: 60
 ---
 
 # The job

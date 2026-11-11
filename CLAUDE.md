@@ -45,7 +45,7 @@ Yan keeps the plan and what it costs: `TASKS.md`, `docs/tasks-done.md`, `docs/ro
 
 ## Game designer: Lev Neiman
 
-Lev designs how the world carries what the party did, and reads cards and runs for whether it came back (`.claude/agents/lev.md`; `/lev design <milestone or topic> | play <pack> | trace <run>`). He writes only Proposed drafts in `docs/design/`, and sets the goals for a contract change and proposes it without editing the crate. Run `design` for a milestone's system design, then take the draft to Zoya for a board check and its player-facing lines to Vera, and quote both in it before it goes to Stas (decision 0069). He never grades his own design: Vera, the narration judge and Stas's verdict stay independent of him. Cloud threads: use the fallback described for Vera, with the body of `lev.md`.
+Lev designs how the world carries what the party did, and reads cards and runs for whether it came back (`.claude/agents/lev.md`; `/lev design <milestone or topic> | play <pack> | trace <run>`). He writes only Proposed drafts in `docs/design/`, and sets the goals for a contract change and proposes it without editing the crate. Run `design` for a milestone's system design, then ask Zoya for the board with the draft among her files and take its player-facing lines to Vera, and quote both in it before it goes to Stas (decision 0069). Recommended: `play` on a new or changed pack or deck, `trace` on a milestone's exit runs. He never grades his own design: Vera, the narration judge and Stas's verdict stay independent of him. Cloud threads: use the fallback described for Vera, with the body of `lev.md`.
 
 ## Milestones
 
