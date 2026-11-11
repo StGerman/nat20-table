@@ -142,10 +142,10 @@ export interface CardSeen {
 /**
  * A road card as the human's numbered choices (AGT-80): one per choice, an own move (API-56) in the
  * words its player said, with its skill. `preset` is the choice most of the others gave (the first
- * of them on a tie), or the first choice: the loop's fallbacks go with it. `marked` is the line
- * Enter takes, set only when the others lead with a choice (AGT-101); that line ends in the mark.
+ * of them on a tie), or the first choice: the loop's fallbacks go with it. The human's card takes
+ * no Enter (AGT-101, Stas 2026-11-11): the others' choice is named, never preset.
  */
-export function cardChoices(card: CardSeen, words: SeatWords = SEAT_WORDS.en, me?: Handle): { choices: Choice[]; preset: number; marked?: number } {
+export function cardChoices(card: CardSeen, words: SeatWords = SEAT_WORDS.en, me?: Handle): { choices: Choice[]; preset: number } {
   const count = new Map<string, number>();
   for (const s of card.said) count.set(s.choice, (count.get(s.choice) ?? 0) + 1);
   let top: string | undefined;
@@ -153,9 +153,9 @@ export function cardChoices(card: CardSeen, words: SeatWords = SEAT_WORDS.en, me
   const move = card.own_move ?? undefined;
   const text = (c: { id: string; text: string }) =>
     c.id === OWN_MOVE && move ? words.ownMoveChoice(move.actor === me, capitalized(move.actor), c.text, move.skill) : c.text;
-  const choices = card.choices.map((c, i) => ({ number: i + 1, label: c.id === top ? `${text(c)} ${words.othersChoice} ${words.marked}` : text(c), about: { id: c.id } }));
+  const choices = card.choices.map((c, i) => ({ number: i + 1, label: c.id === top ? `${text(c)} ${words.othersChoice}` : text(c), about: { id: c.id } }));
   const at = card.choices.findIndex((c) => c.id === top) + 1;
-  return { choices, preset: at || 1, ...(at > 0 ? { marked: at } : {}) };
+  return { choices, preset: at || 1 };
 }
 
 /** The choice id an own move takes on a card (API-56). */

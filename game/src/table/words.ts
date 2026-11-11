@@ -1,6 +1,6 @@
 // The seat's own words, in the run's language (Milestone 12, design §1.6, §3): the lines the table
 // itself writes for the human's seat, never the DM's or the engine's. AGT-99 starts it with the own
-// move, the card's prompt and the marked choice; AGT-98 moves the rest of the seat's strings here.
+// move and the card's prompt; AGT-98 moves the rest of the seat's strings here.
 import type { Skill } from "@nat20-table/engine-client";
 import type { Language } from "../agents/language.ts";
 import { titled } from "../view.ts";
@@ -10,16 +10,16 @@ export interface SeatWords {
   ownMoveLine: string;
   /** The card list's heading. */
   choicesTitle: string;
-  /** The card's prompt line; `marked` adds that Enter takes the marked choice. */
-  cardPrompt(marked: boolean): string;
-  /** The end of the line Enter takes. */
+  /** The card's prompt line. A card takes no Enter (AGT-101). */
+  cardPrompt: string;
+  /** The end of the line Enter takes, on the level-up and road lists. */
   marked: string;
   /** After the choice most of the others gave. */
   othersChoice: string;
   /** An own move on the card, as a numbered choice: in the words the player said, with the skill it takes. */
   ownMoveChoice(mine: boolean, name: string, words: string, skill: Skill): string;
   /** After words a card took no move from: the card still waits. */
-  stillWaits(count: number, marked: boolean): string;
+  stillWaits(count: number): string;
 }
 
 const SKILLS_RU: Record<Skill, string> = {
@@ -47,19 +47,19 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
   en: {
     ownMoveLine: "Something else: say it in your own words.",
     choicesTitle: "Choices",
-    cardPrompt: (marked) => `A choice's number, or your own words${marked ? ", Enter for the marked one" : ""}.`,
+    cardPrompt: "A choice's number, or your own words.",
     marked: "(Enter)",
     othersChoice: "(the others' choice)",
     ownMoveChoice: (mine, name, words, skill) => `${mine ? "Your move" : `${name}'s move`}: "${words}" (${titled(skill)})`,
-    stillWaits: (count, marked) => `The road still waits for your word: a choice, 1 to ${count}${marked ? ", or Enter for the marked one" : ""}, or your own words.`,
+    stillWaits: (count) => `The road still waits for your word: a choice, 1 to ${count}, or your own words.`,
   },
   ru: {
     ownMoveLine: "Или что-то своё: скажите своими словами.",
     choicesTitle: "Выборы",
-    cardPrompt: (marked) => `Номер выбора или своими словами${marked ? ", Enter для отмеченного" : ""}.`,
+    cardPrompt: "Номер выбора или своими словами.",
     marked: "(Enter)",
     othersChoice: "(выбор остальных)",
     ownMoveChoice: (mine, name, words, skill) => `${mine ? "Ваш ход" : `${name} предлагает`}: «${words}» (${SKILLS_RU[skill]})`,
-    stillWaits: (count, marked) => `Дорога всё ещё ждёт вашего слова: выбор от 1 до ${count}${marked ? ", Enter для отмеченного" : ""} или своими словами.`,
+    stillWaits: (count) => `Дорога всё ещё ждёт вашего слова: выбор от 1 до ${count} или своими словами.`,
   },
 };

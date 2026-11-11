@@ -10,7 +10,7 @@ import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
 import { cardChoices, roadChoices } from "../src/table/choices.ts";
 import { SEAT_WORDS } from "../src/table/words.ts";
-import { TableLoop } from "../src/table/loop.ts";
+import { TableLoop, cutAtWord } from "../src/table/loop.ts";
 import { DmTools } from "../src/table/tools.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
@@ -67,7 +67,7 @@ test("the loop starts the campaign, asks a road card of the human first and then
     assert.ok(maren.briefings.some((b) => b.wake === "card" && /^Choices: /m.test(b.briefing) && /^Said so far: bren /m.test(b.briefing)), "the AI player hears the human's word");
     assert.ok(dm.briefings.some((b) => b.wake === "road" && b.briefing.includes("A road card was settled")));
     const word = seat.shown.find((e) => e.kind === "options" && e.title === "Choices");
-    // The human speaks first: nothing is marked, and Enter takes nothing (AGT-101).
+    // A card takes no Enter (AGT-101).
     assert.ok(word?.kind === "options" && word.preset === undefined, "nothing marked");
     assert.equal(word.lines.at(-1), "Something else: say it in your own words.", "the own-move line comes last, unnumbered");
     assert.ok(seat.prompts.some((p) => p.kind === "card" && p.line === "A choice's number, or your own words."), "the prompt names no Enter");
@@ -173,25 +173,33 @@ test("an AI player's own_move words wake the DM's card_words, and the move lands
   }
 });
 
-test("a road card's choices for the human: Enter takes what most of the others said", () => {
+test("a road card's choices for the human: the others' choice is named, and Enter takes none", () => {
   const card = { choices: [{ id: "clear", text: "Clear the road" }, { id: "around", text: "Go around" }], said: [{ actor: "maren", choice: "around" }] };
-  const { choices, preset, marked } = cardChoices(card);
-  assert.deepEqual(choices.map((c) => c.label), ["Clear the road", "Go around (the others' choice) (Enter)"]);
+  const { choices, preset } = cardChoices(card);
+  // A card takes no Enter (AGT-101, Stas 2026-11-11); `preset` is only where the fallbacks go.
+  assert.deepEqual(choices.map((c) => c.label), ["Clear the road", "Go around (the others' choice)"]);
   assert.equal(preset, 2);
-  assert.equal(marked, 2);
-  // Nobody spoke: the fallbacks still take the first choice, but nothing is marked for Enter (AGT-101).
+  // Nobody spoke: the fallbacks take the first choice.
   assert.equal(cardChoices({ ...card, said: [] }).preset, 1);
-  assert.equal(cardChoices({ ...card, said: [] }).marked, undefined);
   // An own move shows in the words its player said, with its skill, and counts like any choice.
   const moved = {
     choices: [...card.choices, { id: "own_move", text: "Ask him who gave the right." }],
     said: [{ actor: "maren", choice: "own_move" }],
     own_move: { actor: "maren", skill: "persuasion" as const },
   };
-  assert.deepEqual(cardChoices(moved, SEAT_WORDS.en, "bren").choices.map((c) => c.label).at(-1), `Maren's move: "Ask him who gave the right." (Persuasion) (the others' choice) (Enter)`);
+  assert.deepEqual(cardChoices(moved, SEAT_WORDS.en, "bren").choices.map((c) => c.label).at(-1), `Maren's move: "Ask him who gave the right." (Persuasion) (the others' choice)`);
   assert.equal(cardChoices(moved, SEAT_WORDS.en, "maren").choices.at(-1)?.label.startsWith(`Your move: "Ask`), true);
-  assert.equal(cardChoices(moved, SEAT_WORDS.ru, "bren").choices.at(-1)?.label, "Maren предлагает: «Ask him who gave the right.» (Убеждение) (выбор остальных) (Enter)");
+  assert.equal(cardChoices(moved, SEAT_WORDS.ru, "bren").choices.at(-1)?.label, "Maren предлагает: «Ask him who gave the right.» (Убеждение) (выбор остальных)");
   assert.equal(cardChoices(moved).preset, 3);
+});
+
+test("own-move words are cut at a word to the engine's limit; short words stay whole", () => {
+  assert.equal(cutAtWord("  Ask the farmer.  ", 300), "Ask the farmer.");
+  const long = "Ask the farmer, and keep asking. ".repeat(10);
+  const cut = cutAtWord(long, 300);
+  assert.equal(cut, long.slice(0, 300));
+  assert.equal(cutAtWord("Ask the farmer kindly", 17), "Ask the farmer");
+  assert.equal(cutAtWord("x".repeat(310), 300), "x".repeat(300));
 });
 
 test("the road's lines join the human's options only when the human may drive and no card waits", () => {

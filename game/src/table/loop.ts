@@ -985,10 +985,10 @@ export class TableLoop {
     const card = (await this.dmWorld())?.card;
     if (!card || this.table.ended) return { made: false };
     // The engine takes an own move's words as said only when they reach every player cleanly.
-    const movable = [...words].length <= OWN_MOVE_MAX_CHARS && !/(^|[^A-Za-z0-9])(AC|DC) \d/.test(words);
+    const movable = !/(^|[^A-Za-z0-9])(AC|DC) \d/.test(words);
     await this.table.flush();
     const head = this.table.engine.logHead;
-    this.dmTools.cardWords = { actor: handle, words };
+    this.dmTools.cardWords = { actor: handle, words: cutAtWord(words, OWN_MOVE_MAX_CHARS) };
     this.dmTools.ownMoveMade = false;
     this.dmTools.cardAnswer = undefined;
     this.table.hold = (e) => e.seq > head;
@@ -1016,8 +1016,8 @@ export class TableLoop {
   }
 
   /**
-   * The human's word on a road card (design: the human seat): a number, Enter for the marked choice
-   * when the others lead with one (AGT-101), or their own words (AGT-99), which the DM may make an
+   * The human's word on a road card (design: the human seat): a number (no Enter: AGT-101, Stas
+   * 2026-11-11), or their own words (AGT-99), which the DM may make an
    * own move on the card. As a Blade the human speaks first (AGT-87); as the caravan's owner they
    * call last.
    */
@@ -1028,16 +1028,16 @@ export class TableLoop {
     let showCard = true;
     for (;;) {
       if (this.table.ended) return;
-      const { choices, marked } = cardChoices(card, words, human);
+      const { choices } = cardChoices(card, words, human);
       if (showCard) this.table.show({ kind: "info", title: "On the road", text: [card.text, owner ? "The caravan is yours: you make the call, with the Blades' advice." : card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
       showCard = false;
-      this.table.show({ kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(card.own_move ? [] : [words.ownMoveLine])], choices, ...(marked ? { preset: marked } : {}) });
-      const intent = await this.ask({ kind: "card", line: words.cardPrompt(marked !== undefined) });
+      this.table.show({ kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(card.own_move ? [] : [words.ownMoveLine])], choices });
+      const intent = await this.ask({ kind: "card", line: words.cardPrompt });
       if (!intent) return;
       if (intent.kind === "option") {
         const picked = choices.find((c) => c.number === intent.number);
         if (!picked) {
-          this.table.show({ kind: "info", title: "No such number", text: words.stillWaits(choices.length, marked !== undefined) });
+          this.table.show({ kind: "info", title: "No such number", text: words.stillWaits(choices.length) });
           continue;
         }
         const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
@@ -1058,10 +1058,10 @@ export class TableLoop {
           return;
         }
         card = (await this.dmWorld())?.card ?? card;
-        this.table.show({ kind: "info", title: "Said at the table", text: words.stillWaits(choices.length, marked !== undefined) });
+        this.table.show({ kind: "info", title: "Said at the table", text: words.stillWaits(choices.length) });
         continue;
       }
-      this.table.show({ kind: "info", title: "On the road", text: words.stillWaits(choices.length, marked !== undefined) });
+      this.table.show({ kind: "info", title: "On the road", text: words.stillWaits(choices.length) });
     }
   }
 
@@ -2429,10 +2429,19 @@ export class TableLoop {
   }
 }
 
-/** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said. */
 /** The engine's limit on an own move's words (API-56). */
 const OWN_MOVE_MAX_CHARS = 300;
 
+/** Words cut at a word to `max` characters (design §1.1): the transcript keeps them whole. */
+export function cutAtWord(words: string, max: number): string {
+  const chars = [...words.trim()];
+  if (chars.length <= max) return chars.join("");
+  const cut = chars.slice(0, max + 1).join("");
+  const at = cut.lastIndexOf(" ");
+  return (at > 0 ? cut.slice(0, at) : chars.slice(0, max).join("")).trimEnd();
+}
+
+/** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said. */
 function cardLines(card: CardPlayer, owner = false): string[] {
   const whose = owner
     ? "the caravan's, and the caravan is yours: you make the call after the Blades' advice"
