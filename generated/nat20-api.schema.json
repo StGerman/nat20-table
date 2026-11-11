@@ -5640,7 +5640,7 @@
           "const": "no_card"
         },
         {
-          "description": "`pick_card` when no cards are offered, or with a card that is not one of them (API-53).",
+          "description": "`pick_card` when no cards are offered, or with a card that is not one of them (API-53),\nor a fallback pick of any card but the first offered (ENG-42).",
           "type": "string",
           "const": "card_not_offered"
         },

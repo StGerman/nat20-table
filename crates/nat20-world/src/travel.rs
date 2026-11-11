@@ -518,10 +518,12 @@ impl World {
                 miles_left,
             } => {
                 let on = via(toward, *miles_left);
+                // A position past the road's length (a map changed since the save) never turns
+                // back for free.
                 let back = self
                     .map
                     .road(road)
-                    .and_then(|r| via(r.other_end(toward)?, r.miles.saturating_sub(*miles_left)));
+                    .and_then(|r| via(r.other_end(toward)?, r.miles.checked_sub(*miles_left)?));
                 match (on, back) {
                     (Some(on), Some(back)) if back.0 < on.0 => back,
                     (Some(on), _) => on,
