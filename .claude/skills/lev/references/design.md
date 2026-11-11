@@ -13,7 +13,7 @@ Goal: a design Stas can accept or reject in one sitting, and a thread can implem
 
 Write the file's headings first and fill it section by section, so a run that stops early still leaves a draft. A file under `docs/design/`, status Proposed, laid out like the last accepted design, with the scope's questions answered by number. Whatever the layout, these ten things are in it:
 
-1. **Summary**: what a player will notice, in three sentences.
+1. **Summary**: what a player will notice, in three sentences, and the moment they would retell the next day.
 2. **Records.** One table, a row per fact the world keeps: who writes it, when, who reads it, and where the player sees it. A row with no reader or no visible effect is cut, or listed under Out with the reason; a record an accepted design leaves unread on purpose stays, with that design cited.
 3. **Rules**, each a statement a test could check ("a card whose `if` names a deed is never drawn before that deed exists").
 4. **Carrier per owed row**: for each of Zoya's rows, the smallest carrier that pays it (existing data, a changed line, a card variant, a new record), and what was tried first and why it failed.

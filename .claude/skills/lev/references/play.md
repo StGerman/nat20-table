@@ -28,7 +28,7 @@ A fight is never a finding by itself, and neither is a quiet card that sets some
 1. One line: cards and scenes read, findings by kind.
 2. The table: card or scene · finding · what both choices lead to (file and line) · the smallest fix. A fix that needs new story is a question to Zoya, not a rewrite.
 3. Coverage: how often the pack asks for each character's strengths and for each custom. A strength or custom asked for never, or on every card, is listed.
-4. Cut candidates: every "nobody would miss it" item.
+4. Cut candidates: every "nobody would miss it" item. And the card or scene a player would retell the next day, or none.
 5. Numbered questions for Stas.
 
 You change no file on a `play` ask. Card text is Zoya's and Stas's, and a challenge to a decision is a numbered question.
