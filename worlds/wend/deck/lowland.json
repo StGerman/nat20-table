@@ -123,6 +123,7 @@
                 },
                 {
                     "id": "build_fire",
+                    "asked": true,
                     "text": "Build the fire high and wait for dawn.",
                     "effects": [
                         {
@@ -145,6 +146,7 @@
                 },
                 {
                     "id": "build_fire_with_dog",
+                    "asked": true,
                     "text": "Build the fire high and wait for dawn.",
                     "if": "fed_gwyns_dog",
                     "effects": [
@@ -183,10 +185,11 @@
             "when": "night",
             "target": "caravan",
             "text": "Two drovers ask to share the fire. They are friendly, and they look over the wagon a little too long.",
-            "owner_pick": "welcome",
+            "owner_pick": "send_away",
             "choices": [
                 {
                     "id": "welcome",
+                    "asked": true,
                     "text": "Make room for them at the fire.",
                     "effects": [
                         {
@@ -204,6 +207,7 @@
                 },
                 {
                     "id": "welcome_with_dog",
+                    "asked": true,
                     "text": "Make room for them at the fire.",
                     "if": "fed_gwyns_dog",
                     "effects": [
@@ -336,12 +340,12 @@
             "once": true,
             "owner_pick": "tracks",
             "text": "Odda counts the sacks twice and her face goes still: one is gone. A passing carter says what the valley always says, that there were roadfolk camped up the road.",
-            "note": "The drovers took it, for Rufus. The valley's prejudice is shown and never confirmed: a search of the roadfolk cart finds nothing, and no card makes the roadfolk the culprit. Maren objects to the search out loud. Odda won't search a family's cart on a carter's word. Let it go is Odda's line: \"Bread doesn't argue.\"",
+            "note": "The drovers took it, for Rufus. The valley's prejudice is shown and never confirmed: a search of the roadfolk cart finds nothing, and no card makes the roadfolk the culprit. Maren objects to the search out loud. Odda won't search a family's cart on a carter's word. Let it go is Odda's line: \"Bread doesn't argue.\" Bel tracking clears her own people out loud.",
             "choices": [
                 {
                     "id": "tracks",
                     "text": "Look for tracks.",
-                    "unless": "joined_the_roadfolk_fire",
+                    "asked": true,
                     "effects": [
                         {
                             "do": "check",
@@ -381,6 +385,7 @@
                 {
                     "id": "let_go",
                     "text": "Let it go.",
+                    "unless": "joined_the_roadfolk_fire",
                     "effects": [
                         {"do": "cargo", "good": "wheat", "change": -50},
                         {"do": "remember", "deed": "let_the_sack_go"}

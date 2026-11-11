@@ -279,6 +279,10 @@ pub struct Choice {
     /// The customs taking it breaks, by id from the world's `customs.json` (ENG-39)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub breaks: Vec<String>,
+    /// The card's own question or plea (MAP-18): a card with one keeps it offered in every
+    /// case its conditions allow; a variant may add to it, never replace it
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub asked: bool,
 }
 
 /// Who an effect touches.
@@ -1526,17 +1530,37 @@ fn check_cases(card: &Card) -> Result<(), DeckError> {
                 ));
             }
         }
-        if !(2..=3).contains(&offered) {
-            let case: Vec<&str> = free
-                .iter()
+        let case = || -> String {
+            free.iter()
                 .enumerate()
                 .filter(|(i, _)| mask & (1 << i) != 0)
                 .map(|(_, d)| *d)
-                .collect();
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        if !(2..=3).contains(&offered) {
             return bad(format!(
                 "card {} offers {offered} choices when the deeds remembered are [{}]; it needs 2 or 3",
                 card.id,
-                case.join(", ")
+                case()
+            ));
+        }
+        // The card's own question or plea stays offered (MAP-18).
+        if card.choices.iter().any(|c| c.asked) && !choices.iter().any(|c| c.asked) {
+            return bad(format!(
+                "card {} offers none of its asked choices when the deeds remembered are [{}]",
+                card.id,
+                case()
+            ));
+        }
+        // The card's own pick is a choice it offers, whatever the deeds (MAP-18).
+        if let Some(pick) = &card.owner_pick
+            && !choices.iter().any(|c| c.id == *pick)
+        {
+            return bad(format!(
+                "card {}'s owner_pick {pick} is not offered when the deeds remembered are [{}]",
+                card.id,
+                case()
             ));
         }
     }
@@ -2372,6 +2396,35 @@ mod tests {
                 .0
                 .contains("both needs and refuses")
         );
+
+        // The card's own question stays offered in every case (MAP-18): `pay_again` goes
+        // when the party is angry, so marking it alone fails; `shout` asks it then.
+        let angry = |d: &mut Deck| {
+            d.cards[0].choices[1].effects.push(Effect::Remember {
+                deed: "angry".into(),
+            })
+        };
+        let mut d = deed_deck();
+        angry(&mut d);
+        d.cards[1].choices[0].asked = true;
+        assert!(d.validate(&map).unwrap_err().0.contains(
+            "card bridge_again offers none of its asked choices when the deeds remembered are ["
+        ));
+        d.cards[1].choices[1].asked = true;
+        d.validate(&map).unwrap();
+
+        // The owner's pick is offered in every case too (MAP-18).
+        let mut d = deed_deck();
+        angry(&mut d);
+        d.cards[1].owner_pick = Some("pay_again".into());
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("card bridge_again's owner_pick pay_again is not offered when the deeds remembered are [")
+        );
+        d.cards[1].owner_pick = Some("say_no".into());
+        d.validate(&map).unwrap();
     }
 
     #[test]

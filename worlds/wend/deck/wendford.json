@@ -77,8 +77,8 @@
                 },
                 {
                     "id": "tell",
-                    "text": "Tell it in your own words.",
-                    "unless": "peddler_testified",
+                    "text": "Tell him how the fight at the bridge went.",
+                    "asked": true,
                     "effects": [
                         {
                             "do": "check",
@@ -98,6 +98,7 @@
                 {
                     "id": "ask",
                     "text": "Ask him who the men were.",
+                    "unless": "peddler_testified",
                     "effects": [
                         {"do": "remember", "deed": "asked_osric_who_they_were"}
                     ]

@@ -344,7 +344,7 @@
             "id": "barefoot_pilgrim",
             "zone": "slopes",
             "target": "caravan",
-            "owner_pick": "seat",
+            "owner_pick": "walk",
             "text": "A woman in the grey of Embra's pilgrims walks barefoot down the track ahead, a round loaf wrapped under her arm. She bows to the wagon and says nothing at all.",
             "note": "Sister Agna, under a vow of silence until she reaches the sea at Saltmouth. Embra's pilgrims walk to the sea this year because the hill shrines have gone cold; she does not explain, and nobody on screen says why. Odda keeps Embra's shrines and wants her on the wagon. She will not ride a wagon that carries grave coins. Joke: she is the only person on this road who asks the Blades for nothing.",
             "choices": [

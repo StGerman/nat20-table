@@ -32,6 +32,7 @@
                 },
                 {
                     "id": "to_bel",
+                    "asked": true,
                     "text": "Take him to find his mother.",
                     "unless": "promised_bel",
                     "effects": [
@@ -40,6 +41,7 @@
                 },
                 {
                     "id": "keep_promise",
+                    "asked": true,
                     "text": "Take him back to his mother, as you promised.",
                     "if": "promised_bel",
                     "keeps": [
@@ -149,7 +151,7 @@
                 {
                     "id": "warden",
                     "text": "Fetch the warden.",
-                    "unless": "knew_who_set_the_toll",
+                    "asked": true,
                     "effects": [
                         {
                             "do": "check",
@@ -178,6 +180,7 @@
                 {
                     "id": "face",
                     "text": "Face the dealer down.",
+                    "unless": "knew_who_set_the_toll",
                     "keeps": [
                         "mercy_to_yielded"
                     ],
