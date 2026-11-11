@@ -1,6 +1,6 @@
 # 0068. A player's own move on a road card is a choice the table votes on
 
-- **Status:** Proposed (accepted when Stas merges the Milestone 12 system design)
+- **Status:** Accepted (table #339, 2026-11-11)
 - **Date:** 2026-11-09
 - **Decided by:** Stas chose the own move, variant B of the project note `engine/m11/own-move-on-a-card.md` (2026-11-08 20:39Z: «Да делаем обязательно own move»), and put it in Milestone 12 (scope `docs/scope/not-a-passenger-scope.md`, table #336). This record holds the shape the system design proposes, for him to accept with it.
 

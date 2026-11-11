@@ -1,12 +1,12 @@
 # Roadmap
 
-As of 2026-11-08, main 3472982. Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api` and nat20-runs `master` 2e65a5d.
+As of 2026-11-11, main ac82f75. Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api` and nat20-runs `master` 2e65a5d.
 
 ## Order
 
 | # | Milestone | Gate (one line) | Status |
 |---|---|---|---|
-| 12 | Not a passenger: phase 1 MAP-15, MAP-17; phase 2 Own move, the readable table (AGT-97, AGT-98, AGT-94 with AGT-76, AGT-13 partial, MAP-14), ENG-21, ENG-40..42, a Plain or Fireside voice flag and one language at the seat (0067) (Stas 2026-11-08) | Proposed: Vera (fallback) asks about no engine line in a DM narration sample; one own move decides a card in each run; the Russian seat shows no English line; Stas plays only after the all-AI half on the same build has passed (0065); the voice comparison reported, not gated | next; scope PR being written; phase 1 rows can start now |
+| 12 | Not a passenger: phase 1 MAP-15, MAP-17; phase 2 Own move, the readable table (AGT-97, AGT-98, AGT-94 with AGT-76, AGT-13 partial, MAP-14), ENG-21, ENG-40..42, a Plain or Fireside voice flag and one language at the seat (0067) (Stas 2026-11-08) | Vera (fallback) asks about no engine line in a DM narration sample; one own move decides a card in each run; the Russian seat shows no English line; Stas plays only after the all-AI half on the same build has passed (0065); the voice comparison reported, not gated | open: scope accepted (table #336); phase 1 done (table #338); design accepted (table #339); rows in table #341 |
 | — | Dramaturg mechanism: the engine carries the story from one quest to the next. Its other half, the role, is done: Zoya, table #328 | no spec yet; input: the dramaturg design of 2026-11-07, carriers A (a scene's `remember`) and B (`if`/`unless` with a `problem` block), quests as `kind: errand`, fronts and clocks | after 12 (Stas 2026-11-07 19:34Z, "the dramaturg whole"; 0066 in table #336) |
 | — | Arachas plus glue | no spec yet | after the Dramaturg mechanism (same) |
 | — | The Silent Mill plus glue | no spec yet | after Arachas (same) |
@@ -32,8 +32,7 @@ Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08).
 
 ## Waiting on Stas
 
-- table #336: the M12 scope with your answers of 22:24Z, decisions 0066 (M11 closed; the order after it) and 0067 (one language at the seat), and 0061, 0062, 0064 marked accepted. It stays open until the system design and rows join it.
-- This PR: the roadmap itself, with the M11 baseline and five amendments.
+- table #341: the M12 rows from scope §7, with decision 0068 (own move) marked accepted.
 - nat20-runs #3: your flag answers for the Mill run 20-38-39, open since 2026-11-03. Merge or close.
 - UPS-1 (P0, open since 2026-10-19): the fork still allows squash merge (repos API, 2026-11-08; rebase is off). One setting.
 

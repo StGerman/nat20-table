@@ -1,6 +1,6 @@
 # Milestone 12, Not a passenger («Не пассажир»): system design
 
-Status: Proposed, 2026-11-08, for Stas. Written for phase 2 of the scope, accepted in table #336 (`docs/scope/not-a-passenger-scope.md` §5); phase 1 (MAP-15, MAP-17) runs on its own rows and is not designed here. It answers the 13 questions of the scope's §6. The rows of §7 go into `TASKS.md` in this PR only after Stas accepts this design (scope §9, answer 4; the scope merged alone, so the design and the rows share this PR). Decision 0068 records the own move's shape, in this PR.
+Status: Accepted (table #339, 2026-11-11). Written for phase 2 of the scope, accepted in table #336 (`docs/scope/not-a-passenger-scope.md` §5); phase 1 (MAP-15, MAP-17) ran on its own rows (table #338) and is not designed here. It answers the 13 questions of the scope's §6. Stas merged the design before its rows joined it, so the §7 rows went into `TASKS.md` in table #341, with the two planning amendments marked below (§4, §8, §9). Decision 0068 records the own move's shape.
 
 ## Summary
 
@@ -216,7 +216,7 @@ MAP-18 also:
 | `Blades` | translate | «наёмники» |
 | English card and choice text | translate | the pack's `text_ru` (below) |
 
-**Card text per language.** Card and choice gain `text_ru` beside `text`, as `map.json` places carry `name_ru`. The world crate accepts the field and never projects it: it is not on the wire. The loop has the card id from the DM view, reads the deck file, and the seat shows `text_ru` in a Russian run. The pack validator (`game/src/pack/check.ts`, not the world crate) requires `text_ru` on every card and choice of every deck a pack plays: the Silent Mill has none, and both road packs play in Russian. The server's test world (`crates/nat20-api-server/data/worlds/test_vale`) is not a pack and stays English, so the fixtures are untouched. This is MAP-19.
+**Card text per language.** Card and choice gain `text_ru` beside `text`, as `map.json` places carry `name_ru`. The world crate accepts the field and never projects it: it is not on the wire. The loop has the card id from the DM view, reads the deck file, and the seat shows `text_ru` in a Russian run; that read is AGT-98's (amended with the rows: the planning check on table #339, item 11), so MAP-19 carries the field, the validator rule and the Russian text, and runs beside AGT-98. The pack validator (`game/src/pack/check.ts`, not the world crate) requires `text_ru` on every card and choice of every deck a pack plays: the Silent Mill has none, and both road packs play in Russian. The server's test world (`crates/nat20-api-server/data/worlds/test_vale`) is not a pack and stays English, so the fixtures are untouched. The field and the text are MAP-19.
 
 **Engine and table words outside events.** More sources reach the seat. AGT-98 renders each in Russian; the list below is what the code shows today, and the language scan (below) finds anything it missed:
 - option names and summaries in `/options` and the turn lists (`buildChoices` in `choices.ts`, from the engine's `option.name` and `summary`): a table-side `game/src/table/ru/options.json` keyed by option id, with a test that every option the pregens and the road packs can offer has an entry;
@@ -268,7 +268,7 @@ AGT-76 is done when the full `check:ts` is green on Stas's Mac. Same PR as AGT-9
   - `m12-language`: the §4 scan, run 2 only.
   - `m12-readable`: manual. The Vera quote goes in `verdict.json` as text and its verdict is Stas's.
 - **The report adds:**
-  - every own move (words, skill, DC, the choices named, the roll, the choice that ran);
+  - every own move put on a card, won or lost (words, skill, DC, the choices named, each seat's vote, the roll, the choice that ran), so run 1 shows the odds for run 2 before Stas sits down (amended with the rows: the planning check on table #339, item 12);
   - the words on a card that got no own move;
   - which MAP-15 and MAP-17 lines fired;
   - p95 against pair 3;
@@ -288,8 +288,8 @@ The scope's §7 rows, with three changes for Stas's review load:
 | 2 | AGT-99 with AGT-101: own move at the table (DM tool and rule, the human and AI players, the line); the marked choice | M + XS | 1 |
 | 3 | MAP-18: `asked` choices, the validator rule, the five cards, Zoya | S | - |
 | 4 | AGT-100 with AGT-97: card after its narration; wakes end on their narration | S | 2 (the `card_words` wake) |
-| 5 | AGT-98: one language at the seat (`seat-lines.ts`, the rest of `words.ts`, option names, refusals, `/sheet`, the per-line table) | L | 2 |
-| 6 | MAP-19: `text_ru` on every card and choice; goods `name_ru` | M | 3, 5, 12 (the card text it translates) |
+| 5 | AGT-98: one language at the seat (`seat-lines.ts`, the rest of `words.ts`, option names, refusals, `/sheet`, the per-line table, the seat's read of `text_ru`) | L | 2 |
+| 6 | MAP-19: `text_ru` on every card and choice; goods `name_ru` | M | 3, 12 (the card text it translates); the seat's read of it is in 5 |
 | 7 | AGT-102: voice flag | S | - |
 | 8 | ENG-40, ENG-41, ENG-42 | XS each | - |
 | 9 (core) | ENG-21: core fix | S | - |

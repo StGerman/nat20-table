@@ -47,8 +47,8 @@ Each run passes:
 1. The Milestone 11 rows that still apply: §8.3 rows 1 to 3; row 4's narration judge half, no story-space flag that Stas confirms (its Vera half becomes item 3); in run 2 also row 5.
 2. **Own move:** in run 2, at least one card decided by Stas's own move: the roll cited, the card decided by the choice named for that result, the own-move deed in the world's deeds. In run 1 too, by an AI player (§9 answer 1).
 3. **Readable:** the Vera fallback reads the scene opening and one card (the own-move card where there is one) with its narration, as a player's seat shows them (narration, engine lines, the card and its prompt line), and asks about no engine line. In run 2 she also reads Stas's `/options` and `/sheet` output (AGT-13). Her answer is quoted verbatim.
-5. **One language:** in run 2 (Russian), no line at the seat is English except ids every player is shown and roll ids (0067); the leak and language scans report each English line.
 4. **In order:** no card reaches the seat before the narration that frames it, except after a logged DM fallback; no wake is logged as timed out after its narrate call returned (AGT-97).
+5. **One language:** in run 2 (Russian), no line at the seat is English except ids every player is shown and roll ids (0067); the leak and language scans report each English line.
 
 Checked by tests, CI and Zoya's board check, not by the runs: MAP-14, MAP-15, MAP-17, ENG-21, ENG-40 to ENG-42, AGT-94, AGT-76 (a full `check:ts` green on Stas's Mac), the marked choice, the validator rule (In 2).
 Reported, not gated: p95 against pair 3; own moves that found no fitting choice; which MAP-15 and MAP-17 lines fired; the voice comparison (§9 answer 3: one Fireside `play:unattended` of *Fair in Wend* on the exit build and run 1's seed, on its own roster; the Vera fallback and Zoya read the same opening and first card in both; Stas reads the two samples).
