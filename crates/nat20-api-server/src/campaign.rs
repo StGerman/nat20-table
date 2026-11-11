@@ -155,6 +155,23 @@ impl Campaign {
                 }
                 // A contract under way is the saved party's: another party can't take it up.
                 let mut state = state;
+                // An own move on the card was checked when it arrived; a roster is read again.
+                if let Some(mv) = state
+                    .deck
+                    .pending
+                    .as_ref()
+                    .and_then(|p| p.own_move.as_ref())
+                    && !parse_check(&mv.ability, &mv.skill)
+                        .is_some_and(|(a, s)| crate::adapter::sheet::skill_fits(a, s))
+                {
+                    return Err(error(
+                        ErrorCode::BadRoster,
+                        format!(
+                            "The roster's own move is not a check: {} / {}.",
+                            mv.ability, mv.skill
+                        ),
+                    ));
+                }
                 if state.pack.is_none() {
                     state.pack = file.id.clone();
                 }
