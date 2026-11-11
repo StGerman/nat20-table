@@ -81,7 +81,7 @@ Checked by CI: a seeded fixture where the Wendford scene reads a Mill roster's d
 | Run load, USD | Mill all AI about 15.5 (the last all-AI Mill PASS; re-measure); Stas's *Fair in Wend* half about 7.9 (an estimate: pair 3's all-AI Fair run; no human Fair run measured since M9): 23.4 | 20.9 | 35.45 |
 | Stas at the table, min | about 26 (M9's human *Fair in Wend*, 0060) | 27 | 65.6 |
 
-Target (0065, half the baseline): 17.73 USD, 33 min, 1 pair, 13.5 PRs, 1.06 days. Planned days: 4 to 6 of thread work, over the 1.06 target; the code also waits for M12's exit pair. Planned: 23.4 USD, 5.7 over (a Mill all-AI run costs two road runs); 27 min, plus starting run 1 and about 10 min of quotes; 1 pair; 8 PRs, 0.30 of the baseline. A failed run 1 costs a day and 15.5 USD and none of Stas's table time; a failed run 2 costs about 2 hours of Stas, a day and 23.4 USD.
+Target (0065, half the baseline): 17.73 USD, 33 min, 1 pair, 13.5 PRs, 1.06 days. Planned days: 4 to 6 of thread work, over the 1.06 target; the code also waits for M12's exit pair. Planned: 23.4 USD, 5.7 over (a Mill all-AI run costs two road runs); about 26 min, plus starting run 1 and about 10 min of quotes; 1 pair; 8 PRs, 0.30 of the baseline. A failed run 1 costs a day and 15.5 USD and none of Stas's table time; a failed run 2 costs about 2 hours of Stas, a day and 23.4 USD.
 
 **M12 dependencies.** Under 0043 as amendment 1 reads it: no M13 code or content PR merges before M12's exit pair has passed on its build.
 
