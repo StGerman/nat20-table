@@ -76,7 +76,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0065](0065-supply-and-tenders-agent.md) | A supply and tenders agent, Yan Metsuyan, keeps TASKS.md (moved into the repo, closed rows in `docs/tasks-done.md`), `docs/roadmap.md` and scope drafts, editing only those files; target twice as cheap and twice as fast against the M11 baseline | Accepted | 2026-11-08 | Stas (post-M11 backlog thread) |
 | [0066](0066-m11-closed.md) | Milestone 11 closes on exit pair 3 on 2294ef6, with table #329 and #330 accepted on top; the order after it: Milestone 12, the dramaturg mechanism, Arachas plus glue, the Mill plus glue; backlog unordered | Accepted | 2026-11-08 | Stas |
 | [0067](0067-one-language-at-the-seat.md) | A player's seat shows one language, the run's: the table renders engine lines, options, cards and UI in it; the wire and core stay English; supersedes 0038's UI half | Accepted | 2026-11-08 | Stas |
-| [0068](0068-own-move-on-a-road-card.md) | A player's own move on a road card is a choice the table votes on: a ladder check naming two of the card's choices for success and failure; one per card; the deed `own_move_<card>` | Proposed | 2026-11-09 | Stas (own move, variant B); shape in the M12 system design |
+| [0068](0068-own-move-on-a-road-card.md) | A player's own move on a road card is a choice the table votes on: a ladder check naming two of the card's choices for success and failure; one per card; the deed `own_move_<card>` | Accepted (table #339, 2026-11-11) | 2026-11-09 | Stas (own move, variant B); shape in the M12 system design |
 
 ## Open questions to watch
 
