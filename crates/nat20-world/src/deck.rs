@@ -628,14 +628,8 @@ pub struct Resolution {
 /// one branch with the resolution's `by`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OwnMoveRun {
-    /// Who rolls: the seat whose words it was
-    pub actor: String,
-    /// The check's ability
-    pub ability: String,
-    /// The check's skill
-    pub skill: String,
-    /// The DC
-    pub dc: u32,
+    /// The move: who rolls (the seat whose words it was) and the check
+    pub mv: OwnMove,
     /// The choice a success brings, and its effects after `remember own_move_<card>`
     pub success: (String, Vec<Effect>),
     /// The choice a failure brings, and its effects after `remember own_move_<card>`
@@ -1287,21 +1281,7 @@ impl Deck {
         if !pending.speakable(card).iter().any(|c| c == choice) {
             return Err(CardError::UnknownChoice(choice.to_string()));
         }
-        let player_owner = matches!(&table.owner, Owner::Player(o) if o == handle);
-        let blade = table.blades.iter().any(|b| b == handle);
-        if pending.said.contains_key(handle) {
-            return Err(CardError::AlreadySpoke(handle.to_string()));
-        }
-        let resolution = if player_owner && card.target == Target::Caravan {
-            let missing: Vec<String> = table
-                .blades
-                .iter()
-                .filter(|b| !pending.said.contains_key(*b))
-                .cloned()
-                .collect();
-            if !missing.is_empty() {
-                return Err(CardError::WaitingFor(missing));
-            }
+        let resolution = if may_speak(pending, card, table, handle)? {
             Some(resolve(
                 card,
                 pending,
@@ -1309,12 +1289,10 @@ impl Deck {
                 Decided::Owner,
                 vec![handle.to_string()],
             ))
-        } else if blade {
+        } else {
             let pending = state.pending.as_mut().expect("checked above");
             pending.said.insert(handle.to_string(), choice.to_string());
             settle(card, pending, table)
-        } else {
-            return Err(CardError::NoSay(handle.to_string()));
         };
         if resolution.is_some() {
             state.pending = None;
@@ -1373,25 +1351,7 @@ impl Deck {
             };
             return Err(CardError::UnknownChoice(missing.clone()));
         };
-        let player_owner = matches!(&table.owner, Owner::Player(o) if *o == mv.actor);
-        let owner_calls = player_owner && card.target == Target::Caravan;
-        if !owner_calls && !table.blades.contains(&mv.actor) {
-            return Err(CardError::NoSay(mv.actor));
-        }
-        if pending.said.contains_key(&mv.actor) {
-            return Err(CardError::AlreadySpoke(mv.actor));
-        }
-        if owner_calls {
-            let missing: Vec<String> = table
-                .blades
-                .iter()
-                .filter(|b| !pending.said.contains_key(*b))
-                .cloned()
-                .collect();
-            if !missing.is_empty() {
-                return Err(CardError::WaitingFor(missing));
-            }
-        }
+        may_speak(pending, card, table, &mv.actor)?;
         if pending.own_move.is_some() {
             return Err(CardError::OwnMoveTaken);
         }
@@ -1411,6 +1371,36 @@ impl Deck {
         state.pending.as_mut().expect("checked above").own_move = Some(mv);
         self.speak(state, table, &actor, OWN_MOVE)
     }
+}
+
+/// Whether `handle` may speak on the card now: `Ok(true)` for a player owner's call on a
+/// caravan card, once every Blade has advised; `Ok(false)` for a Blade's word.
+fn may_speak(
+    pending: &PendingCard,
+    card: &Card,
+    table: &Table,
+    handle: &str,
+) -> Result<bool, CardError> {
+    if pending.said.contains_key(handle) {
+        return Err(CardError::AlreadySpoke(handle.to_string()));
+    }
+    let player_owner = matches!(&table.owner, Owner::Player(o) if o == handle);
+    if player_owner && card.target == Target::Caravan {
+        let missing: Vec<String> = table
+            .blades
+            .iter()
+            .filter(|b| !pending.said.contains_key(*b))
+            .cloned()
+            .collect();
+        if !missing.is_empty() {
+            return Err(CardError::WaitingFor(missing));
+        }
+        return Ok(true);
+    }
+    if !table.blades.iter().any(|b| b == handle) {
+        return Err(CardError::NoSay(handle.to_string()));
+    }
+    Ok(false)
 }
 
 fn resolve(
@@ -1441,14 +1431,18 @@ fn resolve(
                 (id.to_owned(), effects)
             };
             OwnMoveRun {
-                actor: mv.actor.clone(),
-                ability: mv.ability.clone(),
-                skill: mv.skill.clone(),
-                dc: mv.dc,
+                mv: mv.clone(),
                 success: branch(&mv.success),
                 failure: branch(&mv.failure),
             }
         });
+    // The proposer's word was the own move, whether or not they are still up to be counted.
+    let mut by = by;
+    if let Some(run) = &own_move
+        && !by.contains(&run.mv.actor)
+    {
+        by.insert(0, run.mv.actor.clone());
+    }
     Resolution {
         card: card.id.clone(),
         choice: choice.to_string(),
@@ -2154,7 +2148,7 @@ mod tests {
         );
         assert!(done.effects.is_empty());
         let run = done.own_move.unwrap();
-        assert_eq!((run.actor.as_str(), run.dc), ("bren", 10));
+        assert_eq!((run.mv.actor.as_str(), run.mv.dc), ("bren", 10));
         assert_eq!(run.success.0, "give");
         assert_eq!(
             run.success.1[0],

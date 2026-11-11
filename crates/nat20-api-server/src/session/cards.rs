@@ -310,30 +310,7 @@ impl Session {
                 "choose_card is a player's word: send it as your own creature.",
             ));
         }
-        let Some(campaign) = self.campaign.as_ref() else {
-            return Err(error(
-                ErrorCode::NoCampaign,
-                "No campaign is running; the game starts one with start_campaign.",
-            ));
-        };
-        if !campaign.world.state.deck.offered.is_empty() {
-            return Err(rejected(
-                RejectReason::NoCard,
-                "The road card is not on the table yet; the DM is still choosing it.",
-            ));
-        }
-        if campaign.world.state.deck.pending.is_none() {
-            return Err(rejected(
-                RejectReason::NoCard,
-                "No road card is waiting for a decision.",
-            ));
-        }
-        if self.game_mut()?.mode() == Mode::Combat {
-            return Err(error(
-                ErrorCode::WrongMode,
-                "A fight is running; the card waits until it is over.",
-            ));
-        }
+        self.card_open("The road card is not on the table yet; the DM is still choosing it.")?;
         let table = self.table();
         let campaign = self.campaign.as_mut().expect("checked above");
         let world = &mut campaign.world;
@@ -358,6 +335,33 @@ impl Session {
         })
     }
 
+    /// Refuses a word on the card unless one is on the table and no fight is running, as
+    /// `choose_card` and `own_move` both need; `offered` answers while cards are offered.
+    fn card_open(&mut self, offered: &str) -> Result<(), ApiError> {
+        let Some(campaign) = self.campaign.as_ref() else {
+            return Err(error(
+                ErrorCode::NoCampaign,
+                "No campaign is running; the game starts one with start_campaign.",
+            ));
+        };
+        if !campaign.world.state.deck.offered.is_empty() {
+            return Err(rejected(RejectReason::NoCard, offered));
+        }
+        if campaign.world.state.deck.pending.is_none() {
+            return Err(rejected(
+                RejectReason::NoCard,
+                "No road card is waiting for a decision.",
+            ));
+        }
+        if self.game_mut()?.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "A fight is running; the card waits until it is over.",
+            ));
+        }
+        Ok(())
+    }
+
     /// `own_move`: the DM puts a seat's own words on the card on the table (API-56), as a
     /// ladder check that brings one of two offered choices. The seat's word is given for it,
     /// so it may settle the card.
@@ -375,30 +379,7 @@ impl Session {
                 "own_move is the DM's call; send it as dm.",
             ));
         }
-        let Some(campaign) = self.campaign.as_ref() else {
-            return Err(error(
-                ErrorCode::NoCampaign,
-                "No campaign is running; the game starts one with start_campaign.",
-            ));
-        };
-        if !campaign.world.state.deck.offered.is_empty() {
-            return Err(rejected(
-                RejectReason::NoCard,
-                "The road card is not on the table yet; pick it first (pick_card).",
-            ));
-        }
-        if campaign.world.state.deck.pending.is_none() {
-            return Err(rejected(
-                RejectReason::NoCard,
-                "No road card is waiting for a decision.",
-            ));
-        }
-        if self.game_mut()?.mode() == Mode::Combat {
-            return Err(error(
-                ErrorCode::WrongMode,
-                "A fight is running; the card waits until it is over.",
-            ));
-        }
+        self.card_open("The road card is not on the table yet; pick it first (pick_card).")?;
         let length = text.chars().count();
         if !(1..=OWN_MOVE_MAX_CHARS).contains(&length) {
             return Err(error(
@@ -406,6 +387,13 @@ impl Session {
                 format!(
                     "An own move's words are 1 to {OWN_MOVE_MAX_CHARS} characters, not {length}."
                 ),
+            ));
+        }
+        // The words reach every player: they never carry a target number (protocol §5).
+        if crate::leaks::names_a_target_number(text) {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "An own move's words reach every player, so they never name a DC or an AC.",
             ));
         }
         // The check is a ladder check's, refused as `request_check` refuses it.
@@ -421,12 +409,12 @@ impl Session {
                 format!("{skill:?} checks with another ability than its own are not served yet."),
             ));
         }
-        let wire = |v: serde_json::Value| v.as_str().map(str::to_owned).unwrap_or_default();
+        let wire = |v: serde_json::Value| v.as_str().expect("a wire enum is a string").to_owned();
         let mv = world::OwnMove {
             actor: actor.to_owned(),
             text: text.to_owned(),
-            ability: wire(serde_json::to_value(ability).unwrap_or_default()),
-            skill: wire(serde_json::to_value(skill).unwrap_or_default()),
+            ability: wire(serde_json::to_value(ability).expect("an ability serializes")),
+            skill: wire(serde_json::to_value(skill).expect("a skill serializes")),
             dc: u32::from(dc),
             success: success.to_owned(),
             failure: failure.to_owned(),
@@ -508,9 +496,10 @@ impl Session {
     fn run_own_move(
         &mut self,
         card: &str,
-        mv: &world::OwnMoveRun,
+        run: &world::OwnMoveRun,
         by: &[String],
     ) -> Result<(), ApiError> {
+        let mv = &run.mv;
         let up = self
             .game
             .as_ref()
@@ -537,7 +526,7 @@ impl Session {
         } else {
             (None, false)
         };
-        let (choice, effects) = if success { &mv.success } else { &mv.failure };
+        let (choice, effects) = if success { &run.success } else { &run.failure };
         self.push(Pending {
             round: None,
             visibility: Visibility::Dm,
