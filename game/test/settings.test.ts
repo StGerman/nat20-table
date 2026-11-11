@@ -43,6 +43,7 @@ test("a typed flag wins over the profile, and the profile over the command's def
   // Plain stays the default voice (AGT-102); run.json records it with its source like every setting.
   assert.deepEqual(provenance.voice, { value: "plain", from: "default" });
   assert.equal(resolveSettings(["--voice", "fireside"]).values.voice, "fireside");
+  assert.deepEqual(resolveSettings(["--profile", profileFile({ voice: "fireside" })]).provenance.voice, { value: "fireside", from: "profile" });
   assert.equal(values.seed, 7);
   assert.equal(values.scenes, undefined);
   assert.equal(provenance.scenes, undefined);
@@ -55,6 +56,7 @@ test("a profile with an unknown key, a bad value, an unpriced model or a typed-o
   refused({ "player-model": "claude-sonnet-4" }, /not in the price table/);
   refused({ "max-steps": "many" }, /whole number/);
   refused({ verbose: "yes" }, /true or false/);
+  refused({ voice: "loud" }, /voice is one of plain, fireside/);
   refused({ "dry-run": true }, /can only be typed/);
   // A comment is not a setting.
   assert.equal(resolveSettings(["--profile", profileFile({ _comment: "mine", seed: 3 })]).values.seed, 3);

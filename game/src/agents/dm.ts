@@ -117,7 +117,8 @@ function goods(input: { coins?: z.infer<typeof COINS>; item?: string }): Goods |
 }
 
 /** The DM's narration voice (AGT-102): `fireside` adds the voice skill's ask to the adventure part. */
-export type Voice = "plain" | "fireside";
+export const VOICES = ["plain", "fireside"] as const;
+export type Voice = (typeof VOICES)[number];
 
 /** The line a Fireside run adds to the prompt; a Plain run's prompt is byte for byte without it. */
 export const FIRESIDE_LINE = "This run asks for the Fireside voice.";
