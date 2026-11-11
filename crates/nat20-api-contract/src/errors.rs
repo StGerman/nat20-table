@@ -166,7 +166,8 @@ pub enum RejectReason {
     /// `choose_card` or `own_move` with no card on the table, also while a draw's cards wait
     /// for the DM's pick.
     NoCard,
-    /// `pick_card` when no cards are offered, or with a card that is not one of them (API-53).
+    /// `pick_card` when no cards are offered, or with a card that is not one of them (API-53),
+    /// or a fallback pick of any card but the first offered (ENG-42).
     CardNotOffered,
     /// `choose_card` by a creature with no say on this card, `own_move` for one, `scout` by a creature that is
     /// not a Hired Blade, or `choose_card`, `scout`, `level_up` or `answer_level_up` not sent

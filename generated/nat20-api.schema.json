@@ -4010,7 +4010,7 @@
               "minimum": 0
             },
             "from": {
-              "description": "The place the party was in when the last contract ended.",
+              "description": "Where the party set out from: the place it was in when the last contract ended,\nor, when it ended out on a road, the end of that road nearer this contract's start.",
               "type": "string"
             },
             "kind": {
@@ -5857,7 +5857,7 @@
           "const": "no_card"
         },
         {
-          "description": "`pick_card` when no cards are offered, or with a card that is not one of them (API-53).",
+          "description": "`pick_card` when no cards are offered, or with a card that is not one of them (API-53),\nor a fallback pick of any card but the first offered (ENG-42).",
           "type": "string",
           "const": "card_not_offered"
         },

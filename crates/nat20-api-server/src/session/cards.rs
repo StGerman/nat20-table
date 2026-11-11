@@ -252,6 +252,7 @@ impl Session {
         if fallback
             && let Some(first) = campaign.world.state.deck.offered.first()
             && first != card
+            && campaign.world.state.deck.offered.iter().any(|c| c == card)
         {
             return Err(rejected(
                 RejectReason::CardNotOffered,
