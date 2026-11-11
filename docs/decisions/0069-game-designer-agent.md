@@ -35,7 +35,7 @@ C. Lev Neiman, game designer (`.claude/agents/lev.md`, skill `/lev` with one ref
 ## Consequences
 
 - CLAUDE.md gains a short section for Lev. Yan's `scope` reference names Lev's draft as the system design.
-- A design that an accepted record already allows (a deed left unread on purpose, a breaking change before v1) is not a finding for him.
+- A design that an accepted record already allows (a deed left unread on purpose, a breaking change before v1) is not a finding for him; he may challenge the decision behind it once, under item 4.
 
 ## Revisit when
 

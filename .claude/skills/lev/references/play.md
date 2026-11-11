@@ -31,4 +31,4 @@ A fight is never a finding by itself, and neither is a quiet card that sets some
 4. Cut candidates: every "nobody would miss it" item.
 5. Numbered questions for Stas.
 
-You change no file. Card text is Zoya's and Stas's.
+You change no file on a `play` ask. Card text is Zoya's and Stas's, and a challenge to a decision is a numbered question.
