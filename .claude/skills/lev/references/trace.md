@@ -6,15 +6,15 @@ You report what the record shows. You give no verdict on the run: verdicts are S
 
 ## Read
 
-- The run folder the caller names: the session log, the transcript and the run report. Run records never live in this repo; the caller gives the path.
+- The run folder the caller names, whole: the session log, the transcript, the run report, and the record of what the seat showed where the run has one. The caller gives the path.
 - The pack, deck and world files the run played, on the build the run names.
 
 ## Walk it twice
 
 1. **Backwards.** From every pay-off (a card or scene that read a deed, a line where a person recalls something) to the deed behind it. A pay-off with no deed behind it is the narration inventing memory: list it with the line.
-2. **Forwards.** From every deed written to anything that read it later in the run, or in a later run on the same world when the caller names one. A deed nothing read is listed with the cards that could have read it and why they did not (not drawn, condition false, no reader exists).
+2. **Forwards.** From every deed written to anything that read it later in the run, or in a later run on the same world when the caller names one. A deed nothing read is listed with the cards that could have read it and why they did not (not drawn, condition false, no reader exists). A deed an accepted design leaves unread on purpose is listed as such, with the design cited, and is not a gap.
 
-Then check what the player saw: for each deed that was read, the line where the party could tell that it was. A deed read silently counts as not come back.
+Then check what the player saw: for each deed that was read, the line or seat panel where the party could tell that it was. A deed read silently counts as not come back.
 
 ## Page
 

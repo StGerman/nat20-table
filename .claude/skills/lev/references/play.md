@@ -11,15 +11,15 @@ You read as someone who has sat at tables for twenty years, with the files open.
 
 ## Check each card and scene
 
+The deck validator (`cargo test`) already rejects a choice with no effect, two choices with the same effects, and a deed read but never written. Zoya's five card tests already ask whether someone wants something and whether the stake is visible. Do not repeat them: cite either when it applies, and look for what neither catches.
+
 | Finding | Meaning |
 | --- | --- |
-| Same end | two choices lead to the same state and the same later lines |
+| Changes nothing later | the choices differ in effects on paper, but no later card, scene or line reads the difference |
 | Free option | one choice costs nothing, or is simply correct |
 | Cost never arrives | a choice names or implies a cost that nothing later collects |
-| Forgotten | a choice writes no deed and changes nothing a later card or scene reads |
-| One exit | every choice leads to the same next scene with nothing carried |
 | Blind cost | a later cost whose stake was not visible when the choice was made |
-| No reason to care | nobody in the scene wants anything from the party, or nothing is at stake |
+| No reason to care | the party could skip the card or scene and lose nothing |
 
 A fight is never a finding by itself, and neither is a quiet card that sets something up; say which later card pays it.
 

@@ -16,8 +16,8 @@ A section or file under `docs/scope/`, status Proposed, in this order:
 2. **In**: what ships, by row id or finding.
 3. **Out**: what is deliberately left, with where it goes.
 4. **Exit criterion**: the runs (one exit pair, AI half first, Stas plays only after it passed), and the checks each run must pass.
-5. **Questions for the system design**: what the design doc must answer (contract changes, new commands, data formats); you list them, the implementing thread answers them.
+5. **Questions for the system design**: what the design doc must answer (contract changes, new commands, data formats); you list them, the system design answers them.
 6. **Rows that would follow**: proposed ids, one line each, marked "after spec and design merge".
 7. **Cost**: the bid's price line, carried over.
 
-You draft scope only. The system design is the implementing thread's; when it exists, check it against the spec and list each gap.
+You draft scope only. The system design is Lev's draft (`/lev design`), committed by the implementing thread; when it exists, check it against the spec and list each gap.
