@@ -1,6 +1,6 @@
 # Milestone 12, Not a passenger («Не пассажир»): system design
 
-Status: Accepted (table #339, 2026-11-11). Written for phase 2 of the scope, accepted in table #336 (`docs/scope/not-a-passenger-scope.md` §5); phase 1 (MAP-15, MAP-17) ran on its own rows (table #338) and is not designed here. It answers the 13 questions of the scope's §6. Stas merged the design before its rows joined it, so the §7 rows went into `TASKS.md` in table #341, with the two planning amendments marked below (§4, §8, §9). Decision 0068 records the own move's shape.
+Status: Accepted (table #339, 2026-11-11). Written for phase 2 of the scope, accepted in table #336 (`docs/scope/not-a-passenger-scope.md` §5); phase 1 (MAP-15, MAP-17) ran on its own rows (table #338) and is not designed here. It answers the 13 questions of the scope's §6. Stas merged the design before its rows joined it, so the §7 rows went into `TASKS.md` in table #341, with the changes marked "amended with the rows" below: the planning check's items 11 and 12 (§4, §8, §9) and the audit update moved to AGT-100 (§10 item 7). Decision 0068 records the own move's shape.
 
 ## Summary
 
@@ -289,7 +289,7 @@ The scope's §7 rows, with three changes for Stas's review load:
 | 3 | MAP-18: `asked` choices, the validator rule, the five cards, Zoya | S | - |
 | 4 | AGT-100 with AGT-97: card after its narration; wakes end on their narration | S | 2 (the `card_words` wake) |
 | 5 | AGT-98: one language at the seat (`seat-lines.ts`, the rest of `words.ts`, option names, refusals, `/sheet`, the per-line table, the seat's read of `text_ru`) | L | 2 |
-| 6 | MAP-19: `text_ru` on every card and choice; goods `name_ru` | M | 3, 12 (the card text it translates); the seat's read of it is in 5 |
+| 6 | MAP-19: `text_ru` on every card and choice; goods `name_ru` | M | 3, 12 (the card text it translates); beside 5, not on it |
 | 7 | AGT-102: voice flag | S | - |
 | 8 | ENG-40, ENG-41, ENG-42 | XS each | - |
 | 9 (core) | ENG-21: core fix | S | - |
