@@ -1,6 +1,6 @@
 # 0066. Milestone 11 closes on exit pair 3; the order after Milestone 12
 
-- **Status:** Proposed (accepted when Stas merges table #336)
+- **Status:** Accepted (table #336, 2026-11-08)
 - **Date:** 2026-11-08
 - **Decided by:** Stas. He accepted the pair at 20:51Z, dismissed flag n22-1 at 20:58Z (nat20-runs #6), and merged the stack at 21:00Z. The order was set in chat in the dramaturg design thread, 2026-11-07 19:34Z ("M11, then the dramaturg whole, then Arachas plus glue, then the Mill plus glue"). M12 went in after M11 on 2026-11-08 21:15Z. The backlog was named on table #337, 2026-11-08 22:20Z. Stas asked for this record in the planning thread on 2026-11-08 at 22:24Z, answers 5 and 6.
 
