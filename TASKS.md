@@ -45,7 +45,6 @@ The contract review is done: `/mnt/project-files/engine/api/review.md` and `cont
 | ID | Gap | Pri | Dest | Gate | Size | Status |
 |---|---|---|---|---|---|---|
 | API-24 | Plain ability checks with no skill (core's `D20CheckKind` has skills, saves and attacks only); ladder checks require a skill until then | P2 | Up | N | S | todo |
-| API-56 | Own move on the wire and in the world (decision 0068; ENG-43 folded in, design §9): the DM command `own_move {actor, text, ability, skill, dc, success, failure}` with a ladder check and two choices offered on the card; reject reasons `own_move_taken` and `bad_own_move` beside the existing ones; events `card_own_move` (public), `own_move_set` and `own_move_ran` (DM only); `CardDm.own_move` and `CardPlayer.own_move`; the world crate's resolution writes `remember own_move_<card>` then the named choice's effects, and `own_move_<card>` joins `deeds_written`; the server rolls the proposer's check, and a downed proposer rolls nothing and gets the failure choice; fixture `own_move.jsonl`, CHANGELOG, protocol §4.13 and §5 | P1 | Ours | - | M | todo (Milestone 12, PR 1; design `docs/design/m12-system-design.md` §1.2-§1.5) |
 
 ## 2. Engine correctness (core)
 
@@ -149,3 +148,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-09: MAP-15 and MAP-17 done (table #338), Milestone 12 phase 1; rows moved to docs/tasks-done.md
 - 2026-11-11: Milestone 12 rows from scope §7 written after Stas merged the system design (table #339): API-56, AGT-99..103, MAP-18, MAP-19; ENG-43 folded into API-56 (design §9)
 - 2026-11-11: ENG-40, ENG-41 and ENG-42 done (table #343, Milestone 12 PR 8); rows moved to docs/tasks-done.md
+- 2026-11-11: API-56 done (table #346): own move on the wire and in the world
