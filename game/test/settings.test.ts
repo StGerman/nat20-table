@@ -40,6 +40,9 @@ test("a typed flag wins over the profile, and the profile over the command's def
   assert.deepEqual(provenance.lang, { value: "ru", from: "profile" });
   assert.deepEqual(provenance["time-limit-min"], { value: 120, from: "default" });
   assert.deepEqual(provenance.craft, { value: "prompt", from: "default" });
+  // Plain stays the default voice (AGT-102); run.json records it with its source like every setting.
+  assert.deepEqual(provenance.voice, { value: "plain", from: "default" });
+  assert.equal(resolveSettings(["--voice", "fireside"]).values.voice, "fireside");
   assert.equal(values.seed, 7);
   assert.equal(values.scenes, undefined);
   assert.equal(provenance.scenes, undefined);
