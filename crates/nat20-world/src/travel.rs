@@ -276,7 +276,8 @@ impl From<SavedWorld> for WorldState {
 /// How a new contract took up the world a finished one left (ENG-37).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Carried {
-    /// The place the party was in when the last contract ended
+    /// Where the party set out from: the place it was in when the last contract ended, or,
+    /// out on a road, the end of that road nearer the new start (ENG-41)
     pub from: String,
     /// The days the trip to the new contract's start took, at a normal pace: 0 when the party
     /// was already there
@@ -503,27 +504,29 @@ impl World {
     pub fn carry_memory(&mut self, saved: WorldState, start_hour: u32) -> Carried {
         let start = self.place_here().unwrap_or_default().to_string();
         let via = |end: &str, left: u32| {
-            (
-                left + self.map.miles_between(end, &start).unwrap_or(0),
-                end.to_string(),
-            )
+            self.map
+                .miles_between(end, &start)
+                .map(|m| (left + m, end.to_string()))
         };
         let (miles, from) = match &saved.at {
-            Position::At { place } => via(place, 0),
+            Position::At { place } => via(place, 0).unwrap_or((0, place.clone())),
             // On a road, the party goes on or turns back, whichever end is nearer the start
-            // (ENG-41).
+            // (ENG-41); an end with no road to the start never counts as nearer.
             Position::OnRoad {
                 road,
                 toward,
                 miles_left,
             } => {
                 let on = via(toward, *miles_left);
-                match self.map.road(road).and_then(|r| {
-                    let back = r.other_end(toward)?;
-                    Some(via(back, r.miles.saturating_sub(*miles_left)))
-                }) {
-                    Some(back) if back.0 < on.0 => back,
-                    _ => on,
+                let back = self
+                    .map
+                    .road(road)
+                    .and_then(|r| via(r.other_end(toward)?, r.miles.saturating_sub(*miles_left)));
+                match (on, back) {
+                    (Some(on), Some(back)) if back.0 < on.0 => back,
+                    (Some(on), _) => on,
+                    (None, Some(back)) => back,
+                    (None, None) => (*miles_left, toward.clone()),
                 }
             }
         };
@@ -891,7 +894,13 @@ mod tests {
             miles_left: 1,
         };
         let mut next = world("maren");
-        assert_eq!(next.carry_memory(done.state, 9).from, "inn");
+        assert_eq!(
+            next.carry_memory(done.state, 9),
+            Carried {
+                from: "inn".into(),
+                days: 1
+            }
+        );
     }
 
     #[test]
