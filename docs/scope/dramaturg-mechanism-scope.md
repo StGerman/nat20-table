@@ -49,7 +49,7 @@ Each run passes:
 
 1. The rows that still apply: run 1 the Demo Run rows 1 to 3 and 5 (as 0059); run 2 the M11 §8.3 rows 1 to 3, row 4's narration judge half, row 5 (`m11-memory`, which passes on the Mill card), and the M12 rows `m12-order` and `m12-language` (AGT-103).
 2. **Written** (run 1): at least two Mill deeds written by scenes, with `by`, day and contract, in the saved roster's world memory, one of them a Scene 3 outcome deed (In 4), which every run that leaves the yard writes.
-3. **Carried** (run 2): the Mill card for run 1's Scene 3 deed is drawn at Wendford and decided by the Blades, its choice writes its deed, the DM's narration names the cause (the M13 row of In 5), and the narration judge finds no contradiction. The run report quotes the lines.
+3. **Carried** (run 2): the Mill card for run 1's Scene 3 deed is drawn at Wendford and decided by the Blades, its choice writes its deed (the M13 row of In 5 counts it), the narration judge answers yes to "does the DM name what the party did at the mill", and finds no contradiction. The run report quotes the lines.
 4. **Readable** (run 2): the Vera fallback reads the Mill card with its narration as the seat shows it, and Zoya's the same lines for the board; both quoted verbatim.
 
 Checked by CI: a seeded Wendford draw on a Mill roster offers the matching Mill card and never the other; the validator across packs. Reported, not gated: p95; every deed written and read; `m12-own-move` on run 2.
@@ -62,8 +62,7 @@ Checked by CI: a seeded Wendford draw on a Mill roster offers the matching Mill 
 4. **A pack with no world:** how a format 1 pack names its world and writes into the roster, with a contract number and day on every deed; a Mill roster continuing into a road contract (purse, XP); no roster format bump.
 5. **Named people:** a world id for Gritch, so the death deed works and MAP-13 adds `gritch_spared` with no converter. Snitt gets none in M13: his fate stays unrecorded (Out).
 6. **The validator across packs:** a deed one pack reads and another writes.
-7. **Saying the cause:** whether a judge question or a transcript row gates exit row 3.
-8. **Room for later:** optional `saw` and cause fields on the deed record, so gap E and question 4 (b) need no new roster format.
+7. **Room for later:** optional `saw` and cause fields on the deed record, so gap E and question 4 (b) need no new roster format.
 
 ## 6. Rows that would follow (after spec and design merge)
 
@@ -83,7 +82,7 @@ Checked by CI: a seeded Wendford draw on a Mill roster offers the matching Mill 
 | Run load, USD | Mill all AI about 15.5 (the last all-AI Mill PASS; re-measure); Stas's *Fair in Wend* half about 7.9 (an estimate: pair 3's all-AI Fair run; no human Fair run measured since M9): 23.4 | 20.9 | 35.45 |
 | Stas at the table, min | about 26 (M9's human *Fair in Wend*, 0060) | 27 | 65.6 |
 
-Target (0065, half the baseline): 17.73 USD, 33 min, 1 pair, 13.5 PRs, 1.06 days. Planned days: 3 to 4 of thread work, over the 1.06 target; the code also waits for M12's exit pair. Planned: 23.4 USD, 5.7 over (a Mill all-AI run costs two road runs); about 26 min, plus starting run 1 and about 10 min of quotes; 1 pair; 8 PRs, 0.30 of the baseline. A failed run 1 costs a day and 15.5 USD and none of Stas's table time; a failed run 2 costs Stas his sitting (about 26 min), a review of the fix and a second sitting on the new build (about 1 hour in all), a day and 23.4 USD.
+Target (0065, half the baseline): 17.73 USD, 33 min, 1 pair, 13.5 PRs, 1.06 days. Planned days: 3 to 4 of thread work, over the 1.06 target; the code also waits for M12's exit pair. Planned: 23.4 USD, 5.7 over (a Mill all-AI run costs two road runs); about 26 min, plus starting run 1 and about 10 min of quotes; 1 pair; 8 PRs, 0.30 of the baseline. A failed run 1 costs a day, 15.5 USD and a review of the fix, but no table time; a failed run 2 costs Stas his sitting (about 26 min), a review of the fix and a second sitting on the new build (about 1 hour in all), a day and 23.4 USD.
 
 **M12 dependencies.** Under 0043 as amendment 1 reads it: no M13 code or content PR merges before M12's exit pair has passed on its build.
 
@@ -101,7 +100,7 @@ Target (0065, half the baseline): 17.73 USD, 33 min, 1 pair, 13.5 PRs, 1.06 days
 3. **Witnesses and the attitude step (gap E).** (a) Out, to Arachas plus glue, whose scenes are its first readers; recommended. (b) Only the `saw` field on the deed record now, no attitude step: XS and a fixture, no reader until Arachas; Zoya would take this now (Consequence 2), since Arachas needs it. (c) Both in: about 1 M and 2 PRs more.
 4. **Words in the own-move deed.** (a) Out: `own_move_<card>` stays a bare id, owed on Zoya's board until a pack reads one; recommended. (b) In: the deed keeps the player's words as its DM-only cause: XS, and it waits for API-56 to merge. Zoya: the bible (Story-space 1) leans to (b); (a) only with the deed listed as owed.
 5. **MAP-13, the Mill's goblins can yield.** (a) Out of M13: its own row, after carrier A and before Arachas (the rows PR writes "after A" into the row; today it says only "before the Arachas pack"); recommended. (b) In: Gritch and the cellar band can yield and `gritch_spared` is written from the start: S and 1 PR more, and run 1 may play it.
-6. **Who reads the Mill deed: a card now, a scene with Arachas.** (a) A scene reads deeds from this milestone (`if`/`unless` on scene variants, carrier B): Arachas plus glue starts with its reader and carries content only (its concept names scene 1 on the hill-farm deeds and the finale on `heard_of_the_hollow_king`); API-57 grows to M, plus a DM prompt row (XS), `m11-memory` is reported, not gated (a scene, not a card, reads), 8 PRs. (b) A Wendford arrival card reads it (In 2); scene reading moves to Arachas plus glue; one new system in M13; recommended (Lev: "B's only reader in M13 is a greeting a card can carry"; Yan had drafted (a)).
+6. **Who reads the Mill deed: a card now, a scene with Arachas.** (a) A scene reads deeds from this milestone (`if`/`unless` on scene variants, carrier B): Arachas plus glue starts with its reader and carries content only (its concept names scene 1 on the hill-farm deeds and the finale on `heard_of_the_hollow_king`); API-57 grows to M, plus a DM prompt row (XS) in its own PR, `m11-memory` is reported, not gated (a scene, not a card, reads): 9 PRs. (b) A Wendford arrival card reads it (In 2); scene reading moves to Arachas plus glue; one new system in M13; recommended (Lev: "B's only reader in M13 is a greeting a card can carry"; Yan had drafted (a)).
 
 ## 9. Amendments proposed
 
