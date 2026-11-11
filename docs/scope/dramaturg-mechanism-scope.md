@@ -28,7 +28,8 @@ Placed by Stas's §8 answers (§8 n). "Decide later" means no row. No M12 row, f
 | Item | Shelf | Why | Waits on |
 |---|---|---|---|
 | In 1 to 3: scene deeds, the Wendford card, the Mill in the world's memory | M13 In | carries the one prose link with one new system (§8 1, 6) | design, rows; code after M12's exit pair (0043) |
-| In 4, 5: the Mill's deeds and cards (MAP-20), the outcome reader | M13 In | proves a choice carried, not a marker | the bible PR; Zoya, Vera |
+| In 4: the Mill's deeds and cards (MAP-20) | M13 In | proves a choice carried, not a marker | the bible PR; Zoya, Vera |
+| In 5: the outcome reader (AGT-104) | M13 In | gives `m11-thread`'s question a real reader | MAP-20's deeds |
 | Bible amendment 3: a deed every path writes is a marker, not a cause | bible PR, its own | the bible changes only by PR | Stas's review |
 | `examples.md` spells "Venna"; the scenes say "Wenna" | bible PR | a typo | nothing |
 | Quests as `kind: errand`; fronts and clocks | M13 Out → Arachas plus glue | no link here needs a ledger pay or a day; quest Q6 and the new moon are their first cases (§8 2) | Arachas plus glue scope |
@@ -41,7 +42,7 @@ Placed by Stas's §8 answers (§8 n). "Decide later" means no row. No M12 row, f
 | Words in the own-move deed (the bible leans to keep) | no row, decide later; owed on Zoya's board | no pack reads one (§8 4) | a pack that reads one; API-56 |
 | Claims as deeds (idea 6) | no row, decide later | a new DM tool, no reader in the shipped packs | a reader |
 | A model in the loop, scripts, the wants ledger, prices as story | no row, decide later | outside this proof | Stas |
-| Delete deck fields `requires` (0 of 37 cards) and `owner_insists` (0 of 112 choices) (Lev B) | after M12's exit pair, own small `world/` PR | unused; free | M12's exit pair; Stas names the row |
+| Delete deck fields `requires` (0 of 37 cards) and `owner_insists` (0 of 112 choices) (Lev B) | row ENG-45 (XS) in the M13 rows PR; its own small `world/` PR after M12's exit pair, outside M13's exit and PR count | unused; free (the thread's recommendation, accepted with "ok to all") | M12's exit pair |
 | MAP-13, the Mill's goblins yield | own row, after A, before Arachas | after A, `gritch_spared` needs no converter (§8 5) | carrier A; the rows PR writes "after A" |
 | MAP-16, CON-7 | open rows, no milestone | M13 changes neither | Stas's order |
 | Lev's first read (`owner_pick` is a tie-break id, not a queue lever) | done | fixed in this draft | nothing |
@@ -81,6 +82,7 @@ Checked by CI: a seeded Wendford draw on a Mill roster offers the matching Mill 
 - ENG-44 (S): a pack with no campaign writes into its world's memory with a contract number; a Mill roster continues into a road contract.
 - MAP-20 (S): the Mill's outcome deeds, the two Wendford Mill cards (one per Scene 3 deed, a deed per choice), the prose canon removed from `fw_wendford.md` and Osric's note; Zoya, Vera. Waits for the bible PR of amendment 3.
 - AGT-104 (S): the M13 verdict rows (written, carried with the outcome reader of In 5, readable), the report's lines and the exit pair.
+- ENG-45 (XS): delete the unused deck fields `requires` and `owner_insists`; its own PR after M12's exit pair, not part of M13's exit.
 - The rows PR also edits MAP-13: after carrier A, before the Arachas pack.
 
 ## 7. Cost
