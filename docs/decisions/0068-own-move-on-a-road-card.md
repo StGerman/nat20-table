@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (table #339, 2026-11-11)
 - **Date:** 2026-11-09
-- **Decided by:** Stas chose the own move, variant B of the project note `engine/m11/own-move-on-a-card.md` (2026-11-08 20:39Z: «Да делаем обязательно own move»), and put it in Milestone 12 (scope `docs/scope/not-a-passenger-scope.md`, table #336). This record holds the shape the system design proposes, for him to accept with it.
+- **Decided by:** Stas chose the own move, variant B of the project note `engine/m11/own-move-on-a-card.md` (2026-11-08 20:39Z: «Да делаем обязательно own move»), and put it in Milestone 12 (scope `docs/scope/not-a-passenger-scope.md`, table #336). This record holds the shape the system design proposed; Stas accepted it with the design (table #339, 2026-11-11: «Согласен на все»).
 
 ## Context
 
