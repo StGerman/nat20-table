@@ -123,8 +123,9 @@ export interface Processor {
 /** A tracer over a span processor. Exported for the test, which passes an in-memory exporter. */
 export async function langfuseTracer(run: TraceRun, processor: Processor): Promise<TurnTracer> {
   const { NodeTracerProvider } = await import("@opentelemetry/sdk-trace-node");
+  const { resourceFromAttributes } = await import("@opentelemetry/resources");
   const { setLangfuseTracerProvider, startObservation, propagateAttributes } = await import("@langfuse/tracing");
-  const provider = new NodeTracerProvider({ spanProcessors: [processor as never] });
+  const provider = new NodeTracerProvider({ resource: resourceFromAttributes({ "service.name": "nat20-table" }), spanProcessors: [processor as never] });
   // The context manager `propagateAttributes` needs; our spans are made after the fact, all inside it.
   provider.register();
   setLangfuseTracerProvider(provider);

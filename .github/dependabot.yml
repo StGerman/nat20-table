@@ -49,6 +49,8 @@ updates:
         versions: [">=3.0.0"]
       - dependency-name: "@opentelemetry/sdk-trace-node"
         versions: [">=3.0.0"]
+      - dependency-name: "@opentelemetry/resources"
+        versions: [">=3.0.0"]
       - dependency-name: "@opentelemetry/exporter-trace-otlp-http"
         versions: [">=0.300.0"]
       - dependency-name: "@opentelemetry/otlp-exporter-base"

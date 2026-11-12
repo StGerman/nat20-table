@@ -90,6 +90,7 @@ test("the tracer makes one trace a turn: an agent named by role and purpose, a g
   assert.equal(new Set(spans.map((s) => s.spanContext().traceId)).size, 1, "one trace");
   for (const s of spans) if (s !== root) assert.equal(s.parentSpanContext?.spanId, root.spanContext().spanId, `${s.name} hangs off the agent`);
   assert.equal(root.attributes["langfuse.observation.type"], "agent");
+  assert.equal(root.resource.attributes["service.name"], "nat20-table", "named, not unknown_service:node");
   assert.equal(root.attributes["session.id"], "full-2026-11-12T20-00-00-000Z");
   assert.equal(root.attributes["langfuse.trace.name"], "player.narration_check");
   assert.equal(root.attributes["langfuse.observation.level"], "WARNING", "a turn that timed out is flagged");
