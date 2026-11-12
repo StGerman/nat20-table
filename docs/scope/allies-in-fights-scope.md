@@ -1,7 +1,7 @@
 # Allies in fights («Свои в бою»): scope
 
 Status: Proposed, for Stas's review. Drafted by Yan Metsuyan (0065), 2026-11-12, main d2b0fc4. No number: TASKS.md § Milestones has no row for it yet (roadmap amendment 1). Ask: Stas 2026-11-12 20:44Z, «конечно в backlog рядом с B и C и туда же проверку судьи. В целом мы набрали на milestone контента. Ян оформи пожалуйста в milestone». No bid was tendered; priced here.
-Inputs: decision 0071 (A first, B and C later; table #360), decision 0070 (children not exempt from harm; table #361), rows MON-12, ENG-48, ENG-49, AGT-106 (table #360) and MAP-23 (table #361), all open, none on main. If Stas accepts this scope, 0071's Decision line (B and C "in the backlog") is updated in table #360 before it merges (its Consequences already put AGT-106 in the backlog); no new record.
+Inputs: decision 0071 (A first, B and C later; table #360), decision 0070 (children not exempt from harm; table #361), rows MON-12, ENG-48, ENG-49, AGT-106 (table #360) and MAP-23 (table #361), all open, none on main. If Stas accepts this scope, 0071 stays as written: this is a backlog milestone, so B, C and AGT-106 "in the backlog" still hold; no new record.
 
 ## 1. Goal
 
@@ -9,8 +9,8 @@ When wolves hit the wagon at night, Gwyn's dog, the horses and Tam are in the fi
 
 ## 2. In
 
-1. **B: the dog and the horses** (MON-12, ENG-48). Mastiff and Draft Horse into core (`demo`), the pin, then the party-side hold-by-the-wagon script in `adapter/`; a dead horse leaves its wagon's `team`; a dead dog is a deed that `gwyn_news` and `gwyn_cheese` read.
-2. **Tam is a creature** (MAP-23; Stas 20:42Z «он NPC и должен быть существом в движке»). Commoner block (already at pin 3220a7f), same script as ENG-48; his harm or death writes a deed that `bel_asks` and `tams_story` read through `unless`; Rufus's note in `rufus_offer` cannot read a deed, so its text changes or the card gets a gated twin.
+1. **B: the dog and the horses** (MON-12, ENG-48). Mastiff and Draft Horse into core (`demo`), the pin, then the party-side hold-by-the-wagon script in `adapter/`; a dead horse leaves its wagon's `team`; a dead dog is a deed that every card reading `fed_gwyns_dog` also reads (`gwyn_news`, `gwyn_cheese`, `night_wolves`, `drovers`, MAP-22's twin).
+2. **Tam is a creature** (MAP-23; Stas 20:42Z «он NPC и должен быть существом в движке»). Commoner block (already at pin 3220a7f), same script as ENG-48; his harm or death writes a deed that `bel_asks` and `tams_story` read through `unless`; `rufus_offer`, whose note assumes him riding and cannot read a deed, gets a gated twin.
 3. **The judge check** (AGT-106). A creature that attacks, is attacked or is hurt in fight narration but is not in the fight is a flag; the digest gains the fight's participants.
 4. **C: the Merchant can die** (ENG-49), only if §8 question 4 is answered before the system design merges; else it stays in the backlog alone. Not priced until that answer (its row) and not in §7's totals.
 
@@ -36,7 +36,7 @@ Allies are run by the engine's script, never by the DM agent or a player (0071).
 3. Rule 4 and Rule 5: the hold-by-the-wagon policy beside `scripted_action` in `adapter/game.rs`, no rule repeated in `nat20-world`.
 4. Deed ids (snake_case, ENG-33) for a dead dog, a dead horse, Tam hurt, Tam dead; which outlive the contract (ENG-37); the dog going home (MAP-22).
 5. Which of the seven fights each ally joins; where Tam stands when he follows at a distance (`tam_followed`; MAP-23 puts him in the fight).
-6. `caravan.rs`: a wagon with fewer horses; `escort.rs` and the ledger trial balance when the Merchant dies (C, after §8 question 4).
+6. `caravan.rs`: a wagon with fewer horses, or none (both dead: can the contract finish?), and the cards that narrate horses (`lame_horse`, the lowland mud card, Tam's near horse); `escort.rs` and the ledger trial balance when the Merchant dies (C, after §8 question 4).
 7. AGT-106: the participants in both digests (`game/src/check/digest.ts`, `crates/nat20-duel/src/digest.rs`), the flag's kind, the scripted CI judge case.
 
 ## 6. Rows
