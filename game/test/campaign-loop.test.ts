@@ -527,7 +527,7 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     assert.ok(later.length > 0, "a scene waited for its road card");
     for (const scene of later) {
       const open = dm.briefings.findIndex((b) => b.wake === "scene_open" && b.briefing.includes(`Scene ${scene} is loaded`));
-      const before = dm.briefings.slice(0, open).findLastIndex((b) => b.wake === "scene_open");
+      const before = dm.briefings.map((b) => b.wake).lastIndexOf("scene_open", open - 1);
       assert.ok(open > 0 && dm.briefings.slice(before + 1, open).some((b) => b.wake === "pick" || b.wake === "card"), `${scene} opened after its road card`);
     }
     // A card that comes with no pick has its own wake, opened once (AGT-100).
