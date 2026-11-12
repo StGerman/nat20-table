@@ -244,9 +244,9 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
     case "concentration_ended":
       return `${who(event.actor)} больше не удерживает заклинание ${n.thing(event.spell, titled(event.spell))}${CONCENTRATION_RU[event.reason]}.`;
     case "effect_started":
-      return `${who(event.target)}: действует ${n.thing(event.effect, event.name)}.`;
+      return `${who(event.target)}: действует ${lower(n.thing(event.effect, event.name))}.`;
     case "effect_ended":
-      return `${who(event.target)}: ${n.thing(event.effect, event.name)} больше не действует.`;
+      return `${who(event.target)}: больше не действует ${lower(n.thing(event.effect, event.name))}.`;
     case "item_used":
       return event.target === event.actor
         ? `${who(event.actor)} выпивает: ${n.thing(event.item, titled(event.item))}.`
@@ -268,7 +268,7 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
       }
       return null;
     case "moved":
-      return event.anchor ? `${who(event.actor)} идёт: ${n.anchor(event.anchor, event.anchor.replace(/_/g, " "))}.` : `${who(event.actor)} перемещается.`;
+      return event.anchor ? `${who(event.actor)} теперь здесь: ${n.anchor(event.anchor, event.anchor.replace(/_/g, " "))}.` : `${who(event.actor)} перемещается.`;
     case "rest":
       return event.rest === "long"
         ? `${everyone(event.participants, ctx) ? "Отряд" : n.list(event.participants)}: отдых всю ночь, до утра.`
@@ -289,9 +289,9 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
     case "card_drawn":
       return ctx.card ? `На дороге: ${ctx.card.text}` : `На дороге: ${event.card_text}`;
     case "card_advice":
-      return `${who(event.actor)} ${ctx.card?.target === "blades" ? "голосует" : "советует"}: ${choiceWords(event.choice, ctx.card)}.`;
+      return `${who(event.actor)} ${ctx.card?.target === "blades" ? "голосует" : "советует"}: ${quoted(choiceWords(event.choice, ctx.card))}.`;
     case "card_resolved":
-      return `Решено: ${choiceWords(event.choice, ctx.card)}.`;
+      return `Решено: ${quoted(choiceWords(event.choice, ctx.card))}.`;
     case "card_own_move":
       return `${who(event.actor)} предлагает своё: «${event.words}» (${SKILLS_RU[event.skill]}).`;
     case "own_move_ran":
@@ -323,6 +323,11 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
 
 function everyone(participants: readonly Handle[], ctx: SeatContext): boolean {
   return ctx.party !== undefined && ctx.party.length > 1 && ctx.party.every((h) => participants.includes(h));
+}
+
+/** Card words in the seat's quotes, unless the own move is already quoted. */
+function quoted(text: string): string {
+  return text.startsWith("«") ? text : `«${text}»`;
 }
 
 function lower(text: string): string {
@@ -380,7 +385,7 @@ function rollRu(roll: RollView, n: SeatNames, human: Handle | undefined): string
     }
     case "saving_throw": {
       const { ability } = labelled(roll.label);
-      return `${who} ${ability ? `держится (${ABILITY_RU[ability]})` : "держится"}: ${roll.outcome === "success" ? "вышло" : "не вышло"}. ${dieWords ? `${dieWords}, всего ${roll.total}.` : `Всего ${roll.total}.`}`;
+      return `${who} ${ability ? `пытается устоять (${ABILITY_RU[ability]})` : "пытается устоять"}: ${roll.outcome === "success" ? "вышло" : "не вышло"}. ${dieWords ? `${dieWords}, всего ${roll.total}.` : `Всего ${roll.total}.`}`;
     }
     case "attack": {
       const target = roll.target ? ` (${n.who(roll.target)})` : "";
