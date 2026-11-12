@@ -73,7 +73,6 @@ export interface Verdict {
 
 const VOIDS = new Set(["usage_limit", "login", "offline", "operator"]);
 
-
 function readText(file: string): string | undefined {
   return existsSync(file) ? readFileSync(file, "utf8") : undefined;
 }

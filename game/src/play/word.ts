@@ -53,8 +53,7 @@ const cameText = (c: CardMet) =>
   c.came === "dm_pick" ? `the DM picked it: ${c.reason ?? "no reason given"}` : c.came === "engine_pick" ? "the DM did not answer; the engine took the first card" : c.came === "soon" ? "an earlier choice sent it" : "the only card the draw rolled";
 
 /** The section's lines, or none for a run with no living world (no card met, no deed). */
-export function wordReport(dir: string): string[] {
-  const log = readLog(dir);
+export function wordReport(dir: string, log: Event[] = readLog(dir)): string[] {
   const cards = cardsMet(log);
   const deeds = log.flatMap((e) => (e.kind === "deed_remembered" ? [e] : []));
   if (cards.length === 0 && deeds.length === 0 && !log.some((e) => e.kind === "cards_offered")) return [];

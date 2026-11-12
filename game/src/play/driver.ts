@@ -497,6 +497,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   ink?.check(CHECK_REPORT, "running");
   await breath();
 
+  const sessionLog = readLines<Event>(path.join(runDir, SESSION_LOG));
   const report = [
     `# ${play.command} run, ${new Date().toISOString()}`,
     "",
@@ -510,8 +511,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...(run?.suggestions ? [`- ${suggestionLine(run.suggestions)}`] : []),
     ...(record.roster ? [`- ${rosterReport(record.roster)}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
-    ...wordReport(runDir),
-    ...exitReport(record, readLines<Event>(path.join(runDir, SESSION_LOG)), transcript.records, usage.records),
+    ...wordReport(runDir, sessionLog),
+    ...exitReport(record, sessionLog, transcript.records, usage.records),
     ...(narration ? ["", ...narration.lines] : []),
     "",
     ...timingLines(record),

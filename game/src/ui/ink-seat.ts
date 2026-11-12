@@ -383,9 +383,9 @@ export class InkSeat implements Seat {
 
   show(event: TableEvent): void {
     // Engine lines are drawn when they show: at once for the human's own, else when released.
-    // These show the held engine lines above them first: release them now, so the record keeps the screen's order.
+    // These show the held engine lines above them first, released here, so the record keeps the screen's order.
     if (event.kind === "options" || event.kind === "reaction" || event.kind === "question" || event.kind === "end") this.release();
-    // The loop's first answer to a typed command, whatever its kind, is the command's.
+    // The loop's first info or options after a typed command is the command's answer.
     const answers = this.commanded && (event.kind === "info" || event.kind === "options");
     if (answers) this.commanded = false;
     if (event.kind !== "engine") this.drawn(answers || (event.kind === "info" && OVERLAYS.has(event.title)) ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
@@ -400,7 +400,6 @@ export class InkSeat implements Seat {
         return;
       case "options":
         // Numbered options stay above the prompt instead of scrolling away; `/options` prints them again.
-        this.release();
         this.update({ options: event, highlight: event.preset });
         return;
       case "engine": {
@@ -436,16 +435,13 @@ export class InkSeat implements Seat {
         break;
       case "reaction":
         // The fight stands still until the human answers: the action zone holds it, not the story.
-        this.release();
         this.update({ reaction: event });
         return;
       case "question":
-        this.release();
         this.update({ question: event.text });
         break;
       case "end":
         // The end of the run is read in the story, whatever was open over it.
-        this.release();
         // The narrow frame's /panel overlay is `folded`, so it closes too; a wide frame's folded pane opens again.
         this.update({ overlay: undefined, folded: false, reaction: undefined, question: undefined });
         break;
@@ -489,10 +485,9 @@ export class InkSeat implements Seat {
     // Nothing waits for a narration while the human decides.
     this.release();
     const queued = this.queued.shift();
-    if (queued) {
-      this.commanded = queued.kind === "command";
-      return Promise.resolve(queued);
-    }
+    // A command answered with no info or options (/pause, /suggest) is over when the loop asks again.
+    this.commanded = queued?.kind === "command";
+    if (queued) return Promise.resolve(queued);
     if (this.interrupted) return Promise.resolve({ kind: "command", name: "quit" });
     // A fight's options belong to the human's own turn: any other prompt means it is over.
     const turnOver = this.view.options?.budget && prompt.kind !== "combat_turn" && prompt.kind !== "pick";

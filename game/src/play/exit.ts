@@ -280,7 +280,7 @@ export function seatReplay(dir: string): string[] {
   const last = own ?? log.find((e) => e.kind === "card_resolved");
   const end = last?.seq ?? Number.POSITIVE_INFINITY;
   const out: string[] = [];
-  const said = (r: TranscriptRecord) => (r.speaker === "dm" ? `${ui.dm}: ${r.text}` : `${names.who(r.speaker)}: ${r.text}`);
+  const said = (r: TranscriptRecord) => (r.speaker === "dm" ? `${ui.dm}: ${r.text}` : `${names.person(r.speaker)}: ${r.text}`);
   // What the DM narrates and the AI players say aloud, in order.
   const talk = transcript.filter((r) => !r.to && ((r.speaker === "dm" && r.kind === "narration") || (party.includes(r.speaker) && r.kind === "speech")));
   let held: string[] = [];

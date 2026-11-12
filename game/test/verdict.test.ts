@@ -4,7 +4,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { RUN_FORMAT, writeRunRecord, type RunRecord } from "../src/play/record.ts";
+import { readLines, RUN_FORMAT, writeRunRecord, type RunRecord } from "../src/play/record.ts";
+import { SESSION_LOG } from "../src/engine.ts";
 import { AUDIT_JSON, cardsMet, computeVerdict, CONFIRMATIONS_JSON, NARRATION_CHECK, VERDICT_JSON, writeVerdict } from "../src/play/verdict.ts";
 import { SUGGESTED_CARDS, wordReport } from "../src/play/word.ts";
 import { exitReport, latinWords, SEAT_JSONL, seatReplay } from "../src/play/exit.ts";
@@ -353,18 +354,17 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
   assert.deepEqual(latinWords([{ at: "t", kind: "command", text: helpText(UI_WORDS.ru) }]).map((f) => f.word), []);
 
   // The report lists the own move with every seat's vote; the replay shows the card as a seat draws it.
-  const read = <T>(f: string) => readFileSync(path.join(good, f), "utf8").split("\n").filter((l) => l !== "").map((l) => JSON.parse(l) as T);
-  const report = exitReport(run, read("session-log.jsonl"), read("transcript.jsonl"), []).join("\n");
+  const report = exitReport(run, readLines(path.join(good, SESSION_LOG)), readLines(path.join(good, "transcript.jsonl")), []).join("\n");
   assert.match(report, /1\. fallen_tree, maren: "I talk the carter into lending his ox"; persuasion DC 10; success brings clear, failure around; votes: maren own_move, torva own_move; decided on own_move \(majority\); r30, success; brought clear/);
   const replayed = folder(run, seated, withSeq([
-    { kind: "card_drawn", visibility: { scope: "public" }, text: "A road card", card_text: "A tree lies across the road.", choices: [{ id: "clear", text: "Clear it." }, { id: "around", text: "Go around." }], target: { kind: "party" } },
+    { kind: "card_drawn", visibility: { scope: "public" }, text: "A road card", card_text: "A tree lies across the road.", choices: [{ id: "clear", text: "Clear it." }, { id: "around", text: "Go around." }], target: "caravan" },
     { kind: "card_resolved", visibility: { scope: "public" }, text: "The card is decided: clear.", choice: "clear", decided: "majority" },
   ]));
   assert.deepEqual(seatReplay(replayed).filter((l) => l !== ""), [
     "DM: A tree lies across the road.",
     "On the road:",
     "  A tree lies across the road.",
-    "  The Blades decide together.",
+    "  The merchant decides; your word is advice.",
     "Choices:",
     "  1. Clear it.",
     "  2. Go around.",
