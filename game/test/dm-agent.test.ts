@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { CRAFT_PLUGIN, craftSkills, DM_LONG_WAKE_TIMEOUT_MS, DM_TURN_TIMEOUT_MS, dmPrompt, ModelDm, type CraftMode } from "../src/agents/dm.ts";
+import { CRAFT_PLUGIN, craftSkills, DM_LONG_WAKE_TIMEOUT_MS, DM_TURN_TIMEOUT_MS, dmPrompt, FIRESIDE_LINE, ModelDm, type CraftMode } from "../src/agents/dm.ts";
 import { ModelPlayer } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
@@ -94,6 +94,25 @@ test("the DM's prompt holds the rules, the craft guidance and the whole pack; it
   for (const tool of dm.seatTools) {
     for (const field of ["viewer", "prompt_id", "hp", "result", "outcome"]) assert.ok(!(field in tool.inputSchema), `${tool.name} takes ${field}`);
   }
+});
+
+test("a Fireside run adds one ask to the adventure part; a Plain run's prompt is byte for byte as before (AGT-102)", () => {
+  const plain = dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt", "ru");
+  assert.equal(dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt", "ru", "plain"), plain);
+  assert.ok(!plain.includes(FIRESIDE_LINE));
+  assert.ok(plain.includes(`## The adventure (only you see it)\n\n${PACK.text}`));
+  const fireside = dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt", "ru", "fireside");
+  assert.equal(fireside, plain.replace("## The adventure (only you see it)\n\n", `## The adventure (only you see it)\n\n${FIRESIDE_LINE}\n\n`));
+  // The skills mode carries the same ask: the voice skill reads it from the adventure's instructions.
+  assert.ok(dmPrompt(PACK, PARTY.human, PARTY.ai, "skills", "en", "fireside").includes(FIRESIDE_LINE));
+  // The run command passes the flag through to the DM's prompt.
+  const cli = path.join(REPO, "game/src/play/scene.ts");
+  const run = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "--dry-run", "--voice", "fireside"], { encoding: "utf8" });
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  assert.ok(run.stdout.includes(FIRESIDE_LINE));
+  const unknown = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "--dry-run", "--voice", "loud"], { encoding: "utf8" });
+  assert.equal(unknown.status, 2);
+  assert.match(unknown.stderr, /--voice is one of plain, fireside/);
 });
 
 test("in skills mode the craft guidance is the plugin's skills, named in the prompt, not pasted into it", async () => {
