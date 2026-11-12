@@ -29,7 +29,7 @@ C. Stas removed the rule. Torture stays never shown: he did not touch that half.
 ## Consequences
 
 - Guardrail 4 in `.claude/skills/zoya/references/commandments.md` keeps only torture, with a Removed note; its row in `examples.md`, the line in `.claude/agents/zoya.md` and the line in `game/dm-craft/skills/voice/SKILL.md` follow; "Never harm him on screen" leaves the `boy_on_tailboard` note. The producer's bible doc gets the same change (the repo copy wins).
-- The deeds about Tam and Wenna assume them alive; MAP-21 adds a harm deed when a card can hurt them.
+- The deeds about Tam assume him alive; MAP-21 adds a harm deed when a card can hurt him. Wenna in *The Silent Mill* stays out of reach for another reason: she is not a creature in the engine, and narration must match engine state.
 - No rule that a child never gets Hit Points. Whether a child ever becomes a creature in a fight is a content choice per card, not a ban.
 - The narration judge and the Vera test still apply to any scene where it happens.
 
