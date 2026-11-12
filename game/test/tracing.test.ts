@@ -11,6 +11,7 @@ import { LangfuseSpanProcessor } from "@langfuse/otel";
 import { InMemorySpanExporter } from "@opentelemetry/sdk-trace-base";
 import { AgentSession, reply, seatTool, setTurnTracer } from "../src/agents/sdk-session.ts";
 import { langfuseEnv, langfuseTracer, type TracedTurn } from "../src/tracing.ts";
+import { tagsOfRun } from "../src/play/record.ts";
 import { UsageLog } from "../src/usage.ts";
 
 const narrate = seatTool("narrate", "Say this to the table.", { text: z.string() }, async ({ text }) => reply(text === "bad" ? "refused" : "said", text === "bad"));
@@ -98,6 +99,28 @@ test("the tracer makes one trace a turn: an agent named by role and purpose, a g
   assert.equal(generations[0]!.startTime[0], t0 / 1000, "spans keep the turn's own times");
   assert.match(String(generations[0]!.attributes["langfuse.observation.cost_details"]), /0\.008/);
   assert.equal(byName.get("narrate")!.attributes["langfuse.observation.level"], "WARNING", "a refused tool call is flagged");
+});
+
+test("a flush waits for a turn a session has just handed over", async () => {
+  const exporter = new InMemorySpanExporter();
+  const tracer = await langfuseTracer({ sessionId: "s", tags: [] }, new LangfuseSpanProcessor({ exporter, exportMode: "immediate" }));
+  const t0 = Date.parse("2026-11-12T20:00:00Z");
+  const usage = { agent: "maren", model: "m", effort: "low", purpose: "turn", session_turn: 1, outcome: "ok", input_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, output_tokens: 0, api_calls: 0, wall_ms: 1, ttft_ms: null, api_equivalent_usd: 0, tools: [], at: "" } as const;
+  // The session's own way of handing a turn over, right before the run's last flush.
+  setImmediate(() => tracer.turn({ role: "player", seat: "maren", purpose: "turn", message: "go", final: "", started: t0, ended: t0 + 1, usage: { ...usage, tools: [] }, calls: [], tools: [] }));
+  await tracer.flush(1_000);
+  assert.deepEqual(exporter.getFinishedSpans().map((s) => s.name), ["player.turn"]);
+});
+
+test("the audit's traces carry the run's tags from run.json", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "run-tags-"));
+  try {
+    assert.deepEqual(tagsOfRun(dir), [], "no run.json, no tags");
+    writeFileSync(path.join(dir, "run.json"), JSON.stringify({ profile: { name: "cheap", sha256: "x" }, settings: { pack: { value: "/a/scenarios/fair_in_wend", from: "flag" } }, roster: { name: "m12" } }));
+    assert.deepEqual(tagsOfRun(dir), ["cheap", "fair_in_wend", "roster:m12"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("the keys come from the shell, else from .env, and only the three Langfuse ones are taken", () => {

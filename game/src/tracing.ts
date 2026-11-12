@@ -92,9 +92,10 @@ export function langfuseEnv(env: NodeJS.ProcessEnv = process.env, file = path.jo
  * never fails for its traces.
  */
 export async function tracerFromEnv(run: TraceRun): Promise<TurnTracer | undefined> {
-  const keys = langfuseEnv();
-  if (!keys) return undefined;
   try {
+    // Inside the try: an unreadable or malformed `.env` turns tracing off, never the run.
+    const keys = langfuseEnv();
+    if (!keys) return undefined;
     const { LangfuseSpanProcessor } = await import("@langfuse/otel");
     return await langfuseTracer(run, new LangfuseSpanProcessor({ publicKey: keys.LANGFUSE_PUBLIC_KEY, secretKey: keys.LANGFUSE_SECRET_KEY, baseUrl: keys.LANGFUSE_BASE_URL }));
   } catch (error) {
@@ -173,6 +174,9 @@ export async function langfuseTracer(run: TraceRun, processor: Processor): Promi
       }
     },
     async flush(timeoutMs = 10_000) {
+      // A session hands its last turn over on the next turn of the event loop (`setImmediate`), so
+      // let that run first: otherwise the run's last turn would miss the flush.
+      await new Promise((resolve) => setImmediate(resolve));
       let timer: NodeJS.Timeout | undefined;
       const late = new Promise<void>((resolve) => (timer = setTimeout(() => resolve(console.error(`tracing: Langfuse did not answer in ${timeoutMs / 1000} s; some traces may be missing`)), timeoutMs)));
       await Promise.race([processor.forceFlush().catch((error: unknown) => console.error(`tracing: ${error instanceof Error ? error.message : String(error)}`)), late]);
