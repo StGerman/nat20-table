@@ -659,7 +659,7 @@ export class InkSeat implements Seat {
   stopAsking(why: string): void {
     if (this.interrupted) return;
     this.interrupted = true;
-    this.add([{ tone: "end", text: `Stopping: ${why}.` }]);
+    this.add([{ tone: "end", text: this.ui.stoppingFor(why) }]);
     const answer = this.answer;
     if (answer) {
       this.answer = undefined;
@@ -961,7 +961,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
 
   // The overlay in the story's rows: a dim name row with its keys, and the text from `overlayTop`.
   function overlayLines() {
-    const name = view.overlay?.title ?? "Panel";
+    const name = view.overlay?.title ?? seat.ui.panelTitle;
     const fresh = view.overlay ? new Set(view.lines.slice(view.overlay.at).filter((l) => l.text.trim() !== "").map((l) => l.id)).size : 0;
     const more = overlayMax > 0 ? " · PgUp/PgDn" : "";
     const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, seat.ui.overlayKeys(name, more !== "", fresh));

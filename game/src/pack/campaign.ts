@@ -114,11 +114,6 @@ export function seatCards(pack: string): Map<string, CardRu> {
   return cards;
 }
 
-/**
- * What a Russian seat calls the world's things (AGT-98): every place on the map, each good
- * (`good:<id>`) and each place NPC (`npc:<id>`). The seat names only what an event it may see
- * already names, so the whole map is safe to hold here (Rule 3).
- */
 /** The name part of an NPC's Russian description: its capitalised words before any comma. */
 export function shortRu(name: string): string {
   const head = name.split(",")[0]!;
@@ -126,6 +121,11 @@ export function shortRu(name: string): string {
   return words.length > 0 ? words.join(" ") : head;
 }
 
+/**
+ * What a Russian seat calls the world's things (AGT-98): every place on the map, each good
+ * (`good:<id>`) and each place NPC (`npc:<id>`). The seat names only what an event it may see
+ * already names, so the whole map is safe to hold here (Rule 3).
+ */
 export function worldSeatNames(pack: string): Map<string, string> {
   const names = new Map<string, string>();
   const world = campaignWorld(pack);

@@ -101,10 +101,11 @@ function arrivalRu(arrives: { day: number; watch: WorldPlayer["clock"]["watch"] 
 }
 
 /** `/map` in Russian: the way ahead in travel order, as `mapLines` gives it in English. */
-export function mapLinesRu(world: WorldPlayer, names: SeatNames): string[] {
+export function mapLinesRu(world: WorldPlayer, names: SeatNames, form: "wide" | "pane" = "wide"): string[] {
+  const wide = form === "wide";
   const name = (id: string) => names.place(id);
   const today = world.clock.day;
-  const row = (left: string, right: string, width = 26) => (right ? `${left.padEnd(width)} ${right}` : left);
+  const row = (left: string, right: string, width = wide ? 26 : 20) => (right ? `${left.padEnd(width)} ${right}` : left);
   const escort = world.escort && !world.escort.done ? world.escort : undefined;
   const lines = [[`День ${today}`, WATCH_RU[world.clock.watch], ...(escort ? [`путь: ${name(escort.destination)}`] : [])].join(" · "), ""];
   const here = world.at.kind === "at" ? world.at.place : undefined;
@@ -117,7 +118,7 @@ export function mapLinesRu(world: WorldPlayer, names: SeatNames): string[] {
   const legs = trip?.legs ?? [];
   for (const [i, leg] of legs.entries()) {
     const last = i === legs.length - 1;
-    lines.push(row(`│ ${miles(leg.miles)}`, legTime(leg.minutes, leg.nights), 38));
+    lines.push(row(`│ ${miles(leg.miles)}`, legTime(leg.minutes, leg.nights), wide ? 38 : 20));
     lines.push(row(`${last && trip!.complete ? "◎" : "●"} ${name(leg.to)}`, `прибытие: ${arrivalRu(leg.arrives, today)}${last && trip!.complete ? " · подряд кончается" : ""}`));
     onRoute.add(leg.to);
   }

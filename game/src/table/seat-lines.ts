@@ -413,6 +413,8 @@ function ledgerRu(event: Extract<Event, { kind: "ledger" }>, n: SeatNames, human
   const goods = event.what.kind === "coins" ? coinsRu(event.what.copper) : `${n.thing(event.what.item, titled(event.what.item))}${event.what.quantity > 1 ? `, ${event.what.quantity}` : ""}`;
   const from = n.person(event.from);
   const to = n.person(event.to);
+  // A holder that is no one: a wagon, a market, the world.
+  const thing = (id: string) => id.includes(":") || id === "world";
   if (event.to === human) {
     switch (event.reason) {
       case "wage":
@@ -423,7 +425,7 @@ function ledgerRu(event: Extract<Event, { kind: "ledger" }>, n: SeatNames, human
       case "reward":
         return `Вам дают награду: ${goods}.`;
       default:
-        return event.from.includes(":") ? `Вы получаете: ${goods}.` : `${from} даёт вам: ${goods}.`;
+        return thing(event.from) ? `Вы получаете: ${goods}.` : `${from} даёт вам: ${goods}.`;
     }
   }
   if (event.from === human) {
@@ -434,9 +436,9 @@ function ledgerRu(event: Extract<Event, { kind: "ledger" }>, n: SeatNames, human
         return `Вы платите пошлину: ${goods}.`;
       case "loot":
       case "theft":
-        return event.to.includes(":") ? `Вы теряете: ${goods}.` : `${to} забирает ваше: ${goods}.`;
+        return thing(event.to) ? `Вы теряете: ${goods}.` : `${to} забирает ваше: ${goods}.`;
       default:
-        return event.to.includes(":") ? `Вы платите: ${goods}.` : `Вы отдаёте: ${goods}; берёт ${n.who(event.to)}.`;
+        return thing(event.to) ? `Вы платите: ${goods}.` : `Вы отдаёте: ${goods}; берёт ${n.who(event.to)}.`;
     }
   }
   switch (event.reason) {

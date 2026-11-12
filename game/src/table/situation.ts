@@ -132,7 +132,7 @@ function russian(situation: Situation, state: Extract<State, { view: "player" }>
     me: { ...situation.me, name: shown[me.handle]!, kind: situation.me.name, effects: me.effects.map((e) => names.thing(e.id, e.name)) },
     creatures: situation.creatures.map((c) => ({ ...c, name: shown[c.handle]!, kind: c.name })),
     ...(me.concentration ? { concentrationName: names.thing(me.concentration.spell, titled(me.concentration.spell)) } : {}),
-    ...(world && situation.road ? { road: { ...situation.road, where: `${day} · ${at}${scout ? ` · ${scout}` : ""}`, day: day!, map: mapLinesRu(world, names) } } : {}),
+    ...(world && situation.road ? { road: { ...situation.road, where: `${day} · ${at}${scout ? ` · ${scout}` : ""}`, day: day!, map: mapLinesRu(world, names, "pane") } } : {}),
   };
 }
 

@@ -346,7 +346,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
       // The table keeps the first reason, so the quit that frees a waiting prompt doesn't replace it.
       const stop = () => {
         table.end(`the ${limit}-minute time limit`, "time_limit");
-        ink?.stopAsking(`the ${limit}-minute time limit`);
+        ink?.stopAsking(UI_WORDS[language].timeLimit(limit));
       };
       if (limit > 0) deadline = setTimeout(stop, limit * 60_000);
     }

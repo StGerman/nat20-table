@@ -250,8 +250,8 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     walk: " (подойти)",
     anotherTarget: ", другая цель",
     aimAt: (option, at, catches) => `${option}: ${at}, заденет: ${catches}`,
-    takeRoad: (to, miles) => `Дорога на ${to} (${plural(miles, "миля", "мили", "миль")})`,
-    takeRoadFast: (to, miles) => `Дорога на ${to} быстрым шагом, сегодня там (${plural(miles, "миля", "мили", "миль")})`,
+    takeRoad: (to, miles) => `Дорога: ${to} (${plural(miles, "миля", "мили", "миль")})`,
+    takeRoadFast: (to, miles) => `Дорога: ${to}, быстрым шагом, сегодня там (${plural(miles, "миля", "мили", "миль")})`,
     unexplored: (miles) => `Неизведанная дорога (${plural(miles, "миля", "мили", "миль")})`,
     unexploredFast: (miles) => `Неизведанная дорога быстрым шагом, сегодня до её конца (${plural(miles, "миля", "мили", "миль")})`,
     moveOn: "Идти дальше с обозом",
@@ -471,6 +471,12 @@ export interface UiWords {
   overlayKeys(name: string, scroll: boolean, fresh: number): string;
   fresh(count: number): string;
   pickerTitle: string;
+  /** The story's line when the table stops early, with why. */
+  stoppingFor(why: string): string;
+  /** Why: the run's time limit. */
+  timeLimit(minutes: number): string;
+  /** The situation panel's title as an overlay. */
+  panelTitle: string;
   /** The input row while the engine starts. */
   engineStarting: string;
   /** The picker's one row when nothing matches the draft. */
@@ -585,6 +591,9 @@ export const UI_WORDS: Record<Language, UiWords> = {
     overlayKeys: (name, scroll, fresh) => `${name} · Esc closes${scroll ? " · PgUp/PgDn" : ""}${fresh > 0 ? ` · ↓ ${fresh} new` : ""}`,
     fresh: (count) => (count > 0 ? `↓ ${count} new · End to follow` : "↓ End to follow"),
     engineStarting: "The engine is starting",
+    stoppingFor: (why) => `Stopping: ${why}.`,
+    timeLimit: (minutes) => `the ${minutes}-minute time limit`,
+    panelTitle: "Panel",
     pickerTitle: "Commands · ↑/↓ move · Enter runs · Tab completes · Esc closes",
     noCommandStarts: (draft) => `No command starts with ${draft}. /help lists them all.`,
     pickerCount: (shown, total) => ` (${shown} of ${total})`,
@@ -696,6 +705,9 @@ export const UI_WORDS: Record<Language, UiWords> = {
     overlayKeys: (name, scroll, fresh) => `${name} · Esc закрывает${scroll ? " · PgUp/PgDn" : ""}${fresh > 0 ? ` · ↓ новых: ${fresh}` : ""}`,
     fresh: (count) => (count > 0 ? `↓ новых: ${count} · End — к ним` : "↓ End — к последним"),
     engineStarting: "Стол готовится",
+    stoppingFor: (why) => `Игра останавливается: ${why}.`,
+    timeLimit: (minutes) => `вышло отведённое время, ${plural(minutes, "минута", "минуты", "минут")}`,
+    panelTitle: "Обстановка",
     pickerTitle: "Команды · ↑/↓ выбор · Enter выполняет · Tab дописывает · Esc закрывает",
     noCommandStarts: (draft) => `Нет команды, которая начинается с ${draft}. /help покажет все.`,
     pickerCount: (shown, total) => ` (${shown} из ${total})`,
