@@ -360,6 +360,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     table,
     dm,
     players,
+    language,
     // A campaign goes wherever the road takes it, and ends on its own terms (AGT-80).
     ...(campaign ? {} : { onScene: plan.onScene }),
     // The adventure ends only after the run's last scene has loaded (or with the party down).

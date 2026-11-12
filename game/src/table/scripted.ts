@@ -428,6 +428,8 @@ export function chainDm(scenes: ChainScene[], party: Handle[], checker: Handle):
 export class ScriptedSeat implements Seat {
   readonly handle: Handle;
   readonly shown: TableEvent[] = [];
+  /** Every prompt it was asked, in order. */
+  readonly prompts: HumanPrompt[] = [];
   /** The numbered list on screen now: the last options event. */
   choices: Choice[] = [];
   /** The fight policy's place in its turn plan, reset by each "Your turn" status line. */
@@ -530,6 +532,7 @@ export class ScriptedSeat implements Seat {
   }
 
   async ask(prompt: HumanPrompt): Promise<PlayerIntent> {
+    this.prompts.push(prompt);
     return this.answers.shift() ?? this.fallback(prompt);
   }
 }
