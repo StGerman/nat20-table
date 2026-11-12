@@ -1543,18 +1543,21 @@ impl Game {
         }
     }
 
-    /// Moves `actor` and returns the feet it moved, who it provoked, and whether its walk
-    /// reaches where it was sent. In explore mode the creature walks the whole route at no
-    /// movement cost and provokes nobody, since nobody is fighting. In combat the session has
-    /// checked the prompt: the route must fit in the movement left, or with `partial` it is
-    /// walked as far as the movement goes, to the last free spot (API-35); an opportunity attack
-    /// holds the creature where it was provoked until the reaction is resolved.
+    /// Moves `actor` and returns the feet it moved, who it provoked, whether its walk reaches
+    /// where it was sent, and whether its route got there and stopped short because a creature
+    /// stands there (`taken`). Every walk ends on the last free spot along its route, so one
+    /// to a point or an anchor where a creature stands stops short of it (ENG-21). In explore
+    /// mode the creature walks its route at no movement cost and provokes nobody, since nobody
+    /// is fighting. In combat the session has checked the prompt: the route must fit in the
+    /// movement left, or with `partial` it is walked as far as the movement goes (API-35); an
+    /// opportunity attack holds the creature where it was provoked until the reaction is
+    /// resolved.
     pub fn move_to(
         &mut self,
         actor: &str,
         to: &MoveTarget,
         partial: bool,
-    ) -> Result<(f32, Vec<Handle>, bool), ApiError> {
+    ) -> Result<(f32, Vec<Handle>, bool, bool), ApiError> {
         let entity = self.entity(actor)?;
         let combat = self.mode() == Mode::Combat;
         // Explore mode has no movement to run out of, so every walk there goes the whole way.
@@ -1593,23 +1596,41 @@ impl Game {
             },
         )?;
         let full_end = *route.full_path.points.last().unwrap_or(&from);
-        // A partial walk ends where the movement runs out, stepped back to the last free spot:
-        // a creature can't end its move in another's space (SRD 5.2.1, Moving Around Other
-        // Creatures). With none along the way, nothing moves and the move is refused.
-        let end = if route.reaches_goal() || route.taken_path.points.is_empty() {
-            full_end
+        // A walk ends on the last free spot along the route it takes: a creature can't end its
+        // move in another's space (SRD 5.2.1, Moving Around Other Creatures). That cuts short a
+        // partial walk where the movement runs out, and any walk to a point or an anchor where a
+        // creature stands (ENG-21). With none along the way, nothing moves and the move is
+        // refused.
+        // `taken` only for a route that gets to its goal: a partial walk the movement cut short
+        // first is the movement's case, whoever stands at the goal.
+        let reaches = route.reaches_goal();
+        let taken = reaches && !systems::movement::is_free_spot(&self.engine, entity, &full_end);
+        let (end, walked_m) = if reaches && !taken {
+            (
+                full_end,
+                route.full_path.length.get::<uom::si::length::meter>(),
+            )
         } else {
             self.last_free_spot(entity, &route.taken_path)
-                .unwrap_or(from)
+                .unwrap_or((from, 0.0))
         };
         // A creature goal can itself fall short of the creature: core cuts a partial path to a
         // creature back to a free spot, and that spot is the goal then (`goal`).
-        let reached = (end - full_end).norm() < 0.05 && goal_in_reach;
+        let reached = !taken && (end - full_end).norm() < 0.05 && goal_in_reach;
         if (end - from).norm() < 0.05 && !reached {
-            return Err(rejected(
-                RejectReason::InsufficientResource,
-                format!("{actor} has no movement left this turn to get any closer."),
-            ));
+            return Err(if taken {
+                rejected(
+                    RejectReason::NoPath,
+                    format!(
+                        "Someone already stands there, and {actor} has no free spot on the way to stop at."
+                    ),
+                )
+            } else {
+                rejected(
+                    RejectReason::InsufficientResource,
+                    format!("{actor} has no movement left this turn to get any closer."),
+                )
+            });
         }
         let anchor = anchor.filter(|_| reached);
 
@@ -1624,11 +1645,11 @@ impl Game {
             self.note_provoker();
             before - remaining_movement_m(&self.engine, entity)
         } else {
-            // Nobody is fighting, so the creature is simply placed at the end of its route.
+            // Nobody is fighting, so the creature is simply placed where its walk ends.
             systems::geometry::teleport_to(&mut self.engine.world, entity, &end);
             // An explore command that acts closes a finished fight's `combat_over`.
             self.close_finished_fight();
-            route.full_path.length.get::<uom::si::length::meter>()
+            walked_m
         };
         let landed = systems::geometry::get_foot_position(&self.engine.world, entity)
             .expect("scene creatures have a position");
@@ -1680,7 +1701,7 @@ impl Game {
         } else {
             moved_m
         };
-        Ok((round_ft(moved_m), provoked, reached))
+        Ok((round_ft(moved_m), provoked, reached, taken))
     }
 
     /// While a `move` runs, records the creature a pending opportunity attack window on the
@@ -1793,10 +1814,10 @@ impl Game {
         }
     }
 
-    /// The furthest point along `path` where `entity` could end its move, searched by distance
-    /// rather than by the path's corners: a straight walk has only its two ends, and the far one
-    /// may be another creature's space.
-    fn last_free_spot(&self, entity: Entity, path: &WorldPath) -> Option<Point3<f32>> {
+    /// The furthest point along `path` where `entity` could end its move, and how far along the
+    /// path it is in metres, searched by distance rather than by the path's corners: a straight
+    /// walk has only its two ends, and the far one may be another creature's space.
+    fn last_free_spot(&self, entity: Entity, path: &WorldPath) -> Option<(Point3<f32>, f32)> {
         const STEP_M: f32 = 0.25;
         let start = *path.points.first()?;
         let mut distance = path.length.get::<uom::si::length::meter>();
@@ -1805,11 +1826,11 @@ impl Game {
                 uom::si::length::meter,
             >(distance))?;
             if systems::movement::is_free_spot(&self.engine, entity, &point) {
-                return Some(point);
+                return Some((point, distance));
             }
             distance -= STEP_M;
         }
-        Some(start)
+        Some((start, 0.0))
     }
 
     /// Starts the scene encounter `encounter_id`: rolls initiative for its participants, the
@@ -4895,9 +4916,23 @@ mod tests {
             },
         };
 
-        let (_, _, reached) = game.move_to("bren", &far, true).unwrap();
+        let (_, _, reached, taken) = game.move_to("bren", &far, true).unwrap();
 
         assert!(!reached);
+        assert!(!taken, "the movement ran out, nobody stands at the point");
+
+        // The movement runs out short of a point where the goblin stands: still the movement's
+        // case, not `taken`.
+        let mut game = crowded_yard();
+        let at_goblin = MoveTarget::Point {
+            point: PointFt {
+                x_ft: -60.0,
+                y_ft: 0.0,
+                z_ft: 0.0,
+            },
+        };
+        let (_, _, reached, taken) = game.move_to("bren", &at_goblin, true).unwrap();
+        assert!(!reached && !taken);
         let bren = game.entity("bren").unwrap();
         let landed = systems::geometry::get_foot_position(&game.engine.world, bren).unwrap();
         let x_ft = from_core_point(landed).x_ft;
@@ -4905,6 +4940,49 @@ mod tests {
             x_ft < -15.0 && x_ft > -30.0,
             "Bren stops short of Maren, at {x_ft} ft"
         );
+    }
+
+    /// A move to a point where a creature stands ends on the last free spot before it, in
+    /// combat and in explore mode, and says the point wasn't reached (ENG-21).
+    #[test]
+    fn a_move_to_a_point_where_a_creature_stands_ends_on_the_last_free_spot() {
+        let to_maren = MoveTarget::Point {
+            point: PointFt {
+                x_ft: -30.0,
+                y_ft: 0.0,
+                z_ft: 0.0,
+            },
+        };
+        let mut fight = crowded_yard();
+        let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+        let scene = scene::read(&data, "crowded_yard").unwrap();
+        let Ok(mut explore) = Game::load(None, &scene, &[], &[]) else {
+            panic!("crowded_yard loads");
+        };
+        for game in [&mut fight, &mut explore] {
+            let (moved_ft, _, reached, taken) = game.move_to("bren", &to_maren, false).unwrap();
+
+            assert!(!reached && taken);
+            let bren = game.entity("bren").unwrap();
+            let landed = systems::geometry::get_foot_position(&game.engine.world, bren).unwrap();
+            assert!(systems::movement::is_free_spot(&game.engine, bren, &landed));
+            let x_ft = from_core_point(landed).x_ft;
+            assert!(
+                x_ft > -30.0 && x_ft < -20.0,
+                "Bren stops just short of Maren, at {x_ft} ft"
+            );
+            assert!(
+                (moved_ft + x_ft).abs() < 0.5,
+                "moved_ft {moved_ft} is the walk to {x_ft} ft"
+            );
+        }
+
+        // Standing next to Maren, Bren has no free spot on the way into her space: nothing
+        // moves and the move is refused as having no route.
+        let Err(refused) = explore.move_to("bren", &to_maren, false) else {
+            panic!("a move with no free spot on the way is refused");
+        };
+        assert_eq!(refused.reason, Some(RejectReason::NoPath));
     }
 
     /// A partial move towards a creature out of range, whose movement runs out in an ally's
@@ -4917,9 +4995,10 @@ mod tests {
             handle: Handle("goblin_a".to_owned()),
         };
 
-        let (_, _, reached) = game.move_to("bren", &goblin, true).unwrap();
+        let (_, _, reached, taken) = game.move_to("bren", &goblin, true).unwrap();
 
         assert!(!reached);
+        assert!(!taken, "the movement ran out short of the goblin");
         let bren = game.entity("bren").unwrap();
         let landed = systems::geometry::get_foot_position(&game.engine.world, bren).unwrap();
         let x_ft = from_core_point(landed).x_ft;

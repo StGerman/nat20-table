@@ -1143,8 +1143,8 @@ test("once the human has Dashed this turn, Action Surge's action brings a Dash l
   assert.equal(report.humanRejections, 0);
   assert.ok(menu.some((l) => l.includes("stops short")), menu.join("; "));
   assert.ok(menu.some((l) => l.startsWith("Dash, then")), menu.join("; "));
-  // 13 ft left plus one more Speed (30 ft) reaches goblin_3 at 38 ft but not goblin_2 at 56 ft.
-  assert.ok(menu.includes("Dash, then move next to goblin_3 (hostile, 38 ft)"), menu.join("; "));
+  // 17 ft left plus one more Speed (30 ft) reaches goblin_3 at 37 ft but not goblin_2 at 54 ft.
+  assert.ok(menu.includes("Dash, then move next to goblin_3 (hostile, 37 ft)"), menu.join("; "));
   assert.ok(!menu.some((l) => l.startsWith("Dash, then move next to goblin_2")), menu.join("; "));
 });
 

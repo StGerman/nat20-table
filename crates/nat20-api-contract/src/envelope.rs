@@ -617,10 +617,16 @@ pub enum CommandResult {
         /// Creatures that got an opportunity attack prompt from this move, in prompt order.
         provoked: Vec<Handle>,
         /// Whether the walk set out to end where the creature was sent (next to the creature, at
-        /// the anchor or the point). False only for a `partial` move that the movement left cut
-        /// short; a creature an opportunity attack holds on the way is still on a walk that
-        /// reaches.
+        /// the anchor or the point). False for a `partial` move that the movement left cut short,
+        /// and for a move to a point or an anchor where a creature stands, which ends on the last
+        /// free spot before it (`1.0.0-dev.70`); a creature an opportunity attack holds on the way
+        /// is still on a walk that reaches.
         reached: bool,
+        /// True when the walk got as far as where it was sent and stopped short because a creature
+        /// stands there, so a client can say why it didn't get there (`1.0.0-dev.70`). Left out
+        /// otherwise, which includes a `partial` move the movement left cut short first.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        taken: bool,
     },
     /// The check's roll and outcome.
     RequestCheck {

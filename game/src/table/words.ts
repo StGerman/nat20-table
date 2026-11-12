@@ -35,8 +35,8 @@ export interface TableWords {
   sayOrOptions: string;
   noSuchOnList(number: number): string;
   stoppedShort: string;
-  /** A walk that ran out of movement: how far it went, and who it provoked. */
-  movedShort(feet: number, provoked: string): string;
+  /** A walk that stopped short: how far it went, who it provoked, and whether someone stood where it was going (`taken`) rather than the movement running out. */
+  movedShort(feet: number, provoked: string, taken: boolean): string;
   notAccepted: string;
   /** A refusal with no engine reason: the table is not taking that now. */
   notNow: string;
@@ -199,7 +199,7 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     sayOrOptions: "Say what you do, or type /options.",
     noSuchOnList: (number) => `There is no ${number} on the list. Type /options to see it again.`,
     stoppedShort: "Stopped short",
-    movedShort: (feet, provoked) => `You moved ${feet} ft; stopped short, as far as movement goes: not there yet${provoked ? `; provoked ${provoked}` : ""}.`,
+    movedShort: (feet, provoked, taken) => `You moved ${feet} ft; ${taken ? "stopped short: someone already stands there" : "stopped short, as far as movement goes: not there yet"}${provoked ? `; provoked ${provoked}` : ""}.`,
     notAccepted: "Not accepted",
     notNow: "Not now: the table is waiting on something else.",
     notUnderstood: "Not understood",
@@ -290,7 +290,7 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     sayOrOptions: "Скажите, что делаете, или наберите /options.",
     noSuchOnList: (number) => `В списке нет номера ${number}. Наберите /options, чтобы увидеть его снова.`,
     stoppedShort: "Не дошли",
-    movedShort: (feet, provoked) => `Вы прошли ${plural(feet, "фут", "фута", "футов")}, и шаги на этот ход кончились: до цели ещё не дошли${provoked ? `. Вслед вам может ударить: ${provoked}` : ""}.`,
+    movedShort: (feet, provoked, taken) => `Вы прошли ${plural(feet, "фут", "фута", "футов")}${taken ? " и остановились: на том месте уже кто-то стоит" : ", и шаги на этот ход кончились: до цели ещё не дошли"}${provoked ? `. Вслед вам может ударить: ${provoked}` : ""}.`,
     notAccepted: "Не принято",
     notNow: "Сейчас нельзя: стол ждёт другого.",
     notUnderstood: "Не понято",

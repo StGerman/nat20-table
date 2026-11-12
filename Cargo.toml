@@ -42,7 +42,10 @@ nat20-world = { path = "crates/nat20-world" }
 # blocks, MON-11), core #70's head until it merges. cdc2c32 = 38ed11f plus core #72 (a Long Rest
 # needs 1 Hit Point and waits 16 hours, ENG-30) and core #73 (Exhaustion and malnutrition,
 # ENG-29), core #73's head until the stack merges.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "3220a7f23f1b3a9d295a89a5dc88ad4a8aa7531b" }
+# 3220a7f = the head of core's `core/m9-api-48-restore-hit-points` stack, now in `demo`.
+# 1b3c9fb = demo aa636b0 plus core #81 (every Move ends on the last free spot along its path,
+# ENG-21), core #81's head until it merges.
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "1b3c9fbf7f9f906ac8be70f27b072e666a509eae" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
