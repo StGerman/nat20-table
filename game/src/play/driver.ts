@@ -228,9 +228,11 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // (before the table is set, it exits). The keyboard seat draws from here, so the engine's start
   // shows its loading indicator too.
   let quit: () => void = () => process.exit(130);
+  // One way of naming things for the seat and the table's lines (AGT-98).
+  const seatNames = new SeatNames(language, party.seatRu);
   const ink =
     flags.seat === "ink" && party.human
-      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: pack.adventure.title, language, names: new SeatNames(language, party.seatRu) })
+      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: pack.adventure.title, language, names: seatNames })
       : undefined;
   // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame. The
   // seat owns the alternate screen (AGT-69, decision 0054): the terminal comes back as it was when
@@ -298,7 +300,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     inputsFile: path.join(runDir, "inputs.jsonl"),
     ...guards(flags.pack, engine, language),
     // The seat's lines in the run's language (AGT-98): names from the pack, cards' words from the decks.
-    names: new SeatNames(language, party.seatRu),
+    names: seatNames,
     cards: seatCards(flags.pack),
   });
   // Who plays whom, in the transcript as in run.json (AGT-35).

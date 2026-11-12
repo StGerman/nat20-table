@@ -311,7 +311,7 @@ export class TableState {
       const logged = seatLine(event, { ...ctx, site: "log" });
       const roll = rollOf(event);
       if (logged !== null) {
-        this.recent.push(this.names.language === "en" || !roll ? logged : `${logged} [${roll}]`);
+        this.recent.push(this.names.language === "en" || !roll ? logged : `[${roll}] ${logged}`);
         if (this.recent.length > RECENT_LINES) this.recent.shift();
       }
       if (event.kind === "turn_start") this.screenTurn = event.actor;
@@ -337,6 +337,7 @@ export class TableState {
       const id = this.cardsShown.filter((c) => c.seq <= event.seq).at(-1)?.card;
       const ru = this.names.language === "ru" && id !== undefined ? this.cards.get(id) : undefined;
       this.seatCard = {
+        ...(id !== undefined ? { id } : {}),
         target: event.target,
         text: ru?.text_ru ?? event.card_text,
         choices: new Map(event.choices.map((c) => [c.id, ru?.choices[c.id] ?? c.text])),

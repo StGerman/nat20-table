@@ -134,7 +134,11 @@ function bar(s: Situation, stale = false, glyphs: Record<string, string> | undef
   const p = ui.panel;
   const row: Row = [];
   // A creature's glyph, by its handle or else its kind, in front of the handle on the turn-order line only (AGT-67).
-  const kindOf = (handle: string) => (handle === s.me.handle ? s.me.name : s.creatures.find((c) => c.handle === handle)?.name);
+  const kindOf = (handle: string) => {
+    if (handle === s.me.handle) return s.me.name;
+    const c = s.creatures.find((x) => x.handle === handle);
+    return c?.kind ?? c?.name;
+  };
   const marked = (handle: string) => {
     const kind = kindOf(handle);
     const glyph = glyphs?.[handle] ?? (kind ? glyphs?.[kind] : undefined);

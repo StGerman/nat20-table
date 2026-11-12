@@ -41,13 +41,13 @@ export function commandMatches(draft: string): CommandEntry[] | undefined {
  * says so. The `❯` marks the cursor without colour, for NO_COLOR.
  */
 export function pickerRows(draft: string, matches: readonly CommandEntry[], cursor: number, room = PICKER_ROWS, ui: UiWords = UI_WORDS.en): Row[] {
-  if (matches.length === 0) return [[{ text: ui === UI_WORDS.en ? `No command starts with ${draft}. /help lists them all.` : `Нет команды, которая начинается с ${draft}. /help покажет все.`, style: { accent: "hint" } }]];
+  if (matches.length === 0) return [[{ text: ui.noCommandStarts(draft), style: { accent: "hint" } }]];
   const shown = Math.max(1, Math.min(room, matches.length));
   const top = Math.min(Math.max(0, cursor - shown + 1), matches.length - shown);
   const pad = Math.max(...COMMAND_ENTRIES.map((entry) => entry.name.length)) + 1;
-  const count = shown < matches.length ? ` (${shown} of ${matches.length})` : "";
+  const count = shown < matches.length ? ui.pickerCount(shown, matches.length) : "";
   return [
-    [{ text: `${ui.pickerTitle}${ui === UI_WORDS.en ? count : count.replace(" of ", " из ")}`, style: { accent: "hint", bold: true } }],
+    [{ text: `${ui.pickerTitle}${count}`, style: { accent: "hint", bold: true } }],
     ...matches.slice(top, top + shown).map((entry, i): Row => {
       const at = top + i === cursor;
       return [

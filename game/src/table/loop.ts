@@ -1064,7 +1064,8 @@ export class TableLoop {
     for (;;) {
       if (this.table.ended) return;
       // The card's words in the run's language, as the seat read them from its deck (AGT-98).
-      const seen = this.table.cardOnSeat;
+      const seat = this.table.cardOnSeat;
+      const seen = seat?.id === card.id ? seat : undefined;
       const shown = { ...card, text: seen?.text ?? card.text, choices: card.choices.map((c) => ({ ...c, text: seen?.choices.get(c.id) ?? c.text })) };
       const { choices } = cardChoices(shown, words, human, this.table.names);
       if (showCard) this.table.show({ kind: "info", title: words.onTheRoad, text: [shown.text, owner ? words.yourCaravan : card.target === "caravan" ? words.merchantDecides : words.bladesDecide].join("\n") });
@@ -1124,7 +1125,7 @@ export class TableLoop {
       const more = choice.picks - picked.length;
       this.table.show({
         kind: "options",
-        title: this.words.levelTitle(choice.level, this.table.names.thing(choice.label, choice.label), choice.picks > 1 ? more : undefined),
+        title: this.words.levelTitle(choice.level, this.table.names.thing(choice.label, this.table.names.language === "ru" ? "выбор" : choice.label), choice.picks > 1 ? more : undefined),
         lines: choiceLines(choices),
         choices,
         preset: 1,

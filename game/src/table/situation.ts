@@ -16,6 +16,8 @@ export interface SituationCreature {
   health: HealthBand;
   conditions: Condition[];
   distance_ft: number;
+  /** The engine's English name, kept for the turn-order glyphs when `name` is the seat's (AGT-98). */
+  kind?: string;
   /** One of the human's options can reach it without walking first (the human's turn only). */
   in_reach: boolean;
 }
@@ -126,7 +128,7 @@ function russian(situation: Situation, state: Extract<State, { view: "player" }>
     ...situation,
     shown,
     me: { ...situation.me, name: shown[me.handle]!, effects: me.effects.map((e) => names.thing(e.id, e.name)) },
-    creatures: situation.creatures.map((c) => ({ ...c, name: shown[c.handle]! })),
+    creatures: situation.creatures.map((c) => ({ ...c, name: shown[c.handle]!, kind: c.name })),
     ...(me.concentration ? { concentrationName: names.thing(me.concentration.spell, me.concentration.spell) } : {}),
     ...(world && situation.road ? { road: { ...situation.road, where: `${day} · ${at}${scout ? ` · ${scout}` : ""}`, day: day!, map: mapLinesRu(world, names) } } : {}),
   };

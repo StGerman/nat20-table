@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import type { Ability, CardTarget, Condition, DamageType, Event, Handle, RollView, Skill, Watch } from "@nat20-table/engine-client";
 import type { Language } from "../agents/language.ts";
-import { eventLine, titled, yourLine } from "../view.ts";
+import { coinPhrase, eventLine, titled, yourLine } from "../view.ts";
 import { plural } from "./plural.ts";
 import { SKILLS_RU } from "./words.ts";
 
@@ -38,6 +38,8 @@ export function ruDictionary(): RuDictionary {
  * words in the run's language and the own move's words, so advice names a choice, not its id.
  */
 export interface CardOnSeat {
+  /** The card's id, from the DM's `card_shown`, when the seat saw it. */
+  id?: string;
   target: CardTarget;
   /** The card's words in the run's language. */
   text: string;
@@ -157,10 +159,10 @@ function enLine(event: Event, ctx: SeatContext): string | null {
       // The DM's opening says where (design §4); `/log` keeps the line.
       return ctx.site === "seat" ? null : eventLine(event);
     case "ledger":
-      if (event.reason === "wage" && event.what.kind === "coins") return `${n.person(event.from)} pays ${n.person(event.to)} ${coinsEn(event.what.copper)} in wages.`;
+      if (event.reason === "wage" && event.what.kind === "coins") return `${n.person(event.from)} pays ${n.person(event.to)} ${coinPhrase(event.what.copper)} in wages.`;
       break;
     case "rest":
-      if (event.rest === "long") return `${everyone(event.participants, ctx) ? "The party" : n.list(event.participants)} rest${everyone(event.participants, ctx) || event.participants.length > 1 ? "" : "s"} through the night until morning.`;
+      if (event.rest === "long") return `${everyone(event.participants, ctx) ? "The party" : event.participants.map((h) => n.person(h)).join(", ")} rest${everyone(event.participants, ctx) || event.participants.length > 1 ? "" : "s"} through the night until morning.`;
       break;
     case "card_advice":
       if (ctx.card) return `${n.person(event.actor)} ${ctx.card.target === "blades" ? "votes" : "advises"}: ${choiceWords(event.choice, ctx.card)}.`;
@@ -171,7 +173,7 @@ function enLine(event: Event, ctx: SeatContext): string | null {
     case "time_lost":
       return `The party loses ${durationEn(event.minutes)}.`;
     case "roll":
-      if (event.roll.kind === "skill_check" || event.roll.kind === "ability_check") return checkEn(event.roll, n);
+      if (ctx.site === "seat" && (event.roll.kind === "skill_check" || event.roll.kind === "ability_check")) return checkEn(event.roll, n);
       break;
   }
   // `/log` keeps the roll id first, as it read before AGT-98; the seat writes it last.
@@ -468,19 +470,6 @@ export function coinsRu(copper: number): string {
 }
 
 /** Coins in English, as the engine says them: "2 gold pieces", "1 gold, 5 silver pieces". */
-function coinsEn(copper: number): string {
-  const parts = (
-    [
-      [Math.floor(copper / 100), "gold"],
-      [Math.floor((copper % 100) / 10), "silver"],
-      [copper % 10, "copper"],
-    ] as const
-  )
-    .filter(([count]) => count > 0)
-    .map(([count, metal]) => `${count} ${metal}`);
-  const pieces = Math.floor(copper / 100) + Math.floor((copper % 100) / 10) + (copper % 10) === 1 ? "piece" : "pieces";
-  return `${parts.join(", ")} ${pieces}`;
-}
 
 function miles(count: number): string {
   return plural(count, "милю", "мили", "миль");

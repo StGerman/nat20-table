@@ -471,6 +471,10 @@ export interface UiWords {
   overlayKeys(name: string, scroll: boolean, fresh: number): string;
   fresh(count: number): string;
   pickerTitle: string;
+  /** The picker's one row when nothing matches the draft. */
+  noCommandStarts(draft: string): string;
+  /** How many commands the picker shows of how many match, when some are cut. */
+  pickerCount(shown: number, total: number): string;
   suggestQuestion: { answer(name: string): string; surrender(name: string): string; other(name: string): string };
   panel: {
     explore: string;
@@ -579,6 +583,8 @@ export const UI_WORDS: Record<Language, UiWords> = {
     overlayKeys: (name, scroll, fresh) => `${name} · Esc closes${scroll ? " · PgUp/PgDn" : ""}${fresh > 0 ? ` · ↓ ${fresh} new` : ""}`,
     fresh: (count) => (count > 0 ? `↓ ${count} new · End to follow` : "↓ End to follow"),
     pickerTitle: "Commands · ↑/↓ move · Enter runs · Tab completes · Esc closes",
+    noCommandStarts: (draft) => `No command starts with ${draft}. /help lists them all.`,
+    pickerCount: (shown, total) => ` (${shown} of ${total})`,
     suggestQuestion: {
       answer: (name) => `What does ${name} answer?`,
       surrender: (name) => `They offer to surrender. What does ${name} do?`,
@@ -687,6 +693,8 @@ export const UI_WORDS: Record<Language, UiWords> = {
     overlayKeys: (name, scroll, fresh) => `${name} · Esc закрывает${scroll ? " · PgUp/PgDn" : ""}${fresh > 0 ? ` · ↓ новых: ${fresh}` : ""}`,
     fresh: (count) => (count > 0 ? `↓ новых: ${count} · End — к ним` : "↓ End — к последним"),
     pickerTitle: "Команды · ↑/↓ выбор · Enter выполняет · Tab дописывает · Esc закрывает",
+    noCommandStarts: (draft) => `Нет команды, которая начинается с ${draft}. /help покажет все.`,
+    pickerCount: (shown, total) => ` (${shown} из ${total})`,
     suggestQuestion: {
       answer: (name) => `Что отвечает ${name}?`,
       surrender: (name) => `Враги готовы сдаться. Что делает ${name}?`,
