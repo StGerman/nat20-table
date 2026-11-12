@@ -6,7 +6,7 @@
 
 ## Context
 
-On `night_wolves` (`worlds/wend/deck/lowland.json`) in a live *Fair in Wend* run on the M12 exit build, the DM narrated Gwyn's dog growling, but the fight held only the wolves and the party. The dog (deed `fed_gwyns_dog`), Merchant Odda Vell and the horses are in the scene and in no engine fight. Stas's direction: bring everyone in where it makes sense. Facts checked: `place_creature` puts a creature on side `party` under a scripted policy (MON-11); `neutral` creatures never enter a fight; core has no Mastiff or Draft Horse block; SRD 5.2.1 Wolf bite (+4, 1d6+2) kills a Mastiff (AC 12, HP 5) in 43% of attacks and a Commoner (AC 10, HP 4) in 62%.
+On `night_wolves` (`worlds/wend/deck/lowland.json`) in a live *Fair in Wend* run on the M12 exit build, the DM narrated Gwyn's dog growling, but the fight held only the wolves and the party. The dog (deed `fed_gwyns_dog`), Merchant Odda Vell and the horses are in the scene and in no engine fight. Stas's direction: bring everyone in where it makes sense. Facts checked: `place_creature` puts a creature on side `party` under a scripted policy (MON-11); `neutral` creatures never enter a fight; core has no Mastiff or Draft Horse block; SRD 5.2.1 Wolf bite (+4, 1d6+2, crits counted) kills a Mastiff (AC 12, HP 5) in about 45% of attacks and a Commoner (AC 10, HP 4) in about 64%; with Pack Tactics (a second wolf adjacent, Advantage) about 61% and 80%.
 
 ## Options
 
