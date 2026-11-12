@@ -159,3 +159,6 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-12: AGT-94 done, AGT-76 partial (table #358): Shift+↑/↓ and the trackpad scroll the story; the seat tests share one frame wait; row moved to docs/tasks-done.md
 - 2026-11-12: AGT-103 partial, AGT-13 partial (table #359): the seat's record, the Milestone 12 verdict rows and report; the exit pair is next
 - 2026-11-11: AGT-102 done (table #344, Milestone 12 PR 7); row moved to docs/tasks-done.md
+- 2026-11-12: AGT-105 done (table #362): the DM is «Рассказчик» at the Russian seat; row in docs/tasks-done.md
+- 2026-11-12: AGT-100 follow-up (trial run full-2026-11-12T19-02-03-994Z, Stas: fix before run 1): a scene reached with a road card met on the way opens once that card is settled, and the pay waits for the opening
+- 2026-11-12: AGT-99 follow-up (same trial run: 0 own moves in 9 AI card words): the AI players' prompt, card briefing, card ask and own_move tool say the written choices are only the obvious ones

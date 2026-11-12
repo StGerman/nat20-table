@@ -10,7 +10,7 @@ import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
 import { cardChoices, roadChoices } from "../src/table/choices.ts";
 import { SEAT_WORDS } from "../src/table/words.ts";
-import { TableLoop, cutAtWord } from "../src/table/loop.ts";
+import { OWN_MOVE_INVITE, TableLoop, cutAtWord, roadCardAhead } from "../src/table/loop.ts";
 import { DmTools } from "../src/table/tools.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
@@ -158,7 +158,7 @@ test("the human's words on a road card become an own move: their word is given, 
     // The AI player hears it as a choice of the card, in bren's words, and the line to make one is gone.
     const card = maren.briefings.find((b) => b.wake === "card");
     assert.match(card!.briefing, /own_move: bren's own move, "Ask the farmer to lend his ox\." \(persuasion\)/);
-    assert.doesNotMatch(card!.briefing, /say what they do with own_move/);
+    assert.ok(!card!.briefing.includes(OWN_MOVE_INVITE) && !card!.briefing.includes("something of your own with own_move"), card!.briefing);
     assert.ok(t.requests().some((r) => r.cmd === "choose_card" && r.viewer === "maren"));
     // The card was decided on the own move: the engine rolled the proposer's check.
     const log = JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "dm"));
@@ -177,6 +177,9 @@ test("an AI player's own_move words wake the DM's card_words, and the move lands
     const maren = new ScriptedPlayer("maren", { card: async (tools) => void (await tools.ownMove("Offer the farmer a blessing for his field.")) });
     const loop = new TableLoop({ table: t.table, dm, players: [maren], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
     await loop.run("vale_town");
+    // Her first card wake invites an own move, in the briefing and in the ask (AGT-99).
+    const first = maren.briefings.find((b) => b.wake === "card");
+    assert.ok(first?.briefing.includes(OWN_MOVE_INVITE) && first.briefing.includes("with a choice id, or try something of your own with own_move."), first?.briefing);
     const words = dm.briefings.find((b) => b.wake === "card_words");
     assert.match(words!.briefing, /maren says or does: "Offer the farmer a blessing for his field\."/);
     const moved = t.requests().find((r) => r.cmd === "own_move") as { actor?: string } | undefined;
@@ -467,6 +470,7 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
         await tools.narrate("Someone waits by the road.");
       },
       card: async (tools) => void (await tools.narrate("A card's people step forward.")),
+      scene_open: async (tools, briefing) => void (await tools.narrate(`Here is ${/Scene ([a-z0-9_]+) is loaded/.exec(briefing)?.[1]}.`)),
       suggest: async () => '{"cards": [{"id": "fair_debt", "text": "A stall-keeper remembers the party."}], "why": ["it carries on the fair"]}',
     });
     const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
@@ -521,6 +525,22 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     const goes = records.findIndex((r, i) => i > opened && r.kind === "system" && /^card [a-z0-9_]+ goes to the seats$/.test(r.text));
     assert.ok(opened >= 0 && goes > opened, "the picked card goes to the seats after its opening");
     assert.ok(!records.some((r) => r.text === "The road bends."), "the early narration was refused");
+    // A scene reached with a road card met on the way opens once that card is settled (AGT-100):
+    // the trial run of 2026-11-12 told Saltmouth's arrival, then played the road card.
+    const held = records.flatMap((r, i) => (r.kind === "system" && / opens after the road card met on the way$/.test(r.text) ? [i] : []));
+    assert.ok(held.length > 0, "a scene waited for its road card");
+    for (const waits of held) {
+      const scene = records[waits]!.text.split(" ")[1];
+      const goes = records.findIndex((r, i) => i > waits && r.kind === "system" && /^card [a-z0-9_]+ goes to the seats$/.test(r.text));
+      const decided = records.findIndex((r, i) => i > goes && r.text.startsWith("The card is decided"));
+      const opens = records.findIndex((r, i) => i > waits && r.kind === "narration" && r.wake === "scene_open");
+      assert.ok(goes > waits && decided > goes && opens > decided, `${scene}: waits ${waits}, card to the seats ${goes}, decided ${decided}, opened ${opens}`);
+      assert.equal(records[opens]!.text, `Here is ${scene}.`);
+      // No other card is played between the road card and the opening: a place's arrival card comes after it.
+      assert.ok(!records.slice(decided, opens).some((r) => r.kind === "system" && / goes to the seats$/.test(r.text)), `${scene}: a card between the road card and the opening`);
+      // The card's wakes before the opening are told the place is not reached yet.
+      assert.ok(dm.briefings.some((b) => (b.wake === "pick" || b.wake === "card") && b.briefing.includes("the caravan has not arrived")));
+    }
     // A card that comes with no pick has its own wake, opened once (AGT-100).
     for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: "/);
     const framed = records.filter((r) => r.kind === "narration" && r.wake === "card").length;
@@ -923,4 +943,14 @@ test("an arrival card at the destination is decided before the human's last turn
     t.close();
     rmSync(pack, { recursive: true, force: true });
   }
+});
+
+test("a road card met on the way is one from a road's zone, offered or on the table, not a place's arrival card (AGT-100)", () => {
+  const world = (offered: { zone: string }[], card?: { zone: string }) => ({ roads: [{ zone: "lowland" }, { zone: "hills" }], offered, card }) as never;
+  assert.equal(roadCardAhead(undefined), false);
+  assert.equal(roadCardAhead(world([])), false);
+  assert.equal(roadCardAhead(world([{ zone: "lowland" }, { zone: "lowland" }])), true, "a draw on the road offers cards");
+  assert.equal(roadCardAhead(world([{ zone: "wendmouth" }])), false, "an arrival draw");
+  assert.equal(roadCardAhead(world([], { zone: "lowland" })), true, "a road card on the table");
+  assert.equal(roadCardAhead(world([], { zone: "wendmouth" })), false, "the destination's arrival card");
 });
