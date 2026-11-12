@@ -167,7 +167,7 @@ export class InkSeat implements Seat {
   /** The speaker of the message the last line belongs to; undefined after anything else. */
   private speaker: string | undefined;
   /** The loop is answering a typed command (AGT-103): its info, options and status lines are drawn as `command`. */
-  private answer_ = false;
+  private answeringCommand = false;
   /** Drops the suggestion call in flight: the human's first key does (§7.1). */
   private cancelSuggest: (() => void) | undefined;
 
@@ -385,8 +385,8 @@ export class InkSeat implements Seat {
     // Engine lines are drawn when they show: at once for the human's own, else when released.
     // These show the held engine lines above them first, released here, so the record keeps the screen's order.
     if (RELEASES.has(event.kind)) this.release();
-    // Talk, narration or the end that comes while a command is answered keeps its own kind.
-    const answers = this.answer_ && (event.kind === "info" || event.kind === "options" || event.kind === "status");
+    // Only info, options and status lines are a command's answer; anything else keeps its kind.
+    const answers = this.answeringCommand && (event.kind === "info" || event.kind === "options" || event.kind === "status");
     if (event.kind !== "engine") this.drawn(answers ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
     else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));
     switch (event.kind) {
@@ -477,7 +477,7 @@ export class InkSeat implements Seat {
   readonly palette: Palette;
 
   answering(on: boolean): void {
-    this.answer_ = on;
+    this.answeringCommand = on;
   }
 
   unnarrated(): void {

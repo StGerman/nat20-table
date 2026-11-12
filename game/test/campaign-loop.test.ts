@@ -43,7 +43,17 @@ test("the loop starts the campaign, asks a road card of the human first and then
   const seat = new ScriptedSeat("bren", [], traveller());
   // The loop marks each typed command's answer for the seat's record (AGT-103).
   const answering: boolean[] = [];
-  (seat as ScriptedSeat & { answering(on: boolean): void }).answering = (on) => void answering.push(on);
+  const answered: string[] = [];
+  let on = false;
+  const show = seat.show.bind(seat);
+  seat.show = (event) => {
+    if (on) answered.push(event.kind);
+    show(event);
+  };
+  (seat as ScriptedSeat & { answering(on: boolean): void }).answering = (now) => {
+    on = now;
+    answering.push(now);
+  };
   const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
   try {
     const dm = new ScriptedDm({});
@@ -59,7 +69,8 @@ test("the loop starts the campaign, asks a road card of the human first and then
     const report = await loop.run("vale_town");
     assert.equal(report.ended, "the day limit: day 1 is over", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
     assert.equal(nights, 1, "the party is saved after the night");
-    assert.ok(answering.length > 0 && answering.every((on, i) => on === (i % 2 === 0)), `each /options answered between true and false: ${answering.join(",")}`);
+    assert.ok(answering.length > 0 && answering.every((now, i) => now === (i % 2 === 0)), `each /options answered between true and false: ${answering.join(",")}`);
+    assert.ok(answered.includes("options"), `the /options answer came inside the bracket: ${answered.join(",")}`);
     const sent = t.requests().map((r) => [r.cmd, r.viewer]);
     assert.deepEqual(sent.find(([c]) => c === "start_campaign"), ["start_campaign", "dm"]);
     assert.ok(sent.some(([c, v]) => c === "travel" && v === "bren"), "the human moved the caravan on");
