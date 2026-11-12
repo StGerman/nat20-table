@@ -10,7 +10,7 @@ import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
 import { cardChoices, roadChoices } from "../src/table/choices.ts";
 import { SEAT_WORDS } from "../src/table/words.ts";
-import { TableLoop, cutAtWord } from "../src/table/loop.ts";
+import { TableLoop, cutAtWord, roadCardAhead } from "../src/table/loop.ts";
 import { DmTools } from "../src/table/tools.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
@@ -467,6 +467,7 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
         await tools.narrate("Someone waits by the road.");
       },
       card: async (tools) => void (await tools.narrate("A card's people step forward.")),
+      scene_open: async (tools, briefing) => void (await tools.narrate(`Here is ${/Scene ([a-z0-9_]+) is loaded/.exec(briefing)?.[1]}.`)),
       suggest: async () => '{"cards": [{"id": "fair_debt", "text": "A stall-keeper remembers the party."}], "why": ["it carries on the fair"]}',
     });
     const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
@@ -521,6 +522,18 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     const goes = records.findIndex((r, i) => i > opened && r.kind === "system" && /^card [a-z0-9_]+ goes to the seats$/.test(r.text));
     assert.ok(opened >= 0 && goes > opened, "the picked card goes to the seats after its opening");
     assert.ok(!records.some((r) => r.text === "The road bends."), "the early narration was refused");
+    // A scene reached with a road card met on the way opens once that card is settled (AGT-100):
+    // the trial run of 2026-11-12 told Saltmouth's arrival, then played the road card.
+    const held = records.flatMap((r, i) => (r.kind === "system" && / opens after the road card met on the way$/.test(r.text) ? [i] : []));
+    assert.ok(held.length > 0, "a scene waited for its road card");
+    for (const waits of held) {
+      const scene = records[waits]!.text.split(" ")[1];
+      const goes = records.findIndex((r, i) => i > waits && r.kind === "system" && /^card [a-z0-9_]+ goes to the seats$/.test(r.text));
+      const decided = records.findIndex((r, i) => i > goes && r.text.startsWith("The card is decided"));
+      const opens = records.findIndex((r, i) => i > waits && r.kind === "narration" && r.wake === "scene_open");
+      assert.ok(goes > waits && decided > goes && opens > decided, `${scene}: waits ${waits}, card to the seats ${goes}, decided ${decided}, opened ${opens}`);
+      assert.equal(records[opens]!.text, `Here is ${scene}.`);
+    }
     // A card that comes with no pick has its own wake, opened once (AGT-100).
     for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: "/);
     const framed = records.filter((r) => r.kind === "narration" && r.wake === "card").length;
@@ -923,4 +936,14 @@ test("an arrival card at the destination is decided before the human's last turn
     t.close();
     rmSync(pack, { recursive: true, force: true });
   }
+});
+
+test("a road card met on the way is one from a road's zone, offered or on the table, not a place's arrival card (AGT-100)", () => {
+  const world = (offered: { zone: string }[], card?: { zone: string }) => ({ roads: [{ zone: "lowland" }, { zone: "hills" }], offered, card }) as never;
+  assert.equal(roadCardAhead(undefined), false);
+  assert.equal(roadCardAhead(world([])), false);
+  assert.equal(roadCardAhead(world([{ zone: "lowland" }, { zone: "lowland" }])), true, "a draw on the road offers cards");
+  assert.equal(roadCardAhead(world([{ zone: "wendmouth" }])), false, "an arrival draw");
+  assert.equal(roadCardAhead(world([], { zone: "lowland" })), true, "a road card on the table");
+  assert.equal(roadCardAhead(world([], { zone: "wendmouth" })), false, "the destination's arrival card");
 });
