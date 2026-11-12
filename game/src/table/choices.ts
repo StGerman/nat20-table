@@ -184,12 +184,14 @@ function capitalized(handle: Handle): string {
  */
 export function levelUpChoices(choice: LevelUpChoice, picked: readonly string[] = [], talk: SeatTalk = ENGLISH): Choice[] {
   const name = new Map(choice.options.map((o) => [o.id, talk.names.thing(o.id, o.name)]));
+  // A level-up rule summary the dictionary lacks stays off a Russian seat rather than read in English.
+  const summary = (id: string, english: string | null | undefined) => (talk.names.language === "ru" ? talk.names.summary(id, undefined) : (english ?? undefined));
   const recommended = choice.recommended.map((id) => name.get(id) ?? id).join(", ");
   return [
     { number: 1, label: talk.words.recommended(recommended), about: { id: "recommended" } },
     ...choice.options
       .filter((o) => !picked.includes(o.id))
-      .map((o, i) => ({ number: i + 2, label: `${name.get(o.id)}${o.summary ? `: ${talk.names.summary(o.id, o.summary)}` : ""}`, about: { id: o.id } })),
+      .map((o, i) => ({ number: i + 2, label: `${name.get(o.id)}${summary(o.id, o.summary) ? `: ${summary(o.id, o.summary)}` : ""}`, about: { id: o.id } })),
   ];
 }
 

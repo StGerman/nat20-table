@@ -55,13 +55,21 @@ export interface PackParty {
  * pack's party, NPCs and anchors. An NPC whose `name_ru` is a titled phrase («торговец солью Фенн
  * Ласк») goes by the glossary's short name when it has one, so the seat and the narration name it alike.
  */
+/** The name part of an NPC's Russian description: its capitalised words before any comma. */
+function shortRu(name: string): string {
+  const head = name.split(",")[0]!;
+  const words = head.split(/\s+/).filter((w) => /^[А-ЯЁA-Z]/.test(w));
+  return words.length > 0 ? words.join(" ") : head;
+}
+
 export function seatRuNames(pack: string, adventure: Adventure): Map<string, string> {
   const names = worldSeatNames(pack);
   for (const p of adventure.party) if (p.name_ru) names.set(p.handle, p.name_ru);
   for (const n of adventure.npcs) {
     const english = n.id.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     const short = adventure.glossary_ru[english];
-    const name = short ?? n.name_ru;
+    // Without a glossary entry, the capitalised words of `name_ru` before a comma: «торговка зерном Одда Велл» reads «Одда Велл».
+    const name = short ?? (n.name_ru ? shortRu(n.name_ru) : undefined);
     if (name) {
       names.set(`npc:${n.id}`, name);
       names.set(n.id, name);

@@ -135,7 +135,7 @@ function bar(s: Situation, stale = false, glyphs: Record<string, string> | undef
   const row: Row = [];
   // A creature's glyph, by its handle or else its kind, in front of the handle on the turn-order line only (AGT-67).
   const kindOf = (handle: string) => {
-    if (handle === s.me.handle) return s.me.name;
+    if (handle === s.me.handle) return s.me.kind ?? s.me.name;
     const c = s.creatures.find((x) => x.handle === handle);
     return c?.kind ?? c?.name;
   };
@@ -151,7 +151,7 @@ function bar(s: Situation, stale = false, glyphs: Record<string, string> | undef
     if (party.length > 0) row.push({ text: p.party }, ...join(party.map((c) => [{ text: `${shownName(s, c.handle)} ` }, health(c.health, 0, ui)])));
   } else {
     row.push({ text: p.round(s.round ?? 1) });
-    const mine = glyphs?.[s.me.handle] ?? glyphs?.[s.me.name];
+    const mine = glyphs?.[s.me.handle] ?? glyphs?.[s.me.kind ?? s.me.name];
     if (s.turn === s.me.handle) row.push({ text: " · " }, { text: `▶ ${mine ? `${mine} ` : ""}${p.yourTurn}`, style: { accent: "rust", bold: true } });
     else if (s.turn) row.push({ text: ` · ${p.turnOf(marked(s.turn))}` });
     if (s.up_in !== undefined) row.push({ text: p.upIn(s.up_in) });

@@ -291,9 +291,9 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
     case "card_drawn":
       return ctx.card ? `На дороге: ${ctx.card.text}` : `На дороге: ${event.card_text}`;
     case "card_advice":
-      return `${who(event.actor)} ${ctx.card?.target === "blades" ? "голосует" : "советует"}: ${quoted(choiceWords(event.choice, ctx.card))}.`;
+      return `${who(event.actor)} ${ctx.card?.target === "blades" ? "голосует" : "советует"}: ${quoted(choiceWords(event.choice, ctx.card, true))}.`;
     case "card_resolved":
-      return `Решено: ${quoted(choiceWords(event.choice, ctx.card))}.`;
+      return `Решено: ${quoted(choiceWords(event.choice, ctx.card, true))}.`;
     case "card_own_move":
       return `${who(event.actor)} предлагает своё: «${event.words}» (${SKILLS_RU[event.skill]}).`;
     case "own_move_ran":
@@ -337,8 +337,8 @@ function lower(text: string): string {
 }
 
 /** A choice's words on the card it belongs to; an own move reads as the player's words. */
-function choiceWords(choice: string, card: CardOnSeat | undefined): string {
-  if (choice === "own_move" && card?.ownMove) return `«${card.ownMove}»`;
+function choiceWords(choice: string, card: CardOnSeat | undefined, ru = false): string {
+  if (choice === "own_move" && card?.ownMove) return ru ? `«${card.ownMove}»` : `"${card.ownMove}"`;
   // The line ends the sentence itself: "Pay him and cross." reads "advises: Pay him and cross."
   return (card?.choices.get(choice) ?? choice).replace(/[.!]$/, "");
 }
@@ -469,8 +469,6 @@ export function coinsRu(copper: number): string {
   return parts.length > 0 ? parts.join(", ") : "ничего";
 }
 
-/** Coins in English, as the engine says them: "2 gold pieces", "1 gold, 5 silver pieces". */
-
 function miles(count: number): string {
   return plural(count, "милю", "мили", "миль");
 }
@@ -482,7 +480,8 @@ export function durationEn(minutes: number): string {
   if (minutes < 60) {
     if (minutes === 30) return "half an hour";
     const tens = ["", "ten", "twenty", "thirty", "forty", "fifty"];
-    return minutes % 10 === 0 ? `${tens[minutes / 10]} minutes` : `${minutes} minutes`;
+    if (minutes > 0 && minutes % 10 === 0) return `${tens[minutes / 10]} minutes`;
+    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
   }
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;

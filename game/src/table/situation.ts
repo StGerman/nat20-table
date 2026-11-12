@@ -3,7 +3,7 @@
 // for the human's viewer (Rule 3). Nothing here comes from the DM's view or the scenario, so the
 // panel can't show anything `/where`, `/options` and `/sheet` don't.
 import type { Condition, Handle, HealthBand, LifeState, Side, State, WorldPlayer } from "@nat20-table/engine-client";
-import { caravanAt, dayLine, mapLines, type LegalActionsResult } from "../view.ts";
+import { caravanAt, dayLine, mapLines, titled, type LegalActionsResult } from "../view.ts";
 import { plural } from "./plural.ts";
 import { type SeatNames, WATCH_RU } from "./seat-lines.ts";
 import { mapLinesRu } from "./seat-views.ts";
@@ -35,6 +35,8 @@ export interface Situation {
   me: {
     handle: Handle;
     name: string;
+    /** The engine's name, kept for the glyphs when `name` is the seat's (AGT-98). */
+    kind?: string;
     hp: number;
     hp_max: number;
     temp_hp: number;
@@ -127,9 +129,9 @@ function russian(situation: Situation, state: Extract<State, { view: "player" }>
   return {
     ...situation,
     shown,
-    me: { ...situation.me, name: shown[me.handle]!, effects: me.effects.map((e) => names.thing(e.id, e.name)) },
+    me: { ...situation.me, name: shown[me.handle]!, kind: situation.me.name, effects: me.effects.map((e) => names.thing(e.id, e.name)) },
     creatures: situation.creatures.map((c) => ({ ...c, name: shown[c.handle]!, kind: c.name })),
-    ...(me.concentration ? { concentrationName: names.thing(me.concentration.spell, me.concentration.spell) } : {}),
+    ...(me.concentration ? { concentrationName: names.thing(me.concentration.spell, titled(me.concentration.spell)) } : {}),
     ...(world && situation.road ? { road: { ...situation.road, where: `${day} · ${at}${scout ? ` · ${scout}` : ""}`, day: day!, map: mapLinesRu(world, names) } } : {}),
   };
 }

@@ -471,6 +471,8 @@ export interface UiWords {
   overlayKeys(name: string, scroll: boolean, fresh: number): string;
   fresh(count: number): string;
   pickerTitle: string;
+  /** The input row while the engine starts. */
+  engineStarting: string;
   /** The picker's one row when nothing matches the draft. */
   noCommandStarts(draft: string): string;
   /** How many commands the picker shows of how many match, when some are cut. */
@@ -582,6 +584,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
     enterPlays: (line) => `Enter plays ${line}`,
     overlayKeys: (name, scroll, fresh) => `${name} · Esc closes${scroll ? " · PgUp/PgDn" : ""}${fresh > 0 ? ` · ↓ ${fresh} new` : ""}`,
     fresh: (count) => (count > 0 ? `↓ ${count} new · End to follow` : "↓ End to follow"),
+    engineStarting: "The engine is starting",
     pickerTitle: "Commands · ↑/↓ move · Enter runs · Tab completes · Esc closes",
     noCommandStarts: (draft) => `No command starts with ${draft}. /help lists them all.`,
     pickerCount: (shown, total) => ` (${shown} of ${total})`,
@@ -692,6 +695,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
     enterPlays: (line) => `Enter: ${line}`,
     overlayKeys: (name, scroll, fresh) => `${name} · Esc закрывает${scroll ? " · PgUp/PgDn" : ""}${fresh > 0 ? ` · ↓ новых: ${fresh}` : ""}`,
     fresh: (count) => (count > 0 ? `↓ новых: ${count} · End — к ним` : "↓ End — к последним"),
+    engineStarting: "Стол готовится",
     pickerTitle: "Команды · ↑/↓ выбор · Enter выполняет · Tab дописывает · Esc закрывает",
     noCommandStarts: (draft) => `Нет команды, которая начинается с ${draft}. /help покажет все.`,
     pickerCount: (shown, total) => ` (${shown} из ${total})`,

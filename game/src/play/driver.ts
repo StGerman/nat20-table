@@ -27,6 +27,7 @@
 // sits at),
 // --rosters DIR, --suggest-model (AGT-49: the model that suggests the human's moves out of a fight
 // at the terminal, Haiku by default), --no-suggest (no suggestions; `/suggest` toggles them in play).
+import { UI_WORDS } from "../table/words.ts";
 import { spawn, type ChildProcess } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
@@ -239,7 +240,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // it stops, and everything printed after that lands on the normal screen.
   if (ink && screen) ink.adopt(screen);
   else ink?.start({ interactive: true, alternateScreen: true });
-  ink?.busy("The engine is starting");
+  ink?.busy(UI_WORDS[language].engineStarting);
 
   const runDir = runFolder(flags.out, play.folder);
   const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
@@ -301,7 +302,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...guards(flags.pack, engine, language),
     // The seat's lines in the run's language (AGT-98): names from the pack, cards' words from the decks.
     names: seatNames,
-    cards: seatCards(flags.pack),
+    cards: language === "ru" ? seatCards(flags.pack) : new Map(),
   });
   // Who plays whom, in the transcript as in run.json (AGT-35).
   table.log("system", party.human ? `the human plays ${party.human}; AI players: ${party.ai.join(", ")}` : `no human; AI players: ${party.ai.join(", ")}`);

@@ -1,6 +1,7 @@
 // `/sheet`, `/where` and `/map` at a Russian seat (AGT-98, design §4): rendered from the same
 // fields as their English forms in view.ts, which stay byte for byte as they were.
 import type { HealthBand, Sheet, State, WorldPlayer } from "@nat20-table/engine-client";
+import { titled } from "../view.ts";
 import { plural } from "./plural.ts";
 import { ABILITY_RU, coinsRu, type SeatNames, WATCH_RU } from "./seat-lines.ts";
 import { CONDITION_NAMES_RU, SKILLS_RU } from "./words.ts";
@@ -37,7 +38,7 @@ export function sheetRu(sheet: Sheet, names: SeatNames): string {
   const status = [
     ...(sheet.conditions.length > 0 ? [`Состояние: ${sheet.conditions.map((c) => CONDITION_NAMES_RU[c]).join(", ")}`] : []),
     ...(sheet.exhaustion > 0 ? [`Усталость: ${sheet.exhaustion}`] : []),
-    ...(sheet.concentration ? [`Удерживаете заклинание: ${names.thing(sheet.concentration.spell, sheet.concentration.spell)}`] : []),
+    ...(sheet.concentration ? [`Удерживаете заклинание: ${names.thing(sheet.concentration.spell, titled(sheet.concentration.spell))}`] : []),
     ...(sheet.effects.length > 0 ? [`Действует: ${sheet.effects.map((e) => `${names.thing(e.id, e.name)} (от: ${names.who(e.source)})`).join(", ")}`] : []),
   ];
   if (status.length > 0) lines.push(status.join(" · "));
