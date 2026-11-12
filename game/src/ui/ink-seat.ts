@@ -289,15 +289,19 @@ export class InkSeat implements Seat {
   wheelTurns: (turns: (-1 | 1)[]) => void = () => {};
   private stdin: NodeJS.ReadableStream | undefined;
   private carry = "";
+  private carriedAt = 0;
   /**
    * Ink drops every mouse report before `useInput`, so the seat reads the wheel off stdin's `data`
    * events. It listens once Ink's `readable` listener is on and stops before Ink lets go, so the
    * stream stays paused and Ink alone reads it; `data` fires only when Ink reads. A report split
-   * across two reads is carried over.
+   * across two reads is carried over for as long as Ink waits for the rest of a sequence (20 ms);
+   * after that Ink takes the halves as keys, and so does the seat.
    */
   private readonly read = (chunk: Buffer | string): void => {
-    const text = this.carry + String(chunk);
-    this.carry = /\u001b\[(<[\d;]*)?$/.exec(text)?.[0] ?? "";
+    const now = Date.now();
+    const text = (now - this.carriedAt <= INK_PENDING_MS ? this.carry : "") + String(chunk);
+    this.carry = /\u001b(\[(<[\d;]*)?)?$/.exec(text)?.[0] ?? "";
+    this.carriedAt = now;
     const turns = wheelsIn(text);
     if (turns.length > 0) this.wheelTurns(turns);
   };
@@ -346,9 +350,9 @@ export class InkSeat implements Seat {
   private readonly wheelOff = (): void => this.wheel(false);
   /**
    * A kill skips "exit": the mouse goes back to the terminal, then the signal is sent again. Ink's
-   * signal-exit is on before this listener (Ink renders first), and it stands aside while another
-   * listener is on; the second delivery finds it alone, so it unmounts, leaves the alternate
-   * screen and ends the process as the signal asks.
+   * signal-exit stands aside while another listener is on the signal; this one takes itself off
+   * first, so on the second delivery, or later in the same one, signal-exit finds itself alone,
+   * unmounts, leaves the alternate screen and ends the process as the signal asks.
    */
   private readonly hangup = (signal: NodeJS.Signals): void => {
     this.wheel(false);
@@ -861,6 +865,8 @@ export function suggestionRows(suggestions: Suggestions, question: string, ui: U
   ];
 }
 
+/** How long Ink waits for the rest of a split escape sequence before it takes the part as keys. */
+const INK_PENDING_MS = 20;
 /** Mouse reporting on and off: button events (`?1000`) in SGR form (`?1006`). */
 const WHEEL_ON = "\x1b[?1000h\x1b[?1006h";
 const WHEEL_OFF = "\x1b[?1006l\x1b[?1000l";
@@ -895,13 +901,10 @@ export const TOO_SMALL = UI_WORDS.en.tooSmall;
 export function TableScreen({ seat }: { seat: InkSeat }) {
   const view = useSyncExternalStore(seat.subscribe, seat.getView);
   const size: PanelSize = useWindowSize();
-  const [scroll, setScrollTo] = useState<Scroll | undefined>(undefined);
+  const [scroll, setScroll] = useState<Scroll | undefined>(undefined);
   // The scroll hint stays under the story until the reader first scrolls it (AGT-94).
   const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    if (scroll) setScrolled(true);
-  }, [scroll]);
-  const setScroll = setScrollTo;
+  if (scroll && !scrolled) setScrolled(true);
   // How far down the open overlay is read, from its top; a new overlay starts at its top.
   const [overlayRead, setOverlayTop] = useState(0);
   useEffect(() => setOverlayTop(0), [view.overlay, view.folded]);
@@ -985,10 +988,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   useEffect(() => {
     seat.wheelTurns = (turns) => {
       if (overlayRows) return setOverlayTop((top) => turns.reduce((at, d) => stepWithin(at, d * WHEEL_ROWS, overlayMax), Math.min(top, overlayMax)));
-      setScrollTo((at) => turns.reduce((to, d) => scrollRows(to, d, WHEEL_ROWS, story, storyH, view.lines.length), at));
-    };
-    return () => {
-      seat.wheelTurns = () => {};
+      setScroll((at) => turns.reduce((to, d) => scrollRows(to, d, WHEEL_ROWS, story, storyH, view.lines.length), at));
     };
   });
 

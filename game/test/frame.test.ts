@@ -177,6 +177,21 @@ test("on a Mac keyboard and trackpad (AGT-94): Shift+↑ pages the story, the wh
   }
 });
 
+test("Shift+↑ alone takes the scroll hint away too, not only the wheel (AGT-94)", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), title: "The Silent Mill" });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    void seat.ask({ kind: "explore" });
+    for (let i = 0; i < 40; i++) seat.show({ kind: "status", text: `beat ${i}` });
+    await until("the hint", () => stdout.last.includes("two fingers on the trackpad"), () => stdout.last);
+    stdin.press("\u001b[1;2A");
+    await until("paged up", () => stdout.last.includes("↓ End to follow"), () => stdout.last);
+    assert.ok(!stdout.last.includes("two fingers on the trackpad"), "the hint goes with the first scroll");
+  } finally {
+    seat.stop();
+  }
+});
+
 test("the wheel's turns in what the terminal sent, in order; a click, a release or a move is none (AGT-94)", () => {
   assert.deepEqual(wheelsIn("\u001b[<64;1;1M\u001b[<65;80;24M\u001b[<68;1;1M"), [-1, 1, -1]);
   assert.deepEqual(wheelsIn("\u001b[<0;1;1M\u001b[<0;1;1m\u001b[<35;1;1M"), []);
