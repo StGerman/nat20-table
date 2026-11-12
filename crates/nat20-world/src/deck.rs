@@ -120,10 +120,11 @@ pub struct Card {
     /// Deeds that keep the card out: it is in the pile only when none is remembered
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unless: Option<Deeds>,
-    /// The choice an NPC owner takes on a tie (caravan cards); the first tied choice when
-    /// absent or not offered
+    /// The choice an NPC owner takes on a tie or with nobody to speak: one id, or ids in the
+    /// owner's order where a deed swaps one choice for its twin (MAP-18); the first offered
+    /// one is taken, and one of them is offered in every case
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub owner_pick: Option<String>,
+    pub owner_pick: Option<OwnerPick>,
     /// Two or three choices in every case the conditions allow
     pub choices: Vec<Choice>,
     /// What only the DM reads: the card's one oddity, voiced at every meeting (API-53)
@@ -198,6 +199,31 @@ impl Deeds {
             Deeds::One(id) => std::slice::from_ref(id),
             Deeds::All(ids) => ids,
         }
+    }
+}
+
+/// A card's `owner_pick`: one choice id, or several in the owner's order (MAP-18).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum OwnerPick {
+    /// One choice
+    One(String),
+    /// Choices in the owner's order: the first one offered is taken
+    Order(Vec<String>),
+}
+
+impl OwnerPick {
+    /// The choice ids, in the owner's order.
+    pub fn ids(&self) -> &[String] {
+        match self {
+            OwnerPick::One(id) => std::slice::from_ref(id),
+            OwnerPick::Order(ids) => ids,
+        }
+    }
+
+    /// The owner's choice among `ids`: the first of its own that is there.
+    pub fn among<'a>(&self, ids: impl Fn(&str) -> bool + 'a) -> Option<&str> {
+        self.ids().iter().map(String::as_str).find(|id| ids(id))
     }
 }
 
@@ -721,7 +747,8 @@ impl Deck {
     /// cards, zones that are a road zone or a place (a road card's a road zone), `requires` that names a place, DCs
     /// on the ladder, a fight only last in its list, `add_card` that names a chained card, every chained card added by
     /// some choice, no pile over [`MAX_PILE`] cards, and 2 or 3 choices offered in every case a
-    /// card's conditions allow (ENG-33), counting [`SCOUTED`] as a case; `scouted` read only by
+    /// card's conditions allow (ENG-33), counting [`SCOUTED`] as a case, with one of its `asked`
+    /// choices and one of its `owner_pick` among them (MAP-18); `scouted` read only by
     /// a choice and never remembered, and a `scout` skill only on a road card (API-54), and
     /// then with exactly one choice under `if: "scouted"`, which no other card has; and two of
     /// the five card tests (MAP-11): every choice has an effect (a `remember` counts), and no two
@@ -783,8 +810,11 @@ impl Deck {
                     return bad(format!("card {} has two choices {}", card.id, choice.id));
                 }
             }
-            if let Some(pick) = &card.owner_pick
-                && !choices.contains(pick.as_str())
+            if let Some(pick) = card
+                .owner_pick
+                .iter()
+                .flat_map(OwnerPick::ids)
+                .find(|p| !choices.contains(p.as_str()))
             {
                 return bad(format!(
                     "card {}'s owner_pick {pick} is not a choice",
@@ -1321,9 +1351,11 @@ impl Deck {
             .iter()
             .find(|c| c.owner_insists)
             .or_else(|| {
-                offered
-                    .iter()
-                    .find(|c| card.owner_pick.as_deref() == Some(c.id.as_str()))
+                let pick = card
+                    .owner_pick
+                    .as_ref()?
+                    .among(|id| offered.iter().any(|c| c.id == id))?;
+                offered.iter().find(|c| c.id == pick)
             })
             .or(offered.first())
             .map(|c| c.id.clone())?;
@@ -1469,7 +1501,8 @@ const MAX_CASE_DEEDS: usize = 10;
 
 /// Checks that a card offers 2 or 3 choices in every case its own conditions allow: every
 /// way the deeds its choices read can be remembered or not, with the card's `if` deeds
-/// remembered and its `unless` deeds not.
+/// remembered and its `unless` deeds not. In every case it also offers one of its `asked`
+/// choices, when it has any, and one of its `owner_pick` (MAP-18).
 fn check_cases(card: &Card) -> Result<(), DeckError> {
     let bad = |s: String| Err(DeckError(s));
     let must: BTreeSet<&str> = card
@@ -1507,6 +1540,7 @@ fn check_cases(card: &Card) -> Result<(), DeckError> {
             free.len()
         ));
     }
+    let has_asked = card.choices.iter().any(|c| c.asked);
     for mask in 0u32..(1 << free.len()) {
         let known = |id: &str| {
             must.contains(id)
@@ -1546,20 +1580,23 @@ fn check_cases(card: &Card) -> Result<(), DeckError> {
             ));
         }
         // The card's own question or plea stays offered (MAP-18).
-        if card.choices.iter().any(|c| c.asked) && !choices.iter().any(|c| c.asked) {
+        if has_asked && !choices.iter().any(|c| c.asked) {
             return bad(format!(
                 "card {} offers none of its asked choices when the deeds remembered are [{}]",
                 card.id,
                 case()
             ));
         }
-        // The card's own pick is a choice it offers, whatever the deeds (MAP-18).
+        // The owner's pick is one it offers, whatever the deeds (MAP-18).
         if let Some(pick) = &card.owner_pick
-            && !choices.iter().any(|c| c.id == *pick)
+            && pick
+                .among(|id| choices.iter().any(|c| c.id == id))
+                .is_none()
         {
             return bad(format!(
-                "card {}'s owner_pick {pick} is not offered when the deeds remembered are [{}]",
+                "card {}'s owner_pick {} is not offered when the deeds remembered are [{}]",
                 card.id,
+                pick.ids().join(" or "),
                 case()
             ));
         }
@@ -1625,7 +1662,10 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
         .as_ref()
         .and_then(|h| pending.said.get(h))
         .filter(|c| card.target == Target::Blades && tied.contains(&c.as_str()));
-    let pick = card.owner_pick.as_deref().filter(|p| tied.contains(p));
+    let pick = card
+        .owner_pick
+        .as_ref()
+        .and_then(|p| p.among(|id| tied.contains(&id)));
     let choice = human.map(String::as_str).or(pick).unwrap_or(first);
     Some(resolve(card, pending, choice, Decided::Tie, voters(choice)))
 }
@@ -2416,15 +2456,39 @@ mod tests {
         // The owner's pick is offered in every case too (MAP-18).
         let mut d = deed_deck();
         angry(&mut d);
-        d.cards[1].owner_pick = Some("pay_again".into());
+        d.cards[1].owner_pick = Some(OwnerPick::One("pay_again".into()));
         assert!(
             d.validate(&map)
                 .unwrap_err()
                 .0
                 .contains("card bridge_again's owner_pick pay_again is not offered when the deeds remembered are [")
         );
-        d.cards[1].owner_pick = Some("say_no".into());
+        d.cards[1].owner_pick = Some(OwnerPick::One("say_no".into()));
         d.validate(&map).unwrap();
+        // Or the owner's order over a twin: one of them is offered in every case.
+        d.cards[1].owner_pick = Some(OwnerPick::Order(vec!["pay_again".into(), "shout".into()]));
+        d.validate(&map).unwrap();
+
+        // Gated twins that each carry `asked` pass together, though each alone is hidden in
+        // one case; a card-level `if` deed is remembered in every case.
+        let mut d = deed_deck();
+        angry(&mut d);
+        d.cards[1].choices[0].asked = true;
+        d.cards[1].choices[1].asked = true;
+        d.cards[1].if_deeds = Some(Deeds::One("paid".into()));
+        d.validate(&map).unwrap();
+    }
+
+    #[test]
+    fn an_owner_s_ordered_pick_takes_the_first_one_offered() {
+        let pick = OwnerPick::Order(vec!["welcome".into(), "welcome_with_dog".into()]);
+        assert_eq!(pick.among(|id| id != "welcome"), Some("welcome_with_dog"));
+        assert_eq!(pick.among(|_| true), Some("welcome"));
+        assert_eq!(pick.among(|_| false), None);
+        let one: OwnerPick = serde_json::from_str(r#""push""#).unwrap();
+        assert_eq!(one.ids(), ["push"]);
+        let order: OwnerPick = serde_json::from_str(r#"["a", "b"]"#).unwrap();
+        assert_eq!(order.ids(), ["a", "b"]);
     }
 
     #[test]
