@@ -78,7 +78,7 @@ New, proposed:
 8. **The DM never acts, speaks, or feels for the human's character.** It narrates what the engine did with what the human chose.
 9. **We take mechanisms, never characters.** From books and games we borrow how things work, never their people, names, or inventions (Rule 7; Gaiman and Pratchett, 2026-11-06).
 
-Removed (Stas, 2026-11-12): "harm to a child is never shown", the second half of guardrail 4. A child on the road is not kept safe by the story: a consequence on the young is a real one (decision 0070). Torture stays banned.
+Removed (Stas, 2026-11-12): the child half of guardrail 4, which read "Torture and harm to a child are never shown". A child on the road is not kept safe by the story: a consequence on the young is a real one (decision 0070). Torture stays banned.
 
 Removed (Stas, 2026-11-07): "no numbers or jargon on screen". The ban was never about style. Coins were not in the engine, and we did not trust the DM's arithmetic, so the DM was kept away from numbers altogether. The ledger now owns money, so the DM may say a price, a count, or a distance it was given. Guardrail 1 keeps the arithmetic with the engine and the ledger, and guardrail 3 keeps hidden values off the screen. The code change has its own implementation thread.
 
