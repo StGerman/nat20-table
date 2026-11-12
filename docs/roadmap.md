@@ -35,7 +35,7 @@ Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08).
 - nat20-runs #3: your flag answers for the Mill run 20-38-39, open since 2026-11-03, no activity since; dead stock on 2026-11-17. Merge or close.
 - UPS-1 (P0, open since 2026-10-19): the fork still allows squash merge (repos API, 2026-11-11; rebase is off). One setting.
 - UPS-24 (geometry stack, core): the Rule 9 30-day clock from core #26 and #27 (2026-10-20) runs out on 2026-11-19; adopt it or give the row a hold reason (sweep 2026-11-11, question 2).
-- Allies in fights, option A (ENG-44, MAP-20) and the judge check (AGT-104), after the M12 exit pair: place them inside the Dramaturg mechanism (table #348) or as their own small PRs; and confirm the judge check is counted, not gated.
+- Allies in fights, option A (ENG-44, MAP-20) and the judge check (AGT-104), after the M12 exit pair: place them inside the Dramaturg mechanism (table #348) or after it (each is its own PR either way); and confirm the judge check is counted, not gated.
 
 ## Delivery
 

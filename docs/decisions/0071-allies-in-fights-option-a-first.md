@@ -11,7 +11,7 @@ On `night_wolves` (`worlds/wend/deck/lowland.json`) in a live *Fair in Wend* run
 ## Options
 
 ### A. The dog acts through surprise; the note says where everyone is
-- Pro: XS work, 0 extra turns or model calls; what the party did (fed the dog) changes the fight.
+- Pro: small work (one S and one XS PR), 0 extra turns or model calls; what the party did (fed the dog) changes the fight.
 - Con: the dog, Odda and the horses still have no bodies; the stake on the horses stays narrated.
 
 ### B. The dog and the horses as creatures on the party side, under a script
