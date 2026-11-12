@@ -186,6 +186,42 @@ test("Shift+↑ alone takes the scroll hint away too, not only the wheel (AGT-94
   }
 });
 
+test("the seat hands the run what it drew, in order: a command's answer as `command`, engine lines only once they show (AGT-103, AGT-13)", async () => {
+  const drawn: Array<{ kind: string; text: string }> = [];
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), record: (d) => drawn.push(d) });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    seat.show({ kind: "engine", text: "goblin_1 moves", seq: 1 });
+    assert.equal(drawn.length, 0, "held under the narration to come");
+    seat.show({ kind: "narration", speaker: "dm", text: "The goblin slips into the reeds." });
+    seat.answering(true);
+    seat.show({ kind: "info", title: "Sheet", text: "Bren, Fighter 2" });
+    seat.answering(false);
+    seat.show({ kind: "engine", text: "bren gains 2 gold", seq: 2, own: true });
+    await until("drawn", () => stdout.last.includes("Bren, Fighter 2"), () => stdout.last);
+    assert.deepEqual(drawn.map((d) => d.kind), ["narration", "command", "engine"]);
+    assert.match(drawn[0]!.text, /The goblin slips into the reeds\./);
+    assert.match(drawn[1]!.text, /Bren, Fighter 2/);
+    // While the loop answers a typed command, everything it shows is the command's, a status too; /help as well.
+    const asked = seat.ask({ kind: "explore" });
+    stdin.press("/pause");
+    stdin.press("\r");
+    await asked;
+    seat.answering(true);
+    seat.show({ kind: "status", text: "The table waits." });
+    seat.show({ kind: "speech", speaker: "maren", text: "Already?" });
+    seat.answering(false);
+    void seat.ask({ kind: "explore" });
+    seat.show({ kind: "status", text: "The road goes on." });
+    stdin.press("/help");
+    stdin.press("\r");
+    await until("help", () => stdout.last.includes("Help"), () => stdout.last);
+    assert.deepEqual(drawn.slice(3).map((d) => d.kind), ["command", "speech", "status", "command"]);
+  } finally {
+    seat.stop();
+  }
+});
+
 test("the wheel's turns in what the terminal sent, in order; a click, a release or a move is none (AGT-94)", () => {
   assert.deepEqual(wheelsIn("\u001b[<64;1;1M\u001b[<65;80;24M\u001b[<68;1;1M"), [-1, 1, -1]);
   assert.deepEqual(wheelsIn("\u001b[<0;1;1M\u001b[<0;1;1m\u001b[<35;1;1M"), []);

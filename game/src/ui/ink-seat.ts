@@ -134,6 +134,11 @@ export interface InkSeatOptions {
   language?: Language;
   /** How the seat names characters, in the run's language. */
   names?: SeatNames;
+  /**
+   * Each thing the seat draws, in order, as the screen reads it (AGT-103, AGT-13): the run writes
+   * them to `seat.jsonl`. `kind` is the event's, or `command` for a command's answer.
+   */
+  record?: (drawn: { kind: string; text: string }) => void;
 }
 
 export class InkSeat implements Seat {
@@ -161,6 +166,8 @@ export class InkSeat implements Seat {
   private heldSituation: Extract<TableEvent, { kind: "situation" }> | undefined;
   /** The speaker of the message the last line belongs to; undefined after anything else. */
   private speaker: string | undefined;
+  /** The loop is answering a typed command (AGT-103): its info, options and status lines are drawn as `command`. */
+  private answeringCommand = false;
   /** Drops the suggestion call in flight: the human's first key does (§7.1). */
   private cancelSuggest: (() => void) | undefined;
 
@@ -375,6 +382,13 @@ export class InkSeat implements Seat {
   };
 
   show(event: TableEvent): void {
+    // Engine lines are drawn when they show: at once for the human's own, else when released.
+    // These show the held engine lines above them first, released here, so the record keeps the screen's order.
+    if (RELEASES.has(event.kind)) this.release();
+    // Only info, options and status lines are a command's answer; anything else keeps its kind.
+    const answers = this.answeringCommand && (event.kind === "info" || event.kind === "options" || event.kind === "status");
+    if (event.kind !== "engine") this.drawn(answers ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
+    else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));
     switch (event.kind) {
       case "situation":
         // The loop refreshes the panel before each step, ahead of the narration of what came
@@ -385,7 +399,6 @@ export class InkSeat implements Seat {
         return;
       case "options":
         // Numbered options stay above the prompt instead of scrolling away; `/options` prints them again.
-        this.release();
         this.update({ options: event, highlight: event.preset });
         return;
       case "engine": {
@@ -401,7 +414,10 @@ export class InkSeat implements Seat {
         const covered = this.held.map((line) => ({ ...line, text: `    ${line.text.trimStart()}` }));
         this.held = [];
         this.message(event);
-        if (this.options.verbose) this.print(covered, false);
+        if (this.options.verbose) {
+          this.drawn("engine", covered);
+          this.print(covered, false);
+        }
         this.release();
         return;
       }
@@ -418,16 +434,13 @@ export class InkSeat implements Seat {
         break;
       case "reaction":
         // The fight stands still until the human answers: the action zone holds it, not the story.
-        this.release();
         this.update({ reaction: event });
         return;
       case "question":
-        this.release();
         this.update({ question: event.text });
         break;
       case "end":
         // The end of the run is read in the story, whatever was open over it.
-        this.release();
         // The narrow frame's /panel overlay is `folded`, so it closes too; a wide frame's folded pane opens again.
         this.update({ overlay: undefined, folded: false, reaction: undefined, question: undefined });
         break;
@@ -448,6 +461,7 @@ export class InkSeat implements Seat {
   private release(): void {
     const lines = this.held;
     this.held = [];
+    this.drawn("engine", lines);
     this.add(lines);
     const situation = this.heldSituation;
     this.heldSituation = undefined;
@@ -461,6 +475,10 @@ export class InkSeat implements Seat {
   }
 
   readonly palette: Palette;
+
+  answering(on: boolean): void {
+    this.answeringCommand = on;
+  }
 
   unnarrated(): void {
     this.release();
@@ -574,6 +592,7 @@ export class InkSeat implements Seat {
         this.update({ folded: !this.view.folded, overlay: undefined });
         return;
       case "help":
+        this.drawn("command", [{ tone: "info", text: helpText(this.ui) }]);
         this.update({ overlay: { title: this.ui.help, text: helpText(this.ui), at: this.view.lines.length } });
         return;
       case "intent": {
@@ -732,6 +751,12 @@ export class InkSeat implements Seat {
     this.speaker = undefined;
   }
 
+  /** Hands what the seat draws to the run's record, blank lines left out. */
+  private drawn(kind: string, lines: Line[]): void {
+    const text = lines.map((l) => l.text).filter((t) => t.trim() !== "").join("\n");
+    if (text !== "" && this.options.record) this.options.record({ kind, text });
+  }
+
   /** Adds lines to the story, after a blank line when `gap` (and the story has lines). */
   private print(lines: Line[], gap: boolean): void {
     if (lines.length === 0) return;
@@ -787,6 +812,9 @@ export function finaleRows(finale: Finale, width: number, told = false): Row[] {
     ...finale.checks.map((c): Row => [{ text: `${CHECK_MARK[c.state]} ${c.name}`, style: c.state === "failed" ? { accent: "rust" } : c.state === "done" ? {} : { accent: "hint" } }]),
   ];
 }
+
+/** The kinds that show the held engine lines above them; a narration tells them instead (AGT-37). */
+const RELEASES = new Set<TableEvent["kind"]>(["options", "reaction", "question", "end"]);
 
 /** The loop's answers to /sheet, /where, /log and /usage, by their info titles: shown as overlays. */
 export const OVERLAYS = new Set((["en", "ru"] as const).flatMap((l) => [SEAT_WORDS[l].sheet, SEAT_WORDS[l].where, SEAT_WORDS[l].log, SEAT_WORDS[l].usage]));
