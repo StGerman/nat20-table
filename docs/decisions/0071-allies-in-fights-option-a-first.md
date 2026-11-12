@@ -28,7 +28,7 @@ A after the M12 exit pair; B and C in the backlog («Только А остал�
 
 ## Consequences
 
-Rows ENG-47, MAP-22, AGT-106 (after the M12 exit pair); MON-12, ENG-48, ENG-49 (backlog). Allies are run by the engine's script, never by the DM agent or a player.
+Rows ENG-47, MAP-22 (after the M12 exit pair); MON-12, ENG-48, ENG-49 and AGT-106 (backlog; AGT-106 moved there by Stas 20:44Z). Allies are run by the engine's script, never by the DM agent or a player.
 
 ## Revisit when
 
