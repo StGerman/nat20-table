@@ -200,12 +200,14 @@ test("the seat hands the run what it drew, in order: a command's answer as `comm
     assert.deepEqual(drawn.map((d) => d.kind), ["narration", "command", "engine"]);
     assert.match(drawn[0]!.text, /The goblin slips into the reeds\./);
     assert.match(drawn[1]!.text, /Bren, Fighter 2/);
-    // A command typed at the prompt: the loop's answer, whatever its kind, is drawn as `command`; /help too.
+    // While the loop answers a typed command, everything it shows is the command's, a status too; /help as well.
     const asked = seat.ask({ kind: "explore" });
-    stdin.press("/options");
+    stdin.press("/pause");
     stdin.press("\r");
     await asked;
+    seat.answering("pause");
     seat.show({ kind: "info", title: "Options", text: "Nothing to choose right now." });
+    seat.answering(undefined);
     void seat.ask({ kind: "explore" });
     seat.show({ kind: "status", text: "The road goes on." });
     stdin.press("/help");

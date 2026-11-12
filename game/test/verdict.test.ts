@@ -356,12 +356,13 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
   // The report lists the own move with every seat's vote; the replay shows the card as a seat draws it.
   const report = exitReport(run, readLines(path.join(good, SESSION_LOG)), readLines(path.join(good, "transcript.jsonl")), []).join("\n");
   assert.match(report, /1\. fallen_tree, maren: "I talk the carter into lending his ox"; persuasion DC 10; success brings clear, failure around; votes: maren own_move, torva own_move; decided on own_move \(majority\); r30, success; brought clear/);
-  const replayed = folder(run, seated, withSeq([
+  const replayed = folder(run, [...seated, { speaker: "maren", kind: "speech", text: "Clear it, then.", log_head: 1 }], withSeq([
     { kind: "card_drawn", visibility: { scope: "public" }, text: "A road card", card_text: "A tree lies across the road.", choices: [{ id: "clear", text: "Clear it." }, { id: "around", text: "Go around." }], target: "caravan" },
     { kind: "card_resolved", visibility: { scope: "public" }, text: "The card is decided: clear.", choice: "clear", decided: "majority" },
   ]));
   assert.deepEqual(seatReplay(replayed).filter((l) => l !== ""), [
     "DM: A tree lies across the road.",
+    "Maren: Clear it, then.",
     "On the road:",
     "  A tree lies across the road.",
     "  The merchant decides; your word is advice.",
@@ -371,6 +372,12 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
     "  Something else: say it in your own words.",
     "  The card is decided: Clear it.",
   ]);
+
+  const blades = folder(run, seated, withSeq([
+    { kind: "card_drawn", visibility: { scope: "public" }, text: "A road card", card_text: "A tree lies across the road.", choices: [{ id: "clear", text: "Clear it." }], target: "blades" },
+    { kind: "card_resolved", visibility: { scope: "public" }, text: "The card is decided: clear.", choice: "clear", decided: "majority" },
+  ]));
+  assert.ok(seatReplay(blades).includes("  The Blades decide together."));
 
   // A roll own_move_ran cites that the log does not hold never counts.
   const unlogged = folder(run, seated, withSeq(OWN_MOVE.filter((e) => e.kind !== "roll")));

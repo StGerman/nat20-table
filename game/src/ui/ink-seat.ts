@@ -166,8 +166,8 @@ export class InkSeat implements Seat {
   private heldSituation: Extract<TableEvent, { kind: "situation" }> | undefined;
   /** The speaker of the message the last line belongs to; undefined after anything else. */
   private speaker: string | undefined;
-  /** A command was typed and the loop's answer to it has not come (AGT-103): it is drawn as `command`. */
-  private commanded = false;
+  /** The command the loop is answering (AGT-103): what the seat draws meanwhile is drawn as `command`. */
+  private command: string | undefined;
   /** Drops the suggestion call in flight: the human's first key does (§7.1). */
   private cancelSuggest: (() => void) | undefined;
 
@@ -384,11 +384,8 @@ export class InkSeat implements Seat {
   show(event: TableEvent): void {
     // Engine lines are drawn when they show: at once for the human's own, else when released.
     // These show the held engine lines above them first, released here, so the record keeps the screen's order.
-    if (event.kind === "options" || event.kind === "reaction" || event.kind === "question" || event.kind === "end") this.release();
-    // The loop's first info or options after a typed command is the command's answer.
-    const answers = this.commanded && (event.kind === "info" || event.kind === "options");
-    if (answers) this.commanded = false;
-    if (event.kind !== "engine") this.drawn(answers || (event.kind === "info" && OVERLAYS.has(event.title)) ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
+    if (RELEASES.has(event.kind)) this.release();
+    if (event.kind !== "engine") this.drawn(this.command !== undefined || (event.kind === "info" && OVERLAYS.has(event.title)) ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
     else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));
     switch (event.kind) {
       case "situation":
@@ -477,6 +474,10 @@ export class InkSeat implements Seat {
 
   readonly palette: Palette;
 
+  answering(command: string | undefined): void {
+    this.command = command;
+  }
+
   unnarrated(): void {
     this.release();
   }
@@ -485,8 +486,6 @@ export class InkSeat implements Seat {
     // Nothing waits for a narration while the human decides.
     this.release();
     const queued = this.queued.shift();
-    // A command answered with no info or options (/pause, /suggest) is over when the loop asks again.
-    this.commanded = queued?.kind === "command";
     if (queued) return Promise.resolve(queued);
     if (this.interrupted) return Promise.resolve({ kind: "command", name: "quit" });
     // A fight's options belong to the human's own turn: any other prompt means it is over.
@@ -605,7 +604,6 @@ export class InkSeat implements Seat {
           // Out of combat a pick or words answer the options; in a fight they stay until the turn ends.
           const done = this.view.options && !this.view.options.budget && this.view.prompt?.kind !== "pick" && (typed.intent.kind === "option" || typed.intent.kind === "text");
           this.update({ prompt: undefined, highlight: undefined, ...(typed.intent.kind !== "command" ? { suggestions: undefined } : {}), ...(done ? { options: undefined } : {}) });
-          this.commanded = typed.intent.kind === "command";
           answer(typed.intent);
         } else {
           this.queued.push(typed.intent);
@@ -814,6 +812,9 @@ export function finaleRows(finale: Finale, width: number, told = false): Row[] {
 }
 
 /** The loop's answers to /sheet, /where, /log and /usage, by their info titles: shown as overlays. */
+/** The kinds that show the held engine lines above them; a narration tells them instead (AGT-37). */
+const RELEASES = new Set<TableEvent["kind"]>(["options", "reaction", "question", "end"]);
+
 export const OVERLAYS = new Set((["en", "ru"] as const).flatMap((l) => [SEAT_WORDS[l].sheet, SEAT_WORDS[l].where, SEAT_WORDS[l].log, SEAT_WORDS[l].usage]));
 
 /** The /help overlay: the commands, then the keys. */
