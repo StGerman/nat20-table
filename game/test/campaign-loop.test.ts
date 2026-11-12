@@ -158,7 +158,7 @@ test("the human's words on a road card become an own move: their word is given, 
     // The AI player hears it as a choice of the card, in bren's words, and the line to make one is gone.
     const card = maren.briefings.find((b) => b.wake === "card");
     assert.match(card!.briefing, /own_move: bren's own move, "Ask the farmer to lend his ox\." \(persuasion\)/);
-    assert.ok(!card!.briefing.includes(OWN_MOVE_INVITE), card!.briefing);
+    assert.ok(!card!.briefing.includes(OWN_MOVE_INVITE) && !card!.briefing.includes("something of your own with own_move"), card!.briefing);
     assert.ok(t.requests().some((r) => r.cmd === "choose_card" && r.viewer === "maren"));
     // The card was decided on the own move: the engine rolled the proposer's check.
     const log = JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "dm"));
@@ -179,7 +179,7 @@ test("an AI player's own_move words wake the DM's card_words, and the move lands
     await loop.run("vale_town");
     // Her first card wake invites an own move, in the briefing and in the ask (AGT-99).
     const first = maren.briefings.find((b) => b.wake === "card");
-    assert.ok(first?.briefing.includes(OWN_MOVE_INVITE) && first.briefing.includes("Or try something of your own with own_move."), first?.briefing);
+    assert.ok(first?.briefing.includes(OWN_MOVE_INVITE) && first.briefing.includes("with a choice id, or try something of your own with own_move."), first?.briefing);
     const words = dm.briefings.find((b) => b.wake === "card_words");
     assert.match(words!.briefing, /maren says or does: "Offer the farmer a blessing for his field\."/);
     const moved = t.requests().find((r) => r.cmd === "own_move") as { actor?: string } | undefined;
