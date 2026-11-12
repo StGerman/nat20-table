@@ -536,6 +536,8 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
       const opens = records.findIndex((r, i) => i > waits && r.kind === "narration" && r.wake === "scene_open");
       assert.ok(goes > waits && decided > goes && opens > decided, `${scene}: waits ${waits}, card to the seats ${goes}, decided ${decided}, opened ${opens}`);
       assert.equal(records[opens]!.text, `Here is ${scene}.`);
+      // The card's wakes before the opening are told the place is not reached yet.
+      assert.ok(dm.briefings.some((b) => (b.wake === "pick" || b.wake === "card") && b.briefing.includes("the caravan has not arrived")));
     }
     // A card that comes with no pick has its own wake, opened once (AGT-100).
     for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: "/);

@@ -595,9 +595,8 @@ export class TableLoop {
       return;
     }
     // The destination's arrival card is settled and its fight, if any, is over: the pay comes now (ENG-35).
-    const waiting = this.settledLater && !this.table.inCombat ? await this.dmWorld() : undefined;
-    // An arrival draw still offered holds the pay too (ENG-35).
-    if (this.settledLater && !this.table.inCombat && !waiting?.card && !waiting?.offered?.length) {
+    // An arrival draw still offered holds the pay too.
+    if (this.settledLater && !this.table.inCombat && !cardWaits(await this.dmWorld())) {
       const settled = this.settledLater;
       this.settledLater = undefined;
       await this.roadEvent(settled);
@@ -837,6 +836,7 @@ export class TableLoop {
           "road",
           undefined,
           `A road card was settled: ${event.text}`,
+          ...(this.openLater ? [HELD_OPENING] : []),
           "The engine has already applied the card: any fight it brings has started and any creature it brings is placed. Narrate what comes of it in one to three sentences; never start the fight again. Name coin or a price only as the engine's lines give it, never a sum of your own.",
         );
         await this.settle();
@@ -862,7 +862,7 @@ export class TableLoop {
         // The destination's arrival card is on the table (ENG-35): the party decides it first,
         // and the pay, the last turn and the closing follow once it is settled.
         // So does a scene whose opening waits for a road card met on the way (AGT-100).
-        if (this.openLater || (await this.dmWorld())?.card) {
+        if (this.openLater || cardWaits(await this.dmWorld())) {
           this.settledLater = event;
           return;
         }
@@ -907,6 +907,7 @@ export class TableLoop {
         "pick",
         undefined,
         "Pick a road card: a draw offered these, in the order they were rolled.",
+        ...(this.openLater ? [HELD_OPENING] : []),
         ...offered.map((c, i) => offeredLine(c, i + 1)),
         deeds.length > 0 ? `Deeds the world remembers: ${deeds.map((d) => d.deed).join(", ")}.` : "The world remembers no deeds yet.",
         `Call pick_card once, with the card's id and one line of why. Then ${CARD_OPENING.charAt(0).toLowerCase()}${CARD_OPENING.slice(1)}`,
@@ -944,6 +945,7 @@ export class TableLoop {
         undefined,
         "A road card is on the table.",
         cardDrawnLine(card),
+        ...(this.openLater ? [HELD_OPENING] : []),
         ...(this.arrivalOpened ? ["The scene's opening told the arrival: open only the card."] : []),
         CARD_OPENING,
       );
@@ -1694,7 +1696,7 @@ export class TableLoop {
       undefined,
       `The fight is over: ${event.text}`,
       // A road card's fight on the way to a place whose opening waits (AGT-100): the opening tells the arrival.
-      this.openLater ? "Narrate how it ends, on the road: the caravan has not reached the place yet, and its arrival is told next." : "Narrate how it ends, then go on with the scene.",
+      this.openLater ? `Narrate how it ends. ${HELD_OPENING}` : "Narrate how it ends, then go on with the scene.",
     );
     await this.table.flush();
   }
@@ -2531,6 +2533,14 @@ export class TableLoop {
     };
   }
 }
+
+/** A card on the table, or a draw's cards offered for the DM's pick. */
+function cardWaits(world: WorldDm | undefined): boolean {
+  return Boolean(world?.card || world?.offered?.length);
+}
+
+/** The wakes before a held scene's opening (AGT-100): the scene is loaded, but not yet told. */
+const HELD_OPENING = "The new scene is loaded but not opened yet: the caravan has not arrived. Tell only this, on the way; the place's opening comes next.";
 
 /**
  * A road card met on the way (AGT-100): one a draw offers, or one on the table, from a road's zone
