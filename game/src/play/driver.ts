@@ -29,15 +29,16 @@
 // at the terminal, Haiku by default), --no-suggest (no suggestions; `/suggest` toggles them in play).
 import { UI_WORDS } from "../table/words.ts";
 import { spawn, type ChildProcess } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { appendFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import type { Event } from "@nat20-table/engine-client";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { ModelDm, type CraftMode } from "../agents/dm.ts";
 import type { Language } from "../agents/language.ts";
 import { ModelPlayer } from "../agents/player.ts";
 import { Suggester } from "../agents/suggest.ts";
 import { sessionOptions } from "../agents/sdk-session.ts";
-import { GameEngine, REPO } from "../engine.ts";
+import { GameEngine, REPO, SESSION_LOG } from "../engine.ts";
 import { readCampaign, seatCards } from "../pack/campaign.ts";
 import { readPack } from "../pack/read.ts";
 import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
@@ -54,7 +55,8 @@ import { usageBlock, UsageLog } from "../usage.ts";
 import { ScriptedJudge } from "../check/judge.ts";
 import { modelJudgeFor, narrationCheck } from "../check/narration.ts";
 import { SUGGESTED_CARDS, wordReport } from "./word.ts";
-import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
+import { exitReport, SEAT_JSONL } from "./exit.ts";
+import { checkout, readLines, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, suggestionLine, timingLines, type Casting, type PackParty } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
@@ -231,9 +233,13 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   let quit: () => void = () => process.exit(130);
   // One way of naming things for the seat and the table's lines (AGT-98).
   const seatNames = new SeatNames(language, party.seatRu);
+  const runDir = runFolder(flags.out, play.folder);
+  // What the seat drew, as the screen showed it (AGT-103): Vera reads /options and /sheet from it (AGT-13).
+  const seatFile = path.join(runDir, SEAT_JSONL);
+  const drawnTo = (drawn: { kind: string; text: string }) => appendFileSync(seatFile, JSON.stringify({ at: new Date().toISOString(), ...drawn }) + "\n");
   const ink =
     flags.seat === "ink" && party.human
-      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title, language, names: seatNames })
+      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title, language, names: seatNames, record: drawnTo })
       : undefined;
   // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame. The
   // seat owns the alternate screen (AGT-69, decision 0054): the terminal comes back as it was when
@@ -242,7 +248,6 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   else ink?.start({ interactive: true, alternateScreen: true });
   ink?.busy(UI_WORDS[language].engineStarting);
 
-  const runDir = runFolder(flags.out, play.folder);
   const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
   // A failed start gives the terminal back before its error prints.
   const started = await (async () => {
@@ -492,6 +497,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   ink?.check(CHECK_REPORT, "running");
   await breath();
 
+  const sessionLog = readLines<Event>(path.join(runDir, SESSION_LOG));
   const report = [
     `# ${play.command} run, ${new Date().toISOString()}`,
     "",
@@ -505,7 +511,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...(run?.suggestions ? [`- ${suggestionLine(run.suggestions)}`] : []),
     ...(record.roster ? [`- ${rosterReport(record.roster)}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
-    ...wordReport(runDir),
+    ...wordReport(runDir, sessionLog),
+    ...exitReport(record, sessionLog, transcript.records, usage.records),
     ...(narration ? ["", ...narration.lines] : []),
     "",
     ...timingLines(record),
