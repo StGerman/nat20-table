@@ -121,8 +121,8 @@ pub struct Card {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unless: Option<Deeds>,
     /// The choice an NPC owner takes on a tie or with nobody to speak: one id, or ids in the
-    /// owner's order where a deed swaps one choice for its twin (MAP-18); the first offered
-    /// one is taken, and one of them is offered in every case
+    /// owner's order of preference (MAP-18); the first one offered (or tied) is taken, and one
+    /// of them is offered in every case
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_pick: Option<OwnerPick>,
     /// Two or three choices in every case the conditions allow
@@ -221,9 +221,9 @@ impl OwnerPick {
         }
     }
 
-    /// The owner's choice among `ids`: the first of its own that is there.
-    pub fn among<'a>(&self, ids: impl Fn(&str) -> bool + 'a) -> Option<&str> {
-        self.ids().iter().map(String::as_str).find(|id| ids(id))
+    /// The owner's choice among the ids `there` admits: the first in the owner's order.
+    pub fn among(&self, there: impl Fn(&str) -> bool) -> Option<&str> {
+        self.ids().iter().map(String::as_str).find(|id| there(id))
     }
 }
 
@@ -810,14 +810,17 @@ impl Deck {
                     return bad(format!("card {} has two choices {}", card.id, choice.id));
                 }
             }
-            if let Some(pick) = card
-                .owner_pick
-                .iter()
-                .flat_map(OwnerPick::ids)
-                .find(|p| !choices.contains(p.as_str()))
-            {
+            let picks = card.owner_pick.iter().flat_map(OwnerPick::ids);
+            if let Some(pick) = picks.clone().find(|p| !choices.contains(p.as_str())) {
                 return bad(format!(
                     "card {}'s owner_pick {pick} is not a choice",
+                    card.id
+                ));
+            }
+            let named: BTreeSet<&String> = picks.clone().collect();
+            if card.owner_pick.is_some() && (named.is_empty() || named.len() < picks.count()) {
+                return bad(format!(
+                    "card {}'s owner_pick names no choice, or one twice",
                     card.id
                 ));
             }
@@ -1351,11 +1354,11 @@ impl Deck {
             .iter()
             .find(|c| c.owner_insists)
             .or_else(|| {
-                let pick = card
-                    .owner_pick
+                card.owner_pick
                     .as_ref()?
-                    .among(|id| offered.iter().any(|c| c.id == id))?;
-                offered.iter().find(|c| c.id == pick)
+                    .ids()
+                    .iter()
+                    .find_map(|id| offered.iter().find(|c| c.id == *id))
             })
             .or(offered.first())
             .map(|c| c.id.clone())?;
@@ -1579,10 +1582,12 @@ fn check_cases(card: &Card) -> Result<(), DeckError> {
                 case()
             ));
         }
-        // The card's own question or plea stays offered (MAP-18).
-        if has_asked && !choices.iter().any(|c| c.asked) {
+        // The card's own question or plea stays offered, once (MAP-18): asked twins never
+        // show together.
+        let asked = choices.iter().filter(|c| c.asked).count();
+        if has_asked && asked != 1 {
             return bad(format!(
-                "card {} offers none of its asked choices when the deeds remembered are [{}]",
+                "card {} offers {asked} of its asked choices when the deeds remembered are [{}]; it needs 1",
                 card.id,
                 case()
             ));
@@ -2448,7 +2453,7 @@ mod tests {
         angry(&mut d);
         d.cards[1].choices[0].asked = true;
         assert!(d.validate(&map).unwrap_err().0.contains(
-            "card bridge_again offers none of its asked choices when the deeds remembered are ["
+            "card bridge_again offers 0 of its asked choices when the deeds remembered are ["
         ));
         d.cards[1].choices[1].asked = true;
         d.validate(&map).unwrap();
@@ -2477,6 +2482,31 @@ mod tests {
         d.cards[1].choices[1].asked = true;
         d.cards[1].if_deeds = Some(Deeds::One("paid".into()));
         d.validate(&map).unwrap();
+        // Two asked choices offered together are two pleas: refused.
+        d.cards[1].choices[2].asked = true;
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("offers 2 of its asked choices")
+        );
+
+        // An owner_pick that names nothing, or one choice twice, is refused.
+        let mut d = deed_deck();
+        d.cards[1].owner_pick = Some(OwnerPick::Order(vec![]));
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("names no choice, or one twice")
+        );
+        d.cards[1].owner_pick = Some(OwnerPick::Order(vec!["say_no".into(), "say_no".into()]));
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("names no choice, or one twice")
+        );
     }
 
     #[test]
