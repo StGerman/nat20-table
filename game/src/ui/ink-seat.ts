@@ -29,6 +29,9 @@ import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } fro
 import { paletteFor, type Palette, type Style } from "./palette.ts";
 import { cardRows, endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
 import { cardText, costText } from "../table/guide.ts";
+import type { Language } from "../agents/language.ts";
+import { SeatNames } from "../table/seat-lines.ts";
+import { SEAT_WORDS, UI_WORDS, type UiWords } from "../table/words.ts";
 
 /** The suggestions picker's rows and cursor (AGT-49): `cursor` is a row index, `rows.length` for "Your own…". */
 export interface Suggestions {
@@ -127,10 +130,17 @@ export interface InkSeatOptions {
   glyphs?: Record<string, string>;
   /** The adventure's title, for the header. */
   title?: string;
+  /** The run's language (AGT-98, decision 0067): the seat's own words. Default English. */
+  language?: Language;
+  /** How the seat names characters, in the run's language. */
+  names?: SeatNames;
 }
 
 export class InkSeat implements Seat {
   readonly handle: Handle;
+  /** The seat's own words, in the run's language (AGT-98). */
+  readonly ui: UiWords;
+  private readonly names: SeatNames;
   private readonly options: InkSeatOptions;
   private view: SeatView = { lines: [], prompt: undefined, draft: "", cursor: 0 };
   /** Lines entered so far, oldest first, for Ctrl+P and Ctrl+N; `recalled` is the one on the row. */
@@ -157,6 +167,8 @@ export class InkSeat implements Seat {
   constructor(handle: Handle, options: InkSeatOptions = {}) {
     this.handle = handle;
     this.options = options;
+    this.ui = UI_WORDS[options.language ?? "en"];
+    this.names = options.names ?? new SeatNames(options.language ?? "en");
     this.palette = options.palette ?? paletteFor();
     this.animate = options.animate ?? (!process.env.NO_COLOR && process.stdout.isTTY === true);
     this.now = options.now ?? Date.now;
@@ -170,6 +182,8 @@ export class InkSeat implements Seat {
   get title(): string | undefined {
     return this.options.title;
   }
+  /** A character as the seat labels it: "Torva", «Торва». */
+  readonly named = (handle: string): string => (this.ui === UI_WORDS.en ? handle.charAt(0).toUpperCase() + handle.slice(1) : this.names.person(handle));
 
   /**
    * A scene starts (AGT-69): the header shows its number of the total, and the story a divider.
@@ -177,7 +191,7 @@ export class InkSeat implements Seat {
    */
   scene(number: number, of: number): void {
     this.update({ scene: { number, of }, started: this.view.started ?? this.now() });
-    this.add([{ tone: "status", text: `— Scene ${number} of ${of} —` }]);
+    this.add([{ tone: "status", text: `— ${this.ui.sceneOf(number, of)} —` }]);
   }
 
   /**
@@ -319,7 +333,7 @@ export class InkSeat implements Seat {
         return;
       case "engine": {
         // The human's own line shows at once; others' lines before it still wait for their narration.
-        const lines = eventLines(event, this.handle);
+        const lines = eventLines(event, this.handle, false, this.ui, this.named);
         if (event.own) this.add(lines);
         else this.held.push(...lines);
         return;
@@ -340,7 +354,7 @@ export class InkSeat implements Seat {
           this.update({ overlay: { title: event.title, text: event.text, at: this.view.lines.length } });
           return;
         }
-        if (event.title === "Not accepted") {
+        if (event.title === SEAT_WORDS.en.notAccepted || event.title === SEAT_WORDS.ru.notAccepted) {
           this.update({ refusal: event.text });
           return;
         }
@@ -362,14 +376,14 @@ export class InkSeat implements Seat {
         break;
     }
     if (speakerOf(event) !== undefined) this.message(event);
-    else this.add(eventLines(event, this.handle));
+    else this.add(eventLines(event, this.handle, false, this.ui, this.named));
   }
 
   /** A narration, a line, an intent or a question: on the message above when the speaker is the same. */
   private message(event: TableEvent): void {
     const speaker = speakerOf(event);
     const continued = speaker === this.speaker;
-    this.print(eventLines(event, this.handle, continued), !continued);
+    this.print(eventLines(event, this.handle, continued, this.ui, this.named), !continued);
     this.speaker = speaker;
   }
 
@@ -482,7 +496,7 @@ export class InkSeat implements Seat {
     // Enter on an empty line plays the option ↑/↓ lit, as if its number were typed.
     if (!this.view.draft.trim() && this.view.highlight !== undefined && picksOptions(this.view.prompt)) this.update({ draft: String(this.view.highlight) });
     const draft = this.view.draft;
-    const read = readLine(draft, this.view.prompt);
+    const read = readLine(draft, this.view.prompt, this.ui);
     // A line from a suggestion says so, and whether it was edited first (S4).
     const taken = this.view.suggestions?.taken;
     const typed: Typed =
@@ -503,7 +517,7 @@ export class InkSeat implements Seat {
         this.update({ folded: !this.view.folded, overlay: undefined });
         return;
       case "help":
-        this.update({ overlay: { title: "Help", text: helpText(), at: this.view.lines.length } });
+        this.update({ overlay: { title: this.ui.help, text: helpText(this.ui), at: this.view.lines.length } });
         return;
       case "intent": {
         this.add([{ tone: "prompt", text: `> ${draft.trim()}` }]);
@@ -519,7 +533,7 @@ export class InkSeat implements Seat {
           answer(typed.intent);
         } else {
           this.queued.push(typed.intent);
-          this.update({ notice: { text: "answered at your next prompt", error: false } });
+          this.update({ notice: { text: this.ui.answeredLater, error: false } });
         }
       }
     }
@@ -628,7 +642,7 @@ export class InkSeat implements Seat {
       process.exit(130);
     }
     this.interrupted = true;
-    this.add([{ tone: "end", text: "Stopping after the current decision; Ctrl+C again stops at once." }]);
+    this.add([{ tone: "end", text: this.ui.stopping }]);
     this.options.onQuit?.();
     const answer = this.answer;
     if (answer) {
@@ -718,25 +732,11 @@ export function finaleRows(finale: Finale, width: number, told = false): Row[] {
 }
 
 /** The loop's answers to /sheet, /where, /log and /usage, by their info titles: shown as overlays. */
-export const OVERLAYS = new Set(["Sheet", "Where", "Log", "Usage"]);
+export const OVERLAYS = new Set((["en", "ru"] as const).flatMap((l) => [SEAT_WORDS[l].sheet, SEAT_WORDS[l].where, SEAT_WORDS[l].log, SEAT_WORDS[l].usage]));
 
 /** The /help overlay: the commands, then the keys. */
-export function helpText(): string {
-  return [
-    "Commands:",
-    ...Object.entries(COMMAND_HELP).map(([name, what]) => `  /${name}  ${what}`),
-    "",
-    "Keys:",
-    "  Enter      send the line",
-    "  /          on an empty line, the commands to choose from; type to narrow",
-    "  Tab        complete a /command, or put the next suggestion in the line",
-    "  ↑/↓        light a command, an option or a suggestion; Enter runs it",
-    "  Esc        close this, go back from a sub-list, or clear the line",
-    "  PgUp/PgDn  scroll the story, or this",
-    "  End        back to the newest lines",
-    "  Ctrl+P/N   lines you sent before",
-    "  Ctrl+C     stop after this decision; twice, at once",
-  ].join("\n");
+export function helpText(ui: UiWords = UI_WORDS.en): string {
+  return ui.helpText(Object.keys(COMMAND_HELP).map((name) => [name, ui.commandHelp[name as keyof UiWords["commandHelp"]]] as const));
 }
 
 /**
@@ -751,10 +751,9 @@ export const INPUT_HINT: Style = TONE_STYLE.status;
 export const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 /** What the table waits on: "⠹ The DM is thinking · 4s" spinning, or "waiting... The DM is thinking" still. */
-export function waitText(on: string | undefined, seconds: number, frame: number | undefined): string {
-  const who = on ?? "The table is playing";
-  if (frame === undefined) return `waiting... ${who} (/help for commands)`;
-  return `${SPINNER[frame % SPINNER.length]} ${who}${seconds >= 1 ? ` · ${seconds}s` : ""} (/help for commands)`;
+export function waitText(on: string | undefined, seconds: number, frame: number | undefined, ui: UiWords = UI_WORDS.en): string {
+  if (frame === undefined) return ui.wait(on, undefined);
+  return `${SPINNER[frame % SPINNER.length]} ${ui.wait(on, seconds)}`;
 }
 
 /** The wait as the input row's placeholder while no prompt is open; it re-draws itself only while spinning. */
@@ -766,7 +765,7 @@ function Waiting({ seat, busy }: { seat: InkSeat; busy: SeatView["busy"] }) {
     return () => clearInterval(timer);
   }, [seat]);
   const seconds = busy ? Math.floor((seat.now() - busy.since) / 1000) : 0;
-  return h(Text, textProps(TONE_STYLE.status, seat.palette), waitText(busy?.on, seconds, seat.animate ? frame : undefined));
+  return h(Text, textProps(TONE_STYLE.status, seat.palette), waitText(busy?.on, seconds, seat.animate ? frame : undefined, seat.ui));
 }
 
 /** The option a typed number names, from the numbered lines on screen ("2. End turn" for "2"). */
@@ -779,22 +778,21 @@ export function previewOption(draft: string, lines: string[] | undefined): { num
 
 
 /** The picker's header (§7.5): the prompt's question. */
-export function suggestQuestion(prompt: HumanPrompt, handle: Handle): string {
-  const name = handle.charAt(0).toUpperCase() + handle.slice(1);
-  if (prompt.kind === "answer") return `What does ${name} answer?`;
-  if (prompt.kind === "surrender") return `They offer to surrender. What does ${name} do?`;
-  return `What does ${name} do or say?`;
+export function suggestQuestion(prompt: HumanPrompt, handle: Handle, ui: UiWords = UI_WORDS.en, name = handle.charAt(0).toUpperCase() + handle.slice(1)): string {
+  if (prompt.kind === "answer") return ui.suggestQuestion.answer(name);
+  if (prompt.kind === "surrender") return ui.suggestQuestion.surrender(name);
+  return ui.suggestQuestion.other(name);
 }
 
 /** The input row's placeholder while the suggestions picker stands (§7.5). */
-export const SUGGEST_HINT = "or type your own. ↑/↓ and Enter send one; Tab puts one in the line.";
+export const SUGGEST_HINT = UI_WORDS.en.suggestHint;
 
 /**
  * The suggestions picker's rows (§7.5): the prompt's question, the three moves and "Your own…",
  * with the `❯` cursor, which needs no colour under NO_COLOR.
  */
-export function suggestionRows(suggestions: Suggestions, question: string): Row[] {
-  const rows = [...suggestions.rows, "Your own…"];
+export function suggestionRows(suggestions: Suggestions, question: string, ui: UiWords = UI_WORDS.en): Row[] {
+  const rows = [...suggestions.rows, ui.yourOwn];
   return [
     [{ text: question, style: { bold: true } }],
     ...rows.map((text, i): Row => {
@@ -805,7 +803,7 @@ export function suggestionRows(suggestions: Suggestions, question: string): Row[
 }
 
 /** What the tiny frame says instead of the table (under 40 columns or 16 rows). */
-export const TOO_SMALL = "Window too small: make it at least 40×16. The game goes on.";
+export const TOO_SMALL = UI_WORDS.en.tooSmall;
 
 /**
  * The screen: one full frame (AGT-69). The header; the story at the reading measure, pinned to its
@@ -844,13 +842,13 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const choice = picked ? view.options?.choices.find((c) => c.number === picked.number) : undefined;
   const lit = choice?.target?.handle;
   // What the lit option does (AGT-70): a card under the roster in the wide frame, one line above the input in the narrow one.
-  const text = choice?.about ? cardText(choice.about) : undefined;
-  const card = text && choice ? { label: choice.label.replace(/…$/, ""), cost: costText(choice.about?.cost), text } : undefined;
+  const text = choice?.about ? cardText(choice.about, seat.ui) : undefined;
+  const card = text && choice ? { label: choice.label.replace(/…$/, ""), cost: costText(choice.about?.cost, seat.ui), text } : undefined;
   const cardLine = card && layout.mode === "narrow" ? wrapText(`${card.label}: ${card.text}`, width, 0).split("\n")[0] : undefined;
   const inputH = view.draft ? rowsFor(`> ${view.draft} ${picked ? `  ${picked.line}` : ""}`, width, 3) : 1;
   // The slash-command picker over the input row (AGT-82), cut to leave the story its rows.
   const commands = seat.commandPicker;
-  const commandRows = commands ? pickerRows(view.draft, commands.matches, commands.cursor, Math.max(1, Math.min(PICKER_ROWS, size.rows - 18))) : [];
+  const commandRows = commands ? pickerRows(view.draft, commands.matches, commands.cursor, Math.max(1, Math.min(PICKER_ROWS, size.rows - 18)), seat.ui) : [];
   const notice = view.notice ? wrapText(view.notice.text, width, 0).split("\n").slice(0, 2) : [];
   // Paused, the panel is a frame of the last moment: marked stale until the game goes on (screen 10).
   const paused = view.prompt?.kind === "paused";
@@ -860,19 +858,19 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const panel =
     view.situation && layout.mode === "narrow"
       ? // The bar and your own line, with a fallen ally and a foe in reach on it (AGT-47 C1).
-        foldedRows(view.situation, { stale, glyphs: seat.glyphs, lit }).slice(0, NARROW_PANEL_ROWS)
+        foldedRows(view.situation, { stale, glyphs: seat.glyphs, lit, ui: seat.ui }).slice(0, NARROW_PANEL_ROWS)
       : [];
   const below = 1 + (panel.length > 0 ? panel.length + 1 : 0) + notice.length + (cardLine ? 1 : 0) + commandRows.length + inputH;
   // The action zone: what is asked of the human now, above the turn block (screens 4, 5, 7 to 10).
   const said = (text: string, style: Style): Row[] => wrapText(text, width, 0).split("\n").map((row) => [{ text: row, style }]);
   const reaction = view.reaction;
   const block: Row[] = [
-    ...(view.refusal ? said(`Not accepted: ${view.refusal}`, TONE_STYLE.error) : []),
-    ...(reaction ? [...said(`Reaction: ${reaction.summary}`, { accent: "rust", bold: true }), ...reaction.options.map((o, i) => [{ text: `${i + 1}. ${o}` }])] : []),
-    ...(view.question && view.prompt?.kind === "answer" ? said(`DM asks you: ${view.question}`, TONE_STYLE.dm) : []),
-    ...(paused ? said("Paused: the AI players wait. /pause to go on.", { accent: "hint" }) : []),
-    ...(view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number) : []),
-    ...(view.suggestions && view.prompt && !view.options ? suggestionRows(view.suggestions, suggestQuestion(view.prompt, seat.handle)) : []),
+    ...(view.refusal ? said(`${seat.ui.notAccepted}: ${view.refusal}`, TONE_STYLE.error) : []),
+    ...(reaction ? [...said(`${seat.ui.reaction}: ${reaction.summary}`, { accent: "rust", bold: true }), ...reaction.options.map((o, i) => [{ text: `${i + 1}. ${o}` }])] : []),
+    ...(view.question && view.prompt?.kind === "answer" ? said(`${seat.ui.dmAsks}: ${view.question}`, TONE_STYLE.dm) : []),
+    ...(paused ? said(seat.ui.pausedBlock, { accent: "hint" }) : []),
+    ...(view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number, seat.ui) : []),
+    ...(view.suggestions && view.prompt && !view.options ? suggestionRows(view.suggestions, suggestQuestion(view.prompt, seat.handle, seat.ui, seat.named(seat.handle)), seat.ui) : []),
     ...(view.finale ? finaleRows(view.finale, width, lastText(view.lines) === view.finale.text) : []),
   ];
   const actionRoom = Math.min(Math.floor(size.rows / 2), size.rows - below - MIN_STORY_ROWS - 2);
@@ -887,7 +885,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
         // A row that fits keeps its spacing (the sheet's and /help's columns); a longer one wraps.
         .flatMap((text) => ([...text].length <= width ? [text] : wrapText(text, width, 2).split("\n")).map((row) => [{ text: row, style: TONE_STYLE.info }]))
     : panelOverlay
-      ? situationRows(view.situation!, { columns: width, rows: size.rows }, { stale, glyphs: seat.glyphs, pane: true, lit })
+      ? situationRows(view.situation!, { columns: width, rows: size.rows }, { stale, glyphs: seat.glyphs, pane: true, lit, ui: seat.ui })
       : undefined;
   const overlayRoom = Math.max(1, storyH - 1);
   const overlayMax = overlayRows ? Math.max(0, overlayRows.length - overlayRoom) : 0;
@@ -934,13 +932,13 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     const mark = h(Text, { key: "mark" }, h(Text, { ...textProps(INPUT_MARK, palette), inverse: true }, ">"), " ");
     if (!view.draft) {
       const placeholder = view.finale
-        ? h(Text, { key: "hint", ...textProps({ accent: "hint" }, palette) }, "Any key leaves; the checks go on after it.")
+        ? h(Text, { key: "hint", ...textProps({ accent: "hint" }, palette) }, seat.ui.finaleHint)
         : view.prompt && picked
-          ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, `Enter plays ${picked.line}`)
+          ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, seat.ui.enterPlays(picked.line))
           : view.prompt && view.suggestions && !view.options
-            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, SUGGEST_HINT)
+            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, seat.ui.suggestHint)
           : view.prompt
-            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, promptHint(view.prompt, seat.handle))
+            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, promptHint(view.prompt, seat.handle, seat.ui, seat.named(seat.handle)))
             : h(Waiting, { key: "wait", seat, busy: view.busy });
       return h(Box, { key: "input", width, height: 1, overflow: "hidden" }, h(Text, { wrap: "truncate-end" }, mark, h(Text, { key: "cursor", inverse: true }, " "), placeholder));
     }
@@ -966,28 +964,28 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     const name = view.overlay?.title ?? "Panel";
     const fresh = view.overlay ? new Set(view.lines.slice(view.overlay.at).filter((l) => l.text.trim() !== "").map((l) => l.id)).size : 0;
     const more = overlayMax > 0 ? " · PgUp/PgDn" : "";
-    const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, `${name} · Esc closes${more}${fresh > 0 ? ` · ↓ ${fresh} new` : ""}`);
+    const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, seat.ui.overlayKeys(name, more !== "", fresh));
     const rows = overlayRows!.slice(overlayTop, overlayTop + overlayRoom);
     return [nameRow, ...rows.map((row, i) => line(row, `o${i}`)), ...Array.from({ length: overlayRoom - rows.length }, (_, i) => blank(`ob${i}`))];
   }
 
   if (layout.mode === "tiny") {
-    return h(Box, { flexDirection: "column", width: size.columns }, h(Text, { wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, TOO_SMALL), inputRow());
+    return h(Box, { flexDirection: "column", width: size.columns }, h(Text, { wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, seat.ui.tooSmall), inputRow());
   }
 
-  const mode = view.prompt?.kind === "paused" ? "Paused" : view.situation ? (view.situation.mode === "combat" ? `Round ${view.situation.round ?? 1}` : "Explore") : undefined;
+  const mode = view.prompt?.kind === "paused" ? seat.ui.panel.paused : view.situation ? (view.situation.mode === "combat" ? seat.ui.panel.round(view.situation.round ?? 1) : seat.ui.panel.explore) : undefined;
   const header = headerText({
     title: seat.title,
     scene: view.scene,
     mode,
     ...(view.situation?.road ? { day: view.situation.road.day } : {}),
     minutes: view.started === undefined ? undefined : Math.floor((seat.now() - view.started) / 60_000),
-  });
+  }, seat.ui);
   const storyLines = overlayRows
     ? overlayLines()
     : shown.rows.map((row, i) => {
         const key = `s${i}`;
-        if (scroll && i === shown.rows.length - 1) return h(Text, { key, wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, freshText(shown.fresh));
+        if (scroll && i === shown.rows.length - 1) return h(Text, { key, wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, freshText(shown.fresh, seat.ui));
         return row ? h(Text, { key, wrap: "truncate-end", ...textProps(row.style, palette) }, row.text || " ") : blank(key);
       });
   const left = [
@@ -1005,7 +1003,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   if (layout.mode === "narrow") {
     return h(Box, { flexDirection: "column", width: size.columns, height: size.rows }, headerRow, h(Box, { key: "story", flexDirection: "column", width, height: body }, ...left));
   }
-  const roster = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true, lit }) : [];
+  const roster = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true, lit, ui: seat.ui }) : [];
   // The action card stands under the roster, past a blank row, cut to the rows left.
   const cardRoom = body - roster.length - (roster.length > 0 ? 1 : 0);
   const cardShown = card && cardRoom > 1 ? cardRows(card.label, card.cost, card.text, layout.side!).slice(0, cardRoom) : [];

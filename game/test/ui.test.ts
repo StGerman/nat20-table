@@ -101,7 +101,7 @@ test("typed lines become intents by what the table waits for", () => {
 
 test("each event reads as lines: rolls inline with their ids, options numbered, info indented", () => {
   assert.deepEqual(eventLines({ kind: "engine", text: "Bren attacks goblin_1 with Longsword: 17, hit.", roll: "r4", seq: 9 }), [
-    { tone: "engine", text: "  [r4] Bren attacks goblin_1 with Longsword: 17, hit." },
+    { tone: "engine", text: "  Bren attacks goblin_1 with Longsword: 17, hit. [r4]" },
   ]);
   assert.deepEqual(eventLines({ kind: "narration", speaker: "dm", text: "The reeve frowns.", to: "bren" }), [{ tone: "dm", text: "DM (to you): The reeve frowns." }]);
   assert.deepEqual(eventLines({ kind: "speech", speaker: "maren", text: "Easy now." }), [{ tone: "speech", text: "Maren: Easy now." }]);
@@ -189,7 +189,7 @@ test("with --verbose the engine lines a narration covers fold under it, dim and 
     [
       ["dm", "DM: The arrow glances off Torva's pauldron."],
       ["engine", "    goblin_1's turn."],
-      ["engine", "    [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss."],
+      ["engine", "    goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]"],
     ],
   );
   // The next narration carries on the same message.
@@ -202,7 +202,7 @@ test("the human's own lines, and any no narration covered before a decision, sho
   const texts = () => seat.getView().lines.map((l) => l.text);
   seat.show({ kind: "narration", speaker: "dm", text: "The goblin snarls." });
   seat.show({ kind: "engine", text: "bren rolls an attack roll vs goblin_1: 1d20 (14) = 19, hit.", roll: "r50", seq: 60, own: true });
-  assert.deepEqual(texts(), ["DM: The goblin snarls.", "", "  [r50] bren rolls an attack roll vs goblin_1: 1d20 (14) = 19, hit."]);
+  assert.deepEqual(texts(), ["DM: The goblin snarls.", "", "  bren rolls an attack roll vs goblin_1: 1d20 (14) = 19, hit. [r50]"]);
   // The human's own line doesn't take others' lines with it: they still wait for their narration.
   goblinTurn(seat);
   seat.show({ kind: "engine", text: "bren's turn ends.", seq: 61, own: true });
@@ -212,19 +212,19 @@ test("the human's own lines, and any no narration covered before a decision, sho
   // The DM's narration failed (a fallback): the lines show alone.
   goblinTurn(seat);
   seat.unnarrated();
-  assert.deepEqual(texts().slice(-3), ["", "  goblin_1's turn.", "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss."]);
+  assert.deepEqual(texts().slice(-3), ["", "  goblin_1's turn.", "  goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]"]);
   // So does a decision.
   goblinTurn(seat);
   seat.show({ kind: "reaction", summary: "goblin_1 leaves your reach.", options: ["Opportunity Attack"] });
-  assert.deepEqual(texts().slice(-2), ["  goblin_1's turn.", "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss."]);
+  assert.deepEqual(texts().slice(-2), ["  goblin_1's turn.", "  goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]"]);
   // The reaction itself stands in the action zone until it is answered (AGT-69), not in the story.
   assert.equal(seat.getView().reaction?.summary, "goblin_1 leaves your reach.");
   goblinTurn(seat);
   void seat.ask({ kind: "explore" });
-  assert.equal(texts().at(-1), "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss.");
+  assert.equal(texts().at(-1), "  goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]");
   goblinTurn(seat);
   seat.show({ kind: "options", lines: ["1. Longsword: goblin_1"], choices: [] });
-  assert.equal(texts().at(-1), "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss.");
+  assert.equal(texts().at(-1), "  goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]");
 });
 
 test("the seat answers a prompt with what was typed, queues commands typed while busy, and stops on Ctrl+C", async () => {
@@ -272,7 +272,7 @@ test("on a terminal, keys reach the seat and the screen shows the lines, the pro
     seat.show({ kind: "options", lines: ["1. Longsword: goblin_1", "2. End turn"], choices: [] });
     const asked = seat.ask({ kind: "combat_turn" });
     await until("the prompt", () => stdout.last.includes("Your turn: an option number, or what Bren does in words."));
-    assert.match(stdout.last, /\[r7\] goblin_1 attacks Bren with Scimitar: 9, miss\./);
+    assert.match(stdout.last, /goblin_1 attacks Bren with Scimitar: 9, miss\. \[r7\]/);
     assert.match(stdout.last, /1\. Longsword: goblin_1/);
     stdin.press("1");
     await until("the typed key", () => stdout.last.includes("> 1"));

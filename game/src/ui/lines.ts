@@ -4,6 +4,7 @@
 import type { Handle } from "@nat20-table/engine-client";
 import type { TableEvent } from "../table/types.ts";
 import { THEME, type Palette, type Style } from "./palette.ts";
+import { UI_WORDS, type UiWords } from "../table/words.ts";
 
 export type { Style };
 
@@ -61,32 +62,33 @@ export function speakerOf(event: TableEvent): string | undefined {
  * The lines one event adds to the screen; `you` is the human's own handle. `continued`: the event
  * goes on the message above it, so it carries no speaker label.
  */
-export function eventLines(event: TableEvent, you?: Handle, continued = false): Line[] {
+export function eventLines(event: TableEvent, you?: Handle, continued = false, ui: UiWords = UI_WORDS.en, named: (handle: string) => string = name): Line[] {
   const label = (text: string) => (continued ? "" : `${text}: `);
   switch (event.kind) {
     case "narration":
-      return [{ tone: "dm", text: `${label(`${event.speaker === "dm" ? "DM" : name(event.speaker)}${event.to ? " (to you)" : ""}`)}${event.text}` }];
+      return [{ tone: "dm", text: `${label(`${event.speaker === "dm" ? ui.dm : named(event.speaker)}${event.to ? ui.toYou : ""}`)}${event.text}` }];
     case "speech":
-      return [{ tone: "speech", text: `${label(`${name(event.speaker)}${event.to ? ` to ${event.to === you ? "you" : name(event.to)}` : ""}`)}${event.text}` }];
+      return [{ tone: "speech", text: `${label(`${named(event.speaker)}${event.to ? ui.speechTo(event.to === you ? undefined : named(event.to)) : ""}`)}${event.text}` }];
     case "intent":
-      return [{ tone: "intent", text: `${label(name(event.speaker))}${event.text}` }];
+      return [{ tone: "intent", text: `${label(named(event.speaker))}${event.text}` }];
     case "engine":
-      return [{ tone: "engine", text: event.roll ? `  [${event.roll}] ${event.text}` : `  ${event.text}` }];
+      // The roll id goes last and dim (AGT-98): the outcome reads first.
+      return [{ tone: "engine", text: event.roll ? `  ${event.text} [${event.roll}]` : `  ${event.text}` }];
     case "options":
       return [...(event.title ? [{ tone: "options" as const, text: `${event.title}:` }] : []), ...event.lines.map((text) => ({ tone: "options" as const, text: `  ${text}` }))];
     case "reaction":
       return [
-        { tone: "prompt", text: `Reaction: ${event.summary}` },
+        { tone: "prompt", text: `${ui.reaction}: ${event.summary}` },
         ...event.options.map((option, i) => ({ tone: "options" as const, text: `  ${i + 1}. ${option}` })),
       ];
     case "question":
-      return [{ tone: "dm", text: `${label("DM asks you")}${event.text}` }];
+      return [{ tone: "dm", text: `${label(ui.dmAsks)}${event.text}` }];
     case "info":
       return [{ tone: "info", text: `${event.title}:` }, ...event.text.split("\n").map((text) => ({ tone: "info" as const, text: `  ${text}` }))];
     case "status":
       return [{ tone: "status", text: `— ${event.text}` }];
     case "end":
-      return [{ tone: "end", text: `The run is over: ${event.text}` }];
+      return [{ tone: "end", text: `${ui.runOver}: ${event.text}` }];
     case "situation":
       // The panel draws it; nothing goes into the log.
       return [];

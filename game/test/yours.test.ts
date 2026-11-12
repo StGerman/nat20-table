@@ -36,7 +36,7 @@ test("the advance the merchant pays at the start shows to the human at once, and
     const engine = seat.shown.filter((e) => e.kind === "engine");
     const paid = engine.find((e) => e.kind === "engine" && e.text === "You are paid your wages: 2 gold pieces.");
     assert.ok(paid?.kind === "engine" && paid.own, JSON.stringify(engine));
-    const maren = engine.find((e) => e.kind === "engine" && e.text.includes("pays maren"));
+    const maren = engine.find((e) => e.kind === "engine" && e.text.includes("pays Maren"));
     assert.ok(maren?.kind === "engine" && !maren.own, "maren's wages wait for the narration");
     assert.ok(t.table.recent.includes("You are paid your wages: 2 gold pieces."), "/log reads the same plain line");
     const sheet = await t.engine.request("bren", { cmd: "get_sheet", actor: "bren" });

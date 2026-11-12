@@ -37,11 +37,12 @@ import { ModelPlayer } from "../agents/player.ts";
 import { Suggester } from "../agents/suggest.ts";
 import { sessionOptions } from "../agents/sdk-session.ts";
 import { GameEngine, REPO } from "../engine.ts";
-import { readCampaign } from "../pack/campaign.ts";
+import { readCampaign, seatCards } from "../pack/campaign.ts";
 import { readPack } from "../pack/read.ts";
 import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
 import { chainDm, chainScenes, roadDm, ScriptedPlayer, ScriptedSeat, walkOnDm } from "../table/scripted.ts";
 import { TableState } from "../table/state.ts";
+import { SeatNames } from "../table/seat-lines.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat, StopKind } from "../table/types.ts";
 import type { Instance } from "ink";
@@ -229,7 +230,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   let quit: () => void = () => process.exit(130);
   const ink =
     flags.seat === "ink" && party.human
-      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: pack.adventure.title })
+      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: pack.adventure.title, language, names: new SeatNames(language, party.seatRu) })
       : undefined;
   // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame. The
   // seat owns the alternate screen (AGT-69, decision 0054): the terminal comes back as it was when
@@ -296,6 +297,9 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     transcript,
     inputsFile: path.join(runDir, "inputs.jsonl"),
     ...guards(flags.pack, engine, language),
+    // The seat's lines in the run's language (AGT-98): names from the pack, cards' words from the decks.
+    names: new SeatNames(language, party.seatRu),
+    cards: seatCards(flags.pack),
   });
   // Who plays whom, in the transcript as in run.json (AGT-35).
   table.log("system", party.human ? `the human plays ${party.human}; AI players: ${party.ai.join(", ")}` : `no human; AI players: ${party.ai.join(", ")}`);
