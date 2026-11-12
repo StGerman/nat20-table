@@ -148,4 +148,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-12: AGT-98 done (table #354): one language at the seat; row moved to docs/tasks-done.md
 - 2026-11-12: MAP-19 done (table #355): cards, choices and goods in Russian; row moved to docs/tasks-done.md
 - 2026-11-12: ENG-21 done: core #81 ends every Move on the last free spot along its path; table #356 re-pins core and re-records m5_fights (mf-62) and the m7_narration engine log
-- 2026-11-12: MAP-14 done (table #PRNUM): The bridge again is an arrival card of the Millbeck bridge in The Way Back's deck; row moved to docs/tasks-done.md
+- 2026-11-12: MAP-14 done (table #357): The bridge again is an arrival card of the Millbeck bridge in The Way Back's deck; row moved to docs/tasks-done.md
