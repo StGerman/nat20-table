@@ -180,7 +180,7 @@
                 {
                     "id": "talk",
                     "text": "Talk them down.",
-                    "text_ru": "Уговорить их разойтись.",
+                    "text_ru": "Уговорить их успокоиться.",
                     "effects": [
                         {
                             "do": "check",

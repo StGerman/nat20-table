@@ -37,7 +37,7 @@
                     "id": "to_bel",
                     "asked": true,
                     "text": "Take him to find his mother.",
-                    "text_ru": "Отвести его к матери.",
+                    "text_ru": "Пойти с ним искать мать.",
                     "unless": "promised_bel",
                     "effects": [
                         {"do": "remember", "deed": "took_tam_to_bel"}
@@ -276,7 +276,7 @@
             "if": "agna_came_along",
             "once": true,
             "text": "Where the river meets the salt water, the silent pilgrim walks into the shallows and breaks her loaf for the gulls. Then she speaks for the first time since the hills, and her first words are the Blades' names.",
-            "text_ru": "Там, где река встречается с солёной водой, молчаливая паломница заходит на мелководье и крошит свой хлеб чайкам. Потом она впервые после холмов заговаривает, и первое, что она говорит: имена наёмников.",
+            "text_ru": "Там, где река встречается с солёной водой, молчаливая паломница заходит на мелководье и крошит свой хлеб чайкам. Потом она впервые после холмов нарушает молчание и произносит имена наёмников.",
             "note": "Sister Agna, at the end of her vow. Plain, no sermon: she says their names, thanks them, and nothing more. What she does is hearsay that Odda and Brannock repeat, and Gwyn has heard it by the next contract. Given coin, she gives it to the first beggar she passes, in plain sight. Maren cries and pretends it is the wind.",
             "choices": [
                 {

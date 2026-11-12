@@ -9,7 +9,7 @@
             "if": "toll_men_spared",
             "once": true,
             "text": "On the green, the reeve has the man from the Millbeck bridge in the stocks, borrowed helmet and all, his tally stick at his feet.",
-            "text_ru": "На лугу староста держит в колодках человека с моста через Миллбек, прямо в чужом шлеме. Палка с зарубками лежит у его ног.",
+            "text_ru": "На лугу староста держит в колодках человека с моста через Миллбек, прямо в чужом шлеме. Бирка лежит у его ног.",
             "note": "Before the choices, say in one plain sentence what happened last time: the Blades talked the two toll men off the bridge. Col is in the stocks; Dunn has gone home to the farm. The goblins took their flock, and Col sat on the bridge to pay Rufus a farm debt. Osric is careful and proud, and he was the one who sent them away from the common chest. Three threads meet here: the bridge, the reeve's anger, and Rufus's debts. Maren speaks for Col.",
             "choices": [
                 {

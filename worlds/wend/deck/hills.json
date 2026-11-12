@@ -6,12 +6,12 @@
             "zone": "slopes",
             "target": "blades",
             "text": "A flock of black-faced sheep fills the track from wall to wall, and their shepherd is nowhere in sight.",
-            "text_ru": "Отара черномордых овец заполнила тропу от стены до стены, а пастуха нигде не видно.",
+            "text_ru": "Отара черномордых овец заполнила тропу от ограды до ограды, а пастуха нигде не видно.",
             "choices": [
                 {
                     "id": "herd",
                     "text": "Herd them through the gap in the wall.",
-                    "text_ru": "Прогнать их через пролом в стене.",
+                    "text_ru": "Прогнать их через пролом в ограде.",
                     "effects": [
                         {
                             "do": "check",
@@ -32,7 +32,7 @@
                 {
                     "id": "wait",
                     "text": "Sit on the wall and wait for them to move.",
-                    "text_ru": "Сесть на стену и ждать, пока уйдут.",
+                    "text_ru": "Сесть на ограду и ждать, пока уйдут.",
                     "effects": [
                         {"do": "delay", "minutes": 45}
                     ]
@@ -51,7 +51,7 @@
                 {
                     "id": "dig",
                     "text": "Dig the track wider first.",
-                    "text_ru": "Сначала расширить тропу.",
+                    "text_ru": "Сначала окопать склон и расширить тропу.",
                     "effects": [
                         {
                             "do": "check",
@@ -96,7 +96,7 @@
             "zone": "slopes",
             "target": "blades",
             "text": "Two goblins sit on the ridge above the track and watch the wagon. They do not run.",
-            "text_ru": "Два гоблина сидят на гребне над тропой и смотрят на фургон. Они не убегают.",
+            "text_ru": "Двое гоблинов сидят на гребне над тропой и смотрят на фургон. Они не убегают.",
             "choices": [
                 {
                     "id": "chase",
@@ -172,7 +172,7 @@
             "zone": "slopes",
             "target": "blades",
             "text": "A peddler pushing a handcart falls in beside the escort, his hands shaking on the shafts. He has news from up and down the road, he says, and he has not eaten since yesterday.",
-            "text_ru": "Коробейник с ручной тележкой пристраивается рядом с обозом, руки у него трясутся на оглоблях. Он знает новости со всей дороги, говорит он, и со вчерашнего дня ничего не ел.",
+            "text_ru": "Коробейник с ручной тележкой пристраивается рядом с обозом, руки у него трясутся на ручках тележки. Он знает новости со всей дороги, говорит он, и со вчерашнего дня ничего не ел.",
             "choices": [
                 {
                     "id": "share",
@@ -259,7 +259,7 @@
             "zone": "slopes",
             "target": "blades",
             "text": "An old woman the hill folk call the bog-wife sits on the milestone where the track skirts the moss, a basket of knotted charms on her knees and a crow on her shoulder. She asks each traveller for a crust, a coin or a true word, and pays in charms.",
-            "text_ru": "Там, где тропа огибает торфяник, на верстовом камне сидит старуха, которую холмовые зовут болотной бабкой. На коленях у неё корзина узелковых оберегов, на плече ворона. С каждого путника она просит корку, монету или правдивое слово и платит оберегами.",
+            "text_ru": "Там, где тропа огибает торфяник, на верстовом камне сидит старуха, которую в холмах зовут болотной бабкой. На коленях у неё корзина узелковых оберегов, на плече ворона. С каждого путника она просит корку, монету или правдивое слово и платит оберегами.",
             "note": "Mother Sedge, the bog-wife. She talks only to Gwyn the shepherd, so what the Blades do here reaches the Highsteads and nobody else. The charm is a knot of rowan and red thread. For a true word she asks the human's character first, and says one true thing back about the road. If they walk past, her crow follows the wagon for a mile. Maren gives bread; Ilsa thinks the charm is nonsense and says so politely.",
             "choices": [
                 {
@@ -414,7 +414,7 @@
             "zone": "barrows",
             "target": "blades",
             "text": "Pale lights move between the old barrows, and the horses will not look at them.",
-            "text_ru": "Между старыми курганами ходят бледные огни, и лошади на них не смотрят.",
+            "text_ru": "Между старыми курганами ходят бледные огни, и лошади отворачиваются от них.",
             "choices": [
                 {
                     "id": "look",

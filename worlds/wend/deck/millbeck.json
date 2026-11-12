@@ -7,7 +7,7 @@
             "target": "caravan",
             "once": true,
             "text": "At the little bridge over the Millbeck a man in a torn sheepskin coat and a borrowed helmet holds out his cap, a notched tally stick in his other hand: the reeve's toll, he says, two silver a head. His brother leans on a cudgel by a willow hut, beside a cold fire and a heap of gnawed sheep bones.",
-            "text_ru": "У мостика через Миллбек человек в рваном тулупе и чужом шлеме протягивает шапку, в другой руке у него палка с зарубками. Пошлина старосты, говорит он, по два серебряных с головы. Его брат опирается на дубину у шалаша из ивняка, рядом холодное кострище и куча обглоданных овечьих костей.",
+            "text_ru": "У мостика через Миллбек человек в рваном тулупе и чужом шлеме протягивает шапку, в другой руке у него бирка с зарубками. Пошлина старосты, говорит он, по два серебряных с головы. Его брат опирается на дубину у шалаша из ивняка, рядом холодное кострище и куча обглоданных овечьих костей.",
             "owner_pick": "pay",
             "choices": [
                 {
@@ -123,7 +123,7 @@
             "once": "contract",
             "owner_pick": "pay",
             "text": "At the Millbeck bridge a painted board hangs on a new post, with a wax seal at the bottom. A man in a clean coat sits under it with a ledger. The toll belongs to a Saltmouth company now, he says: the same two silver a head, written down this time.",
-            "text_ru": "У моста через Миллбек на новом столбе висит крашеная доска с восковой печатью внизу. Под ней сидит человек в чистом сюртуке с учётной книгой. Пошлина теперь принадлежит солтмутскому товариществу, говорит он: те же два серебряных с головы, только теперь записанные.",
+            "text_ru": "У моста через Миллбек на новом столбе висит крашеная доска с восковой печатью внизу. Под ней сидит человек в чистом сюртуке с учётной книгой. Пошлина теперь принадлежит солтмутскому товариществу, говорит он: те же два серебряных с головы, только теперь под запись.",
             "note": "Before the choices, say in one plain sentence what happened here last time: who held the bridge and what the Blades did about it. Something learned goes out of date: the brothers' false toll is now a true one, on paper, and the paper is Rufus's company's. The clerk is not a villain; he is paid by the day, like the Blades. If the brothers were spared, he has never heard of them. Bren respects a seal; Ilsa asks who gave the company the bridge.",
             "choices": [
                 {

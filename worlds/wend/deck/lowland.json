@@ -6,7 +6,7 @@
             "zone": "lowland",
             "target": "caravan",
             "text": "Last week's rain has turned the river road to soup. The wagon lurches, a wheel sinks to the hub, and the near horse refuses to pull.",
-            "text_ru": "После дождей прошлой недели речная дорога превратилась в кашу. Фургон кренится, колесо уходит в грязь по ступицу, и ближняя лошадь не тянет.",
+            "text_ru": "После дождей прошлой недели речная дорога превратилась в кашу. Фургон кренится, колесо уходит в грязь по ступицу, и ближняя лошадь упирается.",
             "owner_pick": "unload",
             "choices": [
                 {
@@ -44,7 +44,7 @@
             "zone": "lowland",
             "target": "blades",
             "text": "A lean sheepdog trots out of a hedge and falls in beside the wagon, as if it had been hired too.",
-            "text_ru": "Из живой изгороди выбегает тощая овчарка и трусит рядом с фургоном, будто её тоже наняли.",
+            "text_ru": "Из живой изгороди выбегает тощая пастушья собака и трусит рядом с фургоном, будто её тоже наняли.",
             "choices": [
                 {
                     "id": "feed",
@@ -338,7 +338,7 @@
                 {
                     "id": "for_a_price",
                     "text": "Ask him to pay for the way.",
-                    "text_ru": "Попросить заплатить за дорогу.",
+                    "text_ru": "Пропустить его, если заплатит.",
                     "effects": [
                         {
                             "do": "check",
@@ -367,7 +367,7 @@
             "once": true,
             "owner_pick": ["tracks", "ask_bel"],
             "text": "Odda counts the sacks twice and her face goes still: one is gone. A passing carter says what the valley always says, that there were roadfolk camped up the road.",
-            "text_ru": "Одда дважды пересчитывает мешки, и лицо у неё каменеет: одного нет. Проезжий возчик говорит то, что в долине говорят всегда: выше по дороге стояли коррины.",
+            "text_ru": "Одда дважды пересчитывает мешки, и лицо у неё каменеет: одного нет. Проезжий возчик повторяет то, что в долине твердят всегда: выше по дороге стояли коррины.",
             "note": "The drovers took it, for Rufus. The valley's prejudice is shown and never confirmed: a search of the roadfolk cart finds nothing, and no card makes the roadfolk the culprit. Maren objects to the search out loud. Odda won't search a family's cart on a carter's word. Let it go is Odda's line: \"Bread doesn't argue.\"",
             "choices": [
                 {
@@ -497,7 +497,7 @@
             "chained": true,
             "once": true,
             "text": "The peddler with the shaking hands catches up with the camp after dark and sees the grey lantern stitched on a Blade's sleeve, the sign of their old company. He goes quiet, then asks whether any of the company are still alive.",
-            "text_ru": "Коробейник с трясущимися руками догоняет стоянку после темноты и видит серый фонарь, вышитый на рукаве одного из наёмников: знак их старого отряда. Он замолкает, потом спрашивает, жив ли ещё кто-нибудь из отряда.",
+            "text_ru": "Коробейник с трясущимися руками догоняет стоянку после темноты и видит серый фонарь, вышитый на рукаве одного из наёмников: так метил себя их старый отряд. Он замолкает, потом спрашивает, жив ли ещё кто-нибудь из отряда.",
             "note": "Tobin carried a battle-mage's books in the lord's border war, the war the Grey Lanterns fought in. Told about the company and its dead, he laughs and cries in one breath and remembers a red-scaled girl with a notebook (Ilsa's hook). Read well, his hands: he froze at a breach and a fire spell went wrong; read badly, a cheerful lie. Whatever they choose, from now on he tells every alehouse the Grey Lanterns are the last honest company in the kingdom.",
             "choices": [
                 {
@@ -545,7 +545,7 @@
             "chained": true,
             "once": true,
             "text": "The silent pilgrim stops the Blades with a raised hand and draws in the mud with her staff: a bridge, a man in a helmet too big for him holding a notched stick, a second man with a cudgel, and a coin passing from a man in a very good coat to both of them.",
-            "text_ru": "Молчаливая паломница поднимает руку, останавливая наёмников, и чертит посохом в грязи: мост, человек в шлеме не по размеру с зарубленной палкой, второй с дубиной, и монета, которая переходит к обоим от человека в очень хорошем сюртуке.",
+            "text_ru": "Молчаливая паломница поднимает руку, останавливая наёмников, и чертит посохом в грязи: мост, человек в шлеме не по размеру с биркой с зарубками, второй с дубиной, и монета, которая переходит к обоим от человека в очень хорошем сюртуке.",
             "note": "Sister Agna, who cannot say it. If asked, the DM says what the drawing shows and nothing more: the notched stick is Col's tally, the coat is Rufus's. Read well, the Blades know who set the toll men on the bridge, and Rufus wants his due and Odda's mark can use it. The silent witness and the loud one, Tobin, reach the same truth by different roads.",
             "choices": [
                 {
