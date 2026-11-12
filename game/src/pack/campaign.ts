@@ -119,6 +119,13 @@ export function seatCards(pack: string): Map<string, CardRu> {
  * (`good:<id>`) and each place NPC (`npc:<id>`). The seat names only what an event it may see
  * already names, so the whole map is safe to hold here (Rule 3).
  */
+/** The name part of an NPC's Russian description: its capitalised words before any comma. */
+export function shortRu(name: string): string {
+  const head = name.split(",")[0]!;
+  const words = head.split(/\s+/).filter((w) => /^[А-ЯЁA-Z]/.test(w));
+  return words.length > 0 ? words.join(" ") : head;
+}
+
 export function worldSeatNames(pack: string): Map<string, string> {
   const names = new Map<string, string>();
   const world = campaignWorld(pack);
@@ -132,8 +139,8 @@ export function worldSeatNames(pack: string): Map<string, string> {
   if (existsSync(npcs)) {
     for (const n of (JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Array<{ id: string; name_ru?: string }> }).npcs) if (n.name_ru) {
       // A scene places a world NPC under its id as a handle (`osric_hale`); the ledger names it `npc:<id>`.
-      names.set(`npc:${n.id}`, n.name_ru);
-      names.set(n.id, n.name_ru);
+      names.set(`npc:${n.id}`, shortRu(n.name_ru));
+      names.set(n.id, shortRu(n.name_ru));
     }
   }
   return names;

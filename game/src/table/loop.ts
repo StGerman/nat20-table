@@ -2105,7 +2105,7 @@ export class TableLoop {
     switch (name) {
       case "sheet": {
         const r = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
-        this.table.show({ kind: "info", title: this.words.sheet, text: r.result?.cmd === "get_sheet" ? (this.table.names.language === "en" ? formatSheet(r.result.sheet) : sheetRu(r.result.sheet, this.table.names)) : (r.error?.message ?? "") });
+        this.table.show({ kind: "info", title: this.words.sheet, text: r.result?.cmd === "get_sheet" ? (this.table.names.language === "en" ? formatSheet(r.result.sheet) : sheetRu(r.result.sheet, this.table.names)) : this.table.names.language === "en" || !r.error ? (r.error?.message ?? "") : refusedRu(r.error.code, undefined) });
         return;
       }
       case "where": {

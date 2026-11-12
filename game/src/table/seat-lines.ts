@@ -469,6 +469,22 @@ export function coinsRu(copper: number): string {
   return parts.length > 0 ? parts.join(", ") : "ничего";
 }
 
+/** A purse's own coins in Russian, platinum and electrum kept as they are (B4): «1 платиновый, 3 золотых». */
+export function purseRu(coins: { pp?: number | null; gp?: number | null; ep?: number | null; sp?: number | null; cp?: number | null }): string {
+  const parts = (
+    [
+      [coins.pp ?? 0, "платиновый", "платиновых"],
+      [coins.gp ?? 0, "золотой", "золотых"],
+      [coins.ep ?? 0, "электрумовый", "электрумовых"],
+      [coins.sp ?? 0, "серебряный", "серебряных"],
+      [coins.cp ?? 0, "медный", "медных"],
+    ] as const
+  )
+    .filter(([count]) => count > 0)
+    .map(([count, one, many]) => plural(count, one, many, many));
+  return parts.join(", ");
+}
+
 function miles(count: number): string {
   return plural(count, "милю", "мили", "миль");
 }

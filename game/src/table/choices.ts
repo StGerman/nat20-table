@@ -68,7 +68,8 @@ export function buildChoices(result: LegalActionsResult, state: State | undefine
 }
 
 function aboutOf(option: ActionOption, names: SeatNames): NonNullable<Choice["about"]> {
-  const summary = names.summary(option.option_id, option.summary ?? undefined);
+  // A rule summary the dictionary lacks stays off a Russian seat rather than read in English.
+  const summary = names.summary(option.option_id, names.language === "ru" ? undefined : (option.summary ?? undefined));
   return { id: option.option_id, cost: option.cost, ...(summary ? { summary } : {}) };
 }
 

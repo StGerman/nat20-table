@@ -4,16 +4,9 @@
 import type { ActionCost } from "@nat20-table/engine-client";
 import { UI_WORDS, type UiWords } from "./words.ts";
 
-/** What the seat's own lines do, by the id `buildChoices` gives them. */
-const SEAT_LINES: Record<string, string> = {
-  move: "Walk next to a creature or to a place. Leaving a foe's reach lets it make an opportunity attack, unless you took Disengage.",
-  end_turn: "End your turn. Whatever you didn't use is lost; your reaction comes back at the start of your next turn.",
-};
-
 /** The card's text for a choice: the engine's summary for an option, ours for Move and End turn. */
 export function cardText(about: { id: string; summary?: string }, ui: UiWords = UI_WORDS.en): string | undefined {
-  if (ui !== UI_WORDS.en && !about.summary) return about.id === "move" ? ui.panel.moveCard : about.id === "end_turn" ? ui.panel.endTurnCard : undefined;
-  return about.summary ?? SEAT_LINES[about.id];
+  return about.summary ?? (about.id === "move" ? ui.panel.moveCard : about.id === "end_turn" ? ui.panel.endTurnCard : undefined);
 }
 
 /** What an option costs, in the turn budget's words: "Action", "Bonus Action · level 1 slot". */
@@ -30,4 +23,4 @@ export function costText(cost: ActionCost | undefined, ui: UiWords = UI_WORDS.en
 }
 
 /** The seat's own line ids, for tests. */
-export const SEAT_LINE_IDS = Object.keys(SEAT_LINES);
+export const SEAT_LINE_IDS = ["move", "end_turn"];

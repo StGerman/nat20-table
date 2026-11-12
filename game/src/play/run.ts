@@ -8,7 +8,7 @@ import type { Language } from "../agents/language.ts";
 import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
-import { knownPlaceNames, worldSeatNames } from "../pack/campaign.ts";
+import { knownPlaceNames, shortRu, worldSeatNames } from "../pack/campaign.ts";
 import { skeletonFile } from "../pack/read.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
 import type { FightReaction, RunReport, SceneChoice, SceneTime, SuggestionCounts, TalkRound } from "../table/loop.ts";
@@ -55,13 +55,6 @@ export interface PackParty {
  * pack's party, NPCs and anchors. An NPC whose `name_ru` is a titled phrase («торговец солью Фенн
  * Ласк») goes by the glossary's short name when it has one, so the seat and the narration name it alike.
  */
-/** The name part of an NPC's Russian description: its capitalised words before any comma. */
-function shortRu(name: string): string {
-  const head = name.split(",")[0]!;
-  const words = head.split(/\s+/).filter((w) => /^[А-ЯЁA-Z]/.test(w));
-  return words.length > 0 ? words.join(" ") : head;
-}
-
 export function seatRuNames(pack: string, adventure: Adventure): Map<string, string> {
   const names = worldSeatNames(pack);
   for (const p of adventure.party) if (p.name_ru) names.set(p.handle, p.name_ru);

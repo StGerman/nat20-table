@@ -1,15 +1,15 @@
 // `/sheet`, `/where` and `/map` at a Russian seat (AGT-98, design §4): rendered from the same
 // fields as their English forms in view.ts, which stay byte for byte as they were.
-import type { HealthBand, Sheet, State, WorldPlayer } from "@nat20-table/engine-client";
+import type { Sheet, State, WorldPlayer } from "@nat20-table/engine-client";
 import { titled } from "../view.ts";
 import { plural } from "./plural.ts";
-import { ABILITY_RU, coinsRu, type SeatNames, WATCH_RU } from "./seat-lines.ts";
-import { CONDITION_NAMES_RU, SKILLS_RU } from "./words.ts";
+import { ABILITY_RU, purseRu, type SeatNames, WATCH_RU } from "./seat-lines.ts";
+import { CONDITION_NAMES_RU, SEAT_WORDS, SKILLS_RU, UI_WORDS } from "./words.ts";
 
 const signed = (n: number) => (n < 0 ? `${n}` : `+${n}`);
 
-const HEALTH_RU: Record<HealthBand, string> = { unhurt: "без ран", bloodied: "в ранах", down: "вне боя" };
-const SIDE_RU = { party: "свой", hostile: "враг", neutral: "не враг" } as const;
+const HEALTH_RU = UI_WORDS.ru.panel.health;
+const SIDE_RU = SEAT_WORDS.ru.side;
 const LIFE_RU: Record<Sheet["life_state"], string> = { conscious: "в сознании", unconscious: "без сознания", stable: "без сознания, но вне опасности", dead: "погиб" };
 const RECHARGE_RU: Record<string, string> = { turn: "каждый ход", short_rest: "после короткого привала", long_rest: "после ночного отдыха", never: "не возвращается" };
 const CLASSES_RU: Record<string, string> = { fighter: "воин", cleric: "жрец", wizard: "волшебник", barbarian: "варвар", rogue: "плут" };
@@ -30,8 +30,8 @@ export function sheetRu(sheet: Sheet, names: SeatNames): string {
         : `Опыт: ${sheet.xp.points}${typeof sheet.xp.next_level === "number" ? `, следующий уровень на ${sheet.xp.next_level}` : ""}.`,
     );
   }
-  const copper = (sheet.purse.coins.pp ?? 0) * 1000 + (sheet.purse.coins.gp ?? 0) * 100 + (sheet.purse.coins.ep ?? 0) * 50 + (sheet.purse.coins.sp ?? 0) * 10 + (sheet.purse.coins.cp ?? 0);
-  lines.push(copper > 0 ? `Кошелёк: ${coinsRu(copper)}.` : "Кошелёк пуст.");
+  const purse = purseRu(sheet.purse.coins);
+  lines.push(purse ? `Кошелёк: ${purse}.` : "Кошелёк пуст.");
   if (sheet.life_state !== "conscious") {
     lines.push(`Вы ${LIFE_RU[sheet.life_state]}. Борьба со смертью: удач ${sheet.death_saves.successes}, неудач ${sheet.death_saves.failures}.`);
   }
