@@ -33,7 +33,7 @@ import { appendFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Event } from "@nat20-table/engine-client";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
-import { ModelDm, type CraftMode } from "../agents/dm.ts";
+import { ModelDm, type CraftMode, type Voice } from "../agents/dm.ts";
 import type { Language } from "../agents/language.ts";
 import { ModelPlayer } from "../agents/player.ts";
 import { Suggester } from "../agents/suggest.ts";
@@ -144,6 +144,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
       choice: dmChoice,
       craft,
       language,
+      voice: flags.voice as Voice,
       usage,
       ...(flags["dm-timeout-ms"] !== undefined ? { turnTimeoutMs: flags["dm-timeout-ms"] } : {}),
       livingWorld: campaign !== undefined,

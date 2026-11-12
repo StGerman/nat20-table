@@ -130,7 +130,14 @@ function goods(input: { coins?: z.infer<typeof COINS>; item?: string }): Goods |
   };
 }
 
-export function dmPrompt(pack: PackText, human: Handle | undefined, players: Handle[], craft: CraftMode, language: Language = "en"): string {
+/** The DM's narration voice (AGT-102): `fireside` adds the voice skill's ask to the adventure part. */
+export const VOICES = ["plain", "fireside"] as const;
+export type Voice = (typeof VOICES)[number];
+
+/** The line a Fireside run adds to the prompt; a Plain run's prompt is byte for byte without it. */
+export const FIRESIDE_LINE = "This run asks for the Fireside voice.";
+
+export function dmPrompt(pack: PackText, human: Handle | undefined, players: Handle[], craft: CraftMode, language: Language = "en", voice: Voice = "plain"): string {
   const party = [...(human ? [human] : []), ...players];
   // A table with no human (M7 spec §4.2, AGT-40): every character is an AI player, nobody is asked
   // anything, and a surrender is the DM's call.
@@ -210,7 +217,7 @@ Be quick: decide, call the tools, narrate once. Most wakes need one to three too
 ${[...guidance, ...dmLanguage(language, Boolean(human), [...russianNames(pack.adventure), ...(pack.placeNames ?? [])], pack.adventure.glossary_ru)].join("\n")}
 ## The adventure (only you see it)
 
-${pack.text}`;
+${voice === "fireside" ? `${FIRESIDE_LINE}\n\n` : ""}${pack.text}`;
 }
 
 export interface ModelDmConfig {
@@ -224,6 +231,8 @@ export interface ModelDmConfig {
   craft?: CraftMode;
   /** What the table hears from the DM is written in; default `en` (decision 0038). */
   language?: Language;
+  /** The narration voice; default `plain` (AGT-102). */
+  voice?: Voice;
   usage?: UsageLog;
   /** Every wake's limit. Default `DM_TURN_TIMEOUT_MS`, and `DM_LONG_WAKE_TIMEOUT_MS` for the long wakes. */
   turnTimeoutMs?: number;
@@ -303,7 +312,7 @@ export class ModelDm implements DmAgent {
 
   constructor(config: ModelDmConfig) {
     this.config = config;
-    const prompt = dmPrompt(config.pack, config.human, config.players, config.craft ?? "prompt", config.language);
+    const prompt = dmPrompt(config.pack, config.human, config.players, config.craft ?? "prompt", config.language, config.voice);
     this.systemPrompt = config.livingWorld ? `${prompt.replace(SCENES_LINE, ROAD_SCENES_LINE)}\n\n${DM_ROAD_PROMPT}\n\n${storySpacePrompt(config.human)}` : prompt;
     this.seatTools = this.defineTools();
   }
