@@ -106,7 +106,7 @@ export const ROAD_PROMPT = [
   "## On the road",
   "Between the places of the adventure the party travels with a merchant's caravan. look shows the day, where the caravan is, the known places and roads, any road card waiting and the escort contract.",
   "Only whoever may drive the caravan moves it on (travel) and ends the day (rest_night); look says when that is you.",
-  "When a road card waits for your word, give it with choose_card: on the caravan's card it is advice to the merchant, who decides; on a card for the Blades it is your vote. Choose as your character would, and say why in one line if they would. If none of the choices is what your character would do, say what they do with own_move, in one sentence.",
+  "When a road card waits for your word, give it with choose_card: on the caravan's card it is advice to the merchant, who decides; on a card for the Blades it is your vote. Choose as your character would, and say why in one line if they would. The written choices are only the obvious ones: when your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move in one sentence instead of choose_card. The DM sets the check, and the table gives its word on it like on any choice.",
   "When your sheet says you can level up, out of a fight, call level_up and answer each choice with answer_level_up. Take the recommended pick unless your card gives your character a clear reason not to.",
 ].join("\n");
 
@@ -469,7 +469,7 @@ export class ModelPlayer implements PlayerAgent {
       ),
       seatTool(
         "own_move",
-        "When none of the road card's choices is what your character would do: say in one sentence what they do instead. The DM may make it a choice on the card, with a check; then everyone gives their word on it. Not when the card already has one.",
+        "When your character would rather try something of their own than any of the road card's written choices: say in one sentence what they do. The DM may make it a choice on the card, with a check; then everyone gives their word on it. Not when the card already has one.",
         { words: z.string().describe("One sentence: what your character does, in their own words.") },
         (input) => this.bound((t) => t.ownMove(input.words)),
       ),

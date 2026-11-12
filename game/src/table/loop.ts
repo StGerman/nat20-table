@@ -926,7 +926,7 @@ export class TableLoop {
       if (!agent || this.table.ended) continue;
       const now = (await this.dmWorld())?.card;
       if (!now || now.id !== card.id || !now.waiting_for.includes(handle)) continue;
-      await this.aiCard(agent, "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
+      await this.aiCard(agent, "Give your word with choose_card, with a choice id, or try something of your own with own_move. Say why in one line with say, if your character would.");
     }
     const now = (await this.dmWorld())?.card;
     // Whoever is still silent goes with the others (a failed wake or a refusal).
@@ -2523,6 +2523,6 @@ function cardLines(card: CardPlayer, owner = false): string[] {
     `A road card waits for your word (${whose}): ${card.text}`,
     `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === OWN_MOVE && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
-    ...(move ? [] : ["If none of these is what your character would do, say what they do with own_move, in one sentence."]),
+    ...(move ? [] : ["These are only the obvious choices: if your character would rather try something of their own, say it with own_move, in one sentence."]),
   ];
 }
