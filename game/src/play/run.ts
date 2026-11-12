@@ -9,6 +9,7 @@ import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
 import { knownPlaceNames, shortRu, worldSeatNames } from "../pack/campaign.ts";
+import { titled } from "../view.ts";
 import { skeletonFile } from "../pack/read.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
 import type { FightReaction, RunReport, SceneChoice, SceneTime, SuggestionCounts, TalkRound } from "../table/loop.ts";
@@ -59,7 +60,7 @@ export function seatRuNames(pack: string, adventure: Adventure): Map<string, str
   const names = worldSeatNames(pack);
   for (const p of adventure.party) if (p.name_ru) names.set(p.handle, p.name_ru);
   for (const n of adventure.npcs) {
-    const english = n.id.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    const english = titled(n.id);
     const short = adventure.glossary_ru[english];
     // Without a glossary entry, the capitalised words of `name_ru` before a comma: «торговка зерном Одда Велл» reads «Одда Велл».
     const name = short ?? (n.name_ru ? shortRu(n.name_ru) : undefined);

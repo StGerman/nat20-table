@@ -38,6 +38,8 @@ export interface TableWords {
   /** A walk that ran out of movement: how far it went, and who it provoked. */
   movedShort(feet: number, provoked: string): string;
   notAccepted: string;
+  /** A refusal with no engine reason: the table is not taking that now. */
+  notNow: string;
   notUnderstood: string;
   notUnderstoodText: string;
   noSuchReaction: string;
@@ -199,6 +201,7 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     stoppedShort: "Stopped short",
     movedShort: (feet, provoked) => `You moved ${feet} ft; stopped short, as far as movement goes: not there yet${provoked ? `; provoked ${provoked}` : ""}.`,
     notAccepted: "Not accepted",
+    notNow: "Not now: the table is waiting on something else.",
     notUnderstood: "Not understood",
     notUnderstoodText: "I didn't get that; pick from /options.",
     noSuchReaction: "No such reaction",
@@ -289,6 +292,7 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     stoppedShort: "Не дошли",
     movedShort: (feet, provoked) => `Вы прошли ${plural(feet, "фут", "фута", "футов")}, и шаги на этот ход кончились: до цели ещё не дошли${provoked ? `. Вслед вам может ударить: ${provoked}` : ""}.`,
     notAccepted: "Не принято",
+    notNow: "Сейчас нельзя: стол ждёт другого.",
     notUnderstood: "Не понято",
     notUnderstoodText: "Не понял вас; выберите из /options.",
     noSuchReaction: "Такого ответа нет",

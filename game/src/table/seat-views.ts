@@ -103,7 +103,7 @@ function arrivalRu(arrives: { day: number; watch: WorldPlayer["clock"]["watch"] 
 /** `/map` in Russian: the way ahead in travel order, as `mapLines` gives it in English. */
 export function mapLinesRu(world: WorldPlayer, names: SeatNames, form: "wide" | "pane" = "wide"): string[] {
   const wide = form === "wide";
-  const name = (id: string) => names.place(id);
+  const name = (id: string) => names.place(id, world.places.find((p) => p.id === id)?.name);
   const today = world.clock.day;
   const row = (left: string, right: string, width = wide ? 26 : 20) => (right ? `${left.padEnd(width)} ${right}` : left);
   const escort = world.escort && !world.escort.done ? world.escort : undefined;

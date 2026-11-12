@@ -88,9 +88,9 @@ export class SeatNames {
     return ids.map((id) => this.who(id)).join(", ");
   }
 
-  /** A place on the map. */
-  place(id: string): string {
-    return (this.language === "ru" ? this.ru.get(id) : undefined) ?? id.replace(/_/g, " ");
+  /** A place on the map; `name` is the world's English name, when the caller has it. */
+  place(id: string, name?: string): string {
+    return (this.language === "ru" ? this.ru.get(id) : undefined) ?? name ?? id.replace(/_/g, " ");
   }
 
   /** A good the caravan carries. */

@@ -743,8 +743,7 @@ export class TableLoop {
 
   /** A place's name as the table knows it, for the human's lines. */
   private async placeWords(id: string): Promise<string> {
-    if (this.table.names.language !== "en") return this.table.names.place(id);
-    return (await this.dmWorld())?.places.find((p) => p.id === id)?.name ?? id.replace(/_/g, " ");
+    return this.table.names.place(id, (await this.dmWorld())?.places.find((p) => p.id === id)?.name);
   }
 
   /** The human's own sheet (owner view), or undefined. */
@@ -1323,7 +1322,7 @@ export class TableLoop {
     const error = outcome.data as { message?: string; code?: ErrorCode; reason?: RejectReason | null } | undefined;
     const message = error?.message ?? outcome.text;
     this.table.log("retry", `${this.human}'s choice was not accepted: ${message}`, this.human, { decision: this.humanDecision() });
-    this.table.show({ kind: "info", title: this.words.notAccepted, text: this.table.names.language === "en" ? message : refusedRu(error?.code, error?.reason ?? undefined) });
+    this.table.show({ kind: "info", title: this.words.notAccepted, text: this.table.names.language === "en" ? message : error ? refusedRu(error.code, error.reason ?? undefined) : this.words.notNow });
   }
 
   /**

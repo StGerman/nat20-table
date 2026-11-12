@@ -99,7 +99,7 @@ export function roadChoices(world: WorldPlayer, first: number, human?: Handle, t
   const scouts = human !== undefined && world.scout !== human && (world.escort?.blades.some((b) => b.handle === human) ?? false);
   const at = world.at.kind === "at" ? world.at.place : undefined;
   const here = at === undefined ? undefined : world.places.find((p) => p.id === at);
-  const placeName = new Map(world.places.map((p) => [p.id, talk.names.language === "en" ? p.name : talk.names.place(p.id)]));
+  const placeName = new Map(world.places.map((p) => [p.id, talk.names.place(p.id, p.name)]));
   const owns = !world.caravan.owner.includes(":");
   // Absent only in a hand-built view; the engine always sends it.
   const today = world.today as WorldPlayer["today"] | undefined;
