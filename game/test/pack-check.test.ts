@@ -47,6 +47,8 @@ test("every pack in scenarios/ passes the pack check and loads every scene", asy
 /** The Mill as a living-world pack on the Wend map (MAP-7): its skeleton moved to campaign.json with a world block. */
 function campaignMill(world: Record<string, unknown>, edit: (skeleton: Adventure) => void = () => undefined): { pack: string; close(): void } {
   return planted((skeleton, pack) => {
+    // A road pack carries its titles in Russian too (MAP-19).
+    for (const scene of skeleton.scenes) scene.title_ru = `сцена ${scene.id}`;
     edit(skeleton);
     // The Wend place NPCs stand by the wagon: every scene a place loads has that anchor.
     for (const scene of ["s1_village_green", "s2_mill_road"]) {

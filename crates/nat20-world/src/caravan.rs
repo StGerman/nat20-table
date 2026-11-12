@@ -65,7 +65,7 @@ pub struct Good {
     pub id: String,
     /// The name players read, with its unit ("wheat (1 lb.)")
     pub name: String,
-    /// The name a Russian run's seat reads (MAP-19, decision 0067); never projected
+    /// The name a Russian run's seat reads, without the unit (MAP-19, decision 0067); never projected
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name_ru: Option<String>,
     /// The price of one unit, in copper pieces

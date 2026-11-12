@@ -121,6 +121,14 @@ export function shortRu(name: string): string {
   return words.length > 0 ? words.join(" ") : head;
 }
 
+/** The goods of a pack's world that have no Russian name (MAP-19); none for a pack without a world. */
+export function goodsWithoutRu(pack: string): string[] {
+  const world = campaignWorld(pack);
+  const goods = world ? path.join(world.dir, "goods.json") : undefined;
+  if (!goods || !existsSync(goods)) return [];
+  return (JSON.parse(readFileSync(goods, "utf8")) as { goods: Array<{ id: string; name_ru?: string }> }).goods.filter((g) => !g.name_ru?.trim()).map((g) => g.id);
+}
+
 /**
  * What a Russian seat calls the world's things (AGT-98): every place on the map, each good
  * (`good:<id>`) and each place NPC (`npc:<id>`). The seat names only what an event it may see

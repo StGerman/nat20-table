@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../engine.ts";
 import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS, STAT_BLOCKS_SINCE } from "./adventure.ts";
-import { readCampaign, seatCards } from "./campaign.ts";
+import { goodsWithoutRu, readCampaign, seatCards } from "./campaign.ts";
 import { skeletonFile } from "./read.ts";
 
 /** Every pack in the repository: each folder of `scenarios/`. */
@@ -144,13 +144,21 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     if (member.name_ru && !(member.names ?? []).includes(member.name_ru)) problem(`party ${member.handle}: name_ru ${member.name_ru} is not among its names`);
   }
 
-  // Every card a road pack can draw, and each of its choices, reads in Russian too (MAP-19,
-  // decision 0067): the world's deck and the pack's own.
+  // A road pack reads in Russian too (MAP-19, decision 0067): every card and choice it can draw,
+  // from the world's deck and its own, each good of its world, and its titles.
   if (campaign) {
-    for (const [id, card] of seatCards(dir)) {
-      if (!card.text_ru) problem(`card ${id}: no text_ru`);
-      for (const [choice, ru] of Object.entries(card.choices)) if (!ru) problem(`card ${id}, choice ${choice}: no text_ru`);
+    const ru = (text: string | undefined) => (text ?? "").trim() !== "";
+    try {
+      for (const [id, card] of seatCards(dir)) {
+        if (!ru(card.text_ru)) problem(`card ${id}: no text_ru`);
+        for (const [choice, text] of Object.entries(card.choices)) if (!ru(text)) problem(`card ${id}, choice ${choice}: no text_ru`);
+      }
+    } catch (error) {
+      problem(`a deck file can't be read: ${error instanceof Error ? error.message : String(error)}`);
     }
+    for (const id of goodsWithoutRu(dir)) problem(`good ${id}: no name_ru`);
+    if (!ru(adventure.title_ru)) problem("no title_ru");
+    for (const scene of adventure.scenes) if (!ru(scene.title_ru)) problem(`scene ${scene.id}: no title_ru`);
   }
 
   // A turn-order glyph is one grapheme (AGT-67), so it can't push the bar's text around by more than one cell's drift.
