@@ -1,6 +1,6 @@
 # Roadmap
 
-As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z). Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api` and nat20-runs `master` 2e65a5d.
+As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the Allies in fights backlog line added 2026-11-12 on d2b0fc4, numbers unchanged. Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api` and nat20-runs `master` 2e65a5d.
 
 ## Order
 
@@ -24,7 +24,7 @@ As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z). Kept by Yan (decision
 
 ## Backlog milestones
 
-Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08).
+Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08), except Allies in fights, which has a Proposed scope.
 
 - The player as a merchant (maybe the shop that `docs/scope/living-world-scope.md` §4 and decision 0057 number M17)
 - Telegram
