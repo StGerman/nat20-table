@@ -134,6 +134,11 @@ export interface InkSeatOptions {
   language?: Language;
   /** How the seat names characters, in the run's language. */
   names?: SeatNames;
+  /**
+   * Each thing the seat draws, in order, as the screen reads it (AGT-103, AGT-13): the run writes
+   * them to `seat.jsonl`. `kind` is the event's, or `command` for a command's answer.
+   */
+  record?: (drawn: { kind: string; text: string }) => void;
 }
 
 export class InkSeat implements Seat {
@@ -375,6 +380,9 @@ export class InkSeat implements Seat {
   };
 
   show(event: TableEvent): void {
+    // Engine lines are drawn when they show: at once for the human's own, else when released.
+    if (event.kind !== "engine") this.drawn(event.kind === "info" && OVERLAYS.has(event.title) ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
+    else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));
     switch (event.kind) {
       case "situation":
         // The loop refreshes the panel before each step, ahead of the narration of what came
@@ -401,7 +409,10 @@ export class InkSeat implements Seat {
         const covered = this.held.map((line) => ({ ...line, text: `    ${line.text.trimStart()}` }));
         this.held = [];
         this.message(event);
-        if (this.options.verbose) this.print(covered, false);
+        if (this.options.verbose) {
+          this.drawn("engine", covered);
+          this.print(covered, false);
+        }
         this.release();
         return;
       }
@@ -448,6 +459,7 @@ export class InkSeat implements Seat {
   private release(): void {
     const lines = this.held;
     this.held = [];
+    this.drawn("engine", lines);
     this.add(lines);
     const situation = this.heldSituation;
     this.heldSituation = undefined;
@@ -730,6 +742,12 @@ export class InkSeat implements Seat {
     if (lines.length === 0) return;
     this.print(lines, this.speaker !== undefined);
     this.speaker = undefined;
+  }
+
+  /** Hands what the seat draws to the run's record, blank lines left out. */
+  private drawn(kind: string, lines: Line[]): void {
+    const text = lines.map((l) => l.text).filter((t) => t.trim() !== "").join("\n");
+    if (text !== "" && this.options.record) this.options.record({ kind, text });
   }
 
   /** Adds lines to the story, after a blank line when `gap` (and the story has lines). */
