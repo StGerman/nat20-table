@@ -297,7 +297,7 @@ export class InkSeat implements Seat {
    */
   private readonly read = (chunk: Buffer | string): void => {
     const text = this.carry + String(chunk);
-    this.carry = /\u001b(\[(<[\d;]*)?)?$/.exec(text)?.[0] ?? "";
+    this.carry = /\u001b\[(<[\d;]*)?$/.exec(text)?.[0] ?? "";
     const turns = wheelsIn(text);
     if (turns.length > 0) this.wheelTurns(turns);
   };
@@ -345,9 +345,10 @@ export class InkSeat implements Seat {
   private wheelOn = false;
   private readonly wheelOff = (): void => this.wheel(false);
   /**
-   * A kill skips "exit": the mouse goes back to the terminal, then the signal is sent again. While
-   * this listener is on, Ink's signal-exit stands aside; the second delivery finds it alone, so it
-   * unmounts, leaves the alternate screen and ends the process as the signal asks.
+   * A kill skips "exit": the mouse goes back to the terminal, then the signal is sent again. Ink's
+   * signal-exit is on before this listener (Ink renders first), and it stands aside while another
+   * listener is on; the second delivery finds it alone, so it unmounts, leaves the alternate
+   * screen and ends the process as the signal asks.
    */
   private readonly hangup = (signal: NodeJS.Signals): void => {
     this.wheel(false);
@@ -897,10 +898,10 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const [scroll, setScrollTo] = useState<Scroll | undefined>(undefined);
   // The scroll hint stays under the story until the reader first scrolls it (AGT-94).
   const [scrolled, setScrolled] = useState(false);
-  const setScroll = (to: Scroll | undefined) => {
-    if (to) setScrolled(true);
-    setScrollTo(to);
-  };
+  useEffect(() => {
+    if (scroll) setScrolled(true);
+  }, [scroll]);
+  const setScroll = setScrollTo;
   // How far down the open overlay is read, from its top; a new overlay starts at its top.
   const [overlayRead, setOverlayTop] = useState(0);
   useEffect(() => setOverlayTop(0), [view.overlay, view.folded]);
@@ -984,8 +985,10 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   useEffect(() => {
     seat.wheelTurns = (turns) => {
       if (overlayRows) return setOverlayTop((top) => turns.reduce((at, d) => stepWithin(at, d * WHEEL_ROWS, overlayMax), Math.min(top, overlayMax)));
-      if (turns.includes(-1)) setScrolled(true);
       setScrollTo((at) => turns.reduce((to, d) => scrollRows(to, d, WHEEL_ROWS, story, storyH, view.lines.length), at));
+    };
+    return () => {
+      seat.wheelTurns = () => {};
     };
   });
 
