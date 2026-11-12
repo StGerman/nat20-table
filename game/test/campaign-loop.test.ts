@@ -179,7 +179,7 @@ test("an AI player's own_move words wake the DM's card_words, and the move lands
     await loop.run("vale_town");
     // Her first card wake invites an own move, in the briefing and in the ask (AGT-99).
     const first = maren.briefings.find((b) => b.wake === "card");
-    assert.ok(first?.briefing.includes(OWN_MOVE_INVITE) && first.briefing.includes("or your own move with own_move"), first?.briefing);
+    assert.ok(first?.briefing.includes(OWN_MOVE_INVITE) && first.briefing.includes("Or try something of your own with own_move."), first?.briefing);
     const words = dm.briefings.find((b) => b.wake === "card_words");
     assert.match(words!.briefing, /maren says or does: "Offer the farmer a blessing for his field\."/);
     const moved = t.requests().find((r) => r.cmd === "own_move") as { actor?: string } | undefined;

@@ -961,7 +961,7 @@ export class TableLoop {
       if (!agent || this.table.ended) continue;
       const now = (await this.dmWorld())?.card;
       if (!now || now.id !== card.id || !now.waiting_for.includes(handle)) continue;
-      await this.aiCard(agent, `Give your word with choose_card, with a choice id${now.own_move ? "" : ", or your own move with own_move"}. Say why in one line with say, if your character would.`);
+      await this.aiCard(agent, "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
     }
     const now = (await this.dmWorld())?.card;
     // Whoever is still silent goes with the others (a failed wake or a refusal).
@@ -996,7 +996,7 @@ export class TableLoop {
     if (owner === human) {
       await this.humanCard(now, true);
     } else if (agent) {
-      await this.aiCard(agent, `Make the caravan's call with choose_card, with a choice id${now.own_move ? "" : ", or your own move with own_move"}. Say why in one line with say, if your character would.`, true);
+      await this.aiCard(agent, "Make the caravan's call with choose_card, with a choice id. Say why in one line with say, if your character would.", true);
     }
     now = await ready();
     if (!now) return;
@@ -1019,7 +1019,8 @@ export class TableLoop {
     const card = await this.playerCard(handle);
     if (!card) return;
     tools.takeOwnMove();
-    await this.wakePlayer(agent, "card", await this.playerBriefing(handle, ...cardLines(card, owner), ask));
+    // The ask is the briefing's last line: while the card has no own move, it offers one too (AGT-99).
+    await this.wakePlayer(agent, "card", await this.playerBriefing(handle, ...cardLines(card, owner), card.own_move ? ask : `${ask} ${OWN_MOVE_ASK}`));
     const said = tools.takeOwnMove();
     if (!said) return;
     // A seat that also gave its word has spoken: its words were only said aloud.
@@ -2557,6 +2558,9 @@ const CARD_OPENING = "Open it in two to four sentences, on what the people in it
 
 /** The AI players' own-move line in a card briefing (AGT-99), while the card has no own move. */
 export const OWN_MOVE_INVITE = "These are only the obvious choices: if your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move, in one sentence.";
+
+/** The ask's own-move clause on a seat's first card wake (AGT-99), while the card has no own move. */
+const OWN_MOVE_ASK = "Or try something of your own with own_move.";
 
 /** The engine's limit on an own move's words (API-56). */
 const OWN_MOVE_MAX_CHARS = 300;
