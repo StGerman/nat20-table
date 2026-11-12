@@ -56,6 +56,8 @@ import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.t
 import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, suggestionLine, timingLines, type Casting, type PackParty } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
+import { setTurnTracer } from "../agents/sdk-session.ts";
+import { tracerFromEnv } from "../tracing.ts";
 import { uploadStage } from "./upload.ts";
 import { AUDIT_JSON, verdictBlock, writeVerdict } from "./verdict.ts";
 
@@ -240,6 +242,15 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
 
   const runDir = runFolder(flags.out, play.folder);
   const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
+  // Langfuse tracing (AGT-16): on with the LANGFUSE_* keys, and only when a model plays a seat.
+  const tracer =
+    flags.dm === "model" || flags.players === "model"
+      ? await tracerFromEnv({
+          sessionId: path.basename(runDir),
+          tags: [settings.profile?.name ?? "no-profile", path.basename(path.resolve(flags.pack)), ...(flags.roster ? [`roster:${flags.roster}`] : [])],
+        })
+      : undefined;
+  setTurnTracer(tracer);
   // A failed start gives the terminal back before its error prints.
   const started = await (async () => {
     let engine: GameEngine | undefined;
@@ -481,6 +492,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const narration = flags["no-audit"] ? undefined : await checking(CHECK_NARRATION, () => narrationCheck(flags.pack, runDir, flags.dm === "model" ? modelJudgeFor(runDir) : new ScriptedJudge()));
   ink?.check(CHECK_REPORT, "running");
   await breath();
+  // Every turn is traced by now, the judge's too; at most 10 s if Langfuse does not answer.
+  await tracer?.flush();
 
   const report = [
     `# ${play.command} run, ${new Date().toISOString()}`,
@@ -494,6 +507,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...(ink ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
     ...(run?.suggestions ? [`- ${suggestionLine(run.suggestions)}`] : []),
     ...(record.roster ? [`- ${rosterReport(record.roster)}`] : []),
+    ...(tracer ? [`- Tracing: on, Langfuse session ${record.run_id}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
     ...wordReport(runDir),
     ...(narration ? ["", ...narration.lines] : []),

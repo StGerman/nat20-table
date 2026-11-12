@@ -125,7 +125,7 @@ export class ModelJudge implements Judge {
         got = { flags, untracked: (args.untracked ?? []).filter((u) => lines.includes(u.line)) };
         return reply(`Reported ${flags.length} contradictions.`);
       });
-      const session = this.open({ agent: "judge", choice: this.choice, systemPrompt: this.systemPrompt, tools: [report], turnTimeoutMs: this.turnTimeoutMs });
+      const session = this.open({ agent: "judge", role: "judge", choice: this.choice, systemPrompt: this.systemPrompt, tools: [report], turnTimeoutMs: this.turnTimeoutMs });
       try {
         await session.turn(batch, "narration check");
       } finally {
