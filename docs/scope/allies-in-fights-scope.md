@@ -1,7 +1,7 @@
 # Allies in fights («Свои в бою»): scope
 
 Status: Proposed; §8 answered by Stas (§9), accepted on merge. Drafted by Yan Metsuyan (0065), 2026-11-12, main d2b0fc4. No number: TASKS.md § Milestones has no row for it yet (roadmap amendment 1). Ask: Stas 2026-11-12 20:44Z, «конечно в backlog рядом с B и C и туда же проверку судьи. В целом мы набрали на milestone контента. Ян оформи пожалуйста в milestone». No bid was tendered; priced here.
-Inputs: decision 0071 (A first, B and C later; table #360), decision 0070 (children not exempt from harm; table #361), rows MON-12, ENG-48, ENG-49, AGT-106 (table #360) and MAP-23 (table #361), all open, none on main. If Stas accepts this scope, 0071 stays as written: this is a backlog milestone, so B, C and AGT-106 "in the backlog" still hold; no new record.
+Inputs: decision 0071 (A first, B and C later; table #360), decision 0070 (children not exempt from harm; table #361), rows MON-12, ENG-48, ENG-49, AGT-106 (table #360) and MAP-23 (table #361), all open, none on main. 0071's Decision and Consequences lines in table #360 now name this milestone (B, C and AGT-106 gathered here); no new record.
 
 ## 1. Goal
 
@@ -63,6 +63,8 @@ Target (0065, half the baseline): 13.5 PRs, 17.73 USD, 33 min, 1.06 days. Planne
 
 ## 8. Questions for Stas
 
+Answered in §9.
+
 1. **A**: its own PRs right after the M12 exit pair (recommended: 2 PRs, about 30 min, 0 USD, and it fixes the narrated-dog bug a milestone earlier), inside the Dramaturg mechanism (table #348), or in this milestone (0 PRs saved; the bug stays live longer)?
 2. **Slot**: after the Dramaturg mechanism (table #348), before Arachas (recommended: #348's §8 is answered and it is 8 PRs; putting this first delays it by this milestone's 5 code PRs, the core PR and its pin among them), or right after M12?
 3. **AGT-106**: counted, reported and ruled by you without failing the run (recommended, Lev and Claude agree: a new check that gates on its first outing risks a failed run, a day and 7.85 USD), or gated? Until you answer, the M7 rule holds: a confirmed flag fails a run.
@@ -75,6 +77,6 @@ Target (0065, half the baseline): 13.5 PRs, 17.73 USD, 33 min, 1.06 days. Planne
 1. A: no change asked; it stays its own PRs right after the M12 exit pair. Stas added that the Merchant, too, can be bitten: C joins (§2 item 4).
 2. Slot: after the Dramaturg mechanism, before Arachas («Да давай»).
 3. AGT-106 counts, does not gate, for now («Сейчас да»).
-4. C's outcome: Lev's design decides; Stas's view is in §2 item 4.
+4. C's outcome: Zoya first drafts options («А давай сначала мы Зоуи попросим накидать нам вариантов а потом отдадим их Льву», 21:23Z), with Stas's view in §2 item 4 as one of the inputs; then Lev's design decides.
 5. The Tam gap: table #361 merged whole (06063d0), so the window from there until MAP-23 is accepted; AGT-106 and the narration judge are what watch it.
 6. Exit: CI seeds plus one all-AI run («Ок»).
