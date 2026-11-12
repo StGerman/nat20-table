@@ -10,7 +10,7 @@ import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
 import { cardChoices, roadChoices } from "../src/table/choices.ts";
 import { SEAT_WORDS } from "../src/table/words.ts";
-import { CARD_AHEAD, TableLoop, cutAtWord, roadCardAhead } from "../src/table/loop.ts";
+import { TableLoop, cutAtWord, roadCardAhead } from "../src/table/loop.ts";
 import { DmTools } from "../src/table/tools.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
@@ -481,14 +481,12 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     assert.match(ends[1]!.text, /more experience brings your next level\.|enough experience for your next level/);
     assert.match(ends[1]!.text, /Your party is kept for the next journey\.$/);
     assert.ok(dm.briefings.some((b) => b.briefing.includes("The journey is over")), "the DM wrote the closing");
-    // The pay is told once (AGT-86, decision 0060 F5): whoever tells Saltmouth's arrival leaves it to
-    // the pay's own wake: the opening, or the outcome of a road card met on the way in (AGT-100).
+    // The pay is told once (AGT-86, decision 0060 F5): Saltmouth's opening leaves it to the pay's own wake.
     const opening = dm.briefings.filter((b) => b.wake === "scene_open" && b.briefing.includes("fw_wendmouth is loaded")).at(-1);
-    const arrival = opening?.briefing.includes(CARD_AHEAD) ? dm.briefings.slice(dm.briefings.indexOf(opening!)).find((b) => b.briefing.includes("bring it into the place")) : opening;
-    assert.ok(/without the pay|no pay, purse or coin here/.test(arrival?.briefing ?? ""), arrival?.briefing);
+    assert.ok(opening?.briefing.includes("open the arrival here without the pay"), opening?.briefing);
     const pay = dm.briefings.find((b) => b.briefing.includes("the merchant paid the Blades what they are owed"));
     assert.ok(pay?.briefing.includes("Your last narration opened the arrival: don't tell it again."), pay?.briefing);
-    assert.equal(dm.briefings.filter((b) => /without the pay|no pay, purse or coin here/.test(b.briefing)).length, 1, "only the destination's arrival leaves the pay out");
+    assert.equal(dm.briefings.filter((b) => b.briefing.includes("without the pay")).length, 1, "only the destination's opening leaves the pay out");
     assert.ok(!seat.shown.some((e) => e.kind === "options" && e.lines.some((l) => /Move on|Make camp/.test(l)) && seat.shown.indexOf(e) > ends[0]!.i), "no road lines after the contract");
     assert.ok(report.scenes.includes("fw_wendford") && report.scenes.at(-1) === "fw_wendmouth", report.scenes.join(", "));
     const state = await t.engine.request("dm", { cmd: "get_state" });
@@ -523,16 +521,15 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     const goes = records.findIndex((r, i) => i > opened && r.kind === "system" && /^card [a-z0-9_]+ goes to the seats$/.test(r.text));
     assert.ok(opened >= 0 && goes > opened, "the picked card goes to the seats after its opening");
     assert.ok(!records.some((r) => r.text === "The road bends."), "the early narration was refused");
-    // A card drawn on the way to a scene is played before the arrival: that scene's opening keeps
-    // the caravan on the road, and the next wake opens the card (AGT-100).
-    const ahead = dm.briefings.flatMap((b, i) => (b.wake === "scene_open" && b.briefing.includes(CARD_AHEAD) ? [i] : []));
-    assert.ok(ahead.length > 0, "an opening with a card still to come");
-    for (const i of ahead) assert.ok(["pick", "card"].includes(dm.briefings[i + 1]?.wake ?? ""), `after the opening: ${dm.briefings[i + 1]?.wake}`);
-    // ... and the outcome of the last road card before the place brings the caravan in, once per such opening.
-    const brought = dm.briefings.filter((b) => b.wake === "road" && b.briefing.includes("bring it into the place"));
-    assert.equal(brought.length, ahead.length, brought.map((b) => b.briefing).join("\n---\n"));
-    // Saltmouth's arrival card is not a road card: the opening before it never carries the line.
-    assert.ok(!dm.briefings.some((b) => b.wake === "scene_open" && b.briefing.includes(CARD_AHEAD) && b.briefing.includes("without the pay")));
+    // A scene reached with a road card met on the way opens once that card is settled (AGT-100):
+    // the trial run of 2026-11-12 told Saltmouth's arrival, then played the road card.
+    const later = records.flatMap((r) => (r.kind === "system" ? [/^scene ([a-z0-9_]+) opens after the road card met on the way$/.exec(r.text)?.[1]] : [])).filter(Boolean);
+    assert.ok(later.length > 0, "a scene waited for its road card");
+    for (const scene of later) {
+      const open = dm.briefings.findIndex((b) => b.wake === "scene_open" && b.briefing.includes(`Scene ${scene} is loaded`));
+      const before = dm.briefings.slice(0, open).findLastIndex((b) => b.wake === "scene_open");
+      assert.ok(open > 0 && dm.briefings.slice(before + 1, open).some((b) => b.wake === "pick" || b.wake === "card"), `${scene} opened after its road card`);
+    }
     // A card that comes with no pick has its own wake, opened once (AGT-100).
     for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: "/);
     const framed = records.filter((r) => r.kind === "narration" && r.wake === "card").length;
@@ -937,13 +934,12 @@ test("an arrival card at the destination is decided before the human's last turn
   }
 });
 
-test("a road card still to come is one met on the road, not a place's arrival card, nor one already opened (AGT-100)", () => {
-  const world = (offered: { zone: string }[], card?: { id: string; zone: string }) => ({ places: [{ id: "wendmouth" }, { id: "wendford" }], offered, card }) as never;
-  assert.equal(roadCardAhead(undefined, undefined), false);
-  assert.equal(roadCardAhead(world([]), undefined), false);
-  assert.equal(roadCardAhead(world([{ zone: "lowland" }, { zone: "lowland" }]), undefined), true, "a draw on the road offers cards");
-  assert.equal(roadCardAhead(world([{ zone: "wendmouth" }]), undefined), false, "an arrival draw");
-  assert.equal(roadCardAhead(world([], { id: "yellow_wagon", zone: "lowland" }), undefined), true, "a road card on the table");
-  assert.equal(roadCardAhead(world([], { id: "yellow_wagon", zone: "lowland" }), "yellow_wagon"), false, "already opened");
-  assert.equal(roadCardAhead(world([], { id: "the_fair_gate", zone: "wendmouth" }), undefined), false, "the destination's arrival card");
+test("a road card met on the way is one a draw on a road zone offers or put on the table, not a place's arrival card (AGT-100)", () => {
+  const world = (offered: { zone: string }[], card?: { zone: string }) => ({ places: [{ id: "wendmouth" }, { id: "wendford" }], offered, card }) as never;
+  assert.equal(roadCardAhead(undefined), false);
+  assert.equal(roadCardAhead(world([])), false);
+  assert.equal(roadCardAhead(world([{ zone: "lowland" }, { zone: "lowland" }])), true, "a draw on the road offers cards");
+  assert.equal(roadCardAhead(world([{ zone: "wendmouth" }])), false, "an arrival draw");
+  assert.equal(roadCardAhead(world([], { zone: "lowland" })), true, "a road card on the table");
+  assert.equal(roadCardAhead(world([], { zone: "wendmouth" })), false, "the destination's arrival card");
 });
