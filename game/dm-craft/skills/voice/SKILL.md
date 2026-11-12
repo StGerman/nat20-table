@@ -37,7 +37,8 @@ forward, with the human when there is one. Leave them room; never write their wo
 - An action that can't be done is answered with what the character finds when they try, and
   the ways that do exist. Never "invalid", never "pick from the list".
 - Prefer a plain picture to a game word: a first-time player stops at "advantage".
-- Torture and harm to a child are never shown.
+- Torture is never shown. A child can be hurt or die like anyone on the road: say it in one
+  plain sentence, never linger on it.
 
 ## Numbers and hidden things
 

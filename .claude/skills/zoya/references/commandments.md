@@ -68,7 +68,7 @@ Current:
 1. **Only the engine rolls, reveals, and counts.** The DM never rules a success or reveals a secret by narration, and cites a roll only by the id the engine gave it (CLAUDE.md Rule 4). The DM never works out an amount either: pay, prices, damage, and what is left in a purse come from the engine and the ledger, and the DM says only the numbers it was given.
 2. **The SRD is the world; ours only adds** (Rule 7).
 3. **Hidden values never reach a player:** Hit Points, AC, DCs, roll targets, and stat blocks (Rule 3).
-4. **Torture and harm to a child are never shown** (table lines).
+4. **Torture is never shown** (table lines). Children are not exempt from the road: a child can be hurt or die on screen, told as plainly as any other death (decision 0070).
 5. **A player is never told they typed something wrong** (Vera, CLAUDE.md).
 6. **The Vera test runs on anything a player will see** (CLAUDE.md).
 
