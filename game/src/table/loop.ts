@@ -1025,7 +1025,7 @@ export class TableLoop {
     await this.wakePlayer(
       agent,
       "card",
-      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner), "Your words made no choice of the card. Give your word with choose_card, with a choice id."),
+      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner, false), "Your words made no choice of the card. Give your word with choose_card, with a choice id."),
     );
     // Words a second time are only said aloud: the card wants a choice now.
     const again = tools.takeOwnMove();
@@ -2549,8 +2549,8 @@ export function cutAtWord(words: string, max: number): string {
   return (at > 0 ? cut.slice(0, at) : chars.slice(0, max).join("")).trimEnd();
 }
 
-/** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said. */
-function cardLines(card: CardPlayer, owner = false): string[] {
+/** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said; `invite`: the own-move line, left out once the DM answered the seat's words. */
+function cardLines(card: CardPlayer, owner = false, invite = true): string[] {
   const whose = owner
     ? "the caravan's, and the caravan is yours: you make the call after the Blades' advice"
     : card.target === "caravan"
@@ -2561,6 +2561,6 @@ function cardLines(card: CardPlayer, owner = false): string[] {
     `A road card waits for your word (${whose}): ${card.text}`,
     `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === OWN_MOVE && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
-    ...(move ? [] : ["If none of these is what your character would do, say what they do with own_move, in one sentence."]),
+    ...(move || !invite ? [] : ["These are only the obvious choices: if your character would rather try something of their own, say it with own_move, in one sentence."]),
   ];
 }
