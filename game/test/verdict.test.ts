@@ -316,6 +316,9 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
   assert.equal(row(good, "m12-readable").status, "pending", "no Vera read yet");
   writeFileSync(path.join(good, CONFIRMATIONS_JSON), JSON.stringify(READ));
   assert.match(row(good, "m12-readable").detail, /^Vera: I understood the cart and the tree\./);
+  writeFileSync(path.join(good, CONFIRMATIONS_JSON), JSON.stringify({ "m12-readable": { quote: "Hm.", verdict: "FAIL" } }));
+  assert.equal(row(good, "m12-readable").status, "pending", "only pass or fail is a ruling");
+  writeFileSync(path.join(good, CONFIRMATIONS_JSON), JSON.stringify(READ));
   assert.equal(computeVerdict(good).verdict, "FAIL", "the M11 rows still gate (one card only)");
 
   // A success that brought the failure's branch, a fallback vote on the card, a human run with only an AI's own move.
@@ -342,8 +345,8 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
   writeFileSync(path.join(ru, SEAT_JSONL), seat.map((l) => JSON.stringify(l)).join("\n") + "\n");
   assert.equal(row(ru, "m12-language").status, "pass", row(ru, "m12-language").detail);
   writeFileSync(path.join(ru, SEAT_JSONL), [...seat, { at: "t", kind: "command", text: "Fn  держите (в iTerm2 — Option)" }].map((l) => JSON.stringify(l)).join("\n") + "\n");
-  assert.match(row(ru, "m12-language").detail, /^3 English words in 1 lines: Fn, iTerm2, Option/);
-  assert.deepEqual(latinWords([{ at: "t", kind: "engine", text: "r12 /sheet PgDn Ctrl Esc" }]), []);
+  assert.match(row(ru, "m12-language").detail, /^1 English words in 1 lines: iTerm2;/);
+  assert.deepEqual(latinWords([{ at: "t", kind: "engine", text: "r12 /sheet PgDn Ctrl Esc Fn Option" }]), []);
 
   // The report lists the own move with every seat's vote; the replay shows the card as a seat draws it.
   const report = exitReport(good, run).join("\n");

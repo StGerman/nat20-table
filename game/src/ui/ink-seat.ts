@@ -166,6 +166,8 @@ export class InkSeat implements Seat {
   private heldSituation: Extract<TableEvent, { kind: "situation" }> | undefined;
   /** The speaker of the message the last line belongs to; undefined after anything else. */
   private speaker: string | undefined;
+  /** A command was typed and the loop's answer to it has not come (AGT-103): it is drawn as `command`. */
+  private commanded = false;
   /** Drops the suggestion call in flight: the human's first key does (§7.1). */
   private cancelSuggest: (() => void) | undefined;
 
@@ -381,7 +383,8 @@ export class InkSeat implements Seat {
 
   show(event: TableEvent): void {
     // Engine lines are drawn when they show: at once for the human's own, else when released.
-    if (event.kind !== "engine") this.drawn(event.kind === "info" && OVERLAYS.has(event.title) ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
+    const answers = this.commanded && (event.kind === "info" || event.kind === "options");
+    if (event.kind !== "engine") this.drawn(answers || (event.kind === "info" && OVERLAYS.has(event.title)) ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
     else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));
     switch (event.kind) {
       case "situation":
@@ -479,6 +482,8 @@ export class InkSeat implements Seat {
   }
 
   ask(prompt: HumanPrompt): Promise<PlayerIntent> {
+    // A command's answer comes before the loop asks again.
+    this.commanded = false;
     // Nothing waits for a narration while the human decides.
     this.release();
     const queued = this.queued.shift();
@@ -586,10 +591,12 @@ export class InkSeat implements Seat {
         this.update({ folded: !this.view.folded, overlay: undefined });
         return;
       case "help":
+        this.drawn("command", [{ tone: "info", text: helpText(this.ui) }]);
         this.update({ overlay: { title: this.ui.help, text: helpText(this.ui), at: this.view.lines.length } });
         return;
       case "intent": {
         this.add([{ tone: "prompt", text: `> ${draft.trim()}` }]);
+        if (typed.intent.kind === "command") this.commanded = true;
         const answer = this.answer;
         if (answer) {
           this.answer = undefined;

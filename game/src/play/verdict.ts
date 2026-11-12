@@ -73,7 +73,8 @@ export interface Verdict {
 
 const VOIDS = new Set(["usage_limit", "login", "offline", "operator"]);
 
-function readLines<T>(file: string): T[] {
+/** The JSON lines of a run file, none when it is missing. */
+export function readLines<T>(file: string): T[] {
   if (!existsSync(file)) return [];
   return readFileSync(file, "utf8")
     .split("\n")
