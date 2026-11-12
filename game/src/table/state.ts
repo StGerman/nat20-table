@@ -4,8 +4,10 @@
 import { appendFileSync } from "node:fs";
 import type { Awaiting, Event, Handle, Response } from "@nat20-table/engine-client";
 import type { GameEngine } from "../engine.ts";
+import type { CardRu } from "../pack/campaign.ts";
 import { eventLine, noDeaths, tellable, yourLine } from "../view.ts";
 import type { Address } from "./floor.ts";
+import { type CardOnSeat, rollOf, SeatNames, seatLine } from "./seat-lines.ts";
 import { Transcript } from "./transcript.ts";
 import type { DmWake, FallbackCause, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
@@ -35,6 +37,10 @@ export interface TableOptions {
   speechGuard?: TextGuard;
   /** Rejections a decision may take before the loop falls back (spec §6). Default 2. */
   maxRetries?: number;
+  /** How the seat names things, in the run's language (AGT-98, decision 0067). Default English. */
+  names?: SeatNames;
+  /** Every card a journey can draw, by id, with its Russian words, for a Russian seat (AGT-98). */
+  cards?: ReadonlyMap<string, CardRu>;
 }
 
 /** How many engine lines `/log` shows. */
@@ -46,6 +52,13 @@ export class TableState {
   readonly players: Handle[];
   readonly seat: Seat | undefined;
   readonly transcript: Transcript;
+  /** How the seat names things, in the run's language (AGT-98). */
+  readonly names: SeatNames;
+  private readonly cards: ReadonlyMap<string, CardRu>;
+  /** Each card the DM's view showed going on the table, by seq: the card a seat line belongs to (design §4). */
+  private readonly cardsShown: Array<{ seq: number; card: string }> = [];
+  /** The card the seat's latest `card_drawn` drew, as the seat reads it. */
+  private seatCard: CardOnSeat | undefined;
   /** The engine's last `awaiting`: whose decision it waits on. Every response updates it. */
   awaiting: Awaiting = { kind: "none" };
   /** AI players the DM granted one explore action, not yet used (spec §3.3 step 4). */
@@ -172,6 +185,8 @@ export class TableState {
     this.narrationGuard = options.narrationGuard ?? (() => undefined);
     this.speechGuard = options.speechGuard ?? (() => undefined);
     this.maxRetries = options.maxRetries ?? 2;
+    this.names = options.names ?? new SeatNames();
+    this.cards = options.cards ?? new Map();
     for (const player of this.players) {
       this.inboxes.set(player, []);
       this.notes.set(player, []);
@@ -275,7 +290,9 @@ export class TableState {
 
   private async flushNow(holdFrom: ((event: Event) => boolean) | undefined): Promise<void> {
     if (this.human) this.screen.push(...tellable(await this.engine.newEvents(this.human, "screen"), this.deaths));
-    this.dmLines.push(...tellable(await this.engine.newEvents("dm", "transcript"), this.deaths));
+    const dmNew = tellable(await this.engine.newEvents("dm", "transcript"), this.deaths);
+    for (const e of dmNew) if (e.kind === "card_shown") this.cardsShown.push({ seq: e.seq, card: e.card });
+    this.dmLines.push(...dmNew);
     let limit = this.flushLimit ?? Number.POSITIVE_INFINITY;
     const held = holdFrom ? this.dmLines.find(holdFrom) : undefined;
     if (held) limit = Math.min(limit, held.seq - 1);
@@ -284,23 +301,55 @@ export class TableState {
       this.dmShownTo = event.seq;
     }
     for (const event of take(this.screen, limit)) {
-      const line = eventLine(event);
-      this.transcript.add({ speaker: "engine", channel: `to:${this.human}`, kind: "engine", text: line });
-      // Coin and experience for the human's own character show at once, in plain words (B4):
-      // otherwise they are held like others' lines and dropped under the DM's narration. `/log`
-      // reads the same plain line; the transcript keeps the engine's.
-      const mine = this.human ? yourLine(event, this.human) : undefined;
-      this.recent.push(mine ?? line);
-      if (this.recent.length > RECENT_LINES) this.recent.shift();
+      this.transcript.add({ speaker: "engine", channel: `to:${this.human}`, kind: "engine", text: eventLine(event) });
+      this.readCard(event);
+      // The seat's line, in the run's language (AGT-98); the transcript keeps the engine's. Coin
+      // and experience for the human's own character show at once, in plain words (B4): otherwise
+      // they are held like others' lines and dropped under the DM's narration.
+      const ctx = { names: this.names, ...(this.human ? { human: this.human } : {}), party: this.party, ...(this.seatCard ? { card: this.seatCard } : {}) };
+      const text = seatLine(event, { ...ctx, site: "seat" });
+      const logged = seatLine(event, { ...ctx, site: "log" });
+      const roll = rollOf(event);
+      if (logged !== null) {
+        this.recent.push(this.names.language === "en" || !roll ? logged : `[${roll}] ${logged}`);
+        if (this.recent.length > RECENT_LINES) this.recent.shift();
+      }
       if (event.kind === "turn_start") this.screenTurn = event.actor;
       const own = this.screenTurn === this.human;
       if (event.kind === "turn_end" || event.kind === "combat_over") this.screenTurn = undefined;
-      this.show({ kind: "engine", text: mine ?? event.text, seq: event.seq, ...(event.kind === "roll" ? { roll: event.roll.id } : {}), ...(own || mine ? { own: true as const } : {}) });
+      if (text === null) continue;
+      const mine = this.human !== undefined && yourLine(event, this.human) !== undefined;
+      this.show({ kind: "engine", text, seq: event.seq, ...(roll ? { roll } : {}), ...(own || mine ? { own: true as const } : {}) });
     }
     if (this.unnarrated) {
       this.unnarrated = false;
       this.seat?.unnarrated?.();
     }
+  }
+
+  /**
+   * Keeps the card a screen event belongs to (design §4): `card_drawn` starts it, with its words in
+   * the run's language from the deck file the DM's `card_shown` names, and `card_own_move` adds the
+   * own move's words, so a vote for `own_move` reads as what the player said.
+   */
+  private readCard(event: Event): void {
+    if (event.kind === "card_drawn") {
+      const id = this.cardsShown.filter((c) => c.seq <= event.seq).at(-1)?.card;
+      const ru = this.names.language === "ru" && id !== undefined ? this.cards.get(id) : undefined;
+      this.seatCard = {
+        ...(id !== undefined ? { id } : {}),
+        target: event.target,
+        text: ru?.text_ru ?? event.card_text,
+        choices: new Map(event.choices.map((c) => [c.id, ru?.choices[c.id] ?? c.text])),
+      };
+    } else if (event.kind === "card_own_move" && this.seatCard) {
+      this.seatCard = { ...this.seatCard, ownMove: event.words };
+    }
+  }
+
+  /** The card the seat read last, in the run's language: the loop's card panel shows its words (AGT-98). */
+  get cardOnSeat(): CardOnSeat | undefined {
+    return this.seatCard;
   }
 
   /** Takes the lines queued for an AI player's next wake. */

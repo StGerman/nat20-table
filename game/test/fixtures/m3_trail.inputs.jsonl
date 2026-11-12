@@ -1,20 +1,18 @@
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Scene m3_s1_green loaded in explore mode.\",\"seq\":2}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"A new place opens before you.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren moves to reeve_porch.\",\"seq\":3}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The world answers.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren rolls a Wisdom (Insight) check: 1d20 (4) = 6, failure.\",\"seq\":4,\"roll\":\"r4\"}"}
+{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Bren, Insight: it didn't work. The die shows 4, 6 with the skill.\",\"seq\":4,\"roll\":\"r4\"}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The world answers.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"You move on.\"}"}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Scene m3_s2_road loaded in explore mode.\",\"seq\":6}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"A new place opens before you.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren moves to snare_bend.\",\"seq\":7}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The world answers.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren rolls a Wisdom (Survival) check: 1d20 (7) = 9, failure.\",\"seq\":8,\"roll\":\"r8\"}"}
+{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Bren, Survival: it didn't work. The die shows 7, 9 with the skill.\",\"seq\":8,\"roll\":\"r8\"}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren rolls a Dexterity saving throw: 1d20 (4) = 6, failure.\",\"seq\":11,\"roll\":\"r11\"}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren rolls piercing damage: 1d6 (1) = 1.\",\"seq\":12,\"roll\":\"r12\"}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren takes 1 piercing damage.\",\"seq\":13}"}
@@ -24,11 +22,10 @@
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren moves to mill_gate.\",\"seq\":15}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The world answers.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren rolls a Wisdom (Perception) check: 1d20 (11) = 13, success.\",\"seq\":16,\"roll\":\"r16\"}"}
+{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Bren, Perception: it worked. The die shows 11, 13 with the skill.\",\"seq\":16,\"roll\":\"r16\"}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The world answers.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"You move on.\"}"}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Scene m3_s3_yard loaded in explore mode.\",\"seq\":19}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"A new place opens before you.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Combat begins: goblin_1, bren, goblin_2.\",\"seq\":20}"}
@@ -135,13 +132,12 @@
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Combat is over: the other side surrendered.\",\"seq\":89,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"You gain 100 experience, 400 in all.\",\"seq\":90,\"own\":true}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The yard is yours.\"}"}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Scene m3_s4_prisoner loaded in explore mode.\",\"seq\":92}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"A new place opens before you.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"bren","text":"{\"kind\":\"question\",\"text\":\"The goblin shakes. What do you ask it?\"}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The world answers.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren rolls a Charisma (Intimidation) check: 1d20 (15) = 18, success.\",\"seq\":93,\"roll\":\"r93\"}"}
+{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Bren, Intimidation: it worked. The die shows 15, 18 with the skill.\",\"seq\":93,\"roll\":\"r93\"}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The world answers.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"bren rolls a d10 Hit Point Die: 1d10 (4) = 6.\",\"seq\":95,\"roll\":\"r95\"}"}
@@ -151,7 +147,6 @@
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The world answers.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"You move on.\"}"}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Scene m3_s5_cellar loaded in explore mode.\",\"seq\":99}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"A new place opens before you.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Combat begins: bren, boss.\",\"seq\":100}"}

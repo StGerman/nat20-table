@@ -1,7 +1,7 @@
 // What the game reads from a living-world pack's campaign.json (M9, AGT-80). The engine reads its
 // `world` block; the game reads where the run starts and how many days it plays. A pack with no
 // campaign.json plays its scenes in order, as before.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { REPO } from "../paths.ts";
 
@@ -86,4 +86,62 @@ export function readCampaign(pack: string): CampaignPack | undefined {
   if (dayLimit !== undefined && dayLimit < startDay) throw new Error(`${file}: day_limit ${dayLimit} is before the start day ${startDay}; it is the last day the run plays`);
   // The pack's own scene for the place first (MAP-7), then the map's, then the road scene.
   return { startScene: scenes[start] ?? place.scene ?? road_scene, startDay, ...(dayLimit !== undefined ? { dayLimit } : {}) };
+}
+
+/** A road card's Russian words (MAP-19's `text_ru`), as the seat reads them (AGT-98). */
+export interface CardRu {
+  text_ru?: string;
+  choices: Record<string, string | undefined>;
+}
+
+/**
+ * Every card a pack's journeys can draw, by id, with its Russian words where the deck gives them
+ * (AGT-98, design §4): the world's deck, then the pack's own. None for a pack without a campaign.
+ */
+export function seatCards(pack: string): Map<string, CardRu> {
+  const world = campaignWorld(pack);
+  const cards = new Map<string, CardRu>();
+  if (!world) return cards;
+  for (const dir of [path.join(world.dir, "deck"), path.join(pack, "deck")]) {
+    if (!existsSync(dir)) continue;
+    for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
+      const deck = JSON.parse(readFileSync(path.join(dir, file), "utf8")) as { cards: Array<{ id: string; text_ru?: string; choices: Array<{ id: string; text_ru?: string }> }> };
+      for (const card of deck.cards) {
+        cards.set(card.id, { ...(card.text_ru ? { text_ru: card.text_ru } : {}), choices: Object.fromEntries(card.choices.map((c) => [c.id, c.text_ru])) });
+      }
+    }
+  }
+  return cards;
+}
+
+/** The name part of an NPC's Russian description: its capitalised words before any comma. */
+export function shortRu(name: string): string {
+  const head = name.split(",")[0]!;
+  const words = head.split(/\s+/).filter((w) => /^[А-ЯЁA-Z]/.test(w));
+  return words.length > 0 ? words.join(" ") : head;
+}
+
+/**
+ * What a Russian seat calls the world's things (AGT-98): every place on the map, each good
+ * (`good:<id>`) and each place NPC (`npc:<id>`). The seat names only what an event it may see
+ * already names, so the whole map is safe to hold here (Rule 3).
+ */
+export function worldSeatNames(pack: string): Map<string, string> {
+  const names = new Map<string, string>();
+  const world = campaignWorld(pack);
+  if (!world) return names;
+  for (const p of (JSON.parse(readFileSync(path.join(world.dir, "map.json"), "utf8")) as MapFile).places) if (p.name_ru) names.set(p.id, p.name_ru);
+  const goods = path.join(world.dir, "goods.json");
+  if (existsSync(goods)) {
+    for (const g of (JSON.parse(readFileSync(goods, "utf8")) as { goods: Array<{ id: string; name_ru?: string }> }).goods) if (g.name_ru) names.set(`good:${g.id}`, g.name_ru);
+  }
+  const npcs = path.join(world.dir, "npcs.json");
+  if (existsSync(npcs)) {
+    for (const n of (JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Array<{ id: string; name_ru?: string }> }).npcs) if (n.name_ru) {
+      // A scene places a world NPC under its id as a handle (`osric_hale`); the ledger names it `npc:<id>`.
+      names.set(`npc:${n.id}`, shortRu(n.name_ru));
+      names.set(n.id, shortRu(n.name_ru));
+    }
+  }
+  return names;
 }

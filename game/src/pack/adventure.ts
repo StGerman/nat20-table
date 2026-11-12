@@ -174,6 +174,12 @@ export const Adventure = z
       .describe(
         "How a Russian run says the pack's words that a model translates badly (AGT-85), keyed by the English word in the prose: \"oilskin coat\": \"промасленный плащ\". Only the DM's Russian prompt carries it; the skeleton is DM-only.",
       ),
+    anchors_ru: z
+      .record(z.string().min(1), z.string().min(1))
+      .default({})
+      .describe(
+        "What a Russian seat calls each scene anchor, by anchor id (AGT-98): \"the_well\": \"колодец\". The engine sends anchors' English names; the seat reads these instead in a Russian run. One name per id across the pack's scenes.",
+      ),
     glyphs: z
       .record(z.string().min(1), z.string().min(1))
       .default({})

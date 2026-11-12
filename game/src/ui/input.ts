@@ -2,6 +2,7 @@
 // option number, a reaction answer, or free text the DM maps. Pure, so the terminal UI and its
 // tests read input the same way.
 import type { HumanPrompt, PlayerIntent } from "../table/types.ts";
+import { UI_WORDS, type UiWords } from "../table/words.ts";
 
 /** The slash commands the loop answers (scope §4.5). */
 export const COMMANDS = ["sheet", "where", "map", "options", "log", "usage", "pause", "suggest", "quit"] as const;
@@ -11,19 +12,7 @@ export type CommandName = (typeof COMMANDS)[number];
  * What each command does: the one registry `/help` and the slash-command picker read (AGT-82). Its
  * order is theirs: /options and /sheet first, the two a first-time player needs (scope §6.6).
  */
-export const COMMAND_HELP: Record<CommandName | "help" | "panel", string> = {
-  options: "your numbered options now",
-  sheet: "your character sheet",
-  where: "places and the creatures you can see, with distances",
-  map: "the places you know, the roads, and where the caravan is",
-  log: "the last engine lines, with their roll ids",
-  usage: "tokens and API-equivalent cost so far, per agent",
-  pause: "AI players wait until you type /pause again",
-  suggest: "turn the three suggested moves out of a fight off or on",
-  panel: "fold the situation panel to one line, or open it again",
-  help: "every command and key",
-  quit: "end the run (the run folder keeps everything so far)",
-};
+export const COMMAND_HELP: Record<CommandName | "help" | "panel", string> = UI_WORDS.en.commandHelp;
 
 /** A typed line as the seat reads it: an intent for the loop, help for the screen, or a mistake. */
 export type Typed = { kind: "intent"; intent: PlayerIntent } | { kind: "help" } | { kind: "panel" } | { kind: "error"; text: string } | { kind: "empty" };
@@ -33,7 +22,7 @@ export type Typed = { kind: "intent"; intent: PlayerIntent } | { kind: "help" } 
  * an option, or a reaction's option; y or n answers a reaction; anything else is words for the DM.
  * An answer to the DM's question is always words, even a number.
  */
-export function readLine(line: string, prompt: HumanPrompt | undefined): Typed {
+export function readLine(line: string, prompt: HumanPrompt | undefined, ui: UiWords = UI_WORDS.en): Typed {
   const text = line.trim();
   if (!text) return { kind: "empty" };
   if (text.startsWith("/")) {
@@ -41,44 +30,44 @@ export function readLine(line: string, prompt: HumanPrompt | undefined): Typed {
     if (name === "help" || name === "?") return { kind: "help" };
     if (name === "panel") return { kind: "panel" };
     if ((COMMANDS as readonly string[]).includes(name)) return { kind: "intent", intent: { kind: "command", name: name as CommandName } };
-    return { kind: "error", text: `There is no /${name}. Commands: ${Object.keys(COMMAND_HELP).map((c) => `/${c}`).join(" ")}` };
+    return { kind: "error", text: ui.noCommand(name, Object.keys(COMMAND_HELP).map((c) => `/${c}`).join(" ")) };
   }
-  if (!prompt) return { kind: "error", text: "The table is busy: wait for your prompt. A command typed now is answered when it comes." };
-  if (prompt.kind === "paused") return { kind: "error", text: "Paused: only commands until /pause again." };
+  if (!prompt) return { kind: "error", text: ui.busy };
+  if (prompt.kind === "paused") return { kind: "error", text: ui.pausedTyped };
   if (prompt.kind === "reaction") {
     // да and нет too, for a table played in Russian (AGT-48).
     if (/^(y|yes|д|да)$/i.test(text)) return { kind: "intent", intent: { kind: "reaction", take: true } };
     if (/^(n|no|н|нет)$/i.test(text)) return { kind: "intent", intent: { kind: "reaction", take: false } };
     if (/^\d+$/.test(text)) return { kind: "intent", intent: { kind: "option", number: Number(text) } };
-    return { kind: "error", text: "Answer y or n (да or нет), or the number of a reaction." };
+    return { kind: "error", text: ui.answerYesNo };
   }
   if (prompt.kind !== "answer" && /^\d+$/.test(text)) return { kind: "intent", intent: { kind: "option", number: Number(text) } };
   return { kind: "intent", intent: { kind: "text", text } };
 }
 
 /** What the prompt line says while the table waits on the human. */
-export function promptHint(prompt: HumanPrompt, handle: string): string {
-  const name = handle.charAt(0).toUpperCase() + handle.slice(1);
+export function promptHint(prompt: HumanPrompt, handle: string, ui: UiWords = UI_WORDS.en, name = handle.charAt(0).toUpperCase() + handle.slice(1)): string {
+  const hint = ui.hint;
   switch (prompt.kind) {
     case "combat_turn":
-      return `Your turn: an option number, or what ${name} does in words. /options lists them again.`;
+      return hint.combatTurn(name);
     case "reaction":
-      return "React? y or n (or the reaction's number).";
+      return hint.reaction;
     case "explore":
-      return `What does ${name} do or say? Words, or a number from /options.`;
+      return hint.explore(name);
     case "answer":
-      return "The DM asks you: answer in words.";
+      return hint.answer;
     case "pick":
-      return "Pick a number from this list, Esc to go back, or say what you do instead.";
+      return hint.pick;
     case "paused":
-      return "Paused. Commands only; /pause goes on.";
+      return hint.paused;
     case "surrender":
-      return "Accept the surrender (1), fight on (2), or say what you do.";
+      return hint.surrender;
     case "card":
-      return prompt.line ?? "A choice's number, or your own words.";
+      return prompt.line ?? hint.card;
     case "level_up":
-      return "Your new level: a number, or Enter for the recommended pick.";
+      return hint.levelUp;
     case "road":
-      return "The caravan waits on you: Enter for the marked line, or a number.";
+      return hint.road;
   }
 }

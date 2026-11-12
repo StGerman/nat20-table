@@ -8,7 +8,8 @@ import type { Language } from "../agents/language.ts";
 import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
-import { knownPlaceNames } from "../pack/campaign.ts";
+import { knownPlaceNames, shortRu, worldSeatNames } from "../pack/campaign.ts";
+import { titled } from "../view.ts";
 import { skeletonFile } from "../pack/read.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
 import type { FightReaction, RunReport, SceneChoice, SceneTime, SuggestionCounts, TalkRound } from "../table/loop.ts";
@@ -43,6 +44,33 @@ export interface PackParty {
   russianNames: string[];
   /** The pack's turn-order glyphs, by party handle or creature kind (AGT-67). */
   glyphs?: Record<string, string>;
+  /**
+   * What a Russian seat calls things by id (AGT-98): party handles, `npc:<id>`, places, goods
+   * (`good:<id>`) and anchors (`anchor:<id>`). The seat reads it only for what an event it sees names.
+   */
+  seatRu: Map<string, string>;
+}
+
+/**
+ * The Russian names a seat reads (AGT-98, design §4): the world's places, goods and NPCs, then the
+ * pack's party, NPCs and anchors. An NPC whose `name_ru` is a titled phrase («торговец солью Фенн
+ * Ласк») goes by the glossary's short name when it has one, so the seat and the narration name it alike.
+ */
+export function seatRuNames(pack: string, adventure: Adventure): Map<string, string> {
+  const names = worldSeatNames(pack);
+  for (const p of adventure.party) if (p.name_ru) names.set(p.handle, p.name_ru);
+  for (const n of adventure.npcs) {
+    const english = titled(n.id);
+    const short = adventure.glossary_ru[english];
+    // Without a glossary entry, the capitalised words of `name_ru` before a comma: «торговка зерном Одда Велл» reads «Одда Велл».
+    const name = short ?? (n.name_ru ? shortRu(n.name_ru) : undefined);
+    if (name) {
+      names.set(`npc:${n.id}`, name);
+      names.set(n.id, name);
+    }
+  }
+  for (const [id, name] of Object.entries(adventure.anchors_ru)) names.set(`anchor:${id}`, name);
+  return names;
 }
 
 interface PregenSheet {
@@ -115,7 +143,7 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
   for (const p of ai) if (!classes.has(p.handle)) throw new Error(`${pack}: party ${p.handle} has an AI seat and no pregen in the first scene, so no class`);
   const humanEntry = adventure.party.find((p) => p.handle === human);
   const humanCard = humanEntry?.card ? readFileSync(path.resolve(pack, humanEntry.card), "utf8") : undefined;
-  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: [...russianNames(adventure, { npcs: false }), ...knownPlaceNames(pack)], glyphs: adventure.glyphs };
+  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: [...russianNames(adventure, { npcs: false }), ...knownPlaceNames(pack)], glyphs: adventure.glyphs, seatRu: seatRuNames(pack, adventure) };
 }
 
 /** One line of the pick list (AGT-35): a party member as a player picking a pregen sees it. */
