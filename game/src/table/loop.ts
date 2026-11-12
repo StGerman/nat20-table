@@ -405,6 +405,8 @@ export class TableLoop {
   private settledLater: Event | undefined;
   /** The destination's scene opened without the pay, which the `escort_settled` wake tells next (AGT-86). */
   private arrivalOpened = false;
+  /** The scene's opening kept the caravan on the road for a road card still to come (AGT-100): the card's outcome brings it in. */
+  private arrivalAhead = false;
   /** The road card a wake has opened (AGT-100): it is opened once, however often the seats are asked. */
   private framed: string | undefined;
   /** The last game day the contract plays, on the world clock (`dayLimit` from its first day). */
@@ -570,7 +572,11 @@ export class TableLoop {
         if (this.table.ended) return;
         if (event.kind === "combat_over") await this.combatOver(event);
         if (event.kind === "scene_loaded" && i < lastScene) this.table.log("system", `scene ${event.scene_id} left before it opened`);
-        else if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id, settles || (Boolean(this.campaign) && (await this.payWaits())));
+        else if (event.kind === "scene_loaded") {
+          // One read of the world serves both the pay and the card still to come.
+          const world = this.campaign ? await this.dmWorld() : undefined;
+          await this.sceneLoaded(event.scene_id, settles || payWaits(world), world);
+        }
         if (this.campaign) await this.roadEvent(event);
       }
     }
@@ -625,18 +631,8 @@ export class TableLoop {
 
   // --- Scenes -------------------------------------------------------------------------------------
 
-  /**
-   * The caravan stands at the escort's destination and the pay waits for its arrival card
-   * (ENG-35, MAP-10): the opening still leaves the pay out, so the arrival is told once.
-   */
-  private async payWaits(): Promise<boolean> {
-    const world = await this.dmWorld();
-    const escort = world?.escort;
-    return Boolean(escort && !escort.contract.done && world.at.kind === "at" && world.at.place === escort.contract.destination);
-  }
-
-  /** `payNext`: the escort is paid after this opening, in its own wake (AGT-86). */
-  private async sceneLoaded(sceneId: string, payNext = false): Promise<void> {
+  /** `payNext`: the escort is paid after this opening, in its own wake (AGT-86). `world`: the DM's, read as the scene loaded. */
+  private async sceneLoaded(sceneId: string, payNext = false, world?: WorldDm): Promise<void> {
     // A scene the run passes over never loads (`DmTools.loadScene` loads the next one instead).
     if (this.onScene(sceneId, this.scenes) !== "continue") {
       this.table.end(`the run stops before ${sceneId}`);
@@ -667,9 +663,8 @@ export class TableLoop {
     // Read once: a scene loaded with no line on the way must not carry an older scene's words.
     this.dmTools.lastLine = undefined;
     // A road card drawn on the way here is played after this opening (AGT-100), so the opening
-    // must not bring the caravan in ahead of it.
-    const world = this.campaign ? await this.dmWorld() : undefined;
-    const cardAhead = Boolean(world && ((world.offered ?? []).length > 0 || world.card));
+    // keeps the caravan on the road, and the card's outcome brings it in.
+    const cardAhead = roadCardAhead(world, this.framed);
     await this.wakeDm(
       "scene_open",
       undefined,
@@ -681,9 +676,10 @@ export class TableLoop {
         : []),
       `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`,
       ...(cardAhead ? [CARD_AHEAD] : []),
-      ...(payNext ? ["The merchant pays the Blades next, and you narrate that on its own: open the arrival here without the pay, the purse or any coin."] : []),
+      ...(payNext && !cardAhead ? ["The merchant pays the Blades next, and you narrate that on its own: open the arrival here without the pay, the purse or any coin."] : []),
     );
     this.arrivalOpened = payNext;
+    this.arrivalAhead = cardAhead;
     await this.settle();
   }
 
@@ -799,16 +795,21 @@ export class TableLoop {
   private async roadEvent(event: Event): Promise<void> {
     const campaign = this.campaign!;
     switch (event.kind) {
-      case "card_resolved":
+      case "card_resolved": {
         this.framed = undefined;
+        // The last road card before the place is settled: its outcome brings the caravan in.
+        const arrives = this.arrivalAhead && !roadCardAhead(await this.dmWorld(), undefined);
+        if (arrives) this.arrivalAhead = false;
         await this.wakeDm(
           "road",
           undefined,
           `A road card was settled: ${event.text}`,
           "The engine has already applied the card: any fight it brings has started and any creature it brings is placed. Narrate what comes of it in one to three sentences; never start the fight again. Name coin or a price only as the engine's lines give it, never a sum of your own.",
+          ...(arrives ? [this.arrivalOpened ? ARRIVES_AFTER_CARD_NO_PAY : ARRIVES_AFTER_CARD] : []),
         );
         await this.settle();
         return;
+      }
       case "night": {
         const next = await this.dmWorld();
         await this.wakeDm(
@@ -911,7 +912,7 @@ export class TableLoop {
         undefined,
         "A road card is on the table.",
         cardDrawnLine(card),
-        ...(this.arrivalOpened ? ["The scene's opening told the arrival: open only the card."] : []),
+        ...(this.arrivalOpened && !this.arrivalAhead ? ["The scene's opening told the arrival: open only the card."] : []),
         CARD_OPENING,
       );
     }
@@ -2495,6 +2496,30 @@ export class TableLoop {
 
 /** A scene's opening while a road card from the way here is still to be played (AGT-100). */
 export const CARD_AHEAD = "A road card met on the way here is played next, before the caravan arrives: keep this opening on the last stretch of road, with the place in sight, and do not bring the caravan in.";
+
+/** The outcome of the last road card before a place whose opening kept the caravan on the road. */
+const ARRIVES_AFTER_CARD = "The scene's opening kept the caravan on the road: after the outcome, bring it into the place in a sentence.";
+const ARRIVES_AFTER_CARD_NO_PAY = `${ARRIVES_AFTER_CARD} The merchant pays the Blades later, on its own: no pay, purse or coin here.`;
+
+/**
+ * The caravan stands at the escort's destination and the pay waits for its arrival card
+ * (ENG-35, MAP-10): the opening still leaves the pay out, so the arrival is told once.
+ */
+export function payWaits(world: WorldDm | undefined): boolean {
+  const escort = world?.escort;
+  return Boolean(world && escort && !escort.contract.done && world.at.kind === "at" && world.at.place === escort.contract.destination);
+}
+
+/**
+ * A road card met on the way, not yet opened (AGT-100): one a draw offers, or one on the table
+ * that `framed` has not opened. A place's arrival card (its zone is a place id) is not one.
+ */
+export function roadCardAhead(world: WorldDm | undefined, framed: string | undefined): boolean {
+  if (!world) return false;
+  const places = new Set(world.places.map((p) => p.id));
+  const onRoad = (zone: string) => !places.has(zone);
+  return (world.offered ?? []).some((c) => onRoad(c.zone)) || Boolean(world.card && onRoad(world.card.zone) && world.card.id !== framed);
+}
 
 /** How a wake opens a road card (AGT-100), in the pick wake and the card wake alike. */
 const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
