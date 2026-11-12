@@ -42,8 +42,8 @@ export function sheetRu(sheet: Sheet, names: SeatNames): string {
     ...(sheet.effects.length > 0 ? [`Действует: ${sheet.effects.map((e) => `${names.thing(e.id, e.name)} (от: ${names.who(e.source)})`).join(", ")}`] : []),
   ];
   if (status.length > 0) lines.push(status.join(" · "));
-  lines.push(`Качества: ${sheet.abilities.map((a) => `${ABILITY_RU[a.ability]} ${a.score} (${signed(a.modifier)}; устоять ${signed(a.save_bonus)})`).join(" · ")}`);
-  const skill = (s: Sheet["skills"][number]) => `${SKILLS_RU[s.skill]} ${signed(s.bonus)}`;
+  lines.push(`Качества: ${sheet.abilities.map((a) => `${ABILITY_RU[a.ability]} ${a.score} (${signed(a.modifier)}; устоять ${signed(a.save_bonus)}${a.save_proficient ? ", обучены" : ""})`).join(" · ")}`);
+  const skill = (s: Sheet["skills"][number]) => `${SKILLS_RU[s.skill]} ${signed(s.bonus)}${s.proficiency === "expertise" ? " (мастер)" : ""}`;
   const trained = sheet.skills.filter((s) => s.proficiency !== "none");
   if (trained.length > 0) lines.push(`Чему обучены: ${trained.map(skill).join(", ")}`);
   lines.push(`Остальные навыки: ${sheet.skills.filter((s) => s.proficiency === "none").map(skill).join(", ")}`);

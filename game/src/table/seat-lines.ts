@@ -187,8 +187,10 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
   const you = (h: string) => h === human;
   switch (event.kind) {
     case "session_started":
-    case "scene_loaded":
       return null;
+    case "scene_loaded":
+      // The DM's opening says where (design §4); `/log` keeps that a scene began.
+      return ctx.site === "log" ? "Новая сцена." : null;
     // The DM's own lines never reach a seat; a view that sends one shows nothing.
     case "check_resolved":
     case "flag_set":
