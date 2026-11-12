@@ -276,7 +276,7 @@
                     "keeps": [
                         "paper_is_law"
                     ],
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"},
                         {
                             "do": "pay",
                             "who": "party",
@@ -290,7 +290,7 @@
                     "asked": true,
                     "text": "Ask to read the paper.",
                     "text_ru": "Попросить почитать бумагу.",
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"},
                         {
                             "do": "check",
                             "who": "blades",
@@ -315,7 +315,7 @@
                     "text": "Ask him what became of the two brothers.",
                     "text_ru": "Спросить его, что стало с двумя братьями.",
                     "if": "toll_men_spared",
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"},
                         {"do": "remember", "deed": "asked_after_the_brothers"}
                     ]
                 },
@@ -327,7 +327,7 @@
                     "breaks": [
                         "paper_is_law"
                     ],
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"},
                         {"do": "delay", "minutes": 90},
                         {
                             "do": "check",
@@ -343,7 +343,7 @@
                     ]
                 }
             ],
-            "_comment": "The bridge again (MAP-10), an arrival card of the Millbeck bridge (MAP-14): the party meets the clerk when it reaches the bridge, where the text puts him. As a road card of the world's Millbeck zone it was drawn at the end of the bridge road, in Wendford, 8 miles past him; and as a world arrival card it would meet the party on Fair in Wend too, at the same arrival as the bridge's own card. So it lives in The Way Back's deck, which plays only while this contract runs."
+            "_comment": "An arrival card of the Millbeck bridge (MAP-14), so the party meets the clerk where he sits; in this deck because a world arrival card would also meet Fair in Wend at the bridge."
         }
     ]
 }

@@ -18,9 +18,9 @@ Everything in this folder is for the DM. Players see only what the DM narrates, 
 - `campaign.json`: the skeleton and the campaign in one file, the adventure.json format plus the engine's `world` block (map, start, route, caravan, escort, each place's scene) and the run's `day_limit`, which counts from the contract's first day. Its schema is `game/schema/adventure.schema.json`.
 - `scenes/`: the engine's scene files: anchors and checks. Every place scene has a `by_the_wagon` anchor, where the world's place NPCs stand.
 - `prose/`: the premise and truth, one file per scene, and Fenn Lusk in `prose/npcs/`. Odda Vell's is a copy of *Fair in Wend*'s.
-- `deck/`: Fenn's three cards (*Wet salt*, *Men at the iron*, *Salt on credit*) and *The fair price*. They join the world's deck only while this contract runs.
+- `deck/`: Fenn's three cards (*Wet salt*, *Men at the iron*, *Salt on credit*), *The fair price*, and *The bridge again*, an arrival card of the Millbeck bridge (MAP-14). They join the world's deck only while this contract runs.
 - `cards/`: the four pregens' personality cards, the same as *Fair in Wend*'s.
-- The map, the world's road cards (among them *The bridge again* and *Gwyn's news*, or *Gwyn's cheese* when the Blades spoke Col out of the stocks) and the people of each place are the world's: `worlds/wend/`.
+- The map, the world's cards (among them *Gwyn's news*, or *Gwyn's cheese* when the Blades spoke Col out of the stocks) and the people of each place are the world's: `worlds/wend/`.
 
 ## Play and check it
 

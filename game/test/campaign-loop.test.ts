@@ -632,6 +632,12 @@ test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the s
     const shown = log.result.events.find((e) => e.kind === "card_shown" && e.card === "bridge_again");
     // The clerk sits at the bridge, so the party meets him when it arrives there (MAP-14).
     assert.ok(shown?.kind === "card_shown" && shown.zone === "millbeck_bridge" && shown.when === "arrival", JSON.stringify(shown));
+    // ... and decides it there, before the bridge road to Wendford.
+    const events = log.result.events;
+    const at = events.indexOf(shown!);
+    const resolved = events.findIndex((e, i) => i > at && e.kind === "card_resolved");
+    const onward = events.findIndex((e, i) => i > at && e.kind === "traveled" && e.leg.road === "bridge_road");
+    assert.ok(resolved > at && onward > resolved, `resolved at ${resolved}, bridge road at ${onward}`);
     const rows2 = wordRows({ roster: { party: "continue" } } as never, log.result.events as never, [], false);
     // The M11 verdict rows the exit pair is judged on hold by construction (F6).
     const status = (rows: typeof rows1, row: string) => rows.find((r) => r.row === row)?.status;
