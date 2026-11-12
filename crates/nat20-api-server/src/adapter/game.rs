@@ -1600,8 +1600,10 @@ impl Game {
         // partial walk where the movement runs out, and any walk to a point or an anchor where a
         // creature stands (ENG-21). With none along the way, nothing moves and the move is
         // refused.
-        let goal_free = systems::movement::is_free_spot(&self.engine, entity, &full_end);
-        let (end, walked_m) = if route.reaches_goal() && goal_free {
+        // A route that reaches its goal, where a creature stands, stops short of it (ENG-21).
+        let taken = route.reaches_goal()
+            && !systems::movement::is_free_spot(&self.engine, entity, &full_end);
+        let (end, walked_m) = if route.reaches_goal() && !taken {
             (
                 full_end,
                 route.full_path.length.get::<uom::si::length::meter>(),
@@ -1612,25 +1614,21 @@ impl Game {
         };
         // A creature goal can itself fall short of the creature: core cuts a partial path to a
         // creature back to a free spot, and that spot is the goal then (`goal`).
-        let reached = (end - full_end).norm() < 0.05 && goal_free && goal_in_reach;
+        let reached = !taken && (end - full_end).norm() < 0.05 && goal_in_reach;
         if (end - from).norm() < 0.05 && !reached {
-            let out_of_movement = combat
-                && systems::movement::speed(&self.engine, entity)
-                    .remaining_movement()
-                    .get::<uom::si::length::meter>()
-                    <= 0.0;
-            if !goal_free && !out_of_movement {
-                return Err(rejected(
+            return Err(if taken {
+                rejected(
                     RejectReason::NoPath,
                     format!(
                         "Someone already stands there, and {actor} has no free spot on the way to stop at."
                     ),
-                ));
-            }
-            return Err(rejected(
-                RejectReason::InsufficientResource,
-                format!("{actor} has no movement left this turn to get any closer."),
-            ));
+                )
+            } else {
+                rejected(
+                    RejectReason::InsufficientResource,
+                    format!("{actor} has no movement left this turn to get any closer."),
+                )
+            });
         }
         let anchor = anchor.filter(|_| reached);
 
@@ -1701,7 +1699,7 @@ impl Game {
         } else {
             moved_m
         };
-        Ok((round_ft(moved_m), provoked, reached, !goal_free))
+        Ok((round_ft(moved_m), provoked, reached, taken))
     }
 
     /// While a `move` runs, records the creature a pending opportunity attack window on the

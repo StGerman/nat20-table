@@ -1501,7 +1501,7 @@
               "type": "boolean"
             },
             "taken": {
-              "description": "True when the walk stopped short because a creature stands where it was sent, so a\nclient can say why it didn't get there (`1.0.0-dev.70`). Left out otherwise, which\nincludes a `partial` move the movement left cut short.",
+              "description": "True when the walk got as far as where it was sent and stopped short because a creature\nstands there, so a client can say why it didn't get there (`1.0.0-dev.70`). Left out\notherwise, which includes a `partial` move the movement left cut short first.",
               "type": "boolean"
             }
           },

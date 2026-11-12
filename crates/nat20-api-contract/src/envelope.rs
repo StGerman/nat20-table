@@ -622,9 +622,9 @@ pub enum CommandResult {
         /// free spot before it (`1.0.0-dev.70`); a creature an opportunity attack holds on the way
         /// is still on a walk that reaches.
         reached: bool,
-        /// True when the walk stopped short because a creature stands where it was sent, so a
-        /// client can say why it didn't get there (`1.0.0-dev.70`). Left out otherwise, which
-        /// includes a `partial` move the movement left cut short.
+        /// True when the walk got as far as where it was sent and stopped short because a creature
+        /// stands there, so a client can say why it didn't get there (`1.0.0-dev.70`). Left out
+        /// otherwise, which includes a `partial` move the movement left cut short first.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         taken: bool,
     },
