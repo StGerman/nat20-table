@@ -524,14 +524,15 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     assert.ok(!records.some((r) => r.text === "The road bends."), "the early narration was refused");
     // A scene reached with a road card met on the way opens once that card is settled (AGT-100):
     // the trial run of 2026-11-12 told Saltmouth's arrival, then played the road card.
-    const later = records.flatMap((r) => (r.kind === "system" ? [/^scene ([a-z0-9_]+) opens after the road card met on the way$/.exec(r.text)?.[1]] : [])).filter(Boolean);
-    assert.ok(later.length > 0, "a scene waited for its road card");
-    for (const scene of later) {
-      const waits = records.findIndex((r) => r.kind === "system" && r.text === `scene ${scene} opens after the road card met on the way`);
+    const held = records.flatMap((r, i) => (r.kind === "system" && / opens after the road card met on the way$/.test(r.text) ? [i] : []));
+    assert.ok(held.length > 0, "a scene waited for its road card");
+    for (const waits of held) {
+      const scene = records[waits]!.text.split(" ")[1];
       const goes = records.findIndex((r, i) => i > waits && r.kind === "system" && /^card [a-z0-9_]+ goes to the seats$/.test(r.text));
       const decided = records.findIndex((r, i) => i > goes && r.text.startsWith("The card is decided"));
-      const opens = records.findIndex((r) => r.kind === "narration" && r.wake === "scene_open" && r.text === `Here is ${scene}.`);
-      assert.ok(waits >= 0 && goes > waits && decided > goes && opens > decided, `${scene}: waits ${waits}, card to the seats ${goes}, decided ${decided}, opened ${opens}`);
+      const opens = records.findIndex((r, i) => i > waits && r.kind === "narration" && r.wake === "scene_open");
+      assert.ok(goes > waits && decided > goes && opens > decided, `${scene}: waits ${waits}, card to the seats ${goes}, decided ${decided}, opened ${opens}`);
+      assert.equal(records[opens]!.text, `Here is ${scene}.`);
     }
     // A card that comes with no pick has its own wake, opened once (AGT-100).
     for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: "/);
