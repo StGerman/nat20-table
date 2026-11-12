@@ -557,7 +557,8 @@ export class TableState {
    */
   log(kind: "retry" | "fallback" | "error" | "system" | "intent" | "hand", text: string, speaker = "table", about: { cause?: FallbackCause; decision?: string; wake?: DmWake; narrated?: boolean } = {}): void {
     this.transcript.add({ speaker, channel: "run", kind, text, ...about });
-    if (kind === "fallback" && speaker === "dm") this.unnarrated = true;
+    // A wake cut after its narration was shown is not one the table told nothing for (AGT-97).
+    if (kind === "fallback" && speaker === "dm" && about.cause !== "cut_after_narration") this.unnarrated = true;
   }
 }
 

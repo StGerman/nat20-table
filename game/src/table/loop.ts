@@ -864,7 +864,7 @@ export class TableLoop {
         "Pick a road card: a draw offered these, in the order they were rolled.",
         ...offered.map((c, i) => offeredLine(c, i + 1)),
         deeds.length > 0 ? `Deeds the world remembers: ${deeds.map((d) => d.deed).join(", ")}.` : "The world remembers no deeds yet.",
-        "Call pick_card once, with the card's id and one line of why. Then open the card with narrate, in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.",
+        `Call pick_card once, with the card's id and one line of why. Then ${CARD_OPENING.charAt(0).toLowerCase()}${CARD_OPENING.slice(1)}`,
       );
       frame = !this.table.wakeNarrated && !this.dmWakeFailed;
       world = await this.dmWorld();
@@ -900,7 +900,7 @@ export class TableLoop {
         "A road card is on the table.",
         cardDrawnLine(card),
         ...(this.arrivalOpened ? ["The scene's opening told the arrival: open only the card."] : []),
-        "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.",
+        CARD_OPENING,
       );
     }
     this.framed = card.id;
@@ -2375,7 +2375,7 @@ export class TableLoop {
 
   private async wakeDmOnce(wake: DmWake, events: Event[] | undefined, ...lines: string[]): Promise<string | void> {
     this.table.resetRetries("dm");
-    this.dmTools.startWake(wake);
+    this.dmTools.startWake();
     this.dmWakeFailed = false;
     this.table.dmWake = wake;
     this.table.wakeNarrated = false;
@@ -2408,10 +2408,10 @@ export class TableLoop {
       const narrated = this.table.wakeNarrated;
       const why = error instanceof TurnTimeout ? "timed out" : `failed: ${error instanceof Error ? error.message : String(error)}`;
       this.table.log("error", `dm (${wake}) ${why}`, "dm", { wake, narrated });
-      this.table.fallbacks += 1;
       this.dmWakeFailed = true;
       // A wake cut after its narration was shown was not skipped (AGT-97): the run report says so.
       const cut = error instanceof TurnTimeout && narrated;
+      if (!cut) this.table.fallbacks += 1;
       const cause = this.table.exhausted("dm") ? "retries" : cut ? "cut_after_narration" : error instanceof TurnTimeout ? "timeout" : "error";
       // A pick that landed is not skipped: its card shows without an opening (AGT-100).
       const what = cut ? `the DM's ${wake} ran out of time after its narration` : wake === "pick" && this.dmTools.picked ? "the DM picked a road card but ran out of time before opening it; the card shows alone" : `the DM's ${wake} is skipped; the engine lines stand alone`;
@@ -2463,6 +2463,9 @@ export class TableLoop {
     };
   }
 }
+
+/** How a wake opens a road card (AGT-100), in the pick wake and the card wake alike. */
+const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
 
 /** The engine's limit on an own move's words (API-56). */
 const OWN_MOVE_MAX_CHARS = 300;

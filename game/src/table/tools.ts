@@ -26,7 +26,7 @@ import type {
 } from "@nat20-table/engine-client";
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
 import type { NoteKind, TableState } from "./state.ts";
-import type { DmWake, RoadStep, ToolOutcome } from "./types.ts";
+import type { RoadStep, ToolOutcome } from "./types.ts";
 import type { StatBlockEntry } from "../pack/adventure.ts";
 
 /** What an agent may give `submit`: an option, and its targets, variant or aim. */
@@ -624,9 +624,7 @@ export class DmTools {
   private readonly reminded = new Set<string>();
   /** A scene loaded in the wake running: its opening is the next wake's, so no narration follows it (M10 P1). */
   private loadedThisWake = false;
-  /** The wake running (AGT-100): a pick wake narrates only after its pick. */
-  private wake: DmWake | undefined;
-  /** Whether this wake's `pick_card` was taken (AGT-100). */
+  /** Whether this wake's `pick_card` was taken (AGT-100): a pick wake narrates only after it. */
   picked = false;
   /** The DM's last line to the whole table, for the next scene's opening to continue from (M10 P1). */
   lastLine: string | undefined;
@@ -656,9 +654,8 @@ export class DmTools {
   }
 
   /** A DM wake begins: what the wake before it loaded no longer holds its narration back. */
-  startWake(wake?: DmWake): void {
+  startWake(): void {
     this.loadedThisWake = false;
-    this.wake = wake;
     this.picked = false;
   }
 
@@ -1067,7 +1064,7 @@ export class DmTools {
     return this.table.oneAtATime("dm", async () => {
       if (this.loadedThisWake) return notNow("the next scene is loaded; its opening comes with your next wake");
       // A pick wake opens the card it picked (AGT-100): the narration never runs ahead of the pick.
-      if (this.wake === "pick" && !this.picked) return notNow("pick the card first with pick_card, then narrate its opening");
+      if (this.table.dmWake === "pick" && !this.picked) return notNow("pick the card first with pick_card, then narrate its opening");
       const said = await this.table.narrate(text, to);
       if (said.ok && !to) this.lastLine = text;
       return said;
