@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { CRAFT_PLUGIN, craftSkills, DM_LONG_WAKE_TIMEOUT_MS, DM_TURN_TIMEOUT_MS, dmPrompt, ModelDm, type CraftMode } from "../src/agents/dm.ts";
+import { CRAFT_PLUGIN, craftSkills, DM_SETTLE_ON, DM_LONG_WAKE_TIMEOUT_MS, DM_TURN_TIMEOUT_MS, dmPrompt, ModelDm, type CraftMode } from "../src/agents/dm.ts";
 import { ModelPlayer } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
@@ -445,7 +445,9 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   assert.ok(!mill.includes("pass_time"));
   // The DM's pick (AGT-88): the road's DM picks among offered cards by the rule; a pack played in order has no deck.
   assert.ok(names.includes("pick_card"), names.join(", "));
-  assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line\./);
+  assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line, then narrate the card.s opening: narrate before the pick is refused\./);
+  assert.match(dm.systemPrompt, /- "A road card is on the table": a card came with no pick\. Open it in two to four sentences/);
+  assert.match(dm.systemPrompt, /before you narrate; narrate last\./);
   assert.ok(!mill.includes("pick_card"));
   // Own move (AGT-99): the road's DM answers a player's words on a card with own_move_or_answer, by the rule.
   assert.ok(names.includes("own_move_or_answer") && !mill.includes("own_move_or_answer"));
@@ -474,4 +476,11 @@ test("the DM speaks to the human's character as you and names everyone else; a t
   assert.doesNotMatch(dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt"), /«ты»/, "the English prompt stays English");
   assert.match(prompt, /Narration to one AI player's handle alone speaks to that character as "you"/);
   assert.doesNotMatch(dmPrompt(PACK, undefined, [PARTY.human!, ...PARTY.ai], "prompt"), /second person singular/);
+});
+
+test("the wakes that narrate last end on their narration, never on the cap (AGT-97)", () => {
+  for (const wake of ["narrate", "combat_over", "road", "pick", "card", "map_combat", "surrender_words"] as const) assert.deepEqual(DM_SETTLE_ON[wake], ["narrate"], wake);
+  assert.deepEqual(DM_SETTLE_ON.card_words, ["own_move_or_answer"]);
+  // The long wakes keep calling tools after they narrate: they run to their own cap.
+  for (const wake of ["scene_open", "table_turn", "summary", "suggest"] as const) assert.equal(DM_SETTLE_ON[wake], undefined, wake);
 });

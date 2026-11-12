@@ -26,7 +26,7 @@ import type {
 } from "@nat20-table/engine-client";
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
 import type { NoteKind, TableState } from "./state.ts";
-import type { RoadStep, ToolOutcome } from "./types.ts";
+import type { DmWake, RoadStep, ToolOutcome } from "./types.ts";
 import type { StatBlockEntry } from "../pack/adventure.ts";
 
 /** What an agent may give `submit`: an option, and its targets, variant or aim. */
@@ -624,6 +624,9 @@ export class DmTools {
   private readonly reminded = new Set<string>();
   /** A scene loaded in the wake running: its opening is the next wake's, so no narration follows it (M10 P1). */
   private loadedThisWake = false;
+  /** The wake running (AGT-100): a pick wake narrates only after its pick. */
+  private wake: DmWake | undefined;
+  private picked = false;
   /** The DM's last line to the whole table, for the next scene's opening to continue from (M10 P1). */
   lastLine: string | undefined;
   /** A player's words on the road card a `card_words` wake answers (AGT-99): the loop sets them for the wake. */
@@ -652,8 +655,10 @@ export class DmTools {
   }
 
   /** A DM wake begins: what the wake before it loaded no longer holds its narration back. */
-  startWake(): void {
+  startWake(wake?: DmWake): void {
     this.loadedThisWake = false;
+    this.wake = wake;
+    this.picked = false;
   }
 
   private async sceneHandles(): Promise<Handle[]> {
@@ -865,7 +870,17 @@ export class DmTools {
     if (offered.length === 0) return notNow("no road cards wait for your pick");
     if (!offered.some((c) => c.id === card)) return notNow(`${card} is not one of the offered cards: ${offered.map((c) => c.id).join(", ")}`);
     if (!reason.trim()) return notNow("say why in one line");
-    return send(this.table, "dm", { cmd: "pick_card", card, reason: reason.trim() }, () => `${card} is on the table; the table hears it next`);
+    let scout = "";
+    const picked = await send(this.table, "dm", { cmd: "pick_card", card, reason: reason.trim() }, (r) => {
+      const look = r.events.find((e) => e.kind === "scout_looked");
+      if (look?.kind === "scout_looked") scout = look.saw ? ` ${look.actor} scouted ahead and saw it first.` : ` ${look.actor} scouted ahead and missed it.`;
+      return `${card} is on the table`;
+    });
+    if (!picked.ok) return picked;
+    this.picked = true;
+    // The card as drawn (AGT-100): the narration that opens it comes after this result.
+    const drawn = (await this.dmState())?.world?.card;
+    return drawn ? { ...picked, text: `${picked.text}. ${cardDrawnLine(drawn)}${scout} Now open it with narrate.` } : picked;
   }
 
   /** Out of combat: one creature hands another, within 5 feet, coin or one carried item (ITM-6). */
@@ -1051,6 +1066,8 @@ export class DmTools {
     // In the DM's turn, after every change it started: a load_scene sent in parallel lands first.
     return this.table.oneAtATime("dm", async () => {
       if (this.loadedThisWake) return notNow("the next scene is loaded; its opening comes with your next wake");
+      // A pick wake opens the card it picked (AGT-100): the narration never runs ahead of the pick.
+      if (this.wake === "pick" && !this.picked && (await this.dmState())?.world?.offered?.length) return notNow("pick the card first with pick_card, then narrate its opening");
       const said = await this.table.narrate(text, to);
       if (said.ok && !to) this.lastLine = text;
       return said;
@@ -1085,4 +1102,9 @@ export class DmTools {
     if (said.ok) this.table.end("the adventure is over");
     return said.ok ? { ok: true, text: "the adventure is over" } : said;
   }
+}
+
+/** A road card as the DM drew it, for a tool's result: its words and its choices (AGT-100). */
+export function cardDrawnLine(card: { text: string; choices: { id: string; text: string }[] }): string {
+  return `The card: ${card.text} Its choices: ${card.choices.map((c) => `${c.id}: ${c.text}`).join(" | ")}.`;
 }

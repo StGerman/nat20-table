@@ -440,12 +440,18 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     // The DM picks the last card offered at the first draw that offers some, and picks nothing
     // after, so the run shows both the DM's pick and the table's (AGT-88).
     let picked = 0;
+    let early = "";
+    let drawn = "";
     const dm = new ScriptedDm({
       pick: async (tools, briefing) => {
         if (picked++ > 0) return;
+        // A pick wake narrates only after its pick (AGT-100).
+        early = (await tools.narrate("The road bends.")).text;
         const ids = [...briefing.matchAll(/^Offered card \d+: ([a-z0-9_]+) /gm)].map((m) => m[1]!);
-        await tools.pickCard(ids.at(-1)!, "It follows from what the party did.");
+        drawn = (await tools.pickCard(ids.at(-1)!, "It follows from what the party did.")).text;
+        await tools.narrate("Someone waits by the road.");
       },
+      card: async (tools) => void (await tools.narrate("A card's people step forward.")),
       suggest: async () => '{"cards": [{"id": "fair_debt", "text": "A stall-keeper remembers the party."}], "why": ["it carries on the fair"]}',
     });
     const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
@@ -491,6 +497,19 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     assert.deepEqual(came, ["dm_pick", ...Array(wakes.length - 1).fill("engine_pick")]);
     assert.ok(log.result.events.some((e) => e.kind === "card_picked" && e.came === "dm_pick" && e.reason === "It follows from what the party did."));
     assert.equal(t.table.transcript.records.filter((r) => r.kind === "fallback" && r.text.startsWith("the DM picked no road card")).length, wakes.length - 1);
+    // The card goes to the seats after the narration that opens it (AGT-100): the pick wake's
+    // narration, written after the pick, which returned the card as drawn.
+    assert.match(early, /pick the card first/);
+    assert.match(drawn, /is on the table\. The card: .+ Its choices: .+ Now open it with narrate\.$/);
+    const records = t.table.transcript.records;
+    const opened = records.findIndex((r) => r.kind === "narration" && r.wake === "pick" && r.text === "Someone waits by the road.");
+    const goes = records.findIndex((r, i) => i > opened && r.kind === "system" && /^card [a-z0-9_]+ goes to the seats$/.test(r.text));
+    assert.ok(opened >= 0 && goes > opened, "the picked card goes to the seats after its opening");
+    assert.ok(!records.some((r) => r.text === "The road bends."), "the early narration was refused");
+    // A card that comes with no pick has its own wake, opened once (AGT-100).
+    for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: /);
+    const framed = records.filter((r) => r.kind === "narration" && r.wake === "card").length;
+    assert.equal(framed, dm.briefings.filter((b) => b.wake === "card").length);
     // Every card on the table has its DM-only record (AGT-91), and the DM suggests cards once the journey is over.
     const shown = log.result.events.filter((e) => e.kind === "card_shown");
     assert.equal(shown.length, log.result.events.filter((e) => e.kind === "card_drawn").length);

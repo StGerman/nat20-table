@@ -246,7 +246,10 @@ export function roadDm(): ScriptedDm {
     pick: async (tools, briefing) => {
       const first = /^Offered card 1: ([a-z0-9_]+) /m.exec(briefing)?.[1];
       if (first) await tools.pickCard(first, "The first card rolled.");
+      // The pick wake opens the card it picked (AGT-100).
+      await tools.narrate("A road card meets the caravan.");
     },
+    card: line("A road card meets the caravan."),
     summary: async () => "The caravan went on along the road.",
   });
 }

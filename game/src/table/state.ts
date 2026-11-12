@@ -7,7 +7,7 @@ import type { GameEngine } from "../engine.ts";
 import { eventLine, noDeaths, tellable, yourLine } from "../view.ts";
 import type { Address } from "./floor.ts";
 import { Transcript } from "./transcript.ts";
-import type { FallbackCause, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
+import type { DmWake, FallbackCause, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
 
 /** Kinds of private note an AI player keeps (spec §3.6, AGT-21). */
@@ -111,6 +111,10 @@ export class TableState {
   hold: ((event: Event) => boolean) | undefined;
   /** The seq of the last engine line the DM's narration came after: what its latest narration covers. */
   narratedTo = -1;
+  /** The DM wake running, for its narration's record (AGT-100); undefined between wakes. */
+  dmWake: DmWake | undefined;
+  /** Whether the DM wake running has shown a narration yet (AGT-97). */
+  wakeNarrated = false;
   /** The last engine lines shown to the human, for `/log`. */
   readonly recent: string[] = [];
   /**
@@ -349,8 +353,9 @@ export class TableState {
       return { ok: false, retryable: true, text: `${to} is not a seat at the table; address the table or one of ${this.party.join(", ")}.` };
     }
     await this.flush();
-    this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text });
+    this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text, ...(this.dmWake ? { wake: this.dmWake } : {}) });
     this.narratedTo = this.dmShownTo;
+    this.wakeNarrated = true;
     if (this.inCombat) this.narrations = [];
     else if (!to) this.narrations.push(text);
     for (const player of this.players) {
@@ -549,7 +554,7 @@ export class TableState {
    * The orchestrator's own bookkeeping line: a retry, a fallback, an error, a raised hand. A fallback
    * carries its cause, and the human's refusals the decision they belong to (M7 design §3.3).
    */
-  log(kind: "retry" | "fallback" | "error" | "system" | "intent" | "hand", text: string, speaker = "table", about: { cause?: FallbackCause; decision?: string } = {}): void {
+  log(kind: "retry" | "fallback" | "error" | "system" | "intent" | "hand", text: string, speaker = "table", about: { cause?: FallbackCause; decision?: string; wake?: DmWake; narrated?: boolean } = {}): void {
     this.transcript.add({ speaker, channel: "run", kind, text, ...about });
     if (kind === "fallback" && speaker === "dm") this.unnarrated = true;
   }
