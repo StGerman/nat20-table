@@ -584,16 +584,13 @@ export class TableLoop {
       }
     }
     if (this.table.ended) return;
+    // The road card met on the way is settled and its fight is over: the scene opens (AGT-100),
+    // before the place's own arrival card, which the engine may have drawn meanwhile (ENG-35).
+    if (this.openLater && !this.table.inCombat && !roadCardAhead(await this.dmWorld())) return void (await this.openHeld());
     // A road card waits for the party's word out of a fight (AGT-80): it is asked before anything else.
     if (this.campaign && !this.table.inCombat && (await this.cardRound())) return;
-    // No card waits for the party's word now, and the card's fight is over: the scene opens (AGT-100).
-    // The pay may have come in while it waited (ENG-35): the opening leaves it out then.
-    if (this.openLater && !this.table.inCombat) {
-      const { sceneId, payNext, passed, first } = this.openLater;
-      this.openLater = undefined;
-      await this.openScene(sceneId, payNext || Boolean(this.settledLater), passed, first);
-      return;
-    }
+    // No card waits for the party's word now (a card left to an NPC owner): the held scene opens anyway.
+    if (this.openLater && !this.table.inCombat) return void (await this.openHeld());
     // The destination's arrival card is settled and its fight, if any, is over: the pay comes now (ENG-35).
     // An arrival draw still offered holds the pay too.
     if (this.settledLater && !this.table.inCombat && !cardWaits(await this.dmWorld())) {
@@ -691,7 +688,14 @@ export class TableLoop {
       this.table.log("system", `scene ${sceneId} opens after the road card met on the way`);
       return;
     }
-    await this.openScene(sceneId, payNext, passed, first);
+    await this.openScene(sceneId, payNext || Boolean(this.settledLater), passed, first);
+  }
+
+  /** The held scene opens (AGT-100); the pay may have come in while it waited (ENG-35), and the opening leaves it out then. */
+  private async openHeld(): Promise<void> {
+    const { sceneId, payNext, passed, first } = this.openLater!;
+    this.openLater = undefined;
+    await this.openScene(sceneId, payNext || Boolean(this.settledLater), passed, first);
   }
 
   /** The DM opens a loaded scene; `passed`: the scenes the run passed over on the way. */
@@ -848,7 +852,8 @@ export class TableLoop {
           undefined,
           `The night passed: ${event.text}`,
           "Narrate the night and the morning in one to three sentences: who slept well, who went hungry, as the engine says.",
-          ...(next?.card || next?.offered?.length ? ["A road card follows: do not close the night."] : []),
+          ...(cardWaits(next) ? ["A road card follows: do not close the night."] : []),
+          ...(this.openLater ? [HELD_OPENING] : []),
         );
         await this.settle();
         await campaign.onNight?.();

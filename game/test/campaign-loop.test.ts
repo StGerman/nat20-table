@@ -533,6 +533,8 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
       const opens = records.findIndex((r, i) => i > waits && r.kind === "narration" && r.wake === "scene_open");
       assert.ok(goes > waits && decided > goes && opens > decided, `${scene}: waits ${waits}, card to the seats ${goes}, decided ${decided}, opened ${opens}`);
       assert.equal(records[opens]!.text, `Here is ${scene}.`);
+      // No other card is played between the road card and the opening: a place's arrival card comes after it.
+      assert.ok(!records.slice(decided, opens).some((r) => r.kind === "system" && / goes to the seats$/.test(r.text)), `${scene}: a card between the road card and the opening`);
       // The card's wakes before the opening are told the place is not reached yet.
       assert.ok(dm.briefings.some((b) => (b.wake === "pick" || b.wake === "card") && b.briefing.includes("the caravan has not arrived")));
     }
