@@ -194,7 +194,9 @@ test("the seat hands the run what it drew, in order: a command's answer as `comm
     seat.show({ kind: "engine", text: "goblin_1 moves", seq: 1 });
     assert.equal(drawn.length, 0, "held under the narration to come");
     seat.show({ kind: "narration", speaker: "dm", text: "The goblin slips into the reeds." });
+    seat.answering(true);
     seat.show({ kind: "info", title: "Sheet", text: "Bren, Fighter 2" });
+    seat.answering(false);
     seat.show({ kind: "engine", text: "bren gains 2 gold", seq: 2, own: true });
     await until("drawn", () => stdout.last.includes("Bren, Fighter 2"), () => stdout.last);
     assert.deepEqual(drawn.map((d) => d.kind), ["narration", "command", "engine"]);
@@ -205,15 +207,16 @@ test("the seat hands the run what it drew, in order: a command's answer as `comm
     stdin.press("/pause");
     stdin.press("\r");
     await asked;
-    seat.answering("pause");
-    seat.show({ kind: "info", title: "Options", text: "Nothing to choose right now." });
-    seat.answering(undefined);
+    seat.answering(true);
+    seat.show({ kind: "status", text: "The table waits." });
+    seat.show({ kind: "speech", speaker: "maren", text: "Already?" });
+    seat.answering(false);
     void seat.ask({ kind: "explore" });
     seat.show({ kind: "status", text: "The road goes on." });
     stdin.press("/help");
     stdin.press("\r");
     await until("help", () => stdout.last.includes("Help"), () => stdout.last);
-    assert.deepEqual(drawn.slice(3).map((d) => d.kind), ["command", "status", "command"]);
+    assert.deepEqual(drawn.slice(3).map((d) => d.kind), ["command", "speech", "status", "command"]);
   } finally {
     seat.stop();
   }

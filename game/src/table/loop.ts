@@ -2000,11 +2000,11 @@ export class TableLoop {
         if (intent.kind !== "command") return intent;
         // A level-up shows its own list: `/options` goes back to it, never to the round's options.
         if (intent.name === "options" && prompt.kind === "level_up") return intent;
-        this.seat.answering?.(intent.name);
+        this.seat.answering?.(true);
         try {
           await this.command(intent.name);
         } finally {
-          this.seat.answering?.(undefined);
+          this.seat.answering?.(false);
         }
         // `/suggest` just turned them off, or on again.
         if (intent.name === "suggest" && offered && !this.suggestOn) {

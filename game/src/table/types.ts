@@ -127,10 +127,10 @@ export interface Seat {
    */
   unnarrated?(): void;
   /**
-   * The loop is answering a command the human typed (AGT-103), or `undefined` once it is done:
-   * what the seat draws meanwhile is that command's answer.
+   * The loop is answering a command the human typed (AGT-103), or is done with it: the info,
+   * options and status lines the seat draws meanwhile are that command's answer.
    */
-  answering?(command: string | undefined): void;
+  answering?(on: boolean): void;
   /**
    * Response suggestions for the prompt that is open (AGT-49): a call started (`cancel` drops it,
    * as the human's first key does), its three rows, or none (timed out, failed, or the prompt
