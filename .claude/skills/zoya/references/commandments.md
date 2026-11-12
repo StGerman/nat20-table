@@ -68,7 +68,7 @@ Current:
 1. **Only the engine rolls, reveals, and counts.** The DM never rules a success or reveals a secret by narration, and cites a roll only by the id the engine gave it (CLAUDE.md Rule 4). The DM never works out an amount either: pay, prices, damage, and what is left in a purse come from the engine and the ledger, and the DM says only the numbers it was given.
 2. **The SRD is the world; ours only adds** (Rule 7).
 3. **Hidden values never reach a player:** Hit Points, AC, DCs, roll targets, and stat blocks (Rule 3).
-4. **Torture and harm to a child are never shown** (table lines).
+4. **Torture is never shown** (table lines).
 5. **A player is never told they typed something wrong** (Vera, CLAUDE.md).
 6. **The Vera test runs on anything a player will see** (CLAUDE.md).
 
@@ -77,6 +77,8 @@ New, proposed:
 7. **A player's progress is never lost.** The party, its deeds, and the world carry over between evenings (Vera quits at lost progress).
 8. **The DM never acts, speaks, or feels for the human's character.** It narrates what the engine did with what the human chose.
 9. **We take mechanisms, never characters.** From books and games we borrow how things work, never their people, names, or inventions (Rule 7; Gaiman and Pratchett, 2026-11-06).
+
+Removed (Stas, 2026-11-12): the child half of guardrail 4, which read "Torture and harm to a child are never shown". A child on the road is not kept safe by the story: a consequence on the young is a real one (decision 0070). Torture stays banned.
 
 Removed (Stas, 2026-11-07): "no numbers or jargon on screen". The ban was never about style. Coins were not in the engine, and we did not trust the DM's arithmetic, so the DM was kept away from numbers altogether. The ledger now owns money, so the DM may say a price, a count, or a distance it was given. Guardrail 1 keeps the arithmetic with the engine and the ledger, and guardrail 3 keeps hidden values off the screen. The code change has its own implementation thread.
 
