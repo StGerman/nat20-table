@@ -158,7 +158,7 @@ The rule needs a field the validator can test. A choice may carry `"asked": true
 
 MAP-18 also:
 - marks `asked` on the four cards Zoya found replacing their plea, `osric_hears` (`tell`), `the_fair_gate` (`sack`), `missing_sack` (`tracks`) and `oddas_mark` (`warden`), and fixes each so its plea stays offered. On `osric_hears`, `missing_sack` and `oddas_mark`, keeping the plea in the case that replaces it would make four choices, so each fix drops or merges one: a content call for Zoya and Vera, and Stas sees each before it lands; marks `bridge_again`'s `read`, which table #330 already keeps offered, with no other change;
-- adds a validator rule that `owner_pick` names a choice offered in every case (it points at a gated choice on `the_fair_gate`, `missing_sack`, `drovers`, `oddas_mark` and `barefoot_pilgrim`);
+- adds a validator rule that `owner_pick` names a choice offered in every case (it points at a gated choice on `the_fair_gate`, `missing_sack`, `drovers`, `oddas_mark` and `barefoot_pilgrim`); amended in table #352's review: `owner_pick` may list ids in the owner's order, the first offered (or tied) one taken, and one of them must be offered in every case, so a card keeps its authored pick through a twin instead of changing it; at most one `asked` choice is offered in a case, so twins never show together;
 - renames `osric_hears`' "Tell it in your own words.", which would sit next to the own-move line;
 - proposes the bible line Zoya queued: "A card's own question or plea is always offered; a variant may add to it, never replace it." Only Stas changes the bible, by PR.
 

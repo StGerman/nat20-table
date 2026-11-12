@@ -51,6 +51,7 @@ Placing a person:
 5. **The DM narrates reactions, never verdicts,** and never what the human's character feels.
 6. **Funny in the people.** Jokes come from people, details, and surprising consequences. Everyone gets mocked, the human's character too, for what they do, never for what they feel.
 7. **Handrails.** Every detail can be asked about, and a companion speaks at every hard choice.
+8. **A card's own question or plea is always offered.** A deed may add a choice beside it, never replace it: a deed that empties the card punishes the party for what it did earlier.
 
 ## Consequence: how the world changes
 

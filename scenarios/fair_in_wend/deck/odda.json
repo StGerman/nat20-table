@@ -6,7 +6,7 @@
             "zone": "wendmouth",
             "when": "arrival",
             "target": "caravan",
-            "owner_pick": "queue",
+            "owner_pick": ["odda_word", "old_place", "queue"],
             "once": "contract",
             "if": "crossed_millbeck",
             "text": "At the Saltmouth gate the fair warden is chalking stall places on a board. The pitches by the well are nearly gone. He looks at Odda's wheat, then at the queue of carts behind her.",
@@ -37,7 +37,7 @@
                 {
                     "id": "sack",
                     "text": "Give the warden a sack of wheat for a pitch by the well.",
-                    "unless": "toll_men_fought",
+                    "asked": true,
                     "effects": [
                         {"do": "cargo", "good": "wheat", "change": -50},
                         {"do": "remember", "deed": "bought_a_pitch_by_the_well"}
