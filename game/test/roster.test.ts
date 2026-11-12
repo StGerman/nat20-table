@@ -15,6 +15,7 @@ import { readRoster, replayRoster, rosterFile, rosterLine, rosterRefusal, writeR
 import { partyRoster } from "../src/play/run.ts";
 import { paletteFor } from "../src/ui/palette.ts";
 import { partyKey, partyRows, pickOnScreen } from "../src/ui/pick.ts";
+import { until } from "./until.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 
@@ -192,14 +193,6 @@ class FakeStdin extends EventEmitter {
   pause(): void {}
   ref(): void {}
   unref(): void {}
-}
-
-async function until(what: string, ready: () => boolean, ms = 3000): Promise<void> {
-  const end = Date.now() + ms;
-  while (!ready()) {
-    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
 }
 
 test("with a saved party the start screen asks first; continuing, the list shows the saved levels and the card the saved purse and experience (AGT-93)", async () => {

@@ -14,6 +14,7 @@ import { eventLines, wrapText } from "../src/ui/lines.ts";
 import type { Event } from "@nat20-table/engine-client";
 import { formatSheet, noDeaths, tellable, type LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
+import { until } from "./until.ts";
 
 /** A terminal's output as Ink writes it in debug mode: every frame whole. */
 class FakeStdout extends EventEmitter {
@@ -63,14 +64,6 @@ function startOnFakeTerminal(seat: InkSeat): { stdin: FakeStdin; stdout: FakeStd
     patchConsole: false,
   });
   return { stdin, stdout };
-}
-
-async function until(what: string, ready: () => boolean, ms = 3000): Promise<void> {
-  const end = Date.now() + ms;
-  while (!ready()) {
-    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
 }
 
 test("typed lines become intents by what the table waits for", () => {
@@ -271,14 +264,14 @@ test("on a terminal, keys reach the seat and the screen shows the lines, the pro
     seat.show({ kind: "engine", text: "goblin_1 attacks Bren with Scimitar: 9, miss.", roll: "r7", seq: 12 });
     seat.show({ kind: "options", lines: ["1. Longsword: goblin_1", "2. End turn"], choices: [] });
     const asked = seat.ask({ kind: "combat_turn" });
-    await until("the prompt", () => stdout.last.includes("Your turn: an option number, or what Bren does in words."));
+    await until("the prompt", () => stdout.last.includes("Your turn: an option number, or what Bren does in words."), () => stdout.last);
     assert.match(stdout.last, /goblin_1 attacks Bren with Scimitar: 9, miss\. \[r7\]/);
     assert.match(stdout.last, /1\. Longsword: goblin_1/);
     stdin.press("1");
-    await until("the typed key", () => stdout.last.includes("> 1"));
+    await until("the typed key", () => stdout.last.includes("> 1"), () => stdout.last);
     stdin.press("\r");
     assert.deepEqual(await asked, { kind: "option", number: 1 });
-    await until("the echo", () => stdout.last.includes("The table is playing"));
+    await until("the echo", () => stdout.last.includes("The table is playing"), () => stdout.last);
   } finally {
     seat.stop();
   }
@@ -319,7 +312,7 @@ test("on the real loop, the terminal seat plays Bren's commands, and its engine 
     }
     // So is the log the /log overlay showed.
     assert.doesNotMatch(overlays.find((o) => o.title === "Log")!.text, /\bDC\b|\bagainst\b/);
-    await until("the last frame", () => stdout.last.includes("The run is over: the human quit"));
+    await until("the last frame", () => stdout.last.includes("The run is over: the human quit"), () => stdout.last);
   } finally {
     unsubscribe();
     seat.stop();
@@ -518,14 +511,14 @@ test("on a terminal, the command picker stands over the input row (AGT-82)", asy
   try {
     void seat.ask({ kind: "explore" });
     stdin.press("/");
-    await until("the picker", () => stdout.last.includes("Commands · ↑/↓ move"));
+    await until("the picker", () => stdout.last.includes("Commands · ↑/↓ move"), () => stdout.last);
     assert.match(stdout.last, /❯ \/options +your numbered options now/);
     assert.match(stdout.last, / {2}\/sheet +your character sheet/);
     stdin.press("sh");
-    await until("the narrowed picker", () => !stdout.last.includes("/options"));
+    await until("the narrowed picker", () => !stdout.last.includes("/options"), () => stdout.last);
     assert.match(stdout.last, /❯ \/sheet/);
     stdin.press("\u001b");
-    await until("the picker closed", () => !stdout.last.includes("Commands · ↑/↓ move"));
+    await until("the picker closed", () => !stdout.last.includes("Commands · ↑/↓ move"), () => stdout.last);
     assert.match(stdout.last, /> \/sh/);
   } finally {
     seat.stop();
