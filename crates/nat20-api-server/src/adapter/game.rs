@@ -1544,7 +1544,8 @@ impl Game {
     }
 
     /// Moves `actor` and returns the feet it moved, who it provoked, whether its walk reaches
-    /// where it was sent, and whether it stopped short because a creature stands there. Every walk ends on the last free spot along its route, so one
+    /// where it was sent, and whether its route got there and stopped short because a creature
+    /// stands there (`taken`). Every walk ends on the last free spot along its route, so one
     /// to a point or an anchor where a creature stands stops short of it (ENG-21). In explore
     /// mode the creature walks its route at no movement cost and provokes nobody, since nobody
     /// is fighting. In combat the session has checked the prompt: the route must fit in the
@@ -1600,10 +1601,11 @@ impl Game {
         // partial walk where the movement runs out, and any walk to a point or an anchor where a
         // creature stands (ENG-21). With none along the way, nothing moves and the move is
         // refused.
-        // A route that reaches its goal, where a creature stands, stops short of it (ENG-21).
-        let taken = route.reaches_goal()
-            && !systems::movement::is_free_spot(&self.engine, entity, &full_end);
-        let (end, walked_m) = if route.reaches_goal() && !taken {
+        // `taken` only for a route that gets to its goal: a partial walk the movement cut short
+        // first is the movement's case, whoever stands at the goal.
+        let reaches = route.reaches_goal();
+        let taken = reaches && !systems::movement::is_free_spot(&self.engine, entity, &full_end);
+        let (end, walked_m) = if reaches && !taken {
             (
                 full_end,
                 route.full_path.length.get::<uom::si::length::meter>(),
@@ -4918,6 +4920,19 @@ mod tests {
 
         assert!(!reached);
         assert!(!taken, "the movement ran out, nobody stands at the point");
+
+        // The movement runs out short of a point where the goblin stands: still the movement's
+        // case, not `taken`.
+        let mut game = crowded_yard();
+        let at_goblin = MoveTarget::Point {
+            point: PointFt {
+                x_ft: -60.0,
+                y_ft: 0.0,
+                z_ft: 0.0,
+            },
+        };
+        let (_, _, reached, taken) = game.move_to("bren", &at_goblin, true).unwrap();
+        assert!(!reached && !taken);
         let bren = game.entity("bren").unwrap();
         let landed = systems::geometry::get_foot_position(&game.engine.world, bren).unwrap();
         let x_ft = from_core_point(landed).x_ft;

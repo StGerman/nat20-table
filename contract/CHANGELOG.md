@@ -5,7 +5,7 @@ Within major 1, changes are additive only. Nothing is released yet, so versions 
 
 ## 1.0.0-dev.70 (2026-11-12)
 - Meaning (ENG-21, core #81, protocol §4.1): a `move` to a point or an anchor where a creature stands now ends on the last free spot along its route, in combat and in explore mode, with `reached: false` and no anchor on its `moved`; before, the mover ended inside that creature's space (SRD 5.2.1, Moving Around Other Creatures). With no free spot on the way, nothing moves and the move is `rejected` with `no_path`.
-- Additive: `MoveResult.taken` (left out when false) says the walk stopped short because a creature stands where it was sent, so a client can tell it from a `partial` move the movement cut short; the table's stopped-short line names the reason.
+- Additive: `MoveResult.taken` (left out when false) says the route got to where it was sent and stopped short because a creature stands there, so a client can tell it from a `partial` move the movement cut short first (no `taken`; refused `insufficient_resource` when it can't get anywhere); the table's stopped-short line names the reason.
 - The core pin moves to core #81's head (1b3c9fb, fork `demo` aa636b0 plus ENG-21) until it merges: core's own Move now also ends on the last free spot when the movement left cuts it short. `m5_fights.jsonl` mf-62: Torva's move to (9.1, 38.7), where a creature stands, ends at (9.5, 38.0) after 24.2 feet with `reached: false` and `taken: true`, as do two other moves to a taken point. Other fixtures change by version only.
 
 ## 1.0.0-dev.69 (2026-11-11)
