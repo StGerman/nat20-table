@@ -16,7 +16,7 @@ On `night_wolves` (`worlds/wend/deck/lowland.json`) in a live *Fair in Wend* run
 
 ### B. The dog and the horses as creatures on the party side, under a script
 - Pro: a dead horse slows the wagon and the dog can die, so the stake is real.
-- Con: two new stat blocks in core, a hold-position policy, 9 places in initiative instead of 6, longer narration.
+- Con: two new stat blocks in core, a hold-position policy, three more places in initiative, longer narration.
 
 ### C. The Merchant can die
 - Pro: an escort where the Merchant can be lost is a real escort.
@@ -24,7 +24,7 @@ On `night_wolves` (`worlds/wend/deck/lowland.json`) in a live *Fair in Wend* run
 
 ## Decision
 
-A after the M12 exit pair; B and C in the backlog («Только А остальное в backlog»). The dog may die from one bite without its stake shown on `stray_dog` («допустимо»). The narration judge gains a check for a creature that acts in a fight's narration but is not in it («Да добавить проверку судье»); whether it gates a run is still Stas's call.
+A after the M12 exit pair; B and C in the backlog («Только А остальное в backlog»). The dog may die from one bite without its stake shown on `stray_dog` («допустимо»). The narration judge gains a check for a creature that attacks, is attacked or is hurt in a fight's narration but is not in it (a warning growl is not a flag) («Да добавить проверку судье»); whether it gates a run is still Stas's call.
 
 ## Consequences
 
