@@ -7,7 +7,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Handle, Skill};
+use crate::{Ability, Handle, Skill};
 
 /// How fast the party travels (SRD 5.2.1, Travel Pace).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -122,7 +122,8 @@ pub struct CardDm {
     pub target: CardTarget,
     /// What the players read.
     pub text: String,
-    /// The choices, with the customs each keeps or breaks (API-55).
+    /// The choices, with the customs each keeps or breaks (API-55); the last is `own_move`, in
+    /// the seat's own words, once the card has one (API-56).
     pub choices: Vec<CardChoiceDm>,
     /// What each Blade has said so far.
     pub said: Vec<CardSaid>,
@@ -135,6 +136,41 @@ pub struct CardDm {
     /// with nothing to find.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scout: Option<Skill>,
+    /// The own move on the card (API-56), once the DM put it there: its check and the two
+    /// choices a success and a failure bring. Its words are the choice `own_move` in
+    /// `choices`. Absent while the card has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub own_move: Option<OwnMoveDm>,
+}
+
+/// A seat's own move on the card on the table, as the DM sees it (API-56; protocol §4.13).
+/// DM only; players see [`OwnMovePlayer`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct OwnMoveDm {
+    /// The seat whose words it is.
+    pub actor: Handle,
+    /// The check's ability: the skill's own.
+    pub ability: Ability,
+    /// The check's skill.
+    pub skill: Skill,
+    /// The check's DC, from the SRD DC ladder.
+    pub dc: u8,
+    /// The choice id a success brings.
+    pub success: String,
+    /// The choice id a failure brings.
+    pub failure: String,
+}
+
+/// A seat's own move on the card on the table, as a player sees it (API-56): who said it and
+/// what it tries. Never the DC, nor what a success or a failure brings.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct OwnMovePlayer {
+    /// The seat whose words it is.
+    pub actor: Handle,
+    /// The check's ability: the skill's own.
+    pub ability: Ability,
+    /// The check's skill.
+    pub skill: Skill,
 }
 
 /// A road card a draw offered for the DM's pick (API-53). DM only.
@@ -194,12 +230,16 @@ pub struct CardPlayer {
     pub target: CardTarget,
     /// What the players read.
     pub text: String,
-    /// The choices.
+    /// The choices; the last is `own_move`, in the seat's own words, once the card has one.
     pub choices: Vec<CardChoiceView>,
     /// What each Blade has said so far.
     pub said: Vec<CardSaid>,
     /// The Blades who still have to speak.
     pub waiting_for: Vec<Handle>,
+    /// The own move on the card (API-56): who said it and the check it tries. Absent while
+    /// the card has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub own_move: Option<OwnMovePlayer>,
 }
 
 /// How a road card was decided.

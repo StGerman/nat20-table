@@ -490,8 +490,37 @@ test("two narrations made at once show each engine line once", async () => {
     seat: seatThen([]),
     dm: { scene_open: async (tools) => void (await Promise.all([tools.narrate("The yard is quiet."), tools.narrate("Too quiet.")])) },
   });
-  assert.equal(seat.shown.filter((e) => e.kind === "engine" && e.text === loaded).length, 1);
+  // The seat shows no scene load (AGT-98): the DM's opening says where; `/log` keeps it, once.
+  assert.equal(seat.shown.filter((e) => e.kind === "engine" && e.text === loaded).length, 0);
+  assert.equal(t.table.recent.filter((line) => line === loaded).length, 1);
   assert.equal(t.table.transcript.records.filter((r) => r.channel === "dm" && r.text === loaded).length, 1);
+});
+
+test("a DM wake that runs out of time after its narration is logged as cut, not skipped (AGT-97)", async () => {
+  let first = true;
+  const { t } = await play({
+    seed: 27,
+    players: { maren: {} },
+    seat: seatThen([]),
+    dm: {
+      scene_open: async (tools) => {
+        await tools.narrate("The yard is quiet.");
+        if (first) {
+          first = false;
+          throw new TurnTimeout("dm: turn timed out");
+        }
+      },
+    },
+  });
+  const records = t.table.transcript.records;
+  const opening = records.find((r) => r.kind === "narration" && r.text === "The yard is quiet.");
+  assert.equal(opening?.wake, "scene_open");
+  const error = records.find((r) => r.kind === "error" && r.speaker === "dm");
+  assert.deepEqual([error?.wake, error?.narrated], ["scene_open", true]);
+  const cut = records.find((r) => r.kind === "fallback" && r.speaker === "dm");
+  assert.equal(cut?.cause, "cut_after_narration");
+  assert.match(cut?.text ?? "", /ran out of time after its narration/);
+  assert.ok(!records.some((r) => r.kind === "fallback" && /scene_open is skipped/.test(r.text)), "never logged as skipped");
 });
 
 // --- Reactions in a fight (party talk §5 R1, AGT-34) ------------------------------------------------
@@ -1205,7 +1234,8 @@ test("a refused narration reaches nobody; the DM rewrites it, and after two retr
   });
   assert.equal(runLines(stubborn.t, "retry").length, 3);
   assert.ok(runLines(stubborn.t, "fallback").includes("the DM's retries ran out (scene_open); the engine lines stand alone"));
-  assert.ok(stubborn.seat.shown.some((e) => e.kind === "engine" && e.text === "Scene m5_s3_yard loaded in explore mode."));
+  // The scene's load stays off the seat (AGT-98) and in `/log`.
+  assert.ok(stubborn.t.table.recent.includes("Scene m5_s3_yard loaded in explore mode."));
 });
 
 test("raised hands take the floor one at a time, each hearing the lines before it; a refused declaration is asked for again", async () => {

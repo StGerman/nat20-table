@@ -141,6 +141,7 @@ const Scene = z
     _comment: comment,
     id: id.describe("The engine scene id: `scenes/<id>.json` in the pack."),
     title: z.string().min(1),
+    title_ru: z.string().min(1).optional().describe("The title a Russian run's seat shows (MAP-19)."),
     beat: z.enum(["social", "exploration", "fight", "narrative"]),
     target_minutes: z.number().int().positive().describe("The scene's share of the run (scope §3)."),
     prose: packPath.describe("Read-aloud opening, what the characters can notice, how to run it."),
@@ -162,6 +163,7 @@ export const Adventure = z
     format_version: z.number().int().describe(`The skeleton format, one of ${FORMAT_VERSIONS.join(", ")}.`),
     id,
     title: z.string().min(1),
+    title_ru: z.string().min(1).optional().describe("The title a Russian run's seat shows (MAP-19)."),
     licence: z.string().min(1).describe("The pack's licence, e.g. CC-BY-4.0. A committed pack carries only our own or CC-BY text."),
     credit: z.string().min(1).describe("Who to credit."),
     prose: z.array(packPath).describe("Adventure-wide prose: premise, the truth behind it, tone."),
@@ -173,6 +175,12 @@ export const Adventure = z
       .default({})
       .describe(
         "How a Russian run says the pack's words that a model translates badly (AGT-85), keyed by the English word in the prose: \"oilskin coat\": \"промасленный плащ\". Only the DM's Russian prompt carries it; the skeleton is DM-only.",
+      ),
+    anchors_ru: z
+      .record(z.string().min(1), z.string().min(1))
+      .default({})
+      .describe(
+        "What a Russian seat calls each scene anchor, by anchor id (AGT-98): \"the_well\": \"колодец\". The engine sends anchors' English names; the seat reads these instead in a Russian run. One name per id across the pack's scenes.",
       ),
     glyphs: z
       .record(z.string().min(1), z.string().min(1))

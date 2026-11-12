@@ -4,6 +4,7 @@
     "format_version": 2,
     "id": "fair_in_wend",
     "title": "Fair in Wend",
+    "title_ru": "Ярмарка в Венде",
     "licence": "CC-BY-4.0",
     "credit": "nat20-table contributors",
     "prose": [
@@ -100,6 +101,21 @@
         "Col": "Кол",
         "Dunn": "Данн"
     },
+    "anchors_ru": {
+        "ahead": "дальше по дороге",
+        "alehouse_door": "дверь пивной",
+        "behind": "назад по дороге",
+        "by_the_wagon": "у фургона",
+        "fair_gate": "городские ворота",
+        "farmhouse_door": "дверь фермы",
+        "fold_gate": "ворота овчарни",
+        "roadside": "обочина",
+        "the_ford": "брод",
+        "the_quay": "пристань",
+        "the_stalls": "торговые ряды",
+        "the_well": "колодец",
+        "track_down": "начало спуска"
+    },
     "glyphs": {
         "_comment": "Turn-order glyphs for the human's panel (AGT-67): party members by handle, monsters by kind or by the name the pack gives them.",
         "bren": "🪖",
@@ -163,6 +179,7 @@
         {
             "id": "fw_highsteads",
             "title": "The Highsteads",
+            "title_ru": "Хайстедс",
             "beat": "social",
             "target_minutes": 10,
             "prose": "prose/fw_highsteads.md",
@@ -184,6 +201,7 @@
         {
             "id": "fw_road",
             "title": "On the road",
+            "title_ru": "В дороге",
             "beat": "exploration",
             "target_minutes": 15,
             "prose": "prose/fw_road.md",
@@ -195,6 +213,7 @@
         {
             "id": "fw_wendford",
             "title": "Wendford",
+            "title_ru": "Вендфорд",
             "beat": "social",
             "target_minutes": 10,
             "prose": "prose/fw_wendford.md",
@@ -212,6 +231,7 @@
         {
             "id": "fw_wendmouth",
             "title": "The fair at Saltmouth",
+            "title_ru": "Ярмарка в Солтмуте",
             "beat": "narrative",
             "target_minutes": 10,
             "prose": "prose/fw_wendmouth.md",

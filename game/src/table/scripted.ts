@@ -246,7 +246,10 @@ export function roadDm(): ScriptedDm {
     pick: async (tools, briefing) => {
       const first = /^Offered card 1: ([a-z0-9_]+) /m.exec(briefing)?.[1];
       if (first) await tools.pickCard(first, "The first card rolled.");
+      // The pick wake opens the card it picked (AGT-100).
+      await tools.narrate("A road card meets the caravan.");
     },
+    card: line("A road card meets the caravan."),
     summary: async () => "The caravan went on along the road.",
   });
 }
@@ -428,6 +431,8 @@ export function chainDm(scenes: ChainScene[], party: Handle[], checker: Handle):
 export class ScriptedSeat implements Seat {
   readonly handle: Handle;
   readonly shown: TableEvent[] = [];
+  /** Every prompt it was asked, in order. */
+  readonly prompts: HumanPrompt[] = [];
   /** The numbered list on screen now: the last options event. */
   choices: Choice[] = [];
   /** The fight policy's place in its turn plan, reset by each "Your turn" status line. */
@@ -530,6 +535,7 @@ export class ScriptedSeat implements Seat {
   }
 
   async ask(prompt: HumanPrompt): Promise<PlayerIntent> {
+    this.prompts.push(prompt);
     return this.answers.shift() ?? this.fallback(prompt);
   }
 }

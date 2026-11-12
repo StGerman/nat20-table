@@ -3,7 +3,10 @@
 // for the human's viewer (Rule 3). Nothing here comes from the DM's view or the scenario, so the
 // panel can't show anything `/where`, `/options` and `/sheet` don't.
 import type { Condition, Handle, HealthBand, LifeState, Side, State, WorldPlayer } from "@nat20-table/engine-client";
-import { caravanAt, dayLine, mapLines, type LegalActionsResult } from "../view.ts";
+import { caravanAt, dayLine, mapLines, titled, type LegalActionsResult } from "../view.ts";
+import { plural } from "./plural.ts";
+import { type SeatNames, WATCH_RU } from "./seat-lines.ts";
+import { mapLinesRu } from "./seat-views.ts";
 
 /** Another creature as the panel lists it. */
 export interface SituationCreature {
@@ -13,6 +16,8 @@ export interface SituationCreature {
   health: HealthBand;
   conditions: Condition[];
   distance_ft: number;
+  /** The engine's English name, kept for the turn-order glyphs when `name` is the seat's (AGT-98). */
+  kind?: string;
   /** One of the human's options can reach it without walking first (the human's turn only). */
   in_reach: boolean;
 }
@@ -30,6 +35,8 @@ export interface Situation {
   me: {
     handle: Handle;
     name: string;
+    /** The engine's name, kept for the glyphs when `name` is the seat's (AGT-98). */
+    kind?: string;
     hp: number;
     hp_max: number;
     temp_hp: number;
@@ -44,6 +51,10 @@ export interface Situation {
   down: Handle[];
   /** In the living world (AGT-79): the day and where the caravan is, for the bar, and the `/map` sketch for the side pane. */
   road?: { where: string; day: string; map: string[]; scout?: string };
+  /** At a Russian seat (AGT-98): each creature's name as the panel shows it, by handle («волк 1»). */
+  shown?: Record<Handle, string>;
+  /** At a Russian seat: the concentration spell's name. */
+  concentrationName?: string;
 }
 
 const SIDE_ORDER: Record<Side, number> = { hostile: 0, party: 1, neutral: 2 };
@@ -52,7 +63,7 @@ const SIDE_ORDER: Record<Side, number> = { hostile: 0, party: 1, neutral: 2 };
  * The panel's data from the human's player-view state. `turn` is whose action prompt is open (the
  * loop's `awaiting`); `options`, the human's own listing on their turn, marks who is in reach.
  */
-export function situationOf(state: State, turn: Handle | undefined, options?: LegalActionsResult): Situation | undefined {
+export function situationOf(state: State, turn: Handle | undefined, options?: LegalActionsResult, names?: SeatNames): Situation | undefined {
   if (state.view !== "player") return undefined;
   const listed = turn === state.me.handle ? options : undefined;
   const reach = new Set(listed?.options.flatMap((o) => o.targets.filter((t) => t.in_range).map((t) => t.handle)) ?? []);
@@ -79,7 +90,7 @@ export function situationOf(state: State, turn: Handle | undefined, options?: Le
   const after = at < 0 ? [] : [...order.slice(at + 1), ...order.slice(0, at)];
   const mine = after.indexOf(state.me.handle);
   const me = state.me;
-  return {
+  const situation: Situation = {
     mode: combat ? "combat" : "explore",
     ...(typeof state.round === "number" && combat ? { round: state.round } : {}),
     ...(combat && turn ? { turn } : {}),
@@ -99,6 +110,29 @@ export function situationOf(state: State, turn: Handle | undefined, options?: Le
     creatures,
     down,
     ...(state.world ? { road: roadOf(state.world, me, creatures) } : {}),
+  };
+  return names?.language === "ru" ? russian(situation, state, names) : situation;
+}
+
+/**
+ * The same situation at a Russian seat (AGT-98): names as the seat says them, effects and the
+ * concentration spell in Russian, and the road's day and place in Russian words.
+ */
+function russian(situation: Situation, state: Extract<State, { view: "player" }>, names: SeatNames): Situation {
+  const handles = [situation.me.handle, ...situation.creatures.map((c) => c.handle), ...situation.down, ...state.initiative];
+  const shown = Object.fromEntries(handles.map((h) => [h, names.person(h)]));
+  const me = state.me;
+  const world = state.world;
+  const scout = world?.scout ? (world.scout === me.handle ? "вы идёте впереди" : `${names.person(world.scout)} идёт впереди`) : undefined;
+  const day = world ? `День ${world.clock.day}, ${WATCH_RU[world.clock.watch]}` : undefined;
+  const at = world ? (world.at.kind === "at" ? names.place(world.at.place) : `в пути, до конца дороги ${plural(world.at.miles_left, "миля", "мили", "миль")}`) : undefined;
+  return {
+    ...situation,
+    shown,
+    me: { ...situation.me, name: shown[me.handle]!, kind: situation.me.name, effects: me.effects.map((e) => names.thing(e.id, e.name)) },
+    creatures: situation.creatures.map((c) => ({ ...c, name: shown[c.handle]!, kind: c.name })),
+    ...(me.concentration ? { concentrationName: names.thing(me.concentration.spell, titled(me.concentration.spell)) } : {}),
+    ...(world && situation.road ? { road: { ...situation.road, where: `${day} · ${at}${scout ? ` · ${scout}` : ""}`, day: day!, map: mapLinesRu(world, names, "pane") } } : {}),
   };
 }
 

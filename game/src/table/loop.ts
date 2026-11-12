@@ -3,17 +3,21 @@
 // decides who is woken next. Agents act only through their bound tools and the human only through
 // the seat; every number the human picks becomes a complete command with no model call (D5).
 import type { StatBlockEntry } from "../pack/adventure.ts";
-import { EngineStopped, type CardDm, type Event, type Handle, type LevelUpChoice, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
+import { EngineStopped, type CardDm, type CardPlayer, type ErrorCode, type Event, type Handle, type LevelUpChoice, type RejectReason, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, offeredLine, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
-import { buildChoices, cardChoices, choiceLines, levelUpChoices, roadChoices, type Choice, type ChoiceAct } from "./choices.ts";
+import { buildChoices, cardChoices, choiceLines, levelUpChoices, OWN_MOVE, roadChoices, type Choice, type ChoiceAct, type SeatTalk } from "./choices.ts";
+import { coinsRu } from "./seat-lines.ts";
+import { mapLinesRu, sheetRu, stateRu } from "./seat-views.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { BarkTools, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
+import { BarkTools, cardDrawnLine, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import { usageBlock, type UsageLog } from "../usage.ts";
+import type { Language } from "../agents/language.ts";
+import { refusedRu, SEAT_WORDS, UI_WORDS, type SeatWords } from "./words.ts";
 import type { Suggester } from "../agents/suggest.ts";
 import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, ToolOutcome } from "./types.ts";
 
@@ -42,6 +46,8 @@ export interface LoopOptions {
   rests?: string[];
   /** The pack's `stat_blocks` list: the creatures the DM may place beyond the scene files (AGT-24). None by default. */
   statBlocks?: readonly StatBlockEntry[];
+  /** The run's language (decision 0067): the words the table itself shows the human's seat. Default `en`. */
+  language?: Language;
   /** Loop steps before the run is stopped: a safety net for scripted runs. Default 5000. */
   maxSteps?: number;
   /**
@@ -323,6 +329,12 @@ export class TableLoop {
   /** Each AI player's tools for a hand wake: they answer in text only (party talk §4.3). */
   private readonly handTools = new Map<Handle, HandTools>();
   private readonly names: ReadonlyMap<Handle, readonly string[]>;
+  /** The words the table itself shows the human's seat, in the run's language. */
+  private readonly words: SeatWords;
+  /** The seat's words and names together, for the numbered lists (AGT-98). */
+  private get talk(): SeatTalk {
+    return { words: this.words, names: this.table.names };
+  }
   private readonly dmTools: DmTools;
   private readonly onScene: (sceneId: string, played: readonly string[]) => SceneChoice;
   private readonly maxSteps: number;
@@ -393,6 +405,8 @@ export class TableLoop {
   private settledLater: Event | undefined;
   /** The destination's scene opened without the pay, which the `escort_settled` wake tells next (AGT-86). */
   private arrivalOpened = false;
+  /** The road card a wake has opened (AGT-100): it is opened once, however often the seats are asked. */
+  private framed: string | undefined;
   /** The last game day the contract plays, on the world clock (`dayLimit` from its first day). */
   private lastDay: number | undefined;
   private firstDay: number | undefined;
@@ -418,6 +432,7 @@ export class TableLoop {
       this.handTools.set(agent.handle, new HandTools(agent.handle, this.table));
     }
     this.names = options.names ?? new Map();
+    this.words = SEAT_WORDS[options.language ?? "en"];
     this.reactionGraceMs = options.reactionGraceMs ?? REACTION_GRACE_MS;
     this.barkTimeoutMs = options.barkTimeoutMs ?? BARK_TIMEOUT_MS;
     this.dmTools = new DmTools(this.table, {
@@ -494,7 +509,7 @@ export class TableLoop {
     // When the engine is gone, the lines it showed are already written.
     await writing(() => this.table.flush());
     this.table.log("system", `run ended: ${ended}`);
-    this.table.show({ kind: "end", text: ended });
+    this.table.show({ kind: "end", text: this.words.ended(ended, this.table.stop) });
     // When the engine is gone, the run has its transcript and the engine's request log, not the
     // session log, so the audit can't run on it (spec §6: no resume).
     await writing(() => this.table.engine.writeLog());
@@ -689,7 +704,7 @@ export class TableLoop {
     this.passed.push(sceneId);
     this.passedSince.push(sceneId);
     this.table.log("system", `scene ${sceneId} passed over; on to ${next}`);
-    this.table.show({ kind: "info", title: "Passed over", text: `This run doesn't play ${sceneId}: the party goes on to ${next}.` });
+    this.table.show({ kind: "info", title: this.words.passedOverTitle, text: this.words.passedOver(sceneId, next) });
   }
 
   /**
@@ -728,7 +743,7 @@ export class TableLoop {
 
   /** A place's name as the table knows it, for the human's lines. */
   private async placeWords(id: string): Promise<string> {
-    return (await this.dmWorld())?.places.find((p) => p.id === id)?.name ?? id.replace(/_/g, " ");
+    return this.table.names.place(id, (await this.dmWorld())?.places.find((p) => p.id === id)?.name);
   }
 
   /** The human's own sheet (owner view), or undefined. */
@@ -757,15 +772,16 @@ export class TableLoop {
     if (human) {
       const sheet = await this.humanSheet();
       const blade = (await this.dmWorld())?.escort?.contract.blades.find((b) => b.handle === human);
-      const lines = [`The escort contract to ${await this.placeWords(destination)} is done.`];
+      const w = this.words;
+      const lines = [w.contractDone(await this.placeWords(destination))];
       const xp = sheet?.xp;
       const gained = xp && this.startXp !== undefined ? xp.points - this.startXp : undefined;
-      const earned = [...(blade ? [`${coinPhrase(blade.paid_cp)} in wages`] : []), ...(gained ? [`${gained} experience`] : [])];
-      if (earned.length > 0) lines.push(`On this journey you earned ${earned.join(" and ")}.`);
-      if (xp?.can_level_up) lines.push("You have enough experience for your next level.");
-      else if (xp && typeof xp.next_level === "number") lines.push(`${xp.next_level - xp.points} more experience brings your next level.`);
-      if (this.campaign?.keepsParty) lines.push("Your party is kept for the next journey.");
-      this.table.show({ kind: "info", title: "Journey's end", text: lines.join("\n") });
+      const wages = blade ? (this.table.names.language === "ru" ? coinsRu(blade.paid_cp) : coinPhrase(blade.paid_cp)) : undefined;
+      if (wages || gained) lines.push(w.earned(wages, gained || undefined));
+      if (xp?.can_level_up) lines.push(w.enoughXp);
+      else if (xp && typeof xp.next_level === "number") lines.push(w.moreXp(xp.next_level - xp.points));
+      if (this.campaign?.keepsParty) lines.push(w.partyKept);
+      this.table.show({ kind: "info", title: w.journeyEnd, text: lines.join("\n") });
     }
     this.table.end("the escort contract is done");
   }
@@ -779,6 +795,7 @@ export class TableLoop {
     const campaign = this.campaign!;
     switch (event.kind) {
       case "card_resolved":
+        this.framed = undefined;
         await this.wakeDm(
           "road",
           undefined,
@@ -788,7 +805,14 @@ export class TableLoop {
         await this.settle();
         return;
       case "night": {
-        await this.wakeDm("road", undefined, `The night passed: ${event.text}`, "Narrate the night and the morning in one to three sentences: who slept well, who went hungry, as the engine says.");
+        const next = await this.dmWorld();
+        await this.wakeDm(
+          "road",
+          undefined,
+          `The night passed: ${event.text}`,
+          "Narrate the night and the morning in one to three sentences: who slept well, who went hungry, as the engine says.",
+          ...(next?.card || next?.offered?.length ? ["A road card follows: do not close the night."] : []),
+        );
         await this.settle();
         await campaign.onNight?.();
         const day = (await this.dmWorld())?.clock.day;
@@ -818,7 +842,7 @@ export class TableLoop {
         // no human closes at once.
         if (this.table.human && !this.table.inCombat) {
           this.journeyEnd = "last_turn";
-          this.table.show({ kind: "info", title: "Journey's end", text: `The contract is done. You have one last turn in ${await this.placeWords(event.destination)} before the story rests.` });
+          this.table.show({ kind: "info", title: this.words.journeyEnd, text: this.words.lastTurn(await this.placeWords(event.destination)) });
         } else await this.closeJourney(event.destination);
         return;
     }
@@ -837,6 +861,8 @@ export class TableLoop {
     // prompt. A failed or timed-out wake, or one that picks nothing, leaves the first card rolled
     // to the engine's pick, which the run report counts.
     const offered = world?.offered ?? [];
+    // A card is opened by its pick wake, else by a card wake; after a failed wake it shows alone (0041).
+    let frame = offered.length === 0;
     if (offered.length > 0 && !this.table.ended) {
       const deeds = world?.deeds ?? [];
       await this.wakeDm(
@@ -845,15 +871,16 @@ export class TableLoop {
         "Pick a road card: a draw offered these, in the order they were rolled.",
         ...offered.map((c, i) => offeredLine(c, i + 1)),
         deeds.length > 0 ? `Deeds the world remembers: ${deeds.map((d) => d.deed).join(", ")}.` : "The world remembers no deeds yet.",
-        "Call pick_card once, with the card's id and one line of why. Narrate nothing yet.",
+        `Call pick_card once, with the card's id and one line of why. Then ${CARD_OPENING.charAt(0).toLowerCase()}${CARD_OPENING.slice(1)}`,
       );
+      frame = !this.table.wakeNarrated && !this.dmWakeFailed;
       world = await this.dmWorld();
       const first = world?.offered?.[0];
       if (first && !this.table.ended) {
         // A failed wake already counted its fallback; a wake that picked nothing counts here.
         if (!this.dmWakeFailed) {
           this.table.fallbacks += 1;
-          this.table.log("fallback", `the DM picked no road card: the table takes the first card rolled (${first.id})`, "dm", { cause: "unanswered" });
+          this.table.log("fallback", `the DM picked no road card: the table takes the first card rolled (${first.id})`, "dm", { cause: "unanswered", wake: "pick", narrated: false });
         }
         const picked = await send(this.table, "dm", { cmd: "pick_card", card: first.id, reason: "The table took the first card rolled.", fallback: true }, () => `the road card ${first.id} is on the table`);
         // A refused pick leaves the cards offered and every road move refused: the run can't go on.
@@ -871,6 +898,21 @@ export class TableLoop {
     // every word, so the run can't go on.
     const asked = this.cardAsked.get(card.id);
     if (asked !== undefined && asked === this.table.engine.logHead) throw new Error(`the road card ${card.id} won't settle: still waiting for ${card.waiting_for.join(", ")}`);
+    // A card that came with no pick is opened by a `card` wake before the seats see it (AGT-100);
+    // a picked card was opened by its pick wake, or shows alone after that wake's fallback.
+    if (frame && this.framed !== card.id && !this.table.ended) {
+      await this.wakeDmOnce(
+        "card",
+        undefined,
+        "A road card is on the table.",
+        cardDrawnLine(card),
+        ...(this.arrivalOpened ? ["The scene's opening told the arrival: open only the card."] : []),
+        CARD_OPENING,
+      );
+    }
+    this.framed = card.id;
+    if (this.table.ended) return false;
+    this.table.log("system", `card ${card.id} goes to the seats`);
     await this.table.flush();
     const human = this.table.human;
     if (human && card.waiting_for.includes(human) && !this.table.ended) await this.humanCard(card);
@@ -879,9 +921,7 @@ export class TableLoop {
       if (!agent || this.table.ended) continue;
       const now = (await this.dmWorld())?.card;
       if (!now || now.id !== card.id || !now.waiting_for.includes(handle)) continue;
-      this.table.resetRetries(handle);
-      const briefing = await this.playerBriefing(handle, ...cardLines(now), "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
-      await this.wakePlayer(agent, "card", briefing);
+      await this.aiCard(agent, "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
     }
     const now = (await this.dmWorld())?.card;
     // Whoever is still silent goes with the others (a failed wake or a refusal).
@@ -916,9 +956,7 @@ export class TableLoop {
     if (owner === human) {
       await this.humanCard(now, true);
     } else if (agent) {
-      this.table.resetRetries(owner);
-      const briefing = await this.playerBriefing(owner, ...cardLines(now, true), "Make the caravan's call with choose_card, with a choice id. Say why in one line with say, if your character would.");
-      await this.wakePlayer(agent, "card", briefing);
+      await this.aiCard(agent, "Make the caravan's call with choose_card, with a choice id. Say why in one line with say, if your character would.", true);
     }
     now = await ready();
     if (!now) return;
@@ -930,27 +968,114 @@ export class TableLoop {
   }
 
   /**
-   * The human's word on a road card (design: the human seat): a number, or Enter for the marked
-   * choice. As a Blade the human speaks first (AGT-87), so Enter takes the first choice; as the
-   * caravan's owner they call last, and Enter goes with the Blades.
+   * An AI player's word on a road card, from its own view of the card (design §1.7). Its
+   * `own_move` words go to the DM once the wake returns; when they make no move, it is asked once
+   * more, with the DM's answer, for a `choose_card`, before the loop's fallback.
+   */
+  private async aiCard(agent: PlayerAgent, ask: string, owner = false): Promise<void> {
+    const handle = agent.handle;
+    const tools = this.tools.get(handle)!;
+    this.table.resetRetries(handle);
+    const card = await this.playerCard(handle);
+    if (!card) return;
+    tools.takeOwnMove();
+    await this.wakePlayer(agent, "card", await this.playerBriefing(handle, ...cardLines(card, owner), ask));
+    const said = tools.takeOwnMove();
+    if (!said) return;
+    // A seat that also gave its word has spoken: its words were only said aloud.
+    if (said.chose) return void (await this.table.declare(handle, said.words));
+    const answered = await this.cardWords(handle, said.words);
+    if (answered.made) return;
+    const now = await this.playerCard(handle);
+    // A Blade is asked again while the card waits for it; an owner, while the card waits for its call.
+    const waits = owner ? now?.text === card.text && now.waiting_for.length === 0 : now?.waiting_for.includes(handle);
+    if (!now || !waits || this.table.ended) return;
+    this.table.resetRetries(handle);
+    const answer = answered.answer;
+    await this.wakePlayer(
+      agent,
+      "card",
+      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner), "Your words made no choice of the card. Give your word with choose_card, with a choice id."),
+    );
+    // Words a second time are only said aloud: the card wants a choice now.
+    const again = tools.takeOwnMove();
+    if (again) await this.table.declare(handle, again.words);
+  }
+
+  /** The road card as `handle` sees it (Rule 3: an AI player's briefing comes from its own view). */
+  private async playerCard(handle: Handle): Promise<CardPlayer | undefined> {
+    const r = this.table.observe(await this.table.engine.request(handle, { cmd: "get_state" }));
+    return r.result?.cmd === "get_state" && r.result.state.view === "player" ? (r.result.state.world?.card ?? undefined) : undefined;
+  }
+
+  /**
+   * A player's own words on the road card (API-56, design §1.1, §1.8): said aloud, then one
+   * `card_words` wake, in which the DM makes them an own move on the card or only answers them.
+   * Engine lines wait under the DM's narration, so a roll from a move that decided the card at once
+   * never shows above it. Returns whether an own move went on the card.
+   */
+  private async cardWords(handle: Handle, words: string): Promise<{ made: boolean; answer?: string }> {
+    const said = await this.table.declare(handle, words);
+    if (!said.ok) return { made: false };
+    const card = (await this.dmWorld())?.card;
+    if (!card || this.table.ended) return { made: false };
+    // The engine takes an own move's words as said only when they reach every player cleanly.
+    const movable = !/(^|[^A-Za-z0-9])(AC|DC) \d/.test(words);
+    await this.table.flush();
+    const head = this.table.engine.logHead;
+    this.dmTools.cardWords = { actor: handle, words: cutAtWord(words, OWN_MOVE_MAX_CHARS) };
+    this.dmTools.ownMoveMade = false;
+    this.dmTools.cardAnswer = undefined;
+    this.table.hold = (e) => e.seq > head;
+    try {
+      await this.wakeDm(
+        "card_words",
+        undefined,
+        `A player's words on the road card: ${handle} says or does: "${words}"`,
+        cardDrawnLine(card),
+        movable
+          ? "If the words are a move, call own_move_or_answer with the check they call for, two different choices for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits. Answer the attempt only, never how it turns out."
+          : "These words can't go on the card as they are said: call own_move_or_answer with your narration only, one or two sentences, and the card waits.",
+      );
+    } finally {
+      this.table.hold = undefined;
+      this.dmTools.cardWords = undefined;
+    }
+    await this.table.flush();
+    const made = this.dmTools.ownMoveMade;
+    const answer = this.dmTools.cardAnswer;
+    // The run report counts words a card took no move from (design §1.8).
+    if (!made) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
+    return { made, ...(answer ? { answer } : {}) };
+  }
+
+  /**
+   * The human's word on a road card (design: the human seat): a number (no Enter: AGT-101, Stas
+   * 2026-11-11), or their own words (AGT-99), which the DM may make an
+   * own move on the card. As a Blade the human speaks first (AGT-87); as the caravan's owner they
+   * call last.
    */
   private async humanCard(card: CardDm, owner = false): Promise<void> {
     const human = this.human;
-    const { choices, preset } = cardChoices(card);
-    const enter = card.said.length > 0 ? "press Enter to go with the others" : `press Enter for ${preset}`;
+    const words = this.words;
     // The card's words once; after words said at the table only the choices again (AGT-96).
     let showCard = true;
     for (;;) {
       if (this.table.ended) return;
-      if (showCard) this.table.show({ kind: "info", title: "On the road", text: [card.text, owner ? "The caravan is yours: you make the call, with the Blades' advice." : card.target === "caravan" ? "The merchant decides; your word is advice." : "The Blades decide together."].join("\n") });
+      // The card's words in the run's language, as the seat read them from its deck (AGT-98).
+      const seat = this.table.cardOnSeat;
+      const seen = seat?.id === card.id ? seat : undefined;
+      const shown = { ...card, text: seen?.text ?? card.text, choices: card.choices.map((c) => ({ ...c, text: seen?.choices.get(c.id) ?? c.text })) };
+      const { choices } = cardChoices(shown, words, human, this.table.names);
+      if (showCard) this.table.show({ kind: "info", title: words.onTheRoad, text: [shown.text, owner ? words.yourCaravan : card.target === "caravan" ? words.merchantDecides : words.bladesDecide].join("\n") });
       showCard = false;
-      this.table.show({ kind: "options", title: "Your word", lines: choiceLines(choices), choices, preset });
-      const intent = await this.ask({ kind: "card" });
+      this.table.show({ kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(card.own_move ? [] : [words.ownMoveLine])], choices });
+      const intent = await this.ask({ kind: "card", line: words.cardPrompt });
       if (!intent) return;
       if (intent.kind === "option") {
         const picked = choices.find((c) => c.number === intent.number);
         if (!picked) {
-          this.table.show({ kind: "info", title: "No such number", text: `Pick 1 to ${choices.length}, or ${enter}.` });
+          this.table.show({ kind: "info", title: words.noSuchNumber, text: words.stillWaits(choices.length) });
           continue;
         }
         const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
@@ -964,19 +1089,17 @@ export class TableLoop {
         return;
       }
       if (intent.kind === "text") {
-        // Words are said at the table; the card still waits for a number, and the table says so.
-        await this.table.declare(human, intent.text);
-        // The people in the scene answer the words; the card itself stays the table's to decide.
-        await this.wakeDm(
-          "road",
-          undefined,
-          `While the road card waits, ${human} says or does: "${intent.text}"`,
-          "Answer it in one or two sentences, as the people in the scene would: what they say, show or do. The card is not decided: never decide it, never tell how a choice turns out, no number of your own. It waits for the table's word.",
-        );
-        this.table.show({ kind: "info", title: "Said at the table", text: `The road still waits for your word: pick one of the choices, 1 to ${choices.length}, or ${enter}.` });
+        // Words on the card: the DM makes them an own move, the human's word, or answers them in
+        // the scene and the card still waits for a choice (AGT-96, AGT-99).
+        if ((await this.cardWords(human, intent.text)).made) {
+          this.table.log("intent", `${human} on the road card: own move "${intent.text}"`, human);
+          return;
+        }
+        card = (await this.dmWorld())?.card ?? card;
+        this.table.show({ kind: "info", title: words.saidAtTable, text: words.stillWaits(choices.length) });
         continue;
       }
-      this.table.show({ kind: "info", title: "On the road", text: `Pick a number, or ${enter}.` });
+      this.table.show({ kind: "info", title: words.onTheRoad, text: words.stillWaits(choices.length) });
     }
   }
 
@@ -997,11 +1120,11 @@ export class TableLoop {
     const picked: string[] = [];
     for (;;) {
       if (this.table.ended) return;
-      const choices = levelUpChoices(choice, picked);
+      const choices = levelUpChoices(choice, picked, this.talk);
       const more = choice.picks - picked.length;
       this.table.show({
         kind: "options",
-        title: `Level ${choice.level}: ${choice.label}${choice.picks > 1 ? ` (pick ${more} more)` : ""}`,
+        title: this.words.levelTitle(choice.level, this.table.names.thing(choice.label, this.table.names.language === "ru" ? "выбор" : choice.label), choice.picks > 1 ? more : undefined),
         lines: choiceLines(choices),
         choices,
         preset: 1,
@@ -1009,12 +1132,12 @@ export class TableLoop {
       const intent = await this.ask({ kind: "level_up" });
       if (!intent) return;
       if (intent.kind !== "option") {
-        this.table.show({ kind: "info", title: "Level up", text: "Pick a number, or press Enter for the recommended choice." });
+        this.table.show({ kind: "info", title: this.words.levelUp, text: this.words.levelUpHint });
         continue;
       }
       const at = choices.find((c) => c.number === intent.number);
       if (!at) {
-        this.table.show({ kind: "info", title: "No such number", text: `Pick 1 to ${choices.length}.` });
+        this.table.show({ kind: "info", title: this.words.noSuchNumber, text: this.words.pickRange(choices.length) });
         continue;
       }
       if (at.about!.id === "recommended") return this.answerLevelUp(human, promptId, [], choice);
@@ -1083,7 +1206,7 @@ export class TableLoop {
     const human = this.human;
     await this.narrateNew();
     if (!this.isTurnOf(human)) return;
-    this.table.show({ kind: "status", text: "Your turn: pick a number from the list, or say what you do." });
+    this.table.show({ kind: "status", text: this.words.yourTurn });
     const since = this.table.engine.logHead;
     await this.offerChoices(true);
     while (!this.table.ended && (await this.sameTurn(human, since))) {
@@ -1102,7 +1225,7 @@ export class TableLoop {
       } else if (intent.kind === "text") {
         await this.mapHumanWords(intent.text, since);
       } else {
-        this.table.show({ kind: "info", title: "Nothing to react to", text: "Pick a number from the list, or say what you do." });
+        this.table.show({ kind: "info", title: this.words.nothingToReact, text: this.words.pickOrSay });
       }
     }
     await this.narrateNew(human);
@@ -1115,7 +1238,7 @@ export class TableLoop {
   private async pick(number: number): Promise<{ act: ChoiceAct; label: string } | undefined> {
     const choice = this.shown.find((c) => c.number === number);
     if (!choice) {
-      this.table.show({ kind: "info", title: "No such number", text: `There is no ${number} on the list. Type /options to see it again.` });
+      this.table.show({ kind: "info", title: this.words.noSuchNumber, text: this.words.noSuchOnList(number) });
       return undefined;
     }
     if (choice.next) {
@@ -1187,16 +1310,19 @@ export class TableLoop {
     // The engine's line says only that the character moved: a walk that ran out of movement says so.
     const moved = outcome.ok ? (outcome.data as { cmd?: string; reached?: boolean } | undefined) : undefined;
     if (moved?.cmd === "move" && moved.reached === false) {
-      this.table.show({ kind: "info", title: "Stopped short", text: `You ${outcome.text}.` });
+      const walk = moved as { moved_ft?: number; provoked?: string[] };
+      const text = this.table.names.language === "en" ? `You ${outcome.text}.` : this.words.movedShort(Math.round(walk.moved_ft ?? 0), this.table.names.list(walk.provoked ?? []));
+      this.table.show({ kind: "info", title: this.words.stoppedShort, text });
     }
     return outcome;
   }
 
   private async humanRejected(outcome: ToolOutcome): Promise<void> {
     this.table.humanRejections += 1;
-    const message = (outcome.data as { message?: string } | undefined)?.message ?? outcome.text;
+    const error = outcome.data as { message?: string; code?: ErrorCode; reason?: RejectReason | null } | undefined;
+    const message = error?.message ?? outcome.text;
     this.table.log("retry", `${this.human}'s choice was not accepted: ${message}`, this.human, { decision: this.humanDecision() });
-    this.table.show({ kind: "info", title: "Not accepted", text: message });
+    this.table.show({ kind: "info", title: this.words.notAccepted, text: this.table.names.language === "en" ? message : error ? refusedRu(error.code, error.reason ?? undefined) : this.words.notNow });
   }
 
   /**
@@ -1251,7 +1377,7 @@ export class TableLoop {
     if (this.table.acted === acted && this.table.dmToHuman === answered && still && !this.dmWakeFailed) {
       this.table.fallbacks += 1;
       this.table.log("fallback", `the DM didn't map ${human}'s words; back to the human`, "dm", { cause: "unmapped", decision: this.humanDecision() });
-      this.table.show({ kind: "info", title: "Not understood", text: "I didn't get that; pick from /options." });
+      this.table.show({ kind: "info", title: this.words.notUnderstood, text: this.words.notUnderstoodText });
     }
     if (still) await this.offerChoices(true);
   }
@@ -1317,12 +1443,17 @@ export class TableLoop {
     const a = this.table.awaiting;
     if (a.kind !== "reaction" || a.actor !== human) return;
     if (await this.declineReactionToAlly(human, false)) return;
-    this.table.show({ kind: "reaction", summary: a.trigger.summary, options: a.options.map((o) => o.name) });
+    const ru = this.table.names.language === "ru";
+    const to = reactingTo(a.trigger.summary);
+    this.table.show({
+      kind: "reaction",
+      summary: ru ? `можно ответить${to ? `: ${this.table.names.who(to)}` : ""}.` : a.trigger.summary,
+      options: a.options.map((o) => (ru ? this.table.names.option(o.option_id, o.name) : o.name)),
+    });
     let intent = await this.ask({ kind: "reaction" });
     // A number that isn't one of the reactions shown asks again: it never takes another one.
     while (intent?.kind === "option" && !a.options[intent.number - 1]) {
-      const numbers = a.options.length <= 2 ? a.options.map((_, i) => i + 1).join(" or ") : `1 to ${a.options.length}`;
-      this.table.show({ kind: "info", title: "No such reaction", text: `There is no reaction ${intent.number}. Answer y or n, or ${numbers}.` });
+      this.table.show({ kind: "info", title: this.words.noSuchReaction, text: this.words.noSuchReactionText(intent.number, a.options.length) });
       intent = await this.ask({ kind: "reaction" });
     }
     if (!intent) return;
@@ -1403,10 +1534,10 @@ export class TableLoop {
       }
       await this.table.flush();
       const choices: Choice[] = [
-        { number: 1, label: `Accept the surrender of ${handles.join(", ")}` },
-        { number: 2, label: "Fight on" },
+        { number: 1, label: this.words.acceptSurrender(this.table.names.list(handles)) },
+        { number: 2, label: this.words.fightOn },
       ];
-      this.table.show({ kind: "options", title: "Surrender", lines: choiceLines(choices), choices });
+      this.table.show({ kind: "options", title: this.words.surrender, lines: choiceLines(choices), choices });
       const intent = await this.ask({ kind: "surrender" });
       if (!intent) return;
       if (intent.kind === "option" && (intent.number === 1 || intent.number === 2)) {
@@ -1422,7 +1553,7 @@ export class TableLoop {
         return;
       }
       if (intent.kind !== "text") {
-        this.table.show({ kind: "info", title: "Surrender", text: "Pick 1 or 2, or say what you do." });
+        this.table.show({ kind: "info", title: this.words.surrender, text: this.words.surrenderHint });
         continue;
       }
       await this.table.declare(human, intent.text);
@@ -1460,12 +1591,12 @@ export class TableLoop {
       const state = await this.humanState();
       if (state?.view !== "player" || !state.world?.drives) return;
       // Moving on, a Hired Blade may also walk ahead as the scout first (AGT-90).
-      const lines = roadChoices(state.world, 1, human).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel" || c.act?.kind === "scout"));
+      const lines = roadChoices(state.world, 1, human, this.talk).filter((c) => (rest ? c.act?.kind === "rest_night" : c.act?.kind === "travel" || c.act?.kind === "scout"));
       if (!lines.some((c) => c.act?.kind !== "scout")) {
         this.table.tellDm(`${human} can't ${rest ? "end the day" : "move the caravan on"} now: nothing on the road offers it. Go on in fiction.`);
         return;
       }
-      const numbered = (from: Choice[]): Choice[] => [...from.map((c, i) => ({ ...c, number: i + 1 })), { number: from.length + 1, label: "Not yet" }];
+      const numbered = (from: Choice[]): Choice[] => [...from.map((c, i) => ({ ...c, number: i + 1 })), { number: from.length + 1, label: this.words.notYet }];
       let choices = numbered(lines);
       const preset = (choices.findIndex((c) => c.act?.kind === "rest_night" && c.act.where === step) + 1) || 1;
       // The human has seen *Walk ahead as the scout*: the AI Blades may scout now.
@@ -1473,14 +1604,16 @@ export class TableLoop {
       await this.table.flush();
       for (;;) {
         if (this.table.ended) return;
-        this.table.show({ kind: "options", title: rest ? "The night" : "The road", lines: choiceLines(choices), choices, preset });
+        // The line Enter takes ends in the mark (AGT-101).
+        const lines = choiceLines(choices.map((c) => (c.number === preset ? { ...c, label: `${c.label} ${this.words.marked}` } : c)));
+        this.table.show({ kind: "options", title: rest ? this.words.theNight : this.words.theRoad, lines, choices, preset });
         const intent = await this.ask({ kind: "road" });
         if (!intent) return;
         // A line's own text typed out is that line, as in the round's options.
         const typed = intent.kind === "text" ? choices.find((c) => c.label.toLowerCase() === intent.text.trim().replace(/[.!]+$/, "").toLowerCase()) : undefined;
         const picked = intent.kind === "option" ? choices.find((c) => c.number === intent.number) : typed;
         if (!picked) {
-          this.table.show({ kind: "info", title: rest ? "The night" : "The road", text: `Pick 1 to ${choices.length}, or press Enter for the one shown.` });
+          this.table.show({ kind: "info", title: rest ? this.words.theNight : this.words.theRoad, text: this.words.pickOrEnter(choices.length) });
           continue;
         }
         if (!picked.act) {
@@ -1654,7 +1787,7 @@ export class TableLoop {
         line = picked.label;
         break;
       }
-      this.table.show({ kind: "info", title: "Nothing to react to", text: "Say what you do, or type /options." });
+      this.table.show({ kind: "info", title: this.words.nothingToReact, text: this.words.sayOrOptions });
     }
     if (!this.paused) await this.talkRound(line);
     await this.wakeDm(
@@ -1971,19 +2104,19 @@ export class TableLoop {
     switch (name) {
       case "sheet": {
         const r = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
-        this.table.show({ kind: "info", title: "Sheet", text: r.result?.cmd === "get_sheet" ? formatSheet(r.result.sheet) : (r.error?.message ?? "") });
+        this.table.show({ kind: "info", title: this.words.sheet, text: r.result?.cmd === "get_sheet" ? (this.table.names.language === "en" ? formatSheet(r.result.sheet) : sheetRu(r.result.sheet, this.table.names)) : this.table.names.language === "en" || !r.error ? (r.error?.message ?? "") : refusedRu(r.error.code, undefined) });
         return;
       }
       case "where": {
         const state = await this.humanState();
-        this.table.show({ kind: "info", title: "Where", text: state ? formatState(state) : "" });
+        this.table.show({ kind: "info", title: this.words.where, text: state ? (this.table.names.language === "en" ? formatState(state) : stateRu(state, this.table.names)) : "" });
         return;
       }
       case "map": {
         // The human's own world view only (AGT-79): the places they know and the roads between them.
         const state = await this.humanState();
         const world = state?.view === "player" ? state.world : undefined;
-        this.table.show({ kind: "info", title: "Map", text: world ? mapLines(world).join("\n") : "There is no map here: this adventure is not on the road." });
+        this.table.show({ kind: "info", title: this.words.map, text: world ? (this.table.names.language === "en" ? mapLines(world) : mapLinesRu(world, this.table.names)).join("\n") : this.words.noMap });
         return;
       }
       case "options":
@@ -1991,28 +2124,28 @@ export class TableLoop {
           this.shown = this.top;
           this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top });
         } else if (this.table.inCombat) {
-          this.table.show({ kind: "info", title: "Options", text: "It isn't your turn." });
+          this.table.show({ kind: "info", title: this.words.options, text: this.words.notYourTurn });
         } else {
           await this.offerChoices(false);
-          this.table.show({ kind: "info", title: "Options", text: "Pick a number, or say what you do: the DM offers the rest." });
+          this.table.show({ kind: "info", title: this.words.options, text: this.words.optionsHint });
         }
         return;
       case "log":
-        this.table.show({ kind: "info", title: "Log", text: this.table.recent.join("\n") });
+        this.table.show({ kind: "info", title: this.words.log, text: this.table.recent.join("\n") });
         return;
       case "usage":
         // Usage isn't game state, and no player view: it reaches the human's screen alone (M10 U1).
-        this.table.show({ kind: "info", title: "Usage", text: usageBlock(this.usage?.records ?? []).join("\n") });
+        this.table.show({ kind: "info", title: this.words.usage, text: usageBlock(this.usage?.records ?? []).join("\n") });
         return;
       case "pause":
         this.paused = !this.paused;
         this.table.log("system", this.paused ? "paused" : "resumed", human);
-        this.table.show({ kind: "status", text: this.paused ? "Paused: AI players wait until /pause again." : "Resumed." });
+        this.table.show({ kind: "status", text: this.paused ? this.words.pausedStatus : this.words.resumed });
         return;
       case "suggest":
         this.suggestOn = !this.suggestOn;
         this.table.log("system", this.suggestOn ? "suggestions on" : "suggestions off", human);
-        this.table.show({ kind: "status", text: this.suggestOn ? "Suggestions on: three moves out of a fight." : "Suggestions off. /suggest turns them on again." });
+        this.table.show({ kind: "status", text: this.suggestOn ? this.words.suggestOn : this.words.suggestOff });
         return;
       case "quit":
         this.table.end("the human quit", "operator");
@@ -2022,10 +2155,10 @@ export class TableLoop {
 
   /** While paused and an AI player is next, the table waits on the human (spec §3.4). */
   private async waitWhilePaused(): Promise<void> {
-    this.table.show({ kind: "status", text: "Paused. Type /pause to go on." });
+    this.table.show({ kind: "status", text: this.words.pausedWait });
     while (this.paused && !this.table.ended) {
       const intent = await this.ask({ kind: "paused" });
-      if (intent) this.table.show({ kind: "info", title: "Paused", text: "Only commands while paused; /pause goes on." });
+      if (intent) this.table.show({ kind: "info", title: this.words.paused, text: this.words.pausedOnly });
     }
   }
 
@@ -2038,7 +2171,7 @@ export class TableLoop {
     const seen = state ?? (await this.humanState());
     const a = this.table.awaiting;
     const turn = a.kind === "action" ? a.actor : undefined;
-    const situation = seen ? situationOf(seen, turn, turn === this.table.human ? options : undefined) : undefined;
+    const situation = seen ? situationOf(seen, turn, turn === this.table.human ? options : undefined, this.table.names) : undefined;
     this.table.show({ kind: "situation", ...(situation ? { situation } : {}) });
   }
 
@@ -2054,14 +2187,14 @@ export class TableLoop {
     const state = combat || this.situation || this.campaign ? await this.humanState() : undefined;
     if (!listed.ok || listed.result?.cmd !== "legal_actions") {
       this.top = this.shown = [];
-      this.table.show({ kind: "info", title: "Options", text: listed.error?.message ?? "No options now." });
+      this.table.show({ kind: "info", title: this.words.options, text: this.table.names.language === "en" ? (listed.error?.message ?? this.words.noOptions) : this.words.noOptions });
       return;
     }
     this.lastOptions = listed.result as LegalActionsResult;
-    this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat);
+    this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat, this.talk);
     // Out of a fight, whoever may drive the caravan can move it on or end the day (AGT-80).
     if (!combat && state?.view === "player" && state.world) {
-      const road = roadChoices(state.world, this.top.length + 1, human);
+      const road = roadChoices(state.world, this.top.length + 1, human, this.talk);
       // The human has seen *Walk ahead as the scout*, or isn't a Blade: the AI Blades may scout now (AGT-90).
       if (road.length > 0) this.table.scoutOffered = true;
       this.top = this.shown = [...this.top, ...road];
@@ -2070,7 +2203,7 @@ export class TableLoop {
     if (!combat) {
       const sheet = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
       if (sheet.result?.cmd === "get_sheet" && sheet.result.sheet.xp?.can_level_up) {
-        this.top = this.shown = [...this.top, { number: this.top.length + 1, label: `Level up to level ${(sheet.result.sheet.level ?? 0) + 1}`, act: { kind: "level_up" }, about: { id: "level_up" } }];
+        this.top = this.shown = [...this.top, { number: this.top.length + 1, label: this.words.levelUpLine((sheet.result.sheet.level ?? 0) + 1), act: { kind: "level_up" }, about: { id: "level_up" } }];
       }
     }
     if (state) await this.showSituation(state, this.lastOptions);
@@ -2099,7 +2232,7 @@ export class TableLoop {
     this.busy.add(agent.handle);
     await this.quiet(agent.handle);
     this.table.recordInput(agent.handle, briefing);
-    const done = this.waitFor(`${agent.handle} is thinking`);
+    const done = this.waitFor(this.table.names.language === "en" ? `${agent.handle} is thinking` : UI_WORDS.ru.thinking(this.table.names.person(agent.handle)));
     this.failedWake.delete(agent.handle);
     try {
       const answer = await agent.wake(wake, briefing, tools ?? this.tools.get(agent.handle)!);
@@ -2263,6 +2396,8 @@ export class TableLoop {
     this.table.resetRetries("dm");
     this.dmTools.startWake();
     this.dmWakeFailed = false;
+    this.table.dmWake = wake;
+    this.table.wakeNarrated = false;
     const heard = this.table.drainDmInbox();
     let told = events;
     if (!told) {
@@ -2277,27 +2412,33 @@ export class TableLoop {
       ...lines,
       ...facts,
     ].join("\n");
-    const done = this.waitFor("The DM is thinking");
+    const done = this.waitFor(UI_WORDS[this.table.names.language].dmThinking);
     try {
       const said = await this.dm.wake(wake, briefing, this.dmTools);
       this.online();
       if (this.table.exhausted("dm")) {
         this.table.fallbacks += 1;
-        this.table.log("fallback", `the DM's retries ran out (${wake}); the engine lines stand alone`, "dm", { cause: "retries" });
+        this.table.log("fallback", `the DM's retries ran out (${wake}); the engine lines stand alone`, "dm", { cause: "retries", wake, narrated: this.table.wakeNarrated });
       }
       return said;
     } catch (error) {
       if (stopsTheRun(error)) throw error;
       this.offline(error);
+      const narrated = this.table.wakeNarrated;
       const why = error instanceof TurnTimeout ? "timed out" : `failed: ${error instanceof Error ? error.message : String(error)}`;
-      this.table.log("error", `dm (${wake}) ${why}`, "dm");
-      this.table.fallbacks += 1;
+      this.table.log("error", `dm (${wake}) ${why}`, "dm", { wake, narrated });
       this.dmWakeFailed = true;
-      const cause = this.table.exhausted("dm") ? "retries" : error instanceof TurnTimeout ? "timeout" : "error";
-      this.table.log("fallback", `the DM's ${wake} is skipped; the engine lines stand alone`, "dm", { cause });
+      // A wake cut after its narration was shown was not skipped (AGT-97): the run report says so.
+      const cut = error instanceof TurnTimeout && narrated;
+      if (!cut) this.table.fallbacks += 1;
+      const cause = cut ? "cut_after_narration" : this.table.exhausted("dm") ? "retries" : error instanceof TurnTimeout ? "timeout" : "error";
+      // A pick that landed is not skipped: its card shows without an opening (AGT-100).
+      const what = cut ? `the DM's ${wake} ran out of time after its narration` : wake === "pick" && this.dmTools.picked ? "the DM picked a road card but ran out of time before opening it; the card shows alone" : `the DM's ${wake} is skipped; the engine lines stand alone`;
+      this.table.log("fallback", what, "dm", { cause, wake, narrated });
       return undefined;
     } finally {
       done();
+      this.table.dmWake = undefined;
     }
   }
 
@@ -2342,16 +2483,33 @@ export class TableLoop {
   }
 }
 
+/** How a wake opens a road card (AGT-100), in the pick wake and the card wake alike. */
+const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
+
+/** The engine's limit on an own move's words (API-56). */
+const OWN_MOVE_MAX_CHARS = 300;
+
+/** Words cut at a word to `max` characters (design §1.1): the transcript keeps them whole. */
+export function cutAtWord(words: string, max: number): string {
+  const chars = [...words.trim()];
+  if (chars.length <= max) return chars.join("");
+  const cut = chars.slice(0, max + 1).join("");
+  const at = cut.lastIndexOf(" ");
+  return (at > 0 ? cut.slice(0, at) : chars.slice(0, max).join("")).trimEnd();
+}
+
 /** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said. */
-function cardLines(card: CardDm, owner = false): string[] {
+function cardLines(card: CardPlayer, owner = false): string[] {
   const whose = owner
     ? "the caravan's, and the caravan is yours: you make the call after the Blades' advice"
     : card.target === "caravan"
       ? "the caravan's: the merchant decides, and your word is advice"
       : "the Blades': you vote, and most votes win";
+  const move = card.own_move;
   return [
     `A road card waits for your word (${whose}): ${card.text}`,
-    `Choices: ${card.choices.map((c) => `${c.id}: ${c.text}`).join(" | ")}`,
+    `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === OWN_MOVE && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
+    ...(move ? [] : ["If none of these is what your character would do, say what they do with own_move, in one sentence."]),
   ];
 }

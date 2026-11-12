@@ -27,6 +27,7 @@
 // sits at),
 // --rosters DIR, --suggest-model (AGT-49: the model that suggests the human's moves out of a fight
 // at the terminal, Haiku by default), --no-suggest (no suggestions; `/suggest` toggles them in play).
+import { UI_WORDS } from "../table/words.ts";
 import { spawn, type ChildProcess } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
@@ -37,11 +38,12 @@ import { ModelPlayer } from "../agents/player.ts";
 import { Suggester } from "../agents/suggest.ts";
 import { sessionOptions } from "../agents/sdk-session.ts";
 import { GameEngine, REPO } from "../engine.ts";
-import { readCampaign } from "../pack/campaign.ts";
+import { readCampaign, seatCards } from "../pack/campaign.ts";
 import { readPack } from "../pack/read.ts";
 import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
 import { chainDm, chainScenes, roadDm, ScriptedPlayer, ScriptedSeat, walkOnDm } from "../table/scripted.ts";
 import { TableState } from "../table/state.ts";
+import { SeatNames } from "../table/seat-lines.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat, StopKind } from "../table/types.ts";
 import type { Instance } from "ink";
@@ -203,7 +205,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     const entries = partyRoster(flags.pack);
     const ask = saved && partyChoice !== "new" ? saved : undefined;
     const picked = await pickOnScreen(entries, party.human, {
-      title: pack.adventure.title,
+      title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title,
       ...(ask
         ? {
             saved: {
@@ -227,16 +229,18 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // (before the table is set, it exits). The keyboard seat draws from here, so the engine's start
   // shows its loading indicator too.
   let quit: () => void = () => process.exit(130);
+  // One way of naming things for the seat and the table's lines (AGT-98).
+  const seatNames = new SeatNames(language, party.seatRu);
   const ink =
     flags.seat === "ink" && party.human
-      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: pack.adventure.title })
+      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title, language, names: seatNames })
       : undefined;
   // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame. The
   // seat owns the alternate screen (AGT-69, decision 0054): the terminal comes back as it was when
   // it stops, and everything printed after that lands on the normal screen.
   if (ink && screen) ink.adopt(screen);
   else ink?.start({ interactive: true, alternateScreen: true });
-  ink?.busy("The engine is starting");
+  ink?.busy(UI_WORDS[language].engineStarting);
 
   const runDir = runFolder(flags.out, play.folder);
   const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
@@ -296,6 +300,9 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     transcript,
     inputsFile: path.join(runDir, "inputs.jsonl"),
     ...guards(flags.pack, engine, language),
+    // The seat's lines in the run's language (AGT-98): names from the pack, cards' words from the decks.
+    names: seatNames,
+    cards: language === "ru" ? seatCards(flags.pack) : new Map(),
   });
   // Who plays whom, in the transcript as in run.json (AGT-35).
   table.log("system", party.human ? `the human plays ${party.human}; AI players: ${party.ai.join(", ")}` : `no human; AI players: ${party.ai.join(", ")}`);
@@ -339,14 +346,16 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
       // The table keeps the first reason, so the quit that frees a waiting prompt doesn't replace it.
       const stop = () => {
         table.end(`the ${limit}-minute time limit`, "time_limit");
-        ink?.stopAsking(`the ${limit}-minute time limit`);
+        ink?.stopAsking(UI_WORDS[language].timeLimit(limit));
       };
       if (limit > 0) deadline = setTimeout(stop, limit * 60_000);
     }
     // A seat shows the scene's number in its header, or on the road the place's name; the terminal prints progress only when nobody plays in it.
     if (ink) {
-      if (p.kind === "scene_start" && campaign) ink.place(pack.adventure.scenes.find((s) => s.id === p.scene)?.title ?? p.scene);
-      else if (p.kind === "scene_start") ink.scene(pack.adventure.scenes.findIndex((s) => s.id === p.scene) + 1, pack.adventure.scenes.length);
+      if (p.kind === "scene_start" && campaign) {
+        const scene = pack.adventure.scenes.find((s) => s.id === p.scene);
+        ink.place((language === "ru" ? scene?.title_ru : undefined) ?? scene?.title ?? p.scene);
+      } else if (p.kind === "scene_start") ink.scene(pack.adventure.scenes.findIndex((s) => s.id === p.scene) + 1, pack.adventure.scenes.length);
       return;
     }
     const runLines = transcript.records.filter((r) => r.channel === "run");
@@ -360,6 +369,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     table,
     dm,
     players,
+    language,
     // A campaign goes wherever the road takes it, and ends on its own terms (AGT-80).
     ...(campaign ? {} : { onScene: plan.onScene }),
     // The adventure ends only after the run's last scene has loaded (or with the party down).

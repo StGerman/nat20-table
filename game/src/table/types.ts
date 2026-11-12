@@ -93,7 +93,7 @@ export type HumanPrompt =
   /** The DM offered a surrender: accept it (1), fight on (2), or say what you do (AGT-30). */
   | { kind: "surrender" }
   /** A road card waits for the human's word, asked first as a Blade (AGT-87) and last as the owner: a number, or Enter for the marked choice. */
-  | { kind: "card" }
+  | { kind: "card"; /** The prompt line in the run's language; it names Enter only when a choice is marked (AGT-101). */ line?: string }
   /** A choice for the human's new level (AGT-80): a number, or Enter for the recommended pick. */
   | { kind: "level_up" }
   /** The DM says the party moves on or settles for the night, and the human drives the caravan (AGT-80): Enter on the first line, or not yet. */
@@ -208,8 +208,12 @@ export type DmWake =
   | "combat_over"
   /** The road moved on (AGT-80): a card settled, a night passed, the escort was paid. */
   | "road"
-  /** A draw offered two or three road cards (AGT-88): pick one with pick_card. */
+  /** A draw offered two or three road cards (AGT-88): pick one with pick_card, then open it (AGT-100). */
   | "pick"
+  /** A road card came with no pick (a soon card, a zone's only card, an arrival card): open it (AGT-100). */
+  | "card"
+  /** A player's own words on the road card waiting (API-56, AGT-99): an own move, or only an answer. */
+  | "card_words"
   /** The journey is over (AGT-91): suggest up to two road cards, as JSON in the final answer. */
   | "suggest"
   | "summary";
@@ -253,14 +257,19 @@ export interface TranscriptRecord {
    * refusals per decision (M7 design §3.3).
    */
   decision?: string;
+  /** For a DM narration, error or fallback: the wake it came from (AGT-100). */
+  wake?: DmWake;
+  /** For a DM wake's error or fallback: whether a narration was shown in that wake (AGT-97). */
+  narrated?: boolean;
 }
 
 /**
  * Why a decision fell back (M7 design §3.3): its retries were spent on refusals (`retries`), its wake
  * timed out or failed (`timeout`, `error`), the DM couldn't map the human's words (`unmapped`), or the
- * wake ended with nothing refused and nothing done (`unanswered`).
+ * wake ended with nothing refused and nothing done (`unanswered`), or its wake ran out of time
+ * after its narration was shown (`cut_after_narration`, AGT-97: not a skipped wake).
  */
-export type FallbackCause = "retries" | "timeout" | "error" | "unmapped" | "unanswered";
+export type FallbackCause = "retries" | "timeout" | "error" | "unmapped" | "unanswered" | "cut_after_narration";
 
 /**
  * Which stop ended a run early (M7 design §3.1): the time limit, a stall, the plan's usage limit, an
