@@ -165,12 +165,6 @@ test("on a Mac keyboard and trackpad (AGT-94): Shift+↑ pages the story, the wh
     stdin.press("\u001b[<0;10;5m");
     stdin.press("\u001b[1;2B");
     await until("Shift+↓ back at the foot", () => stdout.last.includes("— beat 39") && !stdout.last.includes("↓"), () => stdout.last);
-    // A report split across two reads still turns the wheel once.
-    stdin.press("\u001b[<6");
-    stdin.press("4;10;5M");
-    await until("the split report", () => stdout.last.includes("↓ End to follow"), () => stdout.last);
-    stdin.press("\u001b[<65;10;5M");
-    await until("back again", () => stdout.last.includes("— beat 39") && !stdout.last.includes("↓"), () => stdout.last);
     assert.equal(seat.getView().draft, "", "no mouse report reached the input line");
   } finally {
     seat.stop();

@@ -288,27 +288,20 @@ export class InkSeat implements Seat {
   /** What the frame does with the wheel's turns (AGT-94); the frame sets it on every draw. */
   wheelTurns: (turns: (-1 | 1)[]) => void = () => {};
   private stdin: NodeJS.ReadableStream | undefined;
-  private carry = "";
-  private carriedAt = 0;
   /**
    * Ink drops every mouse report before `useInput`, so the seat reads the wheel off stdin's `data`
    * events. It listens once Ink's `readable` listener is on and stops before Ink lets go, so the
    * stream stays paused and Ink alone reads it; `data` fires only when Ink reads. A report split
-   * across two reads is carried over for as long as Ink waits for the rest of a sequence (20 ms);
-   * after that Ink takes the halves as keys, and so does the seat.
+   * across two reads (rare, over ssh) is one lost turn: Ink drops or types its halves on its own
+   * clock, and the seat does not guess at it.
    */
   private readonly read = (chunk: Buffer | string): void => {
-    const now = Date.now();
-    const text = (now - this.carriedAt <= INK_PENDING_MS ? this.carry : "") + String(chunk);
-    this.carry = /\u001b(\[(<[\d;]*)?)?$/.exec(text)?.[0] ?? "";
-    this.carriedAt = now;
-    const turns = wheelsIn(text);
+    const turns = wheelsIn(String(chunk));
     if (turns.length > 0) this.wheelTurns(turns);
   };
   private listen(stdin: NodeJS.ReadableStream): void {
     this.stdin?.off("data", this.read);
     this.stdin = stdin;
-    this.carry = "";
     stdin.on("data", this.read);
   }
 
@@ -865,8 +858,6 @@ export function suggestionRows(suggestions: Suggestions, question: string, ui: U
   ];
 }
 
-/** How long Ink waits for the rest of a split escape sequence before it takes the part as keys. */
-const INK_PENDING_MS = 20;
 /** Mouse reporting on and off: button events (`?1000`) in SGR form (`?1006`). */
 const WHEEL_ON = "\x1b[?1000h\x1b[?1006h";
 const WHEEL_OFF = "\x1b[?1006l\x1b[?1000l";
@@ -989,6 +980,9 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     seat.wheelTurns = (turns) => {
       if (overlayRows) return setOverlayTop((top) => turns.reduce((at, d) => stepWithin(at, d * WHEEL_ROWS, overlayMax), Math.min(top, overlayMax)));
       setScroll((at) => turns.reduce((to, d) => scrollRows(to, d, WHEEL_ROWS, story, storyH, view.lines.length), at));
+    };
+    return () => {
+      seat.wheelTurns = () => {};
     };
   });
 
