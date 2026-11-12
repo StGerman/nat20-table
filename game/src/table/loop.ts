@@ -575,7 +575,11 @@ export class TableLoop {
         if (this.table.ended) return;
         if (event.kind === "combat_over") await this.combatOver(event);
         if (event.kind === "scene_loaded" && i < lastScene) this.table.log("system", `scene ${event.scene_id} left before it opened`);
-        else if (event.kind === "scene_loaded") await this.sceneLoaded(event.scene_id, settles || (Boolean(this.campaign) && (await this.payWaits())));
+        else if (event.kind === "scene_loaded") {
+          // A road card settled later in this batch was still being played when the scene loaded (AGT-100).
+          const cardInBatch = events.slice(i + 1).some((e) => e.kind === "card_resolved");
+          await this.sceneLoaded(event.scene_id, settles || (Boolean(this.campaign) && (await this.payWaits())), cardInBatch);
+        }
         if (this.campaign) await this.roadEvent(event);
       }
     }
@@ -591,7 +595,9 @@ export class TableLoop {
       return;
     }
     // The destination's arrival card is settled and its fight, if any, is over: the pay comes now (ENG-35).
-    if (this.settledLater && !this.table.inCombat && !(await this.dmWorld())?.card) {
+    const waiting = this.settledLater && !this.table.inCombat ? await this.dmWorld() : undefined;
+    // An arrival draw still offered holds the pay too (ENG-35).
+    if (this.settledLater && !this.table.inCombat && !waiting?.card && !waiting?.offered?.length) {
       const settled = this.settledLater;
       this.settledLater = undefined;
       await this.roadEvent(settled);
@@ -649,7 +655,8 @@ export class TableLoop {
   }
 
   /** `payNext`: the escort is paid after this opening, in its own wake (AGT-86). */
-  private async sceneLoaded(sceneId: string, payNext = false): Promise<void> {
+  /** `cardInBatch`: a road card settles in the batch after this load, so the opening waits for its outcome. */
+  private async sceneLoaded(sceneId: string, payNext = false, cardInBatch = false): Promise<void> {
     // A scene the run passes over never loads (`DmTools.loadScene` loads the next one instead).
     if (this.onScene(sceneId, this.scenes) !== "continue") {
       this.table.end(`the run stops before ${sceneId}`);
@@ -679,7 +686,8 @@ export class TableLoop {
     this.openLater = undefined;
     const passed = [...(held?.passed ?? []), ...this.passedSince];
     this.passedSince = [];
-    if (this.campaign && roadCardAhead(await this.dmWorld())) {
+    // A road card's fight still running holds it too: the arrival is told once the fight is over.
+    if (this.campaign && (cardInBatch || this.table.inCombat || roadCardAhead(await this.dmWorld()))) {
       this.openLater = { sceneId, payNext, passed, first };
       this.table.log("system", `scene ${sceneId} opens after the road card met on the way`);
       return;
