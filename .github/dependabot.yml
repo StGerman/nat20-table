@@ -57,6 +57,7 @@ updates:
       # Tracing moves together (AGT-16): Langfuse pins the OpenTelemetry versions it works with.
       tracing:
         patterns: ["@langfuse/*", "@opentelemetry/*"]
+        update-types: [minor, patch]
       npm-minor-patch:
         update-types: [minor, patch]
 

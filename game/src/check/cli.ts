@@ -27,9 +27,8 @@ if (values["new-digest"]) rmSync(path.join(dir, NARRATION_DIGEST), { force: true
 // The judge's turns join the run's Langfuse session when tracing is on (AGT-16).
 const tracer = values.judge === "model" ? await tracerFromEnv({ sessionId: path.basename(path.resolve(dir)), tags: ["audit:narration"] }) : undefined;
 setTurnTracer(tracer);
-const check = await narrationCheck(values.pack ?? packOfRun(dir), dir, values.judge === "scripted" ? new ScriptedJudge() : modelJudgeFor(dir));
+const check = await narrationCheck(values.pack ?? packOfRun(dir), dir, values.judge === "scripted" ? new ScriptedJudge() : modelJudgeFor(dir)).finally(() => tracer?.flush());
 for (const line of check.lines) console.log(line);
-await tracer?.flush();
 const verdict = writeVerdict(dir);
 console.log(`Verdict: ${verdict.verdict}: ${verdict.why}`);
 process.exit(check.ok ? 0 : 1);

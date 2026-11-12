@@ -106,7 +106,8 @@ test("the keys come from the shell, else from .env, and only the three Langfuse 
     const file = path.join(dir, ".env");
     writeFileSync(file, "LANGFUSE_PUBLIC_KEY=pk-file\nLANGFUSE_SECRET_KEY=sk-file\nLANGFUSE_BASE_URL=https://us.cloud.langfuse.com\nANTHROPIC_API_KEY=never\n");
     assert.deepEqual(langfuseEnv({}, file), { LANGFUSE_PUBLIC_KEY: "pk-file", LANGFUSE_SECRET_KEY: "sk-file", LANGFUSE_BASE_URL: "https://us.cloud.langfuse.com" });
-    assert.equal(langfuseEnv({ LANGFUSE_PUBLIC_KEY: "pk-shell" }, file)?.LANGFUSE_PUBLIC_KEY, "pk-shell", "the shell wins");
+    assert.equal(langfuseEnv({ LANGFUSE_PUBLIC_KEY: "pk-shell" }, file), undefined, "the shell wins whole: never a shell key with the file's secret");
+    assert.equal(langfuseEnv({ LANGFUSE_PUBLIC_KEY: "pk", LANGFUSE_SECRET_KEY: "sk", LANGFUSE_BASE_URL: "u" }, file)?.LANGFUSE_PUBLIC_KEY, "pk");
     assert.equal(langfuseEnv({}, path.join(dir, "missing")), undefined, "no keys, no tracing");
     assert.equal(langfuseEnv({ LANGFUSE_PUBLIC_KEY: "pk", LANGFUSE_SECRET_KEY: "sk" }, path.join(dir, "missing")), undefined, "all three or none");
   } finally {

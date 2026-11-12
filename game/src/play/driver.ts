@@ -436,6 +436,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   }
   clearTimeout(deadline);
   caffeinate?.kill();
+  // The table's turns go out now, so a post-run stage that fails cannot lose them.
+  await tracer?.flush();
   process.off("SIGINT", interrupted);
   // What the run cost, once at its end (M10 U1): printed once the terminal is back.
   const usageLines = ["Usage:", ...usageBlock(usage.records).map((l) => `  ${l}`)].join("\n");
@@ -492,7 +494,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const narration = flags["no-audit"] ? undefined : await checking(CHECK_NARRATION, () => narrationCheck(flags.pack, runDir, flags.dm === "model" ? modelJudgeFor(runDir) : new ScriptedJudge()));
   ink?.check(CHECK_REPORT, "running");
   await breath();
-  // Every turn is traced by now, the judge's too; at most 10 s if Langfuse does not answer.
+  // The judge's turns; at most 10 s if Langfuse does not answer.
   await tracer?.flush();
 
   const report = [

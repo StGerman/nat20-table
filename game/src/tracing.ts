@@ -74,22 +74,33 @@ export interface TraceRun {
 const KEYS = ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL"] as const;
 
 /**
- * The three Langfuse variables, from the shell or else from `.env` in the repo root. Only these
- * three are taken from the file: nothing else in it reaches the process.
+ * The three Langfuse variables, all from the shell if any is set there, else all from `.env` in the
+ * repo root, so a key is never paired with another project's. Only these three are taken from the
+ * file: nothing else in it reaches the process.
  */
 export function langfuseEnv(env: NodeJS.ProcessEnv = process.env, file = path.join(REPO, ".env")): Record<(typeof KEYS)[number], string> | undefined {
-  const parsed = existsSync(file) ? parseEnv(readFileSync(file, "utf8")) : {};
-  const values = KEYS.map((key) => env[key] || parsed[key]);
+  const shell = KEYS.some((key) => env[key]);
+  const source = shell ? env : existsSync(file) ? parseEnv(readFileSync(file, "utf8")) : {};
+  const values = KEYS.map((key) => source[key]);
   if (values.some((v) => !v)) return undefined;
   return Object.fromEntries(KEYS.map((key, i) => [key, values[i]!])) as Record<(typeof KEYS)[number], string>;
 }
 
-/** A run command's tracer: Langfuse when the keys are there, otherwise none, and nothing is loaded. */
+/**
+ * A run command's tracer: Langfuse when the keys are there, otherwise none, and nothing is loaded.
+ * A tracer that cannot start (a package not installed) is none, with one line on stderr: a run
+ * never fails for its traces.
+ */
 export async function tracerFromEnv(run: TraceRun): Promise<TurnTracer | undefined> {
   const keys = langfuseEnv();
   if (!keys) return undefined;
-  const { LangfuseSpanProcessor } = await import("@langfuse/otel");
-  return langfuseTracer(run, new LangfuseSpanProcessor({ publicKey: keys.LANGFUSE_PUBLIC_KEY, secretKey: keys.LANGFUSE_SECRET_KEY, baseUrl: keys.LANGFUSE_BASE_URL }));
+  try {
+    const { LangfuseSpanProcessor } = await import("@langfuse/otel");
+    return await langfuseTracer(run, new LangfuseSpanProcessor({ publicKey: keys.LANGFUSE_PUBLIC_KEY, secretKey: keys.LANGFUSE_SECRET_KEY, baseUrl: keys.LANGFUSE_BASE_URL }));
+  } catch (error) {
+    console.error(`tracing: off, Langfuse did not start (${error instanceof Error ? error.message : String(error)})`);
+    return undefined;
+  }
 }
 
 /** The span processor the tracer hands its spans to: Langfuse's, or an in-memory one in tests. */
@@ -125,7 +136,7 @@ export async function langfuseTracer(run: TraceRun, processor: Processor): Promi
                 input: t.systemPrompt === undefined ? t.message : { system: t.systemPrompt, message: t.message },
                 output: t.final,
                 metadata: { seat: t.seat, session_turn: u.session_turn, outcome: u.outcome, effort: u.effort, ...(u.settled_early ? { settled_early: true, waited_ms: u.waited_ms } : {}) },
-                ...(u.outcome === "ok" || u.outcome === "drained" ? {} : { level: "WARNING" as const, statusMessage: u.outcome }),
+                ...(u.outcome === "ok" ? {} : { level: "WARNING" as const, statusMessage: u.outcome }),
               },
               { asType: "agent", startTime: at(t.started) },
             );
