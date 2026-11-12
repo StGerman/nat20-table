@@ -6,11 +6,12 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
 import { endScreen } from "../src/play/driver.ts";
-import { finaleRows, InkSeat } from "../src/ui/ink-seat.ts";
+import { finaleRows, InkSeat, wheelsIn } from "../src/ui/ink-seat.ts";
 import { actionRows, freshText, headerText, maxOffset, page, storyRows, storyWindow, type StoryRow } from "../src/ui/frame.ts";
 import type { Line } from "../src/ui/lines.ts";
 import { paletteFor } from "../src/ui/palette.ts";
 import { rowText, turnRows } from "../src/ui/panel.ts";
+import { until } from "./until.ts";
 
 class FakeStdout extends EventEmitter {
   readonly frames: string[] = [];
@@ -63,14 +64,6 @@ function startAt(seat: InkSeat, columns: number, rows: number): { stdin: FakeStd
     patchConsole: false,
   });
   return { stdin, stdout };
-}
-
-async function until(what: string, ready: () => boolean, ms = 3000): Promise<void> {
-  const end = Date.now() + ms;
-  while (!ready()) {
-    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
 }
 
 const numbered = (n: number): Array<Line & { id: number }> => Array.from({ length: n }, (_, i) => ({ id: i, tone: "dm", text: `line ${i}` }));
@@ -136,19 +129,52 @@ test("on a terminal, PgUp scrolls the story and holds it while lines arrive, and
   const { stdin, stdout } = startAt(seat, 80, 24);
   try {
     for (let i = 0; i < 40; i++) seat.show({ kind: "status", text: `beat ${i}` });
-    await until("the last beat", () => stdout.last.includes("— beat 39"));
+    await until("the last beat", () => stdout.last.includes("— beat 39"), () => stdout.last);
     stdin.press("\u001b[5~");
-    await until("scrolled up", () => !stdout.last.includes("— beat 39") && stdout.last.includes("↓ End to follow"));
+    await until("scrolled up", () => !stdout.last.includes("— beat 39") && stdout.last.includes("↓ End to follow"), () => stdout.last);
     const held = stdout.last.split("\n").filter((r) => r.startsWith("— beat"));
     seat.show({ kind: "status", text: "beat 40" });
     seat.show({ kind: "status", text: "beat 41" });
-    await until("the marker counts", () => stdout.last.includes("↓ 2 new · End to follow"));
+    await until("the marker counts", () => stdout.last.includes("↓ 2 new · End to follow"), () => stdout.last);
     assert.deepEqual(stdout.last.split("\n").filter((r) => r.startsWith("— beat")), held, "new lines don't move the text");
     stdin.press("\u001b[F");
-    await until("back at the foot", () => stdout.last.includes("— beat 41") && !stdout.last.includes("↓"));
+    await until("back at the foot", () => stdout.last.includes("— beat 41") && !stdout.last.includes("↓"), () => stdout.last);
   } finally {
     seat.stop();
   }
+});
+
+test("on a Mac keyboard and trackpad (AGT-94): Shift+↑ pages the story, the wheel scrolls three rows, a click is never typed, and the hint goes after the first scroll", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), title: "The Silent Mill" });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    void seat.ask({ kind: "explore" });
+    for (let i = 0; i < 40; i++) seat.show({ kind: "status", text: `beat ${i}` });
+    await until("the last beat and the hint", () => stdout.last.includes("— beat 39") && stdout.last.includes("Shift+↑/↓ or two fingers on the trackpad: scroll the story"), () => stdout.last);
+    const lastBeat = () => Math.max(...stdout.last.split("\n").flatMap((r) => (/^— beat (\d+)$/.exec(r) ? [Number(/^— beat (\d+)$/.exec(r)![1])] : [])));
+    stdin.press("\u001b[<64;10;5M");
+    await until("the wheel up", () => stdout.last.includes("↓ End to follow"), () => stdout.last);
+    assert.ok(!stdout.last.includes("two fingers on the trackpad"), "the hint goes once the reader has scrolled");
+    const afterWheel = lastBeat();
+    stdin.press("\u001b[<65;10;5M");
+    await until("the wheel down to the foot", () => stdout.last.includes("— beat 39") && !stdout.last.includes("↓"), () => stdout.last);
+    stdin.press("\u001b[1;2A");
+    await until("Shift+↑ paged up", () => stdout.last.includes("↓ End to follow") && lastBeat() < afterWheel, () => stdout.last);
+    // A click and its release are mouse reports too: nothing is typed, nothing scrolls.
+    stdin.press("\u001b[<0;10;5M");
+    stdin.press("\u001b[<0;10;5m");
+    stdin.press("\u001b[1;2B");
+    await until("Shift+↓ back at the foot", () => stdout.last.includes("— beat 39") && !stdout.last.includes("↓"), () => stdout.last);
+    assert.equal(seat.getView().draft, "", "no mouse report reached the input line");
+  } finally {
+    seat.stop();
+  }
+});
+
+test("the wheel's turns in what the terminal sent, in order; a click, a release or a move is none (AGT-94)", () => {
+  assert.deepEqual(wheelsIn("\u001b[<64;1;1M\u001b[<65;80;24M\u001b[<68;1;1M"), [-1, 1, -1]);
+  assert.deepEqual(wheelsIn("\u001b[<0;1;1M\u001b[<0;1;1m\u001b[<35;1;1M"), []);
+  assert.deepEqual(wheelsIn("x\u001b[5~"), []);
 });
 
 test("a scene start puts a divider in the story and its number in the header, and the run's own line goes into the story", async () => {
@@ -158,12 +184,12 @@ test("a scene start puts a divider in the story and its number in the header, an
   try {
     seat.note("Playing s1_village_green of The Silent Mill. Run folder runs/x/.");
     seat.scene(1, 6);
-    await until("the header", () => stdout.last.split("\n")[0].includes("The Silent Mill · Scene 1 of 6 · 0 min · /help"));
+    await until("the header", () => stdout.last.split("\n")[0].includes("The Silent Mill · Scene 1 of 6 · 0 min · /help"), () => stdout.last);
     assert.ok(stdout.last.includes("— Scene 1 of 6 —"), stdout.last);
     assert.ok(stdout.last.indexOf("Playing s1_village_green") < stdout.last.indexOf("— Scene 1 of 6 —"), stdout.last);
     now += 3 * 60_000;
     seat.scene(2, 6);
-    await until("the next scene", () => stdout.last.split("\n")[0].includes("Scene 2 of 6 · 3 min"));
+    await until("the next scene", () => stdout.last.split("\n")[0].includes("Scene 2 of 6 · 3 min"), () => stdout.last);
   } finally {
     seat.stop();
   }
@@ -175,7 +201,7 @@ test("on the road a place's scene puts its name in the divider and no scene coun
   const { stdout } = startAt(seat, 124, 40);
   try {
     seat.place("Wendford");
-    await until("the divider", () => stdout.last.includes("— Wendford —"));
+    await until("the divider", () => stdout.last.includes("— Wendford —"), () => stdout.last);
     assert.ok(!stdout.last.split("\n")[0].includes("Scene"), stdout.last.split("\n")[0]);
   } finally {
     seat.stop();
@@ -188,7 +214,7 @@ test("under 40 columns or 16 rows the frame is one line asking for a bigger wind
   try {
     seat.show({ kind: "narration", speaker: "dm", text: "The mill wheel turns." });
     const asked = seat.ask({ kind: "explore" });
-    await until("the small window", () => stdout.last.includes("Window too small"));
+    await until("the small window", () => stdout.last.includes("Window too small"), () => stdout.last);
     assert.ok(!stdout.last.includes("mill wheel"), stdout.last);
     stdin.press("look\r");
     assert.deepEqual(await asked, { kind: "text", text: "look" });
@@ -205,18 +231,18 @@ test("/sheet and the other commands' answers stand over the story: Esc closes, P
     void seat.ask({ kind: "explore" });
     const sheet = Array.from({ length: 40 }, (_, i) => `row ${i}`).join("\n");
     seat.show({ kind: "info", title: "Sheet", text: sheet });
-    await until("the overlay", () => stdout.last.includes("Sheet · Esc closes · PgUp/PgDn") && /^row 0$/m.test(stdout.last));
+    await until("the overlay", () => stdout.last.includes("Sheet · Esc closes · Shift+↑/↓") && /^row 0$/m.test(stdout.last), () => stdout.last);
     assert.ok(!stdout.last.includes("mill wheel"), "the overlay covers the story");
     assert.ok(!seat.getView().lines.some((l) => l.text.includes("row 0")), "and the story doesn't keep it");
     stdin.press("\u001b[6~");
-    await until("read on", () => !/^row 0$/m.test(stdout.last) && /^row 19$/m.test(stdout.last));
+    await until("read on", () => !/^row 0$/m.test(stdout.last) && /^row 19$/m.test(stdout.last), () => stdout.last);
     seat.show({ kind: "speech", speaker: "ilsa", text: "Look at the sluice." });
-    await until("the count", () => stdout.last.includes("↓ 1 new"));
+    await until("the count", () => stdout.last.includes("↓ 1 new"), () => stdout.last);
     // Typing still goes to the input row with the overlay open.
     stdin.press("x");
-    await until("the typed key", () => stdout.last.includes("> x"));
+    await until("the typed key", () => stdout.last.includes("> x"), () => stdout.last);
     stdin.press("\u001b");
-    await until("closed", () => stdout.last.includes("mill wheel") && stdout.last.includes("Look at the sluice."));
+    await until("closed", () => stdout.last.includes("mill wheel") && stdout.last.includes("Look at the sluice."), () => stdout.last);
     assert.equal(seat.getView().draft, "x", "Esc closed the overlay and left the line");
   } finally {
     seat.stop();
@@ -229,7 +255,7 @@ test("an overlay read to its foot and then given a bigger window fills it, inste
   try {
     void seat.ask({ kind: "explore" });
     seat.show({ kind: "info", title: "Sheet", text: Array.from({ length: 40 }, (_, i) => `row ${i}`).join("\n") });
-    await until("the overlay", () => /^row 0$/m.test(stdout.last));
+    await until("the overlay", () => /^row 0$/m.test(stdout.last), () => stdout.last);
     const shown = () => (stdout.last.match(/^row \d+$/gm) ?? []).length;
     const small = shown();
     for (let i = 0; i < 3 && !/^row 39$/m.test(stdout.last); i++) {
@@ -237,10 +263,10 @@ test("an overlay read to its foot and then given a bigger window fills it, inste
       stdin.press("\u001b[6~");
       await until("a page", () => stdout.frames.length > before);
     }
-    await until("the foot", () => /^row 39$/m.test(stdout.last));
+    await until("the foot", () => /^row 39$/m.test(stdout.last), () => stdout.last);
     stdout.rows = 40;
     stdout.emit("resize");
-    await until("the bigger window", () => shown() > small && /^row 39$/m.test(stdout.last));
+    await until("the bigger window", () => shown() > small && /^row 39$/m.test(stdout.last), () => stdout.last);
   } finally {
     seat.stop();
   }
@@ -256,14 +282,14 @@ test("a reaction, the DM's question, a refusal and the pause stand in the action
     await until("the reaction", () => zone().includes("Reaction: goblin_1 leaves your reach.") && zone().includes("1. Opportunity Attack"));
     seat.type("y\r");
     assert.deepEqual(await reacted, { kind: "reaction", take: true });
-    await until("the reaction gone", () => !stdout.last.includes("leaves your reach"));
+    await until("the reaction gone", () => !stdout.last.includes("leaves your reach"), () => stdout.last);
 
     seat.show({ kind: "question", text: "Who do you trust here?" });
     const answered = seat.ask({ kind: "answer" });
     await until("the question", () => zone().includes("DM asks you: Who do you trust here?"));
     seat.type("Wenna\r");
     assert.deepEqual(await answered, { kind: "text", text: "Wenna" });
-    await until("the question settled", () => seat.getView().question === undefined && stdout.last.split("\n").filter((r) => r.includes("DM asks you")).length === 1);
+    await until("the question settled", () => seat.getView().question === undefined && stdout.last.split("\n").filter((r) => r.includes("DM asks you")).length === 1, () => stdout.last);
     // It stays in the story, where it was asked.
     assert.ok(seat.getView().lines.some((l) => l.text === "DM asks you: Who do you trust here?"));
 
@@ -273,10 +299,10 @@ test("a reaction, the DM's question, a refusal and the pause stand in the action
     assert.ok(!seat.getView().lines.some((l) => l.text.includes("out of reach")), "the refusal is not in the story");
     seat.type("2\r");
     await again;
-    await until("the refusal gone", () => !stdout.last.includes("Not accepted"));
+    await until("the refusal gone", () => !stdout.last.includes("Not accepted"), () => stdout.last);
 
     void seat.ask({ kind: "paused" });
-    await until("the pause", () => zone().includes("Paused: the AI players wait. /pause to go on.") && stdout.last.split("\n")[0].includes("Paused"));
+    await until("the pause", () => zone().includes("Paused: the AI players wait. /pause to go on.") && stdout.last.split("\n")[0].includes("Paused"), () => stdout.last);
   } finally {
     seat.stop();
   }
@@ -287,7 +313,7 @@ test("/help lists the commands and the keys over the story", async () => {
   const { stdout } = startAt(seat, 124, 40);
   try {
     seat.type("/help\r");
-    await until("help", () => stdout.last.includes("Help · Esc closes") && stdout.last.includes("PgUp/PgDn  scroll the story, or this") && stdout.last.includes("/sheet  your character sheet"));
+    await until("help", () => stdout.last.includes("Help · Esc closes") && stdout.last.includes("Shift+↑/↓  scroll the story, or this; PgUp/PgDn too") && stdout.last.includes("hold Fn to select text") && stdout.last.includes("/sheet  your character sheet"), () => stdout.last);
   } finally {
     seat.stop();
   }
@@ -317,14 +343,14 @@ test("at the end the table stays with the checks ticking in the action zone, and
     assert.equal(seat.getView().draft, "", "the half-typed line goes");
     assert.deepEqual(await open, { kind: "command", name: "quit" }, "a prompt still open is let go");
     seat.check("Audit", "running");
-    await until("the end screen", () => stdout.last.includes("The run is over: the party reached the end") && stdout.last.includes("… Audit") && stdout.last.includes("Any key leaves"));
+    await until("the end screen", () => stdout.last.includes("The run is over: the party reached the end") && stdout.last.includes("… Audit") && stdout.last.includes("Any key leaves"), () => stdout.last);
     assert.ok(stdout.last.includes("The mill falls quiet."), "the DM's last lines stay in the story");
     assert.ok(!stdout.last.includes("Longsword attack"), "the options go");
     // Said once: after the loop's own end line, the zone doesn't repeat it.
     seat.show({ kind: "end", text: "the party reached the end" });
-    await until("one end line", () => stdout.last.split("The run is over: the party reached the end").length === 2);
+    await until("one end line", () => stdout.last.split("The run is over: the party reached the end").length === 2, () => stdout.last);
     seat.check("Audit", "done");
-    await until("the tick", () => stdout.last.includes("✓ Audit"));
+    await until("the tick", () => stdout.last.includes("✓ Audit"), () => stdout.last);
     let left = false;
     void seat.left.then(() => (left = true));
     stdin.press("q");
@@ -343,12 +369,12 @@ test("on a terminal, ↓ lights an option and Enter plays it, and Esc on an empt
     const turn = seat.ask({ kind: "combat_turn" });
     stdin.press("\u001b[B");
     stdin.press("\u001b[B");
-    await until("the lit option", () => stdout.last.includes("Enter plays 2. Longsword attack, another target…"));
+    await until("the lit option", () => stdout.last.includes("Enter plays 2. Longsword attack, another target…"), () => stdout.last);
     stdin.press("\r");
     assert.deepEqual(await turn, { kind: "option", number: 2 });
     seat.show({ kind: "options", title: "Longsword attack", lines: ["1. goblin_4", "2. wolf_1"], choices: [] });
     const pick = seat.ask({ kind: "pick" });
-    await until("the pick", () => stdout.last.includes("Esc to go back"));
+    await until("the pick", () => stdout.last.includes("Esc to go back"), () => stdout.last);
     stdin.press("\u001b");
     assert.deepEqual(await pick, { kind: "back" });
   } finally {
