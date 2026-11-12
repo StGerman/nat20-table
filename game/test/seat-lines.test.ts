@@ -3,7 +3,7 @@
 // letters, and the dictionary names every option the fixtures offer.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import type { Event } from "@nat20-table/engine-client";
 import { REPO } from "../src/engine.ts";
@@ -94,7 +94,7 @@ function texts(e: Record<string, unknown>): string[] {
   return out.flatMap((t) => t.split("\n"));
 }
 
-test("a Russian seat on the road to Wend reads Russian, except card and goods words until MAP-19", async () => {
+test("a Russian seat on the road to Wend reads Russian, cards and goods included", async () => {
   const pack = path.join(REPO, "scenarios/fair_in_wend");
   const party = ["torva", "maren", "ilsa"];
   const seat = new ScriptedSeat("bren", [], blade());
@@ -105,22 +105,8 @@ test("a Russian seat on the road to Wend reads Russian, except card and goods wo
   } finally {
     t.close();
   }
-  // MAP-19 adds `text_ru` to cards and choices and `name_ru` to goods; until then their English
-  // words are the only Latin a Russian seat may show.
-  const english = new Set<string>();
-  const words = (dir: string) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => path.join(dir, f)) : []);
-  for (const w of readdirSync(path.join(REPO, "worlds"))) {
-    const goods = path.join(REPO, "worlds", w, "goods.json");
-    if (existsSync(goods)) for (const m of readFileSync(goods, "utf8").matchAll(/"(?:id|name)":\s*"([^"]+)"/g)) english.add(m[1]!.toLowerCase());
-    for (const f of [...words(path.join(REPO, "worlds", w, "deck")), ...words(path.join(pack, "deck"))]) {
-      const deck = JSON.parse(readFileSync(f, "utf8")) as { cards: Array<{ text: string; choices: Array<{ text: string }> }> };
-      for (const card of deck.cards) for (const t of [card.text, ...card.choices.map((c) => c.text)]) english.add(t.replace(/\.$/, "").toLowerCase());
-    }
-  }
-  const offending = seat.shown
-    .flatMap((e) => texts(e as unknown as Record<string, unknown>))
-    .filter(latin)
-    .filter((line) => ![...english].some((g) => line.toLowerCase().includes(g)));
+  // Cards, choices and goods read in Russian too (MAP-19): no Latin word at all.
+  const offending = seat.shown.flatMap((e) => texts(e as unknown as Record<string, unknown>)).filter(latin);
   assert.deepEqual(offending, []);
   assert.ok(seat.shown.length > 20);
 });

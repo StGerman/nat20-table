@@ -205,7 +205,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     const entries = partyRoster(flags.pack);
     const ask = saved && partyChoice !== "new" ? saved : undefined;
     const picked = await pickOnScreen(entries, party.human, {
-      title: pack.adventure.title,
+      title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title,
       ...(ask
         ? {
             saved: {
@@ -233,7 +233,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const seatNames = new SeatNames(language, party.seatRu);
   const ink =
     flags.seat === "ink" && party.human
-      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: pack.adventure.title, language, names: seatNames })
+      ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title, language, names: seatNames })
       : undefined;
   // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame. The
   // seat owns the alternate screen (AGT-69, decision 0054): the terminal comes back as it was when
@@ -352,8 +352,10 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     }
     // A seat shows the scene's number in its header, or on the road the place's name; the terminal prints progress only when nobody plays in it.
     if (ink) {
-      if (p.kind === "scene_start" && campaign) ink.place(pack.adventure.scenes.find((s) => s.id === p.scene)?.title ?? p.scene);
-      else if (p.kind === "scene_start") ink.scene(pack.adventure.scenes.findIndex((s) => s.id === p.scene) + 1, pack.adventure.scenes.length);
+      if (p.kind === "scene_start" && campaign) {
+        const scene = pack.adventure.scenes.find((s) => s.id === p.scene);
+        ink.place((language === "ru" ? scene?.title_ru : undefined) ?? scene?.title ?? p.scene);
+      } else if (p.kind === "scene_start") ink.scene(pack.adventure.scenes.findIndex((s) => s.id === p.scene) + 1, pack.adventure.scenes.length);
       return;
     }
     const runLines = transcript.records.filter((r) => r.channel === "run");

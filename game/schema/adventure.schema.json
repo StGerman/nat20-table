@@ -25,6 +25,11 @@
       "type": "string",
       "minLength": 1
     },
+    "title_ru": {
+      "description": "The title a Russian run's seat shows (MAP-19).",
+      "type": "string",
+      "minLength": 1
+    },
     "licence": {
       "type": "string",
       "minLength": 1,
@@ -340,6 +345,11 @@
             "description": "The engine scene id: `scenes/<id>.json` in the pack."
           },
           "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title_ru": {
+            "description": "The title a Russian run's seat shows (MAP-19).",
             "type": "string",
             "minLength": 1
           },

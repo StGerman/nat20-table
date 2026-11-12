@@ -7,11 +7,13 @@
             "target": "caravan",
             "once": true,
             "text": "At the little bridge over the Millbeck a man in a torn sheepskin coat and a borrowed helmet holds out his cap, a notched tally stick in his other hand: the reeve's toll, he says, two silver a head. His brother leans on a cudgel by a willow hut, beside a cold fire and a heap of gnawed sheep bones.",
+            "text_ru": "У мостика через Миллбек человек в рваном тулупе и чужом шлеме протягивает шапку, в другой руке у него бирка с зарубками. Пошлина старосты, говорит он, по два серебряных с головы. Его брат опирается на дубину у шалаша из ивняка, рядом холодное кострище и куча обглоданных овечьих костей.",
             "owner_pick": "pay",
             "choices": [
                 {
                     "id": "pay",
                     "text": "Pay him and cross.",
+                    "text_ru": "Заплатить ему и перейти.",
                     "effects": [
                         {
                             "do": "pay",
@@ -25,6 +27,7 @@
                 {
                     "id": "argue",
                     "text": "Tell him the reeve charges no such toll.",
+                    "text_ru": "Сказать ему, что староста такой пошлины не берёт.",
                     "unless": "knew_of_the_toll_men",
                     "keeps": [
                         "mercy_to_yielded"
@@ -64,6 +67,7 @@
                 {
                     "id": "we_know",
                     "text": "Tell them the reeve sent nobody, and that you know why they are here.",
+                    "text_ru": "Сказать им, что староста никого не посылал и что вы знаете, зачем они здесь.",
                     "if": "knew_of_the_toll_men",
                     "effects": [
                         {"do": "remember", "deed": "toll_men_spared"},
@@ -74,6 +78,7 @@
                 {
                     "id": "ford",
                     "text": "Go upstream and ford the beck.",
+                    "text_ru": "Подняться выше по течению и перейти ручей вброд.",
                     "unless": "scouted",
                     "effects": [
                         {"do": "delay", "minutes": 90},
@@ -94,6 +99,7 @@
                 {
                     "id": "feed",
                     "text": "Offer them food for the road instead of a toll.",
+                    "text_ru": "Предложить им еды в дорогу вместо пошлины.",
                     "if": "scouted",
                     "keeps": [
                         "bread_shared"
@@ -117,11 +123,13 @@
             "once": "contract",
             "owner_pick": "pay",
             "text": "At the Millbeck bridge a painted board hangs on a new post, with a wax seal at the bottom. A man in a clean coat sits under it with a ledger. The toll belongs to a Saltmouth company now, he says: the same two silver a head, written down this time.",
+            "text_ru": "У моста через Миллбек на новом столбе висит крашеная доска с восковой печатью внизу. Под ней сидит человек в чистом сюртуке с учётной книгой. Пошлина теперь принадлежит солтмутскому товариществу, говорит он: те же два серебряных с головы, только теперь под запись.",
             "note": "Before the choices, say in one plain sentence what happened here last time: who held the bridge and what the Blades did about it. Something learned goes out of date: the brothers' false toll is now a true one, on paper, and the paper is Rufus's company's. The clerk is not a villain; he is paid by the day, like the Blades. If the brothers were spared, he has never heard of them. Bren respects a seal; Ilsa asks who gave the company the bridge.",
             "choices": [
                 {
                     "id": "pay",
                     "text": "Pay the company's toll.",
+                    "text_ru": "Заплатить пошлину товарищества.",
                     "keeps": [
                         "paper_is_law"
                     ],
@@ -138,6 +146,7 @@
                     "id": "read",
                     "asked": true,
                     "text": "Ask to read the paper.",
+                    "text_ru": "Попросить почитать бумагу.",
                     "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
                         {
                             "do": "check",
@@ -161,6 +170,7 @@
                 {
                     "id": "ask_brothers",
                     "text": "Ask him what became of the two brothers.",
+                    "text_ru": "Спросить его, что стало с двумя братьями.",
                     "if": "toll_men_spared",
                     "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
                         {"do": "remember", "deed": "asked_after_the_brothers"}
@@ -169,6 +179,7 @@
                 {
                     "id": "ford",
                     "text": "Go upstream and ford the beck.",
+                    "text_ru": "Подняться выше по течению и перейти ручей вброд.",
                     "unless": "toll_men_spared",
                     "breaks": [
                         "paper_is_law"

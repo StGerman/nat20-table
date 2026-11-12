@@ -6,10 +6,12 @@
             "zone": "slopes",
             "target": "blades",
             "text": "A flock of black-faced sheep fills the track from wall to wall, and their shepherd is nowhere in sight.",
+            "text_ru": "Отара черномордых овец заполнила тропу от ограды до ограды, а пастуха нигде не видно.",
             "choices": [
                 {
                     "id": "herd",
                     "text": "Herd them through the gap in the wall.",
+                    "text_ru": "Прогнать их через пролом в ограде.",
                     "effects": [
                         {
                             "do": "check",
@@ -30,6 +32,7 @@
                 {
                     "id": "wait",
                     "text": "Sit on the wall and wait for them to move.",
+                    "text_ru": "Сесть на ограду и ждать, пока уйдут.",
                     "effects": [
                         {"do": "delay", "minutes": 45}
                     ]
@@ -42,11 +45,13 @@
             "zone": "slopes",
             "target": "caravan",
             "text": "Part of the track has slid down the hillside in the night. There is room for the wagon, just, if the horses keep their heads.",
+            "text_ru": "За ночь кусок тропы сполз по склону. Фургон пройдёт, впритык, если лошади не испугаются.",
             "owner_pick": "lead",
             "choices": [
                 {
                     "id": "dig",
                     "text": "Dig the track wider first.",
+                    "text_ru": "Сначала окопать склон и расширить тропу.",
                     "effects": [
                         {
                             "do": "check",
@@ -66,6 +71,7 @@
                 {
                     "id": "lead",
                     "text": "Lead the horses across by the bridle.",
+                    "text_ru": "Перевести лошадей под уздцы.",
                     "effects": [
                         {
                             "do": "check",
@@ -90,10 +96,12 @@
             "zone": "slopes",
             "target": "blades",
             "text": "Two goblins sit on the ridge above the track and watch the wagon. They do not run.",
+            "text_ru": "Двое гоблинов сидят на гребне над тропой и смотрят на фургон. Они не убегают.",
             "choices": [
                 {
                     "id": "chase",
                     "text": "Go up and drive them off.",
+                    "text_ru": "Подняться и прогнать их.",
                     "effects": [
                         {
                             "do": "fight",
@@ -110,6 +118,7 @@
                 {
                     "id": "ignore",
                     "text": "Keep moving and keep an eye on them.",
+                    "text_ru": "Идти дальше и не спускать с них глаз.",
                     "effects": [
                         {"do": "add_card", "card": "goblin_ambush"}
                     ]
@@ -124,10 +133,12 @@
             "chained": true,
             "once": true,
             "text": "The goblins from the ridge are back, and there are more of them now, spread across the track ahead.",
+            "text_ru": "Гоблины с гребня вернулись, и теперь их больше. Они растянулись поперёк тропы впереди.",
             "choices": [
                 {
                     "id": "fight",
                     "text": "Close ranks around the wagon and fight.",
+                    "text_ru": "Сомкнуться вокруг фургона и драться.",
                     "effects": [
                         {
                             "do": "fight",
@@ -145,6 +156,7 @@
                 {
                     "id": "throw_food",
                     "text": "Throw them a sack of food and push on.",
+                    "text_ru": "Бросить им мешок еды и идти дальше.",
                     "effects": [
                         {"do": "cargo", "good": "rations", "change": -4}
                     ],
@@ -160,10 +172,12 @@
             "zone": "slopes",
             "target": "blades",
             "text": "A peddler pushing a handcart falls in beside the escort, his hands shaking on the shafts. He has news from up and down the road, he says, and he has not eaten since yesterday.",
+            "text_ru": "Коробейник с ручной тележкой пристраивается рядом с обозом, руки у него трясутся на ручках тележки. Он знает новости со всей дороги, говорит он, и со вчерашнего дня ничего не ел.",
             "choices": [
                 {
                     "id": "share",
                     "text": "Share your food and listen.",
+                    "text_ru": "Поделиться едой и послушать.",
                     "keeps": [
                         "bread_shared"
                     ],
@@ -177,6 +191,7 @@
                 {
                     "id": "send_off",
                     "text": "Send him on his way.",
+                    "text_ru": "Отправить его своей дорогой.",
                     "breaks": [
                         "bread_shared"
                     ],
@@ -194,11 +209,13 @@
             "chained": true,
             "once": true,
             "text": "A mile down the track the roadfolk boy from last night is sitting on the wagon's tailboard as if he had been hired. He wants to see the fair, to get a sword, and to learn from the one Blade he has picked.",
+            "text_ru": "Милей дальше на задке фургона обнаруживается мальчишка корринов, тот самый, со вчерашнего вечера, будто его тоже наняли. Он хочет на ярмарку, хочет меч и хочет учиться у того наёмника, которого сам выбрал.",
             "note": "Tam Corrin, about ten, Bel's son. A consequence on the young. Bren speaks first: another mouth and no pay. Tam has already named the near horse, and the name is wrong. If he is told to go home and does not go, he follows the wagon at a distance and thinks nobody sees him. Never harm him on screen.",
             "choices": [
                 {
                     "id": "ride",
                     "text": "Let him ride.",
+                    "text_ru": "Пусть едет.",
                     "effects": [
                         {"do": "cargo", "good": "rations", "change": -1},
                         {"do": "remember", "deed": "tam_rode"},
@@ -208,6 +225,7 @@
                 {
                     "id": "walk_back",
                     "text": "Walk him back to his mother's cart.",
+                    "text_ru": "Отвести его назад, к повозке матери.",
                     "effects": [
                         {"do": "delay", "minutes": 60},
                         {"do": "remember", "deed": "walked_tam_home"}
@@ -216,6 +234,7 @@
                 {
                     "id": "send_home",
                     "text": "Tell him to go home.",
+                    "text_ru": "Велеть ему идти домой.",
                     "effects": [
                         {
                             "do": "check",
@@ -240,11 +259,13 @@
             "zone": "slopes",
             "target": "blades",
             "text": "An old woman the hill folk call the bog-wife sits on the milestone where the track skirts the moss, a basket of knotted charms on her knees and a crow on her shoulder. She asks each traveller for a crust, a coin or a true word, and pays in charms.",
+            "text_ru": "Там, где тропа огибает торфяник, на верстовом камне сидит старуха, которую в холмах зовут болотной бабкой. На коленях у неё корзина узелковых оберегов, на плече ворона. С каждого путника она просит корку, монету или правдивое слово и платит оберегами.",
             "note": "Mother Sedge, the bog-wife. She talks only to Gwyn the shepherd, so what the Blades do here reaches the Highsteads and nobody else. The charm is a knot of rowan and red thread. For a true word she asks the human's character first, and says one true thing back about the road. If they walk past, her crow follows the wagon for a mile. Maren gives bread; Ilsa thinks the charm is nonsense and says so politely.",
             "choices": [
                 {
                     "id": "bread",
                     "text": "Give her bread.",
+                    "text_ru": "Дать ей хлеба.",
                     "keeps": [
                         "bread_shared"
                     ],
@@ -256,6 +277,7 @@
                 {
                     "id": "true_word",
                     "text": "Tell her something true.",
+                    "text_ru": "Сказать ей что-то правдивое.",
                     "effects": [
                         {"do": "remember", "deed": "sedge_charm"},
                         {"do": "remember", "deed": "told_sedge_a_true_word"}
@@ -264,6 +286,7 @@
                 {
                     "id": "walk_past",
                     "text": "Walk past her.",
+                    "text_ru": "Пройти мимо.",
                     "breaks": [
                         "bread_shared"
                     ],
@@ -279,11 +302,13 @@
             "target": "caravan",
             "owner_pick": "rest",
             "text": "One of the horses comes up lame on the steep bit, holding a forefoot off the stones.",
+            "text_ru": "На крутом месте одна из лошадей захромала и держит переднее копыто над камнями.",
             "note": "Odda would rather lose an hour than a horse. If the Blades gave the bog-wife something, she is already coming up the track as if she knew, and she wants a favour back. If they walked past her, say first, in one plain sentence, that the old woman on the milestone is the only one in these hills who knows horses.",
             "choices": [
                 {
                     "id": "rest",
                     "text": "Rest it and go slow.",
+                    "text_ru": "Дать ей отдых и идти медленно.",
                     "effects": [
                         {"do": "delay", "minutes": 90}
                     ]
@@ -291,6 +316,7 @@
                 {
                     "id": "push",
                     "text": "Push on.",
+                    "text_ru": "Идти дальше как есть.",
                     "effects": [
                         {
                             "do": "check",
@@ -310,6 +336,7 @@
                 {
                     "id": "send_sedge",
                     "text": "Send back up the track for the bog-wife.",
+                    "text_ru": "Послать назад по тропе за болотной бабкой.",
                     "if": "sedge_charm",
                     "effects": [
                         {"do": "remember", "deed": "owes_sedge_a_favour"},
@@ -319,6 +346,7 @@
                 {
                     "id": "go_back",
                     "text": "Go back up the track and ask the bog-wife.",
+                    "text_ru": "Вернуться по тропе и спросить болотную бабку.",
                     "if": "snubbed_sedge",
                     "unless": "sedge_charm",
                     "effects": [
@@ -346,11 +374,13 @@
             "target": "caravan",
             "owner_pick": ["seat", "walk"],
             "text": "A woman in the grey of Embra's pilgrims walks barefoot down the track ahead, a round loaf wrapped under her arm. She bows to the wagon and says nothing at all.",
+            "text_ru": "Впереди по тропе босиком идёт женщина в сером, как ходят паломники Эмбры, под мышкой у неё завёрнутый круглый хлеб. Она кланяется фургону и не говорит ни слова.",
             "note": "Sister Agna, under a vow of silence until she reaches the sea at Saltmouth. Embra's pilgrims walk to the sea this year because the hill shrines have gone cold; she does not explain, and nobody on screen says why. Odda keeps Embra's shrines and wants her on the wagon. She will not ride a wagon that carries grave coins. Joke: she is the only person on this road who asks the Blades for nothing.",
             "choices": [
                 {
                     "id": "seat",
                     "text": "Offer her a seat on the wagon.",
+                    "text_ru": "Предложить ей место на фургоне.",
                     "unless": "robbed_cairn",
                     "effects": [
                         {"do": "remember", "deed": "gave_agna_a_seat"},
@@ -361,6 +391,7 @@
                 {
                     "id": "walk",
                     "text": "Walk beside her a while.",
+                    "text_ru": "Пройти рядом с ней немного.",
                     "effects": [
                         {"do": "delay", "minutes": 20},
                         {"do": "remember", "deed": "walked_with_agna"},
@@ -371,6 +402,7 @@
                 {
                     "id": "nod",
                     "text": "Pass her with a nod.",
+                    "text_ru": "Кивнуть и обойти её.",
                     "effects": [
                         {"do": "remember", "deed": "passed_agna_by"}
                     ]
@@ -382,10 +414,12 @@
             "zone": "barrows",
             "target": "blades",
             "text": "Pale lights move between the old barrows, and the horses will not look at them.",
+            "text_ru": "Между старыми курганами ходят бледные огни, и лошади отворачиваются от них.",
             "choices": [
                 {
                     "id": "look",
                     "text": "Go and see what they are.",
+                    "text_ru": "Пойти и посмотреть, что это.",
                     "effects": [
                         {
                             "do": "check",
@@ -406,6 +440,7 @@
                 {
                     "id": "pass_by",
                     "text": "Look straight ahead and keep walking.",
+                    "text_ru": "Смотреть прямо перед собой и идти дальше.",
                     "effects": [
                         {"do": "remember", "deed": "passed_the_barrow_lights"}
                     ]
@@ -413,6 +448,7 @@
                 {
                     "id": "charm",
                     "text": "Go and look, with the bog-wife's charm in your hand.",
+                    "text_ru": "Пойти и посмотреть, зажав в руке оберег болотной бабки.",
                     "if": "sedge_charm",
                     "effects": [
                         {"do": "remember", "deed": "saw_the_barrow_lights"}
@@ -426,11 +462,13 @@
             "zone": "barrows",
             "target": "caravan",
             "text": "Copper coins lie green on top of a wayside cairn, left for whoever is buried under it.",
+            "text_ru": "На придорожной груде камней лежат позеленевшие медяки, оставленные тому, кто под ней похоронен.",
             "owner_pick": "leave",
             "choices": [
                 {
                     "id": "take",
                     "text": "Take them. The dead don't spend.",
+                    "text_ru": "Забрать. Мёртвым тратить незачем.",
                     "effects": [
                         {
                             "do": "gain",
@@ -443,6 +481,7 @@
                 {
                     "id": "leave",
                     "text": "Leave them where they lie.",
+                    "text_ru": "Оставить, где лежат.",
                     "effects": [
                         {"do": "remember", "deed": "left_the_cairn_stones"}
                     ]

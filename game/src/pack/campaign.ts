@@ -121,6 +121,19 @@ export function shortRu(name: string): string {
   return words.length > 0 ? words.join(" ") : head;
 }
 
+/** The goods of a pack's world that have no Russian name (MAP-19); none for a pack without a world. */
+export function goodsWithoutRu(pack: string): string[] {
+  return worldGoods(pack).filter((g) => !g.name_ru?.trim()).map((g) => g.id);
+}
+
+/** The goods of a pack's world, as `goods.json` lists them; none without a world or a goods file. */
+function worldGoods(pack: string): Array<{ id: string; name_ru?: string }> {
+  const world = campaignWorld(pack);
+  const goods = world ? path.join(world.dir, "goods.json") : undefined;
+  if (!goods || !existsSync(goods)) return [];
+  return (JSON.parse(readFileSync(goods, "utf8")) as { goods: Array<{ id: string; name_ru?: string }> }).goods;
+}
+
 /**
  * What a Russian seat calls the world's things (AGT-98): every place on the map, each good
  * (`good:<id>`) and each place NPC (`npc:<id>`). The seat names only what an event it may see
@@ -131,10 +144,7 @@ export function worldSeatNames(pack: string): Map<string, string> {
   const world = campaignWorld(pack);
   if (!world) return names;
   for (const p of (JSON.parse(readFileSync(path.join(world.dir, "map.json"), "utf8")) as MapFile).places) if (p.name_ru) names.set(p.id, p.name_ru);
-  const goods = path.join(world.dir, "goods.json");
-  if (existsSync(goods)) {
-    for (const g of (JSON.parse(readFileSync(goods, "utf8")) as { goods: Array<{ id: string; name_ru?: string }> }).goods) if (g.name_ru) names.set(`good:${g.id}`, g.name_ru);
-  }
+  for (const g of worldGoods(pack)) if (g.name_ru) names.set(`good:${g.id}`, g.name_ru);
   const npcs = path.join(world.dir, "npcs.json");
   if (existsSync(npcs)) {
     for (const n of (JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Array<{ id: string; name_ru?: string }> }).npcs) if (n.name_ru) {
