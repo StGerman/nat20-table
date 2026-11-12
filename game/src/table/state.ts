@@ -355,7 +355,8 @@ export class TableState {
     await this.flush();
     this.transcript.add({ speaker: "dm", channel: to ? `to:${to}` : "table", kind: "narration", text, ...(this.dmWake ? { wake: this.dmWake } : {}) });
     this.narratedTo = this.dmShownTo;
-    this.wakeNarrated = true;
+    // A narration the human's seat shows counts for the wake's record (AGT-97).
+    if (!to || to === this.human) this.wakeNarrated = true;
     if (this.inCombat) this.narrations = [];
     else if (!to) this.narrations.push(text);
     for (const player of this.players) {

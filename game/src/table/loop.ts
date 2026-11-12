@@ -854,7 +854,8 @@ export class TableLoop {
     // prompt. A failed or timed-out wake, or one that picks nothing, leaves the first card rolled
     // to the engine's pick, which the run report counts.
     const offered = world?.offered ?? [];
-    const pickWake = offered.length > 0;
+    // A card is opened by its pick wake, else by a card wake; after a failed wake it shows alone (0041).
+    let frame = offered.length === 0;
     if (offered.length > 0 && !this.table.ended) {
       const deeds = world?.deeds ?? [];
       await this.wakeDm(
@@ -865,6 +866,7 @@ export class TableLoop {
         deeds.length > 0 ? `Deeds the world remembers: ${deeds.map((d) => d.deed).join(", ")}.` : "The world remembers no deeds yet.",
         "Call pick_card once, with the card's id and one line of why. Then open the card with narrate, in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.",
       );
+      frame = !this.table.wakeNarrated && !this.dmWakeFailed;
       world = await this.dmWorld();
       const first = world?.offered?.[0];
       if (first && !this.table.ended) {
@@ -891,8 +893,8 @@ export class TableLoop {
     if (asked !== undefined && asked === this.table.engine.logHead) throw new Error(`the road card ${card.id} won't settle: still waiting for ${card.waiting_for.join(", ")}`);
     // A card that came with no pick is opened by a `card` wake before the seats see it (AGT-100);
     // a picked card was opened by its pick wake, or shows alone after that wake's fallback.
-    if (!pickWake && this.framed !== card.id && !this.table.ended) {
-      await this.wakeDm(
+    if (frame && this.framed !== card.id && !this.table.ended) {
+      await this.wakeDmOnce(
         "card",
         undefined,
         "A road card is on the table.",
@@ -1023,8 +1025,7 @@ export class TableLoop {
         "card_words",
         undefined,
         `A player's words on the road card: ${handle} says or does: "${words}"`,
-        `The card: ${card.text}`,
-        `Its choices: ${card.choices.map((c) => `${c.id}: ${c.text}${c.keeps?.length ? ` (keeps ${c.keeps.join(", ")})` : ""}${c.breaks?.length ? ` (breaks ${c.breaks.join(", ")})` : ""}`).join(" | ")}`,
+        cardDrawnLine(card),
         movable
           ? "If the words are a move, call own_move_or_answer with the check they call for, two different choices for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits. Answer the attempt only, never how it turns out."
           : "These words can't go on the card as they are said: call own_move_or_answer with your narration only, one or two sentences, and the card waits.",
@@ -1343,7 +1344,7 @@ export class TableLoop {
         "map_combat",
         undefined,
         `It is ${human}'s turn, and the human playing ${human} said what ${human} does (above).`,
-        `Map it to ${human}'s options with legal_actions, submit, move and end_turn, then narrate only what the engine did, last: the wake ends on your narration. If it can't be done, or a move is refused, say so in narration.`,
+        `Map it to ${human}'s options with legal_actions, submit, move and end_turn, then narrate only what the engine did. If it can't be done, or a move is refused, say so in narration.`,
         `${human}'s options:`,
         this.lastOptions ? formatOptions(this.lastOptions) : "(call legal_actions)",
       );
@@ -1543,7 +1544,7 @@ export class TableLoop {
           "surrender_words",
           undefined,
           `You offered ${human} the surrender of ${handles.join(", ")}, and the human playing ${human} answered in words (above).`,
-          `If they accept it, call end_combat with surrender before you narrate. Otherwise answer in fiction with narrate: the offer stays open until ${human} accepts it or fights on. Narrate last: the wake ends on your narration.`,
+          `If they accept it, call end_combat with surrender. Otherwise answer in fiction with narrate: the offer stays open until ${human} accepts it or fights on.`,
         );
       } finally {
         if (this.table.surrender) this.table.surrender.words = false;
@@ -2376,7 +2377,6 @@ export class TableLoop {
     this.table.resetRetries("dm");
     this.dmTools.startWake(wake);
     this.dmWakeFailed = false;
-    const outer = { wake: this.table.dmWake, narrated: this.table.wakeNarrated };
     this.table.dmWake = wake;
     this.table.wakeNarrated = false;
     const heard = this.table.drainDmInbox();
@@ -2413,13 +2413,13 @@ export class TableLoop {
       // A wake cut after its narration was shown was not skipped (AGT-97): the run report says so.
       const cut = error instanceof TurnTimeout && narrated;
       const cause = this.table.exhausted("dm") ? "retries" : cut ? "cut_after_narration" : error instanceof TurnTimeout ? "timeout" : "error";
-      this.table.log("fallback", cut ? `the DM's ${wake} ran out of time after its narration` : `the DM's ${wake} is skipped; the engine lines stand alone`, "dm", { cause, wake, narrated });
+      // A pick that landed is not skipped: its card shows without an opening (AGT-100).
+      const what = cut ? `the DM's ${wake} ran out of time after its narration` : wake === "pick" && this.dmTools.picked ? "the DM picked a road card but ran out of time before opening it; the card shows alone" : `the DM's ${wake} is skipped; the engine lines stand alone`;
+      this.table.log("fallback", what, "dm", { cause, wake, narrated });
       return undefined;
     } finally {
       done();
-      // A wake run inside another (a surrender or road answer) hands the outer wake back its record.
-      this.table.dmWake = outer.wake;
-      this.table.wakeNarrated = outer.narrated;
+      this.table.dmWake = undefined;
     }
   }
 

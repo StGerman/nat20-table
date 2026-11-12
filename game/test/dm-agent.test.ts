@@ -479,7 +479,9 @@ test("the DM speaks to the human's character as you and names everyone else; a t
 });
 
 test("the wakes that narrate last end on their narration, never on the cap (AGT-97)", () => {
-  for (const wake of ["narrate", "combat_over", "road", "pick", "card", "map_combat", "surrender_words"] as const) assert.deepEqual(DM_SETTLE_ON[wake], ["narrate"], wake);
+  for (const wake of ["narrate", "combat_over", "road", "pick", "card"] as const) assert.deepEqual(DM_SETTLE_ON[wake], ["narrate"], wake);
+  // These may still act after a narration (a move after the attack it narrated): they run to their end.
+  for (const wake of ["map_combat", "surrender_words"] as const) assert.equal(DM_SETTLE_ON[wake], undefined, wake);
   assert.deepEqual(DM_SETTLE_ON.card_words, ["own_move_or_answer"]);
   // The long wakes keep calling tools after they narrate: they run to their own cap.
   for (const wake of ["scene_open", "table_turn", "summary", "suggest"] as const) assert.equal(DM_SETTLE_ON[wake], undefined, wake);

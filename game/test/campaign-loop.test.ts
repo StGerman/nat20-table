@@ -500,16 +500,18 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     // The card goes to the seats after the narration that opens it (AGT-100): the pick wake's
     // narration, written after the pick, which returned the card as drawn.
     assert.match(early, /pick the card first/);
-    assert.match(drawn, /is on the table\. The card: .+ Its choices: .+ Now open it with narrate\.$/);
+    assert.match(drawn, /is on the table\. The card: ".+"\nIts choices: .+ Now open it with narrate\.$/);
     const records = t.table.transcript.records;
     const opened = records.findIndex((r) => r.kind === "narration" && r.wake === "pick" && r.text === "Someone waits by the road.");
     const goes = records.findIndex((r, i) => i > opened && r.kind === "system" && /^card [a-z0-9_]+ goes to the seats$/.test(r.text));
     assert.ok(opened >= 0 && goes > opened, "the picked card goes to the seats after its opening");
     assert.ok(!records.some((r) => r.text === "The road bends."), "the early narration was refused");
     // A card that comes with no pick has its own wake, opened once (AGT-100).
-    for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: /);
+    for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: "/);
     const framed = records.filter((r) => r.kind === "narration" && r.wake === "card").length;
     assert.equal(framed, dm.briefings.filter((b) => b.wake === "card").length);
+    // A pick wake that picked nothing leaves the engine's pick, which a card wake then opens.
+    assert.ok(framed >= wakes.length - 1, `${framed} card wakes for ${wakes.length - 1} engine picks`);
     // Every card on the table has its DM-only record (AGT-91), and the DM suggests cards once the journey is over.
     const shown = log.result.events.filter((e) => e.kind === "card_shown");
     assert.equal(shown.length, log.result.events.filter((e) => e.kind === "card_drawn").length);

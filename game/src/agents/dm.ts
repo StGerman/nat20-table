@@ -43,8 +43,6 @@ export const DM_SETTLE_ON: Partial<Record<DmWake, readonly string[]>> = {
   road: ["narrate"],
   pick: ["narrate"],
   card: ["narrate"],
-  map_combat: ["narrate"],
-  surrender_words: ["narrate"],
   card_words: ["own_move_or_answer"],
 };
 
@@ -260,7 +258,7 @@ export const DM_ROAD_PROMPT = [
   "- A card's choice may say which customs it keeps or breaks (\"keeps word_kept\"). When that choice is taken, show how the people who saw or heard it take it, in a look, a word or a silence, never a judgement from you. Never say the custom's id at the table.",
   "- \"Pick a road card\": a draw offered two or three cards. Pick with pick_card, by this rule, in order: the card that continues what the party did (it reads a deed, or follows from one); failing that, the card that gives the human's character the clearest problem to act on; between two that do equally well, the one that can come to a fight. Never pick a card to spare the party a fight. Say why in one line, then narrate the card's opening: narrate before the pick is refused.",
   "- \"A road card is on the table\": a card came with no pick. Open it in two to four sentences, on what the people in it do and want. Do not retell the card's words, which the table shows next; do not decide it or tell how a choice turns out.",
-  "- Make every other call (propose_road, place_creature, pass_time) before you narrate; narrate last.",
+  "- Make every other call (propose_road, start_fight, place_creature, pass_time) before you narrate; narrate last.",
   "- The scout: a Hired Blade may walk ahead of the caravan. When a road card comes, the engine rolls the scout's look first (scout_looked). If they saw it, open the card on what the scout saw, ahead of the others, and let the scout speak first; if they missed it, the card meets the whole party at once. Never say the roll or the skill.",
   "- \"A player's words on the road card\": a player answered the card in their own words. If the words are a move, answer with own_move_or_answer giving the check the words call for, two different choices of the card for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits. When the words simply are one of the card's choices, say so in the scene and let the card wait for that choice: you never decide a card for a player. A failure never brings a choice that breaks a custom, or a deliberate act the words did not ask for; a success brings a fight only when the words asked for one. Your narration answers the attempt only, never how it turns out: the engine rolls, and the card's settling tells the rest.",
   "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as what shows.",
