@@ -8,7 +8,6 @@ As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z). Kept by Yan (decision
 |---|---|---|---|
 | 12 | Not a passenger: phase 1 MAP-15, MAP-17; phase 2 Own move, the readable table (AGT-97, AGT-98, AGT-94 with AGT-76, AGT-13 partial, MAP-14), ENG-21, ENG-40..42, a Plain or Fireside voice flag and one language at the seat (0067) (Stas 2026-11-08) | Vera (fallback) asks about no engine line in a DM narration sample; one own move decides a card in each run; no card before its narration; the Russian seat shows no English line; Stas plays only after the all-AI half on the same build has passed (0065); the voice comparison reported, not gated | open: scope accepted (table #336); phase 1 done (table #338); design accepted (table #339); rows on main (table #341); phase 2: 0 of 13 PRs merged, 0 open |
 | — | Dramaturg mechanism: the engine carries the story from one quest to the next. Its other half, the role, is done: Zoya, table #328 | no spec yet; input: the dramaturg design of 2026-11-07, carriers A (a scene's `remember`) and B (`if`/`unless` with a `problem` block), quests as `kind: errand`, fronts and clocks | after 12 (Stas 2026-11-07 19:34Z, "the dramaturg whole"; 0066 in table #336) |
-| — | Allies in fights: Gwyn's dog, the horses (MON-12, ENG-48) and Tam (MAP-23) in card fights under the engine's script, the judge's absent-creature check (AGT-106), the Merchant can die (ENG-49) if its story question is answered first (0070, 0071) | scope Proposed, `docs/scope/allies-in-fights-scope.md`: seeded card fights in CI count each death and its deed; one all-AI *Fair in Wend* run passes with AGT-106 on | slot pending Stas (scope §8 2; Yan recommends here); Stas 2026-11-12 20:44Z «оформи в milestone» |
 | — | Arachas plus glue | no spec yet | after the Dramaturg mechanism (same) |
 | — | The Silent Mill plus glue | no spec yet | after Arachas (same) |
 | 11 | Word on the road | — | done 2026-11-08: pair 3 on 2294ef6 PASS and PASS; table #299 to #325 merged 21:00Z; record 0066 in table #336 |
@@ -30,6 +29,7 @@ Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08).
 - The player as a merchant (maybe the shop that `docs/scope/living-world-scope.md` §4 and decision 0057 number M17)
 - Telegram
 - A smarter table
+- Allies in fights: Gwyn's dog, the horses (MON-12, ENG-48) and Tam (MAP-23) in card fights under the engine's script, the judge's absent-creature check (AGT-106), the Merchant (ENG-49) if its story question is answered first (0070, 0071). Scope Proposed, `docs/scope/allies-in-fights-scope.md` (table #365); Stas 2026-11-12 20:44Z «оформи в milestone». Joins the Order when Stas picks its slot (scope §8 2; Yan recommends after the Dramaturg mechanism, before Arachas).
 
 ## Waiting on Stas
 
