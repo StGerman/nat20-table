@@ -29,7 +29,7 @@ Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08).
 - The player as a merchant (maybe the shop that `docs/scope/living-world-scope.md` §4 and decision 0057 number M17)
 - Telegram
 - A smarter table
-- Allies in fights: Gwyn's dog, the horses (MON-12, ENG-48) and Tam (MAP-23) in card fights under the engine's script, the judge's absent-creature check (AGT-106), the Merchant (ENG-49) if its story question is answered first (0070, 0071). Scope Proposed, `docs/scope/allies-in-fights-scope.md` (table #365); Stas 2026-11-12 20:44Z «оформи в milestone». Joins the Order when Stas picks its slot (scope §8 2; Yan recommends after the Dramaturg mechanism, before Arachas).
+- Allies in fights: Gwyn's dog, the horses (MON-12, ENG-48) and Tam (MAP-23) in card fights under the engine's script, the judge's absent-creature check (AGT-106), the Merchant (ENG-49) if its story question is answered first (0070, 0071). Scope Proposed, `docs/scope/allies-in-fights-scope.md` (table #365); Stas 2026-11-12 20:44Z «оформи в milestone». The one entry here with a scope: it joins the Order when Stas picks its slot (scope §8 question 2).
 
 ## Waiting on Stas
 
