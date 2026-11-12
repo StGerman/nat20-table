@@ -383,7 +383,11 @@ export class InkSeat implements Seat {
 
   show(event: TableEvent): void {
     // Engine lines are drawn when they show: at once for the human's own, else when released.
+    // These show the held engine lines above them first: release them now, so the record keeps the screen's order.
+    if (event.kind === "options" || event.kind === "reaction" || event.kind === "question" || event.kind === "end") this.release();
+    // The loop's first answer to a typed command, whatever its kind, is the command's.
     const answers = this.commanded && (event.kind === "info" || event.kind === "options");
+    if (answers) this.commanded = false;
     if (event.kind !== "engine") this.drawn(answers || (event.kind === "info" && OVERLAYS.has(event.title)) ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
     else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));
     switch (event.kind) {
@@ -482,12 +486,13 @@ export class InkSeat implements Seat {
   }
 
   ask(prompt: HumanPrompt): Promise<PlayerIntent> {
-    // A command's answer comes before the loop asks again.
-    this.commanded = false;
     // Nothing waits for a narration while the human decides.
     this.release();
     const queued = this.queued.shift();
-    if (queued) return Promise.resolve(queued);
+    if (queued) {
+      this.commanded = queued.kind === "command";
+      return Promise.resolve(queued);
+    }
     if (this.interrupted) return Promise.resolve({ kind: "command", name: "quit" });
     // A fight's options belong to the human's own turn: any other prompt means it is over.
     const turnOver = this.view.options?.budget && prompt.kind !== "combat_turn" && prompt.kind !== "pick";
@@ -596,7 +601,6 @@ export class InkSeat implements Seat {
         return;
       case "intent": {
         this.add([{ tone: "prompt", text: `> ${draft.trim()}` }]);
-        if (typed.intent.kind === "command") this.commanded = true;
         const answer = this.answer;
         if (answer) {
           this.answer = undefined;
@@ -606,6 +610,7 @@ export class InkSeat implements Seat {
           // Out of combat a pick or words answer the options; in a fight they stay until the turn ends.
           const done = this.view.options && !this.view.options.budget && this.view.prompt?.kind !== "pick" && (typed.intent.kind === "option" || typed.intent.kind === "text");
           this.update({ prompt: undefined, highlight: undefined, ...(typed.intent.kind !== "command" ? { suggestions: undefined } : {}), ...(done ? { options: undefined } : {}) });
+          this.commanded = typed.intent.kind === "command";
           answer(typed.intent);
         } else {
           this.queued.push(typed.intent);

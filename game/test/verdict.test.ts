@@ -8,6 +8,8 @@ import { RUN_FORMAT, writeRunRecord, type RunRecord } from "../src/play/record.t
 import { AUDIT_JSON, cardsMet, computeVerdict, CONFIRMATIONS_JSON, NARRATION_CHECK, VERDICT_JSON, writeVerdict } from "../src/play/verdict.ts";
 import { SUGGESTED_CARDS, wordReport } from "../src/play/word.ts";
 import { exitReport, latinWords, SEAT_JSONL, seatReplay } from "../src/play/exit.ts";
+import { helpText } from "../src/ui/ink-seat.ts";
+import { UI_WORDS } from "../src/table/words.ts";
 import { readSuggested } from "../src/table/loop.ts";
 import { offeredLine } from "../src/view.ts";
 import type { TranscriptRecord } from "../src/table/types.ts";
@@ -347,15 +349,32 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
   writeFileSync(path.join(ru, SEAT_JSONL), [...seat, { at: "t", kind: "command", text: "Fn  держите (в iTerm2 — Option)" }].map((l) => JSON.stringify(l)).join("\n") + "\n");
   assert.match(row(ru, "m12-language").detail, /^1 English words in 1 lines: iTerm2;/);
   assert.deepEqual(latinWords([{ at: "t", kind: "engine", text: "r12 /sheet PgDn Ctrl Esc Fn Option" }]), []);
+  // The Russian /help, which the seat records, passes the scan.
+  assert.deepEqual(latinWords([{ at: "t", kind: "command", text: helpText(UI_WORDS.ru) }]).map((f) => f.word), []);
 
   // The report lists the own move with every seat's vote; the replay shows the card as a seat draws it.
-  const report = exitReport(good, run).join("\n");
+  const read = <T>(f: string) => readFileSync(path.join(good, f), "utf8").split("\n").filter((l) => l !== "").map((l) => JSON.parse(l) as T);
+  const report = exitReport(run, read("session-log.jsonl"), read("transcript.jsonl"), []).join("\n");
   assert.match(report, /1\. fallen_tree, maren: "I talk the carter into lending his ox"; persuasion DC 10; success brings clear, failure around; votes: maren own_move, torva own_move; decided on own_move \(majority\); r30, success; brought clear/);
   const replayed = folder(run, seated, withSeq([
     { kind: "card_drawn", visibility: { scope: "public" }, text: "A road card", card_text: "A tree lies across the road.", choices: [{ id: "clear", text: "Clear it." }, { id: "around", text: "Go around." }], target: { kind: "party" } },
     { kind: "card_resolved", visibility: { scope: "public" }, text: "The card is decided: clear.", choice: "clear", decided: "majority" },
   ]));
-  assert.deepEqual(seatReplay(replayed).filter((l) => l !== ""), ["A tree lies across the road.", "[card] A tree lies across the road.", "  1. Clear it.", "  2. Go around.", "  Something else: say it in your own words.", "The card is decided: Clear it."]);
+  assert.deepEqual(seatReplay(replayed).filter((l) => l !== ""), [
+    "DM: A tree lies across the road.",
+    "On the road:",
+    "  A tree lies across the road.",
+    "  The Blades decide together.",
+    "Choices:",
+    "  1. Clear it.",
+    "  2. Go around.",
+    "  Something else: say it in your own words.",
+    "  The card is decided: Clear it.",
+  ]);
+
+  // A roll own_move_ran cites that the log does not hold never counts.
+  const unlogged = folder(run, seated, withSeq(OWN_MOVE.filter((e) => e.kind !== "roll")));
+  assert.match(row(unlogged, "m12-own-move").detail, /r30 is not in the log as a check/);
 });
 
 test("the run report's Word on the road lists deeds, cards, pay-offs, draw-three counts, fights, scout looks and suggested cards (AGT-91)", () => {

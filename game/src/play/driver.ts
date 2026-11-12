@@ -31,13 +31,14 @@ import { UI_WORDS } from "../table/words.ts";
 import { spawn, type ChildProcess } from "node:child_process";
 import { appendFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import type { Event } from "@nat20-table/engine-client";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { ModelDm, type CraftMode } from "../agents/dm.ts";
 import type { Language } from "../agents/language.ts";
 import { ModelPlayer } from "../agents/player.ts";
 import { Suggester } from "../agents/suggest.ts";
 import { sessionOptions } from "../agents/sdk-session.ts";
-import { GameEngine, REPO } from "../engine.ts";
+import { GameEngine, REPO, SESSION_LOG } from "../engine.ts";
 import { readCampaign, seatCards } from "../pack/campaign.ts";
 import { readPack } from "../pack/read.ts";
 import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
@@ -55,7 +56,7 @@ import { ScriptedJudge } from "../check/judge.ts";
 import { modelJudgeFor, narrationCheck } from "../check/narration.ts";
 import { SUGGESTED_CARDS, wordReport } from "./word.ts";
 import { exitReport, SEAT_JSONL } from "./exit.ts";
-import { checkout, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
+import { checkout, readLines, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, suggestionLine, timingLines, type Casting, type PackParty } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
@@ -510,7 +511,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...(record.roster ? [`- ${rosterReport(record.roster)}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
     ...wordReport(runDir),
-    ...exitReport(runDir, record),
+    ...exitReport(record, readLines<Event>(path.join(runDir, SESSION_LOG)), transcript.records, usage.records),
     ...(narration ? ["", ...narration.lines] : []),
     "",
     ...timingLines(record),

@@ -8,13 +8,13 @@ import type { Event, Handle } from "@nat20-table/engine-client";
 import { SESSION_LOG } from "../engine.ts";
 import type { DmWake, TranscriptRecord } from "../table/types.ts";
 import { SeatNames, seatLine, type CardOnSeat } from "../table/seat-lines.ts";
-import { SEAT_WORDS } from "../table/words.ts";
+import { SEAT_WORDS, UI_WORDS } from "../table/words.ts";
 import { waitedMs, percentile, type UsageRecord } from "../usage.ts";
 import { readPack } from "../pack/read.ts";
-import { seatCards } from "../pack/campaign.ts";
-import { packOfRun, readRunRecord, type RunRecord } from "./record.ts";
+import { seatCards, type CardRu } from "../pack/campaign.ts";
+import { packOfRun, readLines, readRunRecord, type RunRecord } from "./record.ts";
 import { seatRuNames } from "./run.ts";
-import { readLines, type VerdictRow } from "./verdict.ts";
+import type { VerdictRow } from "./verdict.ts";
 
 /** What the seat drew, one line a thing, in order (AGT-103, AGT-13): `{at, kind, text}`. */
 export const SEAT_JSONL = "seat.jsonl";
@@ -34,8 +34,8 @@ const SETTLING_WAKES: readonly DmWake[] = ["road", "card", "pick", "card_words"]
 /** The wakes whose narration frames a card. */
 const FRAMING_WAKES: readonly DmWake[] = ["pick", "card"];
 
-/** Key names the keyboard takes, which a Russian seat keeps Latin (design §4, Stas 2026-11-11). */
-const KEY_NAMES = new Set(["Enter", "Esc", "PgUp", "PgDn", "Shift", "Ctrl", "Fn", "Option"]);
+/** Key names the keyboard takes, which a Russian seat keeps Latin (design §4, Stas 2026-11-11), with `Ctrl+<letter>` chords. */
+const KEY_NAMES = new Set(["Enter", "Esc", "Tab", "End", "Home", "PgUp", "PgDn", "Shift", "Ctrl", "Fn", "Option"]);
 
 /** One own move put on a card, won or lost (design §8). */
 export interface OwnMoveMet {
@@ -92,7 +92,7 @@ export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], p
       card = undefined;
     } else if (e.kind === "own_move_ran" && open && e.card === open.card) {
       open.ran = e.choice;
-      open.roll = e.roll ? { id: e.roll, outcome: rolls.get(e.roll) ?? "not in the log" } : null;
+      open.roll = e.roll ? { id: e.roll, outcome: rolls.get(e.roll) ?? "missing" } : null;
     } else if (e.kind === "deed_remembered" && open && e.deed === `own_move_${open.card}`) {
       open.deed = { contract: e.contract, by: e.by };
       open = undefined;
@@ -108,6 +108,7 @@ function counted(m: OwnMoveMet): string | undefined {
   if (m.ran === undefined) return "no own_move_ran";
   if (m.roll === null) return m.down && m.ran === m.failure ? undefined : "no roll, and the proposer was up";
   if (m.roll === undefined) return "no roll";
+  if (m.roll.outcome !== "success" && m.roll.outcome !== "failure") return `${m.roll.id} is not in the log as a check`;
   const named = m.roll.outcome === "success" ? m.success : m.failure;
   return m.ran === named ? undefined : `${m.roll.id} was a ${m.roll.outcome}, but ${m.ran} ran`;
 }
@@ -163,7 +164,7 @@ export function orderRow(log: Event[], transcript: TranscriptRecord[]): VerdictR
 export function latinWords(seat: SeatRecord[]): Array<{ word: string; line: string }> {
   const out: Array<{ word: string; line: string }> = [];
   for (const r of seat) {
-    const text = r.text.replace(/\/[a-z]+/g, " ").replace(/\br\d+\b/g, " ");
+    const text = r.text.replace(/\bCtrl\+[A-Z](\/[A-Z])*\b/g, " ").replace(/\/[a-z]+/g, " ").replace(/\br\d+\b/g, " ");
     for (const word of text.match(/[A-Za-z][A-Za-z0-9'-]*/g) ?? []) if (!KEY_NAMES.has(word)) out.push({ word, line: r.text });
   }
   return out;
@@ -214,11 +215,8 @@ export function lateCalls(usage: UsageRecord[]): Map<string, number> {
 const partyOf = (run: RunRecord): Handle[] => [...(run.seats.human ? [run.seats.human] : []), ...run.seats.ai];
 
 /** The report's Milestone 12 section: every own move, the words that found none, p95 against pair 3, the late calls, and the opening and first card. */
-export function exitReport(dir: string, run: RunRecord): string[] {
-  const log = readLines<Event>(path.join(dir, SESSION_LOG));
+export function exitReport(run: RunRecord, log: Event[], transcript: TranscriptRecord[], usage: UsageRecord[]): string[] {
   if (!log.some((e) => e.kind === "card_shown")) return [];
-  const transcript = readLines<TranscriptRecord>(path.join(dir, "transcript.jsonl"));
-  const usage = readLines<UsageRecord>(path.join(dir, "usage.jsonl"));
   const moves = ownMovesMet(log, transcript, partyOf(run));
   const out = ["", "## Not a passenger", "", `Own moves put on a card: ${moves.length}`];
   moves.forEach((m, i) => {
@@ -261,10 +259,11 @@ export function exitRows(dir: string, run: RunRecord, log: Event[], transcript: 
 
 /**
  * What a seat would have drawn in an all-AI run, for run 1's Vera read (design §8): the DM's
- * narration and the public events through the seat's own `seatLine`, in the run's language, with
- * each card as drawn after the narration that frames it, from the first scene's opening to the
- * first card decided by an own move (or the first card at all) and the narration of its outcome.
- * Nothing new goes into the run record.
+ * narration, the AI players' table talk and the public events through the seat's own `seatLine`,
+ * in the run's language, from the first scene's opening to the first card decided by an own move
+ * (or the first card at all) and the narration of its outcome. As on a seat that is not verbose,
+ * engine lines a narration covers go nowhere, and each card shows as the loop shows it ("On the
+ * road", then "Choices") after the narration that frames it. Nothing new goes into the run record.
  */
 export function seatReplay(dir: string): string[] {
   const log = readLines<Event>(path.join(dir, SESSION_LOG));
@@ -273,38 +272,59 @@ export function seatReplay(dir: string): string[] {
   const language = run.settings.lang?.value === "ru" ? "ru" : "en";
   const pack = packOfRun(dir);
   const names = language === "ru" ? new SeatNames("ru", seatRuNames(pack, readPack(pack).adventure)) : new SeatNames("en");
-  const ru = language === "ru" ? seatCards(pack) : new Map();
-  let shown: string | undefined;
+  const ru = language === "ru" ? seatCards(pack) : new Map<string, CardRu>();
+  const words = SEAT_WORDS[language];
+  const ui = UI_WORDS[language];
+  const party = partyOf(run);
   const own = log.find((e) => e.kind === "card_resolved" && e.choice === "own_move");
   const last = own ?? log.find((e) => e.kind === "card_resolved");
   const end = last?.seq ?? Number.POSITIVE_INFINITY;
   const out: string[] = [];
-  let card: CardOnSeat | undefined;
-  // The card panel shows after the narration that frames it (AGT-100), before the next line.
+  const said = (r: TranscriptRecord) => (r.speaker === "dm" ? `${ui.dm}: ${r.text}` : `${names.who(r.speaker)}: ${r.text}`);
+  // What the DM narrates and the AI players say aloud, in order.
+  const talk = transcript.filter((r) => !r.to && ((r.speaker === "dm" && r.kind === "narration") || (party.includes(r.speaker) && r.kind === "speech")));
+  let held: string[] = [];
   let panel: string[] = [];
+  let card: CardOnSeat | undefined;
+  let shown: string | undefined;
   let next = 0;
-  // Each narration goes before the events of the engine lines written after it.
-  const narrations = transcript.filter((r) => r.speaker === "dm" && r.kind === "narration" && !r.to);
+  const say = (until: (r: TranscriptRecord) => boolean) => {
+    while (next < talk.length && until(talk[next]!)) {
+      const r = talk[next++]!;
+      // A narration tells the lines held under it; they go nowhere.
+      if (r.speaker === "dm") held = [];
+      out.push("", said(r), "");
+    }
+  };
+  const show = () => {
+    out.push(...held, ...panel);
+    held = [];
+    panel = [];
+  };
   for (const e of log) {
     if (e.seq > end) break;
-    while (next < narrations.length && narrations[next]!.log_head < e.seq) out.push("", narrations[next++]!.text, "");
+    say((r) => r.log_head < e.seq);
     if (e.kind === "card_shown") shown = e.card;
     if (e.visibility.scope !== "public") continue;
     if (e.kind === "card_drawn") {
-      const words = shown !== undefined ? ru.get(shown) : undefined;
-      card = { target: e.target, text: words?.text_ru ?? e.card_text, choices: new Map(e.choices.map((c) => [c.id, words?.choices[c.id] ?? c.text])) };
-      panel = ["", `[card] ${card.text}`, ...[...card.choices.values()].map((text, i) => `  ${i + 1}. ${text}`), `  ${SEAT_WORDS[language].ownMoveLine}`, ""];
+      const its = shown !== undefined ? ru.get(shown) : undefined;
+      card = { target: e.target, text: its?.text_ru ?? e.card_text, choices: new Map(e.choices.map((c) => [c.id, its?.choices[c.id] ?? c.text])) };
+      const decides = e.target === "caravan" ? words.merchantDecides : words.bladesDecide;
+      panel = ["", `${words.onTheRoad}:`, `  ${card.text}`, `  ${decides}`, `${words.choicesTitle}:`, ...[...card.choices.values()].map((text, i) => `  ${i + 1}. ${text}`), `  ${words.ownMoveLine}`, ""];
       continue;
     }
-    out.push(...panel);
-    panel = [];
+    // The first word on a card comes once its panel is up.
+    if (panel.length > 0 && (e.kind === "card_advice" || e.kind === "card_own_move" || e.kind === "card_resolved")) show();
     if (e.kind === "card_own_move" && card) card = { ...card, ownMove: e.words };
-    const text = seatLine(e, { names, site: "seat", ...(card ? { card } : {}) });
-    if (text !== null) out.push(text);
+    const text = seatLine(e, { names, site: "seat", party, ...(card ? { card } : {}) });
+    if (text !== null) held.push(`  ${text}`);
+    // The seats' words and the decision show when the card is decided, as the seat releases them when it asks.
+    if (e.kind === "card_resolved") show();
   }
-  while (next < narrations.length && narrations[next]!.log_head < end) out.push("", narrations[next++]!.text);
-  out.push(...panel);
+  say((r) => r.log_head < end);
+  show();
   // The narration that tells how the card turned out, written after its decision.
-  if (next < narrations.length && last) out.push("", narrations[next]!.text);
+  say((r) => r.speaker !== "dm");
+  if (next < talk.length && last) out.push("", said(talk[next]!));
   return out;
 }

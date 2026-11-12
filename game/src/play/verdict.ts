@@ -9,7 +9,7 @@ import type { Event, Handle } from "@nat20-table/engine-client";
 import { SESSION_LOG } from "../engine.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, waitedMs, type UsageRecord } from "../usage.ts";
-import { readRunRecord, RUN_JSON, type RunRecord } from "./record.ts";
+import { readLines, readRunRecord, RUN_JSON, type RunRecord } from "./record.ts";
 import { TARGET_P95_MS } from "./run.ts";
 import { exitRows, type ReadableAnswer } from "./exit.ts";
 
@@ -73,14 +73,6 @@ export interface Verdict {
 
 const VOIDS = new Set(["usage_limit", "login", "offline", "operator"]);
 
-/** The JSON lines of a run file, none when it is missing. */
-export function readLines<T>(file: string): T[] {
-  if (!existsSync(file)) return [];
-  return readFileSync(file, "utf8")
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line) as T);
-}
 
 function readText(file: string): string | undefined {
   return existsSync(file) ? readFileSync(file, "utf8") : undefined;
