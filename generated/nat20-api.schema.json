@@ -1497,7 +1497,11 @@
               }
             },
             "reached": {
-              "description": "Whether the walk set out to end where the creature was sent (next to the creature, at\nthe anchor or the point). False only for a `partial` move that the movement left cut\nshort; a creature an opportunity attack holds on the way is still on a walk that\nreaches.",
+              "description": "Whether the walk set out to end where the creature was sent (next to the creature, at\nthe anchor or the point). False for a `partial` move that the movement left cut short,\nand for a move to a point or an anchor where a creature stands, which ends on the last\nfree spot before it (`1.0.0-dev.70`); a creature an opportunity attack holds on the way\nis still on a walk that reaches.",
+              "type": "boolean"
+            },
+            "taken": {
+              "description": "True when the walk stopped short because a creature stands where it was sent, so a\nclient can say why it didn't get there (`1.0.0-dev.70`). Left out otherwise, which\nincludes a `partial` move the movement left cut short.",
               "type": "boolean"
             }
           },
