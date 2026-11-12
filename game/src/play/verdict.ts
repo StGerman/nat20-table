@@ -172,7 +172,9 @@ function narrationRow(dir: string, flags: Flag[]): VerdictRow {
 function retryRows(run: RunRecord, transcript: TranscriptRecord[], answers: Record<string, { answer: string }>): { row: VerdictRow; flags: Flag[] } {
   const title = "Every rejected decision recovers within 2 retries";
   const human = run.seats.human;
-  const fallbacks = transcript.filter((r) => r.kind === "fallback");
+  // A wake cut after its narration was shown fell back on nothing (AGT-97): reported apart.
+  const fallbacks = transcript.filter((r) => r.kind === "fallback" && r.cause !== "cut_after_narration");
+  const cut = transcript.filter((r) => r.kind === "fallback" && r.cause === "cut_after_narration");
   const spent = fallbacks.filter((r) => r.cause === "retries" && r.speaker !== human);
   const refusals = new Map<string, number>();
   for (const r of transcript) {
@@ -189,7 +191,8 @@ function retryRows(run: RunRecord, transcript: TranscriptRecord[], answers: Reco
   const causes = new Map<string, number>();
   for (const r of fallbacks) causes.set(r.cause ?? "unrecorded", (causes.get(r.cause ?? "unrecorded") ?? 0) + 1);
   const counted = [...causes].map(([cause, n]) => `${cause} ${n}`).join(", ") || "none";
-  const detail = `fallbacks: ${counted}; human decisions refused more than ${HUMAN_REFUSALS} times: ${flags.length}`;
+  const cutWakes = [...new Set(cut.map((r) => r.wake ?? "unrecorded"))].join(", ");
+  const detail = `fallbacks: ${counted}; wakes cut after their narration: ${cut.length}${cut.length > 0 ? ` (${cutWakes})` : ""}; human decisions refused more than ${HUMAN_REFUSALS} times: ${flags.length}`;
   const confirmed = flags.filter((f) => f.answer === "confirmed").length;
   const open = flags.filter((f) => !f.answer).length;
   if (spent.length > 0) return { row: { row: "5", title, status: "fail", detail: `${spent.length} fallbacks after the retries ran out (${spent[0].speaker}: ${spent[0].text}); ${detail}` }, flags };

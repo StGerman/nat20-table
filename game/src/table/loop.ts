@@ -12,7 +12,7 @@ import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, t
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { BarkTools, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
+import { BarkTools, cardDrawnLine, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import { usageBlock, type UsageLog } from "../usage.ts";
 import type { Language } from "../agents/language.ts";
 import { SEAT_WORDS, type SeatWords } from "./words.ts";
@@ -399,6 +399,8 @@ export class TableLoop {
   private settledLater: Event | undefined;
   /** The destination's scene opened without the pay, which the `escort_settled` wake tells next (AGT-86). */
   private arrivalOpened = false;
+  /** The road card a wake has opened (AGT-100): it is opened once, however often the seats are asked. */
+  private framed: string | undefined;
   /** The last game day the contract plays, on the world clock (`dayLimit` from its first day). */
   private lastDay: number | undefined;
   private firstDay: number | undefined;
@@ -786,6 +788,7 @@ export class TableLoop {
     const campaign = this.campaign!;
     switch (event.kind) {
       case "card_resolved":
+        this.framed = undefined;
         await this.wakeDm(
           "road",
           undefined,
@@ -795,7 +798,14 @@ export class TableLoop {
         await this.settle();
         return;
       case "night": {
-        await this.wakeDm("road", undefined, `The night passed: ${event.text}`, "Narrate the night and the morning in one to three sentences: who slept well, who went hungry, as the engine says.");
+        const next = await this.dmWorld();
+        await this.wakeDm(
+          "road",
+          undefined,
+          `The night passed: ${event.text}`,
+          "Narrate the night and the morning in one to three sentences: who slept well, who went hungry, as the engine says.",
+          ...(next?.card || next?.offered?.length ? ["A road card follows: do not close the night."] : []),
+        );
         await this.settle();
         await campaign.onNight?.();
         const day = (await this.dmWorld())?.clock.day;
@@ -844,6 +854,8 @@ export class TableLoop {
     // prompt. A failed or timed-out wake, or one that picks nothing, leaves the first card rolled
     // to the engine's pick, which the run report counts.
     const offered = world?.offered ?? [];
+    // A card is opened by its pick wake, else by a card wake; after a failed wake it shows alone (0041).
+    let frame = offered.length === 0;
     if (offered.length > 0 && !this.table.ended) {
       const deeds = world?.deeds ?? [];
       await this.wakeDm(
@@ -852,15 +864,16 @@ export class TableLoop {
         "Pick a road card: a draw offered these, in the order they were rolled.",
         ...offered.map((c, i) => offeredLine(c, i + 1)),
         deeds.length > 0 ? `Deeds the world remembers: ${deeds.map((d) => d.deed).join(", ")}.` : "The world remembers no deeds yet.",
-        "Call pick_card once, with the card's id and one line of why. Narrate nothing yet.",
+        `Call pick_card once, with the card's id and one line of why. Then ${CARD_OPENING.charAt(0).toLowerCase()}${CARD_OPENING.slice(1)}`,
       );
+      frame = !this.table.wakeNarrated && !this.dmWakeFailed;
       world = await this.dmWorld();
       const first = world?.offered?.[0];
       if (first && !this.table.ended) {
         // A failed wake already counted its fallback; a wake that picked nothing counts here.
         if (!this.dmWakeFailed) {
           this.table.fallbacks += 1;
-          this.table.log("fallback", `the DM picked no road card: the table takes the first card rolled (${first.id})`, "dm", { cause: "unanswered" });
+          this.table.log("fallback", `the DM picked no road card: the table takes the first card rolled (${first.id})`, "dm", { cause: "unanswered", wake: "pick", narrated: false });
         }
         const picked = await send(this.table, "dm", { cmd: "pick_card", card: first.id, reason: "The table took the first card rolled.", fallback: true }, () => `the road card ${first.id} is on the table`);
         // A refused pick leaves the cards offered and every road move refused: the run can't go on.
@@ -878,6 +891,21 @@ export class TableLoop {
     // every word, so the run can't go on.
     const asked = this.cardAsked.get(card.id);
     if (asked !== undefined && asked === this.table.engine.logHead) throw new Error(`the road card ${card.id} won't settle: still waiting for ${card.waiting_for.join(", ")}`);
+    // A card that came with no pick is opened by a `card` wake before the seats see it (AGT-100);
+    // a picked card was opened by its pick wake, or shows alone after that wake's fallback.
+    if (frame && this.framed !== card.id && !this.table.ended) {
+      await this.wakeDmOnce(
+        "card",
+        undefined,
+        "A road card is on the table.",
+        cardDrawnLine(card),
+        ...(this.arrivalOpened ? ["The scene's opening told the arrival: open only the card."] : []),
+        CARD_OPENING,
+      );
+    }
+    this.framed = card.id;
+    if (this.table.ended) return false;
+    this.table.log("system", `card ${card.id} goes to the seats`);
     await this.table.flush();
     const human = this.table.human;
     if (human && card.waiting_for.includes(human) && !this.table.ended) await this.humanCard(card);
@@ -997,8 +1025,7 @@ export class TableLoop {
         "card_words",
         undefined,
         `A player's words on the road card: ${handle} says or does: "${words}"`,
-        `The card: ${card.text}`,
-        `Its choices: ${card.choices.map((c) => `${c.id}: ${c.text}${c.keeps?.length ? ` (keeps ${c.keeps.join(", ")})` : ""}${c.breaks?.length ? ` (breaks ${c.breaks.join(", ")})` : ""}`).join(" | ")}`,
+        cardDrawnLine(card),
         movable
           ? "If the words are a move, call own_move_or_answer with the check they call for, two different choices for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits. Answer the attempt only, never how it turns out."
           : "These words can't go on the card as they are said: call own_move_or_answer with your narration only, one or two sentences, and the card waits.",
@@ -2350,6 +2377,8 @@ export class TableLoop {
     this.table.resetRetries("dm");
     this.dmTools.startWake();
     this.dmWakeFailed = false;
+    this.table.dmWake = wake;
+    this.table.wakeNarrated = false;
     const heard = this.table.drainDmInbox();
     let told = events;
     if (!told) {
@@ -2370,21 +2399,27 @@ export class TableLoop {
       this.online();
       if (this.table.exhausted("dm")) {
         this.table.fallbacks += 1;
-        this.table.log("fallback", `the DM's retries ran out (${wake}); the engine lines stand alone`, "dm", { cause: "retries" });
+        this.table.log("fallback", `the DM's retries ran out (${wake}); the engine lines stand alone`, "dm", { cause: "retries", wake, narrated: this.table.wakeNarrated });
       }
       return said;
     } catch (error) {
       if (stopsTheRun(error)) throw error;
       this.offline(error);
+      const narrated = this.table.wakeNarrated;
       const why = error instanceof TurnTimeout ? "timed out" : `failed: ${error instanceof Error ? error.message : String(error)}`;
-      this.table.log("error", `dm (${wake}) ${why}`, "dm");
-      this.table.fallbacks += 1;
+      this.table.log("error", `dm (${wake}) ${why}`, "dm", { wake, narrated });
       this.dmWakeFailed = true;
-      const cause = this.table.exhausted("dm") ? "retries" : error instanceof TurnTimeout ? "timeout" : "error";
-      this.table.log("fallback", `the DM's ${wake} is skipped; the engine lines stand alone`, "dm", { cause });
+      // A wake cut after its narration was shown was not skipped (AGT-97): the run report says so.
+      const cut = error instanceof TurnTimeout && narrated;
+      if (!cut) this.table.fallbacks += 1;
+      const cause = cut ? "cut_after_narration" : this.table.exhausted("dm") ? "retries" : error instanceof TurnTimeout ? "timeout" : "error";
+      // A pick that landed is not skipped: its card shows without an opening (AGT-100).
+      const what = cut ? `the DM's ${wake} ran out of time after its narration` : wake === "pick" && this.dmTools.picked ? "the DM picked a road card but ran out of time before opening it; the card shows alone" : `the DM's ${wake} is skipped; the engine lines stand alone`;
+      this.table.log("fallback", what, "dm", { cause, wake, narrated });
       return undefined;
     } finally {
       done();
+      this.table.dmWake = undefined;
     }
   }
 
@@ -2428,6 +2463,9 @@ export class TableLoop {
     };
   }
 }
+
+/** How a wake opens a road card (AGT-100), in the pick wake and the card wake alike. */
+const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
 
 /** The engine's limit on an own move's words (API-56). */
 const OWN_MOVE_MAX_CHARS = 300;
