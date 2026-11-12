@@ -119,6 +119,11 @@ export function page(scroll: Scroll | undefined, direction: -1 | 1, rows: StoryR
   return scrollRows(scroll, direction, Math.max(1, height - 2), rows, height, lineCount);
 }
 
+/** `top` moved by `step` rows, kept within `0..max`: an overlay read by the page keys or the wheel. */
+export function stepWithin(top: number, step: number, max: number): number {
+  return Math.max(0, Math.min(max, top + step));
+}
+
 /** The mouse wheel's step (AGT-94): three rows, as a terminal scrolls its own scrollback. */
 export const WHEEL_ROWS = 3;
 
