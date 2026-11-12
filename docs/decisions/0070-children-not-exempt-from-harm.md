@@ -20,21 +20,22 @@ The bible's guardrail 4 said "Torture and harm to a child are never shown", and 
 
 ### C. Drop the child half of the guardrail; torture stays banned
 - Pro: the road treats a child like anyone else; a consequence on the young is a real one, as in Fallout 1 and 2.
-- Con: a DM can now narrate a child hurt or killed; the voice guide has to keep it plain and short.
+- Con: a DM can now narrate a child hurt or killed.
 
 ## Decision
 
-C. Stas removed the rule. Torture stays never shown: he did not touch that half. A child's harm is told in one plain sentence, like any other death on the road, and never lingered on (voice guide).
+C. Stas removed the rule. Torture stays never shown: he did not touch that half.
 
 ## Consequences
 
-- Guardrail 4 in `.claude/skills/zoya/references/commandments.md` and its row in `examples.md`, the line in `.claude/agents/zoya.md` and the line in `game/dm-craft/skills/voice/SKILL.md` change; "Never harm him on screen" leaves the `boy_on_tailboard` note.
+- Guardrail 4 in `.claude/skills/zoya/references/commandments.md` keeps only torture, with a Removed note; its row in `examples.md`, the line in `.claude/agents/zoya.md` and the line in `game/dm-craft/skills/voice/SKILL.md` follow; "Never harm him on screen" leaves the `boy_on_tailboard` note. The producer's bible doc gets the same change (the repo copy wins).
+- The deeds about Tam and Wenna assume them alive; MAP-21 adds a harm deed when a card can hurt them.
 - No rule that a child never gets Hit Points. Whether a child ever becomes a creature in a fight is a content choice per card, not a ban.
 - The narration judge and the Vera test still apply to any scene where it happens.
 
 ## Revisit when
 
-A Vera reading or a friends-and-family player stops at a child's death on screen, or a run shows a DM lingering on it.
+A Vera reading or a friends-and-family player stops at a child's death on screen.
 
 ## Sources
 
