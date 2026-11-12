@@ -1593,10 +1593,15 @@ impl Game {
             },
         )?;
         let full_end = *route.full_path.points.last().unwrap_or(&from);
-        // A partial walk ends where the movement runs out, stepped back to the last free spot:
-        // a creature can't end its move in another's space (SRD 5.2.1, Moving Around Other
-        // Creatures). With none along the way, nothing moves and the move is refused.
-        let end = if route.reaches_goal() || route.taken_path.points.is_empty() {
+        // A walk ends on the last free spot along the route it takes: a creature can't end its
+        // move in another's space (SRD 5.2.1, Moving Around Other Creatures). That cuts short a
+        // partial walk where the movement runs out, and any walk to a point or an anchor where a
+        // creature stands (ENG-21). With none along the way, nothing moves and the move is
+        // refused.
+        let end = if route.taken_path.points.is_empty()
+            || route.reaches_goal()
+                && systems::movement::is_free_spot(&self.engine, entity, &full_end)
+        {
             full_end
         } else {
             self.last_free_spot(entity, &route.taken_path)
@@ -1606,6 +1611,14 @@ impl Game {
         // creature back to a free spot, and that spot is the goal then (`goal`).
         let reached = (end - full_end).norm() < 0.05 && goal_in_reach;
         if (end - from).norm() < 0.05 && !reached {
+            if !systems::movement::is_free_spot(&self.engine, entity, &full_end) {
+                return Err(rejected(
+                    RejectReason::NoPath,
+                    format!(
+                        "Someone already stands there, and {actor} has no free spot on the way to stop at."
+                    ),
+                ));
+            }
             return Err(rejected(
                 RejectReason::InsufficientResource,
                 format!("{actor} has no movement left this turn to get any closer."),
@@ -4905,6 +4918,38 @@ mod tests {
             x_ft < -15.0 && x_ft > -30.0,
             "Bren stops short of Maren, at {x_ft} ft"
         );
+    }
+
+    /// A move to a point where a creature stands ends on the last free spot before it, in
+    /// combat and in explore mode, and says the point wasn't reached (ENG-21).
+    #[test]
+    fn a_move_to_a_point_where_a_creature_stands_ends_on_the_last_free_spot() {
+        let to_maren = MoveTarget::Point {
+            point: PointFt {
+                x_ft: -30.0,
+                y_ft: 0.0,
+                z_ft: 0.0,
+            },
+        };
+        let mut fight = crowded_yard();
+        let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+        let scene = scene::read(&data, "crowded_yard").unwrap();
+        let Ok(mut explore) = Game::load(None, &scene, &[], &[]) else {
+            panic!("crowded_yard loads");
+        };
+        for game in [&mut fight, &mut explore] {
+            let (_, _, reached) = game.move_to("bren", &to_maren, false).unwrap();
+
+            assert!(!reached);
+            let bren = game.entity("bren").unwrap();
+            let landed = systems::geometry::get_foot_position(&game.engine.world, bren).unwrap();
+            assert!(systems::movement::is_free_spot(&game.engine, bren, &landed));
+            let x_ft = from_core_point(landed).x_ft;
+            assert!(
+                x_ft > -30.0 && x_ft < -20.0,
+                "Bren stops just short of Maren, at {x_ft} ft"
+            );
+        }
     }
 
     /// A partial move towards a creature out of range, whose movement runs out in an ally's
