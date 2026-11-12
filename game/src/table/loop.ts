@@ -666,6 +666,10 @@ export class TableLoop {
     const last = first ? undefined : this.dmTools.lastLine;
     // Read once: a scene loaded with no line on the way must not carry an older scene's words.
     this.dmTools.lastLine = undefined;
+    // A road card drawn on the way here is played after this opening (AGT-100), so the opening
+    // must not bring the caravan in ahead of it.
+    const world = this.campaign ? await this.dmWorld() : undefined;
+    const cardAhead = Boolean(world && ((world.offered ?? []).length > 0 || world.card));
     await this.wakeDm(
       "scene_open",
       undefined,
@@ -676,6 +680,7 @@ export class TableLoop {
           ]
         : []),
       `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`,
+      ...(cardAhead ? [CARD_AHEAD] : []),
       ...(payNext ? ["The merchant pays the Blades next, and you narrate that on its own: open the arrival here without the pay, the purse or any coin."] : []),
     );
     this.arrivalOpened = payNext;
@@ -2487,6 +2492,9 @@ export class TableLoop {
     };
   }
 }
+
+/** A scene's opening while a road card from the way here is still to be played (AGT-100). */
+export const CARD_AHEAD = "A road card met on the way here is played next, before the caravan arrives: keep this opening on the last stretch of road, with the place in sight, and do not bring the caravan in.";
 
 /** How a wake opens a road card (AGT-100), in the pick wake and the card wake alike. */
 const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";

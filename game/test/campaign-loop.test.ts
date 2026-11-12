@@ -10,7 +10,7 @@ import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
 import { cardChoices, roadChoices } from "../src/table/choices.ts";
 import { SEAT_WORDS } from "../src/table/words.ts";
-import { TableLoop, cutAtWord } from "../src/table/loop.ts";
+import { CARD_AHEAD, TableLoop, cutAtWord } from "../src/table/loop.ts";
 import { DmTools } from "../src/table/tools.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
@@ -521,6 +521,11 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     const goes = records.findIndex((r, i) => i > opened && r.kind === "system" && /^card [a-z0-9_]+ goes to the seats$/.test(r.text));
     assert.ok(opened >= 0 && goes > opened, "the picked card goes to the seats after its opening");
     assert.ok(!records.some((r) => r.text === "The road bends."), "the early narration was refused");
+    // A card drawn on the way to a scene is played before the arrival: that scene's opening keeps
+    // the caravan on the road, and the next wake opens the card (AGT-100).
+    const ahead = dm.briefings.flatMap((b, i) => (b.wake === "scene_open" && b.briefing.includes(CARD_AHEAD) ? [i] : []));
+    assert.ok(ahead.length > 0, "an opening with a card still to come");
+    for (const i of ahead) assert.ok(["pick", "card"].includes(dm.briefings[i + 1]?.wake ?? ""), `after the opening: ${dm.briefings[i + 1]?.wake}`);
     // A card that comes with no pick has its own wake, opened once (AGT-100).
     for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: "/);
     const framed = records.filter((r) => r.kind === "narration" && r.wake === "card").length;
