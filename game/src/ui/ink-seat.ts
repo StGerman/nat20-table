@@ -328,10 +328,10 @@ export class InkSeat implements Seat {
    * trackpad scroll the story instead of moving the option highlight; the terminal gets its own
    * mouse back when the seat stops or the process exits.
    */
-  private wheel(on: boolean): void {
+  private wheel(on: boolean, write = true): void {
     if (this.wheelOn === on || !process.stdout.isTTY) return;
     this.wheelOn = on;
-    process.stdout.write(on ? WHEEL_ON : WHEEL_OFF);
+    if (write) process.stdout.write(on ? WHEEL_ON : WHEEL_OFF);
     for (const signal of HANGUPS) {
       if (on) process.on(signal, this.hangup);
       else process.off(signal, this.hangup);
@@ -345,10 +345,11 @@ export class InkSeat implements Seat {
    * A kill skips "exit": the mouse goes back to the terminal, then the signal is sent again. Ink's
    * signal-exit stands aside while another listener is on the signal; this one takes itself off
    * first, so on the second delivery, or later in the same one, signal-exit finds itself alone,
-   * unmounts, leaves the alternate screen and ends the process as the signal asks.
+   * unmounts, leaves the alternate screen and ends the process as the signal asks. After SIGHUP
+   * the terminal is gone, so nothing is written to it.
    */
   private readonly hangup = (signal: NodeJS.Signals): void => {
-    this.wheel(false);
+    this.wheel(false, signal !== "SIGHUP");
     process.kill(process.pid, signal);
   };
 
@@ -862,7 +863,7 @@ export function suggestionRows(suggestions: Suggestions, question: string, ui: U
 const WHEEL_ON = "\x1b[?1000h\x1b[?1006h";
 const WHEEL_OFF = "\x1b[?1006l\x1b[?1000l";
 /** The signals that end the run without an "exit" event, after which the shell would get mouse reports. */
-const HANGUPS: NodeJS.Signals[] = ["SIGTERM", "SIGHUP"];
+const HANGUPS: NodeJS.Signals[] = ["SIGTERM", "SIGHUP", "SIGINT", "SIGQUIT"];
 
 /**
  * The wheel turns in a chunk of what the terminal sent (AGT-94), in order: `-1` up, `1` down.
@@ -1059,8 +1060,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   function overlayLines() {
     const name = view.overlay?.title ?? seat.ui.panelTitle;
     const fresh = view.overlay ? new Set(view.lines.slice(view.overlay.at).filter((l) => l.text.trim() !== "").map((l) => l.id)).size : 0;
-    const more = overlayMax > 0 ? " · Shift+↑/↓" : "";
-    const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, seat.ui.overlayKeys(name, more !== "", fresh));
+    const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, seat.ui.overlayKeys(name, overlayMax > 0, fresh));
     const rows = overlayRows!.slice(overlayTop, overlayTop + overlayRoom);
     return [nameRow, ...rows.map((row, i) => line(row, `o${i}`)), ...Array.from({ length: overlayRoom - rows.length }, (_, i) => blank(`ob${i}`))];
   }

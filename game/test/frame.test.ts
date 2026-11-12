@@ -249,6 +249,11 @@ test("/sheet and the other commands' answers stand over the story: Esc closes, P
     await until("the overlay", () => stdout.last.includes("Sheet · Esc closes · Shift+↑/↓") && /^row 0$/m.test(stdout.last), () => stdout.last);
     assert.ok(!stdout.last.includes("mill wheel"), "the overlay covers the story");
     assert.ok(!seat.getView().lines.some((l) => l.text.includes("row 0")), "and the story doesn't keep it");
+    // The wheel scrolls the overlay three rows, never past its top (AGT-94).
+    stdin.press("\u001b[<65;10;5M");
+    await until("the wheel down", () => !/^row 2$/m.test(stdout.last) && /^row 3$/m.test(stdout.last), () => stdout.last);
+    stdin.press("\u001b[<64;10;5M\u001b[<64;10;5M");
+    await until("the wheel up to the top", () => /^row 0$/m.test(stdout.last), () => stdout.last);
     stdin.press("\u001b[6~");
     await until("read on", () => !/^row 0$/m.test(stdout.last) && /^row 19$/m.test(stdout.last), () => stdout.last);
     seat.show({ kind: "speech", speaker: "ilsa", text: "Look at the sluice." });
@@ -328,7 +333,7 @@ test("/help lists the commands and the keys over the story", async () => {
   const { stdout } = startAt(seat, 124, 40);
   try {
     seat.type("/help\r");
-    await until("help", () => stdout.last.includes("Help · Esc closes") && stdout.last.includes("Shift+↑/↓  scroll the story, or this; PgUp/PgDn too") && stdout.last.includes("Trackpad   two fingers scroll the story") && stdout.last.includes("Fn         hold it to select text with the mouse (Option in iTerm2)") && stdout.last.includes("/sheet  your character sheet"), () => stdout.last);
+    await until("help", () => stdout.last.includes("Help · Esc closes") && stdout.last.includes("Shift+↑/↓  scroll the story, or this; PgUp/PgDn too") && stdout.last.includes("Trackpad   two fingers scroll the story") && stdout.last.includes("Fn         hold it to select text with the mouse") && stdout.last.includes("/sheet  your character sheet"), () => stdout.last);
   } finally {
     seat.stop();
   }
