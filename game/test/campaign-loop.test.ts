@@ -607,6 +607,8 @@ test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the s
     const log1 = await run1.t.engine.request("dm", { cmd: "events", since: 0 });
     assert.ok(log1.result?.cmd === "events");
     rows1 = wordRows({ roster: { party: "new" } } as never, log1.result.events as never, [], false);
+    // The bridge again waits for The Way Back: Fair in Wend's arrival at the bridge doesn't meet it (MAP-14).
+    assert.ok(!log1.result.events.some((e) => e.kind === "card_shown" && e.card === "bridge_again"));
     const saved = await run1.t.engine.request("dm", { cmd: "save_roster" });
     assert.ok(saved.result?.cmd === "save_roster");
     roster = saved.result.roster;
@@ -628,6 +630,8 @@ test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the s
     const drawn = log.result.events.flatMap((e) => (e.kind === "card_shown" ? [e.card] : []));
     assert.ok(drawn.includes("bridge_again") && !drawn.includes("millbeck_bridge"), drawn.join(", "));
     const shown = log.result.events.find((e) => e.kind === "card_shown" && e.card === "bridge_again");
+    // The clerk sits at the bridge, so the party meets him when it arrives there (MAP-14).
+    assert.ok(shown?.kind === "card_shown" && shown.zone === "millbeck_bridge" && shown.when === "arrival", JSON.stringify(shown));
     const rows2 = wordRows({ roster: { party: "continue" } } as never, log.result.events as never, [], false);
     // The M11 verdict rows the exit pair is judged on hold by construction (F6).
     const status = (rows: typeof rows1, row: string) => rows.find((r) => r.row === row)?.status;

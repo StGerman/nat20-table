@@ -1,5 +1,5 @@
 {
-    "_comment": "The Way Back's own cards (MAP-10, MAP-12, ENG-38): Fenn Lusk's three and The fair price. They join the world's deck only while this pack's contract runs. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Fights use the SRD 5.2.1 Bandit.",
+    "_comment": "The Way Back's own cards (MAP-10, MAP-12, ENG-38): Fenn Lusk's three, The fair price, and The bridge again (MAP-14). They join the world's deck only while this pack's contract runs. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Fights use the SRD 5.2.1 Bandit.",
     "cards": [
         {
             "id": "wet_salt",
@@ -256,6 +256,94 @@
                     ]
                 }
             ]
+        },
+        {
+            "id": "bridge_again",
+            "zone": "millbeck_bridge",
+            "when": "arrival",
+            "target": "caravan",
+            "if": "crossed_millbeck",
+            "once": "contract",
+            "owner_pick": "pay",
+            "text": "At the Millbeck bridge a painted board hangs on a new post, with a wax seal at the bottom. A man in a clean coat sits under it with a ledger. The toll belongs to a Saltmouth company now, he says: the same two silver a head, written down this time.",
+            "text_ru": "У моста через Миллбек на новом столбе висит крашеная доска с восковой печатью внизу. Под ней сидит человек в чистом сюртуке с учётной книгой. Пошлина теперь принадлежит солтмутскому товариществу, говорит он: те же два серебряных с головы, только теперь под запись.",
+            "note": "Before the choices, say in one plain sentence what happened here last time: who held the bridge and what the Blades did about it. Something learned goes out of date: the brothers' false toll is now a true one, on paper, and the paper is Rufus's company's. The clerk is not a villain; he is paid by the day, like the Blades. If the brothers were spared, he has never heard of them. Bren respects a seal; Ilsa asks who gave the company the bridge.",
+            "choices": [
+                {
+                    "id": "pay",
+                    "text": "Pay the company's toll.",
+                    "text_ru": "Заплатить пошлину товарищества.",
+                    "keeps": [
+                        "paper_is_law"
+                    ],
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
+                        {
+                            "do": "pay",
+                            "who": "party",
+                            "copper": 20
+                        },
+                        {"do": "remember", "deed": "paid_the_company"}
+                    ]
+                },
+                {
+                    "id": "read",
+                    "asked": true,
+                    "text": "Ask to read the paper.",
+                    "text_ru": "Попросить почитать бумагу.",
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "intelligence",
+                            "skill": "investigation",
+                            "dc": 10,
+                            "success": [
+                                {"do": "remember", "deed": "read_the_company_paper"}
+                            ],
+                            "failure": [
+                                {
+                                    "do": "pay",
+                                    "who": "party",
+                                    "copper": 20
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "ask_brothers",
+                    "text": "Ask him what became of the two brothers.",
+                    "text_ru": "Спросить его, что стало с двумя братьями.",
+                    "if": "toll_men_spared",
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
+                        {"do": "remember", "deed": "asked_after_the_brothers"}
+                    ]
+                },
+                {
+                    "id": "ford",
+                    "text": "Go upstream and ford the beck.",
+                    "text_ru": "Подняться выше по течению и перейти ручей вброд.",
+                    "unless": "toll_men_spared",
+                    "breaks": [
+                        "paper_is_law"
+                    ],
+                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
+                        {"do": "delay", "minutes": 90},
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "strength",
+                            "skill": "athletics",
+                            "dc": 10,
+                            "failure": [
+                                {"do": "cargo", "good": "rations", "change": -2}
+                            ]
+                        },
+                        {"do": "remember", "deed": "forded_the_company_toll"}
+                    ]
+                }
+            ],
+            "_comment": "The bridge again (MAP-10), an arrival card of the Millbeck bridge (MAP-14): the party meets the clerk when it reaches the bridge, where the text puts him. As a road card of the world's Millbeck zone it was drawn at the end of the bridge road, in Wendford, 8 miles past him; and as a world arrival card it would meet the party on Fair in Wend too, at the same arrival as the bridge's own card. So it lives in The Way Back's deck, which plays only while this contract runs."
         }
     ]
 }

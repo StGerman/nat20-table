@@ -84,7 +84,6 @@ No open rows; closed rows in `docs/tasks-done.md`.
 | ID | Gap | Pri | Dest | Gate | Size | Status |
 |---|---|---|---|---|---|---|
 | MAP-13 | Goblins are persons in *The Silent Mill* (storytelling bible, "Who is a person", Stas 2026-11-06): today the cellar band "fights to the end, and Gritch never yields" and "No goblin flees" (`prose/adventure.md`, cellar scene), so the goblins there are only targets. Let the cellar band and Gritch yield under a stated condition, as the yard already can, so sparing or killing one who yielded becomes the party's choice (Embra's mercy). Keep Arachas canon working: Gritch dead is one outcome, not the only one. Do it before the Arachas pack, which replays the Mill for M0 | P1 | Ours | - | S | todo |
-| MAP-14 | The bridge card fires where the party is (M11 exit pair 3 human run, post-M11): `bridge_again` is a Millbeck-zone card but was drawn on arrival at Wendford, 8 mi after the party woke at Millbeck and saw no board, so the party pays a clerk it left behind and its own notes say it paid "in Wendford". Draw it at departure from the bridge (the card's own `_comment`), or make the text location-neutral; run Zoya's board check and a Vera read | P1 | Ours | - | S | todo (Milestone 12, Stas 2026-11-08) |
 | MAP-16 | Narration slips found on the human run (post-M11, P2): the DM invented "two sacks darkened" while engine salt stayed 500 and later said "no sack got wet"; the Wendford opening runs 177 words against ~120; «кафтан» vs the dictionary (Stas to rule). DM prompt tune, no engine change | P2 | Ours | - | S | todo (post-M11) |
 
 ## 8. Agents, game loop, interface (all new)
@@ -149,3 +148,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-12: AGT-98 done (table #354): one language at the seat; row moved to docs/tasks-done.md
 - 2026-11-12: MAP-19 done (table #355): cards, choices and goods in Russian; row moved to docs/tasks-done.md
 - 2026-11-12: ENG-21 done: core #81 ends every Move on the last free spot along its path; table #356 re-pins core and re-records m5_fights (mf-62) and the m7_narration engine log
+- 2026-11-12: MAP-14 done (table #PRNUM): The bridge again is an arrival card of the Millbeck bridge in The Way Back's deck; row moved to docs/tasks-done.md
