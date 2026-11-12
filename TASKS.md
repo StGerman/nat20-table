@@ -150,4 +150,5 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-12: MAP-14 done (table #357): The bridge again is an arrival card of the Millbeck bridge in The Way Back's deck; row moved to docs/tasks-done.md
 - 2026-11-12: AGT-94 done, AGT-76 partial (table #358): Shift+↑/↓ and the trackpad scroll the story; the seat tests share one frame wait; row moved to docs/tasks-done.md
 - 2026-11-12: AGT-103 partial, AGT-13 partial (table #359): the seat's record, the Milestone 12 verdict rows and report; the exit pair is next
+- 2026-11-12: AGT-105 done (table #362): the DM is «Рассказчик» at the Russian seat; row in docs/tasks-done.md
 - 2026-11-12: AGT-100 follow-up (trial run full-2026-11-12T19-02-03-994Z, Stas: fix before run 1): a scene reached with a road card met on the way opens once that card is settled, and the pay waits for the opening
