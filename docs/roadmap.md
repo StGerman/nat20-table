@@ -1,6 +1,6 @@
 # Roadmap
 
-As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the Allies in fights backlog line added 2026-11-12 on d2b0fc4, numbers unchanged. Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api` and nat20-runs `master` 2e65a5d.
+As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the Allies in fights row added 2026-11-12, numbers unchanged. Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api` and nat20-runs `master` 2e65a5d.
 
 ## Order
 
@@ -8,7 +8,8 @@ As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the Allies in fights 
 |---|---|---|---|
 | 12 | Not a passenger: phase 1 MAP-15, MAP-17; phase 2 Own move, the readable table (AGT-97, AGT-98, AGT-94 with AGT-76, AGT-13 partial, MAP-14), ENG-21, ENG-40..42, a Plain or Fireside voice flag and one language at the seat (0067) (Stas 2026-11-08) | Vera (fallback) asks about no engine line in a DM narration sample; one own move decides a card in each run; no card before its narration; the Russian seat shows no English line; Stas plays only after the all-AI half on the same build has passed (0065); the voice comparison reported, not gated | open: scope accepted (table #336); phase 1 done (table #338); design accepted (table #339); rows on main (table #341); phase 2: 0 of 13 PRs merged, 0 open |
 | — | Dramaturg mechanism: the engine carries the story from one quest to the next. Its other half, the role, is done: Zoya, table #328 | no spec yet; input: the dramaturg design of 2026-11-07, carriers A (a scene's `remember`) and B (`if`/`unless` with a `problem` block), quests as `kind: errand`, fronts and clocks | after 12 (Stas 2026-11-07 19:34Z, "the dramaturg whole"; 0066 in table #336) |
-| — | Arachas plus glue | no spec yet | after the Dramaturg mechanism (same) |
+| — | Allies in fights («Свои в бою»): Gwyn's dog, the horses, Tam and the Merchant in card fights under the engine's script; the judge's absent-creature check | CI seeds, each ally dead and hurt at least once, deeds read; one all-AI run; AGT-106 counted | after the Dramaturg mechanism (Stas 2026-11-12 21:22Z); scope `docs/scope/allies-in-fights-scope.md` (table #365) |
+| — | Arachas plus glue | no spec yet | after Allies in fights (Stas 2026-11-12 21:22Z) |
 | — | The Silent Mill plus glue | no spec yet | after Arachas (same) |
 | 11 | Word on the road | — | done 2026-11-08: pair 3 on 2294ef6 PASS and PASS; table #299 to #325 merged 21:00Z; record 0066 in table #336 |
 | 10 | Speed and polish | — | done 2026-11-01 (0056) |
@@ -24,12 +25,11 @@ As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the Allies in fights 
 
 ## Backlog milestones
 
-Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08), except Allies in fights, which has a Proposed scope.
+Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08).
 
 - The player as a merchant (maybe the shop that `docs/scope/living-world-scope.md` §4 and decision 0057 number M17)
 - Telegram
 - A smarter table
-- Allies in fights: scope Proposed, `docs/scope/allies-in-fights-scope.md` (table #365); joins the Order when Stas picks its slot.
 
 ## Waiting on Stas
 

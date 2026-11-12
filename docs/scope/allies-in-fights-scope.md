@@ -1,18 +1,18 @@
 # Allies in fights («Свои в бою»): scope
 
-Status: Proposed, for Stas's review. Drafted by Yan Metsuyan (0065), 2026-11-12, main d2b0fc4. No number: TASKS.md § Milestones has no row for it yet (roadmap amendment 1). Ask: Stas 2026-11-12 20:44Z, «конечно в backlog рядом с B и C и туда же проверку судьи. В целом мы набрали на milestone контента. Ян оформи пожалуйста в milestone». No bid was tendered; priced here.
+Status: Proposed; §8 answered by Stas (§9), accepted on merge. Drafted by Yan Metsuyan (0065), 2026-11-12, main d2b0fc4. No number: TASKS.md § Milestones has no row for it yet (roadmap amendment 1). Ask: Stas 2026-11-12 20:44Z, «конечно в backlog рядом с B и C и туда же проверку судьи. В целом мы набрали на milestone контента. Ян оформи пожалуйста в milestone». No bid was tendered; priced here.
 Inputs: decision 0071 (A first, B and C later; table #360), decision 0070 (children not exempt from harm; table #361), rows MON-12, ENG-48, ENG-49, AGT-106 (table #360) and MAP-23 (table #361), all open, none on main. If Stas accepts this scope, 0071 stays as written: this is a backlog milestone, so B, C and AGT-106 "in the backlog" still hold; no new record.
 
 ## 1. Goal
 
-When wolves hit the wagon at night, Gwyn's dog, the horses and Tam are in the fight, and a dead horse, a dead dog or a hurt boy is something the road remembers.
+When wolves hit the wagon at night, Gwyn's dog, the horses, Tam and the Merchant are in the fight, and a dead horse, a dead dog, a hurt boy or a dead Merchant is something the road remembers.
 
 ## 2. In
 
 1. **B: the dog and the horses** (MON-12, ENG-48). Mastiff and Draft Horse into core (`demo`), the pin, then the party-side hold-by-the-wagon script in `adapter/`; a dead horse leaves its wagon's `team`; a dead dog is a deed that every card reading `fed_gwyns_dog` also reads (`gwyn_news`, `gwyn_cheese`, `night_wolves`, `drovers`, MAP-22's twin).
 2. **Tam is a creature** (MAP-23; Stas 20:42Z «он NPC и должен быть существом в движке»). Commoner block (already at pin 3220a7f), same script as ENG-48; his death writes a deed that `bel_asks` and `tams_story` read through `unless`; his being hurt writes a deed the cards that meet him later can read (the design says how); `rufus_offer`'s note, which cannot read a deed, says "riding and alive".
 3. **The judge check** (AGT-106). A creature that attacks, is attacked or is hurt in fight narration but is not in the fight is a flag; the digest gains the fight's participants.
-4. **C: the Merchant can die** (ENG-49), only if §8 question 4 is answered before the system design merges; else it stays in the backlog alone. Not priced until that answer (its row) and not in §7's totals.
+4. **C: the Merchant is a creature and can die** (ENG-49; Stas 21:22Z «А что не торговецы Одда и Флит … тоже могут быть покусаны волками почему нет»): Odda on *Fair in Wend*, Fenn on *The Way Back*, from the Commoner block, under the same script. Stas's view of the outcome, for Lev's design to settle (Stas: «Тут Лев босс»): the Hired Blades take the cargo on to the destination, and there they deal with the mayor or another official over what becomes of it. Priced by the design, not here.
 
 Allies are run by the engine's script, never by the DM agent or a player (0071). The seven cards that start a fight (`night_wolves`, `millbeck_bridge`, `rufus_due`, `oddas_mark`, `goblin_scouts`, `goblin_ambush`, `men_at_the_iron`) are the whole surface; the design says which ally joins which.
 
@@ -47,7 +47,7 @@ Reads: Zoya's board check on every deck change (every card that reads the dog's 
 
 ## 7. Cost
 
-C (ENG-49) is not priced; nothing below includes it.
+C (ENG-49) is in (Stas, §9) but priced by the design; nothing below includes it yet.
 
 | Field | Plan | M11 baseline |
 | --- | --- | --- |
@@ -69,3 +69,12 @@ Target (0065, half the baseline): 13.5 PRs, 17.73 USD, 33 min, 1.06 days. Planne
 4. **C**: the story question (who pays the Hired Blades, whose cargo, what `done` means when the Merchant dies) goes to Zoya and you before any code. Recommended: C is in only if answered before the design merges; else it waits in the backlog and this milestone closes without it.
 5. **The Tam gap.** table #361 removes "harm to a child is never shown" (Stas: «убираем правило «никакого вреда детям в кадре»») and you rejected a stub note on Tam, so from #361's merge until MAP-23 lands the DM can narrate Tam hurt or killed with nothing in the engine, and `tams_story` still greets him alive at the fair: a continuity break no check catches (Tam is in no engine state to contradict, and AGT-106 is in this milestone). Options: (a) accept the window; (b) hold #361 whole until MAP-23; (c) merge #361's bible half (Zoya's references) now and move its two DM-facing lines (the `voice` skill line, the `boy_on_tailboard` note) into MAP-23's PR. Recommended: c, 0 PRs added. It needs 0070's first Consequences bullet changed in #361 before merge, to say the two DM lines land with MAP-23. Why not b: with the recommended slot (question 2) MAP-23 lands after M13 at the earliest, so #361 held whole sits open past the 14-day dead-stock line; if you pick "right after M12", b becomes cheap too.
 6. **Exit**: CI seeds plus one all-AI run (7.85 USD, 0 min of you), or a full pair with you as a Hired Blade (13.02 USD, pair 3; 26.5 min more)? The seat does change: Gwyn's and Tam's card lines, your vote on them first (0062), and a child's death can reach your screen. Recommended: the AI run alone. Vera reads every changed card line before it merges, and your half can miss the allies as the AI run can (§4 2), so 5.17 USD and 26.5 min buy a look at your own seat, not proof. Take the pair if you want to see a child hurt at your seat before friends and family do (0070's revisit).
+
+## 9. Decided by Stas (2026-11-12 21:22Z)
+
+1. A: no change asked; it stays its own PRs right after the M12 exit pair. Stas added that the Merchant, too, can be bitten: C joins (§2 item 4).
+2. Slot: after the Dramaturg mechanism, before Arachas («Да давай»).
+3. AGT-106 counts, does not gate, for now («Сейчас да»).
+4. C's outcome: Lev's design decides; Stas's view is in §2 item 4.
+5. The Tam gap: table #361 merged whole (06063d0), so the window from there until MAP-23 is accepted; AGT-106 and the narration judge are what watch it.
+6. Exit: CI seeds plus one all-AI run («Ок»).
