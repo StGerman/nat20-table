@@ -24,11 +24,11 @@ On `night_wolves` (`worlds/wend/deck/lowland.json`) in a live *Fair in Wend* run
 
 ## Decision
 
-A after the M12 exit pair; B and C in the backlog («Только А остальное в backlog»). The dog may die from one bite without its stake shown on `stray_dog` («допустимо»). The narration judge gains a check for a creature that attacks, is attacked or is hurt in a fight's narration but is not in it (a warning growl is not a flag) («Да добавить проверку судье»); whether it gates a run is still Stas's call.
+A after the M12 exit pair; B and C in the backlog («Только А остальное в backlog»), then gathered into the Allies in fights milestone with Tam (MAP-23) and the judge check (Stas 20:44Z and 21:22Z; scope table #365). The dog may die from one bite without its stake shown on `stray_dog` («допустимо»). The narration judge gains a check for a creature that attacks, is attacked or is hurt in a fight's narration but is not in it (a warning growl is not a flag) («Да добавить проверку судье»); it counts and does not gate, for now (Stas 21:22Z «Сейчас да»).
 
 ## Consequences
 
-Rows ENG-47, MAP-22 (after the M12 exit pair); MON-12, ENG-48, ENG-49 and AGT-106 (backlog; AGT-106 moved there by Stas 20:44Z). Allies are run by the engine's script, never by the DM agent or a player.
+Rows ENG-47, MAP-22 (after the M12 exit pair); MON-12, ENG-48, ENG-49 and AGT-106 (the Allies in fights milestone, after the Dramaturg mechanism). Allies are run by the engine's script, never by the DM agent or a player.
 
 ## Revisit when
 
