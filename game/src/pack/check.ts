@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../engine.ts";
 import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS, STAT_BLOCKS_SINCE } from "./adventure.ts";
-import { readCampaign } from "./campaign.ts";
+import { readCampaign, seatCards } from "./campaign.ts";
 import { skeletonFile } from "./read.ts";
 
 /** Every pack in the repository: each folder of `scenarios/`. */
@@ -142,6 +142,15 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   // A Russian run's one name for a character is one the table's name matcher knows (AGT-38).
   for (const member of adventure.party) {
     if (member.name_ru && !(member.names ?? []).includes(member.name_ru)) problem(`party ${member.handle}: name_ru ${member.name_ru} is not among its names`);
+  }
+
+  // Every card a road pack can draw, and each of its choices, reads in Russian too (MAP-19,
+  // decision 0067): the world's deck and the pack's own.
+  if (campaign) {
+    for (const [id, card] of seatCards(dir)) {
+      if (!card.text_ru) problem(`card ${id}: no text_ru`);
+      for (const [choice, ru] of Object.entries(card.choices)) if (!ru) problem(`card ${id}, choice ${choice}: no text_ru`);
+    }
   }
 
   // A turn-order glyph is one grapheme (AGT-67), so it can't push the bar's text around by more than one cell's drift.

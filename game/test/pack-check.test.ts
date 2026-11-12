@@ -3,7 +3,7 @@
 // `cargo build -p nat20-api-server`.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -97,6 +97,22 @@ test("a living-world pack's skeleton is its campaign.json: no exits needed, and 
     assert.ok(report.problems.some((p) => p.startsWith("the engine refused the campaign: ")), report.problems.join("; "));
   } finally {
     bad.close();
+  }
+  // Every card a road pack can draw reads in Russian too (MAP-19): a pack card without `text_ru` is a problem.
+  const english = campaignMill(WEND, (s) => {
+    for (const scene of s.scenes) scene.exits = [];
+  });
+  try {
+    const deck = readJson(path.join(REPO, "scenarios/fair_in_wend/deck/odda.json"));
+    delete deck.cards[0].text_ru;
+    delete deck.cards[0].choices[0].text_ru;
+    mkdirSync(path.join(english.pack, "deck"));
+    writeFileSync(path.join(english.pack, "deck", "odda.json"), JSON.stringify(deck, null, 4));
+    const report = await checkPack(english.pack);
+    assert.ok(report.problems.includes(`card ${deck.cards[0].id}: no text_ru`), report.problems.join("; "));
+    assert.ok(report.problems.includes(`card ${deck.cards[0].id}, choice ${deck.cards[0].choices[0].id}: no text_ru`), report.problems.join("; "));
+  } finally {
+    english.close();
   }
   const misplaced = planted((s) => Object.assign(s, { day_limit: 3 }));
   try {

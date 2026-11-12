@@ -6,11 +6,13 @@
             "zone": "lowland",
             "target": "caravan",
             "text": "Last week's rain has turned the river road to soup. The wagon lurches, a wheel sinks to the hub, and the near horse refuses to pull.",
+            "text_ru": "После дождей прошлой недели речная дорога превратилась в кашу. Фургон кренится, колесо уходит в грязь по ступицу, и ближняя лошадь не тянет.",
             "owner_pick": "unload",
             "choices": [
                 {
                     "id": "push",
                     "text": "Put your shoulders to the wheel and heave.",
+                    "text_ru": "Навалиться плечами на колесо и толкать.",
                     "effects": [
                         {
                             "do": "check",
@@ -30,6 +32,7 @@
                 {
                     "id": "unload",
                     "text": "Unload the heaviest sacks, roll the wagon free, and load them again.",
+                    "text_ru": "Снять самые тяжёлые мешки, выкатить фургон и погрузить снова.",
                     "effects": [
                         {"do": "delay", "minutes": 60}
                     ]
@@ -41,10 +44,12 @@
             "zone": "lowland",
             "target": "blades",
             "text": "A lean sheepdog trots out of a hedge and falls in beside the wagon, as if it had been hired too.",
+            "text_ru": "Из живой изгороди выбегает тощая овчарка и трусит рядом с фургоном, будто её тоже наняли.",
             "choices": [
                 {
                     "id": "feed",
                     "text": "Toss it a crust and let it come along.",
+                    "text_ru": "Бросить ей корку и взять с собой.",
                     "effects": [
                         {"do": "cargo", "good": "rations", "change": -1},
                         {"do": "remember", "deed": "fed_gwyns_dog"}
@@ -53,6 +58,7 @@
                 {
                     "id": "shoo",
                     "text": "Send it home.",
+                    "text_ru": "Прогнать домой.",
                     "effects": [
                         {"do": "remember", "deed": "sent_the_dog_home"}
                     ]
@@ -66,10 +72,12 @@
             "when": "night",
             "target": "blades",
             "text": "Mist climbs off the river after dark and the fire spits. Something is moving near the wagon, or nothing is.",
+            "text_ru": "После темноты с реки поднимается туман, костёр плюётся искрами. Возле фургона что-то движется. Или ничего.",
             "choices": [
                 {
                     "id": "watch",
                     "text": "Keep a sharp watch by the wagon.",
+                    "text_ru": "Зорко стеречь фургон.",
                     "effects": [
                         {
                             "do": "check",
@@ -86,6 +94,7 @@
                 {
                     "id": "sleep",
                     "text": "Sleep.",
+                    "text_ru": "Спать.",
                     "effects": [
                         {"do": "cargo", "good": "rations", "change": -2}
                     ]
@@ -93,6 +102,7 @@
                 {
                     "id": "charm",
                     "text": "Sleep with the bog-wife's charm by the fire.",
+                    "text_ru": "Спать, положив оберег болотной бабки у костра.",
                     "if": "sedge_charm",
                     "effects": [
                         {"do": "remember", "deed": "slept_under_sedges_charm"}
@@ -107,10 +117,12 @@
             "when": "night",
             "target": "blades",
             "text": "Wolves howl out on the water meadows, closer each time, and the horses stamp and pull at their ropes.",
+            "text_ru": "На заливных лугах воют волки, всякий раз ближе, и лошади бьют копытами и рвутся с привязи.",
             "choices": [
                 {
                     "id": "stand",
                     "text": "Stand between the wolves and the horses.",
+                    "text_ru": "Встать между волками и лошадьми.",
                     "effects": [
                         {
                             "do": "fight",
@@ -125,6 +137,7 @@
                     "id": "build_fire",
                     "asked": true,
                     "text": "Build the fire high and wait for dawn.",
+                    "text_ru": "Развести костёр повыше и ждать рассвета.",
                     "effects": [
                         {
                             "do": "check",
@@ -148,6 +161,7 @@
                     "id": "build_fire_with_dog",
                     "asked": true,
                     "text": "Build the fire high and wait for dawn.",
+                    "text_ru": "Развести костёр повыше и ждать рассвета.",
                     "if": "fed_gwyns_dog",
                     "effects": [
                         {
@@ -170,6 +184,7 @@
                 {
                     "id": "charm",
                     "text": "Hang the bog-wife's charm on the horse lines.",
+                    "text_ru": "Повесить оберег болотной бабки у коновязи.",
                     "if": "sedge_charm",
                     "unless": "fed_gwyns_dog",
                     "effects": [
@@ -185,12 +200,14 @@
             "when": "night",
             "target": "caravan",
             "text": "Two drovers ask to share the fire. They are friendly, and they look over the wagon a little too long.",
+            "text_ru": "Двое гуртовщиков просятся к костру. Они приветливы и разглядывают фургон чуть дольше, чем нужно.",
             "owner_pick": ["welcome", "welcome_with_dog"],
             "choices": [
                 {
                     "id": "welcome",
                     "asked": true,
                     "text": "Make room for them at the fire.",
+                    "text_ru": "Подвинуться и пустить их к костру.",
                     "effects": [
                         {
                             "do": "check",
@@ -209,6 +226,7 @@
                     "id": "welcome_with_dog",
                     "asked": true,
                     "text": "Make room for them at the fire.",
+                    "text_ru": "Подвинуться и пустить их к костру.",
                     "if": "fed_gwyns_dog",
                     "effects": [
                         {"do": "remember", "deed": "the_dog_growled_at_the_drovers"}
@@ -217,6 +235,7 @@
                 {
                     "id": "send_away",
                     "text": "Tell them to find their own fire.",
+                    "text_ru": "Сказать, чтобы искали свой костёр.",
                     "effects": [
                         {"do": "remember", "deed": "sent_the_drovers_away"}
                     ]
@@ -231,11 +250,13 @@
             "chained": true,
             "once": true,
             "text": "The bog-wife is waiting at a bend of the river road. She presses a stoppered jar into one Blade's hands: for the peddler with the handcart, for his shaking hands. He will be at the fair, he always is. Don't open it.",
+            "text_ru": "Болотная бабка ждёт на повороте речной дороги. Она суёт одному из наёмников в руки закупоренный кувшинчик: для коробейника с тележкой, для его трясущихся рук. Он будет на ярмарке, он всегда там. Не открывать.",
             "note": "Mother Sedge's favour for the horse. Ilsa argues for opening it: who carries a stranger's jar unopened? Maren says a promise is a promise. Opened well, it is a tincture for the shakes and nothing worse; opened badly, half of it is spilled, and Sedge will hear through Gwyn that someone looked.",
             "choices": [
                 {
                     "id": "carry",
                     "text": "Carry it to the fair.",
+                    "text_ru": "Донести до ярмарки.",
                     "keeps": [
                         "word_kept"
                     ],
@@ -246,6 +267,7 @@
                 {
                     "id": "open",
                     "text": "Open it.",
+                    "text_ru": "Открыть.",
                     "breaks": [
                         "word_kept"
                     ],
@@ -269,6 +291,7 @@
                 {
                     "id": "refuse",
                     "text": "Give it back to her.",
+                    "text_ru": "Вернуть ей.",
                     "effects": [
                         {"do": "remember", "deed": "refused_sedges_jar"}
                     ]
@@ -281,11 +304,13 @@
             "target": "caravan",
             "owner_pick": "hold",
             "text": "A light wagon with yellow wheels and two fresh horses comes up fast behind. Its driver, a young man in a very good coat, raises his hat and asks Odda to pull onto the verge: first wheat at the fair gets the best price.",
+            "text_ru": "Сзади быстро нагоняет лёгкий фургон с жёлтыми колёсами и парой свежих лошадей. Правит молодой человек в очень хорошем сюртуке. Он приподнимает шляпу и просит Одду съехать на обочину: кто первым привезёт пшеницу на ярмарку, тот возьмёт лучшую цену.",
             "note": "Rufus, the Saltmouth factor, buying the harvest on paper before it reaches the fair. Something learned goes out of date: Odda's twenty autumns of being first no longer work, because Rufus's buyers have already signed. If he passes, tell it at the fair as Odda's silence, never as a lesson. Joke: he hands Odda a printed calling card, and she uses it to wedge a sack. Bren admires the horses; Torva knows exactly what kind of man buys debts.",
             "choices": [
                 {
                     "id": "let_pass",
                     "text": "Let him pass.",
+                    "text_ru": "Пропустить его.",
                     "effects": [
                         {"do": "remember", "deed": "let_the_yellow_wagon_pass"}
                     ]
@@ -293,6 +318,7 @@
                 {
                     "id": "hold",
                     "text": "Keep to the middle of the road.",
+                    "text_ru": "Держаться середины дороги.",
                     "effects": [
                         {
                             "do": "check",
@@ -312,6 +338,7 @@
                 {
                     "id": "for_a_price",
                     "text": "Ask him to pay for the way.",
+                    "text_ru": "Попросить заплатить за дорогу.",
                     "effects": [
                         {
                             "do": "check",
@@ -340,11 +367,13 @@
             "once": true,
             "owner_pick": ["tracks", "ask_bel"],
             "text": "Odda counts the sacks twice and her face goes still: one is gone. A passing carter says what the valley always says, that there were roadfolk camped up the road.",
+            "text_ru": "Одда дважды пересчитывает мешки, и лицо у неё каменеет: одного нет. Проезжий возчик говорит то, что в долине говорят всегда: выше по дороге стояли коррины.",
             "note": "The drovers took it, for Rufus. The valley's prejudice is shown and never confirmed: a search of the roadfolk cart finds nothing, and no card makes the roadfolk the culprit. Maren objects to the search out loud. Odda won't search a family's cart on a carter's word. Let it go is Odda's line: \"Bread doesn't argue.\"",
             "choices": [
                 {
                     "id": "tracks",
                     "text": "Look for tracks.",
+                    "text_ru": "Поискать следы.",
                     "asked": true,
                     "unless": "joined_the_roadfolk_fire",
                     "effects": [
@@ -366,6 +395,7 @@
                 {
                     "id": "ask_bel",
                     "text": "Ask Bel to help you track it.",
+                    "text_ru": "Попросить Бел помочь найти след.",
                     "if": "joined_the_roadfolk_fire",
                     "asked": true,
                     "effects": [
@@ -387,6 +417,7 @@
                 {
                     "id": "let_go",
                     "text": "Let it go.",
+                    "text_ru": "Махнуть рукой.",
                     "effects": [
                         {"do": "cargo", "good": "wheat", "change": -50},
                         {"do": "remember", "deed": "let_the_sack_go"}
@@ -395,6 +426,7 @@
                 {
                     "id": "search",
                     "text": "Search the roadfolk cart.",
+                    "text_ru": "Обыскать повозку корринов.",
                     "breaks": [
                         "road_is_free"
                     ],
@@ -413,11 +445,13 @@
             "chained": true,
             "once": true,
             "text": "After dark the painted roadfolk cart rattles up to the fire. Bel, the woman from the Highsteads fire, does not sit down. She asks whether anyone has seen her boy.",
+            "text_ru": "После темноты к костру с грохотом подъезжает расписная повозка корринов. Бел, женщина от костра в Хайстедсе, не садится. Она спрашивает, не видел ли кто её мальчика.",
             "note": "Bel Corrin, and Tam, who is either on the wagon or hiding behind it. A word is kept: letting Tam answer means Bel lets him go to the fair if the human's character promises to look after him, and that promise is a deed later cards test. Covered for and found out, Bel tells every roadfolk fire in the valley. Maren is for the truth; Ilsa says the boy has rights too.",
             "choices": [
                 {
                     "id": "truth",
                     "text": "Tell her the truth.",
+                    "text_ru": "Сказать ей правду.",
                     "effects": [
                         {"do": "remember", "deed": "told_bel_the_truth"}
                     ]
@@ -425,6 +459,7 @@
                 {
                     "id": "cover",
                     "text": "Cover for him.",
+                    "text_ru": "Прикрыть его.",
                     "effects": [
                         {
                             "do": "check",
@@ -444,6 +479,7 @@
                 {
                     "id": "let_tam",
                     "text": "Let Tam answer for himself.",
+                    "text_ru": "Пусть Тэм ответит сам.",
                     "keeps": [
                         "word_kept"
                     ],
@@ -461,11 +497,13 @@
             "chained": true,
             "once": true,
             "text": "The peddler with the shaking hands catches up with the camp after dark and sees the grey lantern stitched on a Blade's sleeve, the sign of their old company. He goes quiet, then asks whether any of the company are still alive.",
+            "text_ru": "Коробейник с трясущимися руками догоняет стоянку после темноты и видит серый фонарь, вышитый на рукаве одного из наёмников: знак их старого отряда. Он замолкает, потом спрашивает, жив ли ещё кто-нибудь из отряда.",
             "note": "Tobin carried a battle-mage's books in the lord's border war, the war the Grey Lanterns fought in. Told about the company and its dead, he laughs and cries in one breath and remembers a red-scaled girl with a notebook (Ilsa's hook). Read well, his hands: he froze at a breach and a fire spell went wrong; read badly, a cheerful lie. Whatever they choose, from now on he tells every alehouse the Grey Lanterns are the last honest company in the kingdom.",
             "choices": [
                 {
                     "id": "tell",
                     "text": "Tell him about the company.",
+                    "text_ru": "Рассказать ему об отряде.",
                     "effects": [
                         {"do": "remember", "deed": "told_tobin_of_the_dead"}
                     ]
@@ -473,6 +511,7 @@
                 {
                     "id": "hands",
                     "text": "Ask what happened to his hands.",
+                    "text_ru": "Спросить, что с его руками.",
                     "effects": [
                         {
                             "do": "check",
@@ -492,6 +531,7 @@
                 {
                     "id": "change",
                     "text": "Change the subject.",
+                    "text_ru": "Заговорить о другом.",
                     "effects": [
                         {"do": "remember", "deed": "kept_the_war_from_tobin"}
                     ]
@@ -505,11 +545,13 @@
             "chained": true,
             "once": true,
             "text": "The silent pilgrim stops the Blades with a raised hand and draws in the mud with her staff: a bridge, a man in a helmet too big for him holding a notched stick, a second man with a cudgel, and a coin passing from a man in a very good coat to both of them.",
+            "text_ru": "Молчаливая паломница поднимает руку, останавливая наёмников, и чертит посохом в грязи: мост, человек в шлеме не по размеру с зарубленной палкой, второй с дубиной, и монета, которая переходит к обоим от человека в очень хорошем сюртуке.",
             "note": "Sister Agna, who cannot say it. If asked, the DM says what the drawing shows and nothing more: the notched stick is Col's tally, the coat is Rufus's. Read well, the Blades know who set the toll men on the bridge, and Rufus wants his due and Odda's mark can use it. The silent witness and the loud one, Tobin, reach the same truth by different roads.",
             "choices": [
                 {
                     "id": "puzzle",
                     "text": "Puzzle out the drawing.",
+                    "text_ru": "Разобраться в рисунке.",
                     "effects": [
                         {
                             "do": "check",
@@ -529,6 +571,7 @@
                 {
                     "id": "thank",
                     "text": "Thank her and walk on.",
+                    "text_ru": "Поблагодарить её и идти дальше.",
                     "effects": [
                         {"do": "remember", "deed": "thanked_agna"}
                     ]
@@ -543,11 +586,13 @@
             "once": true,
             "if": "fed_tobin",
             "text": "The peddler with the shaking hands catches up while the Blades are still getting their breath back. He saw it all from the bend, he says, and the man in the sheepskin swung first.",
+            "text_ru": "Коробейник с трясущимися руками нагоняет наёмников, пока те ещё не отдышались. Он всё видел от поворота, говорит он: первым ударил тот, что в тулупе.",
             "note": "Tobin, the valley's loudest carrier. A written account he marks with a cross and a drawing of his cart is what Osric or Brannock will believe without a check. Ilsa will offer to write it; let her. The weight of the dead is Rufus's and the chest's, never the Blades', and no choice here blames them.",
             "choices": [
                 {
                     "id": "mark",
                     "text": "Ask him to put his mark on a written account.",
+                    "text_ru": "Попросить его поставить свой знак под записанным рассказом.",
                     "effects": [
                         {"do": "remember", "deed": "peddler_testified"}
                     ]
@@ -555,6 +600,7 @@
                 {
                     "id": "warden",
                     "text": "Ask him to tell the warden at Saltmouth what he saw.",
+                    "text_ru": "Попросить его рассказать смотрителю в Солтмуте, что он видел.",
                     "effects": [
                         {"do": "remember", "deed": "tobin_told_the_warden"}
                     ]
@@ -562,6 +608,7 @@
                 {
                     "id": "let_go",
                     "text": "Let him go his way.",
+                    "text_ru": "Отпустить его своей дорогой.",
                     "effects": [
                         {"do": "remember", "deed": "let_tobin_go"}
                     ]

@@ -10,11 +10,13 @@
             "once": "contract",
             "if": "crossed_millbeck",
             "text": "At the Saltmouth gate the fair warden is chalking stall places on a board. The pitches by the well are nearly gone. He looks at Odda's wheat, then at the queue of carts behind her.",
+            "text_ru": "У ворот Солтмута смотритель ярмарки мелом расписывает места на доске. Места у колодца почти разобраны. Он смотрит на пшеницу Одды, потом на очередь повозок за ней.",
             "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. The warden has heard about the Millbeck bridge before the wagon arrives: carters talk at the gate. If there was a fight there (toll_men_fought), he asks the Blades about it before he looks at the wheat; if they paid or were let through, he says the reeve has never had a toll on that bridge. If Odda was told of Rufus's offer (told_odda_of_rufus), say in one clause, after the warden's question about the bridge if he asks one, that she has been waiting all road to say it out loud. If the Blades stand by her, whatever the roll, nobody tells them they were right to warn her: on a success the warden gives Odda her old place by the well, and if Rufus's cart stands there he has it moved; on a failure the warden shrugs, and the wagon joins the queue. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong.",
             "choices": [
                 {
                     "id": "odda_word",
                     "text": "Stand by Odda while she tells the warden about the bribe you turned down on the road.",
+                    "text_ru": "Стоять рядом с Оддой, пока она рассказывает смотрителю о взятке, от которой вы отказались в дороге.",
                     "if": "told_odda_of_rufus",
                     "unless": "beat_rufus_to_the_fair",
                     "effects": [
@@ -37,6 +39,7 @@
                 {
                     "id": "sack",
                     "text": "Give the warden a sack of wheat for a pitch by the well.",
+                    "text_ru": "Дать смотрителю мешок пшеницы за место у колодца.",
                     "asked": true,
                     "effects": [
                         {"do": "cargo", "good": "wheat", "change": -50},
@@ -46,6 +49,7 @@
                 {
                     "id": "bridge_word",
                     "text": "Tell the warden what happened at the Millbeck bridge.",
+                    "text_ru": "Рассказать смотрителю, что случилось на мосту через Миллбек.",
                     "if": "toll_men_fought",
                     "effects": [
                         {"do": "remember", "deed": "told_the_warden_of_the_bridge"}
@@ -54,6 +58,7 @@
                 {
                     "id": "queue",
                     "text": "Wait in the queue with the other carts.",
+                    "text_ru": "Ждать в очереди с другими повозками.",
                     "unless": ["beat_rufus_to_the_fair", "told_odda_of_rufus"],
                     "effects": [
                         {"do": "delay", "minutes": 60},
@@ -63,6 +68,7 @@
                 {
                     "id": "old_place",
                     "text": "Take the pitch Odda has every year, while it is still free.",
+                    "text_ru": "Занять место, где Одда стоит каждый год, пока оно свободно.",
                     "if": "beat_rufus_to_the_fair",
                     "effects": [
                         {"do": "remember", "deed": "took_the_old_place"}
@@ -77,11 +83,13 @@
             "owner_pick": "take",
             "once": "contract",
             "text": "Odda stands up on the wagon's seat and looks across the water meadows. There is a track over them, she says, that would put the wagon at the fair half a day ahead of anyone on the river road.",
+            "text_ru": "Одда встаёт на козлы и смотрит через заливные луга. Через них есть тропа, говорит она, по ней фургон будет на ярмарке на полдня раньше любого с речной дороги.",
             "note": "Odda wants to beat Rufus to the fair, as she did for twenty autumns. The track crosses the valley's common meadow, which everyone may use and nobody may rut; Torva says so. A failure loses the half day and more, and the wagon comes out of the meadows plastered to the axles. Keeping to the road lets Rufus get ahead, and his cards know it.",
             "choices": [
                 {
                     "id": "take",
                     "text": "Take the meadow track.",
+                    "text_ru": "Пойти тропой через луга.",
                     "effects": [
                         {
                             "do": "check",
@@ -102,6 +110,7 @@
                 {
                     "id": "keep",
                     "text": "Keep to the river road.",
+                    "text_ru": "Держаться речной дороги.",
                     "effects": [
                         {"do": "remember", "deed": "rufus_got_ahead"}
                     ]
@@ -115,11 +124,13 @@
             "target": "blades",
             "once": "contract",
             "text": "After dark a man in a very good coat finds the Blades alone by the horse lines. He is very friendly. Odda's wagon could lose a wheel somewhere quiet tomorrow, he says, and their purses would be heavier for it.",
+            "text_ru": "После темноты человек в очень хорошем сюртуке находит наёмников одних у коновязи. Он очень приветлив. Завтра где-нибудь в тихом месте фургон Одды может лишиться колеса, говорит он, и их кошельки от этого потяжелеют.",
             "note": "Rufus. The human votes first, as on every card, and the whole table knows this one matters. A blind choice: taking the coin is what Rufus wants his due names at the fair. If Tam or Tobin is riding with the wagon, the fair has heard before Odda pays. Ilsa asks whose rights a contract protects; Bren asks how heavy. Nothing happens to the wheel unless the DM's fight or a later card says so. Told, Odda says thank you once, sits up by the wheels with a lantern, and at first light has the Blades check every pin and spoke with her: that is the hour lost. She means to say it to the warden at the fair gate.",
             "choices": [
                 {
                     "id": "tell_odda",
                     "text": "Refuse him and tell Odda.",
+                    "text_ru": "Отказать ему и рассказать Одде.",
                     "keeps": [
                         "word_kept"
                     ],
@@ -131,6 +142,7 @@
                 {
                     "id": "say_nothing",
                     "text": "Refuse him and say nothing.",
+                    "text_ru": "Отказать ему и промолчать.",
                     "effects": [
                         {"do": "remember", "deed": "refused_rufus_quietly"}
                     ]
@@ -138,6 +150,7 @@
                 {
                     "id": "take",
                     "text": "Take his coin.",
+                    "text_ru": "Взять его монету.",
                     "breaks": [
                         "word_kept"
                     ],

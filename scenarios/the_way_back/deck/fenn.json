@@ -8,11 +8,13 @@
             "owner_pick": "willows",
             "once": "contract",
             "text": "Rain comes up the river in a grey wall, and the salt sacks on the wagon start to darken at the seams.",
+            "text_ru": "По реке серой стеной идёт дождь, и мешки с солью на фургоне начинают темнеть по швам.",
             "note": "Failure as content: whatever they choose, the contract goes on. Fenn ticks the sacks on his clipboard with the rain running off his nose. Salt melts; a wet Blade only shivers. Bren says salt is Fenn's problem; Maren gives up her cloak first.",
             "choices": [
                 {
                     "id": "cloaks",
                     "text": "Throw your cloaks over the sacks.",
+                    "text_ru": "Укрыть мешки плащами.",
                     "effects": [
                         {
                             "do": "exhaustion",
@@ -25,6 +27,7 @@
                 {
                     "id": "willows",
                     "text": "Pull in under the willows and wait.",
+                    "text_ru": "Встать под ивами и переждать.",
                     "effects": [
                         {"do": "delay", "minutes": 240}
                     ]
@@ -32,6 +35,7 @@
                 {
                     "id": "push",
                     "text": "Push on through the rain.",
+                    "text_ru": "Идти дальше сквозь дождь.",
                     "effects": [
                         {"do": "cargo", "good": "salt", "change": -100},
                         {"do": "remember", "deed": "lost_salt_to_the_rain"}
@@ -46,11 +50,13 @@
             "target": "blades",
             "once": "contract",
             "text": "In the dark two men with a handcart are at the wagon, lifting the iron bars off it one by one, very quietly.",
+            "text_ru": "В темноте у фургона двое с ручной тележкой: снимают железные прутья один за другим, очень тихо.",
             "note": "Two Wendford men with nothing to plough with this spring: the goblins took the oxen and the price of iron went up. Persons, not beasts: they yield the moment they are caught, and a man who drops his bar has yielded. Fights stay a recommendation. Ilsa wants to know whose iron it was before it was Fenn's.",
             "choices": [
                 {
                     "id": "go",
                     "text": "Go at them.",
+                    "text_ru": "Броситься на них.",
                     "keeps": [
                         "mercy_to_yielded"
                     ],
@@ -67,6 +73,7 @@
                 {
                     "id": "shout",
                     "text": "Shout and wake the camp.",
+                    "text_ru": "Крикнуть и поднять стоянку.",
                     "effects": [
                         {
                             "do": "check",
@@ -86,6 +93,7 @@
                 {
                     "id": "track",
                     "text": "Let them go and track them at first light.",
+                    "text_ru": "Дать им уйти и пойти по следу на рассвете.",
                     "effects": [
                         {"do": "cargo", "good": "iron", "change": -40},
                         {
@@ -110,11 +118,13 @@
             "owner_pick": "talk",
             "once": "contract",
             "text": "A crowd stands in front of Fenn's wagon on the Wendford green. A woman with a basket says what they all think: salt is dear this year, dearer than anyone remembers, and they want Fenn's salt here, at their price, before it goes up the hill.",
+            "text_ru": "Перед фургоном Фенна на лугу Вендфорда стоит толпа. Женщина с корзиной говорит то, что думают все: соль в этом году дорогая, дороже, чем кто-либо помнит, и они хотят соль Фенна здесь и по своей цене, пока её не увезли наверх, в холмы.",
             "note": "Price is the signal of change, and its cause is off the map: nobody on the green knows why salt is dear, only that it is. Market against custom: Fenn has sold at his price for years, the valley thinks a fair price is the one it always paid, and neither is right. It is Fenn's salt, so Fenn decides with the Blades' advice; he says \"Decide it between you\" and means it. Nell Hale, the reeve's niece, about eight, sits on the rim of the well with a slate and does the crowd's sums for them, out loud and wrong on purpose. Nobody is hurt: making way means pushing through people, never the wagon over them. If the Blades paid the company's toll at the bridge (paid_the_company), they carry its paper: two silver a head on salt that used to cross for nothing is part of why it is dear, and the crowd can see the seal.",
             "choices": [
                 {
                     "id": "sell",
                     "text": "Sell the salt at their price.",
+                    "text_ru": "Продать соль по их цене.",
                     "keeps": [
                         "bread_shared"
                     ],
@@ -126,6 +136,7 @@
                 {
                     "id": "toll_paper",
                     "text": "Show them the receipt for the toll you paid at the bridge.",
+                    "text_ru": "Показать им расписку за пошлину, которую вы заплатили на мосту.",
                     "if": "paid_the_company",
                     "effects": [
                         {
@@ -147,6 +158,7 @@
                 {
                     "id": "make_way",
                     "text": "Make way through the crowd.",
+                    "text_ru": "Проложить путь через толпу.",
                     "unless": "paid_the_company",
                     "effects": [
                         {
@@ -168,6 +180,7 @@
                 {
                     "id": "talk",
                     "text": "Talk them down.",
+                    "text_ru": "Уговорить их разойтись.",
                     "effects": [
                         {
                             "do": "check",
@@ -194,11 +207,13 @@
             "owner_pick": "walk",
             "once": "contract",
             "text": "Below the ridge a woman in a man's coat stops the wagon. She wants a winter's salt for the farm, and she cannot pay for it until spring. A boy in a bobble hat holds her hand and looks at the horses, not at the salt.",
+            "text_ru": "Под гребнем фургон останавливает женщина в мужском кафтане. Ей нужна соль на зиму для хутора, а заплатить она сможет только весной. Мальчик в шапке с помпоном держит её за руку и смотрит на лошадей, а не на соль.",
             "note": "The farm under the ridge, Col and Dunn's. The goblins took the flock, so there is no wool in spring to pay with, and Fenn won't give credit to a farm with no sheep. If the brothers died at the bridge (killed_col, killed_dunn), she is in black and Fenn knows why; say it plainly. A blind choice and a consequence on the young: what the Blades do here, Gwyn hears by the next contract. Maren speaks first. The boy's look is told as perception, never as a threat.",
             "choices": [
                 {
                     "id": "pay",
                     "text": "Pay for her salt yourselves.",
+                    "text_ru": "Заплатить за её соль самим.",
                     "keeps": [
                         "bread_shared"
                     ],
@@ -214,6 +229,7 @@
                 {
                     "id": "talk_fenn",
                     "text": "Talk Fenn round.",
+                    "text_ru": "Уговорить Фенна.",
                     "effects": [
                         {
                             "do": "check",
@@ -234,6 +250,7 @@
                 {
                     "id": "walk",
                     "text": "Walk on.",
+                    "text_ru": "Идти дальше.",
                     "effects": [
                         {"do": "remember", "deed": "passed_the_ridge_farm"}
                     ]

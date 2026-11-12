@@ -9,11 +9,13 @@
             "if": "toll_men_spared",
             "once": true,
             "text": "On the green, the reeve has the man from the Millbeck bridge in the stocks, borrowed helmet and all, his tally stick at his feet.",
+            "text_ru": "На лугу староста держит в колодках человека с моста через Миллбек, прямо в чужом шлеме. Палка с зарубками лежит у его ног.",
             "note": "Before the choices, say in one plain sentence what happened last time: the Blades talked the two toll men off the bridge. Col is in the stocks; Dunn has gone home to the farm. The goblins took their flock, and Col sat on the bridge to pay Rufus a farm debt. Osric is careful and proud, and he was the one who sent them away from the common chest. Three threads meet here: the bridge, the reeve's anger, and Rufus's debts. Maren speaks for Col.",
             "choices": [
                 {
                     "id": "speak",
                     "text": "Speak for him.",
+                    "text_ru": "Заступиться за него.",
                     "keeps": [
                         "mercy_to_yielded"
                     ],
@@ -36,6 +38,7 @@
                 {
                     "id": "fine",
                     "text": "Pay his fine.",
+                    "text_ru": "Заплатить за него штраф.",
                     "keeps": [
                         "debt_paid"
                     ],
@@ -51,6 +54,7 @@
                 {
                     "id": "leave",
                     "text": "Leave him to the reeve.",
+                    "text_ru": "Оставить его старосте.",
                     "effects": [
                         {"do": "remember", "deed": "left_col_in_the_stocks"}
                     ]
@@ -65,11 +69,13 @@
             "if": "toll_men_fought",
             "once": true,
             "text": "The reeve meets the wagon at the ford with the common chest's tally sticks under his arm. He has heard about the Millbeck bridge, and he wants to hear it again from the Blades.",
+            "text_ru": "Староста встречает фургон у брода, под мышкой у него бирки общинной казны. Он слышал про мост через Миллбек и хочет услышать ещё раз, от наёмников.",
             "note": "Before the choices, say in one plain sentence what happened last time: the toll men at the Millbeck bridge fought the Blades, and how it ended. Shown Tobin's marked account, Osric goes grey and tells them who the men were: Col and Dunn from the Highsteads, Rufus's debt, and that he sent them away from the chest himself. Custom bent by tribute: he was saving the chest for the steward's visit. No choice blames the Blades and no pay is withheld; the weight is Osric's. Bren speaks: they swung first.",
             "choices": [
                 {
                     "id": "show_mark",
                     "text": "Show him the peddler's mark.",
+                    "text_ru": "Показать ему знак коробейника.",
                     "if": "peddler_testified",
                     "effects": [
                         {"do": "remember", "deed": "showed_osric_the_paper"}
@@ -78,6 +84,7 @@
                 {
                     "id": "tell",
                     "text": "Tell him how the fight at the bridge went.",
+                    "text_ru": "Рассказать ему, как прошла драка на мосту.",
                     "asked": true,
                     "effects": [
                         {
@@ -98,6 +105,7 @@
                 {
                     "id": "ask",
                     "text": "Ask him who the men were.",
+                    "text_ru": "Спросить его, кто были эти люди.",
                     "unless": "peddler_testified",
                     "effects": [
                         {"do": "remember", "deed": "asked_osric_who_they_were"}
@@ -106,6 +114,7 @@
                 {
                     "id": "say_nothing",
                     "text": "Say nothing.",
+                    "text_ru": "Промолчать.",
                     "effects": [
                         {"do": "remember", "deed": "kept_the_bridge_from_osric"}
                     ]
@@ -121,11 +130,13 @@
             "unless": "toll_men_spared",
             "once": true,
             "text": "The reeve stops the Blades by the well. Word has come up the river that they paid a toll at the Millbeck bridge to men he never sent.",
+            "text_ru": "Староста останавливает наёмников у колодца. Вверх по реке дошёл слух, что они заплатили пошлину на мосту через Миллбек людям, которых он не посылал.",
             "note": "Before the choices, say in one plain sentence what happened last time: the Blades paid the two men at the bridge and crossed. Osric is angry at the toll, not at the Blades, and ashamed of what he guesses. Torva asks him who the men were; he knows.",
             "choices": [
                 {
                     "id": "describe",
                     "text": "Tell him who took it.",
+                    "text_ru": "Рассказать ему, кто её взял.",
                     "effects": [
                         {"do": "remember", "deed": "told_osric_of_the_toll"}
                     ]
@@ -133,6 +144,7 @@
                 {
                     "id": "peace",
                     "text": "Tell him you paid to keep the peace.",
+                    "text_ru": "Сказать, что заплатили, чтобы обошлось без драки.",
                     "effects": [
                         {"do": "remember", "deed": "kept_the_peace_at_the_bridge"}
                     ]
@@ -147,11 +159,13 @@
             "if": "forded_the_millbeck",
             "once": true,
             "text": "The reeve is at the upper ford of the Millbeck with his sleeves rolled up. Somebody's wagon churned it to mud last week, and now the sheep will not cross.",
+            "text_ru": "Староста стоит на верхнем броде через Миллбек с закатанными рукавами. На прошлой неделе чей-то фургон разбил брод в грязь, и теперь овцы не идут через него.",
             "note": "Before the choices, say in one plain sentence what happened last time: the Blades went round the toll men and forded the beck upstream. Osric does not know whose wagon it was unless they tell him. Joke: the sheep have opinions. Maren will tell the truth if nobody else does.",
             "choices": [
                 {
                     "id": "help",
                     "text": "Help him mend the ford.",
+                    "text_ru": "Помочь ему поправить брод.",
                     "effects": [
                         {"do": "delay", "minutes": 60},
                         {"do": "remember", "deed": "mended_the_ford"}
@@ -160,6 +174,7 @@
                 {
                     "id": "own_up",
                     "text": "Tell him it was your wagon.",
+                    "text_ru": "Сказать ему, что это был ваш фургон.",
                     "keeps": [
                         "word_kept"
                     ],
@@ -170,6 +185,7 @@
                 {
                     "id": "walk_on",
                     "text": "Wish him luck and walk on.",
+                    "text_ru": "Пожелать ему удачи и идти дальше.",
                     "effects": [
                         {"do": "remember", "deed": "left_osric_in_the_mud"}
                     ]
