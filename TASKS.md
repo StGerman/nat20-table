@@ -152,4 +152,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-11: Milestone 12 rows from scope §7 written after Stas merged the system design (table #339): API-56, AGT-99..103, MAP-18, MAP-19; ENG-43 folded into API-56 (design §9)
 - 2026-11-11: sweep before Milestone 12 phase 2 (main 4c57c7e, 0 open table PRs, 0 open core PRs): 43 open rows, none closed or added; UPS-1 status names what is left; MAP-15 and MAP-17 dated by their merge, not by the PR's own date
 - 2026-11-11: UPS-24 held, with its reason (Rule 9 30-day limit 2026-11-19; Stas, sweep question 2)
-- 2026-11-12: ENG-21 done: core #81 ends every Move on the last free spot along its path; table #PRNUM re-pins core and re-records m5_fights (mf-62) and the m7_narration engine log
+- 2026-11-12: ENG-21 done: core #81 ends every Move on the last free spot along its path; table #356 re-pins core and re-records m5_fights (mf-62) and the m7_narration engine log
