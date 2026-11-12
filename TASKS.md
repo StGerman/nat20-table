@@ -45,7 +45,6 @@ The contract review is done: `/mnt/project-files/engine/api/review.md` and `cont
 | ID | Gap | Pri | Dest | Gate | Size | Status |
 |---|---|---|---|---|---|---|
 | API-24 | Plain ability checks with no skill (core's `D20CheckKind` has skills, saves and attacks only); ladder checks require a skill until then | P2 | Up | N | S | todo |
-| API-56 | Own move on the wire and in the world (decision 0068; ENG-43 folded in, design §9): the DM command `own_move {actor, text, ability, skill, dc, success, failure}` with a ladder check and two choices offered on the card; reject reasons `own_move_taken` and `bad_own_move` beside the existing ones; events `card_own_move` (public), `own_move_set` and `own_move_ran` (DM only); `CardDm.own_move` and `CardPlayer.own_move`; the world crate's resolution writes `remember own_move_<card>` then the named choice's effects, and `own_move_<card>` joins `deeds_written`; `own_move` is a reserved choice id the deck validator refuses, listed last in `offered`, never picked by `settle_unattended`; the server rolls the proposer's check, and a downed proposer rolls nothing and gets the failure choice; fixture `own_move.jsonl`, CHANGELOG, protocol §4.13 and §5 | P1 | Ours | - | M | todo (Milestone 12, PR 1; design `docs/design/m12-system-design.md` §1.2-§1.5) |
 
 ## 2. Engine correctness (core)
 
@@ -151,3 +150,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-11: sweep before Milestone 12 phase 2 (main 4c57c7e, 0 open table PRs, 0 open core PRs): 43 open rows, none closed or added; UPS-1 status names what is left; MAP-15 and MAP-17 dated by their merge, not by the PR's own date
 - 2026-11-11: UPS-24 held, with its reason (Rule 9 30-day limit 2026-11-19; Stas, sweep question 2)
 - 2026-11-11: ENG-40, ENG-41 and ENG-42 done (table #343, Milestone 12 PR 8); rows moved to docs/tasks-done.md
+- 2026-11-11: API-56 done (table #346): own move on the wire and in the world

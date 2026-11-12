@@ -29,8 +29,9 @@ pub use clock::{Clock, Watch};
 pub use customs::{Custom, CustomsError, CustomsFile};
 pub use deck::{
     Card, CardError, Choice, DC_LADDER, DRAW_DIE, Decided, Deck, DeckError, DeckFile, DeckState,
-    Deed, DeedBook, Deeds, Drawn, Effect, MAX_OFFERED, Monster, Once, OnceScope, PendingCard,
-    PickError, Resolution, SCOUTED, ScoutSkill, Table, Target, When, Who, killed_deed,
+    Deed, DeedBook, Deeds, Drawn, Effect, MAX_OFFERED, Monster, OWN_MOVE, Once, OnceScope, OwnMove,
+    OwnMoveRun, PendingCard, PickError, Resolution, SCOUTED, ScoutSkill, Table, Target, When, Who,
+    killed_deed, own_move_deed,
 };
 pub use dice::{ListDice, WorldDice};
 pub use escort::{EscortState, EscortTerms, SKILLED_WAGE_CP, Wage};
