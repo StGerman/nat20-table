@@ -205,7 +205,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     const entries = partyRoster(flags.pack);
     const ask = saved && partyChoice !== "new" ? saved : undefined;
     const picked = await pickOnScreen(entries, party.human, {
-      title: pack.adventure.title,
+      title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title,
       ...(ask
         ? {
             saved: {

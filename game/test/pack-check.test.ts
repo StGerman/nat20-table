@@ -110,7 +110,13 @@ test("a living-world pack's skeleton is its campaign.json: no exits needed, and 
     delete deck.cards[0].choices[0].text_ru;
     mkdirSync(path.join(english.pack, "deck"));
     writeFileSync(path.join(english.pack, "deck", "odda.json"), JSON.stringify(deck, null, 4));
+    const skeleton = readJson(path.join(english.pack, "campaign.json"));
+    delete skeleton.title_ru;
+    delete skeleton.scenes[0].title_ru;
+    writeFileSync(path.join(english.pack, "campaign.json"), JSON.stringify(skeleton, null, 4));
     const report = await checkPack(english.pack);
+    assert.ok(report.problems.includes("no title_ru"), report.problems.join("; "));
+    assert.ok(report.problems.includes(`scene ${skeleton.scenes[0].id}: no title_ru`), report.problems.join("; "));
     assert.ok(report.problems.includes(`card ${deck.cards[0].id}: no text_ru`), report.problems.join("; "));
     assert.ok(report.problems.includes(`card ${deck.cards[0].id}, choice ${deck.cards[0].choices[0].id}: no text_ru`), report.problems.join("; "));
   } finally {
