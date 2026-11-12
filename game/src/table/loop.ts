@@ -959,7 +959,7 @@ export class TableLoop {
       if (!agent || this.table.ended) continue;
       const now = (await this.dmWorld())?.card;
       if (!now || now.id !== card.id || !now.waiting_for.includes(handle)) continue;
-      await this.aiCard(agent, "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
+      await this.aiCard(agent, `Give your word with choose_card, with a choice id${now.own_move ? "" : ", or your own move with own_move"}. Say why in one line with say, if your character would.`);
     }
     const now = (await this.dmWorld())?.card;
     // Whoever is still silent goes with the others (a failed wake or a refusal).
@@ -994,7 +994,7 @@ export class TableLoop {
     if (owner === human) {
       await this.humanCard(now, true);
     } else if (agent) {
-      await this.aiCard(agent, "Make the caravan's call with choose_card, with a choice id. Say why in one line with say, if your character would.", true);
+      await this.aiCard(agent, `Make the caravan's call with choose_card, with a choice id${now.own_move ? "" : ", or your own move with own_move"}. Say why in one line with say, if your character would.`, true);
     }
     now = await ready();
     if (!now) return;
@@ -2545,6 +2545,9 @@ export function roadCardAhead(world: WorldDm | undefined): boolean {
 /** How a wake opens a road card (AGT-100), in the pick wake and the card wake alike. */
 const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
 
+/** The AI players' own-move line in a card briefing (AGT-99), while the card has no own move. */
+export const OWN_MOVE_INVITE = "These are only the obvious choices: if your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move, in one sentence.";
+
 /** The engine's limit on an own move's words (API-56). */
 const OWN_MOVE_MAX_CHARS = 300;
 
@@ -2569,6 +2572,6 @@ function cardLines(card: CardPlayer, owner = false, invite = true): string[] {
     `A road card waits for your word (${whose}): ${card.text}`,
     `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === OWN_MOVE && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
-    ...(move || !invite ? [] : ["These are only the obvious choices: if your character would rather try something of their own, say it with own_move, in one sentence."]),
+    ...(move || !invite ? [] : [OWN_MOVE_INVITE]),
   ];
 }
