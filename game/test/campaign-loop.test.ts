@@ -635,9 +635,10 @@ test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the s
     // ... and decides it there, before the bridge road to Wendford.
     const events = log.result.events;
     const at = events.indexOf(shown!);
-    const resolved = events.findIndex((e, i) => i > at && e.kind === "card_resolved");
+    const resolved = events.findIndex((e, i) => i > at && (e.kind === "card_resolved" || e.kind === "card_shown"));
     const onward = events.findIndex((e, i) => i > at && e.kind === "traveled" && e.leg.road === "bridge_road");
-    assert.ok(resolved > at && onward > resolved, `resolved at ${resolved}, bridge road at ${onward}`);
+    assert.ok(events[resolved]?.kind === "card_resolved" && ["pay", "read", "ask_brothers", "ford"].includes(events[resolved].choice), JSON.stringify(events[resolved]));
+    assert.ok(onward > resolved, `resolved at ${resolved}, bridge road at ${onward}`);
     const rows2 = wordRows({ roster: { party: "continue" } } as never, log.result.events as never, [], false);
     // The M11 verdict rows the exit pair is judged on hold by construction (F6).
     const status = (rows: typeof rows1, row: string) => rows.find((r) => r.row === row)?.status;

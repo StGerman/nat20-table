@@ -276,13 +276,20 @@
                     "keeps": [
                         "paper_is_law"
                     ],
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"},
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "saw_the_company_board"
+                        },
                         {
                             "do": "pay",
                             "who": "party",
                             "copper": 20
                         },
-                        {"do": "remember", "deed": "paid_the_company"}
+                        {
+                            "do": "remember",
+                            "deed": "paid_the_company"
+                        }
                     ]
                 },
                 {
@@ -290,7 +297,11 @@
                     "asked": true,
                     "text": "Ask to read the paper.",
                     "text_ru": "Попросить почитать бумагу.",
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"},
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "saw_the_company_board"
+                        },
                         {
                             "do": "check",
                             "who": "blades",
@@ -298,7 +309,10 @@
                             "skill": "investigation",
                             "dc": 10,
                             "success": [
-                                {"do": "remember", "deed": "read_the_company_paper"}
+                                {
+                                    "do": "remember",
+                                    "deed": "read_the_company_paper"
+                                }
                             ],
                             "failure": [
                                 {
@@ -315,8 +329,15 @@
                     "text": "Ask him what became of the two brothers.",
                     "text_ru": "Спросить его, что стало с двумя братьями.",
                     "if": "toll_men_spared",
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"},
-                        {"do": "remember", "deed": "asked_after_the_brothers"}
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "saw_the_company_board"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "asked_after_the_brothers"
+                        }
                     ]
                 },
                 {
@@ -327,8 +348,15 @@
                     "breaks": [
                         "paper_is_law"
                     ],
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"},
-                        {"do": "delay", "minutes": 90},
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "saw_the_company_board"
+                        },
+                        {
+                            "do": "delay",
+                            "minutes": 90
+                        },
                         {
                             "do": "check",
                             "who": "blades",
@@ -336,14 +364,21 @@
                             "skill": "athletics",
                             "dc": 10,
                             "failure": [
-                                {"do": "cargo", "good": "rations", "change": -2}
+                                {
+                                    "do": "cargo",
+                                    "good": "rations",
+                                    "change": -2
+                                }
                             ]
                         },
-                        {"do": "remember", "deed": "forded_the_company_toll"}
+                        {
+                            "do": "remember",
+                            "deed": "forded_the_company_toll"
+                        }
                     ]
                 }
             ],
-            "_comment": "An arrival card of the Millbeck bridge (MAP-14), so the party meets the clerk where he sits; in this deck because a world arrival card would also meet Fair in Wend at the bridge."
+            "_comment": "An arrival card of the Millbeck bridge (MAP-14), so the party meets the clerk where he sits: as a road card of the world's Millbeck zone it was drawn at the end of the bridge road, in Wendford, 8 miles past him. It is in this deck because a world arrival card would also meet Fair in Wend at the bridge."
         }
     ]
 }
