@@ -297,12 +297,14 @@ export class InkSeat implements Seat {
    */
   private readonly read = (chunk: Buffer | string): void => {
     const text = this.carry + String(chunk);
-    this.carry = /\u001b\[<[\d;]*$/.exec(text)?.[0] ?? "";
+    this.carry = /\u001b(\[(<[\d;]*)?)?$/.exec(text)?.[0] ?? "";
     const turns = wheelsIn(text);
     if (turns.length > 0) this.wheelTurns(turns);
   };
   private listen(stdin: NodeJS.ReadableStream): void {
+    this.stdin?.off("data", this.read);
     this.stdin = stdin;
+    this.carry = "";
     stdin.on("data", this.read);
   }
 
@@ -342,7 +344,11 @@ export class InkSeat implements Seat {
   }
   private wheelOn = false;
   private readonly wheelOff = (): void => this.wheel(false);
-  /** A kill skips "exit": the mouse goes back to the terminal, then the signal goes on as sent. */
+  /**
+   * A kill skips "exit": the mouse goes back to the terminal, then the signal is sent again. While
+   * this listener is on, Ink's signal-exit stands aside; the second delivery finds it alone, so it
+   * unmounts, leaves the alternate screen and ends the process as the signal asks.
+   */
   private readonly hangup = (signal: NodeJS.Signals): void => {
     this.wheel(false);
     process.kill(process.pid, signal);
@@ -891,12 +897,9 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const [scroll, setScrollTo] = useState<Scroll | undefined>(undefined);
   // The scroll hint stays under the story until the reader first scrolls it (AGT-94).
   const [scrolled, setScrolled] = useState(false);
-  const setScroll = (to: Scroll | undefined | ((at: Scroll | undefined) => Scroll | undefined)) => {
-    setScrollTo((at) => {
-      const next = typeof to === "function" ? to(at) : to;
-      if (next) setScrolled(true);
-      return next;
-    });
+  const setScroll = (to: Scroll | undefined) => {
+    if (to) setScrolled(true);
+    setScrollTo(to);
   };
   // How far down the open overlay is read, from its top; a new overlay starts at its top.
   const [overlayRead, setOverlayTop] = useState(0);
@@ -978,10 +981,13 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
 
   // The wheel scrolls three rows, the overlay while one is open (AGT-94), from where the last
   // turn left it: several reports can land before the next frame.
-  seat.wheelTurns = (turns) => {
-    if (overlayRows) return setOverlayTop((top) => turns.reduce((at, d) => stepWithin(at, d * WHEEL_ROWS, overlayMax), Math.min(top, overlayMax)));
-    setScroll((at) => turns.reduce((to, d) => scrollRows(to, d, WHEEL_ROWS, story, storyH, view.lines.length), at));
-  };
+  useEffect(() => {
+    seat.wheelTurns = (turns) => {
+      if (overlayRows) return setOverlayTop((top) => turns.reduce((at, d) => stepWithin(at, d * WHEEL_ROWS, overlayMax), Math.min(top, overlayMax)));
+      if (turns.includes(-1)) setScrolled(true);
+      setScrollTo((at) => turns.reduce((to, d) => scrollRows(to, d, WHEEL_ROWS, story, storyH, view.lines.length), at));
+    };
+  });
 
   useInput((input, key) => {
     // The end screen: any key, Ctrl+C too, gives the terminal back; the checks go on.
