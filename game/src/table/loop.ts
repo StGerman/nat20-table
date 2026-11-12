@@ -873,7 +873,7 @@ export class TableLoop {
         // A failed wake already counted its fallback; a wake that picked nothing counts here.
         if (!this.dmWakeFailed) {
           this.table.fallbacks += 1;
-          this.table.log("fallback", `the DM picked no road card: the table takes the first card rolled (${first.id})`, "dm", { cause: "unanswered" });
+          this.table.log("fallback", `the DM picked no road card: the table takes the first card rolled (${first.id})`, "dm", { cause: "unanswered", wake: "pick", narrated: false });
         }
         const picked = await send(this.table, "dm", { cmd: "pick_card", card: first.id, reason: "The table took the first card rolled.", fallback: true }, () => `the road card ${first.id} is on the table`);
         // A refused pick leaves the cards offered and every road move refused: the run can't go on.
@@ -2412,7 +2412,7 @@ export class TableLoop {
       // A wake cut after its narration was shown was not skipped (AGT-97): the run report says so.
       const cut = error instanceof TurnTimeout && narrated;
       if (!cut) this.table.fallbacks += 1;
-      const cause = this.table.exhausted("dm") ? "retries" : cut ? "cut_after_narration" : error instanceof TurnTimeout ? "timeout" : "error";
+      const cause = cut ? "cut_after_narration" : this.table.exhausted("dm") ? "retries" : error instanceof TurnTimeout ? "timeout" : "error";
       // A pick that landed is not skipped: its card shows without an opening (AGT-100).
       const what = cut ? `the DM's ${wake} ran out of time after its narration` : wake === "pick" && this.dmTools.picked ? "the DM picked a road card but ran out of time before opening it; the card shows alone" : `the DM's ${wake} is skipped; the engine lines stand alone`;
       this.table.log("fallback", what, "dm", { cause, wake, narrated });
