@@ -328,10 +328,10 @@ export class InkSeat implements Seat {
    * trackpad scroll the story instead of moving the option highlight; the terminal gets its own
    * mouse back when the seat stops or the process exits.
    */
-  private wheel(on: boolean, write = true): void {
+  private wheel(on: boolean): void {
     if (this.wheelOn === on || !process.stdout.isTTY) return;
     this.wheelOn = on;
-    if (write) process.stdout.write(on ? WHEEL_ON : WHEEL_OFF);
+    process.stdout.write(on ? WHEEL_ON : WHEEL_OFF);
     for (const signal of HANGUPS) {
       if (on) process.on(signal, this.hangup);
       else process.off(signal, this.hangup);
@@ -345,11 +345,11 @@ export class InkSeat implements Seat {
    * A kill skips "exit": the mouse goes back to the terminal, then the signal is sent again. Ink's
    * signal-exit stands aside while another listener is on the signal; this one takes itself off
    * first, so on the second delivery, or later in the same one, signal-exit finds itself alone,
-   * unmounts, leaves the alternate screen and ends the process as the signal asks. After SIGHUP
-   * the terminal is gone, so nothing is written to it.
+   * unmounts, leaves the alternate screen and ends the process as the signal asks. SIGINT is not
+   * here: at the full screen Ctrl+C is a key, and the table stops after the decision.
    */
   private readonly hangup = (signal: NodeJS.Signals): void => {
-    this.wheel(false, signal !== "SIGHUP");
+    this.wheel(false);
     process.kill(process.pid, signal);
   };
 
@@ -863,7 +863,7 @@ export function suggestionRows(suggestions: Suggestions, question: string, ui: U
 const WHEEL_ON = "\x1b[?1000h\x1b[?1006h";
 const WHEEL_OFF = "\x1b[?1006l\x1b[?1000l";
 /** The signals that end the run without an "exit" event, after which the shell would get mouse reports. */
-const HANGUPS: NodeJS.Signals[] = ["SIGTERM", "SIGHUP", "SIGINT", "SIGQUIT"];
+const HANGUPS: NodeJS.Signals[] = ["SIGTERM", "SIGHUP", "SIGQUIT"];
 
 /**
  * The wheel turns in a chunk of what the terminal sent (AGT-94), in order: `-1` up, `1` down.

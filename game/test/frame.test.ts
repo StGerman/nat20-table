@@ -333,7 +333,7 @@ test("/help lists the commands and the keys over the story", async () => {
   const { stdout } = startAt(seat, 124, 40);
   try {
     seat.type("/help\r");
-    await until("help", () => stdout.last.includes("Help · Esc closes") && stdout.last.includes("Shift+↑/↓  scroll the story, or this; PgUp/PgDn too") && stdout.last.includes("Trackpad   two fingers scroll the story") && stdout.last.includes("Fn         hold it to select text with the mouse") && stdout.last.includes("/sheet  your character sheet"), () => stdout.last);
+    await until("help", () => stdout.last.includes("Help · Esc closes") && stdout.last.includes("Shift+↑/↓  scroll the story, or this; PgUp/PgDn too") && stdout.last.includes("Trackpad   two fingers scroll the story") && stdout.last.includes("Fn         hold it to select text with the mouse (Option in iTerm2)") && stdout.last.includes("/sheet  your character sheet"), () => stdout.last);
   } finally {
     seat.stop();
   }
