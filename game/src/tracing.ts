@@ -86,6 +86,13 @@ export function langfuseEnv(env: NodeJS.ProcessEnv = process.env, file = path.jo
   return Object.fromEntries(KEYS.map((key, i) => [key, values[i]!])) as Record<(typeof KEYS)[number], string>;
 }
 
+/** The Langfuse variables the shell sets when it sets some but not all three: the one way tracing goes off unasked. */
+export function halfSetInShell(env: NodeJS.ProcessEnv = process.env): { set: string[]; missing: string[] } | undefined {
+  const set = KEYS.filter((key) => env[key]);
+  if (set.length === 0 || set.length === KEYS.length) return undefined;
+  return { set, missing: KEYS.filter((key) => !env[key]) };
+}
+
 /**
  * A run command's tracer: Langfuse when the keys are there, otherwise none, and nothing is loaded.
  * A tracer that cannot start (a package not installed) is none, with one line on stderr: a run
@@ -95,7 +102,11 @@ export async function tracerFromEnv(run: TraceRun): Promise<TurnTracer | undefin
   try {
     // Inside the try: an unreadable or malformed `.env` turns tracing off, never the run.
     const keys = langfuseEnv();
-    if (!keys) return undefined;
+    if (!keys) {
+      const half = halfSetInShell();
+      if (half) console.error(`tracing: off, the shell sets ${half.set.join(", ")} but not ${half.missing.join(", ")}, so .env is not read (all three come from one place)`);
+      return undefined;
+    }
     const { LangfuseSpanProcessor } = await import("@langfuse/otel");
     return await langfuseTracer(run, new LangfuseSpanProcessor({ publicKey: keys.LANGFUSE_PUBLIC_KEY, secretKey: keys.LANGFUSE_SECRET_KEY, baseUrl: keys.LANGFUSE_BASE_URL }));
   } catch (error) {

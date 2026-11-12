@@ -10,7 +10,7 @@ import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
 import { LangfuseSpanProcessor } from "@langfuse/otel";
 import { InMemorySpanExporter } from "@opentelemetry/sdk-trace-base";
 import { AgentSession, reply, seatTool, setTurnTracer } from "../src/agents/sdk-session.ts";
-import { langfuseEnv, langfuseTracer, type TracedTurn } from "../src/tracing.ts";
+import { halfSetInShell, langfuseEnv, langfuseTracer, type TracedTurn } from "../src/tracing.ts";
 import { tagsOfRun } from "../src/play/record.ts";
 import { UsageLog } from "../src/usage.ts";
 
@@ -133,6 +133,9 @@ test("the keys come from the shell, else from .env, and only the three Langfuse 
     assert.equal(langfuseEnv({ LANGFUSE_PUBLIC_KEY: "pk", LANGFUSE_SECRET_KEY: "sk", LANGFUSE_BASE_URL: "u" }, file)?.LANGFUSE_PUBLIC_KEY, "pk");
     assert.equal(langfuseEnv({}, path.join(dir, "missing")), undefined, "no keys, no tracing");
     assert.equal(langfuseEnv({ LANGFUSE_PUBLIC_KEY: "pk", LANGFUSE_SECRET_KEY: "sk" }, path.join(dir, "missing")), undefined, "all three or none");
+    // A shell with the keys but the old LANGFUSE_HOST is named on stderr, never silently off.
+    assert.deepEqual(halfSetInShell({ LANGFUSE_HOST: "h", LANGFUSE_PUBLIC_KEY: "pk", LANGFUSE_SECRET_KEY: "sk" }), { set: ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"], missing: ["LANGFUSE_BASE_URL"] });
+    assert.equal(halfSetInShell({}), undefined);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
