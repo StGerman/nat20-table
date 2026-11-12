@@ -147,4 +147,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-11: API-56 done (table #346): own move on the wire and in the world
 - 2026-11-11: AGT-99 and AGT-101 done (table #350): own move at the table, the marked choice is marked
 - 2026-11-12: MAP-18 done (table #352): a card's own question or plea is always offered; row moved to docs/tasks-done.md
-- 2026-11-12: AGT-97 and AGT-100 done (table #PRNUM): a card goes to the seats after the narration that opens it; the wakes that narrate last end on it; rows moved to docs/tasks-done.md
+- 2026-11-12: AGT-97 and AGT-100 done (table #353): a card goes to the seats after the narration that opens it; the wakes that narrate last end on it; rows moved to docs/tasks-done.md
