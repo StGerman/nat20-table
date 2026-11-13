@@ -83,7 +83,7 @@ Answered in §9.
 
 ## 10. Proposed: clickable names (Stas 2026-11-13, awaiting review)
 
-Status: Proposed, not accepted on this PR's merge until Stas answers below; no rows in TASKS.md until this section and Lev's design (`lev-clickable-names.md`, to be committed into this milestone's design PR) both merge. Re-priced on main f98dd86 against Lev's design revised to the 20:00Z answers, then to the 20:25Z direction (Lev §6, AGT-112).
+Status: every question answered by Stas (2026-11-13 19:54Z to 20:38Z, below); accepted when this PR merges; no rows in TASKS.md until this section and Lev's design (`lev-clickable-names.md`, to be committed into this milestone's design PR) both merge. Re-priced on main f98dd86 against Lev's design revised to the 20:00Z answers, then to the 20:25Z direction (Lev §6, AGT-112).
 
 **Goal.** The name of anyone the DM or a card has named is underlined in the story; a mouse click, `/кто <name>` (`/who` still works) or Tab opens a card on the right with what the player's character has seen or heard of them, a rumour marked as heard, never their numbers (Rule 3); every named person who is present, speaks or acts is a record in the world's roster, and the judge counts one who is not.
 
@@ -120,7 +120,7 @@ Against 0065's target (13.5 PRs, 1.06 days): 18 PRs (0.67 of baseline) is 4.5 ov
 
 **Vera, third read** (same file; Lev's two hero-voice sample cards, written to his rules, not model output): not a passenger («Здесь не стала»). Two things for the describer: the rewording dropped «Воительница», so she could not tell Torva's sex («Как переводчицу меня это сразу останавливает»), so rule 9 must keep a person's grammatical gender; and «Помнит: в грязи его оставили вы» read as a deed she did not remember, which she would take for lost progress unless the story told it first.
 
-Questions for Stas: 1. Split: answered, one milestone. 2. Lev's seven questions: answered below. 3. Lev §6's three (no «я»; the human's seat only; `invented_on_card` counts, does not gate): open; AGT-112 is priced on his recommendations.
+Questions for Stas: 1. Split: answered, one milestone. 2. Lev's seven questions: answered below. 3. Lev §6's three: answered below (20:38Z).
 
 **Decided by Stas, 2026-11-13 20:00Z** («Ок по всем кроме»): Lev's Merchant-death questions (the gate is a changed line; Gwyn pays at the Highsteads; a ledger account outlives its owner; one `if` card per choice deed) as recommended. Clickable names:
 
@@ -133,6 +133,8 @@ Questions for Stas: 1. Split: answered, one milestone. 2. Lev's seven questions:
 7. A kind is not a name (a wolf, the dog): «не может сдаться не персонаж».
 
 **Decided by Stas, 2026-11-13 20:25Z** («В целом да по всему»): Lev's four follow-up questions as recommended (a person named elsewhere is an engine record, placed in a scene only once the party is where they are; 0077 as drafted; one authored `heard` line per person; new seat commands named in the run's language). One implementation direction: the card's text (description, rumour, what the person remembers) is written by an agent in the voice of the viewing character, possibly the player agent with a specialised "describe" prompt, and for a human seat too. The authored lines stay the input; the agent rewords them in the hero's words. Lev folds it into the design and Yan re-prices.
+
+**Decided by Stas, 2026-11-13 20:38Z** («везде «да»»): the describer's three questions as Lev recommended: no «я» in the card text; the human's seat only; `invented_on_card` counts and does not gate. No question in §10 is open.
 
 **What the answers change** (Lev revised his design to these answers; re-priced above on main f98dd86, API-59 added):
 - Every card is one view, "what your character knows", built in `projection.rs` from facts the character saw or was told; none carries HP, AC, a DC, a roll target, a coin count or any other number (Rule 3), the health words included («Есть раны.», not hit points).
