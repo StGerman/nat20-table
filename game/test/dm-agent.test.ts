@@ -129,6 +129,13 @@ test("remember still keeps a fact after a settling tool ended the DM's turn; oth
     assert.deepEqual(await sessions[0]!.call("remember", { fact: "The scribe is called Pickler." }), { text: "remembered", isError: false });
     assert.deepEqual(dm.memory, ["The scribe is called Pickler."]);
     assert.equal((await sessions[0]!.call("narrate", { text: "Too late." })).isError, true);
+    // A wake that timed out keeps no tools: its late memory goes nowhere.
+    const timedOut = standInDm(async () => {
+      throw new TurnTimeout("dm: turn timed out");
+    });
+    await assert.rejects(timedOut.dm.wake("narrate", "Narrate these events.", new DmTools(t.table)));
+    assert.equal((await timedOut.sessions[0]!.call("remember", { fact: "Stale." })).isError, true);
+    assert.deepEqual(timedOut.dm.memory, []);
   } finally {
     t.close();
   }

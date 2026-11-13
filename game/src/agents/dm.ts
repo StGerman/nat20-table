@@ -296,7 +296,10 @@ export class ModelDm implements DmAgent {
   private described = new Set<string>();
   /** The bound tools while a wake runs; a call outside a wake (after a timeout) does nothing. */
   private current: DmTools | undefined;
-  /** The last wake's tools: `remember` writes through them after a settling tool ended the turn. */
+  /**
+   * The tools of the last wake, while that wake ended with its turn answered: `remember` writes
+   * through them after a settling tool ended the turn. A timed-out or failed wake keeps none.
+   */
   private lastTools: DmTools | undefined;
   /** What it established in fiction (spec §3.6), in order. */
   readonly memory: string[] = [];
@@ -312,12 +315,14 @@ export class ModelDm implements DmAgent {
 
   async wake(wake: DmWake, briefing: string, tools: DmTools): Promise<string | void> {
     this.current = tools;
-    this.lastTools = tools;
+    // Only the wake that just ended well keeps its tools for a late `remember` (Copilot on table #379).
+    this.lastTools = undefined;
     this.previewed = undefined;
     try {
       const seed = this.session ? undefined : this.seed(await tools.getState());
       this.session ??= this.openSession();
       const result = await this.session.turn(seed ? `${seed}\n\n${briefing}` : briefing, wake);
+      this.lastTools = tools;
       if (wake === "summary" || wake === "suggest") return result.final;
     } catch (error) {
       // As for a player: a timed-out session goes on, a plan limit stops the run, and after any
