@@ -83,35 +83,39 @@ Answered in §9.
 
 ## 10. Proposed: clickable names (Stas 2026-11-13, awaiting review)
 
-Status: Proposed, not accepted on this PR's merge until Stas answers below; no rows in TASKS.md until this section and Lev's design (`lev-clickable-names.md`, to be committed into this milestone's design PR) both merge. Main a2e589f.
+Status: Proposed, not accepted on this PR's merge until Stas answers below; no rows in TASKS.md until this section and Lev's design (`lev-clickable-names.md`, to be committed into this milestone's design PR) both merge. Re-priced on main f98dd86 against Lev's design revised to the 20:00Z answers.
 
-**Goal.** The name of anyone the party has met is underlined in the story; a mouse click, `/who <name>` or Shift+Tab opens a card on the right with who they are, how they look and whether they are here or alive, never their numbers (Rule 3); every named person who is present, speaks or acts is a record in the world's roster, and the judge counts one who is not.
+**Goal.** The name of anyone the DM or a card has named is underlined in the story; a mouse click, `/кто <name>` (`/who` still works) or Tab opens a card on the right with what the player's character has seen or heard of them, a rumour marked as heard, never their numbers (Rule 3); every named person who is present, speaks or acts is a record in the world's roster, and the judge counts one who is not.
 
 | Id | Row | Pri | Dest | Size | Deps |
 | --- | --- | --- | --- | --- | --- |
-| API-58 | Roster `names`, `look`, optional `place`; card `cast` sets `met`; `NpcKnown`/`NpcDm` gain `names`, `look`; protocol §5 row; fixture, CHANGELOG, server | P2 | Ours | M | none; lands before MAP-23 and ENG-49, which then place Tam and the Merchants by roster id; ENG-48 none |
-| MAP-24 | 14 people into `worlds/wend/npcs.json` with every Russian form and Zoya's `look`; `cast` on every card that names one; `glossary_ru` holds no person; `pack check` rules 1 to 4 (shared form, uncast name, digit on a card) | P2 | Ours | M | API-58; Zoya's board, Vera reads `look` lines |
-| AGT-107 | TUI: matcher (listed forms only), underline in `Style`, the card in `cardRows`' slot, `/who`, Shift+Tab | P2 | Ours | M | API-58, MAP-24; Vera reads Lev §4 lines |
-| AGT-108 | TUI mouse: press reporting in the alternate screen, off on every exit, hit test in `frame.ts`, wheel scroll, `/mouse` off; its own PR so it reverts alone | P2 | Ours | S | AGT-107 |
-| AGT-109 | Judge kind `unknown_person`: `people` and place names in both digests, DM prompt line, scripted CI case; counted, not gated (as §9 3) | P2 | Ours | S | stacked on AGT-106 |
+| API-58 | Roster `names`, `look`, `heard`, `remembers`, `monster`, optional `place`/`anchor`; card `cast` and `tells`; DM command `mention{npcs}`, event `npc_named`, a mention places the person if with the party (Lev rule 4); `NpcKnown`/`NpcDm`/`WorldPlayer` fields, `place` optional (the one breaking line); protocol §5; fixture with a mention then a fight, CHANGELOG, server | P2 | Ours | L | none; lands before MAP-23 and ENG-49, which then place Tam and the Merchants by roster id; ENG-48 none |
+| API-59 | Seen-or-heard record: `seen`, `heard` per character on the person's world record, `saw` on a deed (cast of the writing card, then of any shown card that reads it); old rosters load (`met` = seen by the party); per-viewer projection and `remembers` (Lev rule 6); visibility-scan case: no player view holds a deed id, `by`, day or contract | P2 | Ours | M | API-58; decision 0077 merged first (Proposed, Stas's question 2 in Lev's page) |
+| MAP-24 | 14 people and 4 companions into `worlds/wend/npcs.json`: every Russian form, Zoya's `look` and `heard`, her first `remembers` lines; `cast` and `tells` on 44 cards; `glossary_ru` holds no person, no animal in the roster; `pack check` rules 1 to 3 | P2 | Ours | L | API-58; `remembers` lines after API-59; Zoya's board, Vera reads `look`, `heard`, `remembers` |
+| AGT-107 | TUI: both matchers (listed forms only), underline in `Style`, the card in `cardRows`' slot (overlay when narrow), `/кто` and `/who`, Tab and Shift+Tab, the three lists, the unknown-name line | P2 | Ours | M | API-59, MAP-24; Vera reads Lev §4 lines |
+| AGT-108 | TUI mouse, on by default: press reporting in the alternate screen, off on every exit, hit test in `frame.ts`, wheel scroll, the one-time drag hint, `/мышь` (`/mouse`) off and on; its own PR so it reverts alone | P2 | Ours | S | AGT-107 |
+| AGT-109 | Judge kind `unknown_person`: `people` and where the engine has each in both digests, DM prompt line, scripted CI case; counted, not gated (as §9 3) | P2 | Ours | S | API-58; stacked on AGT-106 |
 
-**Exit delta.** §4 1 gains: `pack check` rules 1 to 4 green in CI, and a unit case per card state (here, not here, no longer alive, companion). §4 2 gains: the all-AI run's report counts `unknown_person` flags, Stas rules each; no run added. New: Stas at his Mac in macOS Terminal, about 10 min, on the exit build after the AI run passed: click a name, select a sentence with Option, Ctrl+C twice, mouse off after exit (the terminal behaviour is unverified; no cloud thread can check it).
+**Exit delta.** §4 1 gains: `pack check` rules 1 to 3 green, the visibility scan with API-59's case, a seeded case where `fed_gwyns_dog` is written with Gwyn absent and her card shows «Помнит» only after `gwyn_news` is shown, a unit case per card state (here, elsewhere, companion, heard of, unconscious, dead), and the mention-then-fight fixture. §4 2 gains: the all-AI run's report counts `unknown_person` flags, Stas rules each; no run added. New: Stas at his Mac in macOS Terminal, about 10 min, on the exit build after the AI run passed: click a name, select with Option, the slash on a Russian layout, Ctrl+C twice, mouse off after exit (unverified; no cloud thread can check it).
 
 **Cost delta**, units of §7:
 
 | Field | §10 adds | Milestone total with §10 (C still not priced) |
 | --- | --- | --- |
-| PRs for Stas | 5 (design folds into the milestone's design PR: 0) | 16 |
-| Stas's review | about 1.8 h: 25 min API-58, 20 min MAP-24, 25 min AGT-107, 15 min AGT-108, 10 min AGT-109, 15 min design §10 (estimates) | about 4.4 h |
-| Exit runs USD | 0 runs added; the judge's larger digest is measured on the run's `usage.jsonl`, not estimated | 7.85 USD |
+| Size | 2 L, 2 M, 2 S | 2 L, 4 M, 5 S (ENG-49 L not counted) |
+| PRs for Stas | 6 (design folds into the milestone's design PR, 0077 into table #365: 0) | 17 |
+| Stas's review | about 2.8 h: 35 min API-58, 25 min API-59, 35 min MAP-24, 25 min AGT-107, 15 min AGT-108, 10 min AGT-109, 15 min design §10, 10 min 0077 (estimates) | about 5.4 h |
+| Exit runs USD | 0 runs added; the judge's larger digest and the longer DM prompt are measured on the run's `usage.jsonl`, not estimated | 7.85 USD |
 | Stas at the Mac | about 10 min | about 10 min |
-| Days scope→exit | 2 to 3: API-58 first, then MAP-24, AGT-107, AGT-108 in sequence | 5 to 8 |
+| Days scope→exit | 3 to 4: API-58, then API-59 beside MAP-24's forms and `cast`, then MAP-24's `remembers`, AGT-107, AGT-108 | 6 to 9 |
 
-Against 0065's target (13.5 PRs, 1.06 days): 16 PRs (0.59 of baseline) is 2.5 over; days 5 to 8 against 1.06.
+Against 0065's target (13.5 PRs, 1.06 days): 17 PRs (0.63 of baseline) is 3.5 over; days 6 to 9 against 1.06. The two L rows are the most likely to need a second review round: about 30 min more each if they do.
 
-**One milestone (Stas 2026-11-13 19:54Z «Свои в бою одна веха»).** Yan had recommended a split (API-58 here, the rest as its own milestone); Stas keeps all five rows here: 16 PRs, 5 to 8 days. API-58 still goes first, because MAP-23 and ENG-49 key on roster ids.
+**One milestone (Stas 2026-11-13 19:54Z «Свои в бою одна веха»).** Yan had recommended a split (API-58 here, the rest as its own milestone); Stas keeps all six rows here (API-59 added after 20:00Z): 17 PRs, 6 to 9 days. API-58 still goes first, because MAP-23 and ENG-49 key on roster ids.
 
 **Vera** (the `vera` agent, on Lev's Russian strings only; verbatim in `/mnt/project-files/engine/allies-in-fights/vera-clickable-names.md`): she understood the card and used it unprompted («нажала бы на Торву ещё раз после боя»). She became a passenger at the help line «держите Option или Fn; /mouse отключает щелчки» and would never touch `/mouse`, Shift+Tab or Option. She also asked: how bad «Есть раны.» is («Мне её лечить или можно идти дальше?»); what «· здесь» means next to «· с вами»; whether `/who` needs the English layout; and whether «Вы пока не встречали никого по имени «Гаррик»» means she typed it wrong. The design PR answers each before AGT-107; the mouse help line moves out of the default help and into AGT-108.
+
+**Vera, second read** (same file, revised strings after Stas's 20:00Z answers): no longer a passenger («Пассажиром я не стала»). Still asked: «вы» against «ваш отряд» on the «Помнит» lines; «рядом с вами» against «идёт с вашим отрядом»; whose «записи» the unknown-name line means («звучит так, будто я сама неправильно написала имя»); the Tab help line, read twice; «Мышь в игре выключена» scared her for a moment; «Тяжёлые раны» with no hint what to do. Zoya's board and the wording fixes come in the design PR.
 
 Questions for Stas: 1. Split: answered, one milestone. 2. Lev's seven questions: answered below.
 
@@ -125,7 +129,7 @@ Questions for Stas: 1. Split: answered, one milestone. 2. Lev's seven questions:
 6. "Remembers: you fed her dog" is in this milestone, not later.
 7. A kind is not a name (a wolf, the dog): «не может сдаться не персонаж».
 
-**What the answers change** (Lev revises his design before rows; Yan re-prices):
+**What the answers change** (Lev revised his design to these answers; re-priced above on main f98dd86, API-59 added):
 - Every card is one view, "what your character knows", built in `projection.rs` from facts the character saw or was told; none carries HP, AC, a DC, a roll target, a coin count or any other number (Rule 3), the health words included («Есть раны.», not hit points).
 - Answer 1 moves the creature from placement to the DM's first mention, so API-58 grows: a mention makes the creature, and the judge's `unknown_person` then means a name that matches no roster record.
 - Answers 3 and 6 need a per-character record of what was witnessed or heard (a new row, size M or more). A heard line is a rumour and never fact (bible); answer 3 does not write a world fact from the DM's words, so 0071 holds.
