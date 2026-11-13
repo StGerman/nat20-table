@@ -73,7 +73,7 @@ test("start_fight puts the table in a fight the scene's encounters don't hold", 
   }
 });
 
-test("a creature the DM names in the run's language is called so at the seat, and a neutral never starts a fight (run 2026-11-13)", async () => {
+test("a creature the DM names in the run's language is called so at the seat, and a neutral it fights turns hostile (run 2026-11-13, API-60)", async () => {
   const townsfolk: StatBlockEntry = { id: "townsfolk", monster: "commoner", side: "neutral", name: "Townsfolk" };
   const t = await testTable({ seed: 27, narrationGuard: (text) => (/\bAC \d/.test(text) ? "it gives AC" : undefined) });
   try {
@@ -88,18 +88,19 @@ test("a creature the DM names in the run's language is called so at the seat, an
     const ru = new SeatNames("ru");
     ru.learn("pickler", "Пиклер");
     assert.equal(ru.who("pickler"), "Пиклер");
-    // The engine would refuse it and end the DM's turn: the tool refuses first, and the DM may try again.
-    const fight = await dm.startFight(["bren", "pickler"]);
-    assert.equal(fight.ok, false);
-    assert.equal(fight.retryable, true);
-    assert.match(fight.text, /^pickler is neutral and fights no one\. Answer in the story without a fight, or ask for a check, then narrate\.$/);
+    // A fight with nobody against the party would end the DM's turn at the engine: it is a retry here.
+    const alone = await dm.startFight(["bren", "bren"]);
+    assert.equal(alone.retryable, true);
+    assert.match(alone.text, /^No fight: bren is listed twice\./);
+    assert.equal((await dm.startFight(["bren"])).retryable, true);
     assert.equal(t.requests().some((r) => r.cmd === "start_fight"), false);
-    assert.equal(t.table.exhausted("dm"), false);
-    // Once the retries are spent, the DM hears that its decision is over, not another refusal.
-    await dm.startFight(["bren", "pickler"]);
-    await dm.startFight(["bren", "pickler"]);
-    assert.equal(t.table.exhausted("dm"), true);
-    assert.equal((await dm.startFight(["bren", "pickler"])).retryable, false);
+    t.table.resetRetries("dm");
+    // A neutral the DM names in a fight turns hostile (API-60) and the fight is on.
+    const fight = await dm.startFight(["bren", "pickler"]);
+    assert.equal(fight.ok, true, fight.text);
+    assert.equal(t.table.inCombat, true);
+    const turned = t.requests().find((r) => r.cmd === "start_fight");
+    assert.ok(turned, "the fight reached the engine");
     // A name carries no game statistic into the views.
     t.table.resetRetries("dm");
     const numbered = await dm.placeCreature("townsfolk", "clerk", { near: "bren" }, "Clerk, AC 10");

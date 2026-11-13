@@ -3,6 +3,9 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.71 (2026-11-13)
+- Meaning (API-60, protocol §4 "Who can fight", Stas 2026-11-13): `start_fight` takes a neutral participant and turns it hostile; before, a neutral was refused with `bad_request` ("X is neutral and takes no side in a fight."). It counts as hostile for the one-on-each-side rule. Additive: new event `turned_hostile{handles}` (public), logged before `combat_started`. Fixture: `start_fight.jsonl` places a neutral and fights it. Other fixtures change by version only.
+
 ## 1.0.0-dev.70 (2026-11-12)
 - Meaning (ENG-21, core #81, protocol §4.1): a `move` to a point or an anchor where a creature stands now ends on the last free spot along its route, in combat and in explore mode, with `reached: false` and no anchor on its `moved`; before, the mover ended inside that creature's space (SRD 5.2.1, Moving Around Other Creatures). With no free spot on the way, nothing moves and the move is `rejected` with `no_path`.
 - Additive: `MoveResult.taken` (left out when false) says the route got to where it was sent and stopped short because a creature stands there, so a client can tell it from a `partial` move the movement cut short first (no `taken`; refused `insufficient_resource` when it can't get anywhere); the table's stopped-short line names the reason.

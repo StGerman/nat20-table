@@ -467,7 +467,7 @@ export class ModelDm implements DmAgent {
           ),
           seatTool(
             "start_fight",
-            "Start a fight the scene's encounters don't hold, among creatures present: at least one on each side, every one standing. The engine rolls Initiative and plays the monsters. It ends only when one side is down.",
+            "Start a fight the scene's encounters don't hold, among creatures present: someone of the party and someone against them, every one standing. A neutral creature you name turns hostile and stays so: the fight is the attack on it, or its attack on the party. The engine rolls Initiative and plays the monsters. It ends only when one side is down.",
             { participants: z.array(handle).describe("Every creature in the fight.") },
             (i) => this.bound((t) => t.startFight(i.participants)),
           ),
