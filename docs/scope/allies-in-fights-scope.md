@@ -113,4 +113,20 @@ Against 0065's target (13.5 PRs, 1.06 days): 16 PRs (0.59 of baseline) is 2.5 ov
 
 **Vera** (the `vera` agent, on Lev's Russian strings only; verbatim in `/mnt/project-files/engine/allies-in-fights/vera-clickable-names.md`): she understood the card and used it unprompted («нажала бы на Торву ещё раз после боя»). She became a passenger at the help line «держите Option или Fn; /mouse отключает щелчки» and would never touch `/mouse`, Shift+Tab or Option. She also asked: how bad «Есть раны.» is («Мне её лечить или можно идти дальше?»); what «· здесь» means next to «· с вами»; whether `/who` needs the English layout; and whether «Вы пока не встречали никого по имени «Гаррик»» means she typed it wrong. The design PR answers each before AGT-107; the mouse help line moves out of the default help and into AGT-108.
 
-Questions for Stas: 1. Split: answered, one milestone. 2. Lev's seven questions (his §5) answered before the design merges; question 1 (a roster record is the "engine creature") sets API-58's size.
+Questions for Stas: 1. Split: answered, one milestone. 2. Lev's seven questions: answered below.
+
+**Decided by Stas, 2026-11-13 20:00Z** («Ок по всем кроме»): Lev's Merchant-death questions (the gate is a changed line; Gwyn pays at the Highsteads; a ledger account outlives its owner; one `if` card per choice deed) as recommended. Clickable names:
+
+1. A roster record becomes an engine creature as soon as the DM names it in narration, not only when a scene or fight places it.
+2. A companion's card shows only what the human's character sees and knows of them, never their sheet. Rule 3 unchanged.
+3. Someone only heard of is clickable too, and the card shows only what the human's character heard, marked as heard («говорят…»), never as fact.
+4. Shift+Tab always walks names; Tab when free.
+5. Mouse on by default; `/mouse` turns it off.
+6. "Remembers: you fed her dog" is in this milestone, not later.
+7. A kind is not a name (a wolf, the dog): «не может сдаться не персонаж».
+
+**What the answers change** (Lev revises his design before rows; Yan re-prices):
+- Every card is one view, "what your character knows", built in `projection.rs` from facts the character saw or was told; none carries HP, AC, a DC, a roll target, a coin count or any other number (Rule 3), the health words included («Есть раны.», not hit points).
+- Answer 1 moves the creature from placement to the DM's first mention, so API-58 grows: a mention makes the creature, and the judge's `unknown_person` then means a name that matches no roster record.
+- Answers 3 and 6 need a per-character record of what was witnessed or heard (a new row, size M or more). A heard line is a rumour and never fact (bible); answer 3 does not write a world fact from the DM's words, so 0071 holds.
+- Answer 6 shows a player a deed the person witnessed. Deeds are DM-only since 0063, so this needs its own decision record, drafted in the design PR, superseding 0063 for witnessed deeds on a card only.
