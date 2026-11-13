@@ -1,4 +1,4 @@
-# 0073. A pack with no campaign names its site in `new_session`
+# 0074. A pack with no campaign names its site in `new_session`
 
 - **Status:** Proposed
 - **Date:** 2026-11-13

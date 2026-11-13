@@ -1,6 +1,6 @@
 # 0072. Langfuse traces every agent turn, by hand, off unless keyed
 
-- **Status:** Accepted
+- **Status:** Accepted; "Off in milestone exit runs" superseded by [0073](0073-exit-runs-traced.md)
 - **Date:** 2026-11-12
 - **Decided by:** Stas (thread "Add Langfuse tracing to the table", design doc https://claude.ai/artifact/77VvhZkSJqdHkGr4b5FfFx, six decisions in its comments and the thread, 2026-11-12)
 
