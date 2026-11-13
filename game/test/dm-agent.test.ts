@@ -119,6 +119,21 @@ test("in skills mode the craft guidance is the plugin's skills, named in the pro
   }
 });
 
+test("remember still keeps a fact after a settling tool ended the DM's turn; other tools don't act (run 2026-11-13)", async () => {
+  const { dm, sessions } = standInDm(async () => "");
+  const t = await testTable({ seed: 1, pack: MILL });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "s1_village_green" }));
+    await dm.wake("narrate", "Narrate these events.", new DmTools(t.table));
+    sessions[0]!.settling = true;
+    assert.deepEqual(await sessions[0]!.call("remember", { fact: "The scribe is called Pickler." }), { text: "remembered", isError: false });
+    assert.deepEqual(dm.memory, ["The scribe is called Pickler."]);
+    assert.equal((await sessions[0]!.call("narrate", { text: "Too late." })).isError, true);
+  } finally {
+    t.close();
+  }
+});
+
 test("the DM runs the yard through its tools; its memory and a refused narration reach no player", async () => {
   // A word no pack file, card or engine line holds: if it reaches a player, memory leaked.
   const SENTINEL = "Quillonmarsh";

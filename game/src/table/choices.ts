@@ -57,7 +57,9 @@ type Item = Omit<Choice, "number">;
  */
 export function buildChoices(result: LegalActionsResult, state: State | undefined, combat: boolean, talk: SeatTalk = ENGLISH): Choice[] {
   const about = (option: ActionOption) => aboutOf(option, talk.names);
-  const items = result.options.flatMap((option) => optionItems(option, talk).map((item) => tagged(item, about(option))));
+  // Out of a fight the actions that only a fight has stay off the list (run 2026-11-13); words still start one.
+  const options = combat ? result.options : result.options.filter((o) => !fightOnly(o.option_id));
+  const items = options.flatMap((option) => optionItems(option, talk).map((item) => tagged(item, about(option))));
   if (combat && state) {
     const moves = moveItems(state, reachOf(result, state), talk);
     const dash = result.options.find((o) => o.option_id === "dash");
@@ -65,6 +67,12 @@ export function buildChoices(result: LegalActionsResult, state: State | undefine
   }
   if (combat && result.can_end_turn) items.push({ label: talk.words.endTurn, act: { kind: "end_turn" }, about: { id: "end_turn" } });
   return numbered(items);
+}
+
+/** Actions with a use only in a fight: attacks, Dash, Disengage, Dodge, Action Surge, Rage and the like. */
+const FIGHT_ONLY = new Set(["dash", "disengage", "dodge", "fighter/action_surge", "help/assist_attack_roll", "monster/nimble_escape", "barbarian/rage", "barbarian/extend_rage"]);
+export function fightOnly(id: string): boolean {
+  return FIGHT_ONLY.has(id) || /^(melee_attack|ranged_attack|unarmed_attack|opportunity_attack|barbarian\/reckless_attack|dragonborn\/breath_weapon)(\/|$)/.test(id);
 }
 
 function aboutOf(option: ActionOption, names: SeatNames): NonNullable<Choice["about"]> {
