@@ -101,6 +101,7 @@ const MAX_SCRIPTED_ACTIONS_PER_TURN: usize = 4;
 
 const METERS_PER_FOOT: f32 = 0.3048;
 
+#[derive(Clone)]
 struct SceneCreature {
     handle: String,
     entity: Entity,
@@ -506,17 +507,7 @@ impl Game {
 
         let creatures: Vec<SceneCreature> = carried.into_iter().chain(spawned).collect();
         if failed.is_none() {
-            let all: Vec<SceneCreature> = creatures
-                .iter()
-                .chain(&trial)
-                .map(|c| SceneCreature {
-                    handle: c.handle.clone(),
-                    entity: c.entity,
-                    side: c.side,
-                    control: c.control,
-                    pregen: c.pregen.clone(),
-                })
-                .collect();
+            let all: Vec<SceneCreature> = creatures.iter().chain(&trial).cloned().collect();
             failed = check_sides(&game.engine, &all).err();
         }
         rollback(&mut game, &trial);
@@ -1996,20 +1987,11 @@ impl Game {
         for creature in &mut self.scene.creatures {
             if turned.iter().any(|h| h.0 == creature.handle) {
                 creature.side = Side::Hostile;
+                // A creature that surrendered and fights again is no longer a captive to loot.
+                self.yielded.remove(&creature.entity);
             }
         }
-        let all: Vec<SceneCreature> = self
-            .scene
-            .creatures
-            .iter()
-            .map(|c| SceneCreature {
-                handle: c.handle.clone(),
-                entity: c.entity,
-                side: c.side,
-                control: c.control,
-                pregen: c.pregen.clone(),
-            })
-            .collect();
+        let all = self.scene.creatures.clone();
         for c in all
             .iter()
             .filter(|c| turned.iter().any(|h| h.0 == c.handle))
@@ -2121,19 +2103,8 @@ impl Game {
             }
         }
         if failed.is_none() {
-            let all: Vec<SceneCreature> = self
-                .scene
-                .creatures
-                .iter()
-                .chain(&new)
-                .map(|c| SceneCreature {
-                    handle: c.handle.clone(),
-                    entity: c.entity,
-                    side: c.side,
-                    control: c.control,
-                    pregen: c.pregen.clone(),
-                })
-                .collect();
+            let all: Vec<SceneCreature> =
+                self.scene.creatures.iter().chain(&new).cloned().collect();
             if find_room {
                 // A creature the DM places takes the side it is placed on: a townsfolk Guard
                 // placed hostile is hostile to the party (MON-11), whatever its faction says.

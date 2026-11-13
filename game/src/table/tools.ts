@@ -925,7 +925,9 @@ export class DmTools {
     // fight's sides are not retryable and would end the DM's turn with its narration (run
     // 2026-11-13), so they are answered here, as a retry, before the engine sees them.
     return send(this.table, "dm", { cmd: "start_fight", participants: [...participants] }, () => "the fight is on; initiative rolled", async () => {
-      const sides = new Map((await this.dmState())?.creatures.map((c) => [c.handle, c.side]) ?? []);
+      const state = await this.dmState();
+      if (!state) return undefined;
+      const sides = new Map(state.creatures.map((c) => [c.handle, c.side]));
       const twice = participants.find((h, i) => participants.indexOf(h) !== i);
       const fighting = participants.map((h) => sides.get(h));
       const why = twice
