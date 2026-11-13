@@ -80,7 +80,8 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0069](0069-game-designer-agent.md) | One game designer agent, Lev Neiman, drafts the system design and reads cards and runs (`design`, `play`, `trace`); he proposes contract changes and never edits the crate; he drafts and challenges decisions, Stas decides; he gives no verdict on his own design | Accepted | 2026-11-11 | Stas |
 | [0070](0070-children-not-exempt-from-harm.md) | Torture is never shown; children are not exempt from harm on screen | Accepted | 2026-11-12 | Stas |
 | [0071](0071-deed-from-words.md) | A player's wish becomes a proposed card, not a deed | Accepted | 2026-11-13 | Stas (all six design decisions as recommended) |
-| [0072](0072-langfuse-tracing.md) | Langfuse traces every agent turn with our own spans in `AgentSession` (one trace per turn named `<role>.<purpose>`, one session per run), Cloud US, unmasked, off unless the `LANGFUSE_*` keys are set, off in exit runs | Accepted | 2026-11-12 | Stas |
+| [0072](0072-langfuse-tracing.md) | Langfuse traces every agent turn with our own spans in `AgentSession` (one trace per turn named `<role>.<purpose>`, one session per run), Cloud US, unmasked, off unless the `LANGFUSE_*` keys are set (exit runs: superseded by 0073) | Accepted | 2026-11-12 | Stas |
+| [0073](0073-exit-runs-traced.md) | Milestone exit runs are traced when the keys are set; supersedes 0072's "off in exit runs" | Accepted | 2026-11-13 | Stas |
 
 ## Open questions to watch
 
