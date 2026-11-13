@@ -81,6 +81,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0070](0070-children-not-exempt-from-harm.md) | Torture is never shown; children are not exempt from harm on screen | Accepted | 2026-11-12 | Stas |
 | [0071](0071-deed-from-words.md) | A player's wish becomes a proposed card, not a deed | Accepted | 2026-11-13 | Stas (all six design decisions as recommended) |
 | [0072](0072-langfuse-tracing.md) | Langfuse traces every agent turn with our own spans in `AgentSession` (one trace per turn named `<role>.<purpose>`, one session per run), Cloud US, unmasked, off unless the `LANGFUSE_*` keys are set, off in exit runs | Accepted | 2026-11-12 | Stas |
+| [0073](0073-site-pack-joins-world-memory.md) | A pack with no campaign names its site in `new_session` (`site {map, place, pack}`), keeps a world memory with no contract part and saves it, so a later contract on the map reads its deeds | Proposed | 2026-11-13 | not decided (Lev Neiman proposes A) |
 
 ## Open questions to watch
 
