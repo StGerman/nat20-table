@@ -524,6 +524,9 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
     assert.ok(!records.some((r) => r.text === "The road bends."), "the early narration was refused");
     // A scene reached with a road card met on the way opens once that card is settled (AGT-100):
     // the trial run of 2026-11-12 told Saltmouth's arrival, then played the road card.
+    // The card's wakes before a held opening are told the place is not reached yet; the opening never is.
+    assert.ok(dm.briefings.some((b) => (b.wake === "pick" || b.wake === "card") && b.briefing.includes("the caravan has not arrived")));
+    assert.ok(!dm.briefings.some((b) => b.wake === "scene_open" && b.briefing.includes("the caravan has not arrived")));
     const held = records.flatMap((r, i) => (r.kind === "system" && / opens after the road card met on the way$/.test(r.text) ? [i] : []));
     assert.ok(held.length > 0, "a scene waited for its road card");
     for (const waits of held) {
@@ -535,8 +538,7 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
       assert.equal(records[opens]!.text, `Here is ${scene}.`);
       // No other card is played between the road card and the opening: a place's arrival card comes after it.
       assert.ok(!records.slice(decided, opens).some((r) => r.kind === "system" && / goes to the seats$/.test(r.text)), `${scene}: a card between the road card and the opening`);
-      // The card's wakes before the opening are told the place is not reached yet.
-      assert.ok(dm.briefings.some((b) => (b.wake === "pick" || b.wake === "card") && b.briefing.includes("the caravan has not arrived")));
+
     }
     // A card that comes with no pick has its own wake, opened once (AGT-100).
     for (const b of dm.briefings.filter((b) => b.wake === "card")) assert.match(b.briefing, /A road card is on the table\.\nThe card: "/);
