@@ -1,6 +1,6 @@
 # Roadmap
 
-As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the line 13 updated 2026-11-13 (table #375, #378). Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api` and nat20-runs `master` 2e65a5d.
+As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the line 13 updated 2026-11-13 (table #375, #378); the Allies in fights row added 2026-11-12, numbers unchanged. Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api` and nat20-runs `master` 2e65a5d.
 
 ## Order
 
@@ -8,8 +8,9 @@ As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the line 13 updated 2
 |---|---|---|---|
 | 12 | Not a passenger: phase 1 MAP-15, MAP-17; phase 2 Own move, the readable table (AGT-97, AGT-98, AGT-94 with AGT-76, AGT-13 partial, MAP-14), ENG-21, ENG-40..42, a Plain or Fireside voice flag and one language at the seat (0067) (Stas 2026-11-08) | Vera (fallback) asks about no engine line in a DM narration sample; one own move decides a card in each run; no card before its narration; the Russian seat shows no English line; Stas plays only after the all-AI half on the same build has passed (0065); the voice comparison reported, not gated | open: scope accepted (table #336); phase 1 done (table #338); design accepted (table #339); rows on main (table #341); phase 2: 0 of 13 PRs merged, 0 open |
 | 13 | Dramaturg mechanism: the engine carries the story from one quest to the next. Its other half, the role, is done: Zoya, table #328 | a scene writes a deed, the Mill joins the world's memory, a Wendford arrival card reads it; exit = the Mill all AI, then *Fair in Wend* on its roster with Stas, one pair on one build | open: scope merged (table #348); design accepted (table #375, decision 0075, 2026-11-13); rows API-57, ENG-44, MAP-20, AGT-104 written 2026-11-13 (table #378); code after M12's exit pair (0043, scope amendment 1) |
-| — | Arachas plus glue | no spec yet. Inputs shelved by the M13 scope §3 (no rows): quests as `kind: errand`; fronts and clocks; a scene that reads a deed (carrier B); witnesses, the attitude step and the `saw` field (gap E); carrier C and gap D; arrival without a draw (Lev, decided here with DM-pick data); Snitt's fate and the promise to him (or the Mill plus glue); MAP-13, an existing row, lands after API-57 and before it | after the Dramaturg mechanism (same) |
-| — | The Silent Mill plus glue | no spec yet | after Arachas (same) |
+| — | Allies in fights («Свои в бою»): Gwyn's dog, the horses, Tam and the Merchant in card fights under the engine's script; the judge's absent-creature check | CI seeds, each ally dead and hurt at least once, deeds read; one all-AI run; AGT-106 counted | after the Dramaturg mechanism (Stas 2026-11-12 21:22Z); scope `docs/scope/allies-in-fights-scope.md` (table #365) |
+| — | Arachas plus glue | no spec yet. Inputs shelved by the M13 scope §3 (no rows): quests as `kind: errand`; fronts and clocks; a scene that reads a deed (carrier B); witnesses, the attitude step and the `saw` field (gap E); carrier C and gap D; arrival without a draw (Lev, decided here with DM-pick data); Snitt's fate and the promise to him (or the Mill plus glue); MAP-13, an existing row, lands after API-57 and before it | after Allies in fights (Stas 2026-11-12 21:22Z) |
+| — | The Silent Mill plus glue | no spec yet | after Arachas (Stas 2026-11-07 19:34Z) |
 | 11 | Word on the road | — | done 2026-11-08: pair 3 on 2294ef6 PASS and PASS; table #299 to #325 merged 21:00Z; record 0066 in table #336 |
 | 10 | Speed and polish | — | done 2026-11-01 (0056) |
 | 9 | Living world | — | done 2026-11-06 (0060) |
