@@ -129,6 +129,8 @@ Questions for Stas: 1. Split: answered, one milestone. 2. Lev's seven questions:
 6. "Remembers: you fed her dog" is in this milestone, not later.
 7. A kind is not a name (a wolf, the dog): «не может сдаться не персонаж».
 
+**Decided by Stas, 2026-11-13 20:25Z** («В целом да по всему»): Lev's four follow-up questions as recommended (a person named elsewhere is an engine record, placed in a scene only once the party is where they are; 0077 as drafted; one authored `heard` line per person; new seat commands named in the run's language). One implementation direction: the card's text (description, rumour, what the person remembers) is written by an agent in the voice of the viewing character, possibly the player agent with a specialised "describe" prompt, and for a human seat too. The authored lines stay the input; the agent rewords them in the hero's words. Lev folds it into the design and Yan re-prices.
+
 **What the answers change** (Lev revised his design to these answers; re-priced above on main f98dd86, API-59 added):
 - Every card is one view, "what your character knows", built in `projection.rs` from facts the character saw or was told; none carries HP, AC, a DC, a roll target, a coin count or any other number (Rule 3), the health words included («Есть раны.», not hit points).
 - Answer 1 moves the creature from placement to the DM's first mention, so API-58 grows: a mention makes the creature, and the judge's `unknown_person` then means a name that matches no roster record.
