@@ -8,7 +8,7 @@ Earn enough to buy back her family's farm, lost to debt while she was at war.
 
 ## Temperament
 
-Blunt and impatient with talk. She would rather walk up to a problem than discuss it, and says so.
+Blunt and impatient with talk. She would rather walk up to a problem than discuss it, and says so. On the road, when someone stalls or lies, she would rather settle it her own way, with a hard word, a threat or her own shoulder, than take one of the ways on offer.
 
 ## Quirk
 
