@@ -1017,8 +1017,8 @@ export class TableLoop {
    * An AI player's word on a road card, from its own view of the card (design §1.7). Its
    * `own_move` words go to the DM once the wake returns; when they make no move, it is asked once
    * more, with the DM's answer, for a `choose_card`, before the loop's fallback.
+   * @param ask how the closing ask starts ("Give your word", "Make the caravan's call").
    */
-  // `ask`: how the closing ask starts ("Give your word", "Make the caravan's call").
   private async aiCard(agent: PlayerAgent, ask: string, owner = false): Promise<void> {
     const handle = agent.handle;
     const tools = this.tools.get(handle)!;
@@ -1044,7 +1044,7 @@ export class TableLoop {
     await this.wakePlayer(
       agent,
       "card",
-      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner, false), "Your words made no choice of the card. Give your word with choose_card, with a choice id."),
+      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner, false), `Your words made no choice of the card. ${ask} with choose_card, with a choice id.`),
     );
     // Words a second time are only said aloud: the card wants a choice now.
     const again = tools.takeOwnMove();
@@ -2567,7 +2567,7 @@ export function roadCardAhead(world: WorldDm | undefined): boolean {
 const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
 
 /** The AI players' own-move line in a card briefing (AGT-99), while the card has no own move. */
-export const OWN_MOVE_INVITE = "These are only the obvious choices: if your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move, in one sentence.";
+export const OWN_MOVE_INVITE = "The written choices are only the obvious ones: if your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move, in one sentence.";
 
 /** The engine's limit on an own move's words (API-56). */
 const OWN_MOVE_MAX_CHARS = 300;
