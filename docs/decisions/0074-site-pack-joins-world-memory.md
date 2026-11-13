@@ -10,15 +10,15 @@ Milestone 13 lets a scene write a deed (scope `docs/scope/dramaturg-mechanism-sc
 
 - The engine reads scene files and `campaign.json` from the pack; it never reads `adventure.json`.
 - `worlds/wend/map.json` already has `pells_mill` with `pack_slot: the_silent_mill`.
-- A saved world needs a contract part today (`SavedWorld.contract`: the caravan, where it stands), and `Campaign::read` takes a saved world whose escort is not done as a journey under way and refuses another pack.
+- A saved world needs a contract part today (`SavedWorld.contract`: the caravan, and `at`, the only place the position is kept; `carry_memory` reads it), and `Campaign::read` takes a saved world whose escort is not done as a journey under way and refuses another pack.
 - `RosterWorld.state` is opaque on the wire, so its inner shape is the world crate's, not the contract's.
 - The conformance fixtures replay against one test data directory, which has a `campaign.json`.
 
 ## Options
 
-### A. The game passes `site {map, place, pack}` in `new_session` (proposed)
-`adventure.json` gains `site: {map, place}`; the game sends it with the pack's id. The server checks the place is on the map and its `pack_slot` is the pack. The session keeps a memory with no contract part and saves it; `start_campaign` on that roster carries the memory as from a finished contract.
-- Pro: one optional wire field; the fixture needs no second data directory; the `pack_slot` check uses data the map already holds; the Mill's scene flow is untouched.
+### A. The game passes `site {map, place}` in `new_session` (proposed)
+`adventure.json` gains `site: {map, place}`; the game sends it. The server checks the place is on the map; `pack:check` checks the place's `pack_slot` is the adventure's `id`, since the server never reads `adventure.json` and would only compare the game's claim with itself. The session keeps a memory with no contract part and saves it; `start_campaign` on that roster carries the memory as from a finished contract.
+- Pro: one optional wire field; the fixture needs no second data directory; the Mill's scene flow is untouched.
 - Con: a contract version of its own; the engine trusts the game for which site a session is, as it already trusts it for the pack's directory.
 
 ### B. A `site.json` in the pack, read by the engine
@@ -35,10 +35,10 @@ Proposed: A. It is the smallest change that gives the Mill's deeds a world, a da
 
 ## Consequences
 
-- ENG-44 changes the contract (`NewSession.site`, additive), with its fixture and CHANGELOG line, after API-57's version.
-- In the world crate `SavedWorld.contract` and `Memory.left_at` become optional; roster format stays 2, and every roster saved before still reads.
-- `start_campaign` in a site session, and a site on a roster whose contract is under way, are refused.
-- `pack:check` refuses a pack with both `site` and a campaign.
+- ENG-44 changes the contract (`NewSession.site`, additive), with its fixture and CHANGELOG line, after API-57's version; the doc comments of `RosterWorld.state` and `Roster.world` and protocol §4.15 change with it, and the game passes `site` (`game/src/engine.ts`).
+- In the world crate `Memory` gains an optional `left_at` and `SavedWorld.contract` becomes optional; the carry reads `from` from `contract.at` or, with no contract part, from `left_at`. Roster format stays 2, and every roster saved before still reads.
+- `start_campaign` in a site session, and a site on a roster whose contract is under way, are refused; a roster whose world is on another map starts fresh.
+- `pack:check` refuses a pack with both `site` and a campaign, and a `site` whose place has another `pack_slot`.
 
 ## Revisit when
 
