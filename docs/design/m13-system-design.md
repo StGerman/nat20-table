@@ -121,7 +121,7 @@ Prose canon removed in the same PR: the "village knows them" line in `fw_wendfor
 
 ## 7. Player-facing lines (for Vera, alone)
 
-Working lines, third draft, after Zoya's read and Vera's two (§13); not read again yet. Zoya's MAP-20 text replaces them and is read in both languages (`text_ru`, M12). Shown as the seat shows a card after M12.
+Working lines, third draft, read by Vera and Zoya (§13). Zoya's MAP-20 text replaces them and is read in both languages (`text_ru`, M12). Shown as the seat shows a card after M12.
 
 **Card 1** (a goblin was taken alive)
 
@@ -204,35 +204,36 @@ Beside the count: ENG-45 and MAP-13 (their own PRs), deed from words (three PRs,
    - `m13-written` gates on run 1's `deed_remembered` events alone; the saved memory is shown, not gated, in run 2's report from its first `world.deeds`, instead of opening the roster's world state, which the contract calls opaque;
    - MAP-20 also removes "Snitt's hungry band" from the `goblin_scouts` note in `hills.json` (§4.4), which the scope does not list;
    - the bible PR drops the "Venna" item (a no-op on main) and gains `examples.md` line 43.
-6. **A challenge, made once, to §8 answer 1a.** The record will show Stas deciding a card about a yard the AI party fought in run 1. The loop is proven; the person who made the choice is not the one who meets it. No refinement fits M13 (it would cost Stas a 120-minute Mill sitting). Recommended: 1a stands; the Arachas plus glue exit has the human make a deed and meet its reader in the same pair. Vera's second read (§13) met it at the table: "did I spare him?"; §7's third draft gives each choice its own words so none needs the memory.
+6. **A challenge, made once, to §8 answer 1a.** The record will show Stas deciding a card about a yard the AI party fought in run 1. The loop is proven; the person who made the choice is not the one who meets it. No refinement fits M13 (it would cost Stas a 120-minute Mill sitting). Recommended: 1a stands; the Arachas plus glue exit has the human make a deed and meet its reader in the same pair. Vera's second read (summed up in §13) met it at the table: "did I spare him?"; §7's third draft gives each choice its own words so none needs the memory.
 7. **`by` on a fight-end deed is every party-side participant, downed ones included** (§3 question 3). Recommended; the alternative is only those standing.
 
 ## 13. Vera and Zoya
 
-Both came from the cloud fallback: Vera's from a general-purpose subagent given the body of `vera.md` and the two cards only, which may still see CLAUDE.md; Zoya's from one given the body of `zoya.md`. Vera's first read, of the first draft, led to the rewrite (she did not know who "the Blades" were, and card 2 gave her nothing to answer); below is her second read, of the second draft. Zoya read the first draft; where her page says decision 0074 it said 0073 when written, renumbered after main took 0073.
+Both came from the cloud fallback: Vera's from a general-purpose subagent given the body of `vera.md` and the two cards only, which may still see CLAUDE.md; Zoya's from one given the body of `zoya.md`. Vera read three drafts; her first two led to the rewrites (she did not know who "the Blades" were, card 2 gave her nothing to answer, Osric's question dangled, and both cards assumed she had made the call in the yard); below is her third read, of §7 as it stands. Zoya's board check read the first draft; where it says decision 0074 it said 0073 when written, renumbered after main took 0073. Her card read is of §7 as it stands.
 
-### Vera, second read (fallback), verbatim
+### Vera, third read (fallback), of §7 as it stands, verbatim
 
 > **1. What I understood**
 >
-> Card 1: Our group is back in the village, the mill is working again, and the girl we got out of the cellar, Wenna, is telling everyone what she saw. Part of what she saw is that we left one goblin alive, tied up by the fire. The man in charge, Osric, believes her and wants one of us to own up to it. I think he is asking whose decision it was to keep the goblin alive, and whether we'll answer for it. I'd answer him myself. I would probably pick the first choice, if I could remember why we spared him. If it wasn't me who spared him, I'd want to say so in my own words.
+> Card 1: we come back to the village. The girl we got out of the cellar, Wenna, is on the green telling everyone that one goblin was left alive, tied to a post. The man in charge, Osric, believes her. He isn't angry; he's working out what it will cost. He wants one of us to say we'll be responsible for that goblin. I have to say why we let him live, or say nothing and leave Wenna on her own. I think I'd pick the first one, "he gave up, and that was reason enough", because that's what I'd say if I were really there.
 >
-> Card 2: Same village, same girl, but this time every goblin is dead in the yard. Osric says there's nobody left to answer for what happened, and he wants to know whether any of them begged for their lives. I take that as a reproach, or a test. I'd most likely ask him the second question back, what he would have done, because I don't like being judged before I've said anything.
+> Card 2: same village, same girl, but this time she says every goblin in the yard is dead. Osric wants us to explain how that happened, because now there's nobody left to answer for taking her. I'd ask him what he would have done with one who gave up. That's the only choice that talks back, and it's what I'd say.
 >
 > **2. What I would ask aloud**
 >
-> - "goes on somebody's tally": I think it means somebody gets the blame, or the credit, the way a shopkeeper writes it on your account. But I'm not sure if it's good or bad for us. Is he angry or pleased?
-> - "I'd hear from the company whose.": I had to read this twice. The sentence ends on "whose" and you have to go back and fill in "whose tally". And "the company": does he mean us? Nobody has called us a company before, as far as I remember. At first I thought of a trading company.
-> - "Osric the reeve": I know "reeve" from Chaucer, so a village official of some kind. Someone who has never read Chaucer wouldn't know it. Whose side is he on?
-> - "afterwards a goblin tied to the post by the hearth": after what? After the cellar? Which hearth, the mill's? I don't remember a post.
-> - "Say why you spared him.": did I spare him? If one of my companions did it, I don't know why, so how can I say?
-> - "Not one left to answer for it.": answer for what, the girl in the cellar? I think so, but it's left for me to guess.
-> - "whether any of them asked to live": did any of them? Was I supposed to notice? If I was never given the chance to let one go, this question makes me feel I missed something I was never offered.
-> - "Tell him how the yard ended.": tell him what, exactly? That we won? I'd need to remember the fight, and that was a different evening.
+> - "Which of you answers for him?" (Card 1). He's asking for a name: which one of us. None of the three choices gives a name. They all explain *why*. So am I answering his question or dodging it? If I want to say "I do", it seems I have to use "your own words". I'd want to know whether that's what you expect, or whether I've misread him.
+> - "A spared goblin is a debt." A debt to whom, and who pays it? To the village? Do we owe it, or does the goblin? I read it as "you're now responsible for whatever he does next", but I'm guessing.
+> - "your company". For a second I read it as a business, like a firm. Then I understood it means the group I travel with. Fine, but it appears twice in each card, and the second time I still stumbled over it.
+> - "the reeve". I know the word from Chaucer, and the card explains it ("who speaks for the village"), so no problem. I mention it only because a friend who doesn't read old English books would stop there.
+> - "what she saw on the way out". I was there. Why is she the one telling the story and not me? Does Osric not believe *us*? Is he testing whether we'll back her up? If that's the point, I like it, but I'm not sure that's what's happening.
+> - Card 1, choices 1 and 2: "and that was reason enough" / "and that was all". Two "and that was" endings one under the other. I hear them before I read them. They sound like the same answer said twice, though they aren't.
+> - Card 1: "a goblin tied to a post inside the mill, alive". Did *we* tie him? I'd need to remember that from last time. If I'd forgotten, I'd be lost for a moment.
 >
 > **3. Where I became a passenger**
 >
-> I didn't become one on either card. On both I knew I was being asked to account for myself, and I'd answer. The place I came closest was Card 1, choice 1, "Say why you spared him": if I don't remember sparing anyone, or it wasn't my decision, I'd pick whatever sounds least like a confession, not what I actually think. On Card 2, "whether any of them asked to live" made me feel accused of something I don't remember being able to do. I wouldn't close the laptop, but I'd sit there for a while with my tea.
+> Nowhere in Card 2. I chose, and I chose to answer back.
+>
+> In Card 1 I nearly did, at "Which of you answers for him?". He asks *who*, and the buttons only offer *why*. If I didn't think of typing my own answer, I'd press number 1 just to move on, not because it answers him. I wouldn't close the laptop.
 
 ### Zoya, board check (fallback), verbatim
 
@@ -279,6 +280,31 @@ Both came from the cloud fallback: Vera's from a general-purpose subagent given 
 > - Nothing else in the design contradicts the bible. Decision 0074 is pure machinery and has no board effect.
 >
 > Cut: nothing. This page is a read, not a draft.
+
+### Zoya, card read (fallback), of §7 as it stands, verbatim
+
+> **Zoya Katz: card read of the §7 third draft (bf621b2)**
+>
+> All six of my item-3 points are met.
+>
+> - **Who saw it.** Met. Wenna tells only what she saw on her way out: in card 1 the goblin tied to a post inside the mill, which is Scene 4's post; in card 2 the goblins dead in the yard.
+> - **World 3, a goblin is a person.** Met. Card 1 calls the goblin "him" throughout.
+> - **Osric's voice and compass cell.** Met. "Well, now", "your company", "a man adding up", and "a debt… who answers for him" are Reeve's Tally (row 5, C2) without naming it. "A spared goblin is a debt" is his opinion, not the theme said aloud.
+> - **The cost of silence.** Met. Choice 3 on both cards leaves Wenna "to be believed or not", and the green's doubt makes that cost visible.
+> - **`mercy_to_yielded` marks.** Met on card 1. Card 2's choices touch no custom, which is correct.
+> - **The stake.** Met. On card 1 Osric wants someone to answer for the goblin. On card 2 he wants to hear how it came about. Card 2's is the weaker stake, but it holds.
+>
+> Guardrail 8 holds: every choice is a "Say" or "Ask" the seat picks, with no verdict and no feeling given.
+>
+> **One watch, not a break.** Card 1's "Which of you answers for him?" invites the party to settle what became of Snitt in their own words. That is allowed. The director's note must still forbid the DM from saying it himself, as §4.4 already does. "Let him live" means at the mill only, and the note should say so.
+>
+> **"Taking her" holds in the Mill's files.** `adventure.md`: "They took the mill the morning Wenna arrived. Before they caught her she dropped the sluice gate", and the yard four are of the same band. In Scene 6 Osric hears that from Wenna. Card 2 is written only when no goblin yielded in the yard. Every cellar win leaves no goblin standing as well, since the cellar has no surrender. So "not one left alive" is true whenever card 2 comes.
+>
+> **New breaks of the bible:** none.
+>
+> **Still owed:** card tests 3 and 4 still fail, because no choice's deed has a reader (§12 item 3), and the hills `goblin_scouts` note ("Snitt's hungry band") must go in MAP-20.
+
+Owed to MAP-20's text from the third reads: Osric asks *who* answers and the choices answer *why* (Vera's near-passenger point; the own-words line is the only way to name someone); "a debt" to whom; "your company" twice; the two "and that was" endings; the director's note says "let him live" means at the mill only (Zoya).
 
 ## Sources
 
