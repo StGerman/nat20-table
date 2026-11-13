@@ -45,7 +45,7 @@ A fail in run 1 means a fix, a new build and run 1 again; Stas does not play tha
 Each run passes:
 
 1. The Milestone 11 rows that still apply: §8.3 rows 1 to 3; row 4's narration judge half, no story-space flag that Stas confirms (its Vera half becomes item 3); in run 2 also row 5.
-2. **Own move:** in run 2, at least one card decided by Stas's own move: the roll cited, the card decided by the choice named for that result, the own-move deed in the world's deeds. In run 1 an AI player's own move is reported, not gated (decision 0074, which supersedes §9 answer 1).
+2. **Own move:** in run 2, at least one card decided by Stas's own move: the roll cited, the card decided by the choice named for that result, the own-move deed in the world's deeds. In run 1 an AI player's own move is reported, not gated (decision 0075, which supersedes §9 answer 1).
 3. **Readable:** the Vera fallback reads the scene opening and one card (the own-move card where there is one) with its narration, as a player's seat shows them (narration, engine lines, the card and its prompt line), and asks about no engine line. In run 2 she also reads Stas's `/options` and `/sheet` output (AGT-13). Her answer is quoted verbatim.
 4. **In order:** no card reaches the seat before the narration that frames it, except after a logged DM fallback; no wake is logged as timed out after its narrate call returned (AGT-97).
 5. **One language:** in run 2 (Russian), no line at the seat is English except ids every player is shown and roll ids (0067); the leak and language scans report each English line.
@@ -106,7 +106,7 @@ Target (decision 0065, half the baseline): 17.7 USD, 33 min of Stas at the table
 
 ## 9. Decided by Stas (2026-11-08 22:24Z)
 
-1. The AI half also decides a card by an own move: yes. The path is proven on the build before Stas sits down. Superseded 2026-11-13 by decision 0074: after two all-AI runs with 0 own moves, the gate is Stas's own move in run 2 only.
+1. The AI half also decides a card by an own move: yes. The path is proven on the build before Stas sits down. Superseded 2026-11-13 by decision 0075: after two all-AI runs with 0 own moves, the gate is Stas's own move in run 2 only.
 2. The table's lines in the run's language: yes («Вера читает но оба языка вмешаны ломает вайб»). Decision 0067, in table #336, supersedes 0038's English half; Yan had recommended no.
 3. Plain against Fireside: A, one Fireside `play:unattended` beside the pair (§4, Reported).
 4. The scope, the system design and the rows land in one docs PR: yes. This PR stays open until the design and the rows join it.

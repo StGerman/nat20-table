@@ -1,4 +1,4 @@
-# 0074. The own-move gate is Stas's run
+# 0075. The own-move gate is Stas's run
 
 - **Status:** Accepted
 - **Date:** 2026-11-13
