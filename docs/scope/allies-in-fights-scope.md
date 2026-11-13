@@ -109,8 +109,8 @@ Status: Proposed, not accepted on this PR's merge until Stas answers below; no r
 
 Against 0065's target (13.5 PRs, 1.06 days): 16 PRs (0.59 of baseline) is 2.5 over; days 5 to 8 against 1.06.
 
-**Split: recommended.** API-58 stays in this milestone, first, because MAP-23 and ENG-49 key on roster ids. MAP-24 and AGT-107 to AGT-109 become their own milestone right after, with the exit above and the next all-AI run as its live check. Why: one exit over both doubles the surface a failed run must be re-reviewed on (a failed pair costs about a day and a fix review), and a mouse bug would hold the ally deeds that have no stake in it. Unsplit, this milestone is 16 PRs and 5 to 8 days; split, 12 PRs and 3 to 5 days here, then 4 PRs and 2 to 3 days.
+**One milestone (Stas 2026-11-13 19:54Z «Свои в бою одна веха»).** Yan had recommended a split (API-58 here, the rest as its own milestone); Stas keeps all five rows here: 16 PRs, 5 to 8 days. API-58 still goes first, because MAP-23 and ENG-49 key on roster ids.
 
 **Vera** (the `vera` agent, on Lev's Russian strings only; verbatim in `/mnt/project-files/engine/allies-in-fights/vera-clickable-names.md`): she understood the card and used it unprompted («нажала бы на Торву ещё раз после боя»). She became a passenger at the help line «держите Option или Fn; /mouse отключает щелчки» and would never touch `/mouse`, Shift+Tab or Option. She also asked: how bad «Есть раны.» is («Мне её лечить или можно идти дальше?»); what «· здесь» means next to «· с вами»; whether `/who` needs the English layout; and whether «Вы пока не встречали никого по имени «Гаррик»» means she typed it wrong. The design PR answers each before AGT-107; the mouse help line moves out of the default help and into AGT-108.
 
-Questions for Stas: 1. Split as above, or one milestone? 2. Lev's seven questions (his §5) answered before the design merges; question 1 (a roster record is the "engine creature") sets API-58's size.
+Questions for Stas: 1. Split: answered, one milestone. 2. Lev's seven questions (his §5) answered before the design merges; question 1 (a roster record is the "engine creature") sets API-58's size.
