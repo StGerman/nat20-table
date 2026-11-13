@@ -355,6 +355,7 @@ export class ModelDm implements DmAgent {
     const craft = this.config.craft ?? "prompt";
     return {
       agent: "dm",
+      role: "dm",
       choice: this.config.choice,
       systemPrompt: this.systemPrompt,
       tools: this.seatTools,

@@ -285,6 +285,7 @@ export class ModelPlayer implements PlayerAgent {
   sessionConfig(): SessionConfig {
     return {
       agent: this.handle,
+      role: "player",
       choice: this.config.choice,
       systemPrompt: this.systemPrompt,
       tools: this.seatTools,

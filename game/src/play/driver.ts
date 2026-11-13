@@ -60,6 +60,8 @@ import { checkout, readLines, RUN_FORMAT, writeRunRecord, type RunRecord } from 
 import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, suggestionLine, timingLines, type Casting, type PackParty } from "./run.ts";
 import { resolveSettings, SettingError, type SettingName, type Settings } from "./settings.ts";
+import { setTurnTracer } from "../agents/sdk-session.ts";
+import { tracerFromEnv } from "../tracing.ts";
 import { uploadStage } from "./upload.ts";
 import { AUDIT_JSON, verdictBlock, writeVerdict } from "./verdict.ts";
 
@@ -250,6 +252,15 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   ink?.busy(UI_WORDS[language].engineStarting);
 
   const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
+  // Langfuse tracing (AGT-16): on with the LANGFUSE_* keys, and only when a model plays a seat.
+  const tracer =
+    flags.dm === "model" || flags.players === "model"
+      ? await tracerFromEnv({
+          sessionId: path.basename(runDir),
+          tags: [settings.profile?.name ?? "no-profile", path.basename(path.resolve(flags.pack)), ...(flags.roster ? [`roster:${flags.roster}`] : [])],
+        })
+      : undefined;
+  setTurnTracer(tracer);
   // A failed start gives the terminal back before its error prints.
   const started = await (async () => {
     let engine: GameEngine | undefined;
@@ -441,6 +452,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   }
   clearTimeout(deadline);
   caffeinate?.kill();
+  // The table's turns go out now, so a post-run stage that fails cannot lose them.
+  await tracer?.flush();
   process.off("SIGINT", interrupted);
   // What the run cost, once at its end (M10 U1): printed once the terminal is back.
   const usageLines = ["Usage:", ...usageBlock(usage.records).map((l) => `  ${l}`)].join("\n");
@@ -497,6 +510,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const narration = flags["no-audit"] ? undefined : await checking(CHECK_NARRATION, () => narrationCheck(flags.pack, runDir, flags.dm === "model" ? modelJudgeFor(runDir) : new ScriptedJudge()));
   ink?.check(CHECK_REPORT, "running");
   await breath();
+  // The judge's turns; at most 10 s if Langfuse does not answer.
+  await tracer?.flush();
 
   const sessionLog = readLines<Event>(path.join(runDir, SESSION_LOG));
   const report = [
@@ -511,6 +526,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...(ink ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
     ...(run?.suggestions ? [`- ${suggestionLine(run.suggestions)}`] : []),
     ...(record.roster ? [`- ${rosterReport(record.roster)}`] : []),
+    ...(tracer ? [`- Tracing: on, Langfuse session ${record.run_id}`] : []),
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
     ...wordReport(runDir, sessionLog),
     ...exitReport(record, sessionLog, transcript.records, usage.records),
