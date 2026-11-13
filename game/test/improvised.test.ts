@@ -75,7 +75,7 @@ test("start_fight puts the table in a fight the scene's encounters don't hold", 
 
 test("a creature the DM names in the run's language is called so at the seat, and a neutral never starts a fight (run 2026-11-13)", async () => {
   const townsfolk: StatBlockEntry = { id: "townsfolk", monster: "commoner", side: "neutral", name: "Townsfolk" };
-  const t = await testTable({ seed: 27 });
+  const t = await testTable({ seed: 27, narrationGuard: (text) => (/\bAC \d/.test(text) ? "it gives AC" : undefined) });
   try {
     const learned: string[][] = [];
     t.table.names.learn = (handle, name) => void learned.push([handle, name]);
@@ -95,6 +95,17 @@ test("a creature the DM names in the run's language is called so at the seat, an
     assert.match(fight.text, /^pickler is neutral and fights no one\. Answer in the story without a fight, or ask for a check, then narrate\.$/);
     assert.equal(t.requests().some((r) => r.cmd === "start_fight"), false);
     assert.equal(t.table.exhausted("dm"), false);
+    // Once the retries are spent, the DM hears that its decision is over, not another refusal.
+    await dm.startFight(["bren", "pickler"]);
+    await dm.startFight(["bren", "pickler"]);
+    assert.equal(t.table.exhausted("dm"), true);
+    assert.equal((await dm.startFight(["bren", "pickler"])).retryable, false);
+    // A name carries no game statistic into the views.
+    t.table.resetRetries("dm");
+    const numbered = await dm.placeCreature("townsfolk", "clerk", { near: "bren" }, "Clerk, AC 10");
+    assert.equal(numbered.ok, false);
+    assert.equal(numbered.retryable, true);
+    assert.equal(t.requests().filter((r) => r.cmd === "place_creature").length, 1);
   } finally {
     t.close();
   }

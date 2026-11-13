@@ -830,7 +830,8 @@ export class DmTools {
       if (!beside) return { ok: false, text: `no creature ${where.near} in this scene` };
       at = { kind: "point", point: beside.position_ft };
     } else return { ok: false, text: "give a place or a creature to stand beside" };
-    const called = name?.trim() || found.name;
+    const given = name?.trim();
+    const called = given || found.name;
     const placed = await send(
       this.table,
       "dm",
@@ -844,9 +845,16 @@ export class DmTools {
         ...(found.carries ? { carries: found.carries } : {}),
       },
       () => (this.table.inCombat ? `${handle} is here and joins the fight; initiative rolled` : `${handle} is here`),
+      // A name reaches every view, so it passes the narration guard: no game statistic in it.
+      async () => {
+        const refused = given ? this.table.narrationRefused(given) : undefined;
+        if (!refused) return undefined;
+        this.table.retry("dm", `dm: place_creature name refused: ${refused}`);
+        return { ok: false, retryable: true, text: `Not placed: the name ${refused}. A name is what the table calls it, nothing more.` };
+      },
     );
     // The seat calls the creature by the DM's name, never by its handle (run 2026-11-13: «pickler»).
-    if (placed.ok && name?.trim()) this.table.names.learn(handle, name.trim());
+    if (placed.ok && given) this.table.names.learn(handle, given);
     return placed;
   }
 
@@ -915,12 +923,12 @@ export class DmTools {
     if ((this.passes?.statBlocks ?? []).length === 0) return notNow("this adventure holds no fights beyond its scenes' encounters");
     // The engine refuses a neutral in a fight, and that refusal would end the DM's turn with its
     // narration (run 2026-11-13). Refused here, the DM keeps its turn and answers in the story.
-    const neutral = (await this.dmState())?.creatures.filter((c) => participants.includes(c.handle) && c.side === "neutral").map((c) => c.handle) ?? [];
-    if (neutral.length > 0) {
+    return send(this.table, "dm", { cmd: "start_fight", participants: [...participants] }, () => "the fight is on; initiative rolled", async () => {
+      const neutral = (await this.dmState())?.creatures.filter((c) => participants.includes(c.handle) && c.side === "neutral").map((c) => c.handle) ?? [];
+      if (neutral.length === 0) return undefined;
       this.table.retry("dm", `dm: start_fight refused: ${neutral.join(", ")} neutral`);
       return { ok: false, retryable: true, text: `${neutral.join(", ")} ${neutral.length > 1 ? "are" : "is"} neutral and fights no one. Answer in the story without a fight, or ask for a check, then narrate.` };
-    }
-    return send(this.table, "dm", { cmd: "start_fight", participants: [...participants] }, () => "the fight is on; initiative rolled");
+    });
   }
 
   spawn(spawn_id: string): Promise<ToolOutcome> {
