@@ -23,7 +23,7 @@ A DM command writes a deed in a "proposed" state from the player's words; approv
 ### C. A proposed card built from the record (proposed)
 The loop hands the `suggest` wake the human seat's own lines. The DM proposes up to two cards, each citing the line it answers and the remembered deeds it stands on, under a `dm_` id that cannot load. The report's section becomes a page for Zoya, Lev and Vera, then Stas, who approves by merging a content PR with the deed's writer and reader together.
 - Pro: no contract change; the record feeds the proposal; deed ids stay authored; nothing unchecked reaches a contract.
-- Con: the wish is not in the world's memory, so no card can open only for those who voiced it; the loop depends on the page being read; what the DM says aloud before moderation is reported afterwards, not prevented.
+- Con: the wish is not in the world's memory, so no card can open only for those who voiced it; the loop depends on the page being read; what the DM says aloud before moderation is reported afterwards, not prevented; a run that stops early is never asked for proposals.
 
 ## Decision
 
@@ -31,7 +31,7 @@ Proposed: C, with A's `rufus_hires` as its first batch; B waits for the first ca
 
 ## Consequences
 
-- A game PR, an XS world PR (deck validation refuses a `dm_` card id; it can ride ENG-45's) and a content PR, beside Milestone 13 and outside its exit and count. Rows and sizes are Yan's.
+- A game PR and a content PR, beside Milestone 13 and outside its exit and count. Rows and sizes are Yan's.
 - "A reader card at once" is read as "in the same PR as the deed's first writer".
 - Design decisions 5 (a proposal names no person, only the deeds it stands on) and 6 (Zoya's bible amendment: such a card opens on deeds the world saw) follow; 6 blocks the `rufus_hires` draft.
 
