@@ -80,3 +80,37 @@ Answered in §9.
 4. C's outcome: Zoya first drafts options («А давай сначала мы Зоуи попросим накидать нам вариантов а потом отдадим их Льву», 21:23Z), with Stas's view in §2 item 4 as one of the inputs; then Lev's design decides.
 5. The Tam gap: table #361 merged whole (06063d0), so the window from there until MAP-23 is accepted; AGT-106 and the narration judge are what watch it.
 6. Exit: CI seeds plus one all-AI run («Ок»).
+
+## 10. Proposed: clickable names (Stas 2026-11-13, awaiting review)
+
+Status: Proposed, not accepted on this PR's merge until Stas answers below; no rows in TASKS.md until this section and Lev's design (`lev-clickable-names.md`, to be committed into this milestone's design PR) both merge. Main a2e589f.
+
+**Goal.** The name of anyone the party has met is underlined in the story; a mouse click, `/who <name>` or Shift+Tab opens a card on the right with who they are, how they look and whether they are here or alive, never their numbers (Rule 3); every named person who is present, speaks or acts is a record in the world's roster, and the judge counts one who is not.
+
+| Id | Row | Pri | Dest | Size | Deps |
+| --- | --- | --- | --- | --- | --- |
+| API-58 | Roster `names`, `look`, optional `place`; card `cast` sets `met`; `NpcKnown`/`NpcDm` gain `names`, `look`; protocol §5 row; fixture, CHANGELOG, server | P2 | Ours | M | none; lands before MAP-23 and ENG-49, which then place Tam and the Merchants by roster id; ENG-48 none |
+| MAP-24 | 14 people into `worlds/wend/npcs.json` with every Russian form and Zoya's `look`; `cast` on every card that names one; `glossary_ru` holds no person; `pack check` rules 1 to 4 (shared form, uncast name, digit on a card) | P2 | Ours | M | API-58; Zoya's board, Vera reads `look` lines |
+| AGT-107 | TUI: matcher (listed forms only), underline in `Style`, the card in `cardRows`' slot, `/who`, Shift+Tab | P2 | Ours | M | API-58, MAP-24; Vera reads Lev §4 lines |
+| AGT-108 | TUI mouse: press reporting in the alternate screen, off on every exit, hit test in `frame.ts`, wheel scroll, `/mouse` off; its own PR so it reverts alone | P2 | Ours | S | AGT-107 |
+| AGT-109 | Judge kind `unknown_person`: `people` and place names in both digests, DM prompt line, scripted CI case; counted, not gated (as §9 3) | P2 | Ours | S | stacked on AGT-106 |
+
+**Exit delta.** §4 1 gains: `pack check` rules 1 to 4 green in CI, and a unit case per card state (here, not here, no longer alive, companion). §4 2 gains: the all-AI run's report counts `unknown_person` flags, Stas rules each; no run added. New: Stas at his Mac in macOS Terminal, about 10 min, on the exit build after the AI run passed: click a name, select a sentence with Option, Ctrl+C twice, mouse off after exit (the terminal behaviour is unverified; no cloud thread can check it).
+
+**Cost delta**, units of §7:
+
+| Field | §10 adds | Milestone total with §10 (C still not priced) |
+| --- | --- | --- |
+| PRs for Stas | 5 (design folds into the milestone's design PR: 0) | 16 |
+| Stas's review | about 1.8 h: 25 min API-58, 20 min MAP-24, 25 min AGT-107, 15 min AGT-108, 10 min AGT-109, 15 min design §10 (estimates) | about 4.4 h |
+| Exit runs USD | 0 runs added; the judge's larger digest is measured on the run's `usage.jsonl`, not estimated | 7.85 USD |
+| Stas at the Mac | about 10 min | about 10 min |
+| Days scope→exit | 2 to 3: API-58 first, then MAP-24, AGT-107, AGT-108 in sequence | 5 to 8 |
+
+Against 0065's target (13.5 PRs, 1.06 days): 16 PRs (0.59 of baseline) is 2.5 over; days 5 to 8 against 1.06.
+
+**Split: recommended.** API-58 stays in this milestone, first, because MAP-23 and ENG-49 key on roster ids. MAP-24 and AGT-107 to AGT-109 become their own milestone right after, with the exit above and the next all-AI run as its live check. Why: one exit over both doubles the surface a failed run must be re-reviewed on (a failed pair costs about a day and a fix review), and a mouse bug would hold the ally deeds that have no stake in it. Unsplit, this milestone is 16 PRs and 5 to 8 days; split, 12 PRs and 3 to 5 days here, then 4 PRs and 2 to 3 days.
+
+**Vera** (the `vera` agent, on Lev's Russian strings only; verbatim in `/mnt/project-files/engine/allies-in-fights/vera-clickable-names.md`): she understood the card and used it unprompted («нажала бы на Торву ещё раз после боя»). She became a passenger at the help line «держите Option или Fn; /mouse отключает щелчки» and would never touch `/mouse`, Shift+Tab or Option. She also asked: how bad «Есть раны.» is («Мне её лечить или можно идти дальше?»); what «· здесь» means next to «· с вами»; whether `/who` needs the English layout; and whether «Вы пока не встречали никого по имени «Гаррик»» means she typed it wrong. The design PR answers each before AGT-107; the mouse help line moves out of the default help and into AGT-108.
+
+Questions for Stas: 1. Split as above, or one milestone? 2. Lev's seven questions (his §5) answered before the design merges; question 1 (a roster record is the "engine creature") sets API-58's size.
