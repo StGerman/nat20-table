@@ -1,6 +1,6 @@
 # Milestone 13, Dramaturg mechanism: system design
 
-Status: Proposed. Lev Neiman (cloud fallback), 2026-11-13, main 4d2e2f3. Scope: `docs/scope/dramaturg-mechanism-scope.md` (table #348), §8 answered by Stas; this design adds no mechanism to its In; where it departs from the scope is listed in §12 item 5. It answers the seven questions of the scope's §5 by number (§3). Decision 0075 (Proposed) records the one choice with real alternatives. Beside it and not part of it: `docs/design/deed-from-words.md` and decision 0071, outside M13's exit and PR count. Author's read: no verdict on itself. Zoya's board check and Vera's second read are quoted verbatim in §13; §7 is a third draft, written after both, and has not been read again.
+Status: Accepted by Stas 2026-11-13 by merging table #375, all seven §12 items as recommended. Lev Neiman (cloud fallback), 2026-11-13, main 4d2e2f3. Scope: `docs/scope/dramaturg-mechanism-scope.md` (table #348), §8 answered by Stas; this design adds no mechanism to its In; where it departs from the scope is listed in §12 item 5. It answers the seven questions of the scope's §5 by number (§3). Decision 0075 (Proposed) records the one choice with real alternatives. Beside it and not part of it: `docs/design/deed-from-words.md` and decision 0071, outside M13's exit and PR count. Author's read: no verdict on itself. Zoya's board check and Vera's second read are quoted verbatim in §13; §7 is a third draft, written after both, and has not been read again.
 
 ## 1. Summary
 
@@ -193,6 +193,8 @@ Beside the count: ENG-45 and MAP-13 (their own PRs), deed from words (three PRs,
 - **M12 slips.** As scope §7: without AGT-103 run 2 gates the M11 rows only; without AGT-100 `m13-readable` reads the transcript.
 
 ## 12. Decisions for Stas
+
+Decided by Stas, 2026-11-13: all seven as recommended (he merged table #375; «мердж значит да»).
 
 1. **How the Mill names its world** (decision 0075): the game passes `site {map, place}` in `new_session` from `adventure.json`. Recommended. Alternatives: a `site.json` the engine reads; a `campaign.json` for the Mill.
 2. **A fight's end writes one deed, by ordered rules, and the world keeps the first outcome** (§4.1, §4.2 rules 1 and 2). Recommended: it is what makes the two cards exclude each other without a rule in the deck. The alternative, a free list of consequences per end reason, lets one fight write both.
