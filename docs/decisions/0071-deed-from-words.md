@@ -1,8 +1,8 @@
 # 0071. A player's wish becomes a proposed card, not a deed
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-12
-- **Decided by:** not decided. Stas asked for the design (2026-11-12 21:50Z); Lev Neiman proposes option C in `docs/design/deed-from-words.md`.
+- **Decided by:** Stas, 2026-11-13 15:02Z, all six design decisions as recommended. He asked for the design 2026-11-12 21:50Z; Lev Neiman proposed option C in `docs/design/deed-from-words.md`.
 
 ## Context
 
@@ -27,13 +27,13 @@ The loop hands the `suggest` wake the human seat's own lines. The DM proposes up
 
 ## Decision
 
-Proposed: C, with A's `rufus_hires` as its first batch; B waits for the first card that must open only for a party that voiced a wish.
+C, with A's `rufus_hires` as its first batch; B waits for the first card that must open only for a party that voiced a wish.
 
 ## Consequences
 
 - A game PR and a content PR, beside Milestone 13 and outside its exit and count. Rows and sizes are Yan's.
 - "A reader card at once" is read as "in the same PR as the deed's first writer".
-- Design decisions 5 (a proposal names no person, only the deeds it stands on) and 6 (Zoya's bible amendment: such a card opens on deeds the world saw) follow; 6 blocks the `rufus_hires` draft.
+- Design decisions 5 (a proposal names no person, only the deeds it stands on) and 6 (Zoya's bible amendment: such a card opens on deeds the world saw) follow; 6 is accepted and goes into the bible by its own PR; it gates the `rufus_hires` draft until that PR merges.
 
 ## Revisit when
 

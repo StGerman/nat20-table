@@ -79,7 +79,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0068](0068-own-move-on-a-road-card.md) | A player's own move on a road card is a choice the table votes on: a ladder check naming two of the card's choices for success and failure; one per card; the deed `own_move_<card>` | Accepted (table #339, 2026-11-11) | 2026-11-09 | Stas (own move, variant B); shape in the M12 system design |
 | [0069](0069-game-designer-agent.md) | One game designer agent, Lev Neiman, drafts the system design and reads cards and runs (`design`, `play`, `trace`); he proposes contract changes and never edits the crate; he drafts and challenges decisions, Stas decides; he gives no verdict on his own design | Accepted | 2026-11-11 | Stas |
 | [0070](0070-children-not-exempt-from-harm.md) | Torture is never shown; children are not exempt from harm on screen | Accepted | 2026-11-12 | Stas |
-| [0071](0071-deed-from-words.md) | A player's wish becomes a proposed card, not a deed | Proposed | 2026-11-12 | not decided (Lev proposes option C) |
+| [0071](0071-deed-from-words.md) | A player's wish becomes a proposed card, not a deed | Accepted | 2026-11-13 | Stas (all six design decisions as recommended) |
 
 ## Open questions to watch
 

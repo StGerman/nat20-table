@@ -1,6 +1,6 @@
 # Deed from words: system design
 
-Status: Proposed. Lev Neiman (cloud fallback), 2026-11-12. No scope of its own; the goal is Stas's ask (2026-11-12 21:50Z): the DM proposes a deed from what a player said, Zoya and Lev moderate, Stas approves, a reader card is written at once. Input: the handover `engine/dramaturg/deed-from-words-handover.md`. Options: decision 0071. "The M13 scope" is the Proposed `docs/scope/dramaturg-mechanism-scope.md` of table #348; this PR merges after it. Author's read. Zoya's two checks are quoted in §10; Vera is not run: no line here is one a player sees.
+Status: Accepted by Stas 2026-11-13 15:02Z (§11). Lev Neiman (cloud fallback), 2026-11-12. No scope of its own; the goal is Stas's ask (2026-11-12 21:50Z): the DM proposes a deed from what a player said, Zoya and Lev moderate, Stas approves, a reader card is written at once. Input: the handover `engine/dramaturg/deed-from-words-handover.md`. Options: decision 0071. "The M13 scope" is the Proposed `docs/scope/dramaturg-mechanism-scope.md` of table #348; this PR merges after it. Author's read. Zoya's two checks are quoted in §10; Vera is not run: no line here is one a player sees.
 
 ## 1. Summary
 
@@ -106,6 +106,8 @@ The second, verbatim. Her "PR 4" is PR 3 here; rule 2, §9 and the risks answer 
 > - The calling card Bren read is the one detail the player will remember about Rufus. No deed records it, so the card cannot cite it.
 
 ## 11. Decisions for Stas
+
+Decided by Stas, 2026-11-13 15:02Z: all six as recommended («Вопросы - согласан с рекомендациями»). Decision 6 goes into the bible by its own PR.
 
 1. **A card, not a deed (a challenge to the framing).** The record shows the wish was captured, proposed and printed; nobody read it, and a wish is not something the party did. Proposed: the DM proposes a card; the deed is written when the party takes its choice; "at once" means the deed's writer and reader land in one PR. Cost: no card can yet open only for those who voiced the wish. Recommended (0071, option C).
 2. **Carrier and place:** option C with A's `rufus_hires` as its first batch, three PRs beside M13 and outside its exit; B to Arachas plus glue. Recommended; the alternative is after M13 closes.
