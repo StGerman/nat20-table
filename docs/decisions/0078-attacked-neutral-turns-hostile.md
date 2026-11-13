@@ -1,4 +1,4 @@
-# 0077. A neutral named in a fight turns hostile
+# 0078. A neutral named in a fight turns hostile
 
 - **Status:** Accepted
 - **Date:** 2026-11-13

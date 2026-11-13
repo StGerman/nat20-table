@@ -78,7 +78,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0067](0067-one-language-at-the-seat.md) | A player's seat shows one language, the run's: the table renders engine lines, options, cards and UI in it; the wire and core stay English; supersedes 0038's UI half | Accepted | 2026-11-08 | Stas |
 | [0068](0068-own-move-on-a-road-card.md) | A player's own move on a road card is a choice the table votes on: a ladder check naming two of the card's choices for success and failure; one per card; the deed `own_move_<card>` | Accepted (table #339, 2026-11-11) | 2026-11-09 | Stas (own move, variant B); shape in the M12 system design |
 | [0069](0069-game-designer-agent.md) | One game designer agent, Lev Neiman, drafts the system design and reads cards and runs (`design`, `play`, `trace`); he proposes contract changes and never edits the crate; he drafts and challenges decisions, Stas decides; he gives no verdict on his own design | Accepted | 2026-11-11 | Stas |
-| [0077](0077-attacked-neutral-turns-hostile.md) | A neutral named in `start_fight` turns hostile (`turned_hostile`), with no new command | Accepted | 2026-11-13 | Stas |
+| [0078](0078-attacked-neutral-turns-hostile.md) | A neutral named in `start_fight` turns hostile (`turned_hostile`), with no new command | Accepted | 2026-11-13 | Stas |
 
 ## Open questions to watch
 
