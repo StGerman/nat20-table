@@ -43,6 +43,7 @@ Placed by Stas's §8 answers (§8 n). "Decide later" means no row. No M12 row, f
 | Claims as deeds (idea 6) | no row, decide later | a new DM tool, no reader in the shipped packs | a reader |
 | A model in the loop, scripts, the wants ledger, prices as story | no row, decide later | outside this proof | Stas |
 | Delete deck fields `requires` (0 of 37 cards) and `owner_insists` (0 of 112 choices) (Lev B) | row ENG-45 (XS) in the M13 rows PR; its own small `world/` PR after M12's exit pair, outside M13's exit and PR count | unused; free (the thread's recommendation, accepted with "ok to all") | M12's exit pair |
+| Deed from words: the DM proposes a card from the human's words, Zoya, Lev and Vera moderate, Stas approves by merging the content PR (Stas, 2026-11-12) | beside M13: its own design and decision 0071 (table #367), 3 PRs (docs, game, content `rufus_hires`), outside M13's exit and PR count | Stas gave it to Lev as part of the Dramaturg mechanism; it needs no contract change and no M13 row | Stas's six answers in table #367; code after M12's exit pair |
 | MAP-13, the Mill's goblins yield | own row, after A, before Arachas | after A, `gritch_spared` needs no converter (§8 5) | carrier A; the rows PR writes "after A" |
 | MAP-16, CON-7 | open rows, no milestone | M13 changes neither | Stas's order |
 | Lev's first read (`owner_pick` is a tie-break id, not a queue lever) | done | fixed in this draft | nothing |
