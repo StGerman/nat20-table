@@ -42,6 +42,11 @@ pub fn text(kind: &EventKind) -> String {
                 "surrender"
             }
         ),
+        EventKind::TurnedHostile { handles } => format!(
+            "{} {} hostile.",
+            list(handles),
+            if handles.len() == 1 { "turns" } else { "turn" }
+        ),
         EventKind::Fled { handles } => format!(
             "{} {}.",
             list(handles),

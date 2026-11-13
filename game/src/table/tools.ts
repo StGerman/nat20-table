@@ -921,13 +921,21 @@ export class DmTools {
   /** A fight among creatures present that no scene encounter fits (API-34): no surprise, no early end. */
   async startFight(participants: string[]): Promise<ToolOutcome> {
     if ((this.passes?.statBlocks ?? []).length === 0) return notNow("this adventure holds no fights beyond its scenes' encounters");
-    // The engine refuses a neutral in a fight, and that refusal would end the DM's turn with its
-    // narration (run 2026-11-13). Refused here, the DM keeps its turn and answers in the story.
+    // A neutral named in the fight turns hostile (API-60). The engine's other refusals of a
+    // fight's sides are not retryable and would end the DM's turn with its narration (run
+    // 2026-11-13), so they are answered here, as a retry, before the engine sees them.
     return send(this.table, "dm", { cmd: "start_fight", participants: [...participants] }, () => "the fight is on; initiative rolled", async () => {
-      const neutral = (await this.dmState())?.creatures.filter((c) => participants.includes(c.handle) && c.side === "neutral").map((c) => c.handle) ?? [];
-      if (neutral.length === 0) return undefined;
-      this.table.retry("dm", `dm: start_fight refused: ${neutral.join(", ")} neutral`);
-      return { ok: false, retryable: true, text: `${neutral.join(", ")} ${neutral.length > 1 ? "are" : "is"} neutral and fights no one. Answer in the story without a fight, or ask for a check, then narrate.` };
+      const sides = new Map((await this.dmState())?.creatures.map((c) => [c.handle, c.side]) ?? []);
+      const twice = participants.find((h, i) => participants.indexOf(h) !== i);
+      const fighting = participants.map((h) => sides.get(h));
+      const why = twice
+        ? `${twice} is listed twice`
+        : !fighting.includes("party") || !fighting.some((side) => side === "hostile" || side === "neutral")
+          ? "a fight needs someone of the party and someone against them"
+          : undefined;
+      if (!why) return undefined;
+      this.table.retry("dm", `dm: start_fight refused: ${why}`);
+      return { ok: false, retryable: true, text: `No fight: ${why}. Name everyone in it again, or answer in the story without a fight, then narrate.` };
     });
   }
 

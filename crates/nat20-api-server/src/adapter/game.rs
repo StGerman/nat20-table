@@ -1943,16 +1943,16 @@ impl Game {
                     format!("{} is down and cannot join a fight.", handle.0),
                 ));
             }
-            if self.side_of(entity) == Some(Side::Neutral) {
-                return Err(error(
-                    ErrorCode::BadRequest,
-                    format!("{} is neutral and takes no side in a fight.", handle.0),
-                ));
-            }
         }
+        // A neutral in the fight is the one attacked, or the one attacking (API-60): it turns
+        // hostile, so it counts as hostile here.
         let sides: Vec<Option<Side>> = participants
             .iter()
             .map(|h| self.entity(&h.0).ok().and_then(|e| self.side_of(e)))
+            .map(|side| match side {
+                Some(Side::Neutral) => Some(Side::Hostile),
+                other => other,
+            })
             .collect();
         if !sides.contains(&Some(Side::Party)) || !sides.contains(&Some(Side::Hostile)) {
             return Err(error(
@@ -1967,6 +1967,7 @@ impl Game {
             })
             .expect("some number is free");
         let id = format!("fight_{n}");
+        self.turn_hostile(participants);
         self.scene.encounters.push(Encounter {
             id: id.clone(),
             participants: participants.to_vec(),
@@ -1979,6 +1980,49 @@ impl Game {
             self.scene.encounters.pop();
         }
         started
+    }
+
+    /// Turns the neutral creatures among `handles` hostile (API-60): their side, their attitudes
+    /// toward every other creature of the scene, and a public `turned_hostile`. They stay hostile.
+    fn turn_hostile(&mut self, handles: &[Handle]) {
+        let turned: Vec<Handle> = handles
+            .iter()
+            .filter(|h| self.entity(&h.0).ok().and_then(|e| self.side_of(e)) == Some(Side::Neutral))
+            .cloned()
+            .collect();
+        if turned.is_empty() {
+            return;
+        }
+        for creature in &mut self.scene.creatures {
+            if turned.iter().any(|h| h.0 == creature.handle) {
+                creature.side = Side::Hostile;
+            }
+        }
+        let all: Vec<SceneCreature> = self
+            .scene
+            .creatures
+            .iter()
+            .map(|c| SceneCreature {
+                handle: c.handle.clone(),
+                entity: c.entity,
+                side: c.side,
+                control: c.control,
+                pregen: c.pregen.clone(),
+            })
+            .collect();
+        for c in all
+            .iter()
+            .filter(|c| turned.iter().any(|h| h.0 == c.handle))
+        {
+            for other in all.iter().filter(|o| o.entity != c.entity) {
+                self.align_attitudes(c, other);
+            }
+        }
+        let round = self.round();
+        self.pending.push(Pending::public(
+            round,
+            EventKind::TurnedHostile { handles: turned },
+        ));
     }
 
     /// Places the creatures of the scene spawn `spawn_id`, declared `when: dm`. During a fight
