@@ -584,13 +584,14 @@ export class TableLoop {
       }
     }
     if (this.table.ended) return;
-    // The road card met on the way is settled and its fight is over: the scene opens (AGT-100),
-    // before the place's own arrival card, which the engine may have drawn meanwhile (ENG-35).
-    if (this.openLater && !this.table.inCombat && !roadCardAhead(await this.dmWorld())) return void (await this.openHeld());
+    // A held scene (AGT-100): its road card is played first; once none waits for the party's word,
+    // the scene opens, before the place's own arrival card the engine may have drawn (ENG-35).
+    if (this.openLater && !this.table.inCombat) {
+      if (roadCardAhead(await this.dmWorld()) && (await this.cardRound())) return;
+      return void (await this.openHeld());
+    }
     // A road card waits for the party's word out of a fight (AGT-80): it is asked before anything else.
     if (this.campaign && !this.table.inCombat && (await this.cardRound())) return;
-    // No card waits for the party's word now (a card left to an NPC owner): the held scene opens anyway.
-    if (this.openLater && !this.table.inCombat) return void (await this.openHeld());
     // The destination's arrival card is settled and its fight, if any, is over: the pay comes now (ENG-35).
     // An arrival draw still offered holds the pay too.
     if (this.settledLater && !this.table.inCombat && !cardWaits(await this.dmWorld())) {
@@ -650,8 +651,10 @@ export class TableLoop {
     return Boolean(escort && !escort.contract.done && world.at.kind === "at" && world.at.place === escort.contract.destination);
   }
 
-  /** `payNext`: the escort is paid after this opening, in its own wake (AGT-86). */
-  /** `cardInBatch`: a road card settles in the batch after this load, so the opening waits for its outcome. */
+  /**
+   * `payNext`: the escort is paid after this opening, in its own wake (AGT-86). `cardInBatch`: a
+   * road card settles in the batch after this load, so the opening waits for its outcome (AGT-100).
+   */
   private async sceneLoaded(sceneId: string, payNext = false, cardInBatch = false): Promise<void> {
     // A scene the run passes over never loads (`DmTools.loadScene` loads the next one instead).
     if (this.onScene(sceneId, this.scenes) !== "continue") {
@@ -688,20 +691,22 @@ export class TableLoop {
       this.table.log("system", `scene ${sceneId} opens after the road card met on the way`);
       return;
     }
-    await this.openScene(sceneId, payNext || Boolean(this.settledLater), passed, first);
+    await this.openScene(sceneId, payNext, passed, first);
   }
 
-  /** The held scene opens (AGT-100); the pay may have come in while it waited (ENG-35), and the opening leaves it out then. */
+  /** The held scene opens (AGT-100). */
   private async openHeld(): Promise<void> {
     const { sceneId, payNext, passed, first } = this.openLater!;
     this.openLater = undefined;
-    await this.openScene(sceneId, payNext || Boolean(this.settledLater), passed, first);
+    await this.openScene(sceneId, payNext, passed, first);
   }
 
   /** The DM opens a loaded scene; `passed`: the scenes the run passed over on the way. */
   private async openScene(sceneId: string, payNext: boolean, passed: string[], first = false): Promise<void> {
     // The seat's header moves to the place once its opening is told, not while a road card is played (AGT-100).
     this.onProgress({ kind: "scene_start", scene: sceneId });
+    // A pay that came in while the scene was held is told on its own too (ENG-35, AGT-86).
+    const payLater = payNext || Boolean(this.settledLater);
     // The opening continues from the DM's last words on the way here (M10 P1), not from scratch.
     const last = first ? undefined : this.dmTools.lastLine;
     // Read once: a scene loaded with no line on the way must not carry an older scene's words.
@@ -716,9 +721,9 @@ export class TableLoop {
           ]
         : []),
       `Scene ${sceneId} is loaded. Open it for the table: what the characters see, and what they can obviously do.`,
-      ...(payNext ? ["The merchant pays the Blades next, and you narrate that on its own: open the arrival here without the pay, the purse or any coin."] : []),
+      ...(payLater ? ["The merchant pays the Blades next, and you narrate that on its own: open the arrival here without the pay, the purse or any coin."] : []),
     );
-    this.arrivalOpened = payNext;
+    this.arrivalOpened = payLater;
     await this.settle();
   }
 
@@ -840,7 +845,6 @@ export class TableLoop {
           "road",
           undefined,
           `A road card was settled: ${event.text}`,
-          ...(this.openLater ? [HELD_OPENING] : []),
           "The engine has already applied the card: any fight it brings has started and any creature it brings is placed. Narrate what comes of it in one to three sentences; never start the fight again. Name coin or a price only as the engine's lines give it, never a sum of your own.",
         );
         await this.settle();
@@ -853,7 +857,6 @@ export class TableLoop {
           `The night passed: ${event.text}`,
           "Narrate the night and the morning in one to three sentences: who slept well, who went hungry, as the engine says.",
           ...(cardWaits(next) ? ["A road card follows: do not close the night."] : []),
-          ...(this.openLater ? [HELD_OPENING] : []),
         );
         await this.settle();
         await campaign.onNight?.();
@@ -912,7 +915,6 @@ export class TableLoop {
         "pick",
         undefined,
         "Pick a road card: a draw offered these, in the order they were rolled.",
-        ...(this.openLater ? [HELD_OPENING] : []),
         ...offered.map((c, i) => offeredLine(c, i + 1)),
         deeds.length > 0 ? `Deeds the world remembers: ${deeds.map((d) => d.deed).join(", ")}.` : "The world remembers no deeds yet.",
         `Call pick_card once, with the card's id and one line of why. Then ${CARD_OPENING.charAt(0).toLowerCase()}${CARD_OPENING.slice(1)}`,
@@ -950,7 +952,6 @@ export class TableLoop {
         undefined,
         "A road card is on the table.",
         cardDrawnLine(card),
-        ...(this.openLater ? [HELD_OPENING] : []),
         ...(this.arrivalOpened ? ["The scene's opening told the arrival: open only the card."] : []),
         CARD_OPENING,
       );
@@ -1016,8 +1017,8 @@ export class TableLoop {
    * An AI player's word on a road card, from its own view of the card (design §1.7). Its
    * `own_move` words go to the DM once the wake returns; when they make no move, it is asked once
    * more, with the DM's answer, for a `choose_card`, before the loop's fallback.
+   * @param ask how the closing ask starts ("Give your word", "Make the caravan's call").
    */
-  // `ask`: how the closing ask starts ("Give your word", "Make the caravan's call").
   private async aiCard(agent: PlayerAgent, ask: string, owner = false): Promise<void> {
     const handle = agent.handle;
     const tools = this.tools.get(handle)!;
@@ -1043,7 +1044,7 @@ export class TableLoop {
     await this.wakePlayer(
       agent,
       "card",
-      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner, false), "Your words made no choice of the card. Give your word with choose_card, with a choice id."),
+      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner, false), `Your words made no choice of the card. ${ask} with choose_card, with a choice id.`),
     );
     // Words a second time are only said aloud: the card wants a choice now.
     const again = tools.takeOwnMove();
@@ -1704,7 +1705,7 @@ export class TableLoop {
       undefined,
       `The fight is over: ${event.text}`,
       // A road card's fight on the way to a place whose opening waits (AGT-100): the opening tells the arrival.
-      this.openLater ? `Narrate how it ends. ${HELD_OPENING}` : "Narrate how it ends, then go on with the scene.",
+      this.openLater ? "Narrate how it ends." : "Narrate how it ends, then go on with the scene.",
     );
     await this.table.flush();
   }
@@ -2469,6 +2470,8 @@ export class TableLoop {
       ...(heard.length > 0 ? ["What the table said:", ...heard] : []),
       ...(told.length > 0 ? ["What happened:", ...told.map(eventLine)] : []),
       ...lines,
+      // Every wake before a held scene's opening is told the place is not reached yet (AGT-100).
+      ...(this.openLater && wake !== "scene_open" ? [HELD_OPENING] : []),
       ...facts,
     ].join("\n");
     const done = this.waitFor(UI_WORDS[this.table.names.language].dmThinking);
@@ -2564,7 +2567,7 @@ export function roadCardAhead(world: WorldDm | undefined): boolean {
 const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
 
 /** The AI players' own-move line in a card briefing (AGT-99), while the card has no own move. */
-export const OWN_MOVE_INVITE = "These are only the obvious choices: if your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move, in one sentence.";
+export const OWN_MOVE_INVITE = "The written choices are only the obvious ones: if your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move, in one sentence.";
 
 /** The engine's limit on an own move's words (API-56). */
 const OWN_MOVE_MAX_CHARS = 300;
