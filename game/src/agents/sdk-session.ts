@@ -21,12 +21,21 @@ import {
 import type { z, ZodRawShape } from "zod";
 import { ConnectionLost, LOGIN_FAILURE, LoginExpired, TurnCancelled, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { agentEnv } from "./env.ts";
+import type { Role, TracedTool, TurnTracer } from "../tracing.ts";
 import { apiEquivalentUsd, type UsageLog, type UsageRecord } from "../usage.ts";
 
 export { ConnectionLost, LoginExpired, TurnCancelled, TurnTimeout, UsageLimitReached };
 
 /** The MCP server name every seat's tools live under; the model sees `mcp__table__<tool>`. */
 export const TOOL_SERVER = "table";
+
+/** Where every session's turns are traced (AGT-16): set only by a run command, so tests never trace. */
+let tracer: TurnTracer | undefined;
+
+/** Sets the tracer the sessions opened from now on send their turns to; `undefined` turns it off. */
+export function setTurnTracer(next: TurnTracer | undefined): void {
+  tracer = next;
+}
 
 /** A model and effort for one agent. Config, not code (decision 0032). */
 export interface ModelChoice {
@@ -65,6 +74,8 @@ export function reply(text: string, isError = false): CallToolResult {
 export interface SessionConfig {
   /** The seat: `dm` or a character handle. */
   agent: string;
+  /** What the seat is, for a trace's name (AGT-16): the seat's own name goes in as a value. */
+  role?: Role;
   choice: ModelChoice;
   systemPrompt: string;
   tools: SeatTool[];
@@ -153,6 +164,8 @@ interface PendingTurn {
   /** The turn's number in the session, from 1. */
   number: number;
   purpose: string;
+  /** The message sent, for the trace. */
+  message: string;
   sentAt: number;
   texts: string[];
   tools: string[];
@@ -160,6 +173,8 @@ interface PendingTurn {
   /** Each API call in order, for the record's phases (M10 S1): when it started and ended, its tools, time in them. */
   timeline: ApiCall[];
   model: string;
+  /** Each table tool call, with its input and answer, for the trace (AGT-16). */
+  toolCalls: TracedTool[];
   /** The SDK retried an API call that got no HTTP response during this turn: a lost connection. */
   offline: boolean;
   resolve: (result: TurnResult) => void;
@@ -181,6 +196,8 @@ interface ApiCall {
   toolMs: number;
   /** When its last tool handler returned. */
   toolsDone: number | undefined;
+  /** Its content blocks, for the trace. */
+  content: unknown[];
 }
 
 /** A queue the SDK reads user messages from, one per turn. */
@@ -271,11 +288,13 @@ export class AgentSession {
         uuid: randomUUID(),
         number: this.turns,
         purpose,
+        message,
         sentAt: performance.now(),
         texts: [],
         tools: [],
         calls: new Map(),
         timeline: [],
+        toolCalls: [],
         model: this.config.choice.model,
         offline: false,
         resolve,
@@ -340,7 +359,9 @@ export class AgentSession {
     if (!turn) return;
     this.draining = undefined;
     if (turn.timer) clearTimeout(turn.timer);
-    this.config.usage?.add(this.recordOf(turn, outcome, ttft));
+    const usage = this.recordOf(turn, outcome, ttft);
+    this.config.usage?.add(usage);
+    this.trace(turn, usage);
     this.release();
   }
 
@@ -375,8 +396,11 @@ export class AgentSession {
         // A tool call of a turn that timed out belongs to no turn's timing.
         const turn = this.stale === 0 ? (this.draining ?? this.pending) : undefined;
         const started = performance.now();
+        const requestedBy = turn ? turn.timeline.length - 1 : -1;
+        let answer: CallToolResult | undefined;
         try {
           const result = (await handler(args as never, extra as never)) as CallToolResult;
+          answer = result;
           if (turn && !result.isError && this.config.settleOn?.[turn.purpose]?.includes(result._meta?.settles_as ?? tool.name)) this.settleEarly(turn);
           return result;
         } finally {
@@ -385,6 +409,10 @@ export class AgentSession {
             const now = performance.now();
             call.toolMs += now - started;
             call.toolsDone = now;
+          }
+          if (turn && tracer) {
+            const output = answer ? answer.content.map((c) => c.text).join("\n") : "the tool threw";
+            turn.toolCalls.push({ name: tool.name, call: requestedBy, started: epoch(started), ended: epoch(performance.now()), input: args, output, refused: !answer || answer.isError === true });
           }
         }
       },
@@ -453,10 +481,11 @@ export class AgentSession {
         const now = performance.now();
         let call = turn.timeline.at(-1);
         if (call?.id !== api.id) {
-          call = { id: api.id, started: call ? (call.toolsDone ?? call.ended) : turn.sentAt, ended: now, tools: [], toolMs: 0, toolsDone: undefined };
+          call = { id: api.id, started: call ? (call.toolsDone ?? call.ended) : turn.sentAt, ended: now, tools: [], toolMs: 0, toolsDone: undefined, content: [] };
           turn.timeline.push(call);
         }
         call.ended = now;
+        if (tracer) call.content.push(...api.content);
         for (const block of api.content) {
           if (block.type === "text") turn.texts.push(block.text);
           if (block.type === "tool_use") {
@@ -492,7 +521,7 @@ export class AgentSession {
           );
           return;
         }
-        const usage = this.record(turn, "ok", message.ttft_ms ?? null);
+        const usage = this.record(turn, "ok", message.ttft_ms ?? null, message.result.trim());
         this.settle({ text: turn.texts.join("\n").trim(), final: message.result.trim(), usage });
         return;
       }
@@ -506,10 +535,45 @@ export class AgentSession {
    * plan's limit) is recorded too, with what it spent until then, so a run's report counts every
    * token and every slow turn.
    */
-  private record(turn: PendingTurn, outcome: UsageRecord["outcome"], ttft: number | null): UsageRecord {
+  private record(turn: PendingTurn, outcome: UsageRecord["outcome"], ttft: number | null, final?: string): UsageRecord {
     const usage = this.recordOf(turn, outcome, ttft);
     this.config.usage?.add(usage);
+    this.trace(turn, usage, final);
     return usage;
+  }
+
+  /**
+   * Sends the turn to the tracer, if a run command set one (AGT-16), from the record just written.
+   * After the caller has its answer: tracing never adds to a turn's time.
+   */
+  private trace(turn: PendingTurn, usage: UsageRecord, final?: string): void {
+    const sink = tracer;
+    if (!sink) return;
+    const first = usage.calls?.[0]?.first_token_ms;
+    setImmediate(() => sink.turn({
+      role: this.config.role,
+      seat: this.config.agent,
+      purpose: turn.purpose,
+      ...(turn.number === 1 ? { systemPrompt: this.config.systemPrompt } : {}),
+      message: turn.message,
+      final: final ?? turn.texts.at(-1)?.trim() ?? "",
+      started: epoch(turn.sentAt),
+      ended: epoch(turn.sentAt + usage.wall_ms),
+      usage,
+      calls: turn.timeline.map((call, i) => {
+        const tokens = turn.calls.get(call.id) ?? { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
+        return {
+          model: turn.model,
+          started: epoch(call.started),
+          ended: epoch(call.ended),
+          ...(i === 0 && first !== undefined ? { firstToken: epoch(turn.sentAt + first) } : {}),
+          ...tokens,
+          usd: apiEquivalentUsd(turn.model, tokens),
+          content: call.content,
+        };
+      }),
+      tools: turn.toolCalls,
+    }));
   }
 
   /** The turn's usage record as it stands, not yet written. */
@@ -577,4 +641,9 @@ export class AgentSession {
     this.drained(error instanceof UsageLimitReached ? "limit" : "drained", null);
     this.settle(error);
   }
+}
+
+/** A `performance.now()` time as epoch milliseconds. */
+function epoch(t: number): number {
+  return performance.timeOrigin + t;
 }

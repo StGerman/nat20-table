@@ -17,13 +17,14 @@ import { parseArgs } from "node:util";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { LANGUAGES, type Language } from "../agents/language.ts";
 import { ModelPlayer } from "../agents/player.ts";
-import { sessionOptions } from "../agents/sdk-session.ts";
+import { sessionOptions, setTurnTracer } from "../agents/sdk-session.ts";
 import { GameEngine, REPO } from "../engine.ts";
 import { TableLoop, type RunReport } from "../table/loop.ts";
 import { ScriptedPlayer, ScriptedSeat, yardDm } from "../table/scripted.ts";
 import { TableState } from "../table/state.ts";
 import { Transcript } from "../table/transcript.ts";
 import type { PlayerAgent } from "../table/types.ts";
+import { tracerFromEnv } from "../tracing.ts";
 import { UsageLog } from "../usage.ts";
 import { uploadStage } from "./upload.ts";
 import { audit, endState, guards, castParty, refuseApiKey, reportSections, runFolder } from "./run.ts";
@@ -80,6 +81,9 @@ if (!scripted) refuseApiKey();
 
 const runDir = runFolder(flags.out!, "ai-party");
 const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
+// Langfuse tracing (AGT-16): on with the LANGFUSE_* keys, and only when model players sit.
+const tracer = scripted ? undefined : await tracerFromEnv({ sessionId: path.basename(runDir), tags: ["ai-party", flags.scene!] });
+setTurnTracer(tracer);
 const engine = await GameEngine.start({ pack: flags.scenes!, runDir, seed: flags.seed === undefined ? undefined : Number(flags.seed) });
 const transcript = new Transcript(path.join(runDir, "transcript.jsonl"), () => engine.logHead);
 const table = new TableState({
@@ -107,6 +111,7 @@ try {
 } catch (error) {
   failure = error;
 }
+await tracer?.flush();
 const end = await endState(engine).catch(() => []);
 engine.close();
 const checked = flags["no-audit"] ? undefined : audit(flags.scenes!, runDir);
@@ -118,6 +123,7 @@ const report = [
   `- AI players: ${party.ai.join(", ")} on ${scripted ? "scripted players" : `${choice.model}, effort ${choice.effort}`}; cards from ${path.relative(REPO, path.resolve(flags.pack!))}`,
   `- ${party.human} on a scripted seat; the DM scripted`,
   ...(language === "en" ? [] : [`- Language of the AI players' lines: ${language}`]),
+  ...(tracer ? [`- Tracing: on, Langfuse session ${path.basename(runDir)}`] : []),
   ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
 ].join("\n");
 writeFileSync(path.join(runDir, "report.md"), report + "\n");
