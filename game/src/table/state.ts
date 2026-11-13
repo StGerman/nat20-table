@@ -584,6 +584,11 @@ export class TableState {
     return this.speechGuard(text);
   }
 
+  /** Why the narration guard refuses DM text that reaches the views (a creature's name, say), or undefined. */
+  narrationRefused(text: string): string | undefined {
+    return this.narrationGuard(text);
+  }
+
   end(reason: string, stop?: StopKind): void {
     if (this.ended !== undefined) return;
     this.ended = reason;

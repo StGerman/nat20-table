@@ -373,8 +373,9 @@ test("a potion's quick picks are you and your allies, never a hostile", async ()
     assert.ok(quick.length > 0, "a potion line to take at once");
     assert.ok(quick.every((c) => c.target?.side !== "hostile"), quick.map((c) => c.label).join("; "));
     assert.ok(quick.some((c) => c.target?.handle === "bren"), "you can drink it yourself");
-    // Attacks still offer hostiles first.
-    const attack = choices.find((c) => c.label.startsWith("Longsword attack →"));
+    // Attacks, a fight's own list (out of a fight they stay off it), still offer hostiles first.
+    assert.equal(choices.some((c) => c.label.startsWith("Longsword attack")), false);
+    const attack = buildChoices(listed.result as LegalActionsResult, undefined, true).find((c) => c.label.startsWith("Longsword attack →"));
     assert.equal(attack?.target?.side, "hostile");
   } finally {
     t.close();
