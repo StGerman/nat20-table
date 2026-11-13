@@ -1,4 +1,4 @@
-# 0071. Allies in fights: surprise from the dog first; dog, horses and the Merchant as creatures later
+# 0076. Allies in fights: surprise from the dog first; dog, horses and the Merchant as creatures later
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
