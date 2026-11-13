@@ -929,6 +929,8 @@ export class DmTools {
       if (!state) return undefined;
       const sides = new Map(state.creatures.map((c) => [c.handle, c.side]));
       const twice = participants.find((h, i) => participants.indexOf(h) !== i);
+      // A handle not in the scene goes on to the engine, which names it (unknown_creature).
+      if (!twice && participants.some((h) => !sides.has(h))) return undefined;
       const fighting = participants.map((h) => sides.get(h));
       const why = twice
         ? `${twice} is listed twice`
