@@ -1,6 +1,6 @@
 # Milestone 13, Dramaturg mechanism: scope
 
-Status: Proposed; §8 answered by Stas 2026-11-11 23:40Z. Drafted by Yan Metsuyan (0065), 2026-11-11, main a739abd. No bid was tendered; priced here.
+Status: Accepted (Stas merged table #348, 2026-11-13); §8 answered by Stas 2026-11-11 23:40Z. Drafted by Yan Metsuyan (0065), 2026-11-11, main a739abd. No bid was tendered; priced here.
 Inputs: the campaign line and the dramaturg design (2026-11-07); 0066, order item 2. The system design is Lev Neiman's (decision 0069, table #345 merged); Lev's read of this draft is quoted in table #348 and moved §8 6.
 
 ## 1. Goal

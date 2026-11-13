@@ -1,8 +1,8 @@
 # 0075. A pack with no campaign names its site in `new_session`
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-13
-- **Decided by:** not decided. Lev Neiman proposes option A in `docs/design/m13-system-design.md` §5; Stas decides.
+- **Decided by:** Stas, 2026-11-13, by merging table #375 («мердж значит да»): option A, with all seven design decisions as recommended. Lev Neiman proposed it in `docs/design/m13-system-design.md` §5.
 
 ## Context
 
@@ -31,7 +31,7 @@ Milestone 13 lets a scene write a deed (scope `docs/scope/dramaturg-mechanism-sc
 
 ## Decision
 
-Proposed: A. It is the smallest change that gives the Mill's deeds a world, a day and a contract number, and it leaves the Mill's play as it is.
+A. It is the smallest change that gives the Mill's deeds a world, a day and a contract number, and it leaves the Mill's play as it is.
 
 ## Consequences
 
