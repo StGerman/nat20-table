@@ -10,6 +10,7 @@ import { REPO } from "../src/engine.ts";
 import { packIds } from "../src/table/guards.ts";
 import type { StatBlockEntry } from "../src/pack/adventure.ts";
 import { DmTools, type ScenePasses } from "../src/table/tools.ts";
+import { SeatNames } from "../src/table/seat-lines.ts";
 import { testTable } from "./helpers.ts";
 
 const wolf: StatBlockEntry = { id: "road_wolf", monster: "wolf", side: "hostile", name: "Grey wolf", carries: { coins: { sp: 2 } } };
@@ -67,6 +68,33 @@ test("start_fight puts the table in a fight the scene's encounters don't hold", 
     const fight = await dm.startFight(["bren", "grey_1"]);
     assert.equal(fight.ok, true, fight.text);
     assert.equal(t.table.inCombat, true);
+  } finally {
+    t.close();
+  }
+});
+
+test("a creature the DM names in the run's language is called so at the seat, and a neutral never starts a fight (run 2026-11-13)", async () => {
+  const townsfolk: StatBlockEntry = { id: "townsfolk", monster: "commoner", side: "neutral", name: "Townsfolk" };
+  const t = await testTable({ seed: 27 });
+  try {
+    const learned: string[][] = [];
+    t.table.names.learn = (handle, name) => void learned.push([handle, name]);
+    const dm = new DmTools(t.table, passes([townsfolk]));
+    assert.equal((await dm.loadScene("m5_s3_yard")).ok, true);
+    const placed = await dm.placeCreature("townsfolk", "pickler", { near: "bren" }, " Пиклер ");
+    assert.equal(placed.ok, true, placed.text);
+    assert.equal(t.requests().find((r) => r.cmd === "place_creature")!.name, "Пиклер");
+    assert.deepEqual(learned, [["pickler", "Пиклер"]]);
+    const ru = new SeatNames("ru");
+    ru.learn("pickler", "Пиклер");
+    assert.equal(ru.who("pickler"), "Пиклер");
+    // The engine would refuse it and end the DM's turn: the tool refuses first, and the DM may try again.
+    const fight = await dm.startFight(["bren", "pickler"]);
+    assert.equal(fight.ok, false);
+    assert.equal(fight.retryable, true);
+    assert.match(fight.text, /^pickler is neutral and fights no one\. Answer in the story without a fight, or ask for a check, then narrate\.$/);
+    assert.equal(t.requests().some((r) => r.cmd === "start_fight"), false);
+    assert.equal(t.table.exhausted("dm"), false);
   } finally {
     t.close();
   }

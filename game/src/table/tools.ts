@@ -814,7 +814,7 @@ export class DmTools {
    * what it carries come from the entry, never from the DM, who names only the entry, a new handle
    * and where it stands (a place, or beside a creature). The engine finds the nearest free spot.
    */
-  async placeCreature(entry: string, handle: string, where: { place?: string; near?: string }): Promise<ToolOutcome> {
+  async placeCreature(entry: string, handle: string, where: { place?: string; near?: string }, name?: string): Promise<ToolOutcome> {
     const list = this.passes?.statBlocks ?? [];
     const found = list.find((s) => s.id === entry);
     if (!found) {
@@ -830,7 +830,8 @@ export class DmTools {
       if (!beside) return { ok: false, text: `no creature ${where.near} in this scene` };
       at = { kind: "point", point: beside.position_ft };
     } else return { ok: false, text: "give a place or a creature to stand beside" };
-    return send(
+    const called = name?.trim() || found.name;
+    const placed = await send(
       this.table,
       "dm",
       {
@@ -839,11 +840,14 @@ export class DmTools {
         monster: found.monster,
         side: found.side,
         at,
-        ...(found.name ? { name: found.name } : {}),
+        ...(called ? { name: called } : {}),
         ...(found.carries ? { carries: found.carries } : {}),
       },
       () => (this.table.inCombat ? `${handle} is here and joins the fight; initiative rolled` : `${handle} is here`),
     );
+    // The seat calls the creature by the DM's name, never by its handle (run 2026-11-13: «pickler»).
+    if (placed.ok && name?.trim()) this.table.names.learn(handle, name.trim());
+    return placed;
   }
 
   /**
@@ -907,9 +911,14 @@ export class DmTools {
   }
 
   /** A fight among creatures present that no scene encounter fits (API-34): no surprise, no early end. */
-  startFight(participants: string[]): Promise<ToolOutcome> {
-    if ((this.passes?.statBlocks ?? []).length === 0) {
-      return Promise.resolve(notNow("this adventure holds no fights beyond its scenes' encounters"));
+  async startFight(participants: string[]): Promise<ToolOutcome> {
+    if ((this.passes?.statBlocks ?? []).length === 0) return notNow("this adventure holds no fights beyond its scenes' encounters");
+    // The engine refuses a neutral in a fight, and that refusal would end the DM's turn with its
+    // narration (run 2026-11-13). Refused here, the DM keeps its turn and answers in the story.
+    const neutral = (await this.dmState())?.creatures.filter((c) => participants.includes(c.handle) && c.side === "neutral").map((c) => c.handle) ?? [];
+    if (neutral.length > 0) {
+      this.table.retry("dm", `dm: start_fight refused: ${neutral.join(", ")} neutral`);
+      return { ok: false, retryable: true, text: `${neutral.join(", ")} ${neutral.length > 1 ? "are" : "is"} neutral and fights no one. Answer in the story without a fight, or ask for a check, then narrate.` };
     }
     return send(this.table, "dm", { cmd: "start_fight", participants: [...participants] }, () => "the fight is on; initiative rolled");
   }

@@ -254,7 +254,7 @@ export const DM_ROAD_PROMPT = [
   "",
   "- The party travels with a merchant's caravan between places on a map; get_state shows the world: the day and hour, where the caravan is, the places and roads, the card waiting, the escort contract, the people who live in each place.",
   "- The players move the caravan on and end the day, never you: you have no travel, rest or card tool. When the party says in the story that they move on, or settles down for the night (they make camp, go to sleep, set a watch, take rooms), call propose_road: the table asks whoever drives the caravan at once, and the caravan moves or the night passes only if they agree. Never tell a player to find or pick a line on a panel: propose_road puts it in front of them. When a scene loads after a journey, open it as the arrival: the road behind them in a sentence, then the place.",
-  "- \"A road card was settled\": narrate what came of it in one to three sentences. A card can bring a fight: start_fight or place_creature from your list, with a cause in the story.",
+  "- \"A road card was settled\": narrate what came of it in one to three sentences. When its check failed, first say in the story what went wrong, then what it costs. A card can bring a fight: start_fight or place_creature from your list, with a cause in the story.",
   "- A card's choice may say which customs it keeps or breaks (\"keeps word_kept\"). When that choice is taken, show how the people who saw or heard it take it, in a look, a word or a silence, never a judgement from you. Never say the custom's id at the table.",
   "- \"Pick a road card\": a draw offered two or three cards. Pick with pick_card, by this rule, in order: the card that continues what the party did (it reads a deed, or follows from one); failing that, the card that gives the human's character the clearest problem to act on; between two that do equally well, the one that can come to a fight. Never pick a card to spare the party a fight. Say why in one line, then narrate the card's opening: narrate before the pick is refused.",
   "- \"A road card is on the table\": a card came with no pick. Open it in two to four sentences, on what the people in it do and want. Do not retell the card's words, which the table shows next; do not decide it or tell how a choice turns out.",
@@ -296,6 +296,8 @@ export class ModelDm implements DmAgent {
   private described = new Set<string>();
   /** The bound tools while a wake runs; a call outside a wake (after a timeout) does nothing. */
   private current: DmTools | undefined;
+  /** The last wake's tools: `remember` writes through them after a settling tool ended the turn. */
+  private lastTools: DmTools | undefined;
   /** What it established in fiction (spec §3.6), in order. */
   readonly memory: string[] = [];
   /** What it wrote at the end of each scene (AGT-6). */
@@ -310,6 +312,7 @@ export class ModelDm implements DmAgent {
 
   async wake(wake: DmWake, briefing: string, tools: DmTools): Promise<string | void> {
     this.current = tools;
+    this.lastTools = tools;
     this.previewed = undefined;
     try {
       const seed = this.session ? undefined : this.seed(await tools.getState());
@@ -454,11 +457,12 @@ export class ModelDm implements DmAgent {
               handle: z.string().describe("A new handle: letters, digits and _, such as bandit_1."),
               place: z.string().optional().describe("A place in the scene (anchor id)."),
               beside: handle.optional().describe("A creature to stand beside."),
+              name: z.string().optional().describe("What the table calls it, in the language you narrate in (such as «Пиклер»); without it, the list entry's name."),
             },
             (i) =>
               this.bound((t) => {
                 if (Boolean(i.place) === Boolean(i.beside)) return refuse("give either a place or a creature to stand beside");
-                return t.placeCreature(i.entry, i.handle, i.place ? { place: i.place } : { near: i.beside! });
+                return t.placeCreature(i.entry, i.handle, i.place ? { place: i.place } : { near: i.beside! }, i.name);
               }),
           ),
           seatTool(
@@ -650,12 +654,15 @@ export class ModelDm implements DmAgent {
         "remember",
         "Keep a fact you established in fiction for the rest of the adventure. Fiction only: no Hit Points, Armor Class or DCs.",
         { fact: z.string() },
-        (i) =>
-          this.bound((t) => {
-            const outcome = t.remember(i.fact);
-            if (outcome.ok) this.memory.push(i.fact);
-            return outcome;
-          }),
+        // Memory changes no state at the table, so it is kept after a settling tool ended the turn
+        // too (run 2026-11-13: two facts lost after own_move_or_answer).
+        (i) => {
+          const t = this.current ?? this.lastTools;
+          if (!t) return Promise.resolve(reply("not now: nothing is waiting on you", true));
+          const outcome = t.remember(i.fact);
+          if (outcome.ok) this.memory.push(i.fact);
+          return Promise.resolve(reply(outcome.text, !outcome.ok));
+        },
       ),
       seatTool(
         "end_adventure",
