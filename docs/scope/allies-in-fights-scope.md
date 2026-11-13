@@ -1,7 +1,7 @@
 # Allies in fights («Свои в бою»): scope
 
 Status: Proposed; §8 answered by Stas (§9), accepted on merge. Drafted by Yan Metsuyan (0065), 2026-11-12, main d2b0fc4. No number: TASKS.md § Milestones has no row for it yet (roadmap amendment 1). Ask: Stas 2026-11-12 20:44Z, «конечно в backlog рядом с B и C и туда же проверку судьи. В целом мы набрали на milestone контента. Ян оформи пожалуйста в milestone». No bid was tendered; priced here.
-Inputs: decision 0071 (A first, B and C later; table #360), decision 0070 (children not exempt from harm; table #361), rows MON-12, ENG-48, ENG-49, AGT-106 (table #360) and MAP-23 (table #361), all open, none on main. 0071's Decision and Consequences lines in table #360 now name this milestone (B, C and AGT-106 gathered here); no new record.
+Inputs: decision 0076 (A first, B and C later; table #360), decision 0070 (children not exempt from harm; table #361), rows MON-12, ENG-48, ENG-49, AGT-106 (table #360) and MAP-23 (table #361), all open, none on main. 0076's Decision and Consequences lines in table #360 now name this milestone (B, C and AGT-106 gathered here); no new record.
 
 ## 1. Goal
 
@@ -14,7 +14,7 @@ When wolves hit the wagon at night, Gwyn's dog, the horses, Tam and the Merchant
 3. **The judge check** (AGT-106). A creature that attacks, is attacked or is hurt in fight narration but is not in the fight is a flag; the digest gains the fight's participants.
 4. **C: the Merchant is a creature and can die** (ENG-49; Stas 21:22Z «А что не торговецы Одда и Флит … тоже могут быть покусаны волками почему нет»): Odda on *Fair in Wend*, Fenn on *The Way Back*, from the Commoner block, under the same script. Stas's view of the outcome, for Lev's design to settle (Stas: «Тут Лев босс»): the Hired Blades take the cargo on to the destination, and there they deal with the mayor or another official over what becomes of it. Priced by the design, not here.
 
-Allies are run by the engine's script, never by the DM agent or a player (0071). The seven cards that start a fight (`night_wolves`, `millbeck_bridge`, `rufus_due`, `oddas_mark`, `goblin_scouts`, `goblin_ambush`, `men_at_the_iron`) are the whole surface; the design says which ally joins which.
+Allies are run by the engine's script, never by the DM agent or a player (0076). The seven cards that start a fight (`night_wolves`, `millbeck_bridge`, `rufus_due`, `oddas_mark`, `goblin_scouts`, `goblin_ambush`, `men_at_the_iron`) are the whole surface; the design says which ally joins which.
 
 ## 3. Out
 
