@@ -55,7 +55,7 @@ Placing a person:
 ## Consequence: how the world changes
 
 1. **Problems come from change, not scarcity.** The change itself stays off the map and arrives as prices, rumors, and strangers.
-2. **Deeds come back.** The world remembers; only those who saw or heard react, one step at a time, and a later scene reads the deed back as a cause the table hears. A card born of a player's wish opens on deeds the world saw; the wish itself is never read aloud as a cause (decision 0071).
+2. **Deeds come back.** The world remembers; only those who saw or heard react, one step at a time, and a later scene reads the deed back as a cause the table hears. A card born of a player's wish opens on deeds the world saw; the wish itself is never read aloud as a cause (decision 0071). A deed carries a pay-off only if another outcome of the same scene or card writes a different deed; a deed every path writes is a marker, not a cause: it may gate prose, such as a greeting, but never counts as a carried pay-off.
 3. **Every story has a half-blind choice, a consequence on the young, and something learned that goes out of date.**
 4. **Losing is a consequence, never the end of the game.** Death is final, by price and distance; only a story brings someone back.
 
