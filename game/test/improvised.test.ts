@@ -94,6 +94,11 @@ test("a creature the DM names in the run's language is called so at the seat, an
     assert.match(alone.text, /^No fight: bren is listed twice\./);
     assert.equal((await dm.startFight(["bren"])).retryable, true);
     assert.equal(t.requests().some((r) => r.cmd === "start_fight"), false);
+    // A handle the scene doesn't have is the engine's to name.
+    const nobody = await dm.startFight(["bren", "nobody"]);
+    assert.equal(nobody.ok, false);
+    assert.match(nobody.text, /nobody/);
+    assert.equal(t.requests().filter((r) => r.cmd === "start_fight").length, 1);
     t.table.resetRetries("dm");
     // A neutral the DM names in a fight turns hostile (API-60) and the fight is on.
     const fight = await dm.startFight(["bren", "pickler"]);
