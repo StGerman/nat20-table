@@ -83,7 +83,9 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0072](0072-langfuse-tracing.md) | Langfuse traces every agent turn with our own spans in `AgentSession` (one trace per turn named `<role>.<purpose>`, one session per run), Cloud US, unmasked, off unless the `LANGFUSE_*` keys are set (exit runs: superseded by 0073) | Accepted | 2026-11-12 | Stas |
 | [0073](0073-exit-runs-traced.md) | Milestone exit runs are traced when the keys are set; supersedes 0072's "off in exit runs" | Accepted | 2026-11-13 | Stas |
 | [0074](0074-own-move-gate-in-run-2.md) | The own-move exit gate is Stas's own move in run 2; in run 1 an AI own move is reported, not gated; supersedes scope §9 answer 1 | Accepted | 2026-11-13 | Stas |
+| [0075](0075-site-pack-joins-world-memory.md) | A pack with no campaign names its site in `new_session` (`site {map, place}`), keeps a world memory with no contract part and saves it, so a later contract on the map reads its deeds | Accepted | 2026-11-13 | Stas (by merging table #375: all seven design decisions as recommended) |
 | [0076](0076-allies-in-fights-option-a-first.md) | Allies in fights: the fed dog surprises the wolves first (A); the dog, horses and the Merchant as creatures wait in the backlog (B, C); a judge check for a creature narrated fighting but absent from the fight | Accepted | 2026-11-12 | Stas |
+| [0077](0077-witnessed-deeds-on-a-card.md) | A deed a person witnessed (or was told in front of the party) shows on that person's card as one authored line; supersedes 0063 for that case only | Proposed | 2026-11-13 | not decided (Stas) |
 
 ## Open questions to watch
 
