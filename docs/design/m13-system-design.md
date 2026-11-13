@@ -1,6 +1,6 @@
 # Milestone 13, Dramaturg mechanism: system design
 
-Status: Proposed. Lev Neiman (cloud fallback), 2026-11-13, main 4d2e2f3. Scope: `docs/scope/dramaturg-mechanism-scope.md` (table #348), §8 answered by Stas; this design adds no mechanism to its In; where it departs from the scope is listed in §12 item 5. It answers the seven questions of the scope's §5 by number (§3). Decision 0074 (Proposed) records the one choice with real alternatives. Beside it and not part of it: `docs/design/deed-from-words.md` and decision 0071, outside M13's exit and PR count. Author's read: no verdict on itself. Zoya's board check and Vera's second read are quoted verbatim in §13; §7 is a third draft, written after both, and has not been read again.
+Status: Proposed. Lev Neiman (cloud fallback), 2026-11-13, main 4d2e2f3. Scope: `docs/scope/dramaturg-mechanism-scope.md` (table #348), §8 answered by Stas; this design adds no mechanism to its In; where it departs from the scope is listed in §12 item 5. It answers the seven questions of the scope's §5 by number (§3). Decision 0075 (Proposed) records the one choice with real alternatives. Beside it and not part of it: `docs/design/deed-from-words.md` and decision 0071, outside M13's exit and PR count. Author's read: no verdict on itself. Zoya's board check and Vera's second read are quoted verbatim in §13; §7 is a third draft, written after both, and has not been read again.
 
 ## 1. Summary
 
@@ -29,7 +29,7 @@ Not kept: who saw a deed (`saw`), a cause in words, Snitt's fate after Scene 4, 
 1. **Contract.** §4. Two additive versions after M12's last: scene deeds (API-57), then the site (ENG-44).
 2. **The reader.** An ordinary arrival card with `if`; no deck rule for a card that must come. The exit may rely on a pile of one, and a test holds it (§4.2 rule 7): with only Mill deeds remembered, the Wendford arrival pile of the wend deck joined with *Fair in Wend* holds exactly one card, because the four cards there today all read Millbeck bridge deeds and the route reaches the bridge after Wendford. A pile of one goes on the table with no draw-three and no DM pick (M11, unchanged). On a later contract the card may share the pile and lose a pick; `once: true` keeps it from greeting twice. Visibility: the deed stays DM only; the player sees the card's text and hears the DM's sentence (§4.4).
 3. **Who `by` is.** A fight-end deed: the party-side participants of the encounter, in its order, downed ones included. A check's `remember`: the roller. A death deed: whoever dealt the last blow (ENG-36, unchanged).
-4. **A pack with no world.** §5 and decision 0074.
+4. **A pack with no world.** §5 and decision 0075.
 5. **Named people.** `SceneCreature.npc`, optional: Scene 5's `boss` gets `"npc": "gritch"`, the id `adventure.json` already uses. There is no registry: the id is the same string wherever the person appears, as a card fight's `npc` is today. MAP-13 adds `gritch_spared` as an `on_end` rule on the same fight, with no converter. Snitt gets no id.
 6. **The validator across packs.** §4.2 rule 8.
 7. **Room for later.** Nothing is added now. `Deed` gains a later field only as an optional one with a default, left out when empty, so every roster saved before it still reads. `saw` and a cause arrive with their first reader, without a new roster format. A roster from a newer build is not read by an older one, as today.
@@ -94,7 +94,7 @@ The cause is in the card's own text, so the table hears it even if the model say
 
 Prose canon removed in the same PR: the "village knows them" line in `fw_wendford.md`, the last sentence of Osric's note in `npcs.json`, and "Snitt's hungry band" in the `goblin_scouts` note of `worlds/wend/deck/hills.json` (Zoya: it tells Snitt's fate, and after `yard_to_the_end` there is no Snitt).
 
-## 5. A pack with no campaign joins the world (ENG-44, decision 0074)
+## 5. A pack with no campaign joins the world (ENG-44, decision 0075)
 
 - `adventure.json` gains `site: {map, place}`; the Mill's is `{"map": "wend", "place": "pells_mill"}`. `pack:check` checks the place is on the map and its `pack_slot` is the adventure's `id`, refuses `site` beside a campaign, and checks a scene creature's `npc` against the adventure's `npcs`.
 - The game reads `site` and passes it in `new_session` (`game/src/engine.ts` sends only the seed and the roster today). Proposed wire, the version after API-57's: `NewSession.site: Option<Site>`, `Site {map, place}`. The server never reads `adventure.json`, so it checks only that the map has the place (`bad_request`); `start_campaign` in a site session is `bad_request`. DM-side setup; no view carries it.
@@ -174,7 +174,7 @@ Eight, as the scope counts them. No code or content PR merges before M12's exit 
 | PR | What it lands | Depends on |
 | --- | --- | --- |
 | 1 | Scope (table #348, merged) | - |
-| 2 | This design and decision 0074 | 1 |
+| 2 | This design and decision 0075 | 1 |
 | 3 | Rows (Yan): API-57, ENG-44, MAP-20, AGT-104, ENG-45, the MAP-13 edit, milestone 13 in `TASKS.md` | 2 |
 | 4 | Bible (Zoya): amendment 3; `examples.md` line 43 loses "Snitt freed", a fate no scene decides. The "Venna" typo is a no-op: the references no longer hold the word (checked on main), so it leaves the PR | - |
 | 5 | API-57: §4.3 in Rule 1 order, the server, §4.2 rule 8's test | M12's exit |
@@ -194,7 +194,7 @@ Beside the count: ENG-45 and MAP-13 (their own PRs), deed from words (three PRs,
 
 ## 12. Decisions for Stas
 
-1. **How the Mill names its world** (decision 0074): the game passes `site {map, place}` in `new_session` from `adventure.json`. Recommended. Alternatives: a `site.json` the engine reads; a `campaign.json` for the Mill.
+1. **How the Mill names its world** (decision 0075): the game passes `site {map, place}` in `new_session` from `adventure.json`. Recommended. Alternatives: a `site.json` the engine reads; a `campaign.json` for the Mill.
 2. **A fight's end writes one deed, by ordered rules, and the world keeps the first outcome** (§4.1, §4.2 rules 1 and 2). Recommended: it is what makes the two cards exclude each other without a rule in the deck. The alternative, a free list of consequences per end reason, lets one fight write both.
 3. **The Wendford answer is written and nothing reads it in M13.** The scope's In has the answer deeds and no reader for them; the run report is not one. Cost to the player: Stas answers the reeve and the world says nothing back in this run. Recommended: keep the scope, list the reader as owed on Zoya's board for Arachas plus glue (§9), and print "written, unread" in the report. The alternative adds to In: one `if` choice on a later *Fair in Wend* card that reads an answer. Zoya accepts it as a debt, not a pass (§13): the card fails card tests 3 and 4 until the answer-deed reader is on the Arachas plus glue board, and her page stays open until then.
 4. **Two records ship with no reader in the packs, on the scope's word:** `killed_gritch` (until MAP-13) and `remember` on a scene check (fixture only; Scene 4 writes none). Recommended: accept both; each is one line of data or one match arm.
@@ -209,7 +209,7 @@ Beside the count: ENG-45 and MAP-13 (their own PRs), deed from words (three PRs,
 
 ## 13. Vera and Zoya
 
-Both came from the cloud fallback: Vera's from a general-purpose subagent given the body of `vera.md` and the two cards only, which may still see CLAUDE.md; Zoya's from one given the body of `zoya.md`. Vera read three drafts; her first two led to the rewrites (she did not know who "the Blades" were, card 2 gave her nothing to answer, Osric's question dangled, and both cards assumed she had made the call in the yard); below is her third read, of §7 as it stands. Zoya's board check read the first draft; where it says decision 0074 it said 0073 when written, renumbered after main took 0073. Her card read is of §7 as it stands.
+Both came from the cloud fallback: Vera's from a general-purpose subagent given the body of `vera.md` and the two cards only, which may still see CLAUDE.md; Zoya's from one given the body of `zoya.md`. Vera read three drafts; her first two led to the rewrites (she did not know who "the Blades" were, card 2 gave her nothing to answer, Osric's question dangled, and both cards assumed she had made the call in the yard); below is her third read, of §7 as it stands. Zoya's board check read the first draft; where it says decision 0075 it said 0073 when written, renumbered after main took 0073 and 0074. Her card read is of §7 as it stands.
 
 ### Vera, third read (fallback), of §7 as it stands, verbatim
 
@@ -237,7 +237,7 @@ Both came from the cloud fallback: Vera's from a general-purpose subagent given 
 
 ### Zoya, board check (fallback), verbatim
 
-> **Zoya Katz: board check, `wend`, with the M13 draft (Proposed) and decision 0074 among the files**
+> **Zoya Katz: board check, `wend`, with the M13 draft (Proposed) and decision 0075 among the files**
 >
 > Read: commandments, examples, compass-wend; the Mill's scenes and prose; *Fair in Wend*; `worlds/wend` (deck, npcs, customs). I edited nothing.
 >
@@ -277,7 +277,7 @@ Both came from the cloud fallback: Vera's from a general-purpose subagent given 
 > - `examples.md` line 43 still says the Mill's canon is "Snitt freed". That is a fate no scene decides. It goes in the bible PR. "Venna" no longer appears anywhere in the references, so that part of the bible PR may be a no-op: check before listing it.
 > - Osric stays `attitude: indifferent` in `npcs.json` once the note goes, so after the Mill the card is the only sign that he knows the company. That is consistent with gap E being out; I note it, it is not a contradiction.
 > - §1 and Lev's decision 6: the human answers for a yard he did not fight in. Story-space 1 ("never a passenger") is only half kept. It is owed to the Arachas plus glue exit, which is already on the shelf.
-> - Nothing else in the design contradicts the bible. Decision 0074 is pure machinery and has no board effect.
+> - Nothing else in the design contradicts the bible. Decision 0075 is pure machinery and has no board effect.
 >
 > Cut: nothing. This page is a read, not a draft.
 
@@ -308,4 +308,4 @@ Owed to MAP-20's text from the third reads: Osric asks *who* answers and the cho
 
 ## Sources
 
-Scope `docs/scope/dramaturg-mechanism-scope.md`; decisions 0043, 0063, 0066, 0071, 0074; the M11 and M12 designs. Code read: the contract's `scene.rs`, `events.rs`, `envelope.rs`, `roster.rs`; the world crate's `deck.rs`, `travel.rs`; the server's `session.rs`, `session/cards.rs`, `campaign.rs`, `adapter/game.rs`; the Mill's scenes and `adventure.json`; `worlds/wend`; *Fair in Wend*'s `campaign.json`; `game/src/play/verdict.ts`, `game/src/pack/check.ts`.
+Scope `docs/scope/dramaturg-mechanism-scope.md`; decisions 0043, 0063, 0066, 0071, 0075; the M11 and M12 designs. Code read: the contract's `scene.rs`, `events.rs`, `envelope.rs`, `roster.rs`; the world crate's `deck.rs`, `travel.rs`; the server's `session.rs`, `session/cards.rs`, `campaign.rs`, `adapter/game.rs`; the Mill's scenes and `adventure.json`; `worlds/wend`; *Fair in Wend*'s `campaign.json`; `game/src/play/verdict.ts`, `game/src/pack/check.ts`.
