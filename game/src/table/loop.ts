@@ -954,6 +954,12 @@ export class TableLoop {
     await this.settle();
   }
 
+  /** Whether an own move fell in the log after `since`: an `own_move_ran` with no choice. */
+  private async moveFellSince(since: number): Promise<boolean> {
+    const r = await this.table.engine.request("dm", { cmd: "events", since });
+    return r.result?.cmd === "events" && r.result.events.some((e) => e.kind === "own_move_ran" && e.choice == null);
+  }
+
   /** Whether the card's own move fell since `before` was read: a fall ends the round it fell in (decision 0079). */
   private async fellSince(before: CardDm): Promise<boolean> {
     // A card whose move already fell can't fall again: no read needed.
@@ -1231,20 +1237,17 @@ export class TableLoop {
           this.table.show({ kind: "info", title: words.noSuchNumber, text: words.stillWaits(choices.length) });
           continue;
         }
-        let fell = false;
-        const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, (r) => {
-          // A move that fell takes back only the words given for it (decision 0079).
-          fell = picked.about!.id === OWN_MOVE && r.events.some((e) => e.kind === "own_move_ran" && e.choice == null);
-          return "your word is given";
-        });
+        const since = this.table.engine.logHead;
+        const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
         if (!outcome.ok) {
           await this.humanRejected(outcome);
           showCard = true;
           continue;
         }
         this.table.log("intent", `${human} on the road card: ${picked.label}`, human);
-        // A word for a move that fell was taken back: the fall's wake tells it, not this line.
-        if (!fell) this.table.tellDm(`${human} ${owner ? "made the caravan's call" : "gave their word"} on the road card: ${picked.label}`);
+        // A word for a move that fell was taken back (decision 0079): the fall's wake tells it, not
+        // this line. own_move_ran is DM-only, so it is read from the DM's log.
+        if (!(picked.about!.id === OWN_MOVE && (await this.moveFellSince(since)))) this.table.tellDm(`${human} ${owner ? "made the caravan's call" : "gave their word"} on the road card: ${picked.label}`);
         return;
       }
       if (intent.kind === "text") {
