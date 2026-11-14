@@ -45,15 +45,16 @@ export interface OwnMoveMet {
   skill: string;
   dc: number;
   success: string;
-  failure: string;
+  /** The choice a failure brings; absent when the move named none (decision 0079). */
+  failure?: string;
   /** Each seat's word on the card, in order. */
   votes: Array<{ by: Handle; choice: string }>;
   /** The card's decision; absent while it waited at the run's end. */
   decided?: { choice: string; how: string };
   /** The proposer's roll and its outcome; `null` when the proposer was down and the failure ran without one. */
   roll?: { id: string; outcome: string } | null;
-  /** The choice the own move brought. */
-  ran?: string;
+  /** The choice the own move brought; `null` when it named no failure and fell (decision 0079). */
+  ran?: string | null;
   /** The deed's record in this run, when it was written here. */
   deed?: { contract: number; by: Handle[] };
   /** Seats whose word on the card was a fallback ("goes with the others"). */
@@ -76,7 +77,7 @@ export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], p
     else if (e.kind === "card_own_move" && card) card.words = e.words;
     else if (e.kind === "card_advice" && card) card.votes.push({ by: e.actor, choice: e.choice });
     else if (e.kind === "own_move_set" && card) {
-      open = { card: e.card, actor: e.actor, words: card.words ?? "", skill: e.skill, dc: e.dc, success: e.success, failure: e.failure, votes: card.votes, fallbacks: [], down: false };
+      open = { card: e.card, actor: e.actor, words: card.words ?? "", skill: e.skill, dc: e.dc, success: e.success, failure: e.failure ?? undefined, votes: card.votes, fallbacks: [], down: false };
       out.push(open);
     } else if (e.kind === "card_resolved" && card) {
       if (open && open.card === card.id && !open.decided) {
