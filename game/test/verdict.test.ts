@@ -355,6 +355,9 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
 
   // The report lists the own move with every seat's vote; the replay shows the card as a seat draws it.
   const report = exitReport(run, readLines(path.join(good, SESSION_LOG)), readLines(path.join(good, "transcript.jsonl")), []).join("\n");
+  assert.match(report, /^Voice: plain \(no voice setting in this run\)$/m);
+  const fireside = { ...run, settings: { voice: { value: "fireside", from: "flag" } } } as typeof run;
+  assert.match(exitReport(fireside, readLines(path.join(good, SESSION_LOG)), [], []).join("\n"), /^Voice: fireside$/m);
   assert.match(report, /1\. fallen_tree, maren: "I talk the carter into lending his ox"; persuasion DC 10; success brings clear, failure around; votes: maren own_move, torva own_move; decided on own_move \(majority\); r30, success; brought clear/);
   const replayed = folder(run, [...seated, { speaker: "maren", kind: "speech", text: "Clear it, then.", log_head: 1 }], withSeq([
     { kind: "card_drawn", visibility: { scope: "public" }, text: "A road card", card_text: "A tree lies across the road.", choices: [{ id: "clear", text: "Clear it." }, { id: "around", text: "Go around." }], target: "caravan" },
