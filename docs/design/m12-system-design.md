@@ -99,6 +99,7 @@ A new block for `contract/protocol.md` §5:
 | `success` and `failure` before the roll | yes | no | no |
 | the choice the roll brought, as a choice id | yes | no | no |
 | the roll: dice, total, outcome | yes | yes | yes |
+| `spent`: the move fell and no choice ran (§1.8) | yes | yes | yes |
 | the deed `own_move_<card>` | yes | no | no |
 
 - The words were said aloud, so they are public. The skill is public too, before the vote, so the seats know what they are voting for: the DM's reading of the words. This is a new disclosure, not a precedent: a card's scout skill stays DM-only until its roll. Vera's "I didn't try to persuade him, I demanded" is its cost, and it is the DM's to answer in the scene.
