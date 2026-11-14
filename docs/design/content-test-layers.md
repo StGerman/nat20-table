@@ -1,26 +1,26 @@
 # Testing content below the exit pair: what exists, the gap, one candidate
 
-- **Status:** The rule of §3 accepted by Stas, 2026-11-14 16:59Z (decision 0080). The card bench of §4 stays a candidate: questions 2 to 4 of §6 are open, and there are no TASKS.md rows
+- **Status:** The rule of §3 accepted by Stas, 2026-11-14 16:59Z (decision 0080). At 19:42Z he answered the rest of §6: the card bench of §4 is designed and tried on Milestone 13, in its own design doc and PR, and the gaps of question 4 get rows (AGT-118, AGT-119). §1, §2 and §4 describe main as it stood at 07:00Z that day; Milestone 12 was merged and closed later the same day (decision 0082), and where that changed a fact the text says so
 - **Date:** 2026-11-14
 - **Decision:** `docs/decisions/0080-content-test-layers.md`
 - **Asked by:** Stas, 2026-11-14 06:55Z: the process "looks end-to-end, we need something closer to unit or component tests; be bold"
 
 ## 1. What exists, and the gap
 
-Tests with no model are already deep. `contract/fixtures/` replays seeded transcripts. `game/test/campaign-loop.test.ts` walks whole contracts with a scripted DM and scripted seats and asserts the verdict rows of `game/src/play/verdict.ts`: after M11's exit pair 2 failed, its failure became the test "Fair in Wend's road always reads one of its own deeds, on the first choices or the last, whatever the dice (exit pair 2, run 1)"; the exit pair itself is scripted (MAP-12), and so is the arrival card at the destination (ENG-35). The open M12 stack adds scripted own-move tests to the same file. `npm run pack:check` loads every pack through the engine.
+Tests with no model are already deep. `contract/fixtures/` replays seeded transcripts. `game/test/campaign-loop.test.ts` walks whole contracts with a scripted DM and scripted seats and asserts the verdict rows of `game/src/play/verdict.ts`: after M11's exit pair 2 failed, its failure became the test "Fair in Wend's road always reads one of its own deeds, on the first choices or the last, whatever the dice (exit pair 2, run 1)"; the exit pair itself is scripted (MAP-12), and so is the arrival card at the destination (ENG-35). The M12 stack, merged on 2026-11-14, added scripted own-move tests to the same file. `npm run pack:check` loads every pack through the engine.
 
 The gap is everything a live model decides. How the DM reads a player's words, whether AI players use a tool they are offered, whether a card can hold the plan a person says: each is first tested by a run of a whole contract and its analysis thread. Smaller live runs exist: `npm run play:scene` plays chosen scenes of a pack with a scripted or a human seat, and `play:cheap` is a cheaper profile of the full run. But a road card belongs to a leg of a contract, not to a scene, and nothing brings a live DM to one chosen card.
 
 ## 2. The record
 
-| | M11 (baseline) | M12 so far (2026-11-14) |
+| | M11 (baseline) | M12 by 2026-11-14 07:00Z |
 |---|---|---|
 | Runs played | 5 | 10 (3 of them 1-to-2-minute cheap runs; 1 void, on a stale checkout) |
 | Run cost, USD | 35.45 | 44.29 |
 | Exit pairs played / passed | 3 / 1 | 3 / 0 |
 | Stas at the table, wall time | 1.09 h in 2 evenings | 3.09 h in 3 evenings (38.3 + 120.0 + 27.2 min; for 81 of the 120 Stas had stepped away and the table waited on his seat) |
 
-Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.json` of the ten runs `full-2026-11-12T19-02…` to `full-2026-11-14T01-42…` in nat20-runs `master` 65c0e7c; checked by Yan (§7). `docs/roadmap.md`'s own M12 row dates from 2026-11-11 and shows no runs; it is Yan's file and his next `roadmap` brings it up to these numbers.
+Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.json` of the ten runs `full-2026-11-12T19-02…` to `full-2026-11-14T01-42…` in nat20-runs `master` 65c0e7c; checked by Yan (§7). `docs/roadmap.md`'s own M12 row dates from 2026-11-11 and shows no runs; it is Yan's file and his next `roadmap` brings it up to date. After this table was counted Stas played one more run, and Milestone 12 was merged and closed without a passed exit pair (decision 0082); that run is not in these numbers.
 
 | M12 run | What failed | What would see it without a full run |
 |---|---|---|
@@ -33,7 +33,7 @@ Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.
 
 M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-thread`) were fixed with scripted tests on main.
 
-**The honest tally.** Nothing considered here would have saved a run or an evening for certain on this record. Run 16:05 comes closest: two of its failures had a cause a scripted test can see. But its own-move row stood at 0 on a plan said between cards, and its time limit fell after Stas stepped away with the contract unfinished, so that evening fails with those two tests in place as well. Both failed M12 exit evenings failed on a plan a person said: 01:42 in a design hole that table #381 proposes to close, 16:05 on a plan said between cards, which nothing proposed anywhere addresses. So this doc promises neither fewer evenings nor fewer dollars. It names one candidate: a way to try a player's line on one chosen card against the live DM, so that an evening is not the only place to find out that a plan has nowhere to land. In run 01:42 that took 16 minutes of play to reach.
+**The honest tally.** Nothing considered here would have saved a run or an evening for certain on this record. Run 16:05 comes closest: two of its failures had a cause a scripted test can see. But its own-move row stood at 0 on a plan said between cards, and its time limit fell after Stas stepped away with the contract unfinished, so that evening fails with those two tests in place as well. Both failed M12 exit evenings failed on a plan a person said: 01:42 in a design hole that decision 0079 (table #381) has since closed, 16:05 on a plan said between cards, which nothing proposed anywhere addresses. So this doc promises neither fewer evenings nor fewer dollars. It names one candidate: a way to try a player's line on one chosen card against the live DM, so that an evening is not the only place to find out that a plan has nowhere to land. In run 01:42 that took 16 minutes of play to reach.
 
 ## 3. The rule
 
@@ -46,14 +46,14 @@ The record's own examples: run 16:05's two build defects (a creature's name in E
 
 ## 4. A candidate: the card bench
 
-The own-move names below (`card_words`, `own_move`) are from the open M12 stack, not yet on main.
+The own-move names below (`card_words`, `own_move`) are from the M12 stack, on main since 2026-11-14.
 
 The idea: one command puts a named road card on the table and hands it to the live DM, as `play:scene` does for a scene. A person types a line and sees what the DM does with it; or lines come from a file (Stas's own from runs 16:05 and 01:42, read from the runs' files) and the DM's tool calls are checked; or a model writes plans a person might say and the thread lists the ones that found nowhere to land (a plan fuzz).
 
 It is not designed, and this doc does not ask for it to be built. Review found these open, and each changes the cost:
 
 - **How a named card reaches the table.** A person can already play a campaign pack beside scripted AI seats (`--seat ink`; without a person the run driver refuses scripted players there, and the caravan-driving scripted policies live in test code). What is missing is the card: a seeded walk to it breaks whenever a deck upstream of the draw changes, and an engine command that opens a named card would be a contract change under Rule 1.
-- **One move a card.** M12 design §1.4: one own move per card, no retry. So every line that becomes a move needs the card set up again, and a fresh DM session or one that remembers the last try.
+- **One move a card.** M12 design §1.4 allowed one own move per card and no retry; decision 0081 has since let a card take another move, by another way, after a fall. A line that settles the card still needs the card set up again, and a fresh DM session or one that remembers the last try.
 - **No evening behind the card.** The bench DM has no memory of the scenes before it; a recorded line that leans on them will read differently.
 - **A narrated outcome is text.** Run 01:42's "refusal with no roll" was in the narration, not in a tool call; seeing it needs a judge on text.
 - **What a pass is.** A live DM is not deterministic; a case needs samples and a threshold, set from measured rates.
@@ -64,7 +64,7 @@ Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_word
 **Considered, not proposed.**
 - A seat bench (a card to the live AI players, counting what they do). Its one question so far, "do AI players ever call `own_move`?", stopped gating under 0074.
 - A build check on the run command. Run 15:26 was played on a checkout 44 commits behind the exit build. The verdict marks only a checkout with local changes not eligible, and only after the run; a clean stale checkout passes. A check against the intended commit is cheap and worth its own row; it is not a test of content, so it is not this doc's.
-- A deck lint beyond today's validator. The one rule ready today (a card has two choices that break no custom, from M12 design §1.4 and §1.8) finds `peddler` on main, does not find `bog_wifes_toll`, and is voided if decision 0079 (table #381) makes an own move's failure optional.
+- A deck lint beyond today's validator. The one rule ready today (a card has two choices that break no custom, from M12 design §1.4 and §1.8) finds `peddler` on main, does not find `bog_wifes_toll`, and is voided by decision 0079, accepted since, which makes an own move's failure optional.
 - Changing the exit pair: Stas plays once at milestone close, or a fix covered by a lower-layer case does not replay the pair. The record supports neither (§2).
 
 ## 5. Gates
@@ -74,9 +74,9 @@ Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 an
 ## 6. Questions for Stas
 
 1. Accept the rule of §3, as the CLAUDE.md line drafted in §5? **Answered 2026-11-14 16:59Z: yes, add it to CLAUDE.md.**
-2. Do you want the card bench designed: its own short system design, answering the open points of §4, with a cost, before any decision to build it? Or is the answer to your ask "the scripted layer is already there, and the rest is your evening"?
-3. If designed: for M13, after M12 closes? It needs the M12 stack on main either way.
-4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05, a minor flag in its analysis), if table #379 does not already fix it; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan?
+2. Do you want the card bench designed: its own short system design, answering the open points of §4, with a cost, before any decision to build it? Or is the answer to your ask "the scripted layer is already there, and the rest is your evening"? **Answered 2026-11-14 19:42Z: design it and try it on M13; if it works, it becomes a standing rule («Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным»).**
+3. If designed: for M13, after M12 closes? It needs the M12 stack on main either way. **Answered with question 2: M13. The M12 stack is on main.**
+4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05, a minor flag in its analysis), if table #379 does not already fix it; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan? **Answered 2026-11-14 19:42Z: yes. Yan wrote AGT-118 (the checkout check) and AGT-119 (the prompt after a night). `peddler` gets no row: decision 0079, accepted since, makes the failure choice optional, so an own move lands there.**
 
 ## 7. Yan's numbers (fallback agent, extract, 2026-11-14)
 
