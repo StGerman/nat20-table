@@ -39,10 +39,10 @@ M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-
 
 **A full run should not be the first place a defect is found, when a cheaper layer can see it.** This is already the practice for structure (§1); the rule makes it explicit.
 
-1. From the first milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the exit run (`play:scene`), a full run with its audit and judge, or "a person". The M12 and M13 scopes and designs are not amended.
+1. From the first milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the exit run (`play:scene`), a full run with its audit and judge, or "a person". The M12 and M13 scopes and designs are not amended for it; an amendment to either written after that date names the layer for the exit rows it states or refines.
 2. For fix PRs opened after 2026-11-14: when a full run fails, the analysis says whether a test with no model could have seen it. If one could, the fix's PR adds it, as the M11 fixes did. The rerun the pair's rules require is still played.
 
-The record's own examples: run 16:05's two build defects (a creature's name in English, a fight started on a neutral) both of a kind a scripted test sees.
+The record's own examples are run 16:05's two build defects, a creature's name in English and a fight started on a neutral: both are of a kind a scripted test sees.
 
 ## 4. A candidate: the card bench
 
@@ -76,11 +76,11 @@ Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 an
 1. Accept the rule of §3, as the CLAUDE.md line drafted in §5? **Answered 2026-11-14 16:59Z: yes, add it to CLAUDE.md.**
 2. Do you want the card bench designed: its own short system design, answering the open points of §4, with a cost, before any decision to build it? Or is the answer to your ask "the scripted layer is already there, and the rest is your evening"? **Answered 2026-11-14 19:42Z: design it and try it on M13; if it works, it becomes a standing rule («Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным»).**
 3. If designed: for M13, after M12 closes? It needs the M12 stack on main either way. **Answered with question 2: M13. The M12 stack is on main.**
-4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05, a minor flag in its analysis), if table #379 does not already fix it; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan? **Answered 2026-11-14 19:42Z: yes. Yan wrote AGT-118 (the checkout check) and AGT-119 (the prompt after a night). `peddler` gets no row: decision 0079, accepted since, makes the failure choice optional, so an own move lands there.**
+4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05, a minor flag in its analysis); table #379 was not checked for it when this was written; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan? **Answered 2026-11-14 19:42Z: yes. Yan wrote AGT-118 (the checkout check) and AGT-119 (the prompt after a night; the rows of table #379 and table #392 do not name it, and the row's first step is to confirm it on main). `peddler` gets no row: decision 0079, accepted since, makes the failure choice optional, so an own move lands there.**
 
-## 7. Yan's numbers (fallback agent, extract, 2026-11-14)
+## 7. Yan's numbers (extract, 2026-11-14)
 
-The repo's `yan` agent was run from a cloud thread, read-only; it may have seen CLAUDE.md. His saving estimate assumed Stas's evening moves to once a milestone, which this doc does not propose, so it is not quoted. His baseline numbers are §2's first table.
+Yan was run from a cloud thread, read-only, from the repo's `.claude/agents/yan.md`; by CLAUDE.md's rule for cloud threads that counts as the fallback, which may have seen CLAUDE.md. His saving estimate assumed Stas's evening moves to once a milestone, which this doc does not propose, so it is not quoted. His baseline numbers are §2's first table.
 
 > Human time: 38.3 + 120.0 + 27.2 = 185.5 min. Of the 120 min at 16:05, 81 were the table waiting on bren and the run then hit the time limit.
 > 3 of the 10 runs are 1-to-2-minute cheap runs (1.01 USD together). 15:26 cost 8.83 USD on old build ab59b57 alongside 15:33, and it has no analysis. Write-off candidate.
