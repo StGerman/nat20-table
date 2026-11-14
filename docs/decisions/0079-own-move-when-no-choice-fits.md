@@ -60,7 +60,7 @@ A, with the same deed, and answers only for words no choice fits. A failed roll 
 - 0068's sentences "the success and failure choices must be two different choices" and "a failure decides the card" now hold only for a move that names a failure. One own move per card stays, tried or not.
 - The DM prompt's `card_words` rule and the `remember` tool's description change; no code can test what a narration rules, so the run report lists every answer that made no move, with the words and any fact the DM kept in that wake.
 - Exit row 2 as the scope words it ("a card decided by Stas's own move") does not count a move that failed and left the card waiting; whether it should is question 2 of the amendment.
-- The seat gains one line, shown to the seats whose word was taken back when an own move fails and the card still waits (not when the words left settle it).
+- The seat gains two lines (the move did not work after a roll; it could not be tried with `roll: null`), shown to the seats whose word was taken back when an own move fails and the card still waits (not when the words left settle it).
 
 ## Revisit when
 
