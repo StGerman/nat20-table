@@ -332,9 +332,41 @@ pub enum Command {
         /// Why this card, in one line: kept in the session log and the run report, DM only.
         reason: String,
         /// The game loop picked the first card rolled because the DM did not answer: the
-        /// pick is the engine's, not the DM's.
+        /// pick is the engine's, not the DM's. Only the first card in `world.offered` may be
+        /// picked so; any other is refused with `card_not_offered`.
         #[serde(default)]
         fallback: bool,
+    },
+    /// Puts a seat's own move on the road card on the table (API-56; protocol §4.13): the seat
+    /// said something else than the card's choices, and the DM turns the words into a ladder
+    /// check and names the card's offered choice a success brings and, where one plainly
+    /// fits, another a failure brings. The move joins the card as the choice `own_move`, and
+    /// the actor's word is given for it; the other seats vote on it like any choice. If the
+    /// card is decided on it, the engine rolls the actor's check and runs the named choice's
+    /// effects. With no failure named, a fall (a failed roll, a downed actor, or an engine
+    /// error at the roll) runs no choice: the words given for `own_move` are taken back and
+    /// the card waits for a written choice, unless the words left settle it (decision 0079).
+    /// One own move at a time: after a fall the card takes another, by another way (a skill
+    /// toward a success choice that was already rolled on this card, or that already fell
+    /// twice, is `rejected`, `bad_own_move`; decision 0081). DM only.
+    OwnMove {
+        /// The seat whose words these are: one with a say on the card that has not spoken yet
+        /// (a Hired Blade, or a player owner once every Blade has advised).
+        actor: Handle,
+        /// The words as said, 1 to 300 characters.
+        text: String,
+        /// The check's ability; it must be the skill's own.
+        ability: Ability,
+        /// The check's skill.
+        skill: Skill,
+        /// The DC: one of 5, 10, 15, 20, 25, 30; anything else is a `bad_request`.
+        dc: u8,
+        /// The choice a success brings: an id from `world.card.choices`.
+        success: String,
+        /// The choice a failure brings: another id from `world.card.choices`, never one that
+        /// breaks a custom; none when no choice is what a failure brings (decision 0079).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        failure: Option<String>,
     },
     /// Walks ahead of the caravan as the scout (API-54; protocol §4.13): a Hired Blade takes
     /// the role for every leg until another Blade takes it. When a leg's road card names a
@@ -591,10 +623,16 @@ pub enum CommandResult {
         /// Creatures that got an opportunity attack prompt from this move, in prompt order.
         provoked: Vec<Handle>,
         /// Whether the walk set out to end where the creature was sent (next to the creature, at
-        /// the anchor or the point). False only for a `partial` move that the movement left cut
-        /// short; a creature an opportunity attack holds on the way is still on a walk that
-        /// reaches.
+        /// the anchor or the point). False for a `partial` move that the movement left cut short,
+        /// and for a move to a point or an anchor where a creature stands, which ends on the last
+        /// free spot before it (`1.0.0-dev.70`); a creature an opportunity attack holds on the way
+        /// is still on a walk that reaches.
         reached: bool,
+        /// True when the walk got as far as where it was sent and stopped short because a creature
+        /// stands there, so a client can say why it didn't get there (`1.0.0-dev.70`). Left out
+        /// otherwise, which includes a `partial` move the movement left cut short first.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        taken: bool,
     },
     /// The check's roll and outcome.
     RequestCheck {
@@ -666,6 +704,12 @@ pub enum CommandResult {
     /// The state with the picked card on the table, or already decided when nobody could
     /// speak on it.
     PickCard {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The state with the own move on the card, or the card decided when the actor's word
+    /// settled it.
+    OwnMove {
         /// Projected for the request's `viewer`.
         state: State,
     },

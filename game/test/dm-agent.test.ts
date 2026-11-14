@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { CRAFT_PLUGIN, craftSkills, DM_LONG_WAKE_TIMEOUT_MS, DM_TURN_TIMEOUT_MS, dmPrompt, ModelDm, type CraftMode } from "../src/agents/dm.ts";
+import { CRAFT_PLUGIN, craftSkills, DM_SETTLE_ON, DM_LONG_WAKE_TIMEOUT_MS, DM_TURN_TIMEOUT_MS, dmPrompt, FIRESIDE_LINE, ModelDm, type CraftMode } from "../src/agents/dm.ts";
 import { ModelPlayer } from "../src/agents/player.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
@@ -96,6 +96,25 @@ test("the DM's prompt holds the rules, the craft guidance and the whole pack; it
   }
 });
 
+test("a Fireside run adds one ask to the adventure part; a Plain run's prompt is byte for byte as before (AGT-102)", () => {
+  const plain = dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt", "ru");
+  assert.equal(dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt", "ru", "plain"), plain);
+  assert.ok(!plain.includes(FIRESIDE_LINE));
+  assert.ok(plain.includes(`## The adventure (only you see it)\n\n${PACK.text}`));
+  const fireside = dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt", "ru", "fireside");
+  assert.equal(fireside, plain.replace("## The adventure (only you see it)\n\n", `## The adventure (only you see it)\n\n${FIRESIDE_LINE}\n\n`));
+  // The skills mode carries the same ask: the voice skill reads it from the adventure's instructions.
+  assert.ok(dmPrompt(PACK, PARTY.human, PARTY.ai, "skills", "en", "fireside").includes(FIRESIDE_LINE));
+  // The run command passes the flag through to the DM's prompt.
+  const cli = path.join(REPO, "game/src/play/scene.ts");
+  const run = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "--dry-run", "--voice", "fireside"], { encoding: "utf8" });
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  assert.ok(run.stdout.includes(FIRESIDE_LINE));
+  const unknown = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", cli, "--dry-run", "--voice", "loud"], { encoding: "utf8" });
+  assert.equal(unknown.status, 2);
+  assert.match(unknown.stderr, /--voice is one of plain, fireside/);
+});
+
 test("in skills mode the craft guidance is the plugin's skills, named in the prompt, not pasted into it", async () => {
   const { dm, sessions } = standInDm(async () => "", "skills");
   const skills = craftSkills();
@@ -114,6 +133,28 @@ test("in skills mode the craft guidance is the plugin's skills, named in the pro
     const options = sessionOptions(config, "/empty");
     assert.deepEqual(options.tools, ["Skill"]);
     assert.deepEqual(options.plugins, [{ type: "local", path: CRAFT_PLUGIN, skipMcpDiscovery: true }]);
+  } finally {
+    t.close();
+  }
+});
+
+test("remember still keeps a fact after a settling tool ended the DM's turn; other tools don't act (run 2026-11-13)", async () => {
+  const { dm, sessions } = standInDm(async () => "");
+  const t = await testTable({ seed: 1, pack: MILL });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "s1_village_green" }));
+    await dm.wake("narrate", "Narrate these events.", new DmTools(t.table));
+    sessions[0]!.settling = true;
+    assert.deepEqual(await sessions[0]!.call("remember", { fact: "The scribe is called Pickler." }), { text: "remembered", isError: false });
+    assert.deepEqual(dm.memory, ["The scribe is called Pickler."]);
+    assert.equal((await sessions[0]!.call("narrate", { text: "Too late." })).isError, true);
+    // A wake that timed out keeps no tools: its late memory goes nowhere.
+    const timedOut = standInDm(async () => {
+      throw new TurnTimeout("dm: turn timed out");
+    });
+    await assert.rejects(timedOut.dm.wake("narrate", "Narrate these events.", new DmTools(t.table)));
+    assert.equal((await timedOut.sessions[0]!.call("remember", { fact: "Stale." })).isError, true);
+    assert.deepEqual(timedOut.dm.memory, []);
   } finally {
     t.close();
   }
@@ -340,7 +381,8 @@ test("with no human at the table, the DM's prompt and tools leave the human out 
 test("the DM's scene openings, table turns and summaries get the long limit; --dm-timeout-ms sets every wake's", () => {
   const config = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).sessionConfig();
   assert.equal(config.turnTimeoutMs, DM_TURN_TIMEOUT_MS);
-  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS, suggest: DM_LONG_WAKE_TIMEOUT_MS });
+  // A player's words on a card get their own 30 s (AGT-99): a refused own move and its retry rewrite the narration.
+  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS, suggest: DM_LONG_WAKE_TIMEOUT_MS, card_words: 30_000 });
   const flat = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE, turnTimeoutMs: 20_000 }).sessionConfig();
   assert.equal(flat.turnTimeoutMs, 20_000);
   assert.equal(flat.turnTimeoutsMs, undefined);
@@ -444,8 +486,17 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   assert.ok(!mill.includes("pass_time"));
   // The DM's pick (AGT-88): the road's DM picks among offered cards by the rule; a pack played in order has no deck.
   assert.ok(names.includes("pick_card"), names.join(", "));
-  assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line\./);
+  assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line, then narrate the card.s opening: narrate before the pick is refused\./);
+  assert.match(dm.systemPrompt, /- "A road card is on the table": a card came with no pick\. Open it in two to four sentences/);
+  assert.match(dm.systemPrompt, /before you narrate; narrate last\./);
   assert.ok(!mill.includes("pick_card"));
+  // Own move (AGT-99): the road's DM answers a player's words on a card with own_move_or_answer, by the rule.
+  assert.ok(names.includes("own_move_or_answer") && !mill.includes("own_move_or_answer"));
+  // The three cases of decision 0079 (design §1.8), in the road section.
+  assert.match(dm.systemPrompt, /- "A player's words on the road card": Answer with own_move_or_answer\. First, when the words simply are one of the card's choices, say so in the scene/);
+  assert.match(dm.systemPrompt, /Name a failure only when another choice is plainly what happens when the attempt fails, never one that breaks a custom and never a deliberate act the words did not ask for; with no failure named, a failed roll runs no choice and the move is spent\./);
+  assert.match(dm.systemPrompt, /If no choice is what the words would bring, give only the narration, one or two sentences, and the card waits\./);
+  assert.match(dm.systemPrompt, /a person on the card, if there is one, says what the plan would cost them or asks something back.*never call remember for how the attempt turned out\./);
   // Scouting at the table (AGT-90): the DM opens a scouted card on what the scout saw.
   assert.match(dm.systemPrompt, /- The scout: .*If they saw it, open the card on what the scout saw/);
   // Story-space (AGT-89, design decision 9): five rules on the road, the human's character named in the second.
@@ -470,4 +521,13 @@ test("the DM speaks to the human's character as you and names everyone else; a t
   assert.doesNotMatch(dmPrompt(PACK, PARTY.human, PARTY.ai, "prompt"), /«ты»/, "the English prompt stays English");
   assert.match(prompt, /Narration to one AI player's handle alone speaks to that character as "you"/);
   assert.doesNotMatch(dmPrompt(PACK, undefined, [PARTY.human!, ...PARTY.ai], "prompt"), /second person singular/);
+});
+
+test("the wakes that narrate last end on their narration, never on the cap (AGT-97)", () => {
+  for (const wake of ["narrate", "combat_over", "road", "pick", "card"] as const) assert.deepEqual(DM_SETTLE_ON[wake], ["narrate"], wake);
+  // These may still act after a narration (a move after the attack it narrated): they run to their end.
+  for (const wake of ["map_combat", "surrender_words"] as const) assert.equal(DM_SETTLE_ON[wake], undefined, wake);
+  assert.deepEqual(DM_SETTLE_ON.card_words, ["own_move_or_answer"]);
+  // The long wakes keep calling tools after they narrate: they run to their own cap.
+  for (const wake of ["scene_open", "table_turn", "summary", "suggest"] as const) assert.equal(DM_SETTLE_ON[wake], undefined, wake);
 });

@@ -42,6 +42,11 @@ pub fn text(kind: &EventKind) -> String {
                 "surrender"
             }
         ),
+        EventKind::TurnedHostile { handles } => format!(
+            "{} {} hostile.",
+            list(handles),
+            if handles.len() == 1 { "turns" } else { "turn" }
+        ),
         EventKind::Fled { handles } => format!(
             "{} {}.",
             list(handles),
@@ -253,6 +258,35 @@ pub fn text(kind: &EventKind) -> String {
         ),
         EventKind::CardAdvice { actor, choice } => format!("{} says: {choice}.", actor.0),
         EventKind::CardResolved { choice, .. } => format!("The card is decided: {choice}."),
+        EventKind::CardOwnMove { actor, words, .. } => {
+            format!("{} says something else: {words}", actor.0)
+        }
+        EventKind::OwnMoveSet {
+            card,
+            actor,
+            success,
+            failure,
+            ..
+        } => match failure {
+            Some(failure) => format!(
+                "{}'s own move on {card}: a success brings {success}, a failure {failure}.",
+                actor.0
+            ),
+            None => format!(
+                "{}'s own move on {card}: a success brings {success}; a failure brings no choice.",
+                actor.0
+            ),
+        },
+        EventKind::OwnMoveRan { choice, roll, .. } => match (choice, roll) {
+            (Some(choice), Some(_)) => format!("The own move brings {choice}."),
+            (Some(choice), None) => {
+                format!("The proposer is down: the own move brings {choice} without a roll.")
+            }
+            (None, Some(_)) => "The own move fails: no choice runs.".to_owned(),
+            (None, None) => {
+                "The proposer is down, or the roll could not be made: no choice runs.".to_owned()
+            }
+        },
         EventKind::CargoChanged { good, change } => {
             if *change >= 0 {
                 format!("The caravan gains {change} {good}.")

@@ -1,26 +1,26 @@
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene m3_s1_green","rolls":[],"log_head":2}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene m3_s1_green loaded in explore mode.","rolls":[],"log_head":2}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene m3_s1_green loaded in explore mode.","rolls":[],"log_head":2}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":2}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":2,"wake":"scene_open"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":2,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves to reeve_porch.","rolls":[],"log_head":3}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves to reeve_porch.","rolls":[],"log_head":3}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":3}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":3,"wake":"table_turn"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":3,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r4] bren rolls a Wisdom (Insight) check: 1d20 (4) +2 = 6 vs DC 12, failure.","rolls":["r4"],"log_head":5}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's check fails.","rolls":[],"log_head":5}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r4] bren rolls a Wisdom (Insight) check: 1d20 (4) = 6, failure.","rolls":["r4"],"log_head":5}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":5}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":5,"wake":"table_turn"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":5,"human":true}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":5}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":5,"wake":"table_turn"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene m3_s2_road loaded in explore mode.","rolls":[],"log_head":6}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene m3_s2_road loaded in explore mode.","rolls":[],"log_head":6}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene m3_s2_road","rolls":[],"log_head":6}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":6}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":6,"wake":"scene_open"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":6,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves to snare_bend.","rolls":[],"log_head":7}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves to snare_bend.","rolls":[],"log_head":7}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":7}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":7,"wake":"table_turn"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":7,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r8] bren rolls a Wisdom (Survival) check: 1d20 (7) +2 = 9 vs DC 12, failure.","rolls":["r8"],"log_head":14}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's check fails.","rolls":[],"log_head":14}
@@ -34,23 +34,23 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r12] bren rolls piercing damage: 1d6 (1) = 1.","rolls":["r12"],"log_head":14}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren takes 1 piercing damage.","rolls":[],"log_head":14}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 19/20 Hit Points.","rolls":[],"log_head":14}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":14}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":14,"wake":"table_turn"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":14,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves to mill_gate.","rolls":[],"log_head":15}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves to mill_gate.","rolls":[],"log_head":15}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":15}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":15,"wake":"table_turn"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":15,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r16] bren rolls a Wisdom (Perception) check: 1d20 (11) +2 = 13 vs DC 13, success.","rolls":["r16"],"log_head":18}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's check succeeds.","rolls":[],"log_head":18}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Flag party_ambushes is set.","rolls":[],"log_head":18}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r16] bren rolls a Wisdom (Perception) check: 1d20 (11) = 13, success.","rolls":["r16"],"log_head":18}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":18}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":18,"wake":"table_turn"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":18,"human":true}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":18}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":18,"wake":"table_turn"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene m3_s3_yard loaded in explore mode.","rolls":[],"log_head":19}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene m3_s3_yard loaded in explore mode.","rolls":[],"log_head":19}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene m3_s3_yard","rolls":[],"log_head":19}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":19}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":19,"wake":"scene_open"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":19,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat begins: goblin_1, bren, goblin_2.","rolls":[],"log_head":29}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r21] goblin_1 rolls initiative: 2d20 (17, 14, kept 14) +2 = 16.","rolls":["r21"],"log_head":29}
@@ -72,8 +72,8 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r27] goblin_1 rolls an attack roll vs bren: 1d20 (11) = 15, miss.","rolls":["r27"],"log_head":29}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":29}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":29}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":29}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":29}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":29,"wake":"table_turn"}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":29,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on goblin_1.","rolls":[],"log_head":31}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r31] bren rolls an attack roll vs goblin_1: 1d20 (8) +5 = 13 vs AC 15, miss.","rolls":["r31"],"log_head":31}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren uses Longsword attack on goblin_1.","rolls":[],"log_head":31}
@@ -82,7 +82,7 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":32}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":43}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":43}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":43}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":43,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":43}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Scimitar attack on bren.","rolls":[],"log_head":43}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r36] goblin_2 rolls an attack roll vs bren: 1d20 (7) +4 = 11 vs AC 19, miss.","rolls":["r36"],"log_head":43}
@@ -101,7 +101,7 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 uses Scimitar attack on bren.","rolls":[],"log_head":43}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r41] goblin_1 rolls an attack roll vs bren: 1d20 (4) = 8, miss.","rolls":["r41"],"log_head":43}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":43}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":43}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":43,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":43}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":43}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on goblin_1.","rolls":[],"log_head":48}
@@ -117,7 +117,7 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":49}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":63}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":63}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":63}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":63,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":63}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Scimitar attack on bren.","rolls":[],"log_head":63}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r53] goblin_2 rolls an attack roll vs bren: 1d20 (11) +4 = 15 vs AC 19, miss.","rolls":["r53"],"log_head":63}
@@ -141,7 +141,7 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1 uses Shortbow attack on bren.","rolls":[],"log_head":63}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r61] goblin_1 rolls an attack roll vs bren: 1d20 (3) = 7, miss.","rolls":["r61"],"log_head":63}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":63}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":63}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":63,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":63}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":63}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on goblin_2.","rolls":[],"log_head":68}
@@ -158,7 +158,7 @@
 {"at":"t","speaker":"dm","channel":"run","kind":"system","text":"the DM offers bren the surrender of goblin_1, goblin_2","rolls":[],"log_head":87}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":87}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":87}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":87}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":87,"wake":"narrate"}
 {"at":"t","speaker":"bren","channel":"run","kind":"system","text":"bren accepts the surrender of goblin_1, goblin_2","rolls":[],"log_head":87}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn.","rolls":[],"log_head":90}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 uses Monster Nimble Escape.","rolls":[],"log_head":90}
@@ -190,7 +190,7 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren takes 5 piercing damage.","rolls":[],"log_head":90}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 14/20 Hit Points.","rolls":[],"log_head":90}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1's turn ends.","rolls":[],"log_head":90}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":90}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":90,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":90}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1, goblin_2 surrender.","rolls":[],"log_head":90}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":90}
@@ -199,20 +199,20 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"goblin_1, goblin_2 surrender.","rolls":[],"log_head":90}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":90}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren gains 100 XP, 400 in all.","rolls":[],"log_head":90}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The yard is yours.","rolls":[],"log_head":90}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The yard is yours.","rolls":[],"log_head":90,"wake":"combat_over"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is no longer under Disengage.","rolls":[],"log_head":92}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene m3_s4_prisoner loaded in explore mode.","rolls":[],"log_head":92}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene m3_s4_prisoner loaded in explore mode.","rolls":[],"log_head":92}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene m3_s4_prisoner","rolls":[],"log_head":92}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":92}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":92,"wake":"scene_open"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":92,"human":true}
 {"at":"t","speaker":"dm","channel":"to:bren","kind":"question","text":"The goblin shakes. What do you ask it?","rolls":[],"log_head":92}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":92}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":92,"wake":"table_turn"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":92,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r93] bren rolls a Charisma (Intimidation) check: 1d20 (15) +3 = 18 vs DC 13, success.","rolls":["r93"],"log_head":94}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's check succeeds.","rolls":[],"log_head":94}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r93] bren rolls a Charisma (Intimidation) check: 1d20 (15) = 18, success.","rolls":["r93"],"log_head":94}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":94}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":94,"wake":"table_turn"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":94,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r95] bren rolls a d10 Hit Point Die: 1d10 (4) +2 = 6.","rolls":["r95"],"log_head":98}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren regains 6 Hit Points.","rolls":[],"log_head":98}
@@ -222,13 +222,13 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren regains 6 Hit Points.","rolls":[],"log_head":98}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren has 20/20 Hit Points.","rolls":[],"log_head":98}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren finishes a short rest.","rolls":[],"log_head":98}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":98}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":98,"wake":"table_turn"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":98,"human":true}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":98}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":98,"wake":"table_turn"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene m3_s5_cellar loaded in explore mode.","rolls":[],"log_head":99}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Scene m3_s5_cellar loaded in explore mode.","rolls":[],"log_head":99}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene m3_s5_cellar","rolls":[],"log_head":99}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":99}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":99,"wake":"scene_open"}
 {"at":"t","speaker":"bren","channel":"table","kind":"intent","text":"I wait.","rolls":[],"log_head":99,"human":true}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat begins: bren, boss.","rolls":[],"log_head":104}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r101] bren rolls initiative: 1d20 (18) +2 = 20.","rolls":["r101"],"log_head":104}
@@ -240,8 +240,8 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r102] boss rolls initiative: 1d20 (7) = 9.","rolls":["r102"],"log_head":104}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Round 1 begins.","rolls":[],"log_head":104}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren's turn.","rolls":[],"log_head":104}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":104}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":104}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The world answers.","rolls":[],"log_head":104,"wake":"table_turn"}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":104,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":105}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren moves.","rolls":[],"log_head":105}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on boss.","rolls":[],"log_head":113}
@@ -255,10 +255,10 @@
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"[r108] bren rolls slashing damage: 1d8 (8) = 11.","rolls":["r108"],"log_head":113}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss takes 11 slashing damage.","rolls":[],"log_head":113}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"boss is dead.","rolls":[],"log_head":113}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":113}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Blades flash.","rolls":[],"log_head":113,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":113}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren gains 50 XP, 450 in all.","rolls":[],"log_head":113}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":113}
 {"at":"t","speaker":"engine","channel":"to:bren","kind":"engine","text":"bren gains 50 XP, 450 in all.","rolls":[],"log_head":113}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The cellar falls silent. The mill is quiet again.","rolls":[],"log_head":113}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The cellar falls silent. The mill is quiet again.","rolls":[],"log_head":113,"wake":"combat_over"}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":113}

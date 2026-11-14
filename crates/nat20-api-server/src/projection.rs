@@ -8,8 +8,8 @@
 use nat20_api_contract::{
     Anchor, AnchorObserved, AnchorView, CardChoiceView, CardPlayer, CheckView, Condition,
     CreatureFull, CreatureObserved, EncounterView, Event, EventKind, Handle, Mode, NpcKnown,
-    PlaceKnown, PointFt, ReachView, RoadKnown, RoadUnexplored, RollView, Sheet, SpawnView, State,
-    TripView, Visibility, WorldDm, WorldPlayer,
+    OwnMovePlayer, PlaceKnown, PointFt, ReachView, RoadKnown, RoadUnexplored, RollView, Sheet,
+    SpawnView, State, TripView, Visibility, WorldDm, WorldPlayer,
 };
 
 use crate::render;
@@ -249,6 +249,12 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
                 .collect(),
             said: c.said,
             waiting_for: c.waiting_for,
+            // Who said it and what it tries: never its DC, nor what it brings (API-56).
+            own_move: c.own_move.map(|mv| OwnMovePlayer {
+                actor: mv.actor,
+                ability: mv.ability,
+                skill: mv.skill,
+            }),
         }),
         escort: view.escort.map(|e| e.contract),
         trip,

@@ -41,6 +41,15 @@ pub const MAX_PILE: usize = DRAW_DIE as usize;
 /// check succeeds. It is not a deed: nothing remembers it, and no card asks for it.
 pub const SCOUTED: &str = "scouted";
 
+/// The choice id of a seat's own move on the card on the table (API-56): reserved, so no deck
+/// file may use it.
+pub const OWN_MOVE: &str = "own_move";
+
+/// The deed an own move writes when the card is decided on it (API-56): `own_move_<card>`.
+pub fn own_move_deed(card: &str) -> String {
+    format!("{OWN_MOVE}_{card}")
+}
+
 /// One deck file, `worlds/<id>/deck/<name>.json`. A world's deck is every file together.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -94,6 +103,10 @@ pub struct Card {
     pub target: Target,
     /// What the players read
     pub text: String,
+    /// What the players read in a Russian run (MAP-19, decision 0067); the table reads it from
+    /// the deck file, so it is never projected
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_ru: Option<String>,
     /// A place id: the card is in play only once the party has discovered it
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub requires: Option<String>,
@@ -111,10 +124,11 @@ pub struct Card {
     /// Deeds that keep the card out: it is in the pile only when none is remembered
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unless: Option<Deeds>,
-    /// The choice an NPC owner takes on a tie (caravan cards); the first tied choice when
-    /// absent or not offered
+    /// The choice an NPC owner takes on a tie or with nobody to speak: one id, or ids in the
+    /// owner's order of preference (MAP-18); the first one offered (or tied) is taken, and one
+    /// of them is offered in every case
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub owner_pick: Option<String>,
+    pub owner_pick: Option<OwnerPick>,
     /// Two or three choices in every case the conditions allow
     pub choices: Vec<Choice>,
     /// What only the DM reads: the card's one oddity, voiced at every meeting (API-53)
@@ -192,6 +206,31 @@ impl Deeds {
     }
 }
 
+/// A card's `owner_pick`: one choice id, or several in the owner's order (MAP-18).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum OwnerPick {
+    /// One choice
+    One(String),
+    /// Choices in the owner's order: the first one offered is taken
+    Order(Vec<String>),
+}
+
+impl OwnerPick {
+    /// The choice ids, in the owner's order.
+    pub fn ids(&self) -> &[String] {
+        match self {
+            OwnerPick::One(id) => std::slice::from_ref(id),
+            OwnerPick::Order(ids) => ids,
+        }
+    }
+
+    /// The owner's choice among the ids `there` admits: the first in the owner's order.
+    pub fn among(&self, there: impl Fn(&str) -> bool) -> Option<&str> {
+        self.ids().iter().map(String::as_str).find(|id| there(id))
+    }
+}
+
 /// A deed the world remembers: what the party did, who did it, and when.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -250,6 +289,9 @@ pub struct Choice {
     pub id: String,
     /// What the players read
     pub text: String,
+    /// What the players read in a Russian run (MAP-19), as on the card
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_ru: Option<String>,
     /// An NPC owner takes this choice whatever the advice (the merchant will not risk the
     /// cargo); the DM narrates why. At most one per card, caravan cards only
     #[serde(default)]
@@ -270,6 +312,10 @@ pub struct Choice {
     /// The customs taking it breaks, by id from the world's `customs.json` (ENG-39)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub breaks: Vec<String>,
+    /// The card's own question or plea (MAP-18): a card with one keeps it offered in every
+    /// case its conditions allow; a variant may add to it, never replace it
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub asked: bool,
 }
 
 /// Who an effect touches.
@@ -519,6 +565,53 @@ pub struct PendingCard {
     /// Each Blade's advice (caravan card) or vote (Blade card), by handle
     #[serde(default)]
     pub said: BTreeMap<String, String>,
+    /// A seat's own move on the card (API-56): the choice [`OWN_MOVE`], offered last
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub own_move: Option<OwnMove>,
+    /// The ways that fell on this card (decision 0081), in order: no way is rolled twice
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fell: Vec<FellWay>,
+}
+
+/// A way an own move was tried on a card and fell (decision 0081): a skill toward a success
+/// choice.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FellWay {
+    /// The check's skill, in snake_case
+    pub skill: String,
+    /// The choice a success would have brought
+    pub success: String,
+    /// Whether the check was rolled; a way that fell with no roll may be tried once more
+    pub rolled: bool,
+}
+
+/// A seat's own words on the card on the table, turned by the DM into a ladder check that
+/// brings one of the card's offered choices on a success and, when one is named, another on
+/// a failure (API-56, decision 0079).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OwnMove {
+    /// The seat whose words they are
+    pub actor: String,
+    /// The words, as said
+    pub text: String,
+    /// The check's ability (`strength` .. `charisma`): the skill's own
+    pub ability: String,
+    /// The check's skill, in snake_case
+    pub skill: String,
+    /// The DC, from the SRD DC ladder
+    pub dc: u32,
+    /// The choice a success brings
+    pub success: String,
+    /// The choice a failure brings; none when no choice fits, and a fall runs no choice
+    /// (decision 0079)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<String>,
+    /// The move fell (decision 0079): it is no longer offered, and the card waits for a
+    /// written choice or for another own move by another way (decision 0081)
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub spent: bool,
 }
 
 impl PendingCard {
@@ -530,6 +623,16 @@ impl PendingCard {
     /// The card's choices offered, in card order.
     pub fn offered<'a>(&self, card: &'a Card) -> Vec<&'a Choice> {
         card.choices.iter().filter(|c| self.offers(&c.id)).collect()
+    }
+
+    /// The ids a seat may name: the offered choices in card order, then the own move once
+    /// the card has one that has not fallen, so a tie broken by order never falls to it.
+    pub fn speakable(&self, card: &Card) -> Vec<String> {
+        let mut ids: Vec<String> = self.offered(card).iter().map(|c| c.id.clone()).collect();
+        if self.own_move.as_ref().is_some_and(|mv| !mv.spent) {
+            ids.push(OWN_MOVE.to_owned());
+        }
+        ids
     }
 }
 
@@ -573,8 +676,37 @@ pub struct Resolution {
     /// called it; empty when nobody could speak. A `remember` at the top of the choice
     /// records them
     pub by: Vec<String>,
-    /// The choice's effects, for the server to run
+    /// The choice's effects, for the server to run; empty for an own move, whose branches
+    /// are in `own_move`
     pub effects: Vec<Effect>,
+    /// The card was decided on its own move (API-56): the proposer's check and the two
+    /// branches; the server rolls and runs one. For a move with no failure the card is still
+    /// on the table: the server ends it with [`Deck::own_move_won`] or [`Deck::own_move_fell`]
+    pub own_move: Option<OwnMoveRun>,
+}
+
+impl Resolution {
+    /// Whether the decision is an own move with no failure (decision 0079): its roll comes
+    /// before the card leaves the table, and the server ends it with [`Deck::own_move_won`] or
+    /// [`Deck::own_move_fell`].
+    pub fn rolls_first(&self) -> bool {
+        self.own_move
+            .as_ref()
+            .is_some_and(|run| run.mv.failure.is_none())
+    }
+}
+
+/// An own move to run (API-56): the server rolls the proposer's check through core and runs
+/// one branch with the resolution's `by`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OwnMoveRun {
+    /// The move: who rolls (the seat whose words it was) and the check
+    pub mv: OwnMove,
+    /// The effects of `mv.success`'s choice, after `remember own_move_<card>`
+    pub success: Vec<Effect>,
+    /// The effects of `mv.failure`'s choice, after `remember own_move_<card>`; with no
+    /// failure named, the fall's part: `remember own_move_<card>` alone (decision 0079)
+    pub failure: Vec<Effect>,
 }
 
 /// Why a card choice was refused.
@@ -590,6 +722,12 @@ pub enum CardError {
     AlreadySpoke(String),
     /// The owner decides only after every Blade has advised; these still have to
     WaitingFor(Vec<String>),
+    /// The card has an own move among its choices (API-56); after a fall it takes another
+    /// (decision 0081)
+    OwnMoveTaken,
+    /// An own move's success and failure are the same choice, its failure breaks a custom, or
+    /// its way already fell on the card (decision 0081)
+    BadOwnMove(String),
 }
 
 impl std::fmt::Display for CardError {
@@ -606,6 +744,8 @@ impl std::fmt::Display for CardError {
                     h.join(", ")
                 )
             }
+            CardError::OwnMoveTaken => write!(f, "the card already has an own move"),
+            CardError::BadOwnMove(why) => write!(f, "{why}"),
         }
     }
 }
@@ -652,7 +792,8 @@ impl Deck {
     /// cards, zones that are a road zone or a place (a road card's a road zone), `requires` that names a place, DCs
     /// on the ladder, a fight only last in its list, `add_card` that names a chained card, every chained card added by
     /// some choice, no pile over [`MAX_PILE`] cards, and 2 or 3 choices offered in every case a
-    /// card's conditions allow (ENG-33), counting [`SCOUTED`] as a case; `scouted` read only by
+    /// card's conditions allow (ENG-33), counting [`SCOUTED`] as a case, with one of its `asked`
+    /// choices and one of its `owner_pick` among them (MAP-18); `scouted` read only by
     /// a choice and never remembered, and a `scout` skill only on a road card (API-54), and
     /// then with exactly one choice under `if: "scouted"`, which no other card has; and two of
     /// the five card tests (MAP-11): every choice has an effect (a `remember` counts), and no two
@@ -704,15 +845,27 @@ impl Deck {
             }
             let mut choices = BTreeSet::new();
             for choice in &card.choices {
+                if choice.id == OWN_MOVE {
+                    return bad(format!(
+                        "card {} has a choice {OWN_MOVE}, which is reserved for a seat's own move",
+                        card.id
+                    ));
+                }
                 if !choices.insert(choice.id.as_str()) {
                     return bad(format!("card {} has two choices {}", card.id, choice.id));
                 }
             }
-            if let Some(pick) = &card.owner_pick
-                && !choices.contains(pick.as_str())
-            {
+            let picks = card.owner_pick.iter().flat_map(OwnerPick::ids);
+            if let Some(pick) = picks.clone().find(|p| !choices.contains(p.as_str())) {
                 return bad(format!(
                     "card {}'s owner_pick {pick} is not a choice",
+                    card.id
+                ));
+            }
+            let named: BTreeSet<&String> = picks.clone().collect();
+            if card.owner_pick.is_some() && (named.is_empty() || named.len() < picks.count()) {
+                return bad(format!(
+                    "card {}'s owner_pick names no choice, or one twice",
                     card.id
                 ));
             }
@@ -991,10 +1144,12 @@ impl Deck {
         self
     }
 
-    /// Every deed some choice of the deck can write: its `remember`s, and `killed_<npc>` for
-    /// each NPC a card's fight names.
+    /// Every deed some choice of the deck can write: its `remember`s, `killed_<npc>` for
+    /// each NPC a card's fight names, and `own_move_<card>` for every card (API-56).
     pub fn deeds_written(&self) -> BTreeSet<String> {
-        let mut written = BTreeSet::new();
+        // Any card can be decided on an own move (API-56), which writes `own_move_<card>`.
+        let mut written: BTreeSet<String> =
+            self.cards.iter().map(|c| own_move_deed(&c.id)).collect();
         for effect in self.cards.iter().flat_map(Deck::effects) {
             match effect {
                 Effect::Remember { deed } => {
@@ -1178,15 +1333,17 @@ impl Deck {
             card: card.id.clone(),
             choices: offered_ids(card, deeds),
             said: BTreeMap::new(),
+            own_move: None,
+            fell: Vec::new(),
         });
     }
 
     /// A chained card joins the deck; a `soon` one also joins the queue the next draw in its
-    /// zone takes first.
+    /// zone takes first, unless it is gone for the world (ENG-40): it can never be drawn.
     pub fn add(&self, state: &mut DeckState, card: &str, soon: bool) {
         if self.card(card).is_some_and(|c| c.chained) {
             state.added.insert(card.to_string());
-            if soon && !state.soon.iter().any(|c| c == card) {
+            if soon && !state.gone.contains(card) && !state.soon.iter().any(|c| c == card) {
                 state.soon.push(card.to_string());
             }
         }
@@ -1194,7 +1351,8 @@ impl Deck {
 
     /// One seat speaks on the card on the table: a Blade's advice or vote, or a player
     /// owner's call. Returns the decision once the card is settled, and takes the card off
-    /// the table then.
+    /// the table then, unless it is settled on an own move with no failure, which stays until
+    /// its roll is in (decision 0079).
     pub fn speak(
         &self,
         state: &mut DeckState,
@@ -1204,41 +1362,63 @@ impl Deck {
     ) -> Result<Option<Resolution>, CardError> {
         let pending = state.pending.as_ref().ok_or(CardError::NoCard)?;
         let card = self.card(&pending.card).ok_or(CardError::NoCard)?;
-        if !card.choices.iter().any(|c| c.id == choice) || !pending.offers(choice) {
+        if !pending.speakable(card).iter().any(|c| c == choice) {
             return Err(CardError::UnknownChoice(choice.to_string()));
         }
-        let player_owner = matches!(&table.owner, Owner::Player(o) if o == handle);
-        let blade = table.blades.iter().any(|b| b == handle);
-        if pending.said.contains_key(handle) {
-            return Err(CardError::AlreadySpoke(handle.to_string()));
-        }
-        let resolution = if player_owner && card.target == Target::Caravan {
-            let missing: Vec<String> = table
-                .blades
-                .iter()
-                .filter(|b| !pending.said.contains_key(*b))
-                .cloned()
-                .collect();
-            if !missing.is_empty() {
-                return Err(CardError::WaitingFor(missing));
-            }
+        let resolution = if may_speak(pending, card, table, handle)? {
             Some(resolve(
                 card,
+                pending,
                 choice,
                 Decided::Owner,
                 vec![handle.to_string()],
             ))
-        } else if blade {
+        } else {
             let pending = state.pending.as_mut().expect("checked above");
             pending.said.insert(handle.to_string(), choice.to_string());
             settle(card, pending, table)
-        } else {
-            return Err(CardError::NoSay(handle.to_string()));
         };
-        if resolution.is_some() {
+        if resolution.as_ref().is_some_and(|r| !r.rolls_first()) {
             state.pending = None;
         }
         Ok(resolution)
+    }
+
+    /// The roll of an own move with no failure succeeded (decision 0079): the card leaves the
+    /// table, decided on the move.
+    pub fn own_move_won(&self, state: &mut DeckState) {
+        state.pending = None;
+    }
+
+    /// An own move with no failure fell (decision 0079): a failed roll, a downed proposer or
+    /// no roll at all (`rolled` says which). The move is spent, its way is kept on the card
+    /// (decision 0081) and every word given for it is taken back; the words left are tallied
+    /// as [`Deck::speak`] tallies them. Returns the decision when they settle the card, and
+    /// takes the card off the table then.
+    pub fn own_move_fell(
+        &self,
+        state: &mut DeckState,
+        table: &Table,
+        rolled: bool,
+    ) -> Option<Resolution> {
+        let pending = state.pending.as_mut()?;
+        let card = self.card(&pending.card)?;
+        let mv = pending
+            .own_move
+            .as_mut()
+            .filter(|mv| mv.failure.is_none())?;
+        mv.spent = true;
+        pending.fell.push(FellWay {
+            skill: mv.skill.clone(),
+            success: mv.success.clone(),
+            rolled,
+        });
+        pending.said.retain(|_, choice| choice != OWN_MOVE);
+        let resolution = settle(card, pending, table);
+        if resolution.is_some() {
+            state.pending = None;
+        }
+        resolution
     }
 
     /// Settles the card on the table without anyone speaking, when nobody can: no Blade can
@@ -1258,30 +1438,155 @@ impl Deck {
             .iter()
             .find(|c| c.owner_insists)
             .or_else(|| {
-                offered
+                card.owner_pick
+                    .as_ref()?
+                    .ids()
                     .iter()
-                    .find(|c| card.owner_pick.as_deref() == Some(c.id.as_str()))
+                    .find_map(|id| offered.iter().find(|c| c.id == *id))
             })
             .or(offered.first())
             .map(|c| c.id.clone())?;
+        let resolution = resolve(card, pending, &pick, Decided::Default, Vec::new());
         state.pending = None;
-        Some(resolve(card, &pick, Decided::Default, Vec::new()))
+        Some(resolution)
+    }
+
+    /// A seat's own move goes on the card on the table (API-56): the move joins the card as
+    /// the choice [`OWN_MOVE`], and the seat's word is given for it, as by [`Deck::speak`].
+    /// `success` must be a choice offered on the card; a `failure`, when named, another one
+    /// that breaks no custom. One move at a time: after a fall the card takes another, by
+    /// another way (decision 0081): a skill toward a success that was already rolled on this
+    /// card, or that already fell twice, is refused. Returns the decision when the seat's
+    /// word settles the card.
+    pub fn own_move(
+        &self,
+        state: &mut DeckState,
+        table: &Table,
+        mv: OwnMove,
+    ) -> Result<Option<Resolution>, CardError> {
+        let pending = state.pending.as_ref().ok_or(CardError::NoCard)?;
+        let card = self.card(&pending.card).ok_or(CardError::NoCard)?;
+        let offered = pending.offered(card);
+        let named = |id: &str| offered.iter().find(|c| c.id == id).copied();
+        if named(&mv.success).is_none() {
+            return Err(CardError::UnknownChoice(mv.success.clone()));
+        }
+        let failure = match &mv.failure {
+            Some(id) => Some(named(id).ok_or_else(|| CardError::UnknownChoice(id.clone()))?),
+            None => None,
+        };
+        may_speak(pending, card, table, &mv.actor)?;
+        if pending.own_move.as_ref().is_some_and(|mv| !mv.spent) {
+            return Err(CardError::OwnMoveTaken);
+        }
+        // A way is closed by one rolled fall, or by two with no roll.
+        let same = || {
+            pending
+                .fell
+                .iter()
+                .filter(|w| w.skill == mv.skill && w.success == mv.success)
+        };
+        if same().any(|w| w.rolled) || same().count() >= 2 {
+            return Err(CardError::BadOwnMove(format!(
+                "this way already fell on this card ({} toward {}); name another way, or answer the words and make no move",
+                mv.skill, mv.success
+            )));
+        }
+        if let Some(failure) = failure {
+            if failure.id == mv.success {
+                return Err(CardError::BadOwnMove(format!(
+                    "success and failure are both {}; name two different choices",
+                    mv.success
+                )));
+            }
+            if let Some(custom) = failure.breaks.first() {
+                return Err(CardError::BadOwnMove(format!(
+                    "a failure can't bring {}, which breaks {custom}; name another choice for the failure, or none",
+                    failure.id
+                )));
+            }
+        }
+        let actor = mv.actor.clone();
+        state.pending.as_mut().expect("checked above").own_move = Some(mv);
+        self.speak(state, table, &actor, OWN_MOVE)
     }
 }
 
-fn resolve(card: &Card, choice: &str, decided: Decided, by: Vec<String>) -> Resolution {
-    let effects = card
-        .choices
-        .iter()
-        .find(|c| c.id == choice)
-        .map(|c| c.effects.clone())
-        .unwrap_or_default();
+/// Whether `handle` may speak on the card now: `Ok(true)` for a player owner's call on a
+/// caravan card, once every Blade has advised; `Ok(false)` for a Blade's word.
+fn may_speak(
+    pending: &PendingCard,
+    card: &Card,
+    table: &Table,
+    handle: &str,
+) -> Result<bool, CardError> {
+    if pending.said.contains_key(handle) {
+        return Err(CardError::AlreadySpoke(handle.to_string()));
+    }
+    let player_owner = matches!(&table.owner, Owner::Player(o) if o == handle);
+    if player_owner && card.target == Target::Caravan {
+        let missing: Vec<String> = table
+            .blades
+            .iter()
+            .filter(|b| !pending.said.contains_key(*b))
+            .cloned()
+            .collect();
+        if !missing.is_empty() {
+            return Err(CardError::WaitingFor(missing));
+        }
+        return Ok(true);
+    }
+    if !table.blades.iter().any(|b| b == handle) {
+        return Err(CardError::NoSay(handle.to_string()));
+    }
+    Ok(false)
+}
+
+fn resolve(
+    card: &Card,
+    pending: &PendingCard,
+    choice: &str,
+    decided: Decided,
+    by: Vec<String>,
+) -> Resolution {
+    let effects_of = |id: &str| {
+        card.choices
+            .iter()
+            .find(|c| c.id == id)
+            .map(|c| c.effects.clone())
+            .unwrap_or_default()
+    };
+    let own_move = pending
+        .own_move
+        .as_ref()
+        .filter(|_| choice == OWN_MOVE)
+        .map(|mv| {
+            // The deed comes first, as a choice's own `remember` does, so a fight stays last.
+            // With no choice named (a fall, decision 0079), the branch is the deed alone.
+            let branch = |id: Option<&str>| {
+                let mut effects = vec![Effect::Remember {
+                    deed: own_move_deed(&card.id),
+                }];
+                effects.extend(id.map(effects_of).unwrap_or_default());
+                effects
+            };
+            OwnMoveRun {
+                mv: mv.clone(),
+                success: branch(Some(&mv.success)),
+                failure: branch(mv.failure.as_deref()),
+            }
+        });
     Resolution {
         card: card.id.clone(),
         choice: choice.to_string(),
         decided,
         by,
-        effects,
+        effects: if own_move.is_some() {
+            Vec::new()
+        } else {
+            effects_of(choice)
+        },
+        own_move,
     }
 }
 
@@ -1300,7 +1605,8 @@ const MAX_CASE_DEEDS: usize = 10;
 
 /// Checks that a card offers 2 or 3 choices in every case its own conditions allow: every
 /// way the deeds its choices read can be remembered or not, with the card's `if` deeds
-/// remembered and its `unless` deeds not.
+/// remembered and its `unless` deeds not. In every case it also offers one of its `asked`
+/// choices, when it has any, and one of its `owner_pick` (MAP-18).
 fn check_cases(card: &Card) -> Result<(), DeckError> {
     let bad = |s: String| Err(DeckError(s));
     let must: BTreeSet<&str> = card
@@ -1338,6 +1644,7 @@ fn check_cases(card: &Card) -> Result<(), DeckError> {
             free.len()
         ));
     }
+    let has_asked = card.choices.iter().any(|c| c.asked);
     for mask in 0u32..(1 << free.len()) {
         let known = |id: &str| {
             must.contains(id)
@@ -1361,17 +1668,42 @@ fn check_cases(card: &Card) -> Result<(), DeckError> {
                 ));
             }
         }
-        if !(2..=3).contains(&offered) {
-            let case: Vec<&str> = free
-                .iter()
+        let case = || -> String {
+            free.iter()
                 .enumerate()
                 .filter(|(i, _)| mask & (1 << i) != 0)
                 .map(|(_, d)| *d)
-                .collect();
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        if !(2..=3).contains(&offered) {
             return bad(format!(
                 "card {} offers {offered} choices when the deeds remembered are [{}]; it needs 2 or 3",
                 card.id,
-                case.join(", ")
+                case()
+            ));
+        }
+        // The card's own question or plea stays offered, once (MAP-18): asked twins never
+        // show together.
+        let asked = choices.iter().filter(|c| c.asked).count();
+        if has_asked && asked != 1 {
+            return bad(format!(
+                "card {} offers {asked} of its asked choices when the deeds remembered are [{}]; it needs 1",
+                card.id,
+                case()
+            ));
+        }
+        // The owner's pick is one it offers, whatever the deeds (MAP-18).
+        if let Some(pick) = &card.owner_pick
+            && pick
+                .among(|id| choices.iter().any(|c| c.id == id))
+                .is_none()
+        {
+            return bad(format!(
+                "card {}'s owner_pick {} is not offered when the deeds remembered are [{}]",
+                card.id,
+                pick.ids().join(" or "),
+                case()
             ));
         }
     }
@@ -1385,6 +1717,7 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
         return None;
     }
     let offered = pending.offered(card);
+    let speakable = pending.speakable(card);
     let voters = |choice: &str| -> Vec<String> {
         table
             .blades
@@ -1400,13 +1733,15 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
         if let Some(insist) = offered.iter().find(|c| c.owner_insists) {
             return Some(resolve(
                 card,
+                pending,
                 &insist.id,
                 Decided::OwnerInsists,
                 voters(&insist.id),
             ));
         }
     }
-    let mut counts: Vec<(&str, usize)> = offered.iter().map(|c| (c.id.as_str(), 0)).collect();
+    // The own move counts like any choice, listed last (API-56).
+    let mut counts: Vec<(&str, usize)> = speakable.iter().map(|c| (c.as_str(), 0)).collect();
     for said in pending.said.values() {
         if let Some(count) = counts.iter_mut().find(|(id, _)| id == said) {
             count.1 += 1;
@@ -1420,16 +1755,25 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
         .collect();
     let first = *tied.first()?;
     if tied.len() == 1 {
-        return Some(resolve(card, first, Decided::Majority, voters(first)));
+        return Some(resolve(
+            card,
+            pending,
+            first,
+            Decided::Majority,
+            voters(first),
+        ));
     }
     let human = table
         .tie_breaker
         .as_ref()
         .and_then(|h| pending.said.get(h))
         .filter(|c| card.target == Target::Blades && tied.contains(&c.as_str()));
-    let pick = card.owner_pick.as_deref().filter(|p| tied.contains(p));
+    let pick = card
+        .owner_pick
+        .as_ref()
+        .and_then(|p| p.among(|id| tied.contains(&id)));
     let choice = human.map(String::as_str).or(pick).unwrap_or(first);
-    Some(resolve(card, choice, Decided::Tie, voters(choice)))
+    Some(resolve(card, pending, choice, Decided::Tie, voters(choice)))
 }
 
 #[cfg(test)]
@@ -1568,6 +1912,15 @@ mod tests {
             *dc = 12;
         }
         assert!(d.validate(&map).unwrap_err().0.contains("off the ladder"));
+
+        let mut d = deck();
+        d.cards[1].choices[1].id = OWN_MOVE.into();
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("reserved for a seat's own move")
+        );
     }
 
     /// Draws and, when cards are offered, picks the first rolled, as the engine does when
@@ -1742,6 +2095,8 @@ mod tests {
                 card: "beggar".into(),
                 choices: Vec::new(),
                 said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -1774,6 +2129,8 @@ mod tests {
                 card: "mud".into(),
                 choices: Vec::new(),
                 said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -1793,6 +2150,8 @@ mod tests {
                 card: "mud".into(),
                 choices: Vec::new(),
                 said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -1819,6 +2178,8 @@ mod tests {
                 card: "mud".into(),
                 choices: Vec::new(),
                 said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -1850,6 +2211,8 @@ mod tests {
                 card: "beggar".into(),
                 choices: Vec::new(),
                 said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -1877,6 +2240,8 @@ mod tests {
                 card: "mud".into(),
                 choices: Vec::new(),
                 said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -1884,6 +2249,412 @@ mod tests {
         assert_eq!(
             (done.choice.as_str(), done.decided),
             ("unload", Decided::Default)
+        );
+    }
+
+    fn pending(card: &str) -> DeckState {
+        DeckState {
+            pending: Some(PendingCard {
+                card: card.into(),
+                choices: Vec::new(),
+                said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
+            }),
+            ..DeckState::default()
+        }
+    }
+
+    fn own(actor: &str, success: &str, failure: &str) -> OwnMove {
+        OwnMove {
+            actor: actor.into(),
+            text: "Share the bread and ask the way.".into(),
+            ability: "charisma".into(),
+            skill: "persuasion".into(),
+            dc: 10,
+            success: success.into(),
+            failure: Some(failure.into()),
+            spent: false,
+        }
+    }
+
+    /// An own move that names no failure (decision 0079).
+    fn own_alone(actor: &str, success: &str) -> OwnMove {
+        OwnMove {
+            failure: None,
+            ..own(actor, success, "")
+        }
+    }
+
+    #[test]
+    fn an_own_move_with_no_failure_waits_for_its_roll_and_a_win_takes_the_card() {
+        let d = deck();
+        let table = npc_table();
+        let mut state = pending("beggar");
+        assert_eq!(
+            d.own_move(&mut state, &table, own_alone("bren", "give")),
+            Ok(None)
+        );
+        let done = d
+            .speak(&mut state, &table, "maren", OWN_MOVE)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            (OWN_MOVE, Decided::Majority)
+        );
+        let run = done.own_move.unwrap();
+        // The fall's part is the deed alone.
+        assert_eq!(
+            run.failure,
+            [Effect::Remember {
+                deed: own_move_deed("beggar")
+            }]
+        );
+        assert!(state.pending.is_some(), "the card waits for the roll");
+        d.own_move_won(&mut state);
+        assert!(state.pending.is_none());
+    }
+
+    #[test]
+    fn an_own_move_that_fell_is_spent_its_words_taken_back_and_the_card_waits() {
+        let d = deck();
+        let table = npc_table();
+        let mut state = pending("beggar");
+        d.own_move(&mut state, &table, own_alone("bren", "give"))
+            .unwrap();
+        assert!(
+            d.speak(&mut state, &table, "maren", OWN_MOVE)
+                .unwrap()
+                .is_some()
+        );
+        assert_eq!(d.own_move_fell(&mut state, &table, true), None);
+        let card = state.pending.as_ref().unwrap();
+        assert!(card.own_move.as_ref().unwrap().spent);
+        assert!(card.said.is_empty());
+        assert_eq!(
+            card.speakable(d.card("beggar").unwrap()),
+            ["give", "refuse"]
+        );
+        assert_eq!(
+            d.speak(&mut state, &table, "bren", OWN_MOVE),
+            Err(CardError::UnknownChoice(OWN_MOVE.into()))
+        );
+        // The same way was rolled and fell: it is not rolled twice (decision 0081), and a move
+        // that is also badly formed is told it is the same way first.
+        assert!(matches!(
+            d.own_move(&mut state, &table, own("maren", "give", "give")),
+            Err(CardError::BadOwnMove(why)) if why.contains("already fell")
+        ));
+        assert!(matches!(
+            d.own_move(&mut state, &table, own_alone("maren", "give")),
+            Err(CardError::BadOwnMove(why)) if why.contains("already fell")
+        ));
+        d.speak(&mut state, &table, "bren", "refuse").unwrap();
+        let done = d
+            .speak(&mut state, &table, "maren", "refuse")
+            .unwrap()
+            .unwrap();
+        assert_eq!(done.choice, "refuse");
+        assert!(done.own_move.is_none());
+        assert!(state.pending.is_none());
+    }
+
+    #[test]
+    fn after_a_fall_the_card_takes_another_own_move_by_another_way() {
+        let d = deck();
+        let table = npc_table();
+        let mut state = pending("beggar");
+        d.own_move(&mut state, &table, own_alone("bren", "give"))
+            .unwrap();
+        d.speak(&mut state, &table, "maren", OWN_MOVE).unwrap();
+        assert_eq!(d.own_move_fell(&mut state, &table, true), None);
+        // Another skill toward the same choice is another way.
+        let mut other = own_alone("maren", "give");
+        other.skill = "insight".into();
+        assert_eq!(d.own_move(&mut state, &table, other.clone()), Ok(None));
+        let card = state.pending.as_ref().unwrap();
+        assert!(!card.own_move.as_ref().unwrap().spent);
+        assert_eq!(
+            card.speakable(d.card("beggar").unwrap()).last().unwrap(),
+            OWN_MOVE
+        );
+        // One move at a time.
+        let mut third = own_alone("bren", "refuse");
+        third.skill = "athletics".into();
+        assert_eq!(
+            d.own_move(&mut state, &table, third),
+            Err(CardError::OwnMoveTaken)
+        );
+        assert!(
+            d.speak(&mut state, &table, "bren", OWN_MOVE)
+                .unwrap()
+                .is_some()
+        );
+        assert_eq!(d.own_move_fell(&mut state, &table, true), None);
+        let card = state.pending.as_ref().unwrap();
+        assert_eq!(card.fell.len(), 2, "the engine counts no falls, only ways");
+        assert!(matches!(
+            d.own_move(&mut state, &table, other),
+            Err(CardError::BadOwnMove(_))
+        ));
+    }
+
+    #[test]
+    fn a_way_that_fell_with_no_roll_is_taken_once_more_and_then_refused() {
+        let d = deck();
+        let table = npc_table();
+        let mut state = pending("beggar");
+        for _ in 0..2 {
+            d.own_move(&mut state, &table, own_alone("bren", "give"))
+                .unwrap();
+            d.speak(&mut state, &table, "maren", OWN_MOVE).unwrap();
+            assert_eq!(d.own_move_fell(&mut state, &table, false), None);
+        }
+        assert!(matches!(
+            d.own_move(&mut state, &table, own_alone("bren", "give")),
+            Err(CardError::BadOwnMove(_))
+        ));
+        // The ways that fell are saved with the card and left out when there are none.
+        let saved = serde_json::to_value(state.pending.as_ref().unwrap()).unwrap();
+        assert_eq!(saved["fell"].as_array().unwrap().len(), 2);
+        assert!(
+            serde_json::to_value(pending("beggar").pending.unwrap())
+                .unwrap()
+                .get("fell")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn a_downed_proposer_s_fall_settles_the_card_when_the_words_left_do() {
+        let d = deck();
+        let three = Table {
+            owner: Owner::Npc("tobin".into()),
+            blades: vec!["bren".into(), "maren".into(), "torva".into()],
+            tie_breaker: Some("bren".into()),
+        };
+        let mut state = pending("beggar");
+        d.own_move(&mut state, &three, own_alone("bren", "give"))
+            .unwrap();
+        d.speak(&mut state, &three, "maren", "give").unwrap();
+        // A tie the human seat breaks for its own move.
+        let done = d
+            .speak(&mut state, &three, "torva", "refuse")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            (OWN_MOVE, Decided::Tie)
+        );
+        // Bren is down: the table has only the Blades who are up, and their words split.
+        let up = Table {
+            blades: vec!["maren".into(), "torva".into()],
+            ..three
+        };
+        let settled = d.own_move_fell(&mut state, &up, false).unwrap();
+        assert_eq!(
+            (settled.choice.as_str(), settled.decided),
+            ("give", Decided::Tie)
+        );
+        assert!(state.pending.is_none());
+    }
+
+    #[test]
+    fn a_fall_on_a_player_owner_s_call_frees_the_advice_and_waits_for_the_owner() {
+        let d = deck();
+        let table = Table {
+            owner: Owner::Player("ilsa".into()),
+            blades: vec!["bren".into(), "maren".into()],
+            tie_breaker: None,
+        };
+        let mut state = pending("mud");
+        d.own_move(&mut state, &table, own_alone("bren", "push"))
+            .unwrap();
+        d.speak(&mut state, &table, "maren", "unload").unwrap();
+        let done = d
+            .speak(&mut state, &table, "ilsa", OWN_MOVE)
+            .unwrap()
+            .unwrap();
+        assert_eq!(done.decided, Decided::Owner);
+        assert!(state.pending.is_some(), "the card waits for the roll");
+        // The owner's call is no word in the tally; Bren's advice for the move is taken back.
+        assert_eq!(d.own_move_fell(&mut state, &table, true), None);
+        assert_eq!(
+            d.speak(&mut state, &table, "ilsa", "push"),
+            Err(CardError::WaitingFor(vec!["bren".into()]))
+        );
+        d.speak(&mut state, &table, "bren", "push").unwrap();
+        let done = d
+            .speak(&mut state, &table, "ilsa", "push")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            ("push", Decided::Owner)
+        );
+        assert!(state.pending.is_none());
+    }
+
+    #[test]
+    fn a_fall_with_nobody_up_tallies_the_words_downed_seats_kept() {
+        let d = deck();
+        let table = npc_table();
+        let mut state = pending("beggar");
+        // Maren's written word is kept when she is downed; Bren proposes and is downed too.
+        d.speak(&mut state, &table, "maren", "refuse").unwrap();
+        let only_bren = Table {
+            blades: vec!["bren".into()],
+            ..npc_table()
+        };
+        let done = d
+            .own_move(&mut state, &only_bren, own_alone("bren", "give"))
+            .unwrap()
+            .unwrap();
+        assert!(done.rolls_first());
+        let nobody = Table {
+            blades: Vec::new(),
+            ..npc_table()
+        };
+        // Today's settle, never settle_unattended: Maren's kept word decides.
+        let settled = d.own_move_fell(&mut state, &nobody, false).unwrap();
+        assert_eq!(settled.choice, "refuse");
+        assert!(state.pending.is_none());
+    }
+
+    #[test]
+    fn an_own_move_s_failure_and_spent_are_left_out_when_absent() {
+        let named = serde_json::to_value(own("bren", "give", "refuse")).unwrap();
+        assert!(named.get("spent").is_none());
+        assert_eq!(named["failure"], "refuse");
+        let mut alone = own_alone("bren", "give");
+        assert!(
+            serde_json::to_value(&alone)
+                .unwrap()
+                .get("failure")
+                .is_none()
+        );
+        alone.spent = true;
+        let back: OwnMove = serde_json::from_value(serde_json::to_value(&alone).unwrap()).unwrap();
+        assert_eq!(back, alone);
+    }
+
+    #[test]
+    fn an_own_move_is_one_more_choice_voted_on_and_offered_last() {
+        let d = deck();
+        let table = npc_table();
+        let mut state = pending("beggar");
+        assert_eq!(
+            d.own_move(&mut state, &table, own("bren", "give", "dance")),
+            Err(CardError::UnknownChoice("dance".into()))
+        );
+        assert!(matches!(
+            d.own_move(&mut state, &table, own("bren", "give", "give")),
+            Err(CardError::BadOwnMove(_))
+        ));
+        assert_eq!(
+            d.own_move(&mut state, &table, own("goblin", "give", "refuse")),
+            Err(CardError::NoSay("goblin".into()))
+        );
+        assert_eq!(
+            d.own_move(&mut state, &table, own("bren", "give", "refuse")),
+            Ok(None)
+        );
+        let pending_card = state.pending.as_ref().unwrap();
+        assert_eq!(
+            pending_card.speakable(d.card("beggar").unwrap()),
+            ["give", "refuse", OWN_MOVE]
+        );
+        assert_eq!(
+            d.own_move(&mut state, &table, own("maren", "give", "refuse")),
+            Err(CardError::OwnMoveTaken)
+        );
+        // A one-one tie goes to the human seat, whose word was the own move.
+        let done = d
+            .speak(&mut state, &table, "maren", "give")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            (OWN_MOVE, Decided::Tie)
+        );
+        assert!(done.effects.is_empty());
+        let run = done.own_move.unwrap();
+        assert_eq!((run.mv.actor.as_str(), run.mv.dc), ("bren", 10));
+        assert_eq!(
+            run.success[0],
+            Effect::Remember {
+                deed: own_move_deed("beggar")
+            }
+        );
+        assert!(matches!(run.success[1], Effect::Cargo { .. }));
+        assert_eq!(
+            (run.mv.success.as_str(), run.mv.failure.as_deref()),
+            ("give", Some("refuse"))
+        );
+        assert_eq!(run.failure.len(), 2);
+        assert!(state.pending.is_none());
+    }
+
+    #[test]
+    fn an_own_move_s_failure_never_breaks_a_custom() {
+        let mut d = deck();
+        d.cards[1].choices[1].breaks = vec!["bread_shared".into()];
+        let mut state = pending("beggar");
+        let refused = d.own_move(&mut state, &npc_table(), own("bren", "give", "refuse"));
+        assert!(
+            matches!(&refused, Err(CardError::BadOwnMove(why)) if why.contains("breaks bread_shared"))
+        );
+        // The same choice may be the success.
+        assert_eq!(
+            d.own_move(&mut state, &npc_table(), own("bren", "refuse", "give")),
+            Ok(None)
+        );
+    }
+
+    #[test]
+    fn a_player_owner_s_own_move_waits_for_every_blade_and_decides() {
+        let d = deck();
+        let table = Table {
+            owner: Owner::Player("ilsa".into()),
+            blades: vec!["bren".into(), "maren".into()],
+            tie_breaker: None,
+        };
+        let mut state = pending("mud");
+        d.speak(&mut state, &table, "bren", "push").unwrap();
+        assert_eq!(
+            d.own_move(&mut state, &table, own("ilsa", "push", "unload")),
+            Err(CardError::WaitingFor(vec!["maren".into()]))
+        );
+        d.speak(&mut state, &table, "maren", "push").unwrap();
+        let done = d
+            .own_move(&mut state, &table, own("ilsa", "push", "unload"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            (OWN_MOVE, Decided::Owner)
+        );
+    }
+
+    #[test]
+    fn a_card_settled_unattended_never_takes_an_own_move_and_every_card_can_write_one() {
+        let d = deck();
+        let table = Table {
+            owner: Owner::Npc("tobin".into()),
+            blades: vec![],
+            tie_breaker: None,
+        };
+        let mut state = pending("mud");
+        state.pending.as_mut().unwrap().own_move = Some(own("bren", "push", "unload"));
+        let done = d.settle_unattended(&mut state, &table).unwrap();
+        assert_eq!(done.choice, "unload");
+        assert!(done.own_move.is_none());
+        let deeds = d.deeds_written();
+        assert!(
+            d.cards
+                .iter()
+                .all(|c| deeds.contains(&own_move_deed(&c.id)))
         );
     }
 
@@ -1986,6 +2757,8 @@ mod tests {
                 card: "beggar".into(),
                 choices: Vec::new(),
                 said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -2039,6 +2812,84 @@ mod tests {
                 .0
                 .contains("both needs and refuses")
         );
+
+        // The card's own question stays offered in every case (MAP-18): `pay_again` goes
+        // when the party is angry, so marking it alone fails; `shout` asks it then.
+        let angry = |d: &mut Deck| {
+            d.cards[0].choices[1].effects.push(Effect::Remember {
+                deed: "angry".into(),
+            })
+        };
+        let mut d = deed_deck();
+        angry(&mut d);
+        d.cards[1].choices[0].asked = true;
+        assert!(d.validate(&map).unwrap_err().0.contains(
+            "card bridge_again offers 0 of its asked choices when the deeds remembered are ["
+        ));
+        d.cards[1].choices[1].asked = true;
+        d.validate(&map).unwrap();
+
+        // The owner's pick is offered in every case too (MAP-18).
+        let mut d = deed_deck();
+        angry(&mut d);
+        d.cards[1].owner_pick = Some(OwnerPick::One("pay_again".into()));
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("card bridge_again's owner_pick pay_again is not offered when the deeds remembered are [")
+        );
+        d.cards[1].owner_pick = Some(OwnerPick::One("say_no".into()));
+        d.validate(&map).unwrap();
+        // Or the owner's order over a twin: one of them is offered in every case.
+        d.cards[1].owner_pick = Some(OwnerPick::Order(vec!["pay_again".into(), "shout".into()]));
+        d.validate(&map).unwrap();
+
+        // Gated twins that each carry `asked` pass together, though each alone is hidden in
+        // one case; a card-level `if` deed is remembered in every case.
+        let mut d = deed_deck();
+        angry(&mut d);
+        d.cards[1].choices[0].asked = true;
+        d.cards[1].choices[1].asked = true;
+        d.cards[1].if_deeds = Some(Deeds::One("paid".into()));
+        d.validate(&map).unwrap();
+        // Two asked choices offered together are two pleas: refused.
+        d.cards[1].choices[2].asked = true;
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("offers 2 of its asked choices")
+        );
+
+        // An owner_pick that names nothing, or one choice twice, is refused.
+        let mut d = deed_deck();
+        d.cards[1].owner_pick = Some(OwnerPick::Order(vec![]));
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("names no choice, or one twice")
+        );
+        d.cards[1].owner_pick = Some(OwnerPick::Order(vec!["say_no".into(), "say_no".into()]));
+        assert!(
+            d.validate(&map)
+                .unwrap_err()
+                .0
+                .contains("names no choice, or one twice")
+        );
+    }
+
+    #[test]
+    fn an_owner_s_ordered_pick_takes_the_first_one_offered() {
+        let pick = OwnerPick::Order(vec!["welcome".into(), "welcome_with_dog".into()]);
+        assert_eq!(pick.among(|id| id != "welcome"), Some("welcome_with_dog"));
+        assert_eq!(pick.among(|_| true), Some("welcome"));
+        assert_eq!(pick.among(|_| false), None);
+        let one: OwnerPick = serde_json::from_str(r#""push""#).unwrap();
+        assert_eq!(one.ids(), ["push"]);
+        let order: OwnerPick = serde_json::from_str(r#"["a", "b"]"#).unwrap();
+        assert_eq!(order.ids(), ["a", "b"]);
     }
 
     #[test]
@@ -2114,6 +2965,9 @@ mod tests {
         let mut dice = ListDice::new([1, 1]);
         let card = draw_one(&d, "fields", When::Road, &known(), &mut state, &mut dice);
         assert_eq!(card.as_deref(), Some("mud"));
+        // Gone for the world, it is never queued again (ENG-40).
+        d.add(&mut state, "beggar_returns", true);
+        assert!(state.soon.is_empty());
     }
 
     #[test]

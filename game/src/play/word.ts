@@ -7,18 +7,12 @@ import path from "node:path";
 import type { Event, Handle } from "@nat20-table/engine-client";
 import { SESSION_LOG } from "../engine.ts";
 import { cardsMet, type CardMet } from "./verdict.ts";
+import { readLines } from "./record.ts";
 
 /** The DM's suggested cards after the run (decision 4): deck-file JSON, never loaded. */
 export const SUGGESTED_CARDS = "suggested-cards.json";
 
-function readLog(dir: string): Event[] {
-  const file = path.join(dir, SESSION_LOG);
-  if (!existsSync(file)) return [];
-  return readFileSync(file, "utf8")
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as Event);
-}
+const readLog = (dir: string): Event[] => readLines<Event>(path.join(dir, SESSION_LOG));
 
 /** One fight in the run: what started it, how many rounds, who dropped. */
 export interface FightMet {
@@ -59,8 +53,7 @@ const cameText = (c: CardMet) =>
   c.came === "dm_pick" ? `the DM picked it: ${c.reason ?? "no reason given"}` : c.came === "engine_pick" ? "the DM did not answer; the engine took the first card" : c.came === "soon" ? "an earlier choice sent it" : "the only card the draw rolled";
 
 /** The section's lines, or none for a run with no living world (no card met, no deed). */
-export function wordReport(dir: string): string[] {
-  const log = readLog(dir);
+export function wordReport(dir: string, log: Event[] = readLog(dir)): string[] {
   const cards = cardsMet(log);
   const deeds = log.flatMap((e) => (e.kind === "deed_remembered" ? [e] : []));
   if (cards.length === 0 && deeds.length === 0 && !log.some((e) => e.kind === "cards_offered")) return [];

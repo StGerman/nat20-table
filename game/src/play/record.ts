@@ -11,6 +11,15 @@ import type { StopKind } from "../table/types.ts";
 import type { RosterRecord } from "./roster.ts";
 import type { Settings } from "./settings.ts";
 
+/** The JSON lines of a run file, none when it is missing. */
+export function readLines<T>(file: string): T[] {
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line) as T);
+}
+
 /** The run folder's format: bumped when a file in it changes shape. */
 export const RUN_FORMAT = 1;
 

@@ -3,7 +3,7 @@
 // `cargo build -p nat20-api-server`.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -47,6 +47,8 @@ test("every pack in scenarios/ passes the pack check and loads every scene", asy
 /** The Mill as a living-world pack on the Wend map (MAP-7): its skeleton moved to campaign.json with a world block. */
 function campaignMill(world: Record<string, unknown>, edit: (skeleton: Adventure) => void = () => undefined): { pack: string; close(): void } {
   return planted((skeleton, pack) => {
+    // A road pack carries its titles in Russian too (MAP-19).
+    for (const scene of skeleton.scenes) scene.title_ru = `сцена ${scene.id}`;
     edit(skeleton);
     // The Wend place NPCs stand by the wagon: every scene a place loads has that anchor.
     for (const scene of ["s1_village_green", "s2_mill_road"]) {
@@ -97,6 +99,28 @@ test("a living-world pack's skeleton is its campaign.json: no exits needed, and 
     assert.ok(report.problems.some((p) => p.startsWith("the engine refused the campaign: ")), report.problems.join("; "));
   } finally {
     bad.close();
+  }
+  // Every card a road pack can draw reads in Russian too (MAP-19): a pack card without `text_ru` is a problem.
+  const english = campaignMill(WEND, (s) => {
+    for (const scene of s.scenes) scene.exits = [];
+  });
+  try {
+    const deck = readJson(path.join(REPO, "scenarios/fair_in_wend/deck/odda.json"));
+    delete deck.cards[0].text_ru;
+    delete deck.cards[0].choices[0].text_ru;
+    mkdirSync(path.join(english.pack, "deck"));
+    writeFileSync(path.join(english.pack, "deck", "odda.json"), JSON.stringify(deck, null, 4));
+    const skeleton = readJson(path.join(english.pack, "campaign.json"));
+    delete skeleton.title_ru;
+    delete skeleton.scenes[0].title_ru;
+    writeFileSync(path.join(english.pack, "campaign.json"), JSON.stringify(skeleton, null, 4));
+    const report = await checkPack(english.pack);
+    assert.ok(report.problems.includes("no title_ru"), report.problems.join("; "));
+    assert.ok(report.problems.includes(`scene ${skeleton.scenes[0].id}: no title_ru`), report.problems.join("; "));
+    assert.ok(report.problems.includes(`card ${deck.cards[0].id}: no text_ru`), report.problems.join("; "));
+    assert.ok(report.problems.includes(`card ${deck.cards[0].id}, choice ${deck.cards[0].choices[0].id}: no text_ru`), report.problems.join("; "));
+  } finally {
+    english.close();
   }
   const misplaced = planted((s) => Object.assign(s, { day_limit: 3 }));
   try {

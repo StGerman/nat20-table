@@ -11,6 +11,7 @@ import { castParty, moneyCopper, partyRoster } from "../src/play/run.ts";
 import { InkSeat } from "../src/ui/ink-seat.ts";
 import { paletteFor } from "../src/ui/palette.ts";
 import { cardRows, pickKey, pickOnScreen, pickRows, savedCharacters, savedRoster } from "../src/ui/pick.ts";
+import { until } from "./until.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 
@@ -51,14 +52,6 @@ class FakeStdin extends EventEmitter {
   pause(): void {}
   ref(): void {}
   unref(): void {}
-}
-
-async function until(what: string, ready: () => boolean, ms = 3000): Promise<void> {
-  const end = Date.now() + ms;
-  while (!ready()) {
-    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
 }
 
 test("the pick list shows each character's name, species, class and level, the default marked; the card adds who they are and the goal", () => {

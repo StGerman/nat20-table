@@ -3,7 +3,7 @@
 // frame.ts). What the loop shows goes into the story as messages, one speaker label each (AGT-37);
 // other characters' engine lines wait for the DM's narration of them and are left out of the
 // story, or folded under it with `verbose`; the human's own, and any before a decision, show at
-// once. The story keeps every line and scrolls with PgUp/PgDn; the terminal's own scrollback
+// once. The story keeps every line and scrolls with Shift+↑/↓, PgUp/PgDn and the mouse wheel (AGT-94); the terminal's own scrollback
 // isn't used, and the run folder's transcript is the record. Under the story, while the table
 // waits on the human, the action zone holds the turn block (the budget and the numbered options,
 // AGT-36), then the input row: a line editor (editor.ts, AGT-48) whose placeholder is the
@@ -24,11 +24,14 @@ import type { HumanPrompt, PlayerIntent, Seat, SuggestUpdate, TableEvent } from 
 import { edit, editFor, EMPTY, type Edit } from "./editor.ts";
 import { COMMAND_HELP, promptHint, readLine, type Typed } from "./input.ts";
 import { commandMatches, PICKER_ROWS, pickerRows, type CommandEntry } from "./commands.ts";
-import { actionRows, frameLayout, freshText, headerText, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, storyRows, storyWindow, type Scroll } from "./frame.ts";
+import { actionRows, frameLayout, freshText, headerText, maxOffset, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, scrollRows, stepWithin, storyRows, storyWindow, WHEEL_ROWS, type Scroll } from "./frame.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette, type Style } from "./palette.ts";
 import { cardRows, endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
 import { cardText, costText } from "../table/guide.ts";
+import type { Language } from "../agents/language.ts";
+import { SeatNames } from "../table/seat-lines.ts";
+import { SEAT_WORDS, UI_WORDS, type UiWords } from "../table/words.ts";
 
 /** The suggestions picker's rows and cursor (AGT-49): `cursor` is a row index, `rows.length` for "Your own…". */
 export interface Suggestions {
@@ -127,10 +130,22 @@ export interface InkSeatOptions {
   glyphs?: Record<string, string>;
   /** The adventure's title, for the header. */
   title?: string;
+  /** The run's language (AGT-98, decision 0067): the seat's own words. Default English. */
+  language?: Language;
+  /** How the seat names characters, in the run's language. */
+  names?: SeatNames;
+  /**
+   * Each thing the seat draws, in order, as the screen reads it (AGT-103, AGT-13): the run writes
+   * them to `seat.jsonl`. `kind` is the event's, or `command` for a command's answer.
+   */
+  record?: (drawn: { kind: string; text: string }) => void;
 }
 
 export class InkSeat implements Seat {
   readonly handle: Handle;
+  /** The seat's own words, in the run's language (AGT-98). */
+  readonly ui: UiWords;
+  private readonly names: SeatNames;
   private readonly options: InkSeatOptions;
   private view: SeatView = { lines: [], prompt: undefined, draft: "", cursor: 0 };
   /** Lines entered so far, oldest first, for Ctrl+P and Ctrl+N; `recalled` is the one on the row. */
@@ -151,12 +166,16 @@ export class InkSeat implements Seat {
   private heldSituation: Extract<TableEvent, { kind: "situation" }> | undefined;
   /** The speaker of the message the last line belongs to; undefined after anything else. */
   private speaker: string | undefined;
+  /** The loop is answering a typed command (AGT-103): its info, options and status lines are drawn as `command`. */
+  private answeringCommand = false;
   /** Drops the suggestion call in flight: the human's first key does (§7.1). */
   private cancelSuggest: (() => void) | undefined;
 
   constructor(handle: Handle, options: InkSeatOptions = {}) {
     this.handle = handle;
     this.options = options;
+    this.ui = UI_WORDS[options.language ?? "en"];
+    this.names = options.names ?? new SeatNames(options.language ?? "en");
     this.palette = options.palette ?? paletteFor();
     this.animate = options.animate ?? (!process.env.NO_COLOR && process.stdout.isTTY === true);
     this.now = options.now ?? Date.now;
@@ -170,6 +189,8 @@ export class InkSeat implements Seat {
   get title(): string | undefined {
     return this.options.title;
   }
+  /** A character as the seat labels it: "Torva", «Торва». */
+  readonly named = (handle: string): string => (this.ui === UI_WORDS.en ? handle.charAt(0).toUpperCase() + handle.slice(1) : this.names.person(handle));
 
   /**
    * A scene starts (AGT-69): the header shows its number of the total, and the story a divider.
@@ -177,7 +198,7 @@ export class InkSeat implements Seat {
    */
   scene(number: number, of: number): void {
     this.update({ scene: { number, of }, started: this.view.started ?? this.now() });
-    this.add([{ tone: "status", text: `— Scene ${number} of ${of} —` }]);
+    this.add([{ tone: "status", text: `— ${this.ui.sceneOf(number, of)} —` }]);
   }
 
   /**
@@ -266,8 +287,29 @@ export class InkSeat implements Seat {
    */
   start(options: RenderOptions = {}): Instance {
     this.instance = render(h(TableScreen, { seat: this }), { exitOnCtrlC: false, incrementalRendering: true, ...options });
+    this.listen(options.stdin ?? process.stdin);
     if (options.alternateScreen) this.guardCrash();
     return this.instance;
+  }
+
+  /** What the frame does with the wheel's turns (AGT-94); the frame sets it on every draw. */
+  wheelTurns: (turns: (-1 | 1)[]) => void = () => {};
+  private stdin: NodeJS.ReadableStream | undefined;
+  /**
+   * Ink drops every mouse report before `useInput`, so the seat reads the wheel off stdin's `data`
+   * events. It listens once Ink's `readable` listener is on and stops before Ink lets go, so the
+   * stream stays paused and Ink alone reads it; `data` fires only when Ink reads. A report split
+   * across two reads (rare, over ssh) is one lost turn: Ink drops or types its halves on its own
+   * clock, and the seat does not guess at it.
+   */
+  private readonly read = (chunk: Buffer | string): void => {
+    const turns = wheelsIn(String(chunk));
+    if (turns.length > 0) this.wheelTurns(turns);
+  };
+  private listen(stdin: NodeJS.ReadableStream): void {
+    this.stdin?.off("data", this.read);
+    this.stdin = stdin;
+    stdin.on("data", this.read);
   }
 
   /**
@@ -277,18 +319,54 @@ export class InkSeat implements Seat {
   adopt(instance: Instance): void {
     this.instance = instance;
     instance.rerender(h(TableScreen, { seat: this }));
+    // The pick screen drew on the process's own terminal; a test's pick has no terminal to read.
+    if (process.stdin.isTTY) this.listen(process.stdin);
     this.guardCrash();
   }
 
   private guardCrash(): void {
     process.on("uncaughtException", this.crash);
     process.on("unhandledRejection", this.crash);
+    this.wheel(true);
   }
+
+  /**
+   * The full screen reports the mouse wheel (AGT-94), SGR-encoded, so two fingers on a Mac
+   * trackpad scroll the story instead of moving the option highlight; the terminal gets its own
+   * mouse back when the seat stops or the process exits.
+   */
+  private wheel(on: boolean): void {
+    if (this.wheelOn === on || !process.stdout.isTTY) return;
+    this.wheelOn = on;
+    process.stdout.write(on ? WHEEL_ON : WHEEL_OFF);
+    for (const signal of HANGUPS) {
+      if (on) process.on(signal, this.hangup);
+      else process.off(signal, this.hangup);
+    }
+    if (on) process.once("exit", this.wheelOff);
+    else process.off("exit", this.wheelOff);
+  }
+  private wheelOn = false;
+  private readonly wheelOff = (): void => this.wheel(false);
+  /**
+   * A kill skips "exit": the mouse goes back to the terminal, then the signal is sent again. Ink's
+   * signal-exit stands aside while another listener is on the signal; this one takes itself off
+   * first, so on the second delivery, or later in the same one, signal-exit finds itself alone,
+   * unmounts, leaves the alternate screen and ends the process as the signal asks. SIGINT is not
+   * here: at the full screen Ctrl+C is a key, and the table stops after the decision.
+   */
+  private readonly hangup = (signal: NodeJS.Signals): void => {
+    this.wheel(false);
+    process.kill(process.pid, signal);
+  };
 
   /** Stops drawing; in the alternate screen, the terminal returns to what it showed before. */
   stop(): void {
     process.off("uncaughtException", this.crash);
     process.off("unhandledRejection", this.crash);
+    this.wheel(false);
+    this.stdin?.off("data", this.read);
+    this.stdin = undefined;
     this.instance?.unmount();
     this.instance = undefined;
   }
@@ -304,6 +382,17 @@ export class InkSeat implements Seat {
   };
 
   show(event: TableEvent): void {
+    // Engine lines are drawn when they show: at once for the human's own, else when released.
+    // These show the held engine lines above them first, released here, so the record keeps the screen's order.
+    if (RELEASES.has(event.kind)) this.release();
+    // Only info, options and status lines are a command's answer; anything else keeps its kind.
+    const answers = this.answeringCommand && (event.kind === "info" || event.kind === "options" || event.kind === "status");
+    // The same options list again, over the one already pinned, changes nothing on the screen: the record skips it (AGT-114).
+    const repeated = event.kind === "options" && this.view.options !== undefined && JSON.stringify(this.view.options) === JSON.stringify(event);
+    if (!repeated) {
+      if (event.kind !== "engine") this.drawn(answers ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
+      else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));
+    }
     switch (event.kind) {
       case "situation":
         // The loop refreshes the panel before each step, ahead of the narration of what came
@@ -314,12 +403,11 @@ export class InkSeat implements Seat {
         return;
       case "options":
         // Numbered options stay above the prompt instead of scrolling away; `/options` prints them again.
-        this.release();
         this.update({ options: event, highlight: event.preset });
         return;
       case "engine": {
         // The human's own line shows at once; others' lines before it still wait for their narration.
-        const lines = eventLines(event, this.handle);
+        const lines = eventLines(event, this.handle, false, this.ui, this.named);
         if (event.own) this.add(lines);
         else this.held.push(...lines);
         return;
@@ -330,7 +418,10 @@ export class InkSeat implements Seat {
         const covered = this.held.map((line) => ({ ...line, text: `    ${line.text.trimStart()}` }));
         this.held = [];
         this.message(event);
-        if (this.options.verbose) this.print(covered, false);
+        if (this.options.verbose) {
+          this.drawn("engine", covered);
+          this.print(covered, false);
+        }
         this.release();
         return;
       }
@@ -340,36 +431,33 @@ export class InkSeat implements Seat {
           this.update({ overlay: { title: event.title, text: event.text, at: this.view.lines.length } });
           return;
         }
-        if (event.title === "Not accepted") {
+        if (event.title === SEAT_WORDS.en.notAccepted || event.title === SEAT_WORDS.ru.notAccepted) {
           this.update({ refusal: event.text });
           return;
         }
         break;
       case "reaction":
         // The fight stands still until the human answers: the action zone holds it, not the story.
-        this.release();
         this.update({ reaction: event });
         return;
       case "question":
-        this.release();
         this.update({ question: event.text });
         break;
       case "end":
         // The end of the run is read in the story, whatever was open over it.
-        this.release();
         // The narrow frame's /panel overlay is `folded`, so it closes too; a wide frame's folded pane opens again.
         this.update({ overlay: undefined, folded: false, reaction: undefined, question: undefined });
         break;
     }
     if (speakerOf(event) !== undefined) this.message(event);
-    else this.add(eventLines(event, this.handle));
+    else this.add(eventLines(event, this.handle, false, this.ui, this.named));
   }
 
   /** A narration, a line, an intent or a question: on the message above when the speaker is the same. */
   private message(event: TableEvent): void {
     const speaker = speakerOf(event);
     const continued = speaker === this.speaker;
-    this.print(eventLines(event, this.handle, continued), !continued);
+    this.print(eventLines(event, this.handle, continued, this.ui, this.named), !continued);
     this.speaker = speaker;
   }
 
@@ -377,6 +465,7 @@ export class InkSeat implements Seat {
   private release(): void {
     const lines = this.held;
     this.held = [];
+    this.drawn("engine", lines);
     this.add(lines);
     const situation = this.heldSituation;
     this.heldSituation = undefined;
@@ -390,6 +479,10 @@ export class InkSeat implements Seat {
   }
 
   readonly palette: Palette;
+
+  answering(on: boolean): void {
+    this.answeringCommand = on;
+  }
 
   unnarrated(): void {
     this.release();
@@ -482,7 +575,7 @@ export class InkSeat implements Seat {
     // Enter on an empty line plays the option ↑/↓ lit, as if its number were typed.
     if (!this.view.draft.trim() && this.view.highlight !== undefined && picksOptions(this.view.prompt)) this.update({ draft: String(this.view.highlight) });
     const draft = this.view.draft;
-    const read = readLine(draft, this.view.prompt);
+    const read = readLine(draft, this.view.prompt, this.ui);
     // A line from a suggestion says so, and whether it was edited first (S4).
     const taken = this.view.suggestions?.taken;
     const typed: Typed =
@@ -503,7 +596,8 @@ export class InkSeat implements Seat {
         this.update({ folded: !this.view.folded, overlay: undefined });
         return;
       case "help":
-        this.update({ overlay: { title: "Help", text: helpText(), at: this.view.lines.length } });
+        this.drawn("command", [{ tone: "info", text: helpText(this.ui) }]);
+        this.update({ overlay: { title: this.ui.help, text: helpText(this.ui), at: this.view.lines.length } });
         return;
       case "intent": {
         this.add([{ tone: "prompt", text: `> ${draft.trim()}` }]);
@@ -519,7 +613,7 @@ export class InkSeat implements Seat {
           answer(typed.intent);
         } else {
           this.queued.push(typed.intent);
-          this.update({ notice: { text: "answered at your next prompt", error: false } });
+          this.update({ notice: { text: this.ui.answeredLater, error: false } });
         }
       }
     }
@@ -628,7 +722,7 @@ export class InkSeat implements Seat {
       process.exit(130);
     }
     this.interrupted = true;
-    this.add([{ tone: "end", text: "Stopping after the current decision; Ctrl+C again stops at once." }]);
+    this.add([{ tone: "end", text: this.ui.stopping }]);
     this.options.onQuit?.();
     const answer = this.answer;
     if (answer) {
@@ -645,7 +739,7 @@ export class InkSeat implements Seat {
   stopAsking(why: string): void {
     if (this.interrupted) return;
     this.interrupted = true;
-    this.add([{ tone: "end", text: `Stopping: ${why}.` }]);
+    this.add([{ tone: "end", text: this.ui.stoppingFor(why) }]);
     const answer = this.answer;
     if (answer) {
       this.answer = undefined;
@@ -659,6 +753,12 @@ export class InkSeat implements Seat {
     if (lines.length === 0) return;
     this.print(lines, this.speaker !== undefined);
     this.speaker = undefined;
+  }
+
+  /** Hands what the seat draws to the run's record, blank lines left out. */
+  private drawn(kind: string, lines: Line[]): void {
+    const text = lines.map((l) => l.text).filter((t) => t.trim() !== "").join("\n");
+    if (text !== "" && this.options.record) this.options.record({ kind, text });
   }
 
   /** Adds lines to the story, after a blank line when `gap` (and the story has lines). */
@@ -717,26 +817,15 @@ export function finaleRows(finale: Finale, width: number, told = false): Row[] {
   ];
 }
 
+/** The kinds that show the held engine lines above them; a narration tells them instead (AGT-37). */
+const RELEASES = new Set<TableEvent["kind"]>(["options", "reaction", "question", "end"]);
+
 /** The loop's answers to /sheet, /where, /log and /usage, by their info titles: shown as overlays. */
-export const OVERLAYS = new Set(["Sheet", "Where", "Log", "Usage"]);
+export const OVERLAYS = new Set((["en", "ru"] as const).flatMap((l) => [SEAT_WORDS[l].sheet, SEAT_WORDS[l].where, SEAT_WORDS[l].log, SEAT_WORDS[l].usage]));
 
 /** The /help overlay: the commands, then the keys. */
-export function helpText(): string {
-  return [
-    "Commands:",
-    ...Object.entries(COMMAND_HELP).map(([name, what]) => `  /${name}  ${what}`),
-    "",
-    "Keys:",
-    "  Enter      send the line",
-    "  /          on an empty line, the commands to choose from; type to narrow",
-    "  Tab        complete a /command, or put the next suggestion in the line",
-    "  ↑/↓        light a command, an option or a suggestion; Enter runs it",
-    "  Esc        close this, go back from a sub-list, or clear the line",
-    "  PgUp/PgDn  scroll the story, or this",
-    "  End        back to the newest lines",
-    "  Ctrl+P/N   lines you sent before",
-    "  Ctrl+C     stop after this decision; twice, at once",
-  ].join("\n");
+export function helpText(ui: UiWords = UI_WORDS.en): string {
+  return ui.helpText(Object.keys(COMMAND_HELP).map((name) => [name, ui.commandHelp[name as keyof UiWords["commandHelp"]]] as const));
 }
 
 /**
@@ -751,10 +840,9 @@ export const INPUT_HINT: Style = TONE_STYLE.status;
 export const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 /** What the table waits on: "⠹ The DM is thinking · 4s" spinning, or "waiting... The DM is thinking" still. */
-export function waitText(on: string | undefined, seconds: number, frame: number | undefined): string {
-  const who = on ?? "The table is playing";
-  if (frame === undefined) return `waiting... ${who} (/help for commands)`;
-  return `${SPINNER[frame % SPINNER.length]} ${who}${seconds >= 1 ? ` · ${seconds}s` : ""} (/help for commands)`;
+export function waitText(on: string | undefined, seconds: number, frame: number | undefined, ui: UiWords = UI_WORDS.en): string {
+  if (frame === undefined) return ui.wait(on, undefined);
+  return `${SPINNER[frame % SPINNER.length]} ${ui.wait(on, seconds)}`;
 }
 
 /** The wait as the input row's placeholder while no prompt is open; it re-draws itself only while spinning. */
@@ -766,7 +854,7 @@ function Waiting({ seat, busy }: { seat: InkSeat; busy: SeatView["busy"] }) {
     return () => clearInterval(timer);
   }, [seat]);
   const seconds = busy ? Math.floor((seat.now() - busy.since) / 1000) : 0;
-  return h(Text, textProps(TONE_STYLE.status, seat.palette), waitText(busy?.on, seconds, seat.animate ? frame : undefined));
+  return h(Text, textProps(TONE_STYLE.status, seat.palette), waitText(busy?.on, seconds, seat.animate ? frame : undefined, seat.ui));
 }
 
 /** The option a typed number names, from the numbered lines on screen ("2. End turn" for "2"). */
@@ -779,22 +867,21 @@ export function previewOption(draft: string, lines: string[] | undefined): { num
 
 
 /** The picker's header (§7.5): the prompt's question. */
-export function suggestQuestion(prompt: HumanPrompt, handle: Handle): string {
-  const name = handle.charAt(0).toUpperCase() + handle.slice(1);
-  if (prompt.kind === "answer") return `What does ${name} answer?`;
-  if (prompt.kind === "surrender") return `They offer to surrender. What does ${name} do?`;
-  return `What does ${name} do or say?`;
+export function suggestQuestion(prompt: HumanPrompt, handle: Handle, ui: UiWords = UI_WORDS.en, name = handle.charAt(0).toUpperCase() + handle.slice(1)): string {
+  if (prompt.kind === "answer") return ui.suggestQuestion.answer(name);
+  if (prompt.kind === "surrender") return ui.suggestQuestion.surrender(name);
+  return ui.suggestQuestion.other(name);
 }
 
 /** The input row's placeholder while the suggestions picker stands (§7.5). */
-export const SUGGEST_HINT = "or type your own. ↑/↓ and Enter send one; Tab puts one in the line.";
+export const SUGGEST_HINT = UI_WORDS.en.suggestHint;
 
 /**
  * The suggestions picker's rows (§7.5): the prompt's question, the three moves and "Your own…",
  * with the `❯` cursor, which needs no colour under NO_COLOR.
  */
-export function suggestionRows(suggestions: Suggestions, question: string): Row[] {
-  const rows = [...suggestions.rows, "Your own…"];
+export function suggestionRows(suggestions: Suggestions, question: string, ui: UiWords = UI_WORDS.en): Row[] {
+  const rows = [...suggestions.rows, ui.yourOwn];
   return [
     [{ text: question, style: { bold: true } }],
     ...rows.map((text, i): Row => {
@@ -804,12 +891,34 @@ export function suggestionRows(suggestions: Suggestions, question: string): Row[
   ];
 }
 
+/** Mouse reporting on and off: button events (`?1000`) in SGR form (`?1006`). */
+const WHEEL_ON = "\x1b[?1000h\x1b[?1006h";
+const WHEEL_OFF = "\x1b[?1006l\x1b[?1000l";
+/** The signals that end the run without an "exit" event, after which the shell would get mouse reports. */
+const HANGUPS: NodeJS.Signals[] = ["SIGTERM", "SIGHUP", "SIGQUIT"];
+
+/**
+ * The wheel turns in a chunk of what the terminal sent (AGT-94), in order: `-1` up, `1` down.
+ * Other mouse reports (a click, a release, a move) give nothing. Ink drops every mouse report
+ * before `useInput`, so the seat reads them off stdin itself.
+ */
+export function wheelsIn(chunk: string): (-1 | 1)[] {
+  const turns: (-1 | 1)[] = [];
+  for (const report of chunk.matchAll(/\u001b\[<(\d+);\d+;\d+[Mm]/g)) {
+    // The low two bits name the button; 64 marks the wheel; Shift, Alt and Ctrl add 4, 8 and 16.
+    const button = Number(report[1]) & ~0b11100;
+    if (button === 64) turns.push(-1);
+    if (button === 65) turns.push(1);
+  }
+  return turns;
+}
+
 /** What the tiny frame says instead of the table (under 40 columns or 16 rows). */
-export const TOO_SMALL = "Window too small: make it at least 40×16. The game goes on.";
+export const TOO_SMALL = UI_WORDS.en.tooSmall;
 
 /**
  * The screen: one full frame (AGT-69). The header; the story at the reading measure, pinned to its
- * foot, with its own PgUp/PgDn scroll; the action zone (the turn block) under it; the notice and
+ * foot, with its own scroll (Shift+↑/↓, PgUp/PgDn, the wheel); the action zone (the turn block) under it; the notice and
  * the input row. From 124 columns the side panel stands right of it at full height, past a thin
  * rule; below, the panel folds to two rows above the action zone.
  */
@@ -817,6 +926,9 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const view = useSyncExternalStore(seat.subscribe, seat.getView);
   const size: PanelSize = useWindowSize();
   const [scroll, setScroll] = useState<Scroll | undefined>(undefined);
+  // The scroll hint stays under the story until the reader first scrolls it (AGT-94).
+  const [scrolled, setScrolled] = useState(false);
+  if (scroll && !scrolled) setScrolled(true);
   // How far down the open overlay is read, from its top; a new overlay starts at its top.
   const [overlayRead, setOverlayTop] = useState(0);
   useEffect(() => setOverlayTop(0), [view.overlay, view.folded]);
@@ -844,13 +956,13 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const choice = picked ? view.options?.choices.find((c) => c.number === picked.number) : undefined;
   const lit = choice?.target?.handle;
   // What the lit option does (AGT-70): a card under the roster in the wide frame, one line above the input in the narrow one.
-  const text = choice?.about ? cardText(choice.about) : undefined;
-  const card = text && choice ? { label: choice.label.replace(/…$/, ""), cost: costText(choice.about?.cost), text } : undefined;
+  const text = choice?.about ? cardText(choice.about, seat.ui) : undefined;
+  const card = text && choice ? { label: choice.label.replace(/…$/, ""), cost: costText(choice.about?.cost, seat.ui), text } : undefined;
   const cardLine = card && layout.mode === "narrow" ? wrapText(`${card.label}: ${card.text}`, width, 0).split("\n")[0] : undefined;
   const inputH = view.draft ? rowsFor(`> ${view.draft} ${picked ? `  ${picked.line}` : ""}`, width, 3) : 1;
   // The slash-command picker over the input row (AGT-82), cut to leave the story its rows.
   const commands = seat.commandPicker;
-  const commandRows = commands ? pickerRows(view.draft, commands.matches, commands.cursor, Math.max(1, Math.min(PICKER_ROWS, size.rows - 18))) : [];
+  const commandRows = commands ? pickerRows(view.draft, commands.matches, commands.cursor, Math.max(1, Math.min(PICKER_ROWS, size.rows - 18)), seat.ui) : [];
   const notice = view.notice ? wrapText(view.notice.text, width, 0).split("\n").slice(0, 2) : [];
   // Paused, the panel is a frame of the last moment: marked stale until the game goes on (screen 10).
   const paused = view.prompt?.kind === "paused";
@@ -860,19 +972,19 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const panel =
     view.situation && layout.mode === "narrow"
       ? // The bar and your own line, with a fallen ally and a foe in reach on it (AGT-47 C1).
-        foldedRows(view.situation, { stale, glyphs: seat.glyphs, lit }).slice(0, NARROW_PANEL_ROWS)
+        foldedRows(view.situation, { stale, glyphs: seat.glyphs, lit, ui: seat.ui }).slice(0, NARROW_PANEL_ROWS)
       : [];
   const below = 1 + (panel.length > 0 ? panel.length + 1 : 0) + notice.length + (cardLine ? 1 : 0) + commandRows.length + inputH;
   // The action zone: what is asked of the human now, above the turn block (screens 4, 5, 7 to 10).
   const said = (text: string, style: Style): Row[] => wrapText(text, width, 0).split("\n").map((row) => [{ text: row, style }]);
   const reaction = view.reaction;
   const block: Row[] = [
-    ...(view.refusal ? said(`Not accepted: ${view.refusal}`, TONE_STYLE.error) : []),
-    ...(reaction ? [...said(`Reaction: ${reaction.summary}`, { accent: "rust", bold: true }), ...reaction.options.map((o, i) => [{ text: `${i + 1}. ${o}` }])] : []),
-    ...(view.question && view.prompt?.kind === "answer" ? said(`DM asks you: ${view.question}`, TONE_STYLE.dm) : []),
-    ...(paused ? said("Paused: the AI players wait. /pause to go on.", { accent: "hint" }) : []),
-    ...(view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number) : []),
-    ...(view.suggestions && view.prompt && !view.options ? suggestionRows(view.suggestions, suggestQuestion(view.prompt, seat.handle)) : []),
+    ...(view.refusal ? said(`${seat.ui.notAccepted}: ${view.refusal}`, TONE_STYLE.error) : []),
+    ...(reaction ? [...said(`${seat.ui.reaction}: ${reaction.summary}`, { accent: "rust", bold: true }), ...reaction.options.map((o, i) => [{ text: `${i + 1}. ${o}` }])] : []),
+    ...(view.question && view.prompt?.kind === "answer" ? said(`${seat.ui.dmAsks}: ${view.question}`, TONE_STYLE.dm) : []),
+    ...(paused ? said(seat.ui.pausedBlock, { accent: "hint" }) : []),
+    ...(view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number, seat.ui) : []),
+    ...(view.suggestions && view.prompt && !view.options ? suggestionRows(view.suggestions, suggestQuestion(view.prompt, seat.handle, seat.ui, seat.named(seat.handle)), seat.ui) : []),
     ...(view.finale ? finaleRows(view.finale, width, lastText(view.lines) === view.finale.text) : []),
   ];
   const actionRoom = Math.min(Math.floor(size.rows / 2), size.rows - below - MIN_STORY_ROWS - 2);
@@ -887,7 +999,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
         // A row that fits keeps its spacing (the sheet's and /help's columns); a longer one wraps.
         .flatMap((text) => ([...text].length <= width ? [text] : wrapText(text, width, 2).split("\n")).map((row) => [{ text: row, style: TONE_STYLE.info }]))
     : panelOverlay
-      ? situationRows(view.situation!, { columns: width, rows: size.rows }, { stale, glyphs: seat.glyphs, pane: true, lit })
+      ? situationRows(view.situation!, { columns: width, rows: size.rows }, { stale, glyphs: seat.glyphs, pane: true, lit, ui: seat.ui })
       : undefined;
   const overlayRoom = Math.max(1, storyH - 1);
   const overlayMax = overlayRows ? Math.max(0, overlayRows.length - overlayRoom) : 0;
@@ -895,15 +1007,30 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   // is clamped, so the overlay never slides past its last row.
   const overlayTop = Math.min(overlayRead, overlayMax);
 
+  // The wheel scrolls three rows, the overlay while one is open (AGT-94), from where the last
+  // turn left it: several reports can land before the next frame.
+  useEffect(() => {
+    seat.wheelTurns = (turns) => {
+      if (overlayRows) return setOverlayTop((top) => turns.reduce((at, d) => stepWithin(at, d * WHEEL_ROWS, overlayMax), Math.min(top, overlayMax)));
+      setScroll((at) => turns.reduce((to, d) => scrollRows(to, d, WHEEL_ROWS, story, storyH, view.lines.length), at));
+    };
+    return () => {
+      seat.wheelTurns = () => {};
+    };
+  });
+
   useInput((input, key) => {
     // The end screen: any key, Ctrl+C too, gives the terminal back; the checks go on.
     if (view.finale) return seat.keyAtEnd();
     if (key.ctrl && input === "c") return seat.interrupt();
-    // PgUp/PgDn read the overlay while one is open, the story otherwise; Esc closes the overlay first.
-    if (overlayRows && key.pageUp) return setOverlayTop(Math.max(0, overlayTop - Math.max(1, overlayRoom - 1)));
-    if (overlayRows && key.pageDown) return setOverlayTop(Math.min(overlayMax, overlayTop + Math.max(1, overlayRoom - 1)));
-    if (key.pageUp) return setScroll(page(scroll, -1, story, storyH, view.lines.length));
-    if (key.pageDown) return setScroll(page(scroll, 1, story, storyH, view.lines.length));
+    // Shift+↑/↓ and PgUp/PgDn page the overlay while one is open, the story otherwise; Esc closes
+    // the overlay first. A MacBook has no PgUp/PgDn (AGT-94).
+    const pageUp = key.pageUp || (key.shift && key.upArrow);
+    const pageDown = key.pageDown || (key.shift && key.downArrow);
+    if (overlayRows && pageUp) return setOverlayTop(stepWithin(overlayTop, -Math.max(1, overlayRoom - 1), overlayMax));
+    if (overlayRows && pageDown) return setOverlayTop(stepWithin(overlayTop, Math.max(1, overlayRoom - 1), overlayMax));
+    if (pageUp) return setScroll(page(scroll, -1, story, storyH, view.lines.length));
+    if (pageDown) return setScroll(page(scroll, 1, story, storyH, view.lines.length));
     if (key.escape && seat.closeCommands()) return;
     if (key.escape && seat.closeOverlay(layout.mode === "narrow")) return;
     if (key.escape && seat.closeSuggestions()) return;
@@ -934,13 +1061,13 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     const mark = h(Text, { key: "mark" }, h(Text, { ...textProps(INPUT_MARK, palette), inverse: true }, ">"), " ");
     if (!view.draft) {
       const placeholder = view.finale
-        ? h(Text, { key: "hint", ...textProps({ accent: "hint" }, palette) }, "Any key leaves; the checks go on after it.")
+        ? h(Text, { key: "hint", ...textProps({ accent: "hint" }, palette) }, seat.ui.finaleHint)
         : view.prompt && picked
-          ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, `Enter plays ${picked.line}`)
+          ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, seat.ui.enterPlays(picked.line))
           : view.prompt && view.suggestions && !view.options
-            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, SUGGEST_HINT)
+            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, seat.ui.suggestHint)
           : view.prompt
-            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, promptHint(view.prompt, seat.handle))
+            ? h(Text, { key: "hint", ...textProps(INPUT_HINT, palette) }, promptHint(view.prompt, seat.handle, seat.ui, seat.named(seat.handle)))
             : h(Waiting, { key: "wait", seat, busy: view.busy });
       return h(Box, { key: "input", width, height: 1, overflow: "hidden" }, h(Text, { wrap: "truncate-end" }, mark, h(Text, { key: "cursor", inverse: true }, " "), placeholder));
     }
@@ -963,37 +1090,37 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
 
   // The overlay in the story's rows: a dim name row with its keys, and the text from `overlayTop`.
   function overlayLines() {
-    const name = view.overlay?.title ?? "Panel";
+    const name = view.overlay?.title ?? seat.ui.panelTitle;
     const fresh = view.overlay ? new Set(view.lines.slice(view.overlay.at).filter((l) => l.text.trim() !== "").map((l) => l.id)).size : 0;
-    const more = overlayMax > 0 ? " · PgUp/PgDn" : "";
-    const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, `${name} · Esc closes${more}${fresh > 0 ? ` · ↓ ${fresh} new` : ""}`);
+    const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, seat.ui.overlayKeys(name, overlayMax > 0, fresh));
     const rows = overlayRows!.slice(overlayTop, overlayTop + overlayRoom);
     return [nameRow, ...rows.map((row, i) => line(row, `o${i}`)), ...Array.from({ length: overlayRoom - rows.length }, (_, i) => blank(`ob${i}`))];
   }
 
   if (layout.mode === "tiny") {
-    return h(Box, { flexDirection: "column", width: size.columns }, h(Text, { wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, TOO_SMALL), inputRow());
+    return h(Box, { flexDirection: "column", width: size.columns }, h(Text, { wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, seat.ui.tooSmall), inputRow());
   }
 
-  const mode = view.prompt?.kind === "paused" ? "Paused" : view.situation ? (view.situation.mode === "combat" ? `Round ${view.situation.round ?? 1}` : "Explore") : undefined;
+  const mode = view.prompt?.kind === "paused" ? seat.ui.panel.paused : view.situation ? (view.situation.mode === "combat" ? seat.ui.panel.round(view.situation.round ?? 1) : seat.ui.panel.explore) : undefined;
   const header = headerText({
     title: seat.title,
     scene: view.scene,
     mode,
     ...(view.situation?.road ? { day: view.situation.road.day } : {}),
     minutes: view.started === undefined ? undefined : Math.floor((seat.now() - view.started) / 60_000),
-  });
+  }, seat.ui);
   const storyLines = overlayRows
     ? overlayLines()
     : shown.rows.map((row, i) => {
         const key = `s${i}`;
-        if (scroll && i === shown.rows.length - 1) return h(Text, { key, wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, freshText(shown.fresh));
+        if (scroll && i === shown.rows.length - 1) return h(Text, { key, wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, freshText(shown.fresh, seat.ui));
         return row ? h(Text, { key, wrap: "truncate-end", ...textProps(row.style, palette) }, row.text || " ") : blank(key);
       });
   const left = [
     ...storyLines,
     ...(panel.length > 0 ? [blank("pgap"), ...panel.map((row, i) => line(row, `p${i}`))] : []),
-    blank("agap"),
+    // The gap under the story carries the scroll hint until the first scroll (AGT-94).
+    scrolled || overlayRows || view.finale || maxOffset(story, storyH, view.lines.length) === 0 ? blank("agap") : h(Text, { key: "agap", wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, seat.ui.scrollHint),
     ...(action.length > 0 ? [...action.map((row, i) => line(row, `a${i}`)), blank("igap")] : []),
     ...notice.map((text, i) => h(Text, { key: `n${i}`, wrap: "truncate-end", ...textProps(view.notice!.error ? TONE_STYLE.error : TONE_STYLE.status, palette) }, text)),
     ...(cardLine ? [h(Text, { key: "card", wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, cardLine)] : []),
@@ -1005,7 +1132,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   if (layout.mode === "narrow") {
     return h(Box, { flexDirection: "column", width: size.columns, height: size.rows }, headerRow, h(Box, { key: "story", flexDirection: "column", width, height: body }, ...left));
   }
-  const roster = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true, lit }) : [];
+  const roster = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true, lit, ui: seat.ui }) : [];
   // The action card stands under the roster, past a blank row, cut to the rows left.
   const cardRoom = body - roster.length - (roster.length > 0 ? 1 : 0);
   const cardShown = card && cardRoom > 1 ? cardRows(card.label, card.cost, card.text, layout.side!).slice(0, cardRoom) : [];
