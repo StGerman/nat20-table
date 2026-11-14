@@ -119,7 +119,7 @@
             "once": "contract",
             "text": "A crowd stands in front of Fenn's wagon on the Wendford green. A woman with a basket says what they all think: salt is dear this year, dearer than anyone remembers, and they want Fenn's salt here, at their price, before it goes up the hill.",
             "text_ru": "Перед фургоном Фенна на лугу Вендфорда стоит толпа. Женщина с корзиной говорит то, что думают все: соль в этом году дорогая, дороже, чем кто-либо помнит, и они хотят соль Фенна здесь и по своей цене, пока её не увезли наверх, в холмы.",
-            "note": "Price is the signal of change, and its cause is off the map: nobody on the green knows why salt is dear, only that it is. Market against custom: Fenn has sold at his price for years, the valley thinks a fair price is the one it always paid, and neither is right. It is Fenn's salt, so Fenn decides with the Blades' advice; he says \"Decide it between you\" and means it. Nell Hale, the reeve's niece, about eight, sits on the rim of the well with a slate and does the crowd's sums for them, out loud and wrong on purpose. Nobody is hurt: making way means pushing through people, never the wagon over them. If the Blades paid the company's toll at the bridge (paid_the_company), they carry its paper: two silver a head on salt that used to cross for nothing is part of why it is dear, and the crowd can see the seal.",
+            "note": "Price is the signal of change, and its cause is in the lore (*Salt and Saltmouth's treasury*), and nobody from the valley on the green knows it (Fenn does and never says it): they know only that salt is dear. Market against custom: Fenn has sold at his price for years, the valley thinks a fair price is the one it always paid, and neither is right. It is Fenn's salt, so Fenn decides with the Blades' advice; he says \"Decide it between you\" and means it. Nell Hale, the reeve's niece, about eight, sits on the rim of the well with a slate and does the crowd's sums for them, out loud and wrong on purpose. Nobody is hurt: making way means pushing through people, never the wagon over them. If the Blades paid the company's toll at the bridge (paid_the_company), they carry its paper: two silver a head on salt that used to cross for nothing is the part of the price the crowd can see, with its seal; the duty behind the rest stays unsaid.",
             "choices": [
                 {
                     "id": "sell",
@@ -206,9 +206,9 @@
             "target": "caravan",
             "owner_pick": "walk",
             "once": "contract",
-            "text": "Below the ridge a woman in a man's coat stops the wagon. She wants a winter's salt for the farm, and she cannot pay for it until spring. A boy in a bobble hat holds her hand and looks at the horses, not at the salt.",
-            "text_ru": "Под гребнем фургон останавливает женщина в мужском кафтане. Ей нужна соль на зиму для хутора, а заплатить она сможет только весной. Мальчик в шапке с помпоном держит её за руку и смотрит на лошадей, а не на соль.",
-            "note": "The farm under the ridge, Col and Dunn's. The goblins took the flock, so there is no wool in spring to pay with, and Fenn won't give credit to a farm with no sheep. If the brothers died at the bridge (killed_col, killed_dunn), she is in black and Fenn knows why; say it plainly. A blind choice and a consequence on the young: what the Blades do here, Gwyn hears by the next contract. Maren speaks first. The boy's look is told as perception, never as a threat.",
+            "text": "On the slope track, well below the Highsteads and out of her neighbours' sight, a woman in a man's coat from the farm on Bald Hill stops the wagon. She wants a winter's salt for the farm, and she cannot pay for it until spring. A boy in a bobble hat holds her hand and looks at the horses, not at the salt.",
+            "text_ru": "На склоновой тропе, много ниже Хайстедса и подальше от глаз соседей, фургон останавливает женщина в мужском кафтане с фермы на Лысой горе. Ей нужна соль на зиму для фермы, а заплатить она сможет только весной. Мальчик в шапке с помпоном держит её за руку и смотрит на лошадей, а не на соль.",
+            "note": "The farm on Bald Hill, Col and Dunn's. The goblins took the flock, so there is no wool in spring to pay with, and Fenn won't give credit to a farm with no sheep. If the brothers died at the bridge (killed_col, killed_dunn), she is in black and Fenn knows why; say it plainly. A blind choice and a consequence on the young: what the Blades do here, Gwyn hears by the next contract. Maren speaks first. The boy's look is told as perception, never as a threat.",
             "choices": [
                 {
                     "id": "pay",
@@ -378,7 +378,7 @@
                     ]
                 }
             ],
-            "_comment": "An arrival card of the Millbeck bridge (MAP-14), so the party meets the clerk where he sits: as a road card of the world's Millbeck zone it was drawn at the end of the bridge road, in Wendford, 8 miles past him. It is in this deck because a world arrival card would also meet Fair in Wend at the bridge."
+            "_comment": "An arrival card of the Millbeck bridge (MAP-14), so the party meets the clerk where he sits: as a road card of the world's Millbeck zone it was drawn at the end of the bridge road, in Wendford, 12 miles past him. It is in this deck because a world arrival card would also meet Fair in Wend at the bridge."
         }
     ]
 }

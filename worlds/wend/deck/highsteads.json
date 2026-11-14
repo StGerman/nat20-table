@@ -63,7 +63,7 @@
             "once": "contract",
             "text": "Gwyn the shepherd is waiting at the fold gate when the wagon comes up the last of the track. She has news, and she has been saving it for the Blades.",
             "text_ru": "Пастушка Гвин ждёт у ворот загона, когда фургон одолевает последний подъём. У неё есть новости, и она берегла их для наёмников.",
-            "note": "Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. If they died (killed_col, killed_dunn), she tells it as news, not blame: the farm below the ridge stands empty, the goblins took the flock and the bridge took the boys, and Rufus's man came up with a paper for the land. If they were spared, Col is back mending the fold. If they fed her dog on the river road (fed_gwyns_dog), she knows who fed it: if it came up with the wagon it runs to her, and if not it came home ahead of them, fat and pleased with itself. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
+            "note": "Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. If both died (killed_col and killed_dunn), she tells it as news, not blame: the farm on Bald Hill has no men left, the goblins took the flock and the bridge took the boys, and Rufus's man came up with a paper for the land. If only one died, the other is back on the farm alone. If they were spared, Col is back mending the fold. If they fed her dog on the river road (fed_gwyns_dog), she knows who fed it: if it came up with the wagon it runs to her, and if not it came home ahead of them, fat and pleased with itself. Whatever the Blades did for the woman from Bald Hill, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
             "choices": [
                 {
                     "id": "goblins",
@@ -75,8 +75,8 @@
                 },
                 {
                     "id": "farm",
-                    "text": "Ask about the farm under the ridge.",
-                    "text_ru": "Спросить про хутор под гребнем.",
+                    "text": "Ask about the farm on Bald Hill.",
+                    "text_ru": "Спросить про ферму на Лысой горе.",
                     "effects": [
                         {"do": "remember", "deed": "asked_after_the_ridge_farm"}
                     ]
@@ -110,7 +110,7 @@
             "once": "contract",
             "text": "Gwyn the shepherd meets the wagon at the fold gate with a round cheese in a cloth. Col sent it up for the Blades, she says, for speaking up for him at Wendford, and she cuts it for them there at the gate. She has news as well.",
             "text_ru": "Пастушка Гвин встречает фургон у ворот загона с круглым сыром в тряпице. Это Кол прислал наёмникам, говорит она, за то, что заступились за него в Вендфорде. Она режет сыр тут же, у ворот. И новости у неё тоже есть.",
-            "note": "The card for when the Blades spoke Col out of the stocks at Wendford (col_owes_blades); otherwise gwyn_news. Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. Col is back mending the fold, and the cheese is his thanks for the stocks; Gwyn cuts it at the fold gate and it is eaten there, so it never goes on the wagon. If they fed her dog on the river road (fed_gwyns_dog), she knows who fed it: if it came up with the wagon it runs to her, and if not it came home ahead of them, fat and pleased with itself. Whatever the Blades did for the woman under the ridge, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
+            "note": "The card for when the Blades spoke Col out of the stocks at Wendford (col_owes_blades); otherwise gwyn_news. Before the choices, say in one plain sentence what happened at the Millbeck bridge on the way down. Gwyn knew the brothers. Col is back mending the fold, and the cheese is his thanks for the stocks; Gwyn cuts it at the fold gate and it is eaten there, so it never goes on the wagon. If they fed her dog on the river road (fed_gwyns_dog), she knows who fed it: if it came up with the wagon it runs to her, and if not it came home ahead of them, fat and pleased with itself. Whatever the Blades did for the woman from Bald Hill, Gwyn has heard it. Joke: she has named a ewe after one of the Blades, and not the one they would guess.",
             "choices": [
                 {
                     "id": "goblins",
@@ -122,8 +122,8 @@
                 },
                 {
                     "id": "farm",
-                    "text": "Ask about the farm under the ridge.",
-                    "text_ru": "Спросить про хутор под гребнем.",
+                    "text": "Ask about the farm on Bald Hill.",
+                    "text_ru": "Спросить про ферму на Лысой горе.",
                     "effects": [
                         {"do": "remember", "deed": "asked_after_the_ridge_farm"}
                     ]

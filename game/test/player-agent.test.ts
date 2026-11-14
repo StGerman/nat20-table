@@ -219,6 +219,7 @@ test("a campaign's place NPCs get their Russian names in the DM's name line, nev
     "wendmouth: Солтмут",
     "wendford: Вендфорд",
     "millbeck_bridge: мост через Миллбек",
+    "midwend: Мидвенд",
     "pells_mill: мельница Пелла",
     "highsteads: Хайстедс",
     "snitts_camp: лагерь Снитта",
@@ -236,7 +237,7 @@ test("a campaign's place NPCs get their Russian names in the DM's name line, nev
   for (const npc of ["Гвин", "Браннок"]) assert.ok(!player.includes(npc), npc);
   assert.ok(!player.includes("промасленный"), "the glossary is the DM's");
   // A player knows the start place and the places the map marks discovered, and no other (AGT-85, Rule 3).
-  const known = ["wendmouth: Солтмут", "wendford: Вендфорд", "millbeck_bridge: мост через Миллбек", "pells_mill: мельница Пелла", "highsteads: Хайстедс"];
+  const known = ["wendmouth: Солтмут", "wendford: Вендфорд", "millbeck_bridge: мост через Миллбек", "midwend: Мидвенд", "pells_mill: мельница Пелла", "highsteads: Хайстедс"];
   for (const place of places) assert.equal(player.includes(place), known.includes(place), place);
   assert.equal(readPack(MILL).placeNames, undefined, "a pack without a campaign has no place NPCs");
 });
