@@ -29,6 +29,7 @@
     "audit:narration": "node --experimental-strip-types --no-warnings game/src/check/cli.ts",
     "runs:verdict": "node --experimental-strip-types --no-warnings game/src/play/runs.ts verdict",
     "runs:finish": "node --experimental-strip-types --no-warnings game/src/play/runs.ts finish",
+    "runs:seat": "node --experimental-strip-types --no-warnings game/src/play/runs.ts seat",
     "runs:upload": "node --experimental-strip-types --no-warnings game/src/play/runs.ts upload"
   },
   "devDependencies": {

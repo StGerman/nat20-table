@@ -8,6 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { LANGUAGES } from "../agents/language.ts";
+import { VOICES } from "../agents/dm.ts";
 import { REPO } from "../paths.ts";
 import { priced } from "../usage.ts";
 
@@ -41,6 +42,8 @@ export const SETTINGS = {
   effort: { kind: "string", default: "low", allowed: EFFORTS },
   craft: { kind: "string", default: "prompt", allowed: ["prompt", "skills"] },
   lang: { kind: "string", default: "en", allowed: LANGUAGES },
+  /** The DM's narration voice (AGT-102): Plain by default; Fireside only when a run asks for it (`game/dm-craft/skills/voice/SKILL.md`). */
+  voice: { kind: "string", default: "plain", allowed: VOICES },
   "dm-timeout-ms": { kind: "int" },
   pack: { kind: "string", default: path.join(REPO, "scenarios/the_silent_mill") },
   dm: { kind: "string", default: "model", allowed: ["model", "scripted"] },

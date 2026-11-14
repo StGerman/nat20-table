@@ -14,6 +14,7 @@ import { eventLines, wrapText } from "../src/ui/lines.ts";
 import type { Event } from "@nat20-table/engine-client";
 import { formatSheet, noDeaths, tellable, type LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
+import { until } from "./until.ts";
 
 /** A terminal's output as Ink writes it in debug mode: every frame whole. */
 class FakeStdout extends EventEmitter {
@@ -65,14 +66,6 @@ function startOnFakeTerminal(seat: InkSeat): { stdin: FakeStdin; stdout: FakeStd
   return { stdin, stdout };
 }
 
-async function until(what: string, ready: () => boolean, ms = 3000): Promise<void> {
-  const end = Date.now() + ms;
-  while (!ready()) {
-    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
-}
-
 test("typed lines become intents by what the table waits for", () => {
   const turn = { kind: "combat_turn" } as const;
   assert.deepEqual(readLine(" 3 ", turn), { kind: "intent", intent: { kind: "option", number: 3 } });
@@ -101,7 +94,7 @@ test("typed lines become intents by what the table waits for", () => {
 
 test("each event reads as lines: rolls inline with their ids, options numbered, info indented", () => {
   assert.deepEqual(eventLines({ kind: "engine", text: "Bren attacks goblin_1 with Longsword: 17, hit.", roll: "r4", seq: 9 }), [
-    { tone: "engine", text: "  [r4] Bren attacks goblin_1 with Longsword: 17, hit." },
+    { tone: "engine", text: "  Bren attacks goblin_1 with Longsword: 17, hit. [r4]" },
   ]);
   assert.deepEqual(eventLines({ kind: "narration", speaker: "dm", text: "The reeve frowns.", to: "bren" }), [{ tone: "dm", text: "DM (to you): The reeve frowns." }]);
   assert.deepEqual(eventLines({ kind: "speech", speaker: "maren", text: "Easy now." }), [{ tone: "speech", text: "Maren: Easy now." }]);
@@ -189,7 +182,7 @@ test("with --verbose the engine lines a narration covers fold under it, dim and 
     [
       ["dm", "DM: The arrow glances off Torva's pauldron."],
       ["engine", "    goblin_1's turn."],
-      ["engine", "    [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss."],
+      ["engine", "    goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]"],
     ],
   );
   // The next narration carries on the same message.
@@ -202,7 +195,7 @@ test("the human's own lines, and any no narration covered before a decision, sho
   const texts = () => seat.getView().lines.map((l) => l.text);
   seat.show({ kind: "narration", speaker: "dm", text: "The goblin snarls." });
   seat.show({ kind: "engine", text: "bren rolls an attack roll vs goblin_1: 1d20 (14) = 19, hit.", roll: "r50", seq: 60, own: true });
-  assert.deepEqual(texts(), ["DM: The goblin snarls.", "", "  [r50] bren rolls an attack roll vs goblin_1: 1d20 (14) = 19, hit."]);
+  assert.deepEqual(texts(), ["DM: The goblin snarls.", "", "  bren rolls an attack roll vs goblin_1: 1d20 (14) = 19, hit. [r50]"]);
   // The human's own line doesn't take others' lines with it: they still wait for their narration.
   goblinTurn(seat);
   seat.show({ kind: "engine", text: "bren's turn ends.", seq: 61, own: true });
@@ -212,19 +205,19 @@ test("the human's own lines, and any no narration covered before a decision, sho
   // The DM's narration failed (a fallback): the lines show alone.
   goblinTurn(seat);
   seat.unnarrated();
-  assert.deepEqual(texts().slice(-3), ["", "  goblin_1's turn.", "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss."]);
+  assert.deepEqual(texts().slice(-3), ["", "  goblin_1's turn.", "  goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]"]);
   // So does a decision.
   goblinTurn(seat);
   seat.show({ kind: "reaction", summary: "goblin_1 leaves your reach.", options: ["Opportunity Attack"] });
-  assert.deepEqual(texts().slice(-2), ["  goblin_1's turn.", "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss."]);
+  assert.deepEqual(texts().slice(-2), ["  goblin_1's turn.", "  goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]"]);
   // The reaction itself stands in the action zone until it is answered (AGT-69), not in the story.
   assert.equal(seat.getView().reaction?.summary, "goblin_1 leaves your reach.");
   goblinTurn(seat);
   void seat.ask({ kind: "explore" });
-  assert.equal(texts().at(-1), "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss.");
+  assert.equal(texts().at(-1), "  goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]");
   goblinTurn(seat);
   seat.show({ kind: "options", lines: ["1. Longsword: goblin_1"], choices: [] });
-  assert.equal(texts().at(-1), "  [r234] goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss.");
+  assert.equal(texts().at(-1), "  goblin_1 rolls an attack roll vs torva: 1d20 (8) = 12, miss. [r234]");
 });
 
 test("the seat answers a prompt with what was typed, queues commands typed while busy, and stops on Ctrl+C", async () => {
@@ -271,14 +264,14 @@ test("on a terminal, keys reach the seat and the screen shows the lines, the pro
     seat.show({ kind: "engine", text: "goblin_1 attacks Bren with Scimitar: 9, miss.", roll: "r7", seq: 12 });
     seat.show({ kind: "options", lines: ["1. Longsword: goblin_1", "2. End turn"], choices: [] });
     const asked = seat.ask({ kind: "combat_turn" });
-    await until("the prompt", () => stdout.last.includes("Your turn: an option number, or what Bren does in words."));
-    assert.match(stdout.last, /\[r7\] goblin_1 attacks Bren with Scimitar: 9, miss\./);
+    await until("the prompt", () => stdout.last.includes("Your turn: an option number, or what Bren does in words."), () => stdout.last);
+    assert.match(stdout.last, /goblin_1 attacks Bren with Scimitar: 9, miss\. \[r7\]/);
     assert.match(stdout.last, /1\. Longsword: goblin_1/);
     stdin.press("1");
-    await until("the typed key", () => stdout.last.includes("> 1"));
+    await until("the typed key", () => stdout.last.includes("> 1"), () => stdout.last);
     stdin.press("\r");
     assert.deepEqual(await asked, { kind: "option", number: 1 });
-    await until("the echo", () => stdout.last.includes("The table is playing"));
+    await until("the echo", () => stdout.last.includes("The table is playing"), () => stdout.last);
   } finally {
     seat.stop();
   }
@@ -319,7 +312,7 @@ test("on the real loop, the terminal seat plays Bren's commands, and its engine 
     }
     // So is the log the /log overlay showed.
     assert.doesNotMatch(overlays.find((o) => o.title === "Log")!.text, /\bDC\b|\bagainst\b/);
-    await until("the last frame", () => stdout.last.includes("The run is over: the human quit"));
+    await until("the last frame", () => stdout.last.includes("The run is over: the human quit"), () => stdout.last);
   } finally {
     unsubscribe();
     seat.stop();
@@ -380,9 +373,34 @@ test("a potion's quick picks are you and your allies, never a hostile", async ()
     assert.ok(quick.length > 0, "a potion line to take at once");
     assert.ok(quick.every((c) => c.target?.side !== "hostile"), quick.map((c) => c.label).join("; "));
     assert.ok(quick.some((c) => c.target?.handle === "bren"), "you can drink it yourself");
-    // Attacks still offer hostiles first.
-    const attack = choices.find((c) => c.label.startsWith("Longsword attack →"));
+    // Attacks, a fight's own list (out of a fight they stay off it), still offer hostiles first.
+    assert.equal(choices.some((c) => c.label.startsWith("Longsword attack")), false);
+    const attack = buildChoices(listed.result as LegalActionsResult, undefined, true).find((c) => c.label.startsWith("Longsword attack →"));
     assert.equal(attack?.target?.side, "hostile");
+  } finally {
+    t.close();
+  }
+});
+
+test("on the road at full Hit Points the list has no Second Wind and one potion line that opens its targets (AGT-114 d)", async () => {
+  const t = await testTable({ seed: 1 });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    const listed = await t.engine.request("bren", { cmd: "legal_actions", actor: "bren" });
+    assert.ok(listed.result?.cmd === "legal_actions");
+    const result = listed.result as LegalActionsResult;
+    const hurt = buildChoices(result, undefined, false);
+    assert.ok(hurt.some((c) => c.about?.id === "fighter/second_wind"), "hurt: Second Wind is offered");
+    assert.ok(hurt.filter((c) => c.about?.id === "use/potion_of_healing").length > 1, "hurt: a potion line per quick target");
+    const full = buildChoices(result, undefined, false, undefined, true);
+    assert.equal(full.some((c) => c.about?.id === "fighter/second_wind"), false, full.map((c) => c.label).join("; "));
+    const potion = full.filter((c) => c.about?.id === "use/potion_of_healing");
+    assert.equal(potion.length, 1, potion.map((c) => c.label).join("; "));
+    assert.equal(potion[0]!.act, undefined, "the line opens its targets");
+    assert.ok(potion[0]!.next && potion[0]!.next.length > 0 && potion[0]!.next.every((c) => c.target?.side !== "hostile"));
+    assert.ok(!full.some((c) => /another/i.test(c.label)), full.map((c) => c.label).join("; "));
+    // In a fight nothing changes.
+    assert.ok(buildChoices(result, undefined, true, undefined, true).some((c) => c.about?.id === "fighter/second_wind"));
   } finally {
     t.close();
   }
@@ -518,14 +536,14 @@ test("on a terminal, the command picker stands over the input row (AGT-82)", asy
   try {
     void seat.ask({ kind: "explore" });
     stdin.press("/");
-    await until("the picker", () => stdout.last.includes("Commands · ↑/↓ move"));
+    await until("the picker", () => stdout.last.includes("Commands · ↑/↓ move"), () => stdout.last);
     assert.match(stdout.last, /❯ \/options +your numbered options now/);
     assert.match(stdout.last, / {2}\/sheet +your character sheet/);
     stdin.press("sh");
-    await until("the narrowed picker", () => !stdout.last.includes("/options"));
+    await until("the narrowed picker", () => !stdout.last.includes("/options"), () => stdout.last);
     assert.match(stdout.last, /❯ \/sheet/);
     stdin.press("\u001b");
-    await until("the picker closed", () => !stdout.last.includes("Commands · ↑/↓ move"));
+    await until("the picker closed", () => !stdout.last.includes("Commands · ↑/↓ move"), () => stdout.last);
     assert.match(stdout.last, /> \/sh/);
   } finally {
     seat.stop();

@@ -4,6 +4,7 @@
 // comes from the engine's current `awaiting`. No tool input has a viewer, actor or prompt id field,
 // and the commands are built from named fields only, so extra input fields go nowhere.
 import type {
+  Ability,
   Aim,
   CheckSpec,
   Command,
@@ -18,6 +19,7 @@ import type {
   MoveTarget,
   Placement,
   Response,
+  Skill,
   State,
   TimeSpan,
   Viewer,
@@ -25,6 +27,7 @@ import type {
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
 import type { NoteKind, TableState } from "./state.ts";
 import type { RoadStep, ToolOutcome } from "./types.ts";
+import { takesMove } from "./choices.ts";
 import type { StatBlockEntry } from "../pack/adventure.ts";
 
 /** What an agent may give `submit`: an option, and its targets, variant or aim. */
@@ -47,7 +50,7 @@ function refusal(response: Response): string {
 /** Commands that change the session. The rest only read it. */
 const CHANGES = new Set<Command["cmd"]>([
   "submit", "move", "end_turn", "react", "request_check", "help", "short_rest", "start_combat", "end_combat", "spawn", "load_scene",
-  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "pass_time", "choose_card", "level_up", "answer_level_up", "scout",
+  "place_creature", "start_fight", "give", "steal", "loot", "travel", "rest_night", "pass_time", "choose_card", "own_move", "level_up", "answer_level_up", "scout",
 ]);
 
 /**
@@ -57,10 +60,10 @@ const CHANGES = new Set<Command["cmd"]>([
  * the decision. Once a decision is spent, no further change reaches the engine and the loop falls
  * back. A seat's changes go one at a time, so each sees what the ones before it spent.
  */
-/** A fight move goes as far as the turn's movement allows (API-35); the answer says when it stopped short. */
+/** A move ends on the last free spot it can reach (API-35, ENG-21); the answer says when it stopped short. */
 export function movedText(r: Response): string {
   if (r.result?.cmd !== "move") return "moved";
-  const short = r.result.reached ? "" : "; stopped short, as far as movement goes: not there yet";
+  const short = r.result.reached ? "" : r.result.taken ? "; stopped short: someone already stands there" : "; stopped short, as far as movement goes: not there yet";
   return `moved ${Math.round(r.result.moved_ft)} ft${short}${r.result.provoked.length ? `; provoked ${r.result.provoked.join(", ")}` : ""}`;
 }
 
@@ -281,8 +284,48 @@ export class PlayerTools {
   }
 
   /** Gives this character's word on the road card waiting: advice, a vote or the owner's call. */
-  chooseCard(choice: string): Promise<ToolOutcome> {
-    return this.answer(send(this.table, this.me, { cmd: "choose_card", actor: this.me, choice }, () => `you said: ${choice}`));
+  async chooseCard(choice: string): Promise<ToolOutcome> {
+    const given = await send(this.table, this.me, { cmd: "choose_card", actor: this.me, choice }, () => `you said: ${choice}`);
+    // Only a word the engine took is a word given: a refused one leaves the seat's own words standing.
+    if (given.ok) this.chose = true;
+    return this.answer(given);
+  }
+
+  /** Whether this seat called `choose_card` since the loop last took its words. */
+  private chose = false;
+  /** Its own words on the road card, for the loop to take to the DM once the wake returns (AGT-99). */
+  private ownWords: string | undefined;
+  /** How many own moves fell on the card on the table; the loop sets it before a card wake (decision 0081). */
+  ownMovesFell = 0;
+
+  /**
+   * Says what this character does on the road card instead of a listed choice (AGT-99): the words
+   * are only kept here; once the wake returns the loop takes them to the DM, who may make them an
+   * own move on the card. Refused while an own move is among the card's choices, and once
+   * `AI_FALLS_MAX` own moves have fallen on it (decision 0081: a table rule for AI seats).
+   */
+  async ownMove(words: string): Promise<ToolOutcome> {
+    const r = this.table.observe(await this.table.engine.request(this.me, { cmd: "get_state" }));
+    const card = r.result?.cmd === "get_state" && r.result.state.view === "player" ? r.result.state.world?.card : undefined;
+    if (!card) return this.answer(notNow("no road card waits for your word"));
+    if (!takesMove(card)) return this.answer(notNow("the card already has an own move: give your word on it with choose_card"));
+    if (this.ownMovesFell >= AI_FALLS_MAX) return this.answer(notNow(`${this.ownMovesFell} own moves came to nothing on this card: give your word on a written choice with choose_card`));
+    if (card.said.some((s) => s.actor === this.me)) return this.answer(notNow("you have already given your word on this card"));
+    if (!words.trim()) return this.answer(notNow("say in one sentence what your character does"));
+    this.ownWords = words.trim();
+    return this.answer({ ok: true, text: "your words are said; the table answers them next" });
+  }
+
+  /**
+   * The words this seat gave with `own_move` since the loop last asked, and whether it also called
+   * `choose_card`, and forgets both. A seat that did both has spoken: its words are only speech
+   * (design §1.8).
+   */
+  takeOwnMove(): { words: string; chose: boolean } | undefined {
+    const taken = this.ownWords === undefined ? undefined : { words: this.ownWords, chose: this.chose };
+    this.ownWords = undefined;
+    this.chose = false;
+    return taken;
   }
 
   /** Opens a level-up when the sheet says it can (M9, AGT-80); the answer is the first choice, if any. */
@@ -365,6 +408,10 @@ export class HandTools extends PlayerTools {
   }
 
   override chooseCard(): Promise<ToolOutcome> {
+    return this.wait();
+  }
+
+  override ownMove(): Promise<ToolOutcome> {
     return this.wait();
   }
 
@@ -582,8 +629,18 @@ export class DmTools {
   private readonly reminded = new Set<string>();
   /** A scene loaded in the wake running: its opening is the next wake's, so no narration follows it (M10 P1). */
   private loadedThisWake = false;
+  /** Whether this wake's `pick_card` was taken (AGT-100): a pick wake narrates only after it. */
+  picked = false;
   /** The DM's last line to the whole table, for the next scene's opening to continue from (M10 P1). */
   lastLine: string | undefined;
+  /** A player's words on the road card a `card_words` wake answers (AGT-99): the loop sets them for the wake. */
+  cardWords: { actor: Handle; words: string; answerOnly?: string } | undefined;
+  /** The words whose dropped move was logged, so a retry logs it no more. */
+  private droppedFor: DmTools["cardWords"];
+  /** The own move the wake put on the card, if one did. */
+  ownMoveMade = false;
+  /** The narration that answered the words, once one showed. */
+  cardAnswer: string | undefined;
 
   constructor(table: TableState, passes?: ScenePasses) {
     this.table = table;
@@ -606,6 +663,7 @@ export class DmTools {
   /** A DM wake begins: what the wake before it loaded no longer holds its narration back. */
   startWake(): void {
     this.loadedThisWake = false;
+    this.picked = false;
   }
 
   private async sceneHandles(): Promise<Handle[]> {
@@ -763,7 +821,7 @@ export class DmTools {
    * what it carries come from the entry, never from the DM, who names only the entry, a new handle
    * and where it stands (a place, or beside a creature). The engine finds the nearest free spot.
    */
-  async placeCreature(entry: string, handle: string, where: { place?: string; near?: string }): Promise<ToolOutcome> {
+  async placeCreature(entry: string, handle: string, where: { place?: string; near?: string }, name?: string): Promise<ToolOutcome> {
     const list = this.passes?.statBlocks ?? [];
     const found = list.find((s) => s.id === entry);
     if (!found) {
@@ -779,7 +837,9 @@ export class DmTools {
       if (!beside) return { ok: false, text: `no creature ${where.near} in this scene` };
       at = { kind: "point", point: beside.position_ft };
     } else return { ok: false, text: "give a place or a creature to stand beside" };
-    return send(
+    const given = name?.trim();
+    const called = given || found.name;
+    const placed = await send(
       this.table,
       "dm",
       {
@@ -788,11 +848,21 @@ export class DmTools {
         monster: found.monster,
         side: found.side,
         at,
-        ...(found.name ? { name: found.name } : {}),
+        ...(called ? { name: called } : {}),
         ...(found.carries ? { carries: found.carries } : {}),
       },
       () => (this.table.inCombat ? `${handle} is here and joins the fight; initiative rolled` : `${handle} is here`),
+      // A name reaches every view, so it passes the narration guard: no game statistic in it.
+      async () => {
+        const refused = given ? this.table.narrationRefused(given) : undefined;
+        if (!refused) return undefined;
+        this.table.retry("dm", `dm: place_creature name refused: ${refused}`);
+        return { ok: false, retryable: true, text: `Not placed: the name ${refused}. A name is what the table calls it, nothing more.` };
+      },
     );
+    // The seat calls the creature by the DM's name, never by its handle (run 2026-11-13: «pickler»).
+    if (placed.ok && given) this.table.names.learn(handle, given);
+    return placed;
   }
 
   /**
@@ -817,7 +887,16 @@ export class DmTools {
     if (offered.length === 0) return notNow("no road cards wait for your pick");
     if (!offered.some((c) => c.id === card)) return notNow(`${card} is not one of the offered cards: ${offered.map((c) => c.id).join(", ")}`);
     if (!reason.trim()) return notNow("say why in one line");
-    return send(this.table, "dm", { cmd: "pick_card", card, reason: reason.trim() }, () => `${card} is on the table; the table hears it next`);
+    // The card as drawn and the scout's look (AGT-100): the narration that opens it comes after this result.
+    const picked = await send(this.table, "dm", { cmd: "pick_card", card, reason: reason.trim() }, (r) => {
+      const look = r.events.find((e) => e.kind === "scout_looked");
+      const scout = look?.kind === "scout_looked" ? (look.saw ? ` ${look.actor} scouted ahead and saw it first.` : ` ${look.actor} scouted ahead and missed it.`) : "";
+      const state = r.result?.cmd === "pick_card" && r.result.state.view === "dm" ? r.result.state : undefined;
+      const drawn = state?.world?.card;
+      return drawn ? `${card} is on the table. ${cardDrawnLine(drawn)}${scout} Now open it with narrate.` : `${card} is on the table`;
+    });
+    if (picked.ok) this.picked = true;
+    return picked;
   }
 
   /** Out of combat: one creature hands another, within 5 feet, coin or one carried item (ITM-6). */
@@ -847,11 +926,28 @@ export class DmTools {
   }
 
   /** A fight among creatures present that no scene encounter fits (API-34): no surprise, no early end. */
-  startFight(participants: string[]): Promise<ToolOutcome> {
-    if ((this.passes?.statBlocks ?? []).length === 0) {
-      return Promise.resolve(notNow("this adventure holds no fights beyond its scenes' encounters"));
-    }
-    return send(this.table, "dm", { cmd: "start_fight", participants: [...participants] }, () => "the fight is on; initiative rolled");
+  async startFight(participants: string[]): Promise<ToolOutcome> {
+    if ((this.passes?.statBlocks ?? []).length === 0) return notNow("this adventure holds no fights beyond its scenes' encounters");
+    // A neutral named in the fight turns hostile (API-60). The engine's other refusals of a
+    // fight's sides are not retryable and would end the DM's turn with its narration (run
+    // 2026-11-13), so they are answered here, as a retry, before the engine sees them.
+    return send(this.table, "dm", { cmd: "start_fight", participants: [...participants] }, () => "the fight is on; initiative rolled", async () => {
+      const state = await this.dmState();
+      if (!state) return undefined;
+      const sides = new Map(state.creatures.map((c) => [c.handle, c.side]));
+      const twice = participants.find((h, i) => participants.indexOf(h) !== i);
+      // A handle not in the scene goes on to the engine, which names it (unknown_creature).
+      if (!twice && participants.some((h) => !sides.has(h))) return undefined;
+      const fighting = participants.map((h) => sides.get(h));
+      const why = twice
+        ? `${twice} is listed twice`
+        : !fighting.includes("party") || !fighting.some((side) => side === "hostile" || side === "neutral")
+          ? "a fight needs someone of the party and someone against them"
+          : undefined;
+      if (!why) return undefined;
+      this.table.retry("dm", `dm: start_fight refused: ${why}`);
+      return { ok: false, retryable: true, text: `No fight: ${why}. Name everyone in it again, or answer in the story without a fight, then narrate.` };
+    });
   }
 
   spawn(spawn_id: string): Promise<ToolOutcome> {
@@ -971,11 +1067,50 @@ export class DmTools {
     return { ok: true, text: `${actor} may take one action now` };
   }
 
+  /**
+   * The `card_words` wake's one answer (AGT-99, design §1.8): with `move`, the words of the seat
+   * that woke it become an own move on the card, and the narration shows once the engine took it;
+   * a refusal shows nothing and answers with the engine's reason, so the DM can correct it. Without
+   * `move`, only the narration. While a move is among the card's choices the loop says so, and a
+   * `move` is not sent: the words are only answered, and no retry is spent on `own_move_taken`
+   * (decisions 0079, 0081).
+   */
+  async ownMoveOrAnswer(narration: string, move?: { ability: Ability; skill: Skill; dc: number; success: string; failure?: string }): Promise<ToolOutcome> {
+    const words = this.cardWords;
+    if (!words) return notNow("no player's words on a road card wait for your answer");
+    const dropped = Boolean(move && words.answerOnly);
+    if (dropped) {
+      // Logged once per wake (each wake sets new cardWords): a retry drops the same move again.
+      if (this.droppedFor !== words) this.table.log("system", `${words.answerOnly}: ${words.actor}'s words are only answered`, "table");
+      this.droppedFor = words;
+      move = undefined;
+    }
+    // One move per wake: once it is on the card, a retry only rewrites the narration.
+    const already = move !== undefined && this.ownMoveMade;
+    if (move && !this.ownMoveMade) {
+      const made = await send(
+        this.table,
+        "dm",
+        { cmd: "own_move", actor: words.actor, text: words.words, ability: move.ability, skill: move.skill, dc: move.dc, success: move.success, ...(move.failure ? { failure: move.failure } : {}) },
+        () => `${words.actor}'s own move is on the card`,
+      );
+      if (!made.ok) return made;
+      this.ownMoveMade = true;
+    }
+    const said = await this.narrate(narration);
+    if (!said.ok) return said;
+    this.cardAnswer = narration;
+    if (dropped) return { ...said, text: `${said.text}; ${words.answerOnly}, so this move is not sent: the words are only answered` };
+    return already ? { ...said, text: `${said.text}; the own move you made first stays on the card, this move is not sent` } : said;
+  }
+
   async narrate(text: string, to?: string): Promise<ToolOutcome> {
     // Runs 18-45 and 17-35 opened 4 of 5 scenes twice: once after load_scene, once on scene_open.
     // In the DM's turn, after every change it started: a load_scene sent in parallel lands first.
     return this.table.oneAtATime("dm", async () => {
       if (this.loadedThisWake) return notNow("the next scene is loaded; its opening comes with your next wake");
+      // A pick wake opens the card it picked (AGT-100): the narration never runs ahead of the pick.
+      if (this.table.dmWake === "pick" && !this.picked) return notNow("pick the card first with pick_card, then narrate its opening");
       const said = await this.table.narrate(text, to);
       if (said.ok && !to) this.lastLine = text;
       return said;
@@ -1010,4 +1145,17 @@ export class DmTools {
     if (said.ok) this.table.end("the adventure is over");
     return said.ok ? { ok: true, text: "the adventure is over" } : said;
   }
+}
+
+/** How many own moves may fall on a card before an AI seat is asked for a written choice only (decision 0081, rule 5). */
+export const AI_FALLS_MAX = 2;
+
+/** The own-move rule (decision 0079, design §1.8): in the road section and in the `card_words` wake. */
+export const OWN_MOVE_RULE =
+  "Answer with own_move_or_answer. First, when the words simply are one of the card's choices, say so in the scene and let the card wait for that choice, with no move: you never decide a card for a player. Otherwise, if one of the card's choices is what the words bring when they work, make them a move: the check they call for, that choice as success, and your narration. Name a failure only when another choice is plainly what happens when the attempt fails, never one that breaks a custom and never a deliberate act the words did not ask for; with no failure named, a failed roll runs no choice and the move is spent. If no choice is what the words would bring, give only the narration, one or two sentences, and the card waits. A success brings a fight only when the words asked for one. Your narration answers the attempt only, never how it turns out: nobody in the scene agrees to it, refuses it or gives way, and nothing is won or lost by it; the engine's roll and the card's choices decide that. The scene still answers: a person on the card, if there is one, says what the plan would cost them or asks something back, and a companion may speak. When you answer a player's words with own_move_or_answer, never call remember for how the attempt turned out.";
+
+/** A road card as the DM drew it, for a tool's result: its words and its choices (AGT-100). */
+export function cardDrawnLine(card: { text: string; choices: { id: string; text: string; keeps?: string[] | null; breaks?: string[] | null }[] }): string {
+  const choice = (c: (typeof card.choices)[number]) => `${c.id}: ${c.text}${c.keeps?.length ? ` (keeps ${c.keeps.join(", ")})` : ""}${c.breaks?.length ? ` (breaks ${c.breaks.join(", ")})` : ""}`;
+  return `The card: "${card.text}"\nIts choices: ${card.choices.map(choice).join(" | ")}`;
 }

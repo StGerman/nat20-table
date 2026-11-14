@@ -994,11 +994,12 @@ impl Session {
         }
         let result = self.game_mut()?.move_to(actor, to, partial);
         self.after_decision(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
-        let (moved_ft, provoked, reached) = result.expect("errors returned above");
+        let (moved_ft, provoked, reached, taken) = result.expect("errors returned above");
         Ok(CommandResult::Move {
             moved_ft,
             provoked,
             reached,
+            taken,
         })
     }
 

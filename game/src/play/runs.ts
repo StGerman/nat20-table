@@ -4,6 +4,8 @@
 //   npm run runs:finish -- <run-dir>    runs the stages whose files are missing (the audit, the
 //                                       narration check, the report), then the verdict
 //   npm run runs:upload [-- <run-dir>]  uploads the folder to the runs repo, or every folder in runs/
+//   npm run runs:seat -- <run-dir>      prints what a seat would have drawn in an all-AI run, from
+//                                       the opening to its first own-move card (AGT-103: run 1's Vera read)
 // The verdict needs nothing but the folder, so a thread can recompute it once Stas has answered the
 // flags in confirmations.json.
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
@@ -14,6 +16,7 @@ import { packOfRun, readRunRecord } from "./record.ts";
 import { audit, refuseApiKey, timingLines } from "./run.ts";
 import { UPLOAD_SETUP, uploadRun, uploadTarget } from "./upload.ts";
 import { AUDIT_JSON, NARRATION_CHECK, writeVerdict } from "./verdict.ts";
+import { seatReplay } from "./exit.ts";
 
 const [stage, dir] = process.argv.slice(2);
 if (stage === "upload") {
@@ -33,8 +36,12 @@ if (stage === "upload") {
   }
   process.exit(failed === 0 ? 0 : 1);
 }
+if (stage === "seat" && dir && existsSync(dir)) {
+  console.log(seatReplay(dir).join("\n"));
+  process.exit(0);
+}
 if (!dir || !["verdict", "finish"].includes(stage) || !existsSync(dir)) {
-  console.error("usage: npm run runs:verdict -- <run-dir>, npm run runs:finish -- <run-dir>, or npm run runs:upload [-- <run-dir>]");
+  console.error("usage: npm run runs:verdict -- <run-dir>, npm run runs:finish -- <run-dir>, npm run runs:seat -- <run-dir>, or npm run runs:upload [-- <run-dir>]");
   process.exit(2);
 }
 const pack = packOfRun(dir);

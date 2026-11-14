@@ -139,7 +139,7 @@ export function yourLine(event: Event, human: Handle): string | undefined {
       case "inn":
         return `You pay ${coins} for the inn.`;
       case "toll":
-        return `You pay ${coins} toll.`;
+        return `You pay ${coins}.`;
       case "loot":
       case "theft":
         return to ? `${to} takes ${coins} of yours.` : `You lose ${coins}.`;
@@ -312,7 +312,7 @@ export function mapLines(world: WorldPlayer, form: "wide" | "pane" = "wide"): st
 const signed = (n: number) => (n < 0 ? `${n}` : `+${n}`);
 
 /** An id as the human reads it: `animal_handling` is "Animal Handling", `fighter` is "Fighter". */
-const titled = (id: string) =>
+export const titled = (id: string) =>
   id
     .split(/[_.]/)
     .map((w, i) => (i > 0 && w === "of" ? w : w.charAt(0).toUpperCase() + w.slice(1)))
