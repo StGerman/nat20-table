@@ -77,6 +77,12 @@ pub enum EventKind {
         /// The creatures that surrendered, in the encounter's order.
         handles: Vec<Handle>,
     },
+    /// Neutral creatures turned hostile: the DM named them in a `start_fight`, so the party has
+    /// attacked them or they the party. They are now `hostile`, and stay so after the fight.
+    TurnedHostile {
+        /// The creatures that turned, in the order `start_fight` listed them.
+        handles: Vec<Handle>,
+    },
     /// Creatures fled: the DM ended the fight with `end_combat{fled}` while their encounter
     /// allowed it. They have left the scene; creatures of their side at 0 Hit Points stay where
     /// they fell.

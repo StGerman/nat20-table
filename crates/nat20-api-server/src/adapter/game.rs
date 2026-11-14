@@ -101,6 +101,7 @@ const MAX_SCRIPTED_ACTIONS_PER_TURN: usize = 4;
 
 const METERS_PER_FOOT: f32 = 0.3048;
 
+#[derive(Clone)]
 struct SceneCreature {
     handle: String,
     entity: Entity,
@@ -506,17 +507,7 @@ impl Game {
 
         let creatures: Vec<SceneCreature> = carried.into_iter().chain(spawned).collect();
         if failed.is_none() {
-            let all: Vec<SceneCreature> = creatures
-                .iter()
-                .chain(&trial)
-                .map(|c| SceneCreature {
-                    handle: c.handle.clone(),
-                    entity: c.entity,
-                    side: c.side,
-                    control: c.control,
-                    pregen: c.pregen.clone(),
-                })
-                .collect();
+            let all: Vec<SceneCreature> = creatures.iter().chain(&trial).cloned().collect();
             failed = check_sides(&game.engine, &all).err();
         }
         rollback(&mut game, &trial);
@@ -1943,16 +1934,16 @@ impl Game {
                     format!("{} is down and cannot join a fight.", handle.0),
                 ));
             }
-            if self.side_of(entity) == Some(Side::Neutral) {
-                return Err(error(
-                    ErrorCode::BadRequest,
-                    format!("{} is neutral and takes no side in a fight.", handle.0),
-                ));
-            }
         }
+        // A neutral in the fight is the one attacked, or the one attacking (API-60): it turns
+        // hostile, so it counts as hostile here.
         let sides: Vec<Option<Side>> = participants
             .iter()
             .map(|h| self.entity(&h.0).ok().and_then(|e| self.side_of(e)))
+            .map(|side| match side {
+                Some(Side::Neutral) => Some(Side::Hostile),
+                other => other,
+            })
             .collect();
         if !sides.contains(&Some(Side::Party)) || !sides.contains(&Some(Side::Hostile)) {
             return Err(error(
@@ -1967,6 +1958,7 @@ impl Game {
             })
             .expect("some number is free");
         let id = format!("fight_{n}");
+        self.turn_hostile(participants);
         self.scene.encounters.push(Encounter {
             id: id.clone(),
             participants: participants.to_vec(),
@@ -1979,6 +1971,40 @@ impl Game {
             self.scene.encounters.pop();
         }
         started
+    }
+
+    /// Turns the neutral creatures among `handles` hostile (API-60): their side, their attitudes
+    /// toward every other creature of the scene, and a public `turned_hostile`. They stay hostile.
+    fn turn_hostile(&mut self, handles: &[Handle]) {
+        let turned: Vec<Handle> = handles
+            .iter()
+            .filter(|h| self.entity(&h.0).ok().and_then(|e| self.side_of(e)) == Some(Side::Neutral))
+            .cloned()
+            .collect();
+        if turned.is_empty() {
+            return;
+        }
+        for creature in &mut self.scene.creatures {
+            if turned.iter().any(|h| h.0 == creature.handle) {
+                creature.side = Side::Hostile;
+                // A creature that surrendered and fights again is no longer a captive to loot.
+                self.yielded.remove(&creature.entity);
+            }
+        }
+        let all = self.scene.creatures.clone();
+        for c in all
+            .iter()
+            .filter(|c| turned.iter().any(|h| h.0 == c.handle))
+        {
+            for other in all.iter().filter(|o| o.entity != c.entity) {
+                self.align_attitudes(c, other);
+            }
+        }
+        let round = self.round();
+        self.pending.push(Pending::public(
+            round,
+            EventKind::TurnedHostile { handles: turned },
+        ));
     }
 
     /// Places the creatures of the scene spawn `spawn_id`, declared `when: dm`. During a fight
@@ -2077,19 +2103,8 @@ impl Game {
             }
         }
         if failed.is_none() {
-            let all: Vec<SceneCreature> = self
-                .scene
-                .creatures
-                .iter()
-                .chain(&new)
-                .map(|c| SceneCreature {
-                    handle: c.handle.clone(),
-                    entity: c.entity,
-                    side: c.side,
-                    control: c.control,
-                    pregen: c.pregen.clone(),
-                })
-                .collect();
+            let all: Vec<SceneCreature> =
+                self.scene.creatures.iter().chain(&new).cloned().collect();
             if find_room {
                 // A creature the DM places takes the side it is placed on: a townsfolk Guard
                 // placed hostile is hostile to the party (MON-11), whatever its faction says.

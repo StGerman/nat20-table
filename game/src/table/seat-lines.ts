@@ -212,6 +212,8 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
       return `Бой! Порядок ходов: ${n.list(event.participants)}.`;
     case "surrendered":
       return `Сдаются: ${n.list(event.handles)}.`;
+    case "turned_hostile":
+      return `Теперь враги: ${n.list(event.handles)}.`;
     case "fled":
       return `Бегут с поля боя: ${n.list(event.handles)}.`;
     case "combat_over":
