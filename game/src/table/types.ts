@@ -127,6 +127,11 @@ export interface Seat {
    */
   unnarrated?(): void;
   /**
+   * The loop is answering a command the human typed (AGT-103), or is done with it: the info,
+   * options and status lines the seat draws meanwhile are that command's answer.
+   */
+  answering?(on: boolean): void;
+  /**
    * Response suggestions for the prompt that is open (AGT-49): a call started (`cancel` drops it,
    * as the human's first key does), its three rows, or none (timed out, failed, or the prompt
    * closed). Not a TableEvent and not recorded: only a sent line says it came from one.
