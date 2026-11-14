@@ -17,7 +17,7 @@ A success gives the party nothing a number would not: the named choice runs in f
 
 ## Options
 
-### A. The failure choice is optional; with none, a failed roll leaves the card waiting (chosen)
+### A. The failure choice is optional; with none, a failed roll leaves the card waiting (proposed by Lev; accepted when Stas merges)
 The move names a check and a success choice. If the vote goes to it and the roll fails (or the proposer is down, or the engine cannot roll), no choice runs, the card is decided on a written choice (at once if the words left settle it), and the move is spent.
 - Pro: the bog-wife's card takes the move; a failed roll never acts for the player, by structure and not by prompt; moves that name a failure keep their teeth and their fixtures.
 - Con: the card's decision is no longer final at the vote for such a move: the server rolls before it logs `card_resolved`. A failed attempt costs only the move.
@@ -62,7 +62,7 @@ A, with the same deed and no result in it, and answers only for words no choice 
 - 0068's Revisit line "a reader for the deed, which needs the player's words or the result in it" narrows to the words: the deed carries no result (Stas, amendment §15 question 1).
 - The DM prompt's `card_words` rule and the `remember` tool's description change; no code can test what a narration rules, so the run report lists every answer that made no move, with the words and any fact the DM kept in that wake.
 - Exit row 2 counts a move that fell once the card is settled on a written choice, at once by the words left or later after the re-ask (Stas, amendment §15 question 2): a departure from scope §4 row 2 (design §10 item 12). Design §8 gives the exact reading, with the terms review added after his answer (amendment §15).
-- A fall leaves nothing in the world's record that a success does not: the deed is the same, and only the run's own log (`own_move_ran` with `choice: null`) tells them apart. What a fall brings is the roll, the DM's one or two sentences and the written choice the table then picks (amendment §15.1). Zoya folds her board row for a fall into the `own_move_<card>` row, which stays owed (amendment §16, follow-up).
+- The move leaves the same record after a fall as after a success: the deed is the same, and only the run's own log (`own_move_ran` with `choice: null`) tells them apart. What differs in the world is the written choice the table then picks, with its own deeds and customs. What a fall brings is the roll, the DM's one or two sentences and the written choice the table then picks (amendment §15.1). Zoya folds her board row for a fall into the `own_move_<card>` row, which stays owed (amendment §16, follow-up).
 - The seat gains two lines (the move did not work after a roll; it could not be tried with `roll: null`), shown to the Blades the card waits for and a player owner after an own move fails and the card still waits (not when the words left settle it).
 
 ## Revisit when
