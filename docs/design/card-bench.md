@@ -77,7 +77,7 @@ The report is the DM's side of the table, like a run's analysis. It is never sho
 **Cards.** Three or four:
 
 - the two new Wendford arrival cards of MAP-20, which the row `m13-carried` rests on: the first time a live DM and a person's words meet one of them is otherwise Stas's run 2. Each reads `wenna_saved` and its own yard deed (`snitt_yielded` or `yard_to_the_end`), and one Mill run writes only one of the two yard deeds, so each card needs its own roster;
-- `bog_wifes_toll` and `salt_on_credit`, with the plans Stas said on them in run 01:42. No live run is known to have tried those plans since decision 0079 changed what an own move may be: the one run with Stas on such a build (17:19 on 2026-11-14, not an exit run, decision 0082) is known here from its live notes, which record his words at the Millbeck bridge only; its run folder is not in nat20-runs at 65c0e7c. Their rules change again under decision 0083 (open table #394), so this is a control for the bench, not a test of the rules.
+- `bog_wifes_toll` and `salt_on_credit`, with the plans Stas said on them in run 01:42. No live run is known to have tried those plans since decision 0079 changed what an own move may be: the one run with Stas on such a build (17:19 on 2026-11-14, not an exit run, decision 0082) is known here from its live notes, which record his words at the Millbeck bridge only; its run folder is not in nat20-runs at 65c0e7c. Their rules change again under decision 0083, when its stake design is built in a later milestone, so this is a control for the bench, not a test of the rules.
 
 **Lines.** Five a card. For the two older cards, Stas's recorded lines on them from runs 16:05 and 01:42, read from the run files, made up to five. For the two new cards the thread drafts five from the card's text (a question, a plan that fits a choice, a plan that fits none, a plan that commits the whole party, a joke) and Stas edits or replaces them. Lines files live with the run copies in `/mnt/project-files/engine/m13/bench/`, not in the repo: the recorded ones are run data.
 
@@ -129,7 +129,7 @@ No contract change, no engine change, no new player-facing text, so Rule 1 does 
 - A pass or fail from the bench, a judge on the DM's text, samples and thresholds: after the trial, if it is kept.
 - A model that writes the lines (a plan fuzz): not before the hand-written lines have shown the bench finds anything.
 - Night cards; words said between cards (run 16:05's failure, which belongs to no card).
-- The stake before the roll (open table #395, a milestone after Milestone 13): the report's own-move fields would carry the stake. The way the card reaches the table does not change.
+- The stake before the roll (`docs/design/stake-before-the-roll.md`, Proposed, a milestone after Milestone 13): the report's own-move fields would carry the stake. The way the card reaches the table does not change.
 - Any change to the exit pair (decisions 0043, 0065, 0066, 0074).
 
 ## 8. Risks
@@ -152,5 +152,5 @@ No contract change, no engine change, no new player-facing text, so Rule 1 does 
 
 - `docs/design/content-test-layers.md` §2, §4; `docs/decisions/0080-content-test-layers.md` (table #383)
 - `crates/nat20-world/src/deck.rs` (`draw`, `Drawn::Table`); `game/src/pack/campaign.ts` (`worldDir`); `game/test/campaign-loop.test.ts` (ENG-35, `blade`, `movingDm`); `game/src/play/driver.ts` (`--roster`, `--rosters`, `--seat`); `game/src/agents/dm.ts` (`card_words`, `own_move_or_answer`); `game/src/table/loop.ts` (`closeScene`, `dm.newScene` at a scene change)
-- `docs/design/m13-system-design.md` §1, §8 (the reader card, the exit pair); decisions 0036, 0043, 0079, 0081
+- `docs/design/m13-system-design.md` §1, §8 (the reader card, the exit pair); decisions 0036, 0043, 0079, 0081, 0083
 - nat20-runs `master` 65c0e7c: `full-2026-11-13T16-05-31-438Z`, `full-2026-11-13T21-16-03-269Z` and `full-2026-11-14T01-42-04-072Z` (`usage.jsonl`), and their `analysis.md` in `/mnt/project-files/engine/m12/runs/`; `live-notes.md` of `full-2026-11-14T17-19-50-900Z` there
