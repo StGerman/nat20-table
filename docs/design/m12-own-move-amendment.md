@@ -1,6 +1,6 @@
 # Milestone 12 amendment: an own move when no choice fits
 
-Status: Proposed (2026-11-14). Amends `docs/design/m12-system-design.md` the Summary, §1.1, §1.2, §1.3, §1.4, §1.5, §1.6, §1.8, §8, §10 items 3 and 12 and §11; decision 0079 (Proposed) refines 0068. The direction is Stas's (exit run 2 thread, 2026-11-14 02:23Z); the shape is for him to accept or reject.
+Status: Proposed (2026-11-14). Amends `docs/design/m12-system-design.md` the Summary, §1.1, §1.2, §1.3, §1.4, §1.5, §1.6, §1.8, §8, §10 items 3 and 12 and §11; decision 0079 (Proposed) refines 0068. The direction is Stas's (exit run 2 thread, 2026-11-14 02:23Z), and so are the three answers in §15 (06:20Z); the whole is accepted when he merges table #381.
 
 Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed drafts. The rule itself is folded into the accepted design in table #381 (§13); this file keeps the reasons, the contract goals, the PR list and the readers' quotes.
 
@@ -96,7 +96,7 @@ In order. Row ids, sizes and prices are Yan's.
 | PR | What it lands | Depends on |
 | --- | --- | --- |
 | 0 | This amendment and decision 0079, with §13 folded into the accepted design, Zoya's board check and Vera's read of the lines in §12 | - |
-| 1 | `own_move` without a failure on the wire: contract, protocol §4.13, the world crate's pending card, the server's roll-then-log, the fixture cases of design §1.2 (six new, the roster save and load after a fall among them), CHANGELOG | 0 accepted |
+| 1 | `own_move` without a failure on the wire: contract, protocol §4.13, the world crate's pending card, the server's roll-then-log, the fixture cases of design §1.2 (six new, the roster save and load after a fall among them), CHANGELOG; 0079 and its index row marked Accepted | 0 accepted |
 | 2 | The same at the table: `own_move_or_answer`'s `move.failure` optional; the `card_words` rule in `dm.ts` and `loop.ts` (`cardWords`); the `remember` tool's description; the fall (a `road` wake tells it, the "did not work" and "never tried" lines with one Vera read, the seats asked again, the settled card's wake told of a fall); words on a card that already has a move are only answered; `seat-lines.ts` takes a null `choice` | 1 |
 | 3 | The run report and `m12-own-move`: §8 here, `wake` on `memory` records, the row counts a fall (question 2, Stas: yes) | 2 |
 | 4 | The seat's four lines (a) to (d), one commit each, with a Vera read of a `seat.jsonl` stretch | - |
@@ -157,14 +157,12 @@ Folded into `docs/design/m12-system-design.md` in table #381: §1.1 steps 3, 5, 
 
 **Is that enough for M12: yes, nothing is due now.** This is the author's read of his own mechanism; Zoya's objection (§16) stands beside it.
 - Zoya is right about the record: after a fall and then `bread`, the deed book equals a success's. At the seat the two differ only in the telling: the player's way, or the plain way after the try. With one deed and no result that is all the difference there can be, and a cost at the table is ruled out in §3.
-- So a failure is content once, at the table (the roll line and the DM's sentences), and never later. A success is not met later either. Both are the one debt 0068 leaves unread on purpose, the `own_move_<card>` row. For Zoya's new row, a fall: no carrier, and none is possible under this ruling; it goes back to her as part of the `own_move_<card>` row, where she folded it (§16, follow-up).
+- So a failure is content once, at the table (the roll line and the DM's sentences), and never later; a success is not met later either. Both are the one debt 0068 leaves unread on purpose, the `own_move_<card>` row, into which Zoya folded her fall row (§16, follow-up).
 - The one change weighed and not proposed: when a card that had a fallen move later settles on a written choice, its wake could carry the move's words from the card, so the narration says "after all". The DM told the fall in the same run a few turns earlier, so it is not due until an exit run shows such a settle told as if nothing had been tried.
 
 **What the dramaturg mechanism reads.** From the deed: that the party made a move of its own on this card, who and when. That is enough for an `if`, and it cannot tell a fall from a success. For a person in the world to say it aloud it needs the player's words, which today live only in the run's log; carrying them into the world's record is that milestone's first question for this row (design §1.5, 0068 Revisit). One warning for that design: a narrator given the words and not the result will make the result up, so it either forbids telling how the attempt came out, or asks Stas then whether the result travels with the words. Not reopened here.
 
-**No change to the design:** §1.5 (the deed carries no result) and §1.8 (a fall costs the move and nothing else) of the accepted design already say this.
-
-**The sentence for Stas, yes or no:** in M12 a fall has no consequence of its own: the roll and the DM's one or two sentences are all of it, only the written choice the table then picks goes into the world, and nothing later tells a fall from a success until the dramaturg mechanism carries the player's words.
+**No change to the rule:** design §1.5 (the deed carries no result) and §1.8 (a fall costs the move and nothing else) already say this. The one text folded from this answer is Zoya's tightening of the fall's wake in §1.8 (§16, follow-up).
 
 ## 16. Vera and Zoya
 
@@ -172,7 +170,7 @@ Both run on 2026-11-14 by the calling thread with the repo's `vera` and `zoya` a
 
 **What the thread takes from them** (for Stas):
 - The fall line «Ваш ход не удался. Теперь выберите из написанного.» is where Vera became a passenger, and Zoya hears «Ваш ход» as "your turn" and «выберите из написанного» as officialese. The wording is redone in PR 2 with its own Vera read; the rule (the move is spent) stays unless Stas changes it.
-- Zoya disagrees with question 1: one id with no result means no reader can ever pay a fall off. Her smaller fix is the result inside the deed, not a second id. Stas ruled against both on 2026-11-14 (§15, question 1); what a fall then brings is in §15.1, and her fall row stays hers to keep or strike.
+- Zoya disagrees with question 1: one id with no result means no reader can ever pay a fall off. Her smaller fix is the result inside the deed, not a second id. Stas ruled against both on 2026-11-14 (§15, question 1); what a fall then brings is in §15.1, and she folded her fall row into the `own_move_<card>` row (follow-up below).
 - Question 3: Zoya agrees answer-only, but "nothing is ruled" must not read as "nothing happens": the person reacts with what the plan costs them or asks something back, and a companion speaks. Its sentence is folded into the §1.8 prompt ("The scene still answers…"), and Stas kept it with question 3.
 - «Вы платите: 4 серебряных.»: drop the colon (Zoya), and Vera asks whom and what for; the DM's narration carries that.
 
@@ -240,7 +238,7 @@ Note: the DM sentences, the roll line's format and «Выборы» in that stre
 
 ### Zoya (repo `zoya` agent), follow-up after Stas's ruling, verbatim
 
-Run on 2026-11-14 by the calling thread, on this file with §15.1. Her tightening (item 4) is folded into the fall's wake in design §1.8, without the clause on the human's feelings, which the DM's prompt already carries ("never decide for them what their characters do, feel or say").
+Run on 2026-11-14 by the calling thread, on this file with §15.1. Her tightening (item 4) is folded into the fall's wake in design §1.8 with the guard of the `card_words` rule (the person reacts "without giving way or refusing", so the reaction rules nothing), and without the clause on the human's feelings, which the DM's prompt already carries ("never decide for them what their characters do, feel or say"); a §1.8 loop test checks the sentence is in the wake.
 
 > 1. **`own_move_<card>`: keep it, owed.** Reason: Consequence 2 says deeds come back. Decision 0068 leaves this one unread on purpose, which means it is owed, not finished. Carrier: none yet. It needs the player's words carried into the world's record (0079, Revisit), and a reader that tells what was tried, never how it came out (guardrail 1).
 > 2. **"A fall": fold it into the `own_move_<card>` row, don't strike it.** Reason: by Stas's ruling a fall writes no deed of its own. Its pay-off happens in the same scene: the roll, the DM's sentences, and the written choice's deeds, which already have readers (five Wend choices read `sedge_charm` or `snubbed_sedge`). What it leaves owed is the player's words, and that is the first row's carrier gap. Striking it outright would lose the warning that a later reader must not invent the result.

@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-14
-- **Decided by:** Stas, in part; the record becomes Accepted when he merges table #381. He chose the direction after exit run 2 (2026-11-14 02:23Z: «поправить дизайн через Льва»); the shape below is Lev's proposal (`docs/design/m12-own-move-amendment.md`). It refines decision 0068 and does not replace it. On 2026-11-14 06:20Z Stas decided the amendment's three questions: the deed («Поступок own_move_\<card> один всегда один! Как ты можешь написать провал если сам поступок не известен»), a fall counts for exit row 2 («Да»), and words no choice fits get only an answer («только ответ в сцене, человек реагирует и это логично»).
+- **Decided by:** Stas, in part; Accepted when he merges table #381, and marked so by the next PR (amendment §10, PR 1). He chose the direction after exit run 2 (2026-11-14 02:23Z: «поправить дизайн через Льва»); the shape below is Lev's proposal (`docs/design/m12-own-move-amendment.md`). It refines decision 0068 and does not replace it. On 2026-11-14 06:20Z Stas decided the amendment's three questions: the deed («Поступок own_move_\<card> один всегда один! Как ты можешь написать провал если сам поступок не известен»), a fall counts for exit row 2 («Да»), and words no choice fits get only an answer («только ответ в сцене, человек реагирует и это логично»).
 
 ## Context
 
