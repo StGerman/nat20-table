@@ -6,7 +6,7 @@ import type { StatBlockEntry } from "../pack/adventure.ts";
 import { EngineStopped, type CardDm, type CardPlayer, type ErrorCode, type Event, type Handle, type LevelUpChoice, type RejectReason, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, offeredLine, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
-import { buildChoices, cardChoices, choiceLines, levelUpChoices, moveFell, OWN_MOVE, roadChoices, type Choice, type ChoiceAct, type SeatTalk } from "./choices.ts";
+import { buildChoices, cardChoices, choiceLines, levelUpChoices, OWN_MOVE, roadChoices, takesMove, type Choice, type ChoiceAct, type SeatTalk } from "./choices.ts";
 import { coinsRu } from "./seat-lines.ts";
 import { mapLinesRu, sheetRu, stateRu } from "./seat-views.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
@@ -14,7 +14,7 @@ import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, t
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { BarkTools, cardDrawnLine, DmTools, HandTools, movedText, OWN_MOVE_RULE, PlayerTools, ReactionFloor, send } from "./tools.ts";
+import { AI_FALLS_MAX, BarkTools, cardDrawnLine, DmTools, HandTools, movedText, OWN_MOVE_RULE, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import { usageBlock, type UsageLog } from "../usage.ts";
 import type { Language } from "../agents/language.ts";
 import { refusedRu, SEAT_WORDS, UI_WORDS, type SeatWords } from "./words.ts";
@@ -419,8 +419,10 @@ export class TableLoop {
   private firstDay: number | undefined;
   /** The human's experience when the campaign started, for what the journey earned. */
   private startXp: number | undefined;
-  /** The last own move put on a card: who proposed it and their words (`card_own_move`, then `own_move_set` names the card), for the fall's text (decision 0079). */
-  private ownMove: { card?: string; actor: Handle; words?: string } | undefined;
+  /** The last own move put on a card: who proposed it, their words and its way (`card_own_move`, then `own_move_set` names the card), for the fall's text (decision 0079). */
+  private ownMove: { card?: string; actor: Handle; words?: string; skill?: string; success?: string } | undefined;
+  /** The own moves that fell on the card on the table in this run, in order (decision 0081): the DM's wakes list them, and AI seats are held to `AI_FALLS_MAX`. */
+  private falls: { card: string; moves: Array<{ actor: Handle; words?: string; skill?: string; success?: string; rolled: boolean }> } | undefined;
   /** A fall whose words left settled the card at once: the fall's text goes in that card's `road` wake. */
   private fellSettled: string | undefined;
   /** The card whose own move fell, and whether it was rolled: its seat line shows when the human is next asked on it. */
@@ -852,7 +854,7 @@ export class TableLoop {
         return;
       case "own_move_set":
         // card_own_move and own_move_set come as a pair in one response.
-        this.ownMove = { ...this.ownMove, card: event.card, actor: event.actor };
+        this.ownMove = { ...this.ownMove, card: event.card, actor: event.actor, skill: event.skill, success: event.success };
         return;
       case "own_move_ran":
         if (event.choice == null) await this.ownMoveFell(event.card, event.roll != null);
@@ -866,6 +868,7 @@ export class TableLoop {
         this.fellSettled = undefined;
         this.fellLine = undefined;
         this.ownMove = undefined;
+        this.falls = undefined;
         await this.wakeDm(
           "road",
           undefined,
@@ -936,9 +939,13 @@ export class TableLoop {
     const actor = known ?? "the proposer";
     // The words come from this run's log; a card carried over a save and load has none.
     const words = move?.words ? ` («${move.words}»)` : "";
+    // The earlier tries on this card, for the person who saw them (decision 0081, rule 7).
+    const earlier = this.fallsLine(id);
+    if (this.falls?.card !== id) this.falls = { card: id, moves: [] };
+    this.falls.moves.push({ actor, ...(move?.words ? { words: move.words } : {}), ...(move?.skill ? { skill: move.skill } : {}), ...(move?.success ? { success: move.success } : {}), rolled });
     const neverTried = (why: string) => `${actor}'s own move${words} was never tried (${why}): say so in one sentence, with no roll for the move.`;
     const text = rolled
-      ? `${actor}'s own move${words} failed its roll: tell how the attempt falls short, in one or two sentences. The scene still answers: a person on the card, if there is one, reacts to the try, and a companion may speak.`
+      ? `${actor}'s own move${words} failed its roll: tell how the attempt falls short, in one or two sentences. The scene still answers: a person on the card, if there is one, reacts to this try, going on from their answer to the last one: one step further, never to giving way or leaving; the card decides that. A companion may speak.`
       : neverTried(known !== undefined && !(await this.isUp(known)) ? `${actor} is down or not here` : "the attempt could not be made");
     if (!waits) {
       this.fellSettled = text;
@@ -949,6 +956,7 @@ export class TableLoop {
       "road",
       undefined,
       text,
+      ...(earlier ? [earlier] : []),
       "Nothing else changes and nobody is worse off for it; the card still waits: do not decide it, and never tell or remember any of the card's choices happening.",
     );
     await this.settle();
@@ -960,12 +968,12 @@ export class TableLoop {
     return r.result?.cmd === "events" && r.result.events.some((e) => e.kind === "own_move_ran" && e.card === card && e.choice == null);
   }
 
-  /** Whether the card's own move fell since `before` was read: a fall ends the round it fell in (decision 0079). */
-  private async fellSince(before: CardDm): Promise<boolean> {
-    // A card whose move already fell can't fall again: no read needed.
-    if (moveFell(before)) return false;
-    const now = (await this.dmWorld())?.card;
-    return now?.id === before.id && moveFell(now);
+  /** The moves that fell on card `id` so far, as one line for the DM; undefined when none did. */
+  private fallsLine(id: string): string | undefined {
+    const moves = this.falls?.card === id ? this.falls.moves : [];
+    if (moves.length === 0) return undefined;
+    const told = moves.map((m) => `${m.actor}${m.words ? ` («${m.words}»)` : ""}${m.skill && m.success ? `, ${m.skill} toward ${m.success}` : ""}, ${m.rolled ? "rolled and failed" : "never rolled"}`);
+    return `Own moves that already came to nothing on this card, in order: ${told.join("; ")}.`;
   }
 
   /** Whether `handle` is in the scene and conscious, as the engine's `table()` checks it. */
@@ -1043,6 +1051,7 @@ export class TableLoop {
     this.fellSettled = undefined;
     if (this.fellLine?.card !== card.id) this.fellLine = undefined;
     if (this.ownMove?.card !== undefined && this.ownMove.card !== card.id) this.ownMove = undefined;
+    if (this.falls?.card !== card.id) this.falls = undefined;
     // A move carried over a save and load has no card_own_move in this run: its proposer comes from the card.
     if (card.own_move && this.ownMove?.card !== card.id) this.ownMove = { card: card.id, actor: card.own_move.actor };
     if (this.table.ended) return false;
@@ -1051,7 +1060,8 @@ export class TableLoop {
     const human = this.table.human;
     // An own move that falls ends the round it fell in (decision 0079): no fallback word and no
     // owner's fallback call; a fresh round starts after the fall's wake.
-    const fell = () => this.fellSince(card);
+    const since = this.table.engine.logHead;
+    const fell = () => this.moveFellSince(since, card.id);
     if (human && card.waiting_for.includes(human) && !this.table.ended) await this.humanCard(card);
     if (await fell()) return true;
     for (const handle of card.waiting_for) {
@@ -1092,6 +1102,7 @@ export class TableLoop {
     };
     let now = await ready();
     if (!now) return false;
+    const since = this.table.engine.logHead;
     const human = this.table.human;
     const agent = this.agents.get(owner);
     if (owner === human) {
@@ -1100,7 +1111,7 @@ export class TableLoop {
       await this.aiCard(agent, "Make the caravan's call", true);
     }
     // A call for an own move that fell gets no fallback in this round (decision 0079).
-    if (await this.fellSince(now)) return true;
+    if (await this.moveFellSince(since, id)) return true;
     now = await ready();
     if (!now) return false;
     const { choices, preset } = cardChoices(now);
@@ -1109,7 +1120,7 @@ export class TableLoop {
     this.table.log("fallback", `${owner} makes no call on the road card: goes with the Blades' advice (${choice})`, owner, { cause: this.causeOf(owner) });
     await send(this.table, owner, { cmd: "choose_card", actor: owner, choice }, () => `went with the advice: ${choice}`);
     // The fallback call can itself be the move that falls: a fresh round follows then.
-    return this.fellSince(now);
+    return this.moveFellSince(since, id);
   }
 
   /**
@@ -1125,9 +1136,12 @@ export class TableLoop {
     const card = await this.playerCard(handle);
     if (!card) return;
     tools.takeOwnMove();
-    // The ask is the briefing's last line: while the card has no own move, it offers one too (AGT-99).
-    const offer = card.own_move ? "" : ", or try something of your own with own_move";
-    await this.wakePlayer(agent, "card", await this.playerBriefing(handle, ...cardLines(card, owner), `${ask} with choose_card, with a choice id${offer}. Say why in one line with say, if your character would.`));
+    // The ask is the briefing's last line: while the card takes an own move, it offers one too
+    // (AGT-99); an AI seat is offered none once `AI_FALLS_MAX` have fallen on the card (decision 0081).
+    const fallen = this.falls !== undefined && this.falls.card === this.framed ? this.falls.moves.length : 0;
+    tools.ownMovesFell = fallen;
+    const offer = takesMove(card) && fallen < AI_FALLS_MAX ? `, or try something of your own${fallen > 0 ? ", another way," : ""} with own_move` : "";
+    await this.wakePlayer(agent, "card", await this.playerBriefing(handle, ...cardLines(card, owner, true, fallen), `${ask} with choose_card, with a choice id${offer}. Say why in one line with say, if your character would.`));
     const said = tools.takeOwnMove();
     if (!said) return;
     // A seat that also gave its word has spoken: its words were only said aloud.
@@ -1143,7 +1157,7 @@ export class TableLoop {
     await this.wakePlayer(
       agent,
       "card",
-      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner, false), `Your words made no choice of the card. ${ask} with choose_card, with a choice id.`),
+      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner, false, fallen), `Your words made no choice of the card. ${ask} with choose_card, with a choice id.`),
     );
     // Words a second time are only said aloud: the card wants a choice now.
     const again = tools.takeOwnMove();
@@ -1169,9 +1183,9 @@ export class TableLoop {
     if (!card || this.table.ended) return { made: false };
     // The engine takes an own move's words as said only when they reach every player cleanly.
     const movable = !/(^|[^A-Za-z0-9])(AC|DC) \d/.test(words);
-    // A card that has or had an own move takes no second one (decision 0079): the words are answered.
-    // AGT-116 changes this for decision 0081: after a fall the card takes another move.
-    const answerOnly = card.own_move ? "the card already has or had an own move" : movable ? undefined : "the words name a number no player may see";
+    // One own move at a time (decision 0081): while one is among the choices the words are answered.
+    const answerOnly = !takesMove(card) ? "the card has an own move waiting for the table's word" : movable ? undefined : "the words name a number no player may see";
+    const earlier = this.fallsLine(card.id);
     await this.table.flush();
     const head = this.table.engine.logHead;
     this.dmTools.cardWords = { actor: handle, words: cutAtWord(words, OWN_MOVE_MAX_CHARS), ...(answerOnly ? { answerOnly } : {}) };
@@ -1187,6 +1201,14 @@ export class TableLoop {
         answerOnly
           ? `These words make no move (${answerOnly}): call own_move_or_answer with your narration only, one or two sentences, and the card waits. The scene still answers: a person on the card, if there is one, says what the plan would cost them or asks something back.`
           : OWN_MOVE_RULE,
+        // After a fall (decision 0081): the earlier tries, the way rule, and what was already said.
+        ...(earlier && !answerOnly
+          ? [
+              earlier,
+              "The same skill toward the same choice will be refused: a move must be another way. If these words are the same attempt again, make no move: a person in the scene says it has been tried.",
+              "A later move goes on from what the earlier tries already said to a person on the card. If these words unsay it, answer them with that person holding the table to what it already said, and make no move.",
+            ]
+          : []),
       );
     } finally {
       this.table.hold = undefined;
@@ -1195,10 +1217,9 @@ export class TableLoop {
     await this.table.flush();
     const made = this.dmTools.ownMoveMade;
     const answer = this.dmTools.cardAnswer;
-    // The run report counts words a card took no move from (design §1.8).
-    // Words on a card that has or had a move could make none: the DM is not counted for finding no
-    // fitting choice. Words naming an AC or DC are still counted, as before decision 0079.
-    if (!made && !card.own_move) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
+    // The run report counts words a card took no move from (design §1.8). Words said while a move
+    // is among the choices could make none: the DM is not counted for those (decisions 0079, 0081).
+    if (!made && takesMove(card)) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
     return { made, ...(answer ? { answer } : {}) };
   }
 
@@ -1227,7 +1248,7 @@ export class TableLoop {
         this.table.show({ kind: "info", title: words.onTheRoad, text: words.ownMoveFell(this.fellLine.rolled) });
         this.fellLine = undefined;
       }
-      this.cardList = { kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(card.own_move ? [] : [words.ownMoveLine])], choices };
+      this.cardList = { kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(takesMove(card) ? [words.ownMoveLine] : [])], choices };
       this.table.show(this.cardList);
       // The prompt keeps "or your own words" after a move: words at the table are never refused (design §1.8).
       const intent = await this.ask({ kind: "card", line: words.cardPrompt }).finally(() => (this.cardList = undefined));
@@ -2698,7 +2719,7 @@ export function cutAtWord(words: string, max: number): string {
 }
 
 /** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said; `invite`: the own-move line, left out once the DM answered the seat's words. */
-function cardLines(card: CardPlayer, owner = false, invite = true): string[] {
+function cardLines(card: CardPlayer, owner = false, invite = true, fallen = 0): string[] {
   const whose = owner
     ? "the caravan's, and the caravan is yours: you make the call after the Blades' advice"
     : card.target === "caravan"
@@ -2709,7 +2730,10 @@ function cardLines(card: CardPlayer, owner = false, invite = true): string[] {
     `A road card waits for your word (${whose}): ${card.text}`,
     `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === OWN_MOVE && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
-    ...(move && moveFell(card) ? [`${move.actor}'s own move on this card came to nothing: no choice came of it, and the card waits for a written choice.`] : []),
-    ...(move || !invite ? [] : [OWN_MOVE_INVITE]),
+    ...(fallen > 0
+      ? [`${fallen === 1 ? "One own move" : `${fallen} own moves`} on this card came to nothing: no choice came of ${fallen === 1 ? "it" : "them"}.${takesMove(card) && fallen < AI_FALLS_MAX ? " One more may be tried, another way." : " The card waits for a written choice."}`]
+      : []),
+    // The invite is for a card no own move was tried on yet (decision 0081, rule 5).
+    ...(move || fallen > 0 || !invite ? [] : [OWN_MOVE_INVITE]),
   ];
 }
