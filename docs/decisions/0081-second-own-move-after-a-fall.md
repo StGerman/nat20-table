@@ -1,6 +1,6 @@
 # 0081. After a fall a card takes another own move, by another way
 
-- **Status:** Proposed
+- **Status:** Accepted (Stas, 2026-11-14: option E on the decision card, 14:46Z; merged by decision 0082)
 - **Date:** 2026-11-14
 - **Decided by:** Stas chose option E on 2026-11-14 (the thread's decision card, 14:46Z); the record is accepted when he merges it. Questions 2 to 6 below are still his, and the work goes ahead on their recommendations until he says otherwise. Stas reopened the rule on 2026-11-14 («пересматриваем!») after a blind Vera read, and after her second read asked «Может быть не лимитировать провалы?», which is option E. The options and the recommendation are Lev's, the verdict is Stas's. If accepted it amends decision 0079 ("One own move per card stays, tried or not") and decision 0068 ("One own move per card, no retry"), and replaces neither.
 

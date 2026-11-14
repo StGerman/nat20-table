@@ -139,7 +139,7 @@ export function yourLine(event: Event, human: Handle): string | undefined {
       case "inn":
         return `You pay ${coins} for the inn.`;
       case "toll":
-        return `You pay ${coins} toll.`;
+        return `You pay ${coins}.`;
       case "loot":
       case "theft":
         return to ? `${to} takes ${coins} of yours.` : `You lose ${coins}.`;
