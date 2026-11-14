@@ -247,6 +247,18 @@ impl Session {
                 "No campaign is running; the game starts one with start_campaign.",
             ));
         };
+        // The loop's fallback takes the first card rolled; any other card is the DM's pick,
+        // never the engine's (ENG-42).
+        if fallback
+            && let Some(first) = campaign.world.state.deck.offered.first()
+            && first != card
+            && campaign.world.state.deck.offered.iter().any(|c| c == card)
+        {
+            return Err(rejected(
+                RejectReason::CardNotOffered,
+                format!("A fallback pick takes the first card rolled: {first}, not {card}."),
+            ));
+        }
         campaign.world.pick_card(card).map_err(|e| {
             let offered = campaign.world.state.deck.offered.join(", ");
             let message = match e {

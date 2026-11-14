@@ -433,7 +433,8 @@ pub enum EventKind {
     /// `start_campaign`'s own lines: the party traveled from where the last contract ended to
     /// this one's start. The DM tells the trip in one line. Public.
     TripToStart {
-        /// The place the party was in when the last contract ended.
+        /// Where the party set out from: the place it was in when the last contract ended,
+        /// or, when it ended out on a road, the end of that road nearer this contract's start.
         from: String,
         /// The days the trip took at a normal pace: 0 when the party was already there.
         days: u32,

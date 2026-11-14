@@ -1182,11 +1182,11 @@ impl Deck {
     }
 
     /// A chained card joins the deck; a `soon` one also joins the queue the next draw in its
-    /// zone takes first.
+    /// zone takes first, unless it is gone for the world (ENG-40): it can never be drawn.
     pub fn add(&self, state: &mut DeckState, card: &str, soon: bool) {
         if self.card(card).is_some_and(|c| c.chained) {
             state.added.insert(card.to_string());
-            if soon && !state.soon.iter().any(|c| c == card) {
+            if soon && !state.gone.contains(card) && !state.soon.iter().any(|c| c == card) {
                 state.soon.push(card.to_string());
             }
         }
@@ -2114,6 +2114,9 @@ mod tests {
         let mut dice = ListDice::new([1, 1]);
         let card = draw_one(&d, "fields", When::Road, &known(), &mut state, &mut dice);
         assert_eq!(card.as_deref(), Some("mud"));
+        // Gone for the world, it is never queued again (ENG-40).
+        d.add(&mut state, "beggar_returns", true);
+        assert!(state.soon.is_empty());
     }
 
     #[test]
