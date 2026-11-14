@@ -27,7 +27,7 @@ import type {
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
 import type { NoteKind, TableState } from "./state.ts";
 import type { RoadStep, ToolOutcome } from "./types.ts";
-import { moveFell } from "./choices.ts";
+import { takesMove } from "./choices.ts";
 import type { StatBlockEntry } from "../pack/adventure.ts";
 
 /** What an agent may give `submit`: an option, and its targets, variant or aim. */
@@ -295,18 +295,21 @@ export class PlayerTools {
   private chose = false;
   /** Its own words on the road card, for the loop to take to the DM once the wake returns (AGT-99). */
   private ownWords: string | undefined;
+  /** How many own moves fell on the card on the table; the loop sets it before a card wake (decision 0081). */
+  ownMovesFell = 0;
 
   /**
    * Says what this character does on the road card instead of a listed choice (AGT-99): the words
    * are only kept here; once the wake returns the loop takes them to the DM, who may make them an
-   * own move on the card. Refused while the card already has one.
+   * own move on the card. Refused while an own move is among the card's choices, and once
+   * `AI_FALLS_MAX` own moves have fallen on it (decision 0081: a table rule for AI seats).
    */
   async ownMove(words: string): Promise<ToolOutcome> {
     const r = this.table.observe(await this.table.engine.request(this.me, { cmd: "get_state" }));
     const card = r.result?.cmd === "get_state" && r.result.state.view === "player" ? r.result.state.world?.card : undefined;
     if (!card) return this.answer(notNow("no road card waits for your word"));
-    // A move that fell is no longer among the choices (decision 0079): only a written choice is left.
-    if (card.own_move) return this.answer(notNow(moveFell(card) ? "the card's own move came to nothing: give your word on a written choice with choose_card" : "the card already has an own move: give your word on it with choose_card"));
+    if (!takesMove(card)) return this.answer(notNow("the card already has an own move: give your word on it with choose_card"));
+    if (this.ownMovesFell >= AI_FALLS_MAX) return this.answer(notNow(`${this.ownMovesFell} own moves came to nothing on this card: give your word on a written choice with choose_card`));
     if (card.said.some((s) => s.actor === this.me)) return this.answer(notNow("you have already given your word on this card"));
     if (!words.trim()) return this.answer(notNow("say in one sentence what your character does"));
     this.ownWords = words.trim();
@@ -1068,9 +1071,9 @@ export class DmTools {
    * The `card_words` wake's one answer (AGT-99, design §1.8): with `move`, the words of the seat
    * that woke it become an own move on the card, and the narration shows once the engine took it;
    * a refusal shows nothing and answers with the engine's reason, so the DM can correct it. Without
-   * `move`, only the narration. On a card that has or had an own move, a `move` is not sent: the
-   * words are only answered, and no retry is spent on `own_move_taken` (decision 0079; AGT-116
-   * brings the table in line with decision 0081, where a card takes another move after a fall).
+   * `move`, only the narration. While a move is among the card's choices the loop says so, and a
+   * `move` is not sent: the words are only answered, and no retry is spent on `own_move_taken`
+   * (decisions 0079, 0081).
    */
   async ownMoveOrAnswer(narration: string, move?: { ability: Ability; skill: Skill; dc: number; success: string; failure?: string }): Promise<ToolOutcome> {
     const words = this.cardWords;
@@ -1143,6 +1146,9 @@ export class DmTools {
     return said.ok ? { ok: true, text: "the adventure is over" } : said;
   }
 }
+
+/** How many own moves may fall on a card before an AI seat is asked for a written choice only (decision 0081, rule 5). */
+export const AI_FALLS_MAX = 2;
 
 /** The own-move rule (decision 0079, design §1.8): in the road section and in the `card_words` wake. */
 export const OWN_MOVE_RULE =
