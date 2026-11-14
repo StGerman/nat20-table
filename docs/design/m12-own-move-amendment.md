@@ -118,6 +118,7 @@ For Vera, without this file:
 | Where | Russian | English |
 | --- | --- | --- |
 | own move failed, the human's (new, draft: PR 2 rewords it with its own Vera read, §16) | «Ваш ход не удался. Теперь выберите из написанного.» | "Your move did not work. Now pick one of the written choices." |
+| own move never tried (`roll: null`), the human's or another's (new) | wording in PR 2, with the same Vera read | wording in PR 2 |
 | own move failed, another seat's (new, draft as above) | «Ход Торвы не удался. Теперь выберите из написанного.» | "Torva's move did not work. Now pick one of the written choices." |
 | a card payment, the human's (changed) | «Вы платите: 4 серебряных.» (was «Вы платите пошлину: 4 серебряных.») | "You pay 4 silver pieces." (was "You pay 4 silver pieces toll.") |
 | a card payment, another's, Russian seat (changed) | «Торва платит: 4 серебряных.» (was «Торва платит пошлину: …») | unchanged: the wire's text |
