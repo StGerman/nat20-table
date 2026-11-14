@@ -1,8 +1,8 @@
 # Testing content below the exit pair: what exists, the gap, one candidate
 
-- **Status:** Proposed (for Stas's review; no TASKS.md rows until accepted)
+- **Status:** The rule of §3 accepted by Stas, 2026-11-14 16:59Z (decision 0080). The card bench of §4 stays a candidate: questions 2 to 4 of §6 are open, and there are no TASKS.md rows
 - **Date:** 2026-11-14
-- **Decision draft:** `docs/decisions/0080-content-test-layers.md`
+- **Decision:** `docs/decisions/0080-content-test-layers.md`
 - **Asked by:** Stas, 2026-11-14 06:55Z: the process "looks end-to-end, we need something closer to unit or component tests; be bold"
 
 ## 1. What exists, and the gap
@@ -69,11 +69,11 @@ Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_word
 
 ## 5. Gates
 
-Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. Accepting the rule of §3 adds it to CLAUDE.md, so scope and design authors read it. The line, under Rule 8: "In a milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person. When a full run fails on something a test with no model could have seen, the fix's PR adds that test, and the rerun is still played (decision 0080)." If Stas accepts on the PR, this thread sets 0080 to Accepted and adds that line in this same PR before he merges, with the same sentence in `.claude/skills/yan/references/scope.md` and `.claude/skills/lev/references/design.md`, where a scope's exit criterion and a design are drafted.
+Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. The accepted rule of §3 is in CLAUDE.md, so scope and design authors read it. The line, under Rule 8: "In a milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person. When a full run fails on something a test with no model could have seen, the fix's PR adds that test, and the rerun is still played (decision 0080)." Stas accepted it in the thread on 2026-11-14, so this PR sets 0080 to Accepted and adds that line, with its first sentence in `.claude/skills/yan/references/scope.md` and `.claude/skills/lev/references/design.md`, where a scope's exit criterion and a design are drafted.
 
 ## 6. Questions for Stas
 
-1. Accept the rule of §3, as the CLAUDE.md line drafted in §5?
+1. Accept the rule of §3, as the CLAUDE.md line drafted in §5? **Answered 2026-11-14 16:59Z: yes, add it to CLAUDE.md.**
 2. Do you want the card bench designed: its own short system design, answering the open points of §4, with a cost, before any decision to build it? Or is the answer to your ask "the scripted layer is already there, and the rest is your evening"?
 3. If designed: for M13, after M12 closes? It needs the M12 stack on main either way.
 4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05, a minor flag in its analysis), if table #379 does not already fix it; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan?

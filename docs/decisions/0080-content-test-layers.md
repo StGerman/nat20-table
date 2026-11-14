@@ -1,8 +1,8 @@
 # 0080. Tests with no model stay the layer below the exit pair; a card bench is designed before it is decided
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-14
-- **Decided by:** not decided; drafted for Stas from his ask of 2026-11-14 06:55Z (testing thread)
+- **Decided by:** Stas, 2026-11-14 16:59Z (testing thread, on the rule as quoted to him: «Да давай добавим в CLAUDE.md»); drafted from his ask of 06:55Z. Whether the card bench is designed (design §6, questions 2 and 3) he has not answered
 
 ## Context
 
@@ -34,14 +34,14 @@ Stas asked for testing of card content and player decisions closer to unit or co
 
 ## Decision
 
-Proposed: B. Over A it costs a layer named beside each exit row, a test in the fix's PR when a test with no model could have seen a run's failure, and, only if Stas wants the bench, a second design to read. It beats C and D because both spend, or change accepted rules, on evidence that does not exist yet.
+B. Over A it costs a layer named beside each exit row, a test in the fix's PR when a test with no model could have seen a run's failure, and, only if Stas wants the bench, a second design to read. It beats C and D because both spend, or change accepted rules, on evidence that does not exist yet.
 
 ## Consequences
 
 - From the first milestone scope or design written after acceptance, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or "a person". The M12 and M13 scopes and designs are not amended.
 - From acceptance, for fix PRs opened after it, a full-run failure that a test with no model could have seen gets that test in the fix's PR.
-- The rule goes into CLAUDE.md under Rule 8, in the wording of design §5, and into Yan's scope reference and Lev's design reference, in this PR once Stas accepts on it.
-- If Stas wants it, the card bench gets its own system design; no rows before that is accepted.
+- The rule is in CLAUDE.md under Rule 8, in the wording of design §5, and in Yan's scope reference and Lev's design reference, added in this PR on Stas's acceptance.
+- The card bench gets its own system design only if Stas asks for one; no rows before that design is accepted.
 - No accepted decision and no scope changes.
 
 ## Revisit when

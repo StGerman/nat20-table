@@ -15,7 +15,7 @@ Write the file's headings first and fill it section by section, so a run that st
 
 1. **Summary**: what a player will notice, in three sentences, and the moment they would retell the next day.
 2. **Records.** One table, a row per fact the world keeps: who writes it, when, who reads it, and where the player sees it. A row with no reader or no visible effect is cut, or listed under Out with the reason; a record an accepted design leaves unread on purpose stays, with that design cited.
-3. **Rules**, each a statement a test could check ("a card whose `if` names a deed is never drawn before that deed exists").
+3. **Rules**, each a statement a test could check ("a card whose `if` names a deed is never drawn before that deed exists"). In a design written after 2026-11-14, every exit row the design states or refines names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person (CLAUDE.md Rule 8, decision 0080).
 4. **Carrier per owed row**: for each of Zoya's rows, the smallest carrier that pays it (existing data, a changed line, a card variant, a new record), and what was tried first and why it failed.
 5. **Contract**: the goals the change must meet, then the proposed types, fields and events, the view of each (Rule 3), and whether it is additive or breaking (Rule 2). No change: say why none is needed.
 6. **Failure**: what the party gets when each new check fails, and what happens when the model does not answer.
