@@ -306,6 +306,8 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
     case "card_own_move":
       return `${who(event.actor)} предлагает своё: «${event.words}» (${SKILLS_RU[event.skill]}).`;
     case "own_move_ran":
+      // A fall runs no choice: its line is the table's (AGT-112).
+      if (event.choice == null) return null;
       return event.roll ? `Своё дело ведёт к выбору: ${choiceWords(event.choice, ctx.card)}.` : `Предложивший без сознания, и без броска выходит: ${choiceWords(event.choice, ctx.card)}.`;
     case "cargo_changed":
       return event.change >= 0 ? `Обоз получает: ${n.good(event.good)}, ${event.change}.` : `Обоз теряет: ${n.good(event.good)}, ${-event.change}.`;

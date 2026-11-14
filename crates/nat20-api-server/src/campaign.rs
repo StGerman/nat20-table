@@ -488,6 +488,7 @@ impl Campaign {
             choices: world::Deck::offer_ids(card, &self.world.state.deeds),
             said: Default::default(),
             own_move: None,
+            fell: Vec::new(),
         };
         Some(OfferedCard {
             id: card.id.clone(),
@@ -930,10 +931,11 @@ pub fn choices_dm(card: &world::Card, pending: Option<&world::PendingCard>) -> V
             keeps: c.keeps.clone(),
             breaks: c.breaks.clone(),
         })
-        // A seat's own move, last, in its own words (API-56).
+        // A seat's own move, last, in its own words (API-56), until it falls (decision 0079).
         .chain(
             pending
                 .and_then(|p| p.own_move.as_ref())
+                .filter(|mv| !mv.spent)
                 .map(|mv| CardChoiceDm {
                     id: world::OWN_MOVE.to_owned(),
                     text: mv.text.clone(),

@@ -11,7 +11,7 @@ import { REPO } from "../src/engine.ts";
 import { cardChoices, fightOnly, roadChoices } from "../src/table/choices.ts";
 import { SEAT_WORDS } from "../src/table/words.ts";
 import { OWN_MOVE_INVITE, TableLoop, cutAtWord, roadCardAhead } from "../src/table/loop.ts";
-import { DmTools } from "../src/table/tools.ts";
+import { AI_FALLS_MAX, DmTools } from "../src/table/tools.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
 import { DM_ROAD_PROMPT } from "../src/agents/dm.ts";
@@ -140,7 +140,7 @@ test("words on a road card are said at the table, the DM answers them with no mo
     // Each time the words go to the DM's card_words wake; a DM that makes no own move leaves the card waiting.
     const answer = dm.briefings.filter((b) => b.wake === "card_words" && b.briefing.includes("Ask him for the papers that let him take a toll."));
     assert.equal(answer.length, 2, "the DM answers each time");
-    assert.match(answer[0]!.briefing, /If no two choices fit, give only the narration/);
+    assert.match(answer[0]!.briefing, /If no choice is what the words would bring, give only the narration/);
     assert.equal(t.table.transcript.records.filter((r) => r.text.startsWith("no fitting choice: bren's words")).length, 2, "the report counts both");
     const roadInfo = seat.shown.filter((e) => e.kind === "info" && e.title === "On the road");
     assert.equal(roadInfo.length, 1, "the card's words are shown once");
@@ -216,6 +216,210 @@ test("an AI player's own_move words wake the DM's card_words, and the move lands
     assert.equal(moved?.actor, "maren");
     // Her word is the own move: the loop never falls back for her on this card.
     assert.ok(!t.table.transcript.records.some((r) => r.text.startsWith("maren gives no word on the road card")));
+  } finally {
+    t.close();
+  }
+});
+
+test("an own move with no failure that fails its roll: the fall's wake tells it, the human sees one line, and is asked again with the written choices and the own-move line (decisions 0079, 0081)", async () => {
+  const walk = traveller();
+  let spoke = false;
+  const lists: string[][] = [];
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "card") {
+      const list = [...s.shown].reverse().find((e) => e.kind === "options" && e.title === "Choices");
+      if (list?.kind === "options") lists.push(list.lines);
+      if (!spoke) {
+        spoke = true;
+        return { kind: "text", text: "Ask the farmer to lend his ox." };
+      }
+      return { kind: "option", number: 1 };
+    }
+    return walk(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    // No failure named, and a DC no roll can make: the move falls.
+    const dm = new ScriptedDm({
+      card_words: async (tools, briefing) => {
+        const first = /^Its choices: ([a-z0-9_]+): /m.exec(briefing)?.[1];
+        await tools.ownMoveOrAnswer("The farmer looks at the ox, then at you.", { ability: "charisma", skill: "persuasion", dc: 30, success: first! });
+      },
+    });
+    let voted = false;
+    const maren = new ScriptedPlayer("maren", {
+      card: async (tools) => {
+        if (!voted) return void ((voted = true), await tools.chooseCard("own_move"));
+        await tools.chooseCard("clear");
+      },
+    });
+    const loop = new TableLoop({ table: t.table, dm, players: [maren], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    await loop.run("vale_town");
+    const moved = t.requests().find((r) => r.cmd === "own_move") as { failure?: string } | undefined;
+    assert.ok(moved && moved.failure === undefined, "no failure is sent");
+    const fall = dm.briefings.find((b) => b.wake === "road" && b.briefing.includes("own move («Ask the farmer to lend his ox.») failed its roll"));
+    assert.ok(fall, "the fall's own road wake");
+    assert.match(fall!.briefing, /a person on the card, if there is one, reacts to this try, going on from their answer to the last one/);
+    assert.match(fall!.briefing, /the card still waits: do not decide it/);
+    const line = seat.shown.find((e) => e.kind === "info" && e.text === SEAT_WORDS.en.ownMoveFell(true));
+    assert.ok(line, "the human sees the fall's one line");
+    // Asked again: the written choices and the own-move line; the fallen move is off the list.
+    assert.equal(lists.length, 2, JSON.stringify(lists));
+    assert.ok(lists[0]!.includes(SEAT_WORDS.en.ownMoveLine));
+    assert.ok(lists[1]!.includes(SEAT_WORDS.en.ownMoveLine) && !lists[1]!.some((l) => l.includes("Ask the farmer")), JSON.stringify(lists[1]));
+    assert.ok(t.requests().some((r) => r.cmd === "choose_card" && r.viewer === "bren"), "the human's number gives the word");
+    // The fall ended its round: nobody went with the others.
+    assert.ok(!t.table.transcript.records.some((r) => r.kind === "fallback" && r.text.includes("road card")), "no fallback word");
+  } finally {
+    t.close();
+  }
+});
+
+test("words on a card with an own move among its choices are only answered: no second move is sent (decisions 0079, 0081)", async () => {
+  const tools = new DmTools({ log: () => {}, narrate: async () => ({ ok: true, text: "said" }), oneAtATime: (_: string, f: () => Promise<unknown>) => f() } as never);
+  let sent = 0;
+  (tools as unknown as { table: { engine: unknown } }).table.engine = { request: async () => ((sent += 1), { ok: true }) };
+  tools.cardWords = { actor: "bren", words: "Try again.", answerOnly: "the card has an own move waiting for the table's word" };
+  const out = await tools.ownMoveOrAnswer("The farmer shakes his head.", { ability: "charisma", skill: "persuasion", dc: 10, success: "clear" });
+  assert.equal(out.ok, true);
+  assert.equal(sent, 0, "no own_move reaches the engine");
+  assert.match(out.ok ? out.text : "", /the card has an own move waiting for the table's word, so this move is not sent/, "the DM is told the loop's reason");
+});
+
+/**
+ * A table for decision 0081: the human says `words` in turn on the card, then takes its first
+ * written choice; the DM answers the n-th words with `moves[n]` (a move toward the card's first
+ * choice, or narration only); maren goes with a move while one is on the card, else clears.
+ */
+async function fallsTable(words: string[], moves: Array<{ skill: "persuasion" | "intimidation" | "athletics"; dc: number } | undefined>) {
+  const walk = traveller();
+  const lists: string[][] = [];
+  let spoken = 0;
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "card") {
+      const list = [...s.shown].reverse().find((e) => e.kind === "options" && e.title === "Choices");
+      if (list?.kind === "options") lists.push(list.lines);
+      if (spoken < words.length) return { kind: "text", text: words[spoken++]! };
+      return { kind: "option", number: 1 };
+    }
+    return walk(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  const ABILITY = { persuasion: "charisma", intimidation: "charisma", athletics: "strength" } as const;
+  let asked = 0;
+  const refused: string[] = [];
+  const dm = new ScriptedDm({
+    card_words: async (tools, briefing) => {
+      const first = /^Its choices: ([a-z0-9_]+): /m.exec(briefing)?.[1];
+      const move = moves[asked++];
+      const out = await tools.ownMoveOrAnswer("The farmer looks at the ox, then at you.", move && { ability: ABILITY[move.skill], skill: move.skill, dc: move.dc, success: first! });
+      if (!out.ok) {
+        refused.push(out.text);
+        await tools.ownMoveOrAnswer("The farmer shakes his head: you asked that already.");
+      }
+    },
+  });
+  const maren = new ScriptedPlayer("maren", {
+    card: async (tools, briefing) => void (await tools.chooseCard(briefing.includes("own_move: ") ? "own_move" : "clear")),
+  });
+  const loop = new TableLoop({ table: t.table, dm, players: [maren], maxSteps: 300, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+  return { t, seat, dm, maren, loop, lists, refused };
+}
+
+test("after a fall another way wins: a second own move is taken, rolled and decides the card (decision 0081)", async () => {
+  const f = await fallsTable(["Ask the farmer to lend his ox.", "Lift the trunk with the wagon pole."], [{ skill: "persuasion", dc: 30 }, { skill: "athletics", dc: 5 }]);
+  try {
+    await f.loop.run("vale_town");
+    const moved = f.t.requests().filter((r) => r.cmd === "own_move") as Array<{ skill?: string }>;
+    assert.deepEqual(moved.map((m) => m.skill), ["persuasion", "athletics"]);
+    // The second words' wake names the try that fell and the way rule.
+    const second = f.dm.briefings.filter((b) => b.wake === "card_words")[1]!.briefing;
+    assert.match(second, /Own moves that already came to nothing on this card, in order: /);
+    assert.match(second, /The same skill toward the same choice will be refused/);
+    assert.match(second, /holding the table to what it already said/);
+    const log = JSON.stringify(f.t.table.transcript.records.filter((r) => r.channel === "dm"));
+    assert.match(log, /The card is decided: own_move/);
+    assert.equal(f.seat.shown.filter((e) => e.kind === "info" && e.text === SEAT_WORDS.en.ownMoveFell(true)).length, 1, "one fall, one line");
+    assert.ok(!f.t.requests().some((r) => r.cmd === "choose_card" && r.viewer === "bren" && (r as { choice?: string }).choice !== "own_move"), "no number was needed");
+  } finally {
+    f.t.close();
+  }
+});
+
+test("three ways fall, then a number: the human's seat keeps the own-move line after every fall, and each fall has its line (decision 0081)", async () => {
+  const f = await fallsTable(
+    ["Ask the farmer to lend his ox.", "Tell him the road is his to clear.", "Lift the trunk with the wagon pole."],
+    [{ skill: "persuasion", dc: 30 }, { skill: "intimidation", dc: 30 }, { skill: "athletics", dc: 30 }],
+  );
+  try {
+    await f.loop.run("vale_town");
+    assert.equal(f.t.requests().filter((r) => r.cmd === "own_move").length, 3);
+    assert.equal(f.seat.shown.filter((e) => e.kind === "info" && e.text === SEAT_WORDS.en.ownMoveFell(true)).length, 3, "a line after each fall");
+    assert.equal(f.lists.length, 4, JSON.stringify(f.lists));
+    for (const list of f.lists) assert.ok(list.includes(SEAT_WORDS.en.ownMoveLine), JSON.stringify(list));
+    // The third fall's wake lists the two before it, in order.
+    const falls = f.dm.briefings.filter((b) => b.wake === "road" && b.briefing.includes("failed its roll"));
+    assert.equal(falls.length, 3);
+    assert.match(falls[2]!.briefing, /came to nothing on this card, in order: .*persuasion.*intimidation/s);
+    assert.ok(f.t.requests().some((r) => r.cmd === "choose_card" && r.viewer === "bren" && (r as { choice?: string }).choice === "clear"), "the number decides it");
+  } finally {
+    f.t.close();
+  }
+});
+
+test("the same way after a rolled fall is refused by the engine and answered in the scene: no move, and the card waits (decision 0081)", async () => {
+  const f = await fallsTable(["Ask the farmer to lend his ox.", "Ask the farmer again, nicely."], [{ skill: "persuasion", dc: 30 }, { skill: "persuasion", dc: 10 }]);
+  try {
+    await f.loop.run("vale_town");
+    assert.equal(f.refused.length, 1, "the engine refuses the way");
+    assert.match(f.refused[0]!, /This way already fell on this card/);
+    // The refusal reaches the DM only: the seat sees the scene's answer and its choices again.
+    assert.ok(!f.seat.shown.some((e) => "text" in e && typeof e.text === "string" && e.text.includes("already fell")), "never told by the seat");
+    assert.equal(f.seat.shown.filter((e) => e.kind === "info" && e.text === SEAT_WORDS.en.ownMoveFell(true)).length, 1);
+    assert.ok(f.t.requests().some((r) => r.cmd === "choose_card" && r.viewer === "bren" && (r as { choice?: string }).choice === "clear"));
+  } finally {
+    f.t.close();
+  }
+});
+
+test("with no human, AI seats stop at two fallen own moves on a card: the third is refused by the table and the card is decided on a written choice (decision 0081)", async () => {
+  const t = await testTable({ seed: 1, noHuman: true, players: ["maren", "bren"] });
+  try {
+    const skills = ["persuasion", "intimidation", "athletics"] as const;
+    let asked = 0;
+    const dm = new ScriptedDm({
+      table_turn: async (tools) => void (await tools.proposeRoad("move_on")),
+      card_words: async (tools, briefing) => {
+        const first = /^Its choices: ([a-z0-9_]+): /m.exec(briefing)?.[1];
+        const skill = skills[asked++ % 3]!;
+        await tools.ownMoveOrAnswer("The farmer looks at the ox.", { ability: skill === "athletics" ? "strength" : "charisma", skill, dc: 30, success: first! });
+      },
+    });
+    const refusals: string[] = [];
+    const mover = (handle: string) =>
+      new ScriptedPlayer(handle, {
+        card: async (tools, briefing) => {
+          if (briefing.includes("own_move: ")) return void (await tools.chooseCard("own_move"));
+          const out = await tools.ownMove(`${handle} tries something new.`);
+          if (!out.ok) {
+            refusals.push(out.text);
+            await tools.chooseCard("clear");
+          }
+        },
+      });
+    const players = [mover("maren"), mover("bren")];
+    const loop = new TableLoop({ table: t.table, dm, players, maxSteps: 300, campaign: { party: ["maren", "bren"], dayLimit: 1 } });
+    await loop.run("vale_town");
+    const perCard = new Map<string, number>();
+    for (const r of t.table.transcript.records) {
+      const m = /own move on ([a-z0-9_]+):/.exec(r.text);
+      if (m && r.channel === "dm") perCard.set(m[1]!, (perCard.get(m[1]!) ?? 0) + 1);
+    }
+    assert.ok(perCard.size > 0 && [...perCard.values()].every((n) => n <= AI_FALLS_MAX), JSON.stringify([...perCard]));
+    assert.ok(refusals.some((r) => r.includes("2 own moves came to nothing on this card")), JSON.stringify(refusals));
+    // After the second fall the briefing no longer invites a move.
+    const late = players.flatMap((p) => p.briefings).filter((b) => b.wake === "card" && b.briefing.includes("2 own moves"));
+    assert.ok(late.length > 0 && late.every((b) => !b.briefing.includes("with own_move")), JSON.stringify(late.map((b) => b.briefing)));
   } finally {
     t.close();
   }
