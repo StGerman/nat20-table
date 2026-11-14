@@ -1478,12 +1478,14 @@ impl Deck {
         if pending.own_move.as_ref().is_some_and(|mv| !mv.spent) {
             return Err(CardError::OwnMoveTaken);
         }
-        let same: Vec<&FellWay> = pending
+        // A way is closed by one rolled fall, or by two with no roll.
+        let closed: u32 = pending
             .fell
             .iter()
             .filter(|w| w.skill == mv.skill && w.success == mv.success)
-            .collect();
-        if same.iter().any(|w| w.rolled) || same.len() >= 2 {
+            .map(|w| if w.rolled { 2 } else { 1 })
+            .sum();
+        if closed >= 2 {
             return Err(CardError::BadOwnMove(format!(
                 "this way already fell on this card ({} toward {}); name another way, or answer the words and make no move",
                 mv.skill, mv.success
