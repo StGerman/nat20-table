@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-14
-- **Decided by:** nobody yet. Stas reopened the rule on 2026-11-14 («пересматриваем!») after a blind Vera read, and after her second read asked «Может быть не лимитировать провалы?», which is option E. The options and the recommendation are Lev's, the verdict is Stas's. If accepted it amends decision 0079 ("One own move per card stays, tried or not") and decision 0068 ("One own move per card, no retry"), and replaces neither.
+- **Decided by:** Stas chose option E on 2026-11-14 (the thread's decision card, 14:46Z); the record is accepted when he merges it. Questions 2 to 6 below are still his, and the work goes ahead on their recommendations until he says otherwise. Stas reopened the rule on 2026-11-14 («пересматриваем!») after a blind Vera read, and after her second read asked «Может быть не лимитировать провалы?», which is option E. The options and the recommendation are Lev's, the verdict is Stas's. If accepted it amends decision 0079 ("One own move per card stays, tried or not") and decision 0068 ("One own move per card, no retry"), and replaces neither.
 
 Author's read: Lev proposed the rule this record reopens (0079, "the rest of the shape is Lev's proposal") and both replacements weighed here, C and E. Nothing below is evidence at a milestone exit. Vera's two reads and Zoya's board check are quoted under Readers; three read option C or the build before it, and two read option E.
 
@@ -114,7 +114,7 @@ From her questions: «"Не получилось." Дважды подряд, с
 
 > Zoya, board check of `wend` with 0081 as revised to option E: the board holds. No row breaks, no deed is added or lost, and the bible argues for E over C (Story-space 1, never a passenger; guardrail 5; the failed roll as the better scene). That is on my two conditions, and the amendment's carriers hold them only with two small fixes. First, in the fall's wake the person on the card answers each try from where their last answer left off, one step further, and never so far that they give way or leave, so the world does not sit and wait while the table tries again. Second, words that unsay an earlier try are answered by that person holding the table to what it already said, not by a bare answer. One row stays owed, `own_move_<card>`: on a card with several moves its one record is the first try's, which is always a fall, whoever's way worked in the end.
 
-Her two fixes are wake-clause wordings for the amendment's §7 (not yet folded in; they go in with the PR that writes those clauses if Stas picks E), and she queues one bible line for Consequence 2.
+Her two fixes are folded into the amendment's §7 (items 3 and 4), and she queues one bible line for Consequence 2.
 
 ## Revisit when
 
