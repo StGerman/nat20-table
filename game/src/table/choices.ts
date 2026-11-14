@@ -182,6 +182,11 @@ export function cardChoices(card: CardSeen, words: SeatWords = SEAT_WORDS.en, me
 /** The choice id an own move takes on a card (API-56). */
 export const OWN_MOVE = "own_move";
 
+/** A card whose own move fell (decision 0079): the move is still on it, and no longer among its choices. */
+export function moveFell(card: { own_move?: unknown; choices: Array<{ id: string }> }): boolean {
+  return Boolean(card.own_move) && !card.choices.some((c) => c.id === OWN_MOVE);
+}
+
 function capitalized(handle: Handle): string {
   return handle.charAt(0).toUpperCase() + handle.slice(1);
 }

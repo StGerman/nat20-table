@@ -88,6 +88,8 @@ export interface SeatWords extends TableWords {
   ownMoveChoice(mine: boolean, name: string, words: string, skill: Skill): string;
   /** After words a card took no move from: the card still waits. */
   stillWaits(count: number): string;
+  /** After an own move that fell (decision 0079): it was tried and failed, or it could not be tried, and the written choices wait. Never "you got it wrong". */
+  ownMoveFell(tried: boolean): string;
   /** The fight's move pick, its line and the walk to a creature or a place (AGT-98). */
   moveMenu: string;
   endTurn: string;
@@ -150,6 +152,7 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     othersChoice: "(the others' choice)",
     ownMoveChoice: (mine, name, words, skill) => `${mine ? "Your move" : `${name}'s move`}: "${words}" (${titled(skill)})`,
     stillWaits: (count) => `The road still waits for your word: a choice, 1 to ${count}, or your own words.`,
+    ownMoveFell: (tried) => `${tried ? "It did not work." : "It never came to that."} Decide what now from the list below.`,
     moveMenu: "Move…",
     endTurn: "End turn",
     side: { party: "party", hostile: "hostile", neutral: "neutral" },
@@ -241,6 +244,7 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     othersChoice: "(выбор остальных)",
     ownMoveChoice: (mine, name, words, skill) => `${mine ? "Ваш ход" : `${name} предлагает`}: «${words}» (${SKILLS_RU[skill]})`,
     stillWaits: (count) => `Дорога всё ещё ждёт вашего слова: выбор от 1 до ${count} или своими словами.`,
+    ownMoveFell: (tried) => `${tried ? "Не получилось." : "До этого дело так и не дошло."} Решайте, что теперь, по списку ниже.`,
     moveMenu: "Идти…",
     endTurn: "Закончить ход",
     side: { party: "свой", hostile: "враг", neutral: "не враг" },
