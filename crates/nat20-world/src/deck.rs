@@ -669,6 +669,17 @@ pub struct Resolution {
     pub own_move: Option<OwnMoveRun>,
 }
 
+impl Resolution {
+    /// Whether the decision is an own move with no failure (decision 0079): its roll comes
+    /// before the card leaves the table, and the server ends it with [`Deck::own_move_won`] or
+    /// [`Deck::own_move_fell`].
+    pub fn rolls_first(&self) -> bool {
+        self.own_move
+            .as_ref()
+            .is_some_and(|run| run.mv.failure.is_none())
+    }
+}
+
 /// An own move to run (API-56): the server rolls the proposer's check through core and runs
 /// one branch with the resolution's `by`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1348,7 +1359,7 @@ impl Deck {
             pending.said.insert(handle.to_string(), choice.to_string());
             settle(card, pending, table)
         };
-        if resolution.as_ref().is_some_and(|r| !rolls_first(r)) {
+        if resolution.as_ref().is_some_and(|r| !r.rolls_first()) {
             state.pending = None;
         }
         Ok(resolution)
@@ -1369,6 +1380,10 @@ impl Deck {
         let card = self.card(&pending.card)?;
         pending.own_move.as_mut()?.spent = true;
         pending.said.retain(|_, choice| choice != OWN_MOVE);
+        // Nobody left who can speak: the card is settled as a card nobody can speak on is.
+        if table.blades.is_empty() {
+            return self.settle_unattended(state, table);
+        }
         let resolution = settle(card, pending, table);
         if resolution.is_some() {
             state.pending = None;
@@ -1451,15 +1466,6 @@ impl Deck {
     }
 }
 
-/// Whether a decision is an own move with no failure, whose roll comes before the card
-/// leaves the table (decision 0079).
-fn rolls_first(resolution: &Resolution) -> bool {
-    resolution
-        .own_move
-        .as_ref()
-        .is_some_and(|run| run.mv.failure.is_none())
-}
-
 /// Whether `handle` may speak on the card now: `Ok(true)` for a player owner's call on a
 /// caravan card, once every Blade has advised; `Ok(false)` for a Blade's word.
 fn may_speak(
@@ -1521,7 +1527,12 @@ fn resolve(
                 mv: mv.clone(),
                 success: branch(&mv.success),
                 // With no failure named, the fall's part is the deed alone (decision 0079).
-                failure: mv.failure.as_deref().map_or_else(|| branch(""), branch),
+                failure: match &mv.failure {
+                    Some(failure) => branch(failure),
+                    None => vec![Effect::Remember {
+                        deed: own_move_deed(&card.id),
+                    }],
+                },
             }
         });
     Resolution {
@@ -2362,6 +2373,30 @@ mod tests {
             (done.choice.as_str(), done.decided),
             ("push", Decided::Owner)
         );
+        assert!(state.pending.is_none());
+    }
+
+    #[test]
+    fn a_fall_with_nobody_left_to_speak_settles_the_card_by_its_default() {
+        let d = deck();
+        let one = Table {
+            owner: Owner::Npc("tobin".into()),
+            blades: vec!["bren".into()],
+            tie_breaker: Some("bren".into()),
+        };
+        let mut state = pending("beggar");
+        let done = d
+            .own_move(&mut state, &one, own_alone("bren", "give"))
+            .unwrap()
+            .unwrap();
+        assert!(done.rolls_first());
+        let nobody = Table {
+            blades: Vec::new(),
+            ..one
+        };
+        let settled = d.own_move_fell(&mut state, &nobody).unwrap();
+        assert_eq!(settled.decided, Decided::Default);
+        assert!(settled.by.is_empty());
         assert!(state.pending.is_none());
     }
 

@@ -482,7 +482,7 @@ impl Session {
         if let Some(run) = resolution
             .own_move
             .as_ref()
-            .filter(|run| run.mv.failure.is_none())
+            .filter(|_| resolution.rolls_first())
         {
             return self.resolve_own_move_alone(&resolution, run);
         }
@@ -513,7 +513,8 @@ impl Session {
         resolution: &world::Resolution,
         run: &world::OwnMoveRun,
     ) -> Result<(), ApiError> {
-        let (roll, success) = match self.roll_own_move(&run.mv) {
+        // Only core's own refusal of the check is a fall; a move that is not a check is a bug.
+        let (roll, success) = match self.roll_own_move(&run.mv)? {
             Ok(rolled) => rolled,
             Err(err) => {
                 eprintln!(
@@ -543,16 +544,19 @@ impl Session {
             self.settle_if_arrived()?;
             return Ok(());
         }
-        self.push_own_move_ran(&resolution.card, None, roll);
-        // The fall's part: the deed alone, with the resolution's `by`.
-        self.run_effects(&run.failure, &resolution.by)?;
+        // The move is spent and its words taken back first, so an error in the deed never
+        // leaves the card voted for a move nobody can try again.
         let table = self.table();
         let world = &mut self
             .campaign
             .as_mut()
             .expect("a card needs a campaign")
             .world;
-        match world.deck.own_move_fell(&mut world.state.deck, &table) {
+        let settled = world.deck.own_move_fell(&mut world.state.deck, &table);
+        self.push_own_move_ran(&resolution.card, None, roll);
+        // The fall's part: the deed alone, with the resolution's `by`.
+        self.run_effects(&run.failure, &resolution.by)?;
+        match settled {
             Some(settled) => self.resolve_card(settled),
             None => Ok(()),
         }
@@ -568,7 +572,7 @@ impl Session {
         by: &[String],
     ) -> Result<(), ApiError> {
         let mv = &run.mv;
-        let (roll, success) = self.roll_own_move(mv)?;
+        let (roll, success) = self.roll_own_move(mv)??;
         let (choice, effects) = if success {
             (Some(&mv.success), &run.success)
         } else {
@@ -579,14 +583,19 @@ impl Session {
     }
 
     /// The proposer's check (API-56): the roll id and whether it succeeded, or no roll and a
-    /// failure when the proposer is down or not here.
-    fn roll_own_move(&mut self, mv: &world::OwnMove) -> Result<(Option<RollId>, bool), ApiError> {
+    /// failure when the proposer is down or not here. The inner error is core's refusal of
+    /// the check; the outer one, a move that is not a check.
+    #[allow(clippy::type_complexity)]
+    fn roll_own_move(
+        &mut self,
+        mv: &world::OwnMove,
+    ) -> Result<Result<(Option<RollId>, bool), ApiError>, ApiError> {
         let up = self
             .game
             .as_ref()
             .is_some_and(|g| g.has_creature(&mv.actor) && g.is_up(&mv.actor));
         if !up {
-            return Ok((None, false));
+            return Ok(Ok((None, false)));
         }
         let (ability, skill) = campaign::parse_check(&mv.ability, &mv.skill)
             .ok_or_else(|| error(ErrorCode::Internal, "an own move names no ability or skill"))?;
@@ -597,13 +606,14 @@ impl Session {
         };
         let outcome = self.game_mut()?.request_check(&mv.actor, &spec);
         self.push_entries();
-        let outcome = outcome?;
-        let roll = self
-            .roll_keys
-            .get(&outcome.key)
-            .cloned()
-            .expect("the check's roll was logged");
-        Ok((Some(roll), outcome.success))
+        Ok(outcome.map(|outcome| {
+            let roll = self
+                .roll_keys
+                .get(&outcome.key)
+                .cloned()
+                .expect("the check's roll was logged");
+            (Some(roll), outcome.success)
+        }))
     }
 
     /// `own_move_ran` (API-56): the choice the roll brought, or none after a fall.

@@ -93,6 +93,8 @@ export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], p
       card = undefined;
     } else if (e.kind === "own_move_ran" && open && e.card === open.card) {
       open.ran = e.choice;
+      // The words on the move end here: after a fall the card waits, and its new words are not the move's.
+      open.votes = [...open.votes];
       open.roll = e.roll ? { id: e.roll, outcome: rolls.get(e.roll) ?? "missing" } : null;
     } else if (e.kind === "deed_remembered" && open && e.deed === `own_move_${open.card}`) {
       open.deed = { contract: e.contract, by: e.by };
