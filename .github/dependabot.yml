@@ -40,7 +40,26 @@ updates:
       # Types follow the Node major in .nvmrc; newer majors describe APIs CI's Node does not have.
       - dependency-name: "@types/node"
         update-types: [version-update:semver-major]
+      # Held for @langfuse/otel's peer ranges (TASKS.md UPS-26): api below 1.10, SDK 2.x, exporter below 0.300.
+      - dependency-name: "@opentelemetry/api"
+        versions: [">=1.10.0"]
+      - dependency-name: "@opentelemetry/core"
+        versions: [">=3.0.0"]
+      - dependency-name: "@opentelemetry/sdk-trace-base"
+        versions: [">=3.0.0"]
+      - dependency-name: "@opentelemetry/sdk-trace-node"
+        versions: [">=3.0.0"]
+      - dependency-name: "@opentelemetry/resources"
+        versions: [">=3.0.0"]
+      - dependency-name: "@opentelemetry/exporter-trace-otlp-http"
+        versions: [">=0.300.0"]
+      - dependency-name: "@opentelemetry/otlp-exporter-base"
+        versions: [">=0.300.0"]
     groups:
+      # Tracing moves together (AGT-16): Langfuse pins the OpenTelemetry versions it works with.
+      tracing:
+        patterns: ["@langfuse/*", "@opentelemetry/*"]
+        update-types: [minor, patch]
       npm-minor-patch:
         update-types: [minor, patch]
 

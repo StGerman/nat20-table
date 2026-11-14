@@ -3,3 +3,6 @@ node_modules/
 .cargo/config.toml
 /runs/
 /rosters/
+
+# Langfuse keys (AGT-16) and any other local secret
+.env
