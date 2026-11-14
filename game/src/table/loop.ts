@@ -967,7 +967,7 @@ export class TableLoop {
       if (!agent || this.table.ended) continue;
       const now = (await this.dmWorld())?.card;
       if (!now || now.id !== card.id || !now.waiting_for.includes(handle)) continue;
-      await this.aiCard(agent, "Give your word with choose_card, with a choice id. Say why in one line with say, if your character would.");
+      await this.aiCard(agent, "Give your word");
     }
     const now = (await this.dmWorld())?.card;
     // Whoever is still silent goes with the others (a failed wake or a refusal).
@@ -1002,7 +1002,7 @@ export class TableLoop {
     if (owner === human) {
       await this.humanCard(now, true);
     } else if (agent) {
-      await this.aiCard(agent, "Make the caravan's call with choose_card, with a choice id. Say why in one line with say, if your character would.", true);
+      await this.aiCard(agent, "Make the caravan's call", true);
     }
     now = await ready();
     if (!now) return;
@@ -1017,6 +1017,7 @@ export class TableLoop {
    * An AI player's word on a road card, from its own view of the card (design §1.7). Its
    * `own_move` words go to the DM once the wake returns; when they make no move, it is asked once
    * more, with the DM's answer, for a `choose_card`, before the loop's fallback.
+   * @param ask how the closing ask starts ("Give your word", "Make the caravan's call").
    */
   private async aiCard(agent: PlayerAgent, ask: string, owner = false): Promise<void> {
     const handle = agent.handle;
@@ -1025,7 +1026,9 @@ export class TableLoop {
     const card = await this.playerCard(handle);
     if (!card) return;
     tools.takeOwnMove();
-    await this.wakePlayer(agent, "card", await this.playerBriefing(handle, ...cardLines(card, owner), ask));
+    // The ask is the briefing's last line: while the card has no own move, it offers one too (AGT-99).
+    const offer = card.own_move ? "" : ", or try something of your own with own_move";
+    await this.wakePlayer(agent, "card", await this.playerBriefing(handle, ...cardLines(card, owner), `${ask} with choose_card, with a choice id${offer}. Say why in one line with say, if your character would.`));
     const said = tools.takeOwnMove();
     if (!said) return;
     // A seat that also gave its word has spoken: its words were only said aloud.
@@ -1041,7 +1044,7 @@ export class TableLoop {
     await this.wakePlayer(
       agent,
       "card",
-      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner), "Your words made no choice of the card. Give your word with choose_card, with a choice id."),
+      await this.playerBriefing(handle, ...(answer ? [`The DM answered your words: ${answer}`] : []), ...cardLines(now, owner, false), `Your words made no choice of the card. ${ask} with choose_card, with a choice id.`),
     );
     // Words a second time are only said aloud: the card wants a choice now.
     const again = tools.takeOwnMove();
@@ -2563,6 +2566,9 @@ export function roadCardAhead(world: WorldDm | undefined): boolean {
 /** How a wake opens a road card (AGT-100), in the pick wake and the card wake alike. */
 const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
 
+/** The AI players' own-move line in a card briefing (AGT-99), while the card has no own move. */
+export const OWN_MOVE_INVITE = "The written choices are only the obvious ones: if your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move, in one sentence.";
+
 /** The engine's limit on an own move's words (API-56). */
 const OWN_MOVE_MAX_CHARS = 300;
 
@@ -2575,8 +2581,8 @@ export function cutAtWord(words: string, max: number): string {
   return (at > 0 ? cut.slice(0, at) : chars.slice(0, max).join("")).trimEnd();
 }
 
-/** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said. */
-function cardLines(card: CardPlayer, owner = false): string[] {
+/** A road card for an AI player's briefing: its words, whose call it is, the choices and what was said; `invite`: the own-move line, left out once the DM answered the seat's words. */
+function cardLines(card: CardPlayer, owner = false, invite = true): string[] {
   const whose = owner
     ? "the caravan's, and the caravan is yours: you make the call after the Blades' advice"
     : card.target === "caravan"
@@ -2587,6 +2593,6 @@ function cardLines(card: CardPlayer, owner = false): string[] {
     `A road card waits for your word (${whose}): ${card.text}`,
     `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === OWN_MOVE && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
-    ...(move ? [] : ["If none of these is what your character would do, say what they do with own_move, in one sentence."]),
+    ...(move || !invite ? [] : [OWN_MOVE_INVITE]),
   ];
 }
