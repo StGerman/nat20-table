@@ -86,7 +86,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0075](0075-site-pack-joins-world-memory.md) | A pack with no campaign names its site in `new_session` (`site {map, place}`), keeps a world memory with no contract part and saves it, so a later contract on the map reads its deeds | Accepted | 2026-11-13 | Stas (by merging table #375: all seven design decisions as recommended) |
 | [0076](0076-allies-in-fights-option-a-first.md) | Allies in fights: the fed dog surprises the wolves first (A); the dog, horses and the Merchant as creatures wait in the backlog (B, C); a judge check for a creature narrated fighting but absent from the fight | Accepted | 2026-11-12 | Stas |
 | [0077](0077-witnessed-deeds-on-a-card.md) | A deed a person witnessed (or was told in front of the party) shows on that person's card as one authored line; supersedes 0063 for that case only | Proposed | 2026-11-13 | not decided (Stas) |
-| [0080](0080-content-test-layers.md) | Content is tested in layers (deck lint, contract walk, DM and seat benches); a full run confirms, Stas plays once at milestone close; would supersede 0043's one commit for a fix a lower-layer case covers | Proposed | 2026-11-14 | not decided (Stas) |
+| [0080](0080-content-test-layers.md) | Content is tested in layers before the exit pair (deck lint, contract walk, DM and seat benches), in shadow for one milestone; the pair's rules wait for that record | Proposed | 2026-11-14 | not decided (Stas) |
 
 ## Open questions to watch
 

@@ -1,54 +1,51 @@
-# 0080. Content is tested in layers; a full run confirms, it does not discover
+# 0080. Content is tested in layers before the exit pair; the pair's rules wait for the record
 
 - **Status:** Proposed
 - **Date:** 2026-11-14
 - **Decided by:** not decided; drafted for Stas from his ask of 2026-11-14 06:55Z (testing thread)
-- **Would supersede:** in [0043](0043-demo-acceptance-two-runs.md), "on the same commit" for a fix that a lower-layer case covers; and the rule "a fail in run 2 means a fix and both runs again" in the scopes that state it (`docs/scope/not-a-passenger-scope.md` §4, `docs/scope/dramaturg-mechanism-scope.md`), from the milestone Stas names. 0043's audit, leak scan, narration check and retry rule stand. The all-AI half first (0065) stands.
 
 ## Context
 
-A card, a DM prompt line and a player prompt line are first tested by a whole playthrough. Milestone 11 played three exit pairs to pass one (35.45 USD, 1.09 h of Stas in two evenings). Milestone 12 has played ten runs and three exit pairs, passed none, and cost 44.29 USD and 3.09 h of Stas in three evenings by 2026-11-14. Its own-move row failed four times, each found only after a full run:
+A card, a DM prompt line and a player prompt line are first tested by a whole playthrough. Milestone 11 played three exit pairs to pass one (35.45 USD, 1.09 h of Stas in two evenings). Milestone 12 has played ten runs and three exit pairs, passed none, and cost 44.29 USD and 3.09 h of Stas in three evenings by 2026-11-14.
 
-- runs 14:15 and 15:33: AI players never call `own_move` (0 of 28 card wakes each). The card wakes alone would have shown it.
-- run 16:05: Stas's real plan came between cards, where no own move exists. Only a person at the seat finds that.
-- run 01:42: one card has no failure the design allows, which a rule over the deck JSON finds only if choices carry a mark nobody had written; another has no choice Stas's plan could land on, which needed his plan.
+What the failed runs found (`docs/design/content-test-layers.md` §1):
 
-The constraint is Stas's hours and the subscription's limits (0065), and a full run spends both.
+- M11 pair 1, both halves: no arrival card could be met. A scripted walk of the contract shows it with no model.
+- M12 runs 14:15 and 15:33: AI players never call `own_move` (0 of 28 card wakes each). The card wakes alone show it.
+- M12 run 16:05, Stas's evening: his real plan came between cards, where no own move exists. Only a person at the seat finds that.
+- M12 run 01:42, Stas's evening: one card has no failure the design allows for his plan, another no choice his plan could land on. A rule over the deck JSON does not find either as the data stands.
+
+So lower layers would have caught, for certain, 24.34 USD of runs and one 39-minute evening, and neither of Stas's two failed M12 exit evenings. The constraint is Stas's hours and the subscription's limits (0065).
 
 ## Options
 
 ### A. Keep the exit pair as the only content gate
 - Pro: nothing to build; the pair tests the real thing.
-- Con: every structural hole costs a run and often an evening of Stas; M12 is the record.
+- Con: structural holes and agent rates keep costing full runs; M11 pair 1 cost Stas an evening a script would have saved.
 
-### B. Layers below the run, the pair's rules unchanged
-- Pro: defects are found sooner; no accepted rule changes.
-- Con: a fix after Stas's run still means both runs again, so his evenings are saved only when the layers catch everything.
+### B. Layers before the pair, in shadow for one milestone; the pair's rules unchanged
+- Deck lint and a scripted contract walk in CI; a DM bench with a plan fuzz, and a seat bench, as one command Stas runs before the all-AI run. A full-run failure becomes a case at the layer that should have seen it, when that layer exists. The milestone's close records what each layer caught, missed and cost.
+- Pro: no accepted rule changes; no full run is spent on what a script or thirty model calls can show; the DM bench starts from Stas's own 13 recorded lines; the record it produces is what a later gate change needs.
+- Con: 4 to 5 PRs into a queue of about 20 open ones; no dollar saving (a bench pass costs about what an all-AI run costs, unmeasured); it does not promise Stas fewer evenings; the plan fuzz, the one tool aimed at what cost him two evenings, is unproven.
 
-### C. Layers below the run, and the run only confirms
-- Deck lint and a scripted contract walk in CI; a DM bench and a seat bench on demand (one card, one state, one line, the live model); one all-AI confirming run; one evening of Stas at milestone close. Every full-run failure becomes a lower-layer case before any rerun, except a row only a person can rule. A fix that a lower-layer case covers does not void the runs already played.
-- Pro: Stas plays one evening a milestone instead of one for every pair attempt; a bench answers in minutes with nobody at the seat; the golden set starts from his own 13 recorded lines.
-- Con: 5 to 6 PRs into a queue of about 20 open ones before it pays; no dollar saving (about 47 to 100 USD a milestone, unmeasured, against 35.45 and 44.29); of the six failed runs in the design's §1 the layers would have caught four, and neither of Stas's failed M12 evenings; nothing saved on a milestone whose first pair would have passed; benches are live calls, so Stas runs them on his Mac (0036); one commit stops being absolute, so a fix can ride on a bench that missed something; two of M12's findings needed a person, so the one evening can still fail.
-
-### D. C without Stas's evening as a gate
-- Pro: cheapest in his hours.
-- Con: no layer rules whether it is a game; friends-and-family testing would be the first human filter.
+### C. B, and the gates change now: Stas plays once at milestone close, a fix covered by a lower-layer case does not replay the pair
+- Pro: the bold version; if the layers catch what they claim, three evenings become one.
+- Con: the record does not support it: both failed M12 evenings failed on things no built layer would have caught, so under C they would have been replayed anyway; it supersedes 0043's one commit and the scopes' "both runs again" on a promise.
 
 ## Decision
 
-Proposed: C. It beats B because B keeps the rule that spent Stas's second and third M12 evenings: any fix replays him. It beats D because readability and "is it a game" have no lower layer. Design: `docs/design/content-test-layers.md`.
+Proposed: B. It beats A on M11 pair 1 and the two M12 runs alone. It beats C because C changes accepted rules on evidence that does not exist yet; B produces that evidence in one milestone. Design: `docs/design/content-test-layers.md`.
 
 ## Consequences
 
-- Every exit row in a milestone's design doc names its lowest layer; a row gates on a full run only when no lower layer can see it.
-- A layer joins a gate only after a shadow milestone: it reports beside the exit pair under today's rules and has caught a defect a full run also showed, or caught it first (Yan's amendment). Each deck-lint rule starts as a report and turns red in CI only after Stas has ruled its first hits.
-- New commands and CI steps (deck lint, contract walk, `bench:dm`, `bench:seat`); rows only after Stas accepts.
-- CLAUDE.md gains a short section on the layers, and `docs/roadmap.md`'s Delivery columns gain bench passes and their cost, with the accepting PR.
-- Decision 0036 is not changed here: benches run on Stas's Mac. A bench from a cloud thread would need 0036 revisited in its own record.
+- Every exit row in a milestone's design doc names its lowest layer, or "a person".
+- New warnings in the deck validator, a contract walk in CI, and a bench command; rows only after Stas accepts. Each lint rule starts as a warning and becomes an error only after Stas has ruled its first hits.
+- Decisions 0036, 0043, 0065 and 0074 and the milestone scopes are not changed. Benches run on Stas's Mac (0036); a bench from a cloud thread would need 0036 revisited in its own record.
+- `docs/roadmap.md`'s Delivery section gains, at the shadow milestone's close, what each layer caught, missed and cost.
 
 ## Revisit when
 
-A milestone closes with every layer green and Stas's evening still finds a mechanics defect twice: the benches are not seeing what they claim to.
+The shadow milestone closes: then the gate change of option C is decided on its record, for or against.
 
 ## Sources
 
