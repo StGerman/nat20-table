@@ -51,6 +51,7 @@ Placing a person:
 5. **The DM narrates reactions, never verdicts,** and never what the human's character feels.
 6. **Funny in the people.** Jokes come from people, details, and surprising consequences. Everyone gets mocked, the human's character too, for what they do, never for what they feel.
 7. **Handrails.** Every detail can be asked about, and a companion speaks at every hard choice.
+8. **A world card fits every quest it can be drawn under.** A card that names one quest's client, cargo, or destination belongs in that quest's deck, not the world's.
 
 ## Consequence: how the world changes
 
@@ -58,6 +59,7 @@ Placing a person:
 2. **Deeds come back.** The world remembers; only those who saw or heard react, one step at a time, and a later scene reads the deed back as a cause the table hears. A card born of a player's wish opens on deeds the world saw; the wish itself is never read aloud as a cause (decision 0071). A deed carries a pay-off only if another outcome of the same scene or card writes a different deed; a deed every path writes is a marker, not a cause: it may gate prose, such as a greeting, but never counts as a carried pay-off.
 3. **Every story has a half-blind choice, a consequence on the young, and something learned that goes out of date.**
 4. **Losing is a consequence, never the end of the game.** Death is final, by price and distance; only a story brings someone back.
+5. **A chain of cards has no shape of its own.** Its paths through the deeds end on different curves of money and standing, and at least one path falls and goes on. The shape is the one the party's decisions draw, never one written ahead.
 
 ## Guardrails
 
