@@ -19,7 +19,7 @@ import { usageBlock, type UsageLog } from "../usage.ts";
 import type { Language } from "../agents/language.ts";
 import { refusedRu, SEAT_WORDS, UI_WORDS, type SeatWords } from "./words.ts";
 import type { Suggester } from "../agents/suggest.ts";
-import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, ToolOutcome } from "./types.ts";
+import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
 /**
  * What the run does with a scene the DM loads: play it, end the run before it, or pass over it, so
@@ -350,6 +350,8 @@ export class TableLoop {
   /** The human's numbered list (`/options`), and the follow-up pick on screen inside it, if any. */
   private top: Choice[] = [];
   private shown: Choice[] = [];
+  /** The road card's choices while the human's word on it is asked: `/options` shows them again. */
+  private cardList: Extract<TableEvent, { kind: "options" }> | undefined;
   /** The human's last `legal_actions`, for the DM when it maps the human's words (D5). */
   private lastOptions: LegalActionsResult | undefined;
   /** DM events read but held back for the next DM wake (a fight's end, kept for `combat_over`). */
@@ -1118,8 +1120,9 @@ export class TableLoop {
       const { choices } = cardChoices(shown, words, human, this.table.names);
       if (showCard) this.table.show({ kind: "info", title: words.onTheRoad, text: [shown.text, owner ? words.yourCaravan : card.target === "caravan" ? words.merchantDecides : words.bladesDecide].join("\n") });
       showCard = false;
-      this.table.show({ kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(card.own_move ? [] : [words.ownMoveLine])], choices });
-      const intent = await this.ask({ kind: "card", line: words.cardPrompt });
+      this.cardList = { kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(card.own_move ? [] : [words.ownMoveLine])], choices };
+      this.table.show(this.cardList);
+      const intent = await this.ask({ kind: "card", line: words.cardPrompt }).finally(() => (this.cardList = undefined));
       if (!intent) return;
       if (intent.kind === "option") {
         const picked = choices.find((c) => c.number === intent.number);
@@ -2180,7 +2183,9 @@ export class TableLoop {
         return;
       }
       case "options":
-        if (this.isTurnOf(human)) {
+        // On a road card the card's choices are the human's options (run 2026-11-13: Vera saw a fight's list).
+        if (this.cardList) this.table.show(this.cardList);
+        else if (this.isTurnOf(human)) {
           this.shown = this.top;
           this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top });
         } else if (this.table.inCombat) {

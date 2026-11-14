@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { REPO } from "../src/engine.ts";
-import { cardChoices, roadChoices } from "../src/table/choices.ts";
+import { cardChoices, fightOnly, roadChoices } from "../src/table/choices.ts";
 import { SEAT_WORDS } from "../src/table/words.ts";
 import { OWN_MOVE_INVITE, TableLoop, cutAtWord, roadCardAhead } from "../src/table/loop.ts";
 import { DmTools } from "../src/table/tools.ts";
@@ -93,6 +93,36 @@ test("the loop starts the campaign, asks a road card of the human first and then
   } finally {
     t.close();
   }
+});
+
+test("/options on a road card shows the card's choices again, not the round's actions (run 2026-11-13)", async () => {
+  const walk = traveller();
+  let asked = false;
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "card" && !asked) {
+      asked = true;
+      return { kind: "command", name: "options" };
+    }
+    return walk(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    const loop = new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    await loop.run("vale_town");
+    assert.ok(asked, "a card was asked");
+    const lists = seat.shown.filter((e) => e.kind === "options" && e.title === "Choices");
+    assert.equal(lists.length, 2, "the card's list, then the same list on /options");
+    assert.deepEqual(lists[1], lists[0]);
+    const between = seat.shown.slice(seat.shown.indexOf(lists[0]!) + 1, seat.shown.indexOf(lists[1]!));
+    assert.deepEqual(between.filter((e) => e.kind === "options"), [], "no other list in between");
+  } finally {
+    t.close();
+  }
+});
+
+test("out of a fight the human's options leave out what only a fight has", () => {
+  for (const id of ["dash", "disengage", "dodge", "fighter/action_surge", "melee_attack/longsword", "unarmed_attack", "ranged_attack/shortbow", "barbarian/reckless_attack/greataxe"]) assert.equal(fightOnly(id), true, id);
+  for (const id of ["fighter/second_wind", "help/assist_ability_check", "use/potion_of_healing", "cast/cure_wounds/1", "help/stabilize"]) assert.equal(fightOnly(id), false, id);
 });
 
 test("words on a road card are said at the table, the DM answers them with no move, and the card waits for a number without being shown again (AGT-96, AGT-99)", async () => {

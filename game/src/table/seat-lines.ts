@@ -53,11 +53,16 @@ export interface CardOnSeat {
 export class SeatNames {
   readonly language: Language;
   /** Russian names by id: party handles, `npc:<id>`, places, goods and anchors (`anchor:<id>`). */
-  private readonly ru: ReadonlyMap<string, string>;
+  private readonly ru: Map<string, string>;
 
   constructor(language: Language = "en", ru: ReadonlyMap<string, string> = new Map()) {
     this.language = language;
-    this.ru = ru;
+    this.ru = new Map(ru);
+  }
+
+  /** A creature the DM brought in with a name in the run's language: a Russian seat calls it so from now on. */
+  learn(handle: string, name: string): void {
+    if (this.language === "ru") this.ru.set(handle, name);
   }
 
   /**
