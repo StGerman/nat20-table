@@ -18,7 +18,7 @@ A success gives the party nothing a number would not: the named choice runs in f
 ## Options
 
 ### A. The failure choice is optional; with none, a failed roll leaves the card waiting (proposed)
-The move names a check and a success choice. If the vote goes to it and the roll fails, no choice runs, the card stays on the table for a written choice, and the move is spent.
+The move names a check and a success choice. If the vote goes to it and the roll fails (or the proposer is down, or the engine cannot roll), no choice runs, the card is decided on a written choice (at once if the words left settle it), and the move is spent.
 - Pro: the bog-wife's card takes the move; a failed roll never acts for the player, by structure and not by prompt; moves that name a failure keep their teeth and their fixtures.
 - Con: the card's decision is no longer final at the vote for such a move: the server rolls before it logs `card_resolved`. A failed attempt costs only the move.
 
