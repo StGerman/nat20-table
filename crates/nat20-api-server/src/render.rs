@@ -283,7 +283,9 @@ pub fn text(kind: &EventKind) -> String {
                 format!("The proposer is down: the own move brings {choice} without a roll.")
             }
             (None, Some(_)) => "The own move fails: no choice runs.".to_owned(),
-            (None, None) => "The own move was never tried: no choice runs.".to_owned(),
+            (None, None) => {
+                "The proposer is down, or the roll could not be made: no choice runs.".to_owned()
+            }
         },
         EventKind::CargoChanged { good, change } => {
             if *change >= 0 {
