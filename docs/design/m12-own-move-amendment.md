@@ -22,7 +22,7 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 | Fact | Who writes it, when | Who reads it | Where the player sees it |
 | --- | --- | --- | --- |
 | `own_move_set` with no `failure` | the server, when the DM puts the move on the card | the run report (moves with and without a failure), the verdict row | the move as a numbered choice in their own words (§1.6 of the design; its own-move line and the AI tool are gone once a card has or had a move) |
-| `own_move_ran {choice: null, roll}` | the server, when the move named no failure and the roll fails, the proposer is down, or the engine cannot roll | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line, the DM's one or two sentences, a line that the move did not work (draft, §12), the written choices again, unless the words left settle the card (then only its settled wake) |
+| `own_move_ran {choice: null, roll}` | the server, when the move named no failure and the roll fails, the proposer is down, or the engine cannot roll | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line if there was a roll, the DM's one or two sentences, a line that the move did not work (draft, §12), the written choices again, unless the words left settle the card (then only its settled wake) |
 | the pending card's own move, marked spent (world crate only; the views show it as `own_move` no longer among the choices) | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) the `own_move` command (`own_move_taken`) and `choose_card {choice: "own_move"}` (`unknown_choice`) | no own-move line and no "Your move" choice on the card |
 | the deed `own_move_<card>` | the world, whenever `own_move_ran` is logged, whatever it brought | the run report and the verdict row; no card in M12 | nowhere yet: owed on Zoya's board, left unread on purpose by decision 0068 |
 | `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move | nowhere; it is the check on rule 6 below |
@@ -62,9 +62,9 @@ No new owed row. A tried move writes the deed 0068 already owes, `own_move_<card
 
 ## 6. Failure
 
-- **The roll fails, no failure named:** §3. The party gets the roll line, the DM's sentences, and the card.
+- **The roll fails, no failure named:** §3. The party gets the roll line (if there was a roll), the DM's sentences, and the card.
 - **The `card_words` wake fails or times out:** as today: no move, the "Said at the table" line, the card waits.
-- **The DM's wake for a fall fails:** the logged fallback; the seat still shows the roll line and the "did not work" line, and the card goes to the seats.
+- **The DM's wake for a fall fails:** the logged fallback; the seat still shows the roll line, if any, and the "did not work" line, and the card goes to the seats.
 - **The DM names a failure the engine refuses:** as today it corrects within its retries; the refusal's message now says "or none".
 
 ## 7. The seat's lines from run 2
@@ -118,9 +118,9 @@ For Vera, without this file:
 | Where | Russian | English |
 | --- | --- | --- |
 | own move failed, the human's (new, draft: PR 2 rewords it with its own Vera read, §16) | «Ваш ход не удался. Теперь выберите из написанного.» | "Your move did not work. Now pick one of the written choices." |
-| own move failed, another seat's (new, draft as above) | «Ход Брена не удался. Теперь выберите из написанного.» | "Bren's move did not work. Now pick one of the written choices." |
+| own move failed, another seat's (new, draft as above) | «Ход Торвы не удался. Теперь выберите из написанного.» | "Torva's move did not work. Now pick one of the written choices." |
 | a card payment, the human's (changed) | «Вы платите: 4 серебряных.» (was «Вы платите пошлину: 4 серебряных.») | "You pay 4 silver pieces." (was "You pay 4 silver pieces toll.") |
-| a card payment, another's, Russian seat (changed) | «Брен платит: 4 серебряных.» (was «Брен платит пошлину: …») | unchanged: the wire's text |
+| a card payment, another's, Russian seat (changed) | «Торва платит: 4 серебряных.» (was «Торва платит пошлину: …») | unchanged: the wire's text |
 | after an answered word on a card (removed) | «Сказано за столом: Дорога всё ещё ждёт вашего слова: выбор от 1 до 3 или своими словами.» no longer shows | "Said at the table: The road still waits for your word…" no longer shows |
 
 ## 13. Text for the accepted design
