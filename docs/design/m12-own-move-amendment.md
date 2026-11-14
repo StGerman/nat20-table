@@ -73,7 +73,7 @@ Each is one change, with where it lives.
 
 - **(a) "The road still waits" after every answer.** After the DM answered the words, the seat adds no line: the choices are still pinned above the prompt. `game/src/table/loop.ts`, `humanCard`: drop the `saidAtTable` / `stillWaits` info after `cardWords` returns an answer; keep it only when the wake gave none. A correction to the run's read: at the Ink seat an `options` event is pinned above the prompt, not printed into the story (`game/src/ui/ink-seat.ts`, `show`, case `options`), so Stas's screen repeated the two-line info nine times, not the whole block. `seat.jsonl` logged the block nine times because `drawn` records every `show`; it should skip an `options` event equal to the list already pinned, so the next blind read sees what the screen showed.
 - **(b) The card's paragraph twice.** Each card's text shows once at the seat. `game/src/table/seat-lines.ts`, `case "card_drawn"` (and the English path beside it): no line at call site `seat` when the loop's card panel follows (`humanCard`, the `onTheRoad` info); `/log` keeps it. Test: in a `seat.jsonl`, a drawn card's text appears once.
-- **(c) A salt purchase called a toll.** Every card `pay` effect reaches the wire as `toll` (`crates/nat20-api-server/src/session/cards.rs`, `pay_world(…, LedgerReason::Toll)`), so the seat stops naming it: `game/src/table/seat-lines.ts` (the two `case "toll"` lines) and `game/src/view.ts` (`You pay … toll.`). The DM's narration says what the coins were for.
+- **(c) A salt purchase called a toll.** Every card `pay` effect reaches the wire as `toll` (`crates/nat20-api-server/src/session/cards.rs`, `pay_world(…, LedgerReason::Toll)`), so the seat stops naming it: `game/src/table/seat-lines.ts` (the two `case "toll"` lines) and `game/src/view.ts` (`You pay … toll.`, and another seat's card payment, which today falls through to the wire's English "pays … in toll"). The DM's narration says what the coins were for.
 - **(d) Second Wind and potions on the road at full health.** Out of a fight, with the human's character at full Hit Points (their own sheet), the list has no Second Wind line and one potion line that opens its targets, never a line per target or "another target". `game/src/table/choices.ts`: `buildChoices`, `fightOnly`, and `optionItems`' `single` case; called from `offerChoices(false)` in `loop.ts`.
 
 ## 8. What the run report counts
@@ -86,7 +86,7 @@ In `game/src/play/exit.ts`, beside what §8 of the design lists:
 
 - **A plain table line saying "this card cannot carry that"** for a plan like the salt one. It needs the DM to label its own answer, and a first-time player may hear "you typed it wrong". The report's list shows whether it is needed (question 3).
 - **`remember` called in 2 of 9 `card_words` wakes** (lost: Fenn never sold his notes in twelve years; Rufus rides in from Saltmouth in spring). A backlog row, not this amendment: it is the DM's own voice across a run (decision 0034), a different concern, and this amendment narrows what `remember` may keep; asking for more of it in the same PR would blur what the next run shows. For that row: the loop already holds each answer (`cardAnswer` in `tools.ts`) and could keep it for the DM without a tool call.
-- **The ledger's reason stays `toll`** for every card payment, and the wire's English text ("pays … in toll") with it: a reason per `pay` effect is a deck-format change that only line (c) would read.
+- **The ledger's reason stays `toll`** for every card payment, and the wire's English text ("pays … in toll") with it, which the seat no longer prints (§7 c): a reason per `pay` effect is a deck-format change that only line (c) would read.
 - **A cost for a failed move** beyond the move itself: §3 says why not.
 
 ## 10. PRs
@@ -121,7 +121,7 @@ For Vera, without this file:
 | own move never tried (`roll: null`), the human's or another's (new) | wording in PR 2, with the same Vera read | wording in PR 2 |
 | own move failed, another seat's (new, draft as above) | «Ход Торвы не удался. Теперь выберите из написанного.» | "Torva's move did not work. Now pick one of the written choices." |
 | a card payment, the human's (changed) | «Вы платите: 4 серебряных.» (was «Вы платите пошлину: 4 серебряных.») | "You pay 4 silver pieces." (was "You pay 4 silver pieces toll.") |
-| a card payment, another's, Russian seat (changed) | «Торва платит: 4 серебряных.» (was «Торва платит пошлину: …») | unchanged: the wire's text |
+| a card payment, another's, Russian seat (changed) | «Торва платит: 4 серебряных.» (was «Торва платит пошлину: …») | "Torva pays 4 silver pieces." (was the wire's "pays … in toll") |
 | after an answered word on a card (removed) | «Сказано за столом: Дорога всё ещё ждёт вашего слова: выбор от 1 до 3 или своими словами.» no longer shows | "Said at the table: The road still waits for your word…" no longer shows |
 
 ## 13. Text for the accepted design
