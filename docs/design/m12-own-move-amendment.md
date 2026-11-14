@@ -25,7 +25,7 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 | `own_move_ran {choice: null, roll}` | the server, when the move named no failure and the roll fails, the proposer is down, or the engine cannot roll | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line if there was a roll, the DM's one or two sentences, a line that the move did not work, or could not be tried with `roll: null` (drafts, §12), the written choices again, unless the words left settle the card (then only its settled wake) |
 | the pending card's own move, marked spent (world crate only; the views show it as `own_move` no longer among the choices) | the world crate, on that fall | the views (`own_move` is no longer among the card's choices); the `own_move` command (`own_move_taken`) and `choose_card {choice: "own_move"}` (`unknown_choice`) | no own-move line and no "Your move" choice on the card |
 | the deed `own_move_<card>` | the world, whenever `own_move_ran` is logged, whatever it brought | the run report and the verdict row; no card in M12 | nowhere yet: owed on Zoya's board, left unread on purpose by decision 0068 |
-| `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move, and facts kept in a wake that told a fall | nowhere; it is the check on rule 6 below |
+| `wake` on a transcript `memory` record, and `fall: <card>` when the wake told a fall | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move, and facts kept in a wake that told a fall | nowhere; it is the check on rule 6 below |
 
 No new deed id: `own_move_tried_<card>` would be a second deed nothing reads (question 1).
 
@@ -81,7 +81,7 @@ Each is one change, with where it lives.
 In `game/src/play/exit.ts`, beside what §8 of the design lists:
 - own moves put on a card: with a failure choice, without one; for each, rolled or not, and what `own_move_ran` named (a choice, or none);
 - every answer in words that made no move: the card, the player's words, the DM's answer in full, and each `remember` fact kept in that wake. At most a dozen lines a run; Stas reads them for an outcome ruled in words (rule 6). Zoya reads the same list for cards whose choices the players keep walking around.
-- apart, each `remember` fact kept in a wake that told a fall (its own, or the settled card's), with the card and the move's words; none should be about the attempt (rule 6), while the settled card's wake may keep how the card settled.
+- apart, each `remember` fact kept in a wake that told a fall (`memory` records with `fall`), with the card and the move's words; none should be about the attempt (rule 6), while the settled card's wake may keep how the card settled.
 
 ## 9. Out
 
@@ -99,7 +99,7 @@ In order. Row ids, sizes and prices are Yan's.
 | 0 | This amendment and decision 0079, with §13 folded into the accepted design, Zoya's board check and Vera's read of the lines in §12 | - |
 | 1 | `own_move` without a failure on the wire: contract, protocol §4.13, the world crate's pending card, the server's roll-then-log, the fixture cases of design §1.2 (six new, the roster save and load after a fall among them), CHANGELOG; 0079, its index row and 0068's row ("amended by 0079") marked Accepted | 0 accepted |
 | 2 | The same at the table: `own_move_or_answer`'s `move.failure` optional; the `card_words` rule in `dm.ts` and `loop.ts` (`cardWords`); the `remember` tool's description; the fall (a `road` wake tells it, the "did not work" and "never tried" lines with one Vera read, the seats asked again, the settled card's wake told of a fall); words on a card that already has a move are only answered; `seat-lines.ts` takes a null `choice` | 1 |
-| 3 | The run report and `m12-own-move`: §8 here, `wake` on `memory` records, the row counts a fall (question 2, Stas: yes) | 2 |
+| 3 | The run report and `m12-own-move`: §8 here, `wake` and `fall` on `memory` records, the row counts a fall (question 2, Stas: yes) | 2 |
 | 4 | The seat's four lines (a) to (d), one commit each, with a Vera read of a `seat.jsonl` stretch | - |
 | 5 | Optional, drop first: a narration-judge flag kind for an answer to words on a card that tells an outcome with no roll in its engine lines. Without it the §8 list is read by a person | 3 |
 
@@ -150,7 +150,7 @@ Folded into `docs/design/m12-system-design.md` in table #381: the Summary; §1.1
 | --- | --- | --- | --- | --- |
 | that the move fell | the engine: the proposer's roll against the ladder DC (Rule 4); no roll when the proposer is down or the engine cannot roll | the roll in the engine log, cited in the transcript; `own_move_ran {choice: null, roll}` in the run's log, DM only | the roll line (none with `roll: null`) | no |
 | how it fell short | nobody: the DM tells it in one or two sentences from the player's words (the wake carries them) and the roll; the fall's own wake forbids it to change anything or tell a choice happening, and both wakes that tell a fall forbid a `remember` of the attempt (design §1.8) | the transcript, read by the narration judge | the sentences (told in the settled card's wake when the words left settle it at once) | only if the DM brings it up in the same run; nothing promises it |
-| the move is spent | the world crate | the waiting card (`own_move` set, no longer offered); gone when the card resolves | the line that the move did not work, or could not be tried with `roll: null`, and no own-move choice; neither line when the words left settle the card at once | no |
+| the move is spent | the world crate | the waiting card's `own_move.spent` (world crate only; the views no longer offer `own_move`); gone when the card resolves | the line that the move did not work, or could not be tried with `roll: null`, and no own-move choice; neither line when the words left settle the card at once | no |
 | what happens in the world | the table, by a written choice; the deck file says what that choice brings | the deed book, the customs, the cargo: `bread` takes one ration, writes `sedge_charm` and keeps `bread_shared`; `true_word` writes `sedge_charm` and `told_sedge_a_true_word`; `walk_past` writes `snubbed_sedge` and breaks `bread_shared` | the choice's own lines and the DM's narration | yes: five choices in the Wend decks read `sedge_charm` or `snubbed_sedge` |
 | that a move was made here | the world, on `own_move_ran` | the deed `own_move_bog_wifes_toll {by, day, contract}`, the same after a success | nothing | no reader in M12 (0068) |
 
