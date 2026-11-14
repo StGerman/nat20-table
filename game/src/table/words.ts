@@ -469,6 +469,8 @@ export interface UiWords {
   suggestHint: string;
   yourOwn: string;
   tooSmall: string;
+  /** Under the story until the first scroll (AGT-94): the keys and the trackpad that scroll it. */
+  scrollHint: string;
   pausedBlock: string;
   finaleHint: string;
   enterPlays(line: string): string;
@@ -576,7 +578,9 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Tab        complete a /command, or put the next suggestion in the line",
         "  ↑/↓        light a command, an option or a suggestion; Enter runs it",
         "  Esc        close this, go back from a sub-list, or clear the line",
-        "  PgUp/PgDn  scroll the story, or this",
+        "  Shift+↑/↓  scroll the story, or this; PgUp/PgDn too",
+        "  Trackpad   two fingers scroll the story",
+        "  Fn         hold it to select text with the mouse (Option in iTerm2)",
         "  End        back to the newest lines",
         "  Ctrl+P/N   lines you sent before",
         "  Ctrl+C     stop after this decision; twice, at once",
@@ -589,10 +593,11 @@ export const UI_WORDS: Record<Language, UiWords> = {
     suggestHint: "or type your own. ↑/↓ and Enter send one; Tab puts one in the line.",
     yourOwn: "Your own…",
     tooSmall: "Window too small: make it at least 40×16. The game goes on.",
+    scrollHint: "Shift+↑/↓ or two fingers on the trackpad: scroll the story",
     pausedBlock: "Paused: the AI players wait. /pause to go on.",
     finaleHint: "Any key leaves; the checks go on after it.",
     enterPlays: (line) => `Enter plays ${line}`,
-    overlayKeys: (name, scroll, fresh) => `${name} · Esc closes${scroll ? " · PgUp/PgDn" : ""}${fresh > 0 ? ` · ↓ ${fresh} new` : ""}`,
+    overlayKeys: (name, scroll, fresh) => `${name} · Esc closes${scroll ? " · Shift+↑/↓" : ""}${fresh > 0 ? ` · ↓ ${fresh} new` : ""}`,
     fresh: (count) => (count > 0 ? `↓ ${count} new · End to follow` : "↓ End to follow"),
     engineStarting: "The engine is starting",
     stoppingFor: (why) => `Stopping: ${why}.`,
@@ -690,7 +695,9 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Tab        дописать /команду или взять следующую подсказку в строку",
         "  ↑/↓        выбрать команду, вариант или подсказку; Enter выполняет",
         "  Esc        закрыть, вернуться из подсписка или очистить строку",
-        "  PgUp/PgDn  листать историю или это окно",
+        "  Shift+↑/↓  листать историю или это окно; PgUp/PgDn тоже",
+        "  Трекпад    два пальца листают историю",
+        "  Fn         держите, чтобы выделить текст мышью (в iTerm2 — Option)",
         "  End        к последним строкам",
         "  Ctrl+P/N   строки, которые вы уже отправляли",
         "  Ctrl+C     остановить после этого решения; дважды — сразу",
@@ -703,10 +710,11 @@ export const UI_WORDS: Record<Language, UiWords> = {
     suggestHint: "или напишите своё. ↑/↓ и Enter отправляют подсказку; Tab кладёт её в строку.",
     yourOwn: "Своё…",
     tooSmall: "Окно слишком маленькое: нужно хотя бы 40×16. Игра идёт дальше.",
+    scrollHint: "Shift+↑/↓ или два пальца на трекпаде: листать историю",
     pausedBlock: "Пауза: игроки за столом ждут. /pause продолжает.",
     finaleHint: "Любая клавиша — выход; проверки продолжатся после него.",
     enterPlays: (line) => `Enter: ${line}`,
-    overlayKeys: (name, scroll, fresh) => `${name} · Esc закрывает${scroll ? " · PgUp/PgDn" : ""}${fresh > 0 ? ` · ↓ новых: ${fresh}` : ""}`,
+    overlayKeys: (name, scroll, fresh) => `${name} · Esc закрывает${scroll ? " · Shift+↑/↓" : ""}${fresh > 0 ? ` · ↓ новых: ${fresh}` : ""}`,
     fresh: (count) => (count > 0 ? `↓ новых: ${count} · End — к ним` : "↓ End — к последним"),
     engineStarting: "Стол готовится",
     stoppingFor: (why) => `Игра останавливается: ${why}.`,

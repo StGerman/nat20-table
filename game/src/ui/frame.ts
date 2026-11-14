@@ -116,7 +116,19 @@ export function maxOffset(rows: StoryRow[], height: number, seen: number): numbe
  * the foot, the scroll ends and the story follows the game again.
  */
 export function page(scroll: Scroll | undefined, direction: -1 | 1, rows: StoryRow[], height: number, lineCount: number): Scroll | undefined {
-  const step = Math.max(1, height - 2);
+  return scrollRows(scroll, direction, Math.max(1, height - 2), rows, height, lineCount);
+}
+
+/** `top` moved by `step` rows, kept within `0..max`: an overlay read by the page keys or the wheel. */
+export function stepWithin(top: number, step: number, max: number): number {
+  return Math.max(0, Math.min(max, top + step));
+}
+
+/** The mouse wheel's step (AGT-94): three rows, as a terminal scrolls its own scrollback. */
+export const WHEEL_ROWS = 3;
+
+/** Scrolls `step` rows up (`-1`) or down (`1`); back at the foot, the story follows the game again. */
+export function scrollRows(scroll: Scroll | undefined, direction: -1 | 1, step: number, rows: StoryRow[], height: number, lineCount: number): Scroll | undefined {
   if (direction === 1) {
     if (!scroll) return undefined;
     const offset = scroll.offset - step;

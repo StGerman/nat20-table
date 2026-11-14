@@ -3,7 +3,7 @@
 // frame.ts). What the loop shows goes into the story as messages, one speaker label each (AGT-37);
 // other characters' engine lines wait for the DM's narration of them and are left out of the
 // story, or folded under it with `verbose`; the human's own, and any before a decision, show at
-// once. The story keeps every line and scrolls with PgUp/PgDn; the terminal's own scrollback
+// once. The story keeps every line and scrolls with Shift+↑/↓, PgUp/PgDn and the mouse wheel (AGT-94); the terminal's own scrollback
 // isn't used, and the run folder's transcript is the record. Under the story, while the table
 // waits on the human, the action zone holds the turn block (the budget and the numbered options,
 // AGT-36), then the input row: a line editor (editor.ts, AGT-48) whose placeholder is the
@@ -24,7 +24,7 @@ import type { HumanPrompt, PlayerIntent, Seat, SuggestUpdate, TableEvent } from 
 import { edit, editFor, EMPTY, type Edit } from "./editor.ts";
 import { COMMAND_HELP, promptHint, readLine, type Typed } from "./input.ts";
 import { commandMatches, PICKER_ROWS, pickerRows, type CommandEntry } from "./commands.ts";
-import { actionRows, frameLayout, freshText, headerText, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, storyRows, storyWindow, type Scroll } from "./frame.ts";
+import { actionRows, frameLayout, freshText, headerText, maxOffset, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, scrollRows, stepWithin, storyRows, storyWindow, WHEEL_ROWS, type Scroll } from "./frame.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette, type Style } from "./palette.ts";
 import { cardRows, endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
@@ -280,8 +280,29 @@ export class InkSeat implements Seat {
    */
   start(options: RenderOptions = {}): Instance {
     this.instance = render(h(TableScreen, { seat: this }), { exitOnCtrlC: false, incrementalRendering: true, ...options });
+    this.listen(options.stdin ?? process.stdin);
     if (options.alternateScreen) this.guardCrash();
     return this.instance;
+  }
+
+  /** What the frame does with the wheel's turns (AGT-94); the frame sets it on every draw. */
+  wheelTurns: (turns: (-1 | 1)[]) => void = () => {};
+  private stdin: NodeJS.ReadableStream | undefined;
+  /**
+   * Ink drops every mouse report before `useInput`, so the seat reads the wheel off stdin's `data`
+   * events. It listens once Ink's `readable` listener is on and stops before Ink lets go, so the
+   * stream stays paused and Ink alone reads it; `data` fires only when Ink reads. A report split
+   * across two reads (rare, over ssh) is one lost turn: Ink drops or types its halves on its own
+   * clock, and the seat does not guess at it.
+   */
+  private readonly read = (chunk: Buffer | string): void => {
+    const turns = wheelsIn(String(chunk));
+    if (turns.length > 0) this.wheelTurns(turns);
+  };
+  private listen(stdin: NodeJS.ReadableStream): void {
+    this.stdin?.off("data", this.read);
+    this.stdin = stdin;
+    stdin.on("data", this.read);
   }
 
   /**
@@ -291,18 +312,54 @@ export class InkSeat implements Seat {
   adopt(instance: Instance): void {
     this.instance = instance;
     instance.rerender(h(TableScreen, { seat: this }));
+    // The pick screen drew on the process's own terminal; a test's pick has no terminal to read.
+    if (process.stdin.isTTY) this.listen(process.stdin);
     this.guardCrash();
   }
 
   private guardCrash(): void {
     process.on("uncaughtException", this.crash);
     process.on("unhandledRejection", this.crash);
+    this.wheel(true);
   }
+
+  /**
+   * The full screen reports the mouse wheel (AGT-94), SGR-encoded, so two fingers on a Mac
+   * trackpad scroll the story instead of moving the option highlight; the terminal gets its own
+   * mouse back when the seat stops or the process exits.
+   */
+  private wheel(on: boolean): void {
+    if (this.wheelOn === on || !process.stdout.isTTY) return;
+    this.wheelOn = on;
+    process.stdout.write(on ? WHEEL_ON : WHEEL_OFF);
+    for (const signal of HANGUPS) {
+      if (on) process.on(signal, this.hangup);
+      else process.off(signal, this.hangup);
+    }
+    if (on) process.once("exit", this.wheelOff);
+    else process.off("exit", this.wheelOff);
+  }
+  private wheelOn = false;
+  private readonly wheelOff = (): void => this.wheel(false);
+  /**
+   * A kill skips "exit": the mouse goes back to the terminal, then the signal is sent again. Ink's
+   * signal-exit stands aside while another listener is on the signal; this one takes itself off
+   * first, so on the second delivery, or later in the same one, signal-exit finds itself alone,
+   * unmounts, leaves the alternate screen and ends the process as the signal asks. SIGINT is not
+   * here: at the full screen Ctrl+C is a key, and the table stops after the decision.
+   */
+  private readonly hangup = (signal: NodeJS.Signals): void => {
+    this.wheel(false);
+    process.kill(process.pid, signal);
+  };
 
   /** Stops drawing; in the alternate screen, the terminal returns to what it showed before. */
   stop(): void {
     process.off("uncaughtException", this.crash);
     process.off("unhandledRejection", this.crash);
+    this.wheel(false);
+    this.stdin?.off("data", this.read);
+    this.stdin = undefined;
     this.instance?.unmount();
     this.instance = undefined;
   }
@@ -802,12 +859,34 @@ export function suggestionRows(suggestions: Suggestions, question: string, ui: U
   ];
 }
 
+/** Mouse reporting on and off: button events (`?1000`) in SGR form (`?1006`). */
+const WHEEL_ON = "\x1b[?1000h\x1b[?1006h";
+const WHEEL_OFF = "\x1b[?1006l\x1b[?1000l";
+/** The signals that end the run without an "exit" event, after which the shell would get mouse reports. */
+const HANGUPS: NodeJS.Signals[] = ["SIGTERM", "SIGHUP", "SIGQUIT"];
+
+/**
+ * The wheel turns in a chunk of what the terminal sent (AGT-94), in order: `-1` up, `1` down.
+ * Other mouse reports (a click, a release, a move) give nothing. Ink drops every mouse report
+ * before `useInput`, so the seat reads them off stdin itself.
+ */
+export function wheelsIn(chunk: string): (-1 | 1)[] {
+  const turns: (-1 | 1)[] = [];
+  for (const report of chunk.matchAll(/\u001b\[<(\d+);\d+;\d+[Mm]/g)) {
+    // The low two bits name the button; 64 marks the wheel; Shift, Alt and Ctrl add 4, 8 and 16.
+    const button = Number(report[1]) & ~0b11100;
+    if (button === 64) turns.push(-1);
+    if (button === 65) turns.push(1);
+  }
+  return turns;
+}
+
 /** What the tiny frame says instead of the table (under 40 columns or 16 rows). */
 export const TOO_SMALL = UI_WORDS.en.tooSmall;
 
 /**
  * The screen: one full frame (AGT-69). The header; the story at the reading measure, pinned to its
- * foot, with its own PgUp/PgDn scroll; the action zone (the turn block) under it; the notice and
+ * foot, with its own scroll (Shift+↑/↓, PgUp/PgDn, the wheel); the action zone (the turn block) under it; the notice and
  * the input row. From 124 columns the side panel stands right of it at full height, past a thin
  * rule; below, the panel folds to two rows above the action zone.
  */
@@ -815,6 +894,9 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const view = useSyncExternalStore(seat.subscribe, seat.getView);
   const size: PanelSize = useWindowSize();
   const [scroll, setScroll] = useState<Scroll | undefined>(undefined);
+  // The scroll hint stays under the story until the reader first scrolls it (AGT-94).
+  const [scrolled, setScrolled] = useState(false);
+  if (scroll && !scrolled) setScrolled(true);
   // How far down the open overlay is read, from its top; a new overlay starts at its top.
   const [overlayRead, setOverlayTop] = useState(0);
   useEffect(() => setOverlayTop(0), [view.overlay, view.folded]);
@@ -893,15 +975,30 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   // is clamped, so the overlay never slides past its last row.
   const overlayTop = Math.min(overlayRead, overlayMax);
 
+  // The wheel scrolls three rows, the overlay while one is open (AGT-94), from where the last
+  // turn left it: several reports can land before the next frame.
+  useEffect(() => {
+    seat.wheelTurns = (turns) => {
+      if (overlayRows) return setOverlayTop((top) => turns.reduce((at, d) => stepWithin(at, d * WHEEL_ROWS, overlayMax), Math.min(top, overlayMax)));
+      setScroll((at) => turns.reduce((to, d) => scrollRows(to, d, WHEEL_ROWS, story, storyH, view.lines.length), at));
+    };
+    return () => {
+      seat.wheelTurns = () => {};
+    };
+  });
+
   useInput((input, key) => {
     // The end screen: any key, Ctrl+C too, gives the terminal back; the checks go on.
     if (view.finale) return seat.keyAtEnd();
     if (key.ctrl && input === "c") return seat.interrupt();
-    // PgUp/PgDn read the overlay while one is open, the story otherwise; Esc closes the overlay first.
-    if (overlayRows && key.pageUp) return setOverlayTop(Math.max(0, overlayTop - Math.max(1, overlayRoom - 1)));
-    if (overlayRows && key.pageDown) return setOverlayTop(Math.min(overlayMax, overlayTop + Math.max(1, overlayRoom - 1)));
-    if (key.pageUp) return setScroll(page(scroll, -1, story, storyH, view.lines.length));
-    if (key.pageDown) return setScroll(page(scroll, 1, story, storyH, view.lines.length));
+    // Shift+↑/↓ and PgUp/PgDn page the overlay while one is open, the story otherwise; Esc closes
+    // the overlay first. A MacBook has no PgUp/PgDn (AGT-94).
+    const pageUp = key.pageUp || (key.shift && key.upArrow);
+    const pageDown = key.pageDown || (key.shift && key.downArrow);
+    if (overlayRows && pageUp) return setOverlayTop(stepWithin(overlayTop, -Math.max(1, overlayRoom - 1), overlayMax));
+    if (overlayRows && pageDown) return setOverlayTop(stepWithin(overlayTop, Math.max(1, overlayRoom - 1), overlayMax));
+    if (pageUp) return setScroll(page(scroll, -1, story, storyH, view.lines.length));
+    if (pageDown) return setScroll(page(scroll, 1, story, storyH, view.lines.length));
     if (key.escape && seat.closeCommands()) return;
     if (key.escape && seat.closeOverlay(layout.mode === "narrow")) return;
     if (key.escape && seat.closeSuggestions()) return;
@@ -963,8 +1060,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   function overlayLines() {
     const name = view.overlay?.title ?? seat.ui.panelTitle;
     const fresh = view.overlay ? new Set(view.lines.slice(view.overlay.at).filter((l) => l.text.trim() !== "").map((l) => l.id)).size : 0;
-    const more = overlayMax > 0 ? " · PgUp/PgDn" : "";
-    const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, seat.ui.overlayKeys(name, more !== "", fresh));
+    const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, seat.ui.overlayKeys(name, overlayMax > 0, fresh));
     const rows = overlayRows!.slice(overlayTop, overlayTop + overlayRoom);
     return [nameRow, ...rows.map((row, i) => line(row, `o${i}`)), ...Array.from({ length: overlayRoom - rows.length }, (_, i) => blank(`ob${i}`))];
   }
@@ -991,7 +1087,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const left = [
     ...storyLines,
     ...(panel.length > 0 ? [blank("pgap"), ...panel.map((row, i) => line(row, `p${i}`))] : []),
-    blank("agap"),
+    // The gap under the story carries the scroll hint until the first scroll (AGT-94).
+    scrolled || overlayRows || view.finale || maxOffset(story, storyH, view.lines.length) === 0 ? blank("agap") : h(Text, { key: "agap", wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, seat.ui.scrollHint),
     ...(action.length > 0 ? [...action.map((row, i) => line(row, `a${i}`)), blank("igap")] : []),
     ...notice.map((text, i) => h(Text, { key: `n${i}`, wrap: "truncate-end", ...textProps(view.notice!.error ? TONE_STYLE.error : TONE_STYLE.status, palette) }, text)),
     ...(cardLine ? [h(Text, { key: "card", wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, cardLine)] : []),

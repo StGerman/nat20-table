@@ -20,6 +20,7 @@ import { frameLayout, GOLDEN, RULE_COLUMNS } from "../src/ui/frame.ts";
 import { foldedRows, glyphsFor, rowText, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
 import type { LegalActionsResult } from "../src/view.ts";
 import { testTable } from "./helpers.ts";
+import { until } from "./until.ts";
 
 const at = { x_ft: 0, y_ft: 0, z_ft: 0 };
 const other = (handle: string, name: string, side: "party" | "hostile" | "neutral", health: "unhurt" | "bloodied" | "down", distance_ft: number, conditions: string[] = []) => ({
@@ -201,14 +202,6 @@ class FakeStdin extends EventEmitter {
   unref(): void {}
 }
 
-async function until(what: string, ready: () => boolean, ms = 3000): Promise<void> {
-  const end = Date.now() + ms;
-  while (!ready()) {
-    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
-}
-
 test("on an 80x24 terminal the seat draws the panel and the turn block above the prompt, and the turn block goes when the turn ends", async () => {
   const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }) });
   const stdout = new FakeStdout(80, 24);
@@ -225,7 +218,7 @@ test("on an 80x24 terminal the seat draws the panel and the turn block above the
     seat.show({ kind: "situation", situation: situationOf(yard(), "bren", listing)! });
     seat.show({ kind: "options", lines: ["1. Longsword attack → goblin_3", "2. End turn"], choices: [], budget: listing.budget! });
     void seat.ask({ kind: "combat_turn" });
-    await until("the turn block", () => stdout.last.includes("Action used · Bonus Action free"));
+    await until("the turn block", () => stdout.last.includes("Action used · Bonus Action free"), () => stdout.last);
     const frame = stdout.last;
     // Narrow (AGT-69): the story, the panel folded to its bar and your line, the turn block, the input row.
     const order = ["goblin_3 attacks", "Round 5 · ▶ your turn", "Bren 12/20 HP", "Action used", "1. Longsword attack", "Your turn: an option number"];
@@ -235,25 +228,25 @@ test("on an 80x24 terminal the seat draws the panel and the turn block above the
     assert.ok(!seat.getView().lines.some((l) => l.text.includes("Longsword attack")));
     // Someone else's turn: the turn block goes at once; the situation follows with the narration (AGT-37).
     seat.show({ kind: "situation", situation: situationOf(yard(), "goblin_4")! });
-    await until("the turn block gone", () => !stdout.last.includes("Action used"));
+    await until("the turn block gone", () => !stdout.last.includes("Action used"), () => stdout.last);
     seat.show({ kind: "narration", speaker: "dm", text: "Bren steps back." });
-    await until("the next turn", () => stdout.last.includes("you are up in 5"));
+    await until("the next turn", () => stdout.last.includes("you are up in 5"), () => stdout.last);
     assert.ok(!stdout.last.includes("Action used"));
     // A failed refresh keeps the last panel, marked stale; /panel folds it to the bar.
     seat.show({ kind: "situation" });
     seat.show({ kind: "narration", speaker: "dm", text: "The goblin snarls." });
-    await until("stale", () => stdout.last.includes("you are up in 5 · stale"));
+    await until("stale", () => stdout.last.includes("you are up in 5 · stale"), () => stdout.last);
     // Narrow: /panel opens the whole panel over the story, and Esc closes it (AGT-69).
     seat.type("/panel\r");
-    await until("the panel overlay", () => stdout.last.includes("Panel · Esc closes") && stdout.last.includes("Foes   goblin_3"));
+    await until("the panel overlay", () => stdout.last.includes("Panel · Esc closes") && stdout.last.includes("Foes   goblin_3"), () => stdout.last);
     seat.closeOverlay(true);
-    await until("closed", () => !stdout.last.includes("Foes   goblin_3"));
+    await until("closed", () => !stdout.last.includes("Foes   goblin_3"), () => stdout.last);
     assert.ok(stdout.last.includes("Round 5 · goblin_4's turn"));
     // The end of the run closes the /panel overlay too, so the end line is read in the story.
     seat.type("/panel\r");
-    await until("open again", () => stdout.last.includes("Panel · Esc closes"));
+    await until("open again", () => stdout.last.includes("Panel · Esc closes"), () => stdout.last);
     seat.show({ kind: "end", text: "The run is over." });
-    await until("the end line", () => !stdout.last.includes("Panel · Esc closes") && stdout.last.includes("The run is over."));
+    await until("the end line", () => !stdout.last.includes("Panel · Esc closes") && stdout.last.includes("The run is over."), () => stdout.last);
   } finally {
     seat.stop();
   }
@@ -285,15 +278,15 @@ test("while no prompt is open the seat spins a braille indicator naming who the 
   const stdout = startSeat(seat);
   try {
     seat.busy("The DM is thinking");
-    await until("the DM's wait", () => stdout.last.includes("The DM is thinking"));
+    await until("the DM's wait", () => stdout.last.includes("The DM is thinking"), () => stdout.last);
     const glyphs = () => new Set(stdout.frames.flatMap((f) => SPINNER.filter((g) => f.includes(`${g} The DM is thinking`))));
     await until("the spinner turning", () => glyphs().size >= 2);
     now += 3_200;
-    await until("the seconds", () => stdout.last.includes("The DM is thinking · 3s"));
+    await until("the seconds", () => stdout.last.includes("The DM is thinking · 3s"), () => stdout.last);
     seat.busy(undefined);
-    await until("the plain wait", () => stdout.last.includes("The table is playing"));
+    await until("the plain wait", () => stdout.last.includes("The table is playing"), () => stdout.last);
     void seat.ask({ kind: "explore" });
-    await until("the prompt", () => !stdout.last.includes("The table is playing"));
+    await until("the prompt", () => !stdout.last.includes("The table is playing"), () => stdout.last);
     const frames = stdout.frames.length;
     await new Promise((resolve) => setTimeout(resolve, 200));
     assert.ok(stdout.frames.length - frames <= 1, "no frames spin under an open prompt");
@@ -307,7 +300,7 @@ test("without animation (NO_COLOR, not a terminal) the wait is one still line", 
   const stdout = startSeat(seat);
   try {
     seat.busy("ilsa is thinking");
-    await until("the still line", () => stdout.last.includes("waiting... ilsa is thinking"));
+    await until("the still line", () => stdout.last.includes("waiting... ilsa is thinking"), () => stdout.last);
     const frames = stdout.frames.length;
     await new Promise((resolve) => setTimeout(resolve, 200));
     assert.equal(stdout.frames.length, frames, "a still line draws no new frames");
@@ -426,7 +419,7 @@ async function frameAt(columns: number, rows: number, options = ["1. Longsword a
   seat.show({ kind: "situation", situation: situationOf(yard(), "bren", listing)! });
   seat.show({ kind: "options", lines: options, choices, budget: listing.budget! });
   void seat.ask({ kind: "combat_turn" });
-  await until("the prompt", () => stdout.last.includes("Your turn: an option number") || stdout.last.includes("Enter plays"));
+  await until("the prompt", () => stdout.last.includes("Your turn: an option number") || stdout.last.includes("Enter plays"), () => stdout.last);
   return { seat, stdout };
 }
 
@@ -481,7 +474,7 @@ test("on the narrow frame the folded panel is the bar and your own line, out of 
     const calm: Situation = { ...s, mode: "explore", turn: undefined, up_in: undefined, next: [], creatures: s.creatures.filter((c) => c.side === "party") };
     seat.show({ kind: "situation", situation: calm });
     void seat.ask({ kind: "explore" });
-    await until("the explore panel", () => stdout.last.includes("Explore · party: torva unhurt") && stdout.last.includes("Bren 12/20 HP · prone · Bless"));
+    await until("the explore panel", () => stdout.last.includes("Explore · party: torva unhurt") && stdout.last.includes("Bren 12/20 HP · prone · Bless"), () => stdout.last);
     assert.ok(!stdout.last.includes("Party  torva"), "two rows only");
   } finally {
     seat.stop();
@@ -517,7 +510,7 @@ test("the hint is the input row's placeholder, and a typed number lights its opt
   try {
     assert.ok(stdout.last.split("\n").some((r) => r.startsWith(">") && r.includes("Your turn: an option number")), stdout.last);
     seat.type("1");
-    await until("the preview", () => stdout.last.includes("> 1   Longsword attack → goblin_3"));
+    await until("the preview", () => stdout.last.includes("> 1   Longsword attack → goblin_3"), () => stdout.last);
     assert.ok(!stdout.last.includes("Your turn: an option number"), "the hint goes once something is typed");
   } finally {
     seat.stop();
@@ -609,7 +602,7 @@ test("the lit option's card stands under the roster on a wide frame, and as one 
     const { seat, stdout } = await frameAt(columns, rows, undefined, choices);
     try {
       seat.type("1");
-      await until("the card", () => stdout.last.includes("Attack a creature within"));
+      await until("the card", () => stdout.last.includes("Attack a creature within"), () => stdout.last);
       const frame = stdout.last.split("\n");
       if (columns === 160) {
         const story = frameLayout({ columns, rows }).story;
