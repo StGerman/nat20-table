@@ -190,3 +190,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-14: Milestone 12 closed, not done (decision 0082, Stas 17:52Z «давай мерджить M12»): the stack merges without a passed exit pair; AGT-115 dropped; the outcome no card wrote goes to Milestone 13
 - 2026-11-14: AGT-102 done (table #344, Milestone 12 PR 7, merged after the M12 stack; the run report gains its Voice line); row moved to docs/tasks-done.md
 - 2026-11-14: AGT-121 done (humour in every beat of the Plain voice, told once a card), row in docs/tasks-done.md
+- 2026-11-14: AGT-122 done (Vera's fourth section, where it got dull), row in docs/tasks-done.md
