@@ -21,7 +21,7 @@ Stas asked for testing of card content and player decisions closer to unit or co
 - Con: the practice is unwritten, so a new exit row can still arrive with no scripted test; a player's line on a road card can only be tried in an evening.
 
 ### B. Write the practice down as a rule, and design a card bench before deciding to build it
-- Pro: costs one docs PR now; every exit row names its lowest layer, and a run failure a scripted test could see gets one; the bench's open points (how a named card reaches the table, one move a card, a judge for narrated outcomes, who runs it) are answered with a cost before any code.
+- Pro: costs one docs PR now; every exit row names its lowest layer, and a run failure a scripted test could see gets one; the bench's six open points (design §4) are answered with a cost before any code.
 - Con: a second design for Stas to read; no saving until a bench exists and works.
 
 ### C. Build the card bench now
@@ -34,7 +34,7 @@ Stas asked for testing of card content and player decisions closer to unit or co
 
 ## Decision
 
-Proposed: B. It beats A at the price of one sentence in each design doc. It beats C and D because both spend, or change accepted rules, on evidence that does not exist yet.
+Proposed: B. Over A it costs a layer named beside each exit row, a test in the fix's PR when a scripted test could have seen a run's failure, and, only if Stas wants the bench, a second design to read. It beats C and D because both spend, or change accepted rules, on evidence that does not exist yet.
 
 ## Consequences
 
@@ -44,7 +44,7 @@ Proposed: B. It beats A at the price of one sentence in each design doc. It beat
 
 ## Revisit when
 
-A card bench design is accepted and one milestone has used the bench: then option D is decided on that record. Or a milestone in which a full run is again the first place a defect is found that a scripted test could have seen: then the rule is not being followed.
+A card bench design is accepted and one milestone has used the bench: then option D is decided on that record. If Stas declines the bench, option D is not reopened by this record.
 
 ## Sources
 

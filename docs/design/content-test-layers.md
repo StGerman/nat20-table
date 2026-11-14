@@ -39,7 +39,7 @@ M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-
 
 **A full run should not be the first place a defect is found, when a cheaper layer can see it.** This is already the practice for structure (§1); the rule makes it explicit.
 
-1. From the first milestone design written after acceptance, every exit row names the lowest layer that tests it: a scripted test, a full run, or "a person". The M12 and M13 designs are not amended.
+1. From the first milestone design written after acceptance, every exit row names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the contract (`play:scene`), a full run with its audit and judge, or "a person". The M12 and M13 designs are not amended.
 2. When a full run fails, the analysis says whether a scripted test could have seen it. If one could, the fix's PR adds it, as the M11 fixes did. The rerun the pair's rules require is still played.
 
 The record's own example: run 16:05 also failed two gating rows on build defects (a creature's name in English, a fight started on a neutral), both of a kind a scripted loop test sees.
@@ -52,7 +52,7 @@ The idea: one command puts a named road card on the table and hands it to the li
 
 It is not designed, and this doc does not ask for it to be built. Review found these open, and each changes the cost:
 
-- **How a named card reaches the table.** A seeded scripted walk breaks whenever a deck upstream of the draw changes, and the run driver today refuses scripted players on a campaign pack (the caravan-driving scripted policies live in test code). The robust way is an engine command that opens a named card, which is a contract change under Rule 1.
+- **How a named card reaches the table.** A person can already play a campaign pack beside scripted AI seats (`--seat ink`; without a person the run driver refuses scripted players there, and the caravan-driving scripted policies live in test code). What is missing is the card: a seeded walk to it breaks whenever a deck upstream of the draw changes, and an engine command that opens a named card would be a contract change under Rule 1.
 - **One move a card.** M12 design §1.4: one own move per card, no retry. So every line that becomes a move needs the card set up again, and a fresh DM session or one that remembers the last try.
 - **No evening behind the card.** The bench DM has no memory of the scenes before it; a recorded line that leans on them will read differently.
 - **A narrated outcome is text.** Run 01:42's "refusal with no roll" was in the narration, not in a tool call; seeing it needs a judge on text.
@@ -69,19 +69,18 @@ Unit prices, from the `usage.jsonl` of runs 16:05, 21:16 and 01:42: a `dm/card_w
 
 ## 5. Gates
 
-Nothing changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand.
+Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. Accepting the rule of §3 adds it to CLAUDE.md as one line, so design authors read it.
 
 ## 6. Questions for Stas
 
-1. Accept the rule of §3?
+1. Accept the rule of §3, as one new line in CLAUDE.md?
 2. Do you want the card bench designed: its own short system design, answering the open points of §4, with a cost, before any decision to build it? Or is the answer to your ask "the scripted layer is already there, and the rest is your evening"?
 3. If designed: for M13, after M12 closes? It needs the M12 stack on main either way.
 
 ## 7. Yan's numbers (fallback agent, extract, 2026-11-14)
 
-The repo's `yan` agent was run from a cloud thread, read-only; it may have seen CLAUDE.md. His saving estimate assumed Stas's evening moves to once a milestone, which this doc does not propose, so it is not quoted.
+The repo's `yan` agent was run from a cloud thread, read-only; it may have seen CLAUDE.md. His saving estimate assumed Stas's evening moves to once a milestone, which this doc does not propose, so it is not quoted. His baseline numbers are §2's first table.
 
-> Runs 10 against 5 (2.0); USD 44.29 against 35.45 (1.25; target 17.73: 2.50); exit pairs played/passed 3/0 against 3/1; Stas at the table 3.09 h against 1.09 (2.84); days from scope at least 5.15 against 2.12 (2.43).
 > Human time: 38.3 + 120.0 + 27.2 = 185.5 min. Of the 120 min at 16:05, 81 were the table waiting on bren and the run then hit the time limit.
 > 3 of the 10 runs are 1-to-2-minute cheap runs (1.01 USD together). 15:26 cost 8.83 USD on old build ab59b57 alongside 15:33, and it has no analysis. Write-off candidate.
 > 16:05, own move: only e2e. The DM classified 4/4 correctly; Bren's plans came between cards. 01:42, bog_wifes_toll: static lint. salt_on_credit having no success branch: only e2e or design. `remember` with no roll: golden DM set. [His "golden DM set" is this doc's recorded lines.]
