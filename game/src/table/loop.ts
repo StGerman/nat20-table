@@ -954,10 +954,10 @@ export class TableLoop {
     await this.settle();
   }
 
-  /** Whether an own move fell in the log after `since`: an `own_move_ran` with no choice. */
-  private async moveFellSince(since: number): Promise<boolean> {
+  /** Whether the card's own move fell in the log after `since`: an `own_move_ran` with no choice. */
+  private async moveFellSince(since: number, card: string): Promise<boolean> {
     const r = await this.table.engine.request("dm", { cmd: "events", since });
-    return r.result?.cmd === "events" && r.result.events.some((e) => e.kind === "own_move_ran" && e.choice == null);
+    return r.result?.cmd === "events" && r.result.events.some((e) => e.kind === "own_move_ran" && e.card === card && e.choice == null);
   }
 
   /** Whether the card's own move fell since `before` was read: a fall ends the round it fell in (decision 0079). */
@@ -1247,7 +1247,7 @@ export class TableLoop {
         this.table.log("intent", `${human} on the road card: ${picked.label}`, human);
         // A word for a move that fell was taken back (decision 0079): the fall's wake tells it, not
         // this line. own_move_ran is DM-only, so it is read from the DM's log.
-        if (!(picked.about!.id === OWN_MOVE && (await this.moveFellSince(since)))) this.table.tellDm(`${human} ${owner ? "made the caravan's call" : "gave their word"} on the road card: ${picked.label}`);
+        if (!(picked.about!.id === OWN_MOVE && (await this.moveFellSince(since, card.id)))) this.table.tellDm(`${human} ${owner ? "made the caravan's call" : "gave their word"} on the road card: ${picked.label}`);
         return;
       }
       if (intent.kind === "text") {
