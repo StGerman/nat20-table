@@ -19,7 +19,7 @@ What it would have seen in the Milestone 12 record: run 01:42's two plans, on `b
 | Open point (`content-test-layers.md` §4) | Answer |
 |---|---|
 | How a named card reaches the table | A temporary copy of the pack whose decks hold that card alone. A pile of one goes on the table with no draw-three and no pick (§3). No contract change |
-| One move a card | A line that leaves the card waiting is followed by the next line in the same session. A line that settles the card ends the session, and the next line starts a fresh one (§4) |
+| One move a card | A line that leaves the card waiting is followed by the next line in the same bench run. A line that settles the card ends the run, and the next line starts a fresh one (§4) |
 | No evening behind the card | True, and not fixed. A line that leans on an earlier scene is left out of the list, and the report says so. A card that reads deeds is played on a copy of a saved roster, so the deed book is real (§3) |
 | A narrated outcome is text | The bench reports and does not judge. A person reads the DM's text beside the tool calls and the engine's events (§4) |
 | What a pass is | None in this version. The trial counts findings (§5); a threshold needs rates nobody has measured |
@@ -44,7 +44,7 @@ Cards that read deeds (`if`): the bench takes `--roster NAME` and plays on a cop
 
 Out of this version: night cards, and chained cards (`chained: true`, eight on main), which are in play only after another card's choice adds them, so reaching one means deciding that card first. Nothing in the Milestone 13 trial needs either.
 
-## 4. A session, and what is written down
+## 4. A bench run, and what is written down
 
 The lines are a text file, one line of the player's words per row, given with `--lines FILE`. With `--seat ink` a person types instead.
 
@@ -52,7 +52,7 @@ For each line the human's seat types it at the card's prompt and the bench waits
 
 - the DM answers and the card still waits: the next line goes in;
 - the words become an own move, the scripted AI seats vote for it, the engine rolls, and the card is decided or the move falls (decision 0081): the next line goes in if the card still waits;
-- the card is decided: the session ends. Lines left over start a fresh session each time.
+- the card is decided: the bench run ends. Lines left over start a fresh run each time.
 
 When the lines run out with the card still waiting, the bench stops. It never picks a number.
 
@@ -93,11 +93,11 @@ Recommended: the first if PR 1 shows it works, else the second.
 - A new DM session pays one cache write of 55 to 80 thousand tokens, 0.31 to 0.42 USD. It lands on the session's first wake, or on the second when the first times out: that happened in 5 of the 9 new sessions of runs 16:05 and 01:42 and adds 0.02 to 0.12 USD and a lost wake of 12 to 30 s. The estimates below leave the timeouts out.
 - The loop opens a new DM session each time a scene loads (`game/src/table/loop.ts`, `closeScene`, `dm.newScene`). How many load before a card depends on the way to it. In run 21:16 the first leg of *Fair in Wend* loaded one, Wendford's, and the leg's road card was played in that session. In run 01:42 the leg from Wendford to the Highsteads loaded two: `twb_road`, where `bog_wifes_toll` came, then `twb_highsteads`, where `salt_on_credit` and the arrival card `gwyn_cheese` came. All four trial cards are one leg from a place with a scene (§3), so each is in the second or the third session of its bench run.
 - Warm wakes: `scene_open` 0.04 to 0.05, `summary` 0.02, `road` 0.02 to 0.05, `card` 0.02 to 0.04, `card_words` 0.04 to 0.06 USD and 9 to 24 s.
-- Run 01:42 had paid 0.79 USD when its first road card reached the seats, in its second session (0.425 + 0.039 + 0.019 + 0.308), in 55 s of DM wakes.
+- Run 01:42 had paid 0.79 USD when its first road card reached the seats, in its second DM session (0.425 + 0.039 + 0.019 + 0.308), in 55 s of DM wakes.
 
-So a card's first line costs about 0.85 USD when it comes in the second session and about 1.2 USD in the third, in one to two minutes, and each further line in the same session about 0.05 USD.
+So a card's first line costs about 0.85 USD when it comes in the second DM session and about 1.2 USD in the third, in one to two minutes, and each further line in the same bench run about 0.05 USD.
 
-The lines go in with the questions first and the plans last, so that a plan that settles the card ends a session late.
+The lines go in with the questions first and the plans last, so that a plan that settles the card ends a bench run late.
 
 | 4 cards, 20 lines | USD | Machine time |
 |---|---|---|
