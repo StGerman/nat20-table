@@ -1,4 +1,4 @@
-# 0080. Tests with no model stay the layer below the exit pair; a card bench is designed before it is decided
+# 0080. Every exit row names the lowest layer that tests it; a card bench stays a candidate until Stas asks for its design
 
 - **Status:** Accepted
 - **Date:** 2026-11-14
@@ -34,12 +34,14 @@ Stas asked for testing of card content and player decisions closer to unit or co
 
 ## Decision
 
-B. Over A it costs a layer named beside each exit row, a test in the fix's PR when a test with no model could have seen a run's failure, and, only if Stas wants the bench, a second design to read. It beats C and D because both spend, or change accepted rules, on evidence that does not exist yet.
+Accepted: the rule of option B, and only the rule. The other half of B, a design for the card bench, is not decided: Stas has not said whether he wants one (design §6, questions 2 and 3), and nothing about a bench follows from this record until he does.
+
+Why B: over A it costs a layer named beside each exit row, a test in the fix's PR when a test with no model could have seen a run's failure, and, only if Stas wants the bench, a second design to read. It beats C and D because both spend, or change accepted rules, on evidence that does not exist yet.
 
 ## Consequences
 
-- From the first milestone scope or design written after acceptance, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or "a person". The M12 and M13 scopes and designs are not amended.
-- From acceptance, for fix PRs opened after it, a full-run failure that a test with no model could have seen gets that test in the fix's PR.
+- From the first milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or "a person". The M12 and M13 scopes and designs are not amended.
+- For fix PRs opened after 2026-11-14: when a full run fails, its analysis says whether a test with no model could have seen it, and if one could, the fix's PR adds that test.
 - The rule is in CLAUDE.md under Rule 8, in the wording of design §5, and in Yan's scope reference and Lev's design reference, added in this PR on Stas's acceptance.
 - The card bench gets its own system design only if Stas asks for one; no rows before that design is accepted.
 - No accepted decision and no scope changes.

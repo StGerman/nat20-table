@@ -15,7 +15,7 @@ A section or file under `docs/scope/`, status Proposed, in this order:
 1. **Goal**: one sentence a player would notice.
 2. **In**: what ships, by row id or finding.
 3. **Out**: what is deliberately left, with where it goes.
-4. **Exit criterion**: the runs (one exit pair, AI half first, Stas plays only after it passed), and the checks each run must pass. In a scope written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person (CLAUDE.md Rule 8, decision 0080).
+4. **Exit criterion**: the runs (one exit pair, AI half first, Stas plays only after it passed), and the checks each run must pass. In a scope written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or a person (CLAUDE.md Rule 8, decision 0080).
 5. **Questions for the system design**: what the design doc must answer (contract changes, new commands, data formats); you list them, the system design answers them.
 6. **Rows that would follow**: proposed ids, one line each, marked "after spec and design merge".
 7. **Cost**: the bid's price line, carried over.

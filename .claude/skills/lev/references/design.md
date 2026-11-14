@@ -15,7 +15,7 @@ Write the file's headings first and fill it section by section, so a run that st
 
 1. **Summary**: what a player will notice, in three sentences, and the moment they would retell the next day.
 2. **Records.** One table, a row per fact the world keeps: who writes it, when, who reads it, and where the player sees it. A row with no reader or no visible effect is cut, or listed under Out with the reason; a record an accepted design leaves unread on purpose stays, with that design cited.
-3. **Rules**, each a statement a test could check ("a card whose `if` names a deed is never drawn before that deed exists"). In a design written after 2026-11-14, every exit row the design states or refines names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person (CLAUDE.md Rule 8, decision 0080).
+3. **Rules**, each a statement a test could check ("a card whose `if` names a deed is never drawn before that deed exists").
 4. **Carrier per owed row**: for each of Zoya's rows, the smallest carrier that pays it (existing data, a changed line, a card variant, a new record), and what was tried first and why it failed.
 5. **Contract**: the goals the change must meet, then the proposed types, fields and events, the view of each (Rule 3), and whether it is additive or breaking (Rule 2). No change: say why none is needed.
 6. **Failure**: what the party gets when each new check fails, and what happens when the model does not answer.
@@ -23,5 +23,7 @@ Write the file's headings first and fill it section by section, so a run that st
 8. **PRs**: the list, in order, each with what it lands and what it depends on. New row ids, sizes and prices are Yan's.
 9. **Risks**: the one part most likely to sink the milestone, and the cheapest test of it.
 10. **Decisions for Stas**: numbered, each with a recommendation. One with real alternatives also gets a Proposed record in `docs/decisions/`. An accepted decision the design would do better without goes here too, as a challenge: what the record shows, the refinement, the cost.
+
+Wherever a design written after 2026-11-14 states or refines an exit row, the row names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or a person (CLAUDE.md Rule 8, decision 0080).
 
 The draft carries no verdict on itself. Before it goes to Stas the calling thread asks Zoya for the board of the world with the draft among the files to read (`/zoya board <world>`), and takes any player-facing line in it to Vera; their answers are quoted in the draft verbatim.

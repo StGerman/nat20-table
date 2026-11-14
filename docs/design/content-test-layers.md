@@ -39,8 +39,8 @@ M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-
 
 **A full run should not be the first place a defect is found, when a cheaper layer can see it.** This is already the practice for structure (§1); the rule makes it explicit.
 
-1. From the first milestone scope or design written after acceptance, every exit row names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the contract (`play:scene`), a full run with its audit and judge, or "a person". The M12 and M13 scopes and designs are not amended.
-2. From acceptance, for fix PRs opened after it: when a full run fails, the analysis says whether a test with no model could have seen it. If one could, the fix's PR adds it, as the M11 fixes did. The rerun the pair's rules require is still played.
+1. From the first milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the exit run (`play:scene`), a full run with its audit and judge, or "a person". The M12 and M13 scopes and designs are not amended.
+2. For fix PRs opened after 2026-11-14: when a full run fails, the analysis says whether a test with no model could have seen it. If one could, the fix's PR adds it, as the M11 fixes did. The rerun the pair's rules require is still played.
 
 The record's own examples: run 16:05's two build defects (a creature's name in English, a fight started on a neutral) both of a kind a scripted test sees.
 
@@ -69,7 +69,7 @@ Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_word
 
 ## 5. Gates
 
-Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. The accepted rule of §3 is in CLAUDE.md, so scope and design authors read it. The line, under Rule 8: "In a milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person. When a full run fails on something a test with no model could have seen, the fix's PR adds that test, and the rerun is still played (decision 0080)." Stas accepted it in the thread on 2026-11-14, so this PR sets 0080 to Accepted and adds that line, with its first sentence in `.claude/skills/yan/references/scope.md` and `.claude/skills/lev/references/design.md`, where a scope's exit criterion and a design are drafted.
+Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. The accepted rule of §3 is in CLAUDE.md, so scope and design authors read it. The line, under Rule 8: "In a milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or a person. When a full run fails, its analysis says whether a test with no model could have seen it; if one could, a fix PR opened after 2026-11-14 adds that test, and the rerun is still played (decision 0080)." Stas accepted it in the thread on 2026-11-14, so this PR sets 0080 to Accepted and adds that line, with its first sentence in `.claude/skills/yan/references/scope.md` and `.claude/skills/lev/references/design.md`, where a scope's exit criterion and a design are drafted.
 
 ## 6. Questions for Stas
 
