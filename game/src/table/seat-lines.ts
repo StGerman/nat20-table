@@ -169,6 +169,9 @@ function enLine(event: Event, ctx: SeatContext): string | null {
     case "rest":
       if (event.rest === "long") return `${everyone(event.participants, ctx) ? "The party" : event.participants.map((h) => n.person(h)).join(", ")} rest${everyone(event.participants, ctx) || event.participants.length > 1 ? "" : "s"} through the night until morning.`;
       break;
+    case "card_drawn":
+      // The loop's card panel shows the card's words; `/log` keeps this line (AGT-114).
+      return ctx.site === "seat" ? null : eventLine(event);
     case "card_advice":
       if (ctx.card) return `${n.person(event.actor)} ${ctx.card.target === "blades" ? "votes" : "advises"}: ${choiceWords(event.choice, ctx.card)}.`;
       break;
@@ -298,7 +301,8 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
       return `Ночь ${night.lodging === "inn" ? "на постоялом дворе" : "в лагере"}.${rested}${notRested}${hungry}`;
     }
     case "card_drawn":
-      return ctx.card ? `На дороге: ${ctx.card.text}` : `На дороге: ${event.card_text}`;
+      // The loop's card panel shows the card's words; `/log` keeps this line (AGT-114).
+      return ctx.site === "seat" ? null : ctx.card ? `На дороге: ${ctx.card.text}` : `На дороге: ${event.card_text}`;
     case "card_advice":
       return `${who(event.actor)} ${ctx.card?.target === "blades" ? "голосует" : "советует"}: ${quoted(choiceWords(event.choice, ctx.card, true))}.`;
     case "card_resolved":

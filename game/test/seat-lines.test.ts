@@ -21,7 +21,7 @@ const events: Event[] = logs.flatMap((f) =>
 );
 
 /** The kinds whose English seat line AGT-98 changes (design §4's table). */
-const CHANGED = new Set(["scene_loaded", "ledger", "rest", "card_advice", "card_resolved", "time_lost", "roll"]);
+const CHANGED = new Set(["scene_loaded", "ledger", "rest", "card_drawn", "card_advice", "card_resolved", "time_lost", "roll"]);
 
 /** Latin words a Russian line may carry: roll ids, keys and commands. */
 const latin = (line: string) => /[A-Za-z]{2,}/.test(line.replace(/\br\d+\b|Enter|Esc|\/\w+/g, ""));
@@ -52,6 +52,15 @@ test("a Russian seat shows every recorded event without an English word", () => 
     }
   }
   assert.ok(shown > 100);
+});
+
+test("a drawn card's text shows once at the seat: no seat line, `/log` keeps it (AGT-114 b)", () => {
+  const drawn = { kind: "card_drawn", seq: 7, visibility: { scope: "public" }, text: "On the road: A tree lies across the road.", card_text: "A tree lies across the road.", choices: [{ id: "clear", text: "Clear it." }], target: "caravan" } as unknown as Event;
+  for (const names of [new SeatNames(), new SeatNames("ru", new Map())]) {
+    assert.equal(seatLine(drawn, { names, site: "seat" }), null, names.language);
+    const logged = seatLine(drawn, { names, site: "log" });
+    assert.ok(logged?.includes("A tree lies across the road."), `${names.language}: ${logged}`);
+  }
 });
 
 test("the Russian dictionary names every option the fixtures offer", () => {
