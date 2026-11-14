@@ -378,11 +378,12 @@ test("with no human at the table, the DM's prompt and tools leave the human out 
   assert.doesNotMatch(dmPrompt(PACK, undefined, all.ai, "prompt", "ru"), /questions to the human|The human may write/);
 });
 
-test("the DM's scene openings, table turns and summaries get the long limit; --dm-timeout-ms sets every wake's", () => {
+test("the DM's scene openings, table turns, summaries and card picks get the long limit; --dm-timeout-ms sets every wake's", () => {
   const config = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE }).sessionConfig();
   assert.equal(config.turnTimeoutMs, DM_TURN_TIMEOUT_MS);
+  // A card pick opens the card after pick_card, often on a fresh session (AGT-120).
   // A player's words on a card get their own 30 s (AGT-99): a refused own move and its retry rewrite the narration.
-  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS, suggest: DM_LONG_WAKE_TIMEOUT_MS, card_words: 30_000 });
+  assert.deepEqual(config.turnTimeoutsMs, { scene_open: DM_LONG_WAKE_TIMEOUT_MS, table_turn: DM_LONG_WAKE_TIMEOUT_MS, summary: DM_LONG_WAKE_TIMEOUT_MS, suggest: DM_LONG_WAKE_TIMEOUT_MS, pick: DM_LONG_WAKE_TIMEOUT_MS, card_words: 30_000 });
   const flat = new ModelDm({ pack: PACK, human: PARTY.human, players: PARTY.ai, choice: CHOICE, turnTimeoutMs: 20_000 }).sessionConfig();
   assert.equal(flat.turnTimeoutMs, 20_000);
   assert.equal(flat.turnTimeoutsMs, undefined);
