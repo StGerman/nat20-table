@@ -136,6 +136,7 @@
                 },
                 {
                     "id": "read",
+                    "asked": true,
                     "text": "Ask to read the paper.",
                     "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
                         {
