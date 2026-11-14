@@ -34,7 +34,7 @@ No new deed id: `own_move_tried_<card>` would be a second deed nothing reads (qu
 The one statement is the first bullet of §1.8 in the accepted design. As tests:
 
 1. `own_move` with no `failure` is accepted when `success` is offered on the card; every refusal of today stands.
-2. For a move with no `failure`, `card_resolved` is logged only after a successful roll. A failed roll, a downed proposer or an engine error at the roll (both `roll: null`) logs `own_move_ran` with `choice: null` and no `card_resolved` on `own_move`; the card is still on the table unless the words left settle it (rule 3).
+2. For a move with no `failure`, `card_resolved` on `own_move` is logged only after a successful roll. A failed roll, a downed proposer or an engine error at the roll (both `roll: null`) logs `own_move_ran` with `choice: null` and no `card_resolved` on `own_move`; the card is still on the table unless the words left settle it (rule 3).
 3. After that fall: every word given for `own_move` is taken back (advice included) and the other words stand; on a player owner's card the freed Blades who can still speak advise again before the owner calls; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the words left are tallied at once and may settle the card; otherwise the Blades the card waits for (its `waiting_for`, read before each ask) and then a player owner (who keeps the call even when down) are asked, with no fallback in the round the fall happened in, and the card settles by `choose_card` as a card with no own move would (one word per seat, the tally as today). An engine error at the roll is a fall with `roll: null`.
 4. The deed `own_move_<card>` is in the deed book after every `own_move_ran`, with the `by` of the vote that settled on `own_move`, unchanged, as §1.5 of the design gives (today's rules: the voters for `own_move` who were up at that settle, or the owner on an owner's call, even when down; it may be empty).
 5. A move that names a `failure` replays the accepted fixture byte for byte.
@@ -51,7 +51,7 @@ No new owed row. A tried move writes the deed 0068 already owes, `own_move_<card
 **Goals.**
 - G1. An own move may name no failure choice.
 - G2. With none, a failed roll, a downed proposer or an engine error at the roll runs no choice and leaves the card on the table, unless the words left settle it.
-- G3. For a move with no failure, `card_resolved` is logged only after the move's own roll succeeds, so no client sees such a card resolved and then waiting. (The success choice's own check may still error after it, as any choice's does today.) A move that names a failure keeps the accepted order (G6).
+- G3. For a move with no failure, `card_resolved` on `own_move` is logged only after the move's own roll succeeds, so no client sees such a card resolved and then waiting. (The success choice's own check may still error after it, as any choice's does today.) A move that names a failure keeps the accepted order (G6).
 - G4. One own move per card, tried or not.
 - G5. Nothing hidden reaches a player view (Rule 3): players learn of the fall from their own view (`own_move` set but no longer among the choices) and, when there was one, the public roll; `success`, `failure` and the DC stay DM only.
 - G6. A move that names a failure, and every fixture line recorded for one, is unchanged.
