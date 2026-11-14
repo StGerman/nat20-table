@@ -119,6 +119,7 @@ export class Suggester {
   sessionConfig(): SessionConfig {
     return {
       agent: `suggest:${this.handle}`,
+      role: "suggest",
       choice: this.config.choice ?? SUGGEST_CHOICE,
       systemPrompt: this.systemPrompt,
       tools: [],

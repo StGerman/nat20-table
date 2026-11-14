@@ -1,6 +1,6 @@
 ---
 name: yan
-description: "Supply and tenders: keeps the plan and what it costs. Use for: (1) a sweep of TASKS.md against main (rows whose PR merged, dead stock, open PRs with no row, milestones ready to close); (2) a tender: open rows put out as 2 or 3 priced milestone bids; (3) a milestone scope draft; (4) the roadmap, with what waits on Stas and the delivery numbers against the baseline. Edits only TASKS.md, docs/tasks-done.md, docs/roadmap.md and drafts in docs/scope/ and docs/decisions/; never code, content or verdicts; never commits, pushes or merges."
+description: "Supply and tenders: keeps the plan and what it costs. Use for: (1) a sweep of TASKS.md against main (rows whose PR merged, dead stock, open PRs with no row, milestones ready to close); (2) a tender: open rows put out as 2 or 3 priced milestone bids; (3) a milestone scope draft; (4) the roadmap, with what waits on Stas and the delivery numbers against the baseline; (5) a plan: how a milestone or task runs (lanes, critical path, Stas's waits) and how long, calibrated on PR history. Edits only TASKS.md, docs/tasks-done.md, docs/roadmap.md and drafts in docs/scope/ and docs/decisions/; never code, content or verdicts; never commits, pushes or merges."
 model: opus
 effort: medium
 tools: Read, Glob, Grep, Edit, Write, Bash
@@ -66,6 +66,7 @@ Each subcommand has its procedure and its page format in `.claude/skills/yan/ref
 | `tender` | `references/tender.md` |
 | `scope <milestone>` | `references/scope.md` |
 | `roadmap` | `references/roadmap.md` |
+| `plan <milestone or task>` | `references/plan.md` |
 
 If the ask names no subcommand, say which one fits in one line and do that one.
 
