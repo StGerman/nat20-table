@@ -103,9 +103,9 @@ Running, from the two ecd1f9e runs' `usage.jsonl`: a `dm/card_words` wake is abo
 
 ## 6. Questions for Stas
 
-1. Accept the direction: the rule of §2; L0 and L1 in CI; the DM bench and the fuzz as a report for one milestone; the pair's rules unchanged until that record exists?
+1. Accept the direction: the rule of §2; the build check; L0 and L1 as reports; the DM bench and the fuzz as a report for one milestone; the pair's rules unchanged until that record exists?
 2. Who runs the bench: you, by one command on your Mac; a thread through a Remote Control session you approve (0036 allows it; blocked in practice so far); or a cloud thread on an API key with a dollar cap a pass (0036 revisited in its own record)?
-3. Start now (L0 and L1 can land beside M12; the bench needs the M12 stack on main), or after M12 closes?
+3. Start now (the build check, L0 and L1 can land beside M12; the bench needs the M12 stack on main), or after M12 closes?
 
 ## 7. Yan's numbers (fallback agent, extract, 2026-11-14)
 
