@@ -6,7 +6,7 @@ import type { StatBlockEntry } from "../pack/adventure.ts";
 import { EngineStopped, type CardDm, type CardPlayer, type ErrorCode, type Event, type Handle, type LevelUpChoice, type RejectReason, type Sheet, type State, type WorldDm } from "@nat20-table/engine-client";
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, offeredLine, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
-import { buildChoices, cardChoices, choiceLines, levelUpChoices, OWN_MOVE, roadChoices, type Choice, type ChoiceAct, type SeatTalk } from "./choices.ts";
+import { buildChoices, cardChoices, choiceLines, levelUpChoices, moveFell, OWN_MOVE, roadChoices, type Choice, type ChoiceAct, type SeatTalk } from "./choices.ts";
 import { coinsRu } from "./seat-lines.ts";
 import { mapLinesRu, sheetRu, stateRu } from "./seat-views.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
@@ -14,7 +14,7 @@ import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, t
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { BarkTools, cardDrawnLine, DmTools, HandTools, moveFell, movedText, OWN_MOVE_RULE, PlayerTools, ReactionFloor, send } from "./tools.ts";
+import { BarkTools, cardDrawnLine, DmTools, HandTools, movedText, OWN_MOVE_RULE, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import { usageBlock, type UsageLog } from "../usage.ts";
 import type { Language } from "../agents/language.ts";
 import { refusedRu, SEAT_WORDS, UI_WORDS, type SeatWords } from "./words.ts";
@@ -932,15 +932,14 @@ export class TableLoop {
     // With no world to read, the fall is told as waiting: that never claims the card settled.
     const waits = !world || world.card?.id === id;
     const move = this.ownMove?.card === id ? this.ownMove : undefined;
-    const known = move?.actor ?? world?.card?.own_move?.actor;
+    const known = move?.actor ?? (world?.card?.id === id ? world.card.own_move?.actor : undefined);
     const actor = known ?? "the proposer";
     // The words come from this run's log; a card carried over a save and load has none.
     const words = move?.words ? ` («${move.words}»)` : "";
     const neverTried = (why: string) => `${actor}'s own move${words} was never tried (${why}): say so in one sentence, with no roll for the move.`;
     const text = rolled
       ? `${actor}'s own move${words} failed its roll: tell how the attempt falls short, in one or two sentences. The scene still answers: a person on the card, if there is one, reacts to the try, and a companion may speak.`
-      : // Only a downed proposer's fall settles at once (design §1.8).
-        neverTried(!waits || (known !== undefined && !(await this.isUp(known))) ? `${actor} is down or not here` : "the attempt could not be made");
+      : neverTried(known !== undefined && !(await this.isUp(known)) ? `${actor} is down or not here` : "the attempt could not be made");
     if (!waits) {
       this.fellSettled = text;
       return;
@@ -1169,7 +1168,7 @@ export class TableLoop {
         `A player's words on the road card: ${handle} says or does: "${words}"`,
         cardDrawnLine(card),
         answerOnly
-          ? `${answerOnly[0].toUpperCase()}${answerOnly.slice(1)}, so these words make no move: call own_move_or_answer with your narration only, one or two sentences, and the card waits. The scene still answers: a person on the card, if there is one, says what the plan would cost them or asks something back.`
+          ? `These words make no move (${answerOnly}): call own_move_or_answer with your narration only, one or two sentences, and the card waits. The scene still answers: a person on the card, if there is one, says what the plan would cost them or asks something back.`
           : OWN_MOVE_RULE,
       );
     } finally {
@@ -2688,7 +2687,7 @@ function cardLines(card: CardPlayer, owner = false, invite = true): string[] {
     `A road card waits for your word (${whose}): ${card.text}`,
     `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === OWN_MOVE && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
-    ...(move && moveFell(card) ? [`${move.actor}'s own move on this card was tried and fell: no choice came of it, and the card waits for a written choice.`] : []),
+    ...(move && moveFell(card) ? [`${move.actor}'s own move on this card came to nothing: no choice came of it, and the card waits for a written choice.`] : []),
     ...(move || !invite ? [] : [OWN_MOVE_INVITE]),
   ];
 }

@@ -504,7 +504,8 @@ export class ModelDm implements DmAgent {
         },
         (i) =>
           this.bound((t) => {
-            if (i.move && !LADDER.includes(i.move.dc)) return refuse(`a DC from the ladder: ${LADDER.join(", ")}`);
+            // A move on answer-only words is dropped anyway: its DC costs no retry.
+            if (i.move && !t.cardWords?.answerOnly && !LADDER.includes(i.move.dc)) return refuse(`a DC from the ladder: ${LADDER.join(", ")}`);
             return t.ownMoveOrAnswer(i.narration, i.move && { ability: SKILL_ABILITY[i.move.skill], ...i.move });
           }),
       ),

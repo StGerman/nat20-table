@@ -27,7 +27,7 @@ import type {
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
 import type { NoteKind, TableState } from "./state.ts";
 import type { RoadStep, ToolOutcome } from "./types.ts";
-import { OWN_MOVE } from "./choices.ts";
+import { moveFell } from "./choices.ts";
 import type { StatBlockEntry } from "../pack/adventure.ts";
 
 /** What an agent may give `submit`: an option, and its targets, variant or aim. */
@@ -306,7 +306,7 @@ export class PlayerTools {
     const card = r.result?.cmd === "get_state" && r.result.state.view === "player" ? r.result.state.world?.card : undefined;
     if (!card) return this.answer(notNow("no road card waits for your word"));
     // A move that fell is no longer among the choices (decision 0079): only a written choice is left.
-    if (card.own_move) return this.answer(notNow(moveFell(card) ? "the card's own move was tried and fell: give your word on a written choice with choose_card" : "the card already has an own move: give your word on it with choose_card"));
+    if (card.own_move) return this.answer(notNow(moveFell(card) ? "the card's own move came to nothing: give your word on a written choice with choose_card" : "the card already has an own move: give your word on it with choose_card"));
     if (card.said.some((s) => s.actor === this.me)) return this.answer(notNow("you have already given your word on this card"));
     if (!words.trim()) return this.answer(notNow("say in one sentence what your character does"));
     this.ownWords = words.trim();
@@ -1137,11 +1137,6 @@ export class DmTools {
     if (said.ok) this.table.end("the adventure is over");
     return said.ok ? { ok: true, text: "the adventure is over" } : said;
   }
-}
-
-/** A card whose own move fell (decision 0079): the move is still on it, and no longer among its choices. */
-export function moveFell(card: { own_move?: unknown; choices: Array<{ id: string }> }): boolean {
-  return Boolean(card.own_move) && !card.choices.some((c) => c.id === OWN_MOVE);
 }
 
 /** The own-move rule (decision 0079, design §1.8): in the road section and in the `card_words` wake. */
