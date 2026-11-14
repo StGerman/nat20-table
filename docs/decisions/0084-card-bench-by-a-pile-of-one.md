@@ -12,7 +12,7 @@ Facts, on main at 6d0766f:
 - The contract has no command that opens a named card.
 - A draw is by zone and `when`; "a pile of one puts its card on the table" with no pick (`crates/nat20-world/src/deck.rs`, `draw`).
 - A pack that carries its own `worlds/<map>` plays that world (`game/src/pack/campaign.ts`, `worldDir`). The ENG-35 test already copies a pack and its world to a temporary folder and writes one card into the copy's deck.
-- A new DM session pays one cache write of 0.31 to 0.42 USD on its first wake, and the loop opens a new DM session at every scene change; a warm `card_words` wake costs 0.04 to 0.06 USD (runs 16:05 and 01:42). Run 01:42 paid 0.92 USD from its start to its first road card.
+- A new DM session pays one cache write of 0.31 to 0.42 USD, and the loop opens a new DM session at every scene change: two before a road card, three before an arrival card at a place with its own scene. A warm `card_words` wake costs 0.04 to 0.06 USD (runs 16:05 and 01:42). Run 01:42 paid 0.92 USD from its start to its first road card.
 - A chained card is in play only after another card's choice adds it.
 - Live model calls run only on Stas's Mac (decision 0036).
 
@@ -21,7 +21,7 @@ Facts, on main at 6d0766f:
 ### A. A copied pack whose decks hold the one card (proposed)
 The bench copies the pack and its world to a temporary folder, takes every other card out of the copy's decks, cuts the route to the stretch that reaches the card, and plays the real loop.
 - Pro: no contract change and no engine change. The DM, the engine and the card run the code an evening runs. The technique is already in a test.
-- Con: two fresh DM sessions before the card, about 0.9 USD and a minute and a half before the first line, and again after every line that settles the card. It does not reach a chained card. The copy may fail a deck check once cards are taken out. A route cut to start at its second place opens on a scene written for an arrival.
+- Con: two or three fresh DM sessions before the card, about 0.9 to 1.3 USD and a minute and a half to two minutes before the first line, and again after every line that settles the card. It does not reach a chained card. The copy may fail a deck check once cards are taken out. A route cut to start at its second place opens on a scene written for an arrival.
 
 ### B. An engine command that opens a named card
 - Pro: any card, any place, one call.
@@ -43,7 +43,7 @@ Proposed: **A.** It is the only option where the line, the DM's call, the roll a
 ## Consequences
 
 - `npm run play:card` and its report, in two table PRs beside Milestone 13 (`docs/design/card-bench.md` §6). Rows are Yan's, after Stas accepts the design.
-- The bench is tried on three or four cards before Stas's Milestone 13 evening, at an expected 8 USD or so, about one more all-AI run, and four commands of Stas's (design §5). It adds cost to the milestone and changes no exit rule (decisions 0043, 0065, 0066, 0074).
+- The bench is tried on three or four cards before Stas's Milestone 13 evening, at an expected 9.5 USD or so, a little more than an all-AI run of *Fair in Wend*, and four commands of Stas's (design §5). It adds cost to the milestone and changes no exit rule (decisions 0043, 0065, 0066, 0074).
 - The bench reports and gives no pass or fail. Findings are read by the analysis thread; the verdict on each is Stas's.
 - Whether the bench becomes a standing rule is a later decision with its own record (decision 0080).
 

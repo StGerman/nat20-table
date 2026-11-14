@@ -8,7 +8,7 @@
 
 ## 1. Summary
 
-One command, `npm run play:card`, puts one named card on the table of a real contract, hands it to the live DM, types a list of lines at the human's seat and writes down what the DM and the engine did with each. It is the smallest live run the game has: about 0.9 USD and a minute and a half to the first line, about 0.05 USD and 10 to 25 seconds for each further line while the card still waits.
+One command, `npm run play:card`, puts one named card on the table of a real contract, hands it to the live DM, types a list of lines at the human's seat and writes down what the DM and the engine did with each. It is the smallest live run the game has: about 0.9 USD and a minute and a half to the first line of a road card, about 1.3 USD and two minutes for an arrival card at a place with its own scene, then about 0.05 USD and 10 to 25 seconds for each further line while the card still waits.
 
 It answers one question before an evening does: **can this card hold what a person says?** It answers it only for lines somebody thought of beforehand. It does not replace either half of an exit pair and changes no exit rule.
 
@@ -84,21 +84,28 @@ The report is the DM's side of the table, like a run's analysis. It is never sho
 **When.** One of two moments, and which one depends on code that is not on main yet.
 
 - *Before the pair*, on two rosters saved by scripted walks of the Mill with no model, one for each yard outcome. Both new cards are benched, and a finding costs only its fix. This needs Milestone 13's build to let a scripted walk write the Mill's deeds and save a roster. Not checked.
-- *Between run 1 and run 2*, on a copy of run 1's roster. Always possible. Only the card that run 1's yard deed opens is benched, so the trial is three cards, and a finding that changes the build replays run 1 (the pair is one build, decision 0043): 11.9 to 15.5 USD on the three all-AI Mill runs on record, which are older builds, and none of Stas's time.
+- *Between run 1 and run 2*, on a copy of run 1's roster. Always possible. Only the card that run 1's yard deed opens is benched, so the trial is three cards, and a finding that changes the build replays run 1 (the pair is one build, decision 0043): 11.5 to 15.5 USD on the five complete all-AI Mill runs on record (2026-10-30 to 2026-11-03, older builds), and none of Stas's time.
 
 Recommended: the first if PR 1 shows it works, else the second.
 
-**Cost.** From the DM's rows in the `usage.jsonl` of runs 16:05 and 01:42 (`api_equivalent_usd`). A new DM session pays one cache write of 55 to 80 thousand tokens on its first wake, whichever wake that is: 0.31 to 0.42 USD. (Once, at the start of run 16:05, the first wake timed out at 0.12 USD and the write landed on the next, 0.32 USD.) The loop opens a new DM session at every scene change (`game/src/table/loop.ts`, `dm.newScene`), so a bench session pays it twice before the card: once in the start place's scene and once on the road. Warm wakes: `scene_open` 0.04 to 0.05, `summary` 0.02, `road` 0.02 to 0.05, `card` 0.02 to 0.04, `card_words` 0.04 to 0.06 USD and 9 to 24 s. Run 01:42 paid 0.92 USD from its start to its first road card (0.425 + 0.039 + 0.019 + 0.308 + 0.046 + 0.038 + 0.041), table talk left out. So about 0.9 USD and a minute and a half to a card's first line, and about 0.05 USD for each further line in the same session.
+**Cost.** From the DM's rows in the `usage.jsonl` of runs 16:05 and 01:42 (`api_equivalent_usd`).
+
+- A new DM session pays one cache write of 55 to 80 thousand tokens, 0.31 to 0.42 USD. It lands on the session's first wake, or on the second when the first times out: that happened in 5 of the 9 new sessions of the two runs and adds 0.02 to 0.12 USD and a lost wake of 12 to 30 s. The estimates below leave the timeouts out.
+- The loop opens a new DM session at every scene change (`game/src/table/loop.ts`, `closeScene`, `dm.newScene`). A road card is two sessions from the start: the start place's scene, then the road. An arrival card at a place with its own scene is three: the place's scene opens before the card, as `twb_wendford` did before `toll_man_stocks` in run 01:42.
+- Warm wakes: `scene_open` 0.04 to 0.05, `summary` 0.02, `road` 0.02 to 0.05, `card` 0.02 to 0.04, `card_words` 0.04 to 0.06 USD and 9 to 24 s.
+- Run 01:42 paid 0.92 USD from its start to its first road card (0.425 + 0.039 + 0.019 + 0.308 + 0.046 + 0.038 + 0.041), table talk left out.
+
+So a card's first line costs about 0.9 USD and a minute and a half for a road card, about 1.3 USD and two minutes for an arrival card at a place with a scene, and each further line in the same session about 0.05 USD.
 
 The lines go in with the questions first and the plans last, so that a plan that settles the card ends a session late.
 
-| 4 cards, 20 lines | USD | Machine time |
+| 2 arrival cards and 2 road cards, 20 lines | USD | Machine time |
 |---|---|---|
-| One session a card: no line settles a card before its last | about 4.5 | about 12 minutes |
-| Two sessions a card: three questions, then two plans, and the first plan settles. Expected | about 8 | about 20 minutes |
-| Twenty sessions: every line settles its card | about 18 | about 35 minutes |
+| One session a card: no line settles a card before its last | about 5 | about 12 minutes |
+| Two sessions a card: three questions, then two plans, and the first plan settles. Expected | about 9.5 | about 20 minutes |
+| Twenty sessions: every line settles its card | about 22 | about 40 minutes |
 
-Stas starts one command a card and need not watch it. For scale: an all-AI run of *Fair in Wend* was 8.57 USD, and an evening of Stas 5.70 to 6.95 USD and 27 to 120 minutes. So the trial costs about one more all-AI run. It saves nothing unless it finds something.
+Stas starts one command a card and need not watch it. For scale: an all-AI run of *Fair in Wend* was 8.57 USD, and an evening of Stas 5.70 to 6.95 USD and 27 to 120 minutes. So the trial is expected to cost a little more than an all-AI run of *Fair in Wend*; the two new cards alone, about 5.5 USD. It saves nothing unless it finds something.
 
 **How the trial is read at Milestone 13's close** (decision 0080's checkpoint). Yan's close sweep reports three numbers:
 
@@ -130,20 +137,20 @@ No contract change, no engine change, no new player-facing text, so Rule 1 does 
 - **The copy may not load.** Taking cards out can fail the deck's own checks, for one a deed that is read with no card left to write it. PR 1's test runs the copy for every card it covers; where a check objects, the copy keeps the card it needs in a zone the cut route does not cross.
 - **A cut route may not start cleanly.** A contract opened at its second place has a scene written for an arrival, not for a start. The DM may narrate oddly before the card. It costs one wake and is visible in the report.
 - **The bench DM is colder than the evening's DM.** No scenes behind it and no table talk. A line can land on the bench and fail in the evening, or the other way. Number 2 of §5 measures exactly this.
-- **The price is an estimate until the first run.** Whether the prompt cache carries from one process to the next is not measured; the table in §5 assumes it does not. At two cache writes a session the DM's wake alone (decision 0084, option D) would cost about a third of the trial's price, and tells less.
+- **The price is an estimate until the first run.** Whether the prompt cache carries from one process to the next is not measured; the table in §5 assumes it does not. At two or three cache writes a session the DM's wake alone (decision 0084, option D) would cost about a third of the trial's price, and tells less.
 - **It tests guesses.** Both real plans of run 01:42 were ones nobody predicted. Five lines a card will miss the sixth.
 
 ## 9. Questions for Stas
 
 1. Accept the design: a temporary pack with a pile of one, lines from a file, a report with no pass or fail? Recommended: yes.
-2. The trial's cards: the new Wendford arrival cards (both, or the one run 1's roster opens, §5) plus `bog_wifes_toll` and `salt_on_credit`? Recommended: yes; drop the two older ones if that is too many.
+2. The trial's cards: the new Wendford arrival cards (both, or the one run 1's roster opens, §5) plus `bog_wifes_toll` and `salt_on_credit`, about 9.5 USD? Or the new cards alone, about 5.5 USD? Recommended: all four. Two new cards with five guessed lines each may find nothing, and a trial that finds nothing says little about the bench.
 3. Lines for the new cards: the thread drafts five a card and you edit them, or you write them? Recommended: the thread drafts, you edit.
-4. A cap for the trial: 10 USD and 20 minutes of yours? Recommended: yes; past the cap the trial stops and is read as it stands.
+4. A cap for the trial: 12 USD and 20 minutes of yours? Recommended: yes; past the cap the trial stops and is read as it stands.
 5. Beside Milestone 13, outside its exit and PR count, two PRs? Recommended: yes.
 
 ## Sources
 
 - `docs/design/content-test-layers.md` §2, §4; `docs/decisions/0080-content-test-layers.md` (table #383)
-- `crates/nat20-world/src/deck.rs` (`draw`, `Drawn::Table`); `game/src/pack/campaign.ts` (`worldDir`); `game/test/campaign-loop.test.ts` (ENG-35, `blade`, `movingDm`); `game/src/play/driver.ts` (`--roster`, `--rosters`, `--seat`); `game/src/agents/dm.ts` (`card_words`, `own_move_or_answer`); `game/src/table/loop.ts` (`dm.newScene` at a scene change)
+- `crates/nat20-world/src/deck.rs` (`draw`, `Drawn::Table`); `game/src/pack/campaign.ts` (`worldDir`); `game/test/campaign-loop.test.ts` (ENG-35, `blade`, `movingDm`); `game/src/play/driver.ts` (`--roster`, `--rosters`, `--seat`); `game/src/agents/dm.ts` (`card_words`, `own_move_or_answer`); `game/src/table/loop.ts` (`closeScene`, `dm.newScene` at a scene change)
 - `docs/design/m13-system-design.md` §1, §8 (the reader card, the exit pair); decisions 0036, 0043, 0079, 0081
 - nat20-runs `master` 65c0e7c: `full-2026-11-13T16-05-31-438Z` and `full-2026-11-14T01-42-04-072Z` (`usage.jsonl`), and their `analysis.md` in `/mnt/project-files/engine/m12/runs/`
