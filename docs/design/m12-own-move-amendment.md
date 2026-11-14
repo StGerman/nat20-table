@@ -132,7 +132,7 @@ Folded into `docs/design/m12-system-design.md` in table #381: §1.1 steps 3, 5, 
 - **Most likely to sink it: the DM stops naming failures** (the new §11 risk in the design). Cheapest test: the count in the all-AI run's report.
 - **The card un-settled.** The world crate today takes a card off the table the moment the vote settles it; a move with no failure keeps it there until the roll. The fixture's fall case, then `choose_card`, is the test, and it is the first thing PR 1 writes.
 - **The narration still rules.** A prompt line cannot stop a model telling a refusal. The §8 list makes it a dozen lines a person reads, and PR 5 an independent flag.
-- **Exit row 4** reads the first `card <id> goes to the seats` line per card; after a fall the loop logs the line again for the same card, and the check must take the first.
+- **Exit row 4 and the seated count.** After a fall the loop logs `card <id> goes to the seats` again for the same card. Row 4's check already passes a repeated line (it looks for a framing narration before each); the report's count of cards seated would count the card twice, so PR 3 counts a card once.
 
 ## 15. Decisions for Stas
 
