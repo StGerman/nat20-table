@@ -1037,6 +1037,8 @@ export class TableLoop {
     this.fellSettled = undefined;
     if (this.fellLine?.card !== card.id) this.fellLine = undefined;
     if (this.ownMove?.card !== undefined && this.ownMove.card !== card.id) this.ownMove = undefined;
+    // A move carried over a save and load has no card_own_move in this run: its proposer comes from the card.
+    if (card.own_move && this.ownMove?.card !== card.id) this.ownMove = { card: card.id, actor: card.own_move.actor };
     if (this.table.ended) return false;
     this.table.log("system", `card ${card.id} goes to the seats`);
     await this.table.flush();
