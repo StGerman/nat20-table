@@ -193,7 +193,7 @@
             "target": "caravan",
             "owner_pick": "walk",
             "once": "contract",
-            "text": "On the slope track a woman in a man's coat, come down from the farm on Bald Hill, stops the wagon. She wants a winter's salt for the farm, and she cannot pay for it until spring. A boy in a bobble hat holds her hand and looks at the horses, not at the salt.",
+            "text": "On the slope track a woman in a man's coat, walking down to Wendford from the farm on Bald Hill, stops the wagon. She wants a winter's salt for the farm, and she cannot pay for it until spring. A boy in a bobble hat holds her hand and looks at the horses, not at the salt.",
             "note": "The farm on Bald Hill, Col and Dunn's. The goblins took the flock, so there is no wool in spring to pay with, and Fenn won't give credit to a farm with no sheep. If the brothers died at the bridge (killed_col, killed_dunn), she is in black and Fenn knows why; say it plainly. A blind choice and a consequence on the young: what the Blades do here, Gwyn hears by the next contract. Maren speaks first. The boy's look is told as perception, never as a threat.",
             "choices": [
                 {
