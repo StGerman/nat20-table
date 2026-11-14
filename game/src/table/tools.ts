@@ -59,10 +59,10 @@ const CHANGES = new Set<Command["cmd"]>([
  * the decision. Once a decision is spent, no further change reaches the engine and the loop falls
  * back. A seat's changes go one at a time, so each sees what the ones before it spent.
  */
-/** A fight move goes as far as the turn's movement allows (API-35); the answer says when it stopped short. */
+/** A move ends on the last free spot it can reach (API-35, ENG-21); the answer says when it stopped short. */
 export function movedText(r: Response): string {
   if (r.result?.cmd !== "move") return "moved";
-  const short = r.result.reached ? "" : "; stopped short, as far as movement goes: not there yet";
+  const short = r.result.reached ? "" : r.result.taken ? "; stopped short: someone already stands there" : "; stopped short, as far as movement goes: not there yet";
   return `moved ${Math.round(r.result.moved_ft)} ft${short}${r.result.provoked.length ? `; provoked ${r.result.provoked.join(", ")}` : ""}`;
 }
 

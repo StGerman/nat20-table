@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.69"
+    "version": "1.0.0-dev.70"
   },
   "$defs": {
     "Ability": {
@@ -1497,7 +1497,11 @@
               }
             },
             "reached": {
-              "description": "Whether the walk set out to end where the creature was sent (next to the creature, at\nthe anchor or the point). False only for a `partial` move that the movement left cut\nshort; a creature an opportunity attack holds on the way is still on a walk that\nreaches.",
+              "description": "Whether the walk set out to end where the creature was sent (next to the creature, at\nthe anchor or the point). False for a `partial` move that the movement left cut short,\nand for a move to a point or an anchor where a creature stands, which ends on the last\nfree spot before it (`1.0.0-dev.70`); a creature an opportunity attack holds on the way\nis still on a walk that reaches.",
+              "type": "boolean"
+            },
+            "taken": {
+              "description": "True when the walk got as far as where it was sent and stopped short because a creature\nstands there, so a client can say why it didn't get there (`1.0.0-dev.70`). Left out\notherwise, which includes a `partial` move the movement left cut short first.",
               "type": "boolean"
             }
           },

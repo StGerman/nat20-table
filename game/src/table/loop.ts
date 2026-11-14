@@ -1307,11 +1307,11 @@ export class TableLoop {
     // The human sees their own action's lines at once. What follows their turn (the monsters'
     // turns, a fight's end) waits for the DM to narrate the turn first.
     await this.table.flush((e) => e.kind === "combat_over" || (e.kind === "turn_end" && e.actor === human));
-    // The engine's line says only that the character moved: a walk that ran out of movement says so.
+    // The engine's line says only that the character moved: a walk that stopped short says so.
     const moved = outcome.ok ? (outcome.data as { cmd?: string; reached?: boolean } | undefined) : undefined;
     if (moved?.cmd === "move" && moved.reached === false) {
-      const walk = moved as { moved_ft?: number; provoked?: string[] };
-      const text = this.table.names.language === "en" ? `You ${outcome.text}.` : this.words.movedShort(Math.round(walk.moved_ft ?? 0), this.table.names.list(walk.provoked ?? []));
+      const walk = moved as { moved_ft?: number; provoked?: string[]; taken?: boolean };
+      const text = this.table.names.language === "en" ? `You ${outcome.text}.` : this.words.movedShort(Math.round(walk.moved_ft ?? 0), this.table.names.list(walk.provoked ?? []), walk.taken === true);
       this.table.show({ kind: "info", title: this.words.stoppedShort, text });
     }
     return outcome;
