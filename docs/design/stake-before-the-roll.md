@@ -1,6 +1,6 @@
 # Own move, any outcome: the stake before the roll (system design)
 
-Status: Proposed. Lev Neiman, 2026-11-14, branch `table/stake-before-the-roll-design` on table #394 (6d1feaac). A milestone after Milestone 13; Yan numbers it. No scope document: the goals below are decision 0083, Stas's seven decisions of 2026-11-14 and his 19:39Z ruling on a natural 20 (§16 item 8). Evidence: the rules review (project file `engine/m12/rules-review/rules-review.md`). Author's read: this page carries no verdict on itself. Zoya's board check and Vera's read are quoted verbatim in §17, with what each changed. §12 and rules 8, 9 and 13 are a second draft written after both and have not been read again.
+Status: Proposed. Lev Neiman, 2026-11-14, branch `table/stake-before-the-roll-design` on table #394 (6d1feaac). A milestone after Milestone 13; Yan numbers it. No scope document: the goals below are decision 0083 and the seven decisions of Stas's that came with the ask on 2026-11-14 (any outcome behind a stake; the sentences DM-only; the split by whose hands; a natural 20 and 1; torture never described; the same rule in scenes; the review's open rows). The fourth was replaced the same day by his 19:39Z ruling (§16 item 8). §16 holds that ruling and nine open questions. Evidence: the rules review (project file `engine/m12/rules-review/rules-review.md`). Author's read: this page carries no verdict on itself. Zoya's board check and Vera's read are quoted verbatim in §17, with what each changed. §12 and rules 8, 9 and 13 are a second draft written after both and have not been read again.
 
 ## 1. Summary
 
@@ -93,8 +93,7 @@ Goals: one command carries the whole stake before the roll; the kept outcome is 
 | `DeedDm.causes`, and `causes` on the roster's deed | `DeedCause[]`, optional, left out when empty | DM only; the roster file |
 | Event `stakes_recalled` | `at`, `causes`, each with `why: here \| person \| thread \| company` | DM only |
 | `OwnMoveDm.stake` | the two outcomes, while a company stake waits for the vote; `OwnMovePlayer` unchanged (actor, ability, skill) | DM only |
-| `CardDecided::OwnAct` | how a card was decided when an own-hands stake closed it | public, as `card_resolved` is |
-| The DM's full roll view | one optional field saying the check was rolled under core's "a natural 20 succeeds" flag, so the audit can explain a success below the DC | DM only |
+| `CardDecided::OwnAct` | how a card was decided when an own-hands stake closed it. Kept, with its reader: `card_resolved.decided` is a required field of a public event, and the run report prints it for every card (`game/src/play/exit.ts`); without the variant an own-hands close would be logged as a majority that never voted | public, as `card_resolved` is |
 | Errors | `bad_stake` (new reason); `already_attempted`, `no_card`, `no_say`, `wrong_mode` reused | as today |
 
 Public and unchanged: the `roll` in the player's view of any check, and `card_own_move{actor, words, skill}` when a company stake goes on the card. `own_move` (API-56) stays in the contract and the table stops sending it; removing it, with `bad_own_move`, is a later breaking line, not this milestone's (§13). `contract/protocol.md`: §4.13 "Own move" is rewritten around the stake, §4.3 gains the scene stake, and the visibility table gains the rows above. Fixture `stake.jsonl`: the first three phrases of §2 on their real cards, one scene stake, one natural 20 below the DC, one roster round trip.
@@ -102,8 +101,8 @@ Public and unchanged: the `roll` in the player's view of any check, and `card_ow
 ## 6. Engine, world and core
 
 - **Core (fork `demo`, Rules 5 and 6):** a check may opt in to "a natural 20 succeeds". Off by default; no natural-1 rule. A test in `core/tests/`: with the flag a natural 20 below the DC succeeds; without it, it fails; with it, a natural 1 whose total meets the DC still succeeds. A `docs/PROGRESS.md` row. Then a pin bump in its own table PR. No table code ever flips a result.
-- **Adapter:** sets the flag on stake rolls and on no other check.
-- **World crate:** `Deed` gains `causes`; a deed done again still keeps its first `by`, day and contract, and appends the cause. The vote path of `Deck::own_move` is kept and narrowed to company stakes: its `success` and `failure` become the two outcomes, and `own_move_fell` serves `after: waits`. The rules that go: "a failure may not break a custom", "the same way twice", the fall count. The validator reserves `own_move_<scene id>` as it reserves `own_move_<card>`.
+- **Adapter:** sets the flag on stake rolls and on no other check. The roll's views gain no field: the audit explains a success below the DC from `natural: 20` on that roll's `stake_kept`.
+- **World crate:** `Deed` gains `causes`; a deed done again still keeps its first `by`, day and contract, and appends the cause. The vote path of `Deck::own_move` is kept and narrowed to company stakes: its `success` and `failure` become the two outcomes. **The fall, said once:** the code stays and the outcome goes. `own_move_fell`, which takes `own_move` off the choices, takes back the words given for it and leaves the card waiting, stays and runs in two cases only: a company stake whose kept outcome is `after: waits`, and a roll that could not be made (a downed proposer, an engine error). What goes is a failed roll that keeps nothing: every roll made now keeps a sentence. The per-card record of ways and falls goes with it, replaced by rule 7's record of who rolled which skill on the card; "a failure may not break a custom" goes too. The validator reserves `own_move_<scene id>` as it reserves `own_move_<card>`.
 - **Server:** `stake` (rules 1 to 8, 11, 13), the recall (rule 9), the roster round trip (rule 12).
 - A session with no world memory (no campaign and no site) answers `stake` with `rejected`, `wrong_mode`. After Milestone 13 (ENG-44) no shipped pack is one.
 
@@ -136,8 +135,8 @@ What stays and what goes of 0068, 0079 and 0081:
 | Stays | Goes |
 | --- | --- |
 | The vote on a company stake, the owner's call, the human first (0068 A, 0062) | Success and failure must be the card's written choices (0068) |
-| A DC from the ladder; the engine rolls (0068) | The optional failure and the "fall" with no outcome (0079) |
-| A downed proposer: no roll, the card waits (0068) | "Words no choice fits get only an answer" (0079) |
+| A DC from the ladder; the engine rolls (0068) | The optional failure, and a failed roll that keeps nothing (0079's "fall" as an outcome) |
+| A downed proposer: no roll, the card waits (0068), through `own_move_fell`, whose code stays (§6) | "Words no choice fits get only an answer" (0079) |
 | Never act for the player (0068, rule D3) | A failure may not break a custom (0068) |
 | The AI seats' cap, as a loop guard in the table: an AI seat is offered no third stake on one card (`AI_FALLS_MAX`, 0081 rule 5) | One own move per card; the way counted per card; `bad_own_move` (0081). Rule 7 here replaces it, per seat |
 | A wish never acted on becomes a proposed card (0071) | The vote on an act of the character's own hands (0068 A) |
@@ -235,12 +234,16 @@ Sizes are my guess for Yan to price; row ids are his.
 | 1 | `core:` a check may opt in to "a natural 20 succeeds" | the flag, a `core/tests/` test, a `docs/PROGRESS.md` row, into `demo` | S | — |
 | 2 | `table:` core pin bump | the rev, full suite green (Rule 5) | XS | 1 |
 | 3 | `table:` contract and engine, cards | §5 in Rule 1's order; world crate and server, rules 1 to 8 and 11 to 13; fixture `stake.jsonl`; protocol §4.13; the visibility-scan case | L | 2; Milestone 13's API-57 and ENG-44 |
-| 4 | `table:` the recall and the scene stake | rule 9, `stakes_recalled`, `stake` in a scene, protocol §4.3 | M | 3 |
-| 5 | `table:` the table | the three-answer tool, the vote by words, the prompt lines of §7, the AI cap, the lines of §12 after Vera's second read | L | 4 |
+| 4 | `table:` the recall and the scene stake | rule 9 for `here`, `person` and `thread`, `stakes_recalled`, `stake` in a scene, protocol §4.3 | M | 3 |
+| 5 | `table:` the table | the answer tool with talk and stake, the prompt lines of §7, the AI cap, §12 line 2 after Vera's second read | L | 4 |
 | 6 | `table:` the judge | the digest carries kept sentences; the five kinds; a scripted CI case each | M | 4 |
 | 7 | `table:` the run report and the exit rows | §10 | M | 5 |
 | 8 | `table:` the voice of a turned-away line | the DM voice skill and one bible example, drafted by Zoya | S | — |
-| 9 | the exit pair | run 1, then Stas | — | 5 to 8 |
+| 9 | `table:` the vote by words (separable) | D1's first answer, §12 line 1, the report's list of such votes | S | 5; §16 item 6 |
+| 10 | `table:` the `company` recall (separable) | rule 9's `company` reason, D10's second sentence | S | 4; §16 item 10 |
+| 11 | the exit pair | run 1, then Stas | — | 5 to 8 |
+
+PRs 9 and 10 can land after the stake PRs, or after the pair, and §16 items 6 and 10 do not block PRs 1 to 8. No exit row of §10 depends on either: `stake-came-back` is met by a `here`, `person` or `thread` recall, and `stake-answered` reads only the talk list. Until PR 9 lands, words that are a written choice are answered as today (the DM says so and the seat presses the button). Until PR 10 lands, a `company` cause is in `world.deeds` and in the judge's state but is not handed at later cards, so `stake-told` is at more risk on a run with a company stake.
 
 Docs for the calling thread, not mine: the supersession marks on 0068, 0079 and 0081 once Stas accepts; Yan's rows.
 
