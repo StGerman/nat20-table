@@ -421,7 +421,7 @@ export class TableLoop {
   private startXp: number | undefined;
   /** The last own move put on a card: who proposed it and their words (`card_own_move`, then `own_move_set` names the card), for the fall's text (decision 0079). */
   private ownMove: { card?: string; actor: Handle; words?: string } | undefined;
-  /** A fall whose words left settled the card at once: its never-tried text goes in that card's `road` wake. */
+  /** A fall whose words left settled the card at once: the fall's text goes in that card's `road` wake. */
   private fellSettled: string | undefined;
   /** The card whose own move fell, and whether it was rolled: its seat line shows when the human is next asked on it. */
   private fellLine: { card: string; rolled: boolean } | undefined;
@@ -956,8 +956,10 @@ export class TableLoop {
 
   /** Whether the card's own move fell since `before` was read: a fall ends the round it fell in (decision 0079). */
   private async fellSince(before: CardDm): Promise<boolean> {
+    // A card whose move already fell can't fall again: no read needed.
+    if (moveFell(before)) return false;
     const now = (await this.dmWorld())?.card;
-    return !moveFell(before) && now?.id === before.id && moveFell(now);
+    return now?.id === before.id && moveFell(now);
   }
 
   /** Whether `handle` is in the scene and conscious, as the engine's `table()` checks it. */
