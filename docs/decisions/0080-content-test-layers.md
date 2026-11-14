@@ -34,16 +34,16 @@ Stas asked for testing of card content and player decisions closer to unit or co
 
 ## Decision
 
-Accepted: B, in two answers. The rule at 16:59Z. The bench at 19:42Z: it is designed and tried on Milestone 13, and whether it then becomes a standing rule is a later decision, taken on what the trial shows.
+Accepted: B, in two answers, and one step past it. The rule at 16:59Z. The bench at 19:42Z: Stas asked for more than B's design, a trial on Milestone 13. So the design comes first, with its cost, and once he accepts it the bench is built for that trial; no option above says this exactly. Whether the bench then becomes a standing rule is a later decision, taken on what the trial shows.
 
 Why B: over A it costs a layer named beside each exit row, a test in the fix's PR when a test with no model could have seen a run's failure, and a second design to read. It beats C and D because both spend, or change accepted rules, on evidence that does not exist yet.
 
 ## Consequences
 
 - From 2026-11-15, every exit row in a milestone scope or design first drafted from that date names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or "a person". Scopes and designs drafted earlier (M12, M13, the Allies in fights scope) are not amended.
-- From 2026-11-15: when a full run fails, its analysis says whether a test with no model could have seen it, and if one could, the fix's PR adds that test. The rerun the pair's rules require is still played.
+- When a full run fails from 2026-11-15, its analysis says whether a test with no model could have seen it, and if one could, the fix's PR adds that test. The rerun the pair's rules require is still played.
 - The rule is one bullet in CLAUDE.md under Rule 8, and its exit-row sentence is in Yan's scope reference and Lev's design reference, all added in this PR. Where a doc and CLAUDE.md differ on the wording, CLAUDE.md is the rule.
-- The card bench gets its own system design, in its own PR, to be tried on Milestone 13; no rows before that design is accepted. Making the bench a standing rule needs its own record after the trial.
+- The card bench gets its own system design, in its own PR; rows and the build for the Milestone 13 trial follow Stas's acceptance of that design, not this record. Making the bench a standing rule needs its own record after the trial.
 - No accepted decision and no scope changes.
 
 ## Revisit when
