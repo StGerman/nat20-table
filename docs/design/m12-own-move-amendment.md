@@ -64,7 +64,7 @@ No new owed row. A tried move writes the deed 0068 already owes, `own_move_<card
 
 - **The roll fails, no failure named:** §3. The party gets the roll line (if there was a roll), the DM's sentences, and the card.
 - **The `card_words` wake fails or times out:** as today: no move, the "Said at the table" line, the card waits.
-- **The DM's wake for a fall fails** (the fall's own wake, or the settled card's wake that tells a fall settled at once): the logged fallback; the seat still shows the roll line, if any, and, to the seats whose word was taken back, the "did not work" or "never tried" line; then, unless the card settled, those seats are asked again (design §1.8).
+- **The DM's wake for a fall fails** (the fall's own wake, or the settled card's wake that tells a fall settled at once): the logged fallback; the seat still shows the roll line, if any; when the card still waits, the seats whose word was taken back and who can still speak also get the "did not work" or "never tried" line and are asked again; when it settled, no fall line shows (design §1.8).
 - **The DM names a failure the engine refuses:** as today it corrects within its retries; the refusal's message now says "or none".
 
 ## 7. The seat's lines from run 2
