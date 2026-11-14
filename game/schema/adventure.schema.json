@@ -191,6 +191,19 @@
         "minLength": 1
       }
     },
+    "anchors_ru": {
+      "default": {},
+      "description": "What a Russian seat calls each scene anchor, by anchor id (AGT-98): \"the_well\": \"колодец\". The engine sends anchors' English names; the seat reads these instead in a Russian run. One name per id across the pack's scenes.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "glyphs": {
       "default": {},
       "description": "One glyph per creature kind for the turn-order line of the human's panel (M10 P7, AGT-67), keyed by a party handle or by a creature's kind as the panel names it (\"Goblin Warrior\"). Each is one grapheme, such as one emoji. The bar shows it in front of the handle; the roster never does.",

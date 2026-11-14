@@ -109,6 +109,21 @@
         "Nell Hale": "Нелл Хейл",
         "clipboard": "дощечка для записей"
     },
+    "anchors_ru": {
+        "ahead": "дальше по дороге",
+        "alehouse_door": "дверь пивной",
+        "behind": "назад по дороге",
+        "by_the_wagon": "у фургона",
+        "fair_gate": "городские ворота",
+        "farmhouse_door": "дверь фермы",
+        "fold_gate": "ворота овчарни",
+        "odda_stall": "пустой прилавок Одды",
+        "roadside": "обочина",
+        "the_ford": "брод",
+        "the_quay": "пристань",
+        "the_well": "колодец",
+        "track_down": "начало спуска"
+    },
     "glyphs": {
         "_comment": "Turn-order glyphs for the human's panel (AGT-67): party members by handle, monsters by kind or by the name the pack gives them.",
         "bren": "🪖",

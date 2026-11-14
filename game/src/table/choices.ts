@@ -6,7 +6,16 @@
 import type { ActionCost, ActionOption, Aim, Handle, LevelUpChoice, Lodging, MoveTarget, Pace, Side, Skill, State, TargetCandidate, WorldPlayer } from "@nat20-table/engine-client";
 import type { LegalActionsResult } from "../view.ts";
 import type { DecisionInput } from "./tools.ts";
+import { SeatNames } from "./seat-lines.ts";
 import { SEAT_WORDS, type SeatWords } from "./words.ts";
+
+/** How the seat words its lines (AGT-98): its strings and its names, in the run's language. */
+export interface SeatTalk {
+  words: SeatWords;
+  names: SeatNames;
+}
+
+const ENGLISH: SeatTalk = { words: SEAT_WORDS.en, names: new SeatNames() };
 
 /** What picking a numbered line does. */
 export type ChoiceAct =
@@ -46,19 +55,22 @@ type Item = Omit<Choice, "number">;
  * The numbered list for the human's options. In a fight it ends with a move pick (anchors and the
  * creatures the human can see) and End turn; out of combat moving is the DM's call, made in words.
  */
-export function buildChoices(result: LegalActionsResult, state: State | undefined, combat: boolean): Choice[] {
-  const items = result.options.flatMap((option) => optionItems(option).map((item) => tagged(item, aboutOf(option))));
+export function buildChoices(result: LegalActionsResult, state: State | undefined, combat: boolean, talk: SeatTalk = ENGLISH): Choice[] {
+  const about = (option: ActionOption) => aboutOf(option, talk.names);
+  const items = result.options.flatMap((option) => optionItems(option, talk).map((item) => tagged(item, about(option))));
   if (combat && state) {
-    const moves = moveItems(state, reachOf(result, state));
+    const moves = moveItems(state, reachOf(result, state), talk);
     const dash = result.options.find((o) => o.option_id === "dash");
-    if (moves.length > 0) items.push(tagged({ label: "Move…", next: numbered(moves) }, { id: "move" }, dash ? aboutOf(dash) : { id: "dash" }));
+    if (moves.length > 0) items.push(tagged({ label: talk.words.moveMenu, next: numbered(moves) }, { id: "move" }, dash ? about(dash) : { id: "dash" }));
   }
-  if (combat && result.can_end_turn) items.push({ label: "End turn", act: { kind: "end_turn" }, about: { id: "end_turn" } });
+  if (combat && result.can_end_turn) items.push({ label: talk.words.endTurn, act: { kind: "end_turn" }, about: { id: "end_turn" } });
   return numbered(items);
 }
 
-function aboutOf(option: ActionOption): NonNullable<Choice["about"]> {
-  return { id: option.option_id, cost: option.cost, ...(option.summary ? { summary: option.summary } : {}) };
+function aboutOf(option: ActionOption, names: SeatNames): NonNullable<Choice["about"]> {
+  // A rule summary the dictionary lacks stays off a Russian seat rather than read in English.
+  const summary = names.summary(option.option_id, names.language === "ru" ? undefined : (option.summary ?? undefined));
+  return { id: option.option_id, cost: option.cost, ...(summary ? { summary } : {}) };
 }
 
 /** An item and the follow-up picks under it, marked with the option they play. A Dash-and-move line plays Dash. */
@@ -78,7 +90,8 @@ function tagged<T extends Item | Choice>(item: T, about: NonNullable<Choice["abo
  * one when the next stop is out of reach today at a normal pace but within it at a fast one, on a
  * road that allows it.
  */
-export function roadChoices(world: WorldPlayer, first: number, human?: Handle): Choice[] {
+export function roadChoices(world: WorldPlayer, first: number, human?: Handle, talk: SeatTalk = ENGLISH): Choice[] {
+  const w = talk.words;
   // Once the contract is done the journey is over: the caravan goes nowhere more this run (B7).
   if (!world.drives || world.card || world.escort?.done) return [];
   // A Hired Blade may walk ahead as the scout (AGT-90): one line for the road, not one per leg,
@@ -86,7 +99,7 @@ export function roadChoices(world: WorldPlayer, first: number, human?: Handle): 
   const scouts = human !== undefined && world.scout !== human && (world.escort?.blades.some((b) => b.handle === human) ?? false);
   const at = world.at.kind === "at" ? world.at.place : undefined;
   const here = at === undefined ? undefined : world.places.find((p) => p.id === at);
-  const placeName = new Map(world.places.map((p) => [p.id, p.name]));
+  const placeName = new Map(world.places.map((p) => [p.id, talk.names.place(p.id, p.name)]));
   const owns = !world.caravan.owner.includes(":");
   // Absent only in a hand-built view; the engine always sends it.
   const today = world.today as WorldPlayer["today"] | undefined;
@@ -104,15 +117,15 @@ export function roadChoices(world: WorldPlayer, first: number, human?: Handle): 
   if (owns && at !== undefined) {
     for (const r of world.roads.filter((r) => r.from === at || r.to === at)) {
       const end = placeName.get(r.from === at ? r.to : r.from) ?? (r.from === at ? r.to : r.from);
-      if (normal) moves.push({ label: `Take the road to ${end} (${r.miles} miles)`, act: travel("normal", r.id), about: { id: "travel" } });
-      if (fastToday(r.miles, r.max_pace)) moves.push({ label: `Take the road to ${end} at a fast pace, there today (${r.miles} miles)`, act: travel("fast", r.id), about: { id: "travel" } });
+      if (normal) moves.push({ label: w.takeRoad(end, r.miles), act: travel("normal", r.id), about: { id: "travel" } });
+      if (fastToday(r.miles, r.max_pace)) moves.push({ label: w.takeRoadFast(end, r.miles), act: travel("fast", r.id), about: { id: "travel" } });
     }
     for (const r of world.unexplored.filter((r) => r.from === at)) {
-      if (normal) moves.push({ label: `Take an unexplored road (${r.miles} miles)`, act: travel("normal", r.id), about: { id: "travel" } });
-      if (fastToday(r.miles, r.max_pace)) moves.push({ label: `Take an unexplored road at a fast pace, to its end today (${r.miles} miles)`, act: travel("fast", r.id), about: { id: "travel" } });
+      if (normal) moves.push({ label: w.unexplored(r.miles), act: travel("normal", r.id), about: { id: "travel" } });
+      if (fastToday(r.miles, r.max_pace)) moves.push({ label: w.unexploredFast(r.miles), act: travel("fast", r.id), about: { id: "travel" } });
     }
   } else {
-    if (normal) moves.push({ label: "Move on with the caravan", act: travel("normal"), about: { id: "travel" } });
+    if (normal) moves.push({ label: w.moveOn, act: travel("normal"), about: { id: "travel" } });
     // The next stretch: the rest of this road, or the merchant's next leg.
     const next =
       world.at.kind === "on_road"
@@ -120,14 +133,14 @@ export function roadChoices(world: WorldPlayer, first: number, human?: Handle): 
         : world.trip?.legs[0] && { miles: world.trip.legs[0].miles, road: world.trip.legs[0].road, to: world.trip.legs[0].to };
     if (next && fastToday(next.miles, paceOf(next.road))) {
       const where = next.to === undefined ? undefined : placeName.get(next.to);
-      moves.push({ label: where ? `Push on at a fast pace to reach ${where} today` : "Push on at a fast pace to reach the road's end today", act: travel("fast"), about: { id: "travel" } });
+      moves.push({ label: w.pushOn(where), act: travel("fast"), about: { id: "travel" } });
     }
   }
   const items: Item[] = [
     ...moves,
-    { label: "Make camp for the night", act: { kind: "rest_night", where: "camp" }, about: { id: "rest_night" } },
-    ...(typeof here?.inn_cp === "number" ? [{ label: `Take rooms at the inn for the night`, act: { kind: "rest_night", where: "inn" } as ChoiceAct, about: { id: "rest_night" } }] : []),
-    ...(scouts ? [{ label: "Walk ahead as the scout", act: { kind: "scout" } as ChoiceAct, about: { id: "scout" } }] : []),
+    { label: w.makeCamp, act: { kind: "rest_night", where: "camp" }, about: { id: "rest_night" } },
+    ...(typeof here?.inn_cp === "number" ? [{ label: w.takeRooms, act: { kind: "rest_night", where: "inn" } as ChoiceAct, about: { id: "rest_night" } }] : []),
+    ...(scouts ? [{ label: w.scout, act: { kind: "scout" } as ChoiceAct, about: { id: "scout" } }] : []),
   ];
   return items.map((item, i) => ({ number: first + i, ...item }));
 }
@@ -145,14 +158,14 @@ export interface CardSeen {
  * of them on a tie), or the first choice: the loop's fallbacks go with it. The human's card takes
  * no Enter (AGT-101, Stas 2026-11-11): the others' choice is named, never preset.
  */
-export function cardChoices(card: CardSeen, words: SeatWords = SEAT_WORDS.en, me?: Handle): { choices: Choice[]; preset: number } {
+export function cardChoices(card: CardSeen, words: SeatWords = SEAT_WORDS.en, me?: Handle, names: SeatNames = ENGLISH.names): { choices: Choice[]; preset: number } {
   const count = new Map<string, number>();
   for (const s of card.said) count.set(s.choice, (count.get(s.choice) ?? 0) + 1);
   let top: string | undefined;
   for (const s of card.said) if (top === undefined || (count.get(s.choice) ?? 0) > (count.get(top) ?? 0)) top = s.choice;
   const move = card.own_move ?? undefined;
   const text = (c: { id: string; text: string }) =>
-    c.id === OWN_MOVE && move ? words.ownMoveChoice(move.actor === me, capitalized(move.actor), c.text, move.skill) : c.text;
+    c.id === OWN_MOVE && move ? words.ownMoveChoice(move.actor === me, names.language === "en" ? capitalized(move.actor) : names.person(move.actor), c.text, move.skill) : c.text;
   const choices = card.choices.map((c, i) => ({ number: i + 1, label: c.id === top ? `${text(c)} ${words.othersChoice}` : text(c), about: { id: c.id } }));
   const at = card.choices.findIndex((c) => c.id === top) + 1;
   return { choices, preset: at || 1 };
@@ -170,14 +183,16 @@ function capitalized(handle: Handle): string {
  * the recommended pick in one line, which Enter takes, then each option with its plain summary.
  * `picked` are the ids already chosen when the choice wants more than one.
  */
-export function levelUpChoices(choice: LevelUpChoice, picked: readonly string[] = []): Choice[] {
-  const name = new Map(choice.options.map((o) => [o.id, o.name]));
+export function levelUpChoices(choice: LevelUpChoice, picked: readonly string[] = [], talk: SeatTalk = ENGLISH): Choice[] {
+  const name = new Map(choice.options.map((o) => [o.id, talk.names.thing(o.id, o.name)]));
+  // A level-up rule summary the dictionary lacks stays off a Russian seat rather than read in English.
+  const summary = (id: string, english: string | null | undefined) => (talk.names.language === "ru" ? talk.names.summary(id, undefined) : (english ?? undefined));
   const recommended = choice.recommended.map((id) => name.get(id) ?? id).join(", ");
   return [
-    { number: 1, label: `Take the recommended: ${recommended} ${SEAT_WORDS.en.marked}`, about: { id: "recommended" } },
+    { number: 1, label: talk.words.recommended(recommended), about: { id: "recommended" } },
     ...choice.options
       .filter((o) => !picked.includes(o.id))
-      .map((o, i) => ({ number: i + 2, label: `${o.name}${o.summary ? `: ${o.summary}` : ""}`, about: { id: o.id } })),
+      .map((o, i) => ({ number: i + 2, label: `${name.get(o.id)}${summary(o.id, o.summary) ? `: ${summary(o.id, o.summary)}` : ""}`, about: { id: o.id } })),
   ];
 }
 
@@ -210,33 +225,34 @@ function byDistance(targets: TargetCandidate[]): TargetCandidate[] {
  * A target as an option names it (AGT-47 C3): its handle, and `(walk)` when the human walks to it
  * first. The side and the feet are the panel's, said once there.
  */
-function targetLabel(t: TargetCandidate): string {
-  return `${t.handle}${t.in_range ? "" : " (walk)"}`;
+function targetLabel(t: TargetCandidate, talk: SeatTalk): string {
+  return `${talk.names.who(t.handle)}${t.in_range ? "" : talk.words.walk}`;
 }
 
-function targetItems(option: ActionOption, targets: TargetCandidate[], variant?: string): Item[] {
+function targetItems(option: ActionOption, targets: TargetCandidate[], talk: SeatTalk, variant?: string, name = talk.names.option(option.option_id, option.name)): Item[] {
   return targets.map((t) => ({
-    label: `${option.name} → ${targetLabel(t)}`,
+    label: `${name} → ${targetLabel(t, talk)}`,
     act: submit(option, [t.handle], variant),
     target: { handle: t.handle, side: t.side, in_range: t.in_range },
   }));
 }
 
-function optionItems(option: ActionOption): Item[] {
-  const name = option.name;
+function optionItems(option: ActionOption, talk: SeatTalk): Item[] {
+  const name = talk.names.option(option.option_id, option.name);
+  const variantName = (v: { variant: string; name: string }) => talk.names.variant(v.variant, v.name);
   const targets = byDistance(option.targets);
   switch (option.targeting) {
     case "none":
     case "self":
       return option.variants.length > 0
-        ? option.variants.map((v) => ({ label: `${name}: ${v.name}`, act: submit(option, [], v.variant) }))
+        ? option.variants.map((v) => ({ label: `${name}: ${variantName(v)}`, act: submit(option, [], v.variant) }))
         : [{ label: name, act: submit(option) }];
     case "single": {
       if (targets.length === 0) return [];
       if (option.variants.length > 0) {
         const variants = option.variants.map((v) => ({
-          label: `${name}: ${v.name}…`,
-          next: numbered(targetItems(option, targets, v.variant)),
+          label: `${name}: ${variantName(v)}…`,
+          next: numbered(targetItems(option, targets, talk, v.variant)),
         }));
         return [{ label: `${name}…`, next: numbered(variants) }];
       }
@@ -250,8 +266,8 @@ function optionItems(option: ActionOption): Item[] {
       const inReach = wanted.filter((t) => t.in_range);
       const quick = inReach.length > 0 ? inReach : wanted.slice(0, 1);
       const rest = targets.filter((t) => !quick.includes(t));
-      const lines = targetItems(option, quick);
-      if (rest.length > 0) lines.push({ label: `${name}${quick.length > 0 ? ", another target" : ""}…`, next: numbered(targetItems(option, rest)) });
+      const lines = targetItems(option, quick, talk);
+      if (rest.length > 0) lines.push({ label: `${name}${quick.length > 0 ? talk.words.anotherTarget : ""}…`, next: numbered(targetItems(option, rest, talk)) });
       return lines;
     }
     case "multiple": {
@@ -259,15 +275,15 @@ function optionItems(option: ActionOption): Item[] {
       const spread = targets.filter((t) => t.in_range).slice(0, option.max_targets);
       const lines: Item[] = [];
       if (spread.length > 1) {
-        lines.push({ label: `${name} → ${spread.map((t) => t.handle).join(", ")}`, act: submit(option, spread.map((t) => t.handle)) });
+        lines.push({ label: `${name} → ${talk.names.list(spread.map((t) => t.handle))}`, act: submit(option, spread.map((t) => t.handle)) });
       }
-      lines.push(...targetItems(option, targets));
+      lines.push(...targetItems(option, targets, talk));
       return [{ label: `${name}…`, next: numbered(lines) }];
     }
     case "area": {
       const aims = option.area?.aims ?? [];
       if (aims.length === 0) return [];
-      const lines = aims.map((a) => ({ label: `${name} at ${aimLabel(a.aim)}: catches ${a.catches.join(", ")}`, act: submit(option, [], undefined, a.aim) }));
+      const lines = aims.map((a) => ({ label: talk.words.aimAt(name, aimLabel(a.aim, talk.names), talk.names.list(a.catches)), act: submit(option, [], undefined, a.aim) }));
       return [{ label: `${name}…`, next: numbered(lines) }];
     }
     case "point":
@@ -276,12 +292,12 @@ function optionItems(option: ActionOption): Item[] {
   }
 }
 
-function aimLabel(aim: Aim): string {
+function aimLabel(aim: Aim, names: SeatNames): string {
   switch (aim.kind) {
     case "creature":
-      return aim.handle;
+      return names.who(aim.handle);
     case "anchor":
-      return aim.anchor;
+      return names.anchor(aim.anchor, aim.anchor);
     case "point":
       return `(${Math.round(aim.point.x_ft)}, ${Math.round(aim.point.y_ft)})`;
   }
@@ -310,14 +326,15 @@ function reachOf(result: LegalActionsResult, state: State): Reach | undefined {
  * Dash would get there a line to Dash and walk follows it. Distances are straight lines and "next
  * to" means 5 ft away, so a crooked route can still stop short; the engine walks it as far as it goes.
  */
-function moveItems(state: State, reach: Reach | undefined): Item[] {
+function moveItems(state: State, reach: Reach | undefined, talk: SeatTalk): Item[] {
+  const w = talk.words;
   if (state.view !== "player") return [];
   const sides: Side[] = ["hostile", "neutral", "party"];
   const creatures = state.others
     .filter((c) => c.health !== "down")
     .sort((a, b) => sides.indexOf(a.side) - sides.indexOf(b.side) || a.distance_ft - b.distance_ft || a.handle.localeCompare(b.handle))
     .flatMap((c) =>
-      walkItems(`next to ${c.handle}`, `${c.side}, ${Math.round(c.distance_ft)} ft`, Math.max(0, c.distance_ft - 5), { kind: "creature", handle: c.handle }, reach, {
+      walkItems(w.nextTo(talk.names.who(c.handle)), `${w.side[c.side]}, ${w.feet(Math.round(c.distance_ft))}`, Math.max(0, c.distance_ft - 5), { kind: "creature", handle: c.handle }, reach, w, {
         handle: c.handle,
         side: c.side,
         in_range: false,
@@ -325,18 +342,18 @@ function moveItems(state: State, reach: Reach | undefined): Item[] {
     );
   const places = [...state.anchors]
     .sort((a, b) => a.distance_ft - b.distance_ft || a.id.localeCompare(b.id))
-    .flatMap((a) => walkItems(`to ${a.name}`, `${Math.round(a.distance_ft)} ft`, a.distance_ft, { kind: "anchor", anchor: a.id }, reach));
+    .flatMap((a) => walkItems(w.toPlace(talk.names.anchor(a.id, a.name)), w.feet(Math.round(a.distance_ft)), a.distance_ft, { kind: "anchor", anchor: a.id }, reach, w));
   return [...creatures, ...places];
 }
 
 /** The line to walk somewhere, and the line to Dash and walk there when only a Dash reaches it. */
-function walkItems(where: string, about: string, need_ft: number, to: MoveTarget, reach: Reach | undefined, target?: Choice["target"]): Item[] {
+function walkItems(where: string, about: string, need_ft: number, to: MoveTarget, reach: Reach | undefined, words: SeatWords, target?: Choice["target"]): Item[] {
   const short = reach !== undefined && need_ft > reach.movement_ft;
   const move: Item = {
-    label: `Move ${where} (${about}${short ? `; ${reach.movement_ft} ft this turn, stops short` : ""})`,
+    label: words.move(where, `${about}${short ? words.stopsShort(reach.movement_ft) : ""}`),
     act: { kind: "move", to },
     ...(target ? { target } : {}),
   };
   if (!short || reach.dash_ft === undefined || need_ft > reach.movement_ft + reach.dash_ft) return [move];
-  return [move, { label: `Dash, then move ${where} (${about})`, act: { kind: "dash_move", to } }];
+  return [move, { label: words.dashMove(where, about), act: { kind: "dash_move", to } }];
 }

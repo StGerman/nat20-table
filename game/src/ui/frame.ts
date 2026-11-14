@@ -5,6 +5,7 @@
 // tested without Ink: these functions say what goes on each row; ink-seat.ts only draws the rows.
 import { wrapText, TONE_STYLE, type Line, type Style } from "./lines.ts";
 import { FOLD_COLUMNS, FOLD_ROWS, SIDE_PANE_COLUMNS, TEXT_COLUMNS, type PanelSize, type Row } from "./panel.ts";
+import { UI_WORDS, type UiWords } from "../table/words.ts";
 
 /**
  * How the frame is laid out at a terminal size: `wide` puts the side panel right of the story at
@@ -145,8 +146,8 @@ function padTop<T>(rows: T[], height: number): Array<T | undefined> {
 }
 
 /** The marker in place of the story's last row while scrolled up. */
-export function freshText(fresh: number): string {
-  return fresh > 0 ? `↓ ${fresh} new · End to follow` : "↓ End to follow";
+export function freshText(fresh: number, ui: UiWords = UI_WORDS.en): string {
+  return ui.fresh(fresh);
 }
 
 /** What the header says: the adventure, which scene of how many, the mode, the game day and time of day, the party's time, and /help. */
@@ -161,13 +162,13 @@ export interface HeaderInfo {
 }
 
 /** The header row, dim, cut to the terminal's width. No scene names (C9): a number of the total. */
-export function headerText(info: HeaderInfo): string {
+export function headerText(info: HeaderInfo, ui: UiWords = UI_WORDS.en): string {
   const parts = [
     info.title,
-    info.scene ? `Scene ${info.scene.number} of ${info.scene.of}` : undefined,
+    info.scene ? ui.sceneOf(info.scene.number, info.scene.of) : undefined,
     info.mode,
     info.day,
-    info.minutes !== undefined ? `${info.minutes} min` : undefined,
+    info.minutes !== undefined ? ui.minutes(info.minutes) : undefined,
     "/help",
   ].filter((part): part is string => Boolean(part));
   return parts.join(" · ");

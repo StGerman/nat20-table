@@ -490,7 +490,9 @@ test("two narrations made at once show each engine line once", async () => {
     seat: seatThen([]),
     dm: { scene_open: async (tools) => void (await Promise.all([tools.narrate("The yard is quiet."), tools.narrate("Too quiet.")])) },
   });
-  assert.equal(seat.shown.filter((e) => e.kind === "engine" && e.text === loaded).length, 1);
+  // The seat shows no scene load (AGT-98): the DM's opening says where; `/log` keeps it, once.
+  assert.equal(seat.shown.filter((e) => e.kind === "engine" && e.text === loaded).length, 0);
+  assert.equal(t.table.recent.filter((line) => line === loaded).length, 1);
   assert.equal(t.table.transcript.records.filter((r) => r.channel === "dm" && r.text === loaded).length, 1);
 });
 
@@ -1232,7 +1234,8 @@ test("a refused narration reaches nobody; the DM rewrites it, and after two retr
   });
   assert.equal(runLines(stubborn.t, "retry").length, 3);
   assert.ok(runLines(stubborn.t, "fallback").includes("the DM's retries ran out (scene_open); the engine lines stand alone"));
-  assert.ok(stubborn.seat.shown.some((e) => e.kind === "engine" && e.text === "Scene m5_s3_yard loaded in explore mode."));
+  // The scene's load stays off the seat (AGT-98) and in `/log`.
+  assert.ok(stubborn.t.table.recent.includes("Scene m5_s3_yard loaded in explore mode."));
 });
 
 test("raised hands take the floor one at a time, each hearing the lines before it; a refused declaration is asked for again", async () => {

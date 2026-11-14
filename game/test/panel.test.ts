@@ -228,7 +228,7 @@ test("on an 80x24 terminal the seat draws the panel and the turn block above the
     await until("the turn block", () => stdout.last.includes("Action used · Bonus Action free"));
     const frame = stdout.last;
     // Narrow (AGT-69): the story, the panel folded to its bar and your line, the turn block, the input row.
-    const order = ["[r7] goblin_3 attacks", "Round 5 · ▶ your turn", "Bren 12/20 HP", "Action used", "1. Longsword attack", "Your turn: an option number"];
+    const order = ["goblin_3 attacks", "Round 5 · ▶ your turn", "Bren 12/20 HP", "Action used", "1. Longsword attack", "Your turn: an option number"];
     const places = order.map((text) => frame.indexOf(text));
     assert.ok(places.every((p, i) => p >= 0 && (i === 0 || p > places[i - 1])), `in order:\n${frame}`);
     // The options are on screen, not in the log.

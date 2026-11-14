@@ -1,11 +1,9 @@
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Scene s1_village_green loaded in explore mode.\",\"seq\":2}"}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"The village green is quiet under a grey sky.\"}"}
 {"seat":"bren","text":"{\"kind\":\"text\",\"text\":\"I wait.\"}","human":true}
 {"seat":"torva","text":"What you heard:\nDM: The village green is quiet under a grey sky.\nbren: I wait.\nWhat happened:\nScene s1_village_green loaded in explore mode.\nDo you raise your hand? Answer SPEAK, BOTH, ACT: and what you do without a word, or PASS. Call no tool.","quoted":["bren: I wait."]}
 {"seat":"maren","text":"What you heard:\nDM: The village green is quiet under a grey sky.\nbren: I wait.\nWhat happened:\nScene s1_village_green loaded in explore mode.\nDo you raise your hand? Answer SPEAK, BOTH, ACT: and what you do without a word, or PASS. Call no tool.","quoted":["bren: I wait."]}
 {"seat":"ilsa","text":"What you heard:\nDM: The village green is quiet under a grey sky.\nbren: I wait.\nWhat happened:\nScene s1_village_green loaded in explore mode.\nDo you raise your hand? Answer SPEAK, BOTH, ACT: and what you do without a word, or PASS. Call no tool.","quoted":["bren: I wait."]}
 {"seat":"bren","text":"{\"kind\":\"narration\",\"speaker\":\"dm\",\"text\":\"You take the road to the mill.\"}"}
-{"seat":"bren","text":"{\"kind\":\"engine\",\"text\":\"Scene s3_mill_yard loaded in explore mode.\",\"seq\":3}"}
 {"seat":"torva","text":"What you heard:\nDM: You take the road to the mill.\nWhat happened:\nScene s3_mill_yard loaded in explore mode.\nThe scene is over. Sum it up for yourself in a few sentences of fiction: what happened, who you met, what you promised or suspect."}
 {"seat":"maren","text":"What you heard:\nDM: You take the road to the mill.\nWhat happened:\nScene s3_mill_yard loaded in explore mode.\nThe scene is over. Sum it up for yourself in a few sentences of fiction: what happened, who you met, what you promised or suspect."}
 {"seat":"ilsa","text":"What you heard:\nDM: You take the road to the mill.\nWhat happened:\nScene s3_mill_yard loaded in explore mode.\nThe scene is over. Sum it up for yourself in a few sentences of fiction: what happened, who you met, what you promised or suspect."}
