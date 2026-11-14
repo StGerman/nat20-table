@@ -63,6 +63,28 @@ test("a drawn card's text shows once at the seat: no seat line, `/log` keeps it 
   }
 });
 
+test("a card payment is never called a toll, for any payer, in either language (AGT-114 c)", () => {
+  const pay = (from: string, what: object, text: string) => ({ kind: "ledger", seq: 9, visibility: { scope: "public" }, text, from, to: "world", what, reason: "toll" }) as unknown as Event;
+  const coins = { kind: "coins", copper: 40 };
+  const item = { kind: "item", item: "potion_of_healing", quantity: 1 };
+  const en = new SeatNames();
+  const ru = new SeatNames("ru", new Map([["bren", "Брен"], ["torva", "Торва"]]));
+  const line = (e: Event, names: SeatNames, site: "seat" | "log", human?: string) => seatLine(e, { names, site, ...(human ? { human } : {}) });
+  assert.equal(line(pay("bren", coins, "bren pays 4 silver pieces in toll."), en, "seat", "bren"), "You pay 4 silver pieces.");
+  assert.equal(line(pay("torva", coins, "torva pays 4 silver pieces in toll."), en, "seat", "bren"), "Torva pays 4 silver pieces.");
+  assert.equal(line(pay("torva", item, "torva pays a potion of healing in toll."), en, "seat", "bren"), "torva pays a potion of healing.");
+  assert.equal(line(pay("bren", coins, "x"), ru, "seat", "bren"), "Вы платите: 4 серебряных.");
+  assert.equal(line(pay("torva", coins, "x"), ru, "seat", "bren"), "Торва платит: 4 серебряных.");
+  for (const names of [en, ru]) {
+    for (const site of ["seat", "log"] as const) {
+      for (const from of ["bren", "torva"]) {
+        const text = line(pay(from, coins, `${from} pays 4 silver pieces in toll.`), names, site, "bren");
+        assert.ok(text && !/toll|пошлин/i.test(text), `${names.language} ${site} ${from}: ${text}`);
+      }
+    }
+  }
+});
+
 test("the Russian dictionary names every option the fixtures offer", () => {
   const ids = new Set<string>();
   for (const f of readdirSync(FIXTURES)) {

@@ -165,6 +165,8 @@ function enLine(event: Event, ctx: SeatContext): string | null {
       return ctx.site === "seat" ? null : eventLine(event);
     case "ledger":
       if (event.reason === "wage" && event.what.kind === "coins") return `${n.person(event.from)} pays ${n.person(event.to)} ${coinPhrase(event.what.copper)} in wages.`;
+      // Every card payment reaches the wire as a toll, a salt purchase too: the seat does not name it (the DM's narration says what it was for; AGT-114).
+      if (event.reason === "toll") return event.what.kind === "coins" ? `${n.person(event.from)} pays ${coinPhrase(event.what.copper)}.` : event.text.replace(/ in toll\.$/, ".");
       break;
     case "rest":
       if (event.rest === "long") return `${everyone(event.participants, ctx) ? "The party" : event.participants.map((h) => n.person(h)).join(", ")} rest${everyone(event.participants, ctx) || event.participants.length > 1 ? "" : "s"} through the night until morning.`;
@@ -446,7 +448,7 @@ function ledgerRu(event: Extract<Event, { kind: "ledger" }>, n: SeatNames, human
       case "inn":
         return `Вы платите за постой: ${goods}.`;
       case "toll":
-        return `Вы платите пошлину: ${goods}.`;
+        return `Вы платите: ${goods}.`;
       case "loot":
       case "theft":
         return thing(event.to) ? `Вы теряете: ${goods}.` : `${to} забирает ваше: ${goods}.`;
@@ -458,7 +460,7 @@ function ledgerRu(event: Extract<Event, { kind: "ledger" }>, n: SeatNames, human
     case "wage":
       return `${to} получает жалованье: ${goods}. Платит ${n.who(event.from)}.`;
     case "toll":
-      return `${from} платит пошлину: ${goods}.`;
+      return `${from} платит: ${goods}.`;
     case "inn":
       return `${from} платит за постой: ${goods}.`;
     case "loot":
