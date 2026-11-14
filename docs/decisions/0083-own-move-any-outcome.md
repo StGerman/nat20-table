@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-14
 - **Decided by:** Stas, 2026-11-14: «свой ход может вести к любым исходам это правило!» (17:55Z), five answers in the project chat (19:21Z), «делаем» (19:23Z). The table rules review (project files `engine/m12/rules-review/rules-review.md`, read by Lev Neiman) found where the cap came from.
-- **Supersedes:** 0079 and 0081 in full. In part: 0068 (an own move's success and failure must be choices the card already offers; the vote on an own move that is the human's character's own act) and 0070 (torture "never shown" becomes "never described"). The lines this overrides in accepted scopes stay as written: `docs/scope/not-a-passenger-scope.md` §2 item 1 and §3 ("An own move never invents an outcome") and `docs/scope/allies-in-fights-scope.md` ("Torture stays never shown").
+- **Supersedes, in part:** 0068, 0079 and 0081 where they cap an own move to the card's written choices. Their other rules (an optional failure, a fall and another try, the AI seats' fall cap, words answered and nothing more) still describe the code that runs, until the stake design replaces them. Also in part: (an own move's success and failure must be choices the card already offers; the vote on an own move that is the human's character's own act) and 0070 (torture "never shown" becomes "never described"). The lines this overrides in accepted scopes stay as written: `docs/scope/not-a-passenger-scope.md` §2 item 1 and §3 ("An own move never invents an outcome") and `docs/scope/allies-in-fights-scope.md` ("Torture stays never shown").
 
 ## Context
 
