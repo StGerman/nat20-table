@@ -15,20 +15,20 @@ The gap is everything a live model decides. How the DM reads a player's words, w
 
 | | M11 (baseline) | M12 by 2026-11-14 07:00Z |
 |---|---|---|
-| Runs played | 5 | 10 (3 of them 1-to-2-minute cheap runs; 1 void, on a stale checkout) |
-| Run cost, USD | 35.45 | 44.29 |
+| Runs played | 5 | 7 (1 of them not eligible: a stale checkout with local changes) |
+| Run cost, USD | 35.45 | 43.28 |
 | Exit pairs played / passed | 3 / 1 | 3 / 0 |
 | Stas at the table, wall time | 1.09 h in 2 evenings | 3.09 h in 3 evenings (38.3 + 120.0 + 27.2 min; for 81 of the 120 Stas had stepped away and the table waited on his seat) |
 
-Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.json` of the ten runs `full-2026-11-12T19-02…` to `full-2026-11-14T01-42…` in nat20-runs `master` 65c0e7c; checked by Yan (§7). `docs/roadmap.md`'s own M12 row dates from 2026-11-11 and shows no runs; it is Yan's file and his next `roadmap` brings it up to date. After this table was counted Stas played one more run, and Milestone 12 was merged and closed without a passed exit pair (decision 0082); that run is not in these numbers.
+Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl`, `run.json` and `verdict.json` of the seven runs of *Fair in Wend* and its return contract from `full-2026-11-12T19-02…` to `full-2026-11-14T01-42…` in nat20-runs `master` 65c0e7c; checked by Yan (§7). Three more runs sit between them, 1-to-2-minute `play:cheap` runs of one scene of *The Silent Mill* on the commits of the tracing PR (table #366), 1.01 USD together: they are not Milestone 12 runs and are not counted, though Yan's extract counts them. `docs/roadmap.md`'s own M12 row dates from 2026-11-11 and shows no runs; it is Yan's file and his next `roadmap` brings it up to date. After this table was counted Stas played one more run, and Milestone 12 was merged and closed without a passed exit pair (decision 0082); that run is not in these numbers.
 
 | M12 run | What failed | What would see it without a full run |
 |---|---|---|
 | 11-12 19:02, Stas's trial (2.50 USD, 38 min) | not an exit half: a roster already spent by an earlier session | nothing proposed here |
 | 11-13 14:15 and 15:33 (2.19 + 8.54 USD) | 0 AI own moves in 28 card wakes, twice | a seat bench (§4, considered and not proposed): the card wakes alone; decision 0074 has since made this row reported, not gated |
-| 11-13 15:26 (8.83 USD) | void: played on a stale checkout with local changes | a slip in starting the run, not a test gap; outside this proposal |
+| 11-13 15:26 (8.83 USD) | not eligible (`verdict.json`: FAIL, the checkout had changes): played on a stale checkout with local changes | a slip in starting the run, not a test gap; outside this proposal |
 | 11-13 16:05 (5.70 USD, 120 min of Stas) | own move 0: Stas's real plan came between cards, where no own move exists, and the DM read all 4 of his card lines correctly. Two build defects also failed gating rows (a creature's name shown in English; a fight started on a neutral spent the retries). At 16:44 Stas stepped away (his words, 2026-11-13 19:19Z, in the run's analysis); the table waited on his seat for 81 minutes and the run ended on the 120-minute limit, which failed row 1 and the rows that need the contract finished. The analysis also flags, as minor, that after that night, at the same 16:44, the seat showed no options list and no prompt; by Stas's account he had stepped away, and whether the missing prompt added to the wait is not known (AGT-119) | own move: nothing, a person at the seat. The two build defects: scripted loop tests, which exist as a kind. The time limit: nothing for a person who left; a scripted walk through a night for the missing prompt, if it played a part |
-| 11-13 21:16 (8.57 USD) | the all-AI half of pair 3. Its `verdict.json` says FAIL on the own-move row: the report code still gates a row that decision 0074 made reported. 0074 left that code unchanged on purpose on the pair 2 build; this is a later build. The analysis reads the run as passed | not a failure of content. Listed so the ten runs add up, with the three cheap runs (1.01 USD) |
+| 11-13 21:16 (8.57 USD) | the all-AI half of pair 3. Its `verdict.json` says FAIL on the own-move row: the report code still gates a row that decision 0074 made reported. 0074 left that code unchanged on purpose on the pair 2 build; this is a later build. The analysis reads the run as passed | not a failure of content. Listed so the seven runs add up |
 | 11-14 01:42 (6.95 USD, 27 min of Stas) | `bog_wifes_toll` has no failure the design allows for Stas's plan; `salt_on_credit` has no choice his plan could land on. Not gating: on `salt_on_credit` the DM narrated a refusal with no roll and remembered it as fact | nothing certain. A person trying lines on those two cards before the evening might have met the holes (§4) |
 
 M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-thread`) were fixed with scripted tests on main.
@@ -69,7 +69,7 @@ Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_word
 
 ## 5. Gates
 
-Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. The accepted rule of §3 is in CLAUDE.md, so scope and design authors read it. The line is the bullet under Rule 8 that cites decision 0080. §3 states the rule as it was proposed; where the two differ, CLAUDE.md is the rule. Stas accepted the rule in the thread on 2026-11-14 as two sentences quoted to him; the line adds a start date, the analysis step and "the rerun is still played", and those are his when he merges table #383. The exit-row sentence is also in `.claude/skills/yan/references/scope.md` (item 4) and `.claude/skills/lev/references/design.md` (item 11), where a scope's exit criterion and a design are drafted.
+Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. The accepted rule of §3 is in CLAUDE.md, so scope and design authors read it. The line is the bullet under Rule 8 that cites decision 0080. §3 states the rule as it was proposed; where the two differ, CLAUDE.md is the rule. Stas accepted the rule in the thread on 2026-11-14 as two sentences quoted to him; the line adds a start date, the analysis step and "the rerun the exit pair's rules require is still played", and those are his when he merges table #383. The exit-row sentence is also in `.claude/skills/yan/references/scope.md` (item 4) and `.claude/skills/lev/references/design.md` (item 11), where a scope's exit criterion and a design are drafted, and both halves are in item 8 of `.github/copilot-instructions.md`, which code review reads.
 
 ## 6. Questions for Stas
 
