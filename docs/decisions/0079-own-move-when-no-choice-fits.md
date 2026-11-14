@@ -68,7 +68,7 @@ A, with the same deed and no result in it, and answers only for words no choice 
 
 - An exit run shows the DM leaving the failure out where a choice plainly is what failing brings, in more than half of the own moves made: then B's simplicity is being paid for anyway, and B is the honest rule.
 - The report's list shows a plan no choice could carry on two runs in a row: then the plain table line, or a card change, is due.
-- The dramaturg mechanism gives `own_move_<card>` a reader: the deed stays one, with no result in it (Stas, 2026-11-14), and the reader first needs the player's words; how the attempt came out is that design's question only once the words are carried.
+- The dramaturg mechanism designs a reader for `own_move_<card>`: it carries the player's words first (the deed stays one id, Stas, 2026-11-14), and whether the result travels with the words is asked of Stas then (amendment §15.1).
 
 ## Sources
 
