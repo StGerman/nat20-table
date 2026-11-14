@@ -424,6 +424,8 @@ export class TableLoop {
   private lastOwnWords: { actor: Handle; words: string } | undefined;
   /** A fall whose words left settled the card at once: its never-tried text goes in that card's `road` wake. */
   private fellSettled: string | undefined;
+  /** The card whose own move fell, and whether it was rolled: its seat line shows when the human is next asked on it. */
+  private fellLine: { card: string; rolled: boolean } | undefined;
   /** The road cards the run has asked about, by the engine's log head when each was drawn, so a card that won't settle stops the run. */
   private cardAsked = new Map<string, number>();
   /** The human's open level-up choice, from the engine's last answer (AGT-80). */
@@ -859,8 +861,12 @@ export class TableLoop {
       case "card_resolved": {
         this.framed = undefined;
         // A fall the words left settled at once: the settled card's wake tells both (design §1.8).
+        // The engine settles a fallen card in the same response as its own_move_ran, so the next
+        // card_resolved is that card's.
         const fell = this.fellSettled;
         this.fellSettled = undefined;
+        this.fellLine = undefined;
+        this.ownMoves.clear();
         await this.wakeDm(
           "road",
           undefined,
@@ -924,19 +930,22 @@ export class TableLoop {
    */
   private async ownMoveFell(id: string, rolled: boolean): Promise<void> {
     const world = await this.dmWorld();
-    const waits = world?.card?.id === id;
+    // With no world to read, the fall is told as waiting: that never claims the card settled.
+    const waits = !world || world.card?.id === id;
     const move = this.ownMoves.get(id);
     const actor = move?.actor ?? world?.card?.own_move?.actor ?? "the proposer";
     // The words come from this run's log; a card carried over a save and load has none.
     const words = move?.words ? ` («${move.words}»)` : "";
-    const failed = `${actor}'s own move${words} failed its roll: tell how the attempt falls short, in one or two sentences. The scene still answers: a person on the card, if there is one, reacts to the try, and a companion may speak.`;
+    const neverTried = (why: string) => `${actor}'s own move${words} was never tried (${why}): say so in one sentence, with no roll for the move.`;
+    const text = rolled
+      ? `${actor}'s own move${words} failed its roll: tell how the attempt falls short, in one or two sentences. The scene still answers: a person on the card, if there is one, reacts to the try, and a companion may speak.`
+      : // Only a downed proposer's fall settles at once (design §1.8).
+        neverTried(!waits || !(await this.isUp(actor)) ? `${actor} is down or not here` : "the attempt could not be made");
     if (!waits) {
-      // Only a downed proposer's fall settles at once (design §1.8); a rolled one is told as rolled.
-      this.fellSettled = rolled ? failed : `${actor}'s own move${words} was never tried (${actor} is down or not here): say so in one sentence, with no roll for the move.`;
+      this.fellSettled = text;
       return;
     }
-    const up = rolled || (await this.isUp(actor));
-    const text = rolled ? failed : `${actor}'s own move${words} was never tried (${up ? "the attempt could not be made" : `${actor} is down or not here`}): say so in one sentence, with no roll for the move.`;
+    this.fellLine = { card: id, rolled };
     await this.wakeDm(
       "road",
       undefined,
@@ -944,13 +953,12 @@ export class TableLoop {
       "Nothing else changes and nobody is worse off for it; the card still waits: do not decide it, and never tell or remember any of the card's choices happening.",
     );
     await this.settle();
-    // One plain line, for the seats the card waits for: the written choices wait.
-    const card = (await this.dmWorld())?.card;
-    const human = this.table.human;
-    const owner = world && card?.target === "caravan" && !world.caravan.owner.includes(":") ? world.caravan.owner : undefined;
-    // A player owner is asked for the call once the freed Blades have advised again.
-    const asked = card?.id === id && human && (card.waiting_for.includes(human) || owner === human);
-    if (asked && !this.table.ended) this.table.show({ kind: "info", title: this.words.onTheRoad, text: this.words.ownMoveFell(rolled) });
+  }
+
+  /** Whether the card's own move fell since `before` was read: a fall ends the round it fell in (decision 0079). */
+  private async fellSince(before: CardDm): Promise<boolean> {
+    const now = (await this.dmWorld())?.card;
+    return !moveFell(before) && now?.id === before.id && moveFell(now);
   }
 
   /** Whether `handle` is in the scene and conscious, as the engine's `table()` checks it. */
@@ -1029,10 +1037,7 @@ export class TableLoop {
     const human = this.table.human;
     // An own move that falls ends the round it fell in (decision 0079): no fallback word and no
     // owner's fallback call; a fresh round starts after the fall's wake.
-    const fell = async () => {
-      const now = (await this.dmWorld())?.card;
-      return !moveFell(card) && now?.id === card.id && moveFell(now);
-    };
+    const fell = () => this.fellSince(card);
     if (human && card.waiting_for.includes(human) && !this.table.ended) await this.humanCard(card);
     if (await fell()) return true;
     for (const handle of card.waiting_for) {
@@ -1082,8 +1087,7 @@ export class TableLoop {
       await this.aiCard(agent, "Make the caravan's call", true);
     }
     // A call for an own move that fell gets no fallback in this round (decision 0079).
-    const after = (await this.dmWorld())?.card;
-    if (!moveFell(before) && after?.id === id && moveFell(after)) return true;
+    if (await this.fellSince(before)) return true;
     now = await ready();
     if (!now) return false;
     const { choices, preset } = cardChoices(now);
@@ -1202,14 +1206,21 @@ export class TableLoop {
       const { choices } = cardChoices(shown, words, human, this.table.names);
       if (showCard) this.table.show({ kind: "info", title: words.onTheRoad, text: [shown.text, owner ? words.yourCaravan : card.target === "caravan" ? words.merchantDecides : words.bladesDecide].join("\n") });
       showCard = false;
+      // The fall's one line, where the list it points at follows (decision 0079, design §1.8).
+      if (this.fellLine?.card === card.id) {
+        this.table.show({ kind: "info", title: words.onTheRoad, text: words.ownMoveFell(this.fellLine.rolled) });
+        this.fellLine = undefined;
+      }
       this.cardList = { kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(card.own_move ? [] : [words.ownMoveLine])], choices };
       this.table.show(this.cardList);
-      const intent = await this.ask({ kind: "card", line: words.cardPrompt }).finally(() => (this.cardList = undefined));
+      // A card that has or had an own move takes a number; words said now are only answered.
+      const own = !card.own_move;
+      const intent = await this.ask({ kind: "card", line: own ? words.cardPrompt : words.cardPromptNumber }).finally(() => (this.cardList = undefined));
       if (!intent) return;
       if (intent.kind === "option") {
         const picked = choices.find((c) => c.number === intent.number);
         if (!picked) {
-          this.table.show({ kind: "info", title: words.noSuchNumber, text: words.stillWaits(choices.length) });
+          this.table.show({ kind: "info", title: words.noSuchNumber, text: words.stillWaits(choices.length, own) });
           continue;
         }
         const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
@@ -1230,10 +1241,10 @@ export class TableLoop {
           return;
         }
         card = (await this.dmWorld())?.card ?? card;
-        this.table.show({ kind: "info", title: words.saidAtTable, text: words.stillWaits(choices.length) });
+        this.table.show({ kind: "info", title: words.saidAtTable, text: words.stillWaits(choices.length, own) });
         continue;
       }
-      this.table.show({ kind: "info", title: words.onTheRoad, text: words.stillWaits(choices.length) });
+      this.table.show({ kind: "info", title: words.onTheRoad, text: words.stillWaits(choices.length, own) });
     }
   }
 

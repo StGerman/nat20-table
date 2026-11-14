@@ -27,6 +27,7 @@ import type {
 import { formatDmState, formatOptions, formatState, type LegalActionsResult } from "../view.ts";
 import type { NoteKind, TableState } from "./state.ts";
 import type { RoadStep, ToolOutcome } from "./types.ts";
+import { OWN_MOVE } from "./choices.ts";
 import type { StatBlockEntry } from "../pack/adventure.ts";
 
 /** What an agent may give `submit`: an option, and its targets, variant or aim. */
@@ -1141,7 +1142,7 @@ export class DmTools {
 
 /** A card whose own move fell (decision 0079): the move is still on it, and no longer among its choices. */
 export function moveFell(card: { own_move?: unknown; choices: Array<{ id: string }> }): boolean {
-  return Boolean(card.own_move) && !card.choices.some((c) => c.id === "own_move");
+  return Boolean(card.own_move) && !card.choices.some((c) => c.id === OWN_MOVE);
 }
 
 /** The own-move rule (decision 0079, design §1.8): in the road section and in the `card_words` wake. */
