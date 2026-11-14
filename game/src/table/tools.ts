@@ -304,6 +304,8 @@ export class PlayerTools {
     const r = this.table.observe(await this.table.engine.request(this.me, { cmd: "get_state" }));
     const card = r.result?.cmd === "get_state" && r.result.state.view === "player" ? r.result.state.world?.card : undefined;
     if (!card) return this.answer(notNow("no road card waits for your word"));
+    // A move that fell is no longer among the choices (decision 0079): only a written choice is left.
+    if (card.own_move && !card.choices.some((c) => c.id === "own_move")) return this.answer(notNow("the card's own move was tried and fell: give your word on a written choice with choose_card"));
     if (card.own_move) return this.answer(notNow("the card already has an own move: give your word on it with choose_card"));
     if (card.said.some((s) => s.actor === this.me)) return this.answer(notNow("you have already given your word on this card"));
     if (!words.trim()) return this.answer(notNow("say in one sentence what your character does"));
@@ -629,7 +631,7 @@ export class DmTools {
   /** The DM's last line to the whole table, for the next scene's opening to continue from (M10 P1). */
   lastLine: string | undefined;
   /** A player's words on the road card a `card_words` wake answers (AGT-99): the loop sets them for the wake. */
-  cardWords: { actor: Handle; words: string } | undefined;
+  cardWords: { actor: Handle; words: string; answerOnly?: boolean } | undefined;
   /** The own move the wake put on the card, if one did. */
   ownMoveMade = false;
   /** The narration that answered the words, once one showed. */
@@ -1064,18 +1066,23 @@ export class DmTools {
    * The `card_words` wake's one answer (AGT-99, design §1.8): with `move`, the words of the seat
    * that woke it become an own move on the card, and the narration shows once the engine took it;
    * a refusal shows nothing and answers with the engine's reason, so the DM can correct it. Without
-   * `move`, only the narration.
+   * `move`, only the narration. On a card that has or had an own move, a `move` is not sent: the
+   * words are only answered, and no retry is spent on `own_move_taken` (decision 0079).
    */
-  async ownMoveOrAnswer(narration: string, move?: { ability: Ability; skill: Skill; dc: number; success: string; failure: string }): Promise<ToolOutcome> {
+  async ownMoveOrAnswer(narration: string, move?: { ability: Ability; skill: Skill; dc: number; success: string; failure?: string }): Promise<ToolOutcome> {
     const words = this.cardWords;
     if (!words) return notNow("no player's words on a road card wait for your answer");
+    if (move && words.answerOnly) {
+      this.table.log("system", `the card already has or had an own move: ${words.actor}'s words are only answered`, "table");
+      move = undefined;
+    }
     // One move per wake: once it is on the card, a retry only rewrites the narration.
     const already = move !== undefined && this.ownMoveMade;
     if (move && !this.ownMoveMade) {
       const made = await send(
         this.table,
         "dm",
-        { cmd: "own_move", actor: words.actor, text: words.words, ability: move.ability, skill: move.skill, dc: move.dc, success: move.success, failure: move.failure },
+        { cmd: "own_move", actor: words.actor, text: words.words, ability: move.ability, skill: move.skill, dc: move.dc, success: move.success, ...(move.failure ? { failure: move.failure } : {}) },
         () => `${words.actor}'s own move is on the card`,
       );
       if (!made.ok) return made;
@@ -1129,6 +1136,10 @@ export class DmTools {
     return said.ok ? { ok: true, text: "the adventure is over" } : said;
   }
 }
+
+/** The own-move rule (decision 0079, design §1.8): in the road section and in the `card_words` wake. */
+export const OWN_MOVE_RULE =
+  "Answer with own_move_or_answer. First, when the words simply are one of the card's choices, say so in the scene and let the card wait for that choice, with no move: you never decide a card for a player. Otherwise, if one of the card's choices is what the words bring when they work, make them a move: the check they call for, that choice as success, and your narration. Name a failure only when another choice is plainly what happens when the attempt fails, never one that breaks a custom and never a deliberate act the words did not ask for; with no failure named, a failed roll runs no choice and the move is spent. If no choice is what the words would bring, give only the narration, one or two sentences, and the card waits. A success brings a fight only when the words asked for one. Your narration answers the attempt only, never how it turns out: nobody in the scene agrees to it, refuses it or gives way, and nothing is won or lost by it; the engine's roll and the card's choices decide that. The scene still answers: a person on the card, if there is one, says what the plan would cost them or asks something back, and a companion may speak. When you answer a player's words with own_move_or_answer, never call remember for how the attempt turned out.";
 
 /** A road card as the DM drew it, for a tool's result: its words and its choices (AGT-100). */
 export function cardDrawnLine(card: { text: string; choices: { id: string; text: string; keeps?: string[] | null; breaks?: string[] | null }[] }): string {

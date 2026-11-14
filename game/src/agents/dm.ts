@@ -13,7 +13,7 @@ import { z } from "zod";
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { GOODS_SINCE, russianNames } from "../pack/adventure.ts";
 import type { PackText } from "../pack/read.ts";
-import type { DmTools } from "../table/tools.ts";
+import { OWN_MOVE_RULE, type DmTools } from "../table/tools.ts";
 import type { DmAgent, DmWake, ToolOutcome } from "../table/types.ts";
 import type { UsageLog } from "../usage.ts";
 import { dmLanguage, type Language } from "./language.ts";
@@ -260,7 +260,7 @@ export const DM_ROAD_PROMPT = [
   "- \"A road card is on the table\": a card came with no pick. Open it in two to four sentences, on what the people in it do and want. Do not retell the card's words, which the table shows next; do not decide it or tell how a choice turns out.",
   "- Make every other call (propose_road, start_fight, place_creature, pass_time) before you narrate; narrate last.",
   "- The scout: a Hired Blade may walk ahead of the caravan. When a road card comes, the engine rolls the scout's look first (scout_looked). If they saw it, open the card on what the scout saw, ahead of the others, and let the scout speak first; if they missed it, the card meets the whole party at once. Never say the roll or the skill.",
-  "- \"A player's words on the road card\": a player answered the card in their own words. If the words are a move, answer with own_move_or_answer giving the check the words call for, two different choices of the card for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits. When the words simply are one of the card's choices, say so in the scene and let the card wait for that choice: you never decide a card for a player. A failure never brings a choice that breaks a custom, or a deliberate act the words did not ask for; a success brings a fight only when the words asked for one. Your narration answers the attempt only, never how it turns out: the engine rolls, and the card's settling tells the rest.",
+  `- "A player's words on the road card": ${OWN_MOVE_RULE}`,
   "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as what shows.",
   "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. Name an amount only as the engine's lines give it, never a sum of your own.",
   "- Time in a place: the journey and the nights move the clock, and nothing else does. When the party spends time where they are (a meal, a long talk, a search, a wait), call pass_time once for it, with the span the story took: short_while, hour, or watch (until the next part of the day). Time in a place shortens the day's road. Never past midnight: the night is the players' call.",
@@ -487,7 +487,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "own_move_or_answer",
-        "Answer a player's own words on the road card waiting (\"A player's words on the road card\"). With move, their words become an own move on the card: the check they call for (a skill and a DC from the ladder) and two different choices of the card, one a success brings and one a failure brings; the seats then vote on it as on any choice. Without move, only your narration answers them, and the card waits. Narration answers the words, the attempt only, never how it turns out.",
+        "Answer a player's own words on the road card waiting (\"A player's words on the road card\"). With move, their words become an own move on the card: the check they call for (a skill and a DC from the ladder), the card's choice a success brings and, only when another choice plainly is what a failure brings, that choice; with no failure, a failed roll runs no choice and the card waits for a written one. The seats then vote on it as on any choice. Without move, only your narration answers them, and the card waits. Narration answers the words, the attempt only, never how it turns out.",
         {
           narration: z.string().describe("One to three sentences: what the people in the scene say or do at the words."),
           move: z
@@ -495,7 +495,10 @@ export class ModelDm implements DmAgent {
               skill: z.enum(SKILLS),
               dc: z.number().int().describe(`From the ladder: ${LADDER.join(", ")}.`),
               success: z.string().describe("The card's choice id a success brings."),
-              failure: z.string().describe("The card's choice id a failure brings: never one that breaks a custom or is a deliberate act the words did not ask for."),
+              failure: z
+                .string()
+                .optional()
+                .describe("The card's choice id a failure brings, only when one plainly is: never one that breaks a custom or is a deliberate act the words did not ask for. Leave it out when none fits."),
             })
             .optional(),
         },
@@ -657,7 +660,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "remember",
-        "Keep a fact you established in fiction for the rest of the adventure. Fiction only: no Hit Points, Armor Class or DCs.",
+        "Keep a fact you established in fiction for the rest of the adventure. Fiction only: no Hit Points, Armor Class or DCs. When you answer a player's words with own_move_or_answer, never keep how the attempt turned out: the roll and the card record that.",
         { fact: z.string() },
         // Memory changes no state at the table, so it is kept after a settling tool ended the turn
         // too (run 2026-11-13: two facts lost after own_move_or_answer).
