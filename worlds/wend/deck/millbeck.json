@@ -1,5 +1,5 @@
 {
-    "_comment": "The Millbeck bridge (B8, Stas 2026-11-05: the bridge as a fixed event, fitted to Faces of the Road): the Millbeck zone, the upper stretch of the river road, so the first leg from Wendford meets it once. Milestone 11 (MAP-10): every choice writes crossed_millbeck; the toll men are Col and Dunn; the next contract meets The bridge again. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours. The two toll men are SRD 5.2.1 Bandits. A variant replaces a choice, so every case keeps three.",
+    "_comment": "The Millbeck bridge (B8, Stas 2026-11-05: the bridge as a fixed event, fitted to Faces of the Road): the Millbeck zone, the upper stretch of the river road, so the first leg from Wendford meets it once. Milestone 11 (MAP-10): every choice writes crossed_millbeck; the toll men are Col and Dunn; The Way Back meets The bridge again (MAP-14: its own deck now holds it, as an arrival card of the bridge). Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Variant rule (D2): the road event deck is ours. The two toll men are SRD 5.2.1 Bandits. A variant replaces a choice, so every case keeps three.",
     "cards": [
         {
             "id": "millbeck_bridge",
@@ -114,93 +114,6 @@
             ],
             "scout": "perception",
             "note": "Col and Dunn, brothers from a Highsteads farm. The goblins took their flock this autumn; Rufus bought the farm's debt and set them on the bridge to slow Odda's wagon and pay him out of the toll. Osric, counting the common chest for the steward's yearly visit, had sent them away. Col counts every coin on a tally stick he cut himself, notch by notch, like a reeve. Torva's family lost a farm to debt: give her that line. In a fight the DM tells the brothers reaching for their cudgels; initiative is the engine's, and a brother who drops his cudgel has yielded. A scout who looks first sees the gnawed bones and the empty pot: these men are hungry, not hard."
-        },
-        {
-            "id": "bridge_again",
-            "zone": "millbeck",
-            "target": "caravan",
-            "if": "crossed_millbeck",
-            "once": "contract",
-            "owner_pick": "pay",
-            "text": "At the Millbeck bridge a painted board hangs on a new post, with a wax seal at the bottom. A man in a clean coat sits under it with a ledger. The toll belongs to a Saltmouth company now, he says: the same two silver a head, written down this time.",
-            "text_ru": "У моста через Миллбек на новом столбе висит крашеная доска с восковой печатью внизу. Под ней сидит человек в чистом сюртуке с учётной книгой. Пошлина теперь принадлежит солтмутскому товариществу, говорит он: те же два серебряных с головы, только теперь под запись.",
-            "note": "Before the choices, say in one plain sentence what happened here last time: who held the bridge and what the Blades did about it. Something learned goes out of date: the brothers' false toll is now a true one, on paper, and the paper is Rufus's company's. The clerk is not a villain; he is paid by the day, like the Blades. If the brothers were spared, he has never heard of them. Bren respects a seal; Ilsa asks who gave the company the bridge.",
-            "choices": [
-                {
-                    "id": "pay",
-                    "text": "Pay the company's toll.",
-                    "text_ru": "Заплатить пошлину товарищества.",
-                    "keeps": [
-                        "paper_is_law"
-                    ],
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
-                        {
-                            "do": "pay",
-                            "who": "party",
-                            "copper": 20
-                        },
-                        {"do": "remember", "deed": "paid_the_company"}
-                    ]
-                },
-                {
-                    "id": "read",
-                    "asked": true,
-                    "text": "Ask to read the paper.",
-                    "text_ru": "Попросить почитать бумагу.",
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
-                        {
-                            "do": "check",
-                            "who": "blades",
-                            "ability": "intelligence",
-                            "skill": "investigation",
-                            "dc": 10,
-                            "success": [
-                                {"do": "remember", "deed": "read_the_company_paper"}
-                            ],
-                            "failure": [
-                                {
-                                    "do": "pay",
-                                    "who": "party",
-                                    "copper": 20
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "id": "ask_brothers",
-                    "text": "Ask him what became of the two brothers.",
-                    "text_ru": "Спросить его, что стало с двумя братьями.",
-                    "if": "toll_men_spared",
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
-                        {"do": "remember", "deed": "asked_after_the_brothers"}
-                    ]
-                },
-                {
-                    "id": "ford",
-                    "text": "Go upstream and ford the beck.",
-                    "text_ru": "Подняться выше по течению и перейти ручей вброд.",
-                    "unless": "toll_men_spared",
-                    "breaks": [
-                        "paper_is_law"
-                    ],
-                    "effects": [{"do": "remember", "deed": "saw_the_company_board"}, 
-                        {"do": "delay", "minutes": 90},
-                        {
-                            "do": "check",
-                            "who": "blades",
-                            "ability": "strength",
-                            "skill": "athletics",
-                            "dc": 10,
-                            "failure": [
-                                {"do": "cargo", "good": "rations", "change": -2}
-                            ]
-                        },
-                        {"do": "remember", "deed": "forded_the_company_toll"}
-                    ]
-                }
-            ],
-            "_comment": "A road card of the Millbeck zone, as the design has it: the leg over the bridge road meets it once the bridge's own card is gone from the world, so going down on the first contract the bridge comes and this card waits; on the way back it comes on the road, on the leg from the bridge to Wendford."
         }
     ]
 }
