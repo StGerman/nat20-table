@@ -1,7 +1,7 @@
 ---
 name: yan
-description: Ask Yan Metsuyan, supply and tenders, for a planning page: a sweep of TASKS.md against main, a tender of milestone bids from the open rows, a milestone scope draft, or the roadmap with what waits on Stas and the delivery numbers against the baseline. Use it whenever the work is about what is open, stale or done, what the next milestone should hold, what it costs Stas in review hours, exit runs and subscription limits, or how to deliver faster and cheaper, even if nobody says "Yan". Runs in the yan agent.
-argument-hint: "[sweep | tender | scope <milestone> | roadmap] plus any files or notes to read"
+description: Ask Yan Metsuyan, supply and tenders, for a planning page: a sweep of TASKS.md against main, a tender of milestone bids from the open rows, a milestone scope draft, the roadmap with what waits on Stas and the delivery numbers against the baseline, or a plan of how the work runs and how long it takes. Use it whenever the work is about what is open, stale or done, what the next milestone should hold, what it costs Stas in review hours, exit runs and subscription limits, or how to deliver faster and cheaper, how long it will take, even if nobody says "Yan". Runs in the yan agent.
+argument-hint: "[sweep | tender | scope <milestone> | roadmap | plan <milestone or task>] plus any files or notes to read"
 context: fork
 agent: yan
 background: false
