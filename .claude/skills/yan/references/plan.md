@@ -15,7 +15,7 @@ Goal: Stas knows when a milestone or task lands on main, what can run at once, a
 4. Code by Sonnet medium; independent PRs run as parallel agents in worktrees, checks in the background.
 5. Stas reviews and merges; his runs are evenings at the Mac.
 
-Where an assumption breaks a rule in CLAUDE.md, list it as an amendment (rulebook §2).
+Where an assumption breaks a rule in CLAUDE.md (1 and 2 against Rule 8 today), estimate with the rule as written, list the assumption as an amendment (rulebook §2), and give its saving in hours beside it until Stas accepts it.
 
 ## Build
 
