@@ -13,7 +13,7 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 
 ## 1. Summary
 
-- A player's own move no longer needs a failure choice. If the table votes for it and the roll fails, nothing is decided for them: the DM tells how it fell short, the card is still there, and they pick a written choice. Words the card cannot carry get an answer in the scene and nothing is ruled.
+- A player's own move no longer needs a failure choice. If the table votes for it and the roll fails, nothing is decided for them: the DM tells how it fell short, and the card is decided on a written choice (at once if the other words settle it). Words the card cannot carry get an answer in the scene and nothing is ruled.
 - The seat stops repeating itself: no "the road still waits" line after every answer, the card's paragraph once, a payment that is not a toll not called one, no Second Wind offered to a healthy fighter on the road.
 - **The moment a player would retell:** "I tried to feed the raven and not the witch. The dice said no, the old woman laughed at me, and Maren gave her the bread after all."
 
@@ -22,7 +22,7 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 | Fact | Who writes it, when | Who reads it | Where the player sees it |
 | --- | --- | --- | --- |
 | `own_move_set` with no `failure` | the server, when the DM puts the move on the card | the run report (moves with and without a failure), the verdict row | the move as a numbered choice in their own words (§1.6 of the design; its own-move line and the AI tool are gone once a card has or had a move) |
-| `own_move_ran {choice: null, roll}` | the server, when the move named no failure and the roll fails, the proposer is down, or the engine cannot roll | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line, the DM's one or two sentences, a line that the move did not work (draft, §12), the written choices again |
+| `own_move_ran {choice: null, roll}` | the server, when the move named no failure and the roll fails, the proposer is down, or the engine cannot roll | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line, the DM's one or two sentences, a line that the move did not work (draft, §12), the written choices again, unless the words left settle the card (then only its settled wake) |
 | the pending card's own move, marked spent (world crate only; the views show it as `own_move` no longer among the choices) | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) the `own_move` command (`own_move_taken`) and `choose_card {choice: "own_move"}` (`unknown_choice`) | no own-move line and no "Your move" choice on the card |
 | the deed `own_move_<card>` | the world, whenever `own_move_ran` is logged, whatever it brought | the run report and the verdict row; no card in M12 | nowhere yet: owed on Zoya's board, left unread on purpose by decision 0068 |
 | `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move | nowhere; it is the check on rule 6 below |
@@ -34,7 +34,7 @@ No new deed id: `own_move_tried_<card>` would be a second deed nothing reads (qu
 The one statement is the first bullet of §1.8 in the accepted design. As tests:
 
 1. `own_move` with no `failure` is accepted when `success` is offered on the card; every refusal of today stands.
-2. For a move with no `failure`, `card_resolved` is logged only after a successful roll. A failed roll, a downed proposer or an engine error at the roll (both `roll: null`) logs `own_move_ran` with `choice: null` and no `card_resolved`; the card is still on the table.
+2. For a move with no `failure`, `card_resolved` is logged only after a successful roll. A failed roll, a downed proposer or an engine error at the roll (both `roll: null`) logs `own_move_ran` with `choice: null` and no `card_resolved` on `own_move`; the card is still on the table unless the words left settle it (rule 3).
 3. After that fall: every word given for `own_move` is taken back (advice included) and the other words stand; on a player owner's card the freed Blades advise again before the owner calls; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the words left are tallied at once and may settle the card; otherwise the freed seats that can still speak are asked, and the card settles by `choose_card` as a card with no own move would (one word per seat, the tally as today). An engine error at the roll is a fall with `roll: null`.
 4. The deed `own_move_<card>` is in the deed book after every `own_move_ran`, with the `by` §1.5 of the design gives (the seats whose word was for `own_move`, or the owner alone on an owner's call).
 5. A move that names a `failure` replays the accepted fixture byte for byte.
