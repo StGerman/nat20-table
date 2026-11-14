@@ -193,9 +193,12 @@ pub enum RejectReason {
     /// `answer_level_up` with picks that are not the choice's options, repeat one, or are not
     /// as many as it asks; the message lists the options.
     BadPicks,
-    /// `own_move` on a card that already carries an own move (API-56): one per card.
+    /// `own_move` on a card that has an own move among its choices (API-56): one at a time.
+    /// After a fall the card takes another (decision 0081).
     OwnMoveTaken,
     /// `own_move` whose success and failure are the same choice, or whose failure breaks a
-    /// custom (API-56); the message says which, so the DM can correct it.
+    /// custom (API-56), or whose skill and success choice were already rolled on this card
+    /// or already fell twice (decision 0081); the message says which, so the DM can correct
+    /// it or answer the player from it.
     BadOwnMove,
 }

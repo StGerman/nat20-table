@@ -553,7 +553,9 @@ impl Session {
             .as_mut()
             .expect("a card needs a campaign")
             .world;
-        let settled = world.deck.own_move_fell(&mut world.state.deck, &table);
+        let settled = world
+            .deck
+            .own_move_fell(&mut world.state.deck, &table, roll.is_some());
         self.push_own_move_ran(&resolution.card, None, roll);
         // The fall's part: the deed alone, with the resolution's `by`. A card the words left
         // settled is resolved even if the deed fails, since it is already off the table.

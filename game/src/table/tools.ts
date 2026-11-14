@@ -1069,7 +1069,8 @@ export class DmTools {
    * that woke it become an own move on the card, and the narration shows once the engine took it;
    * a refusal shows nothing and answers with the engine's reason, so the DM can correct it. Without
    * `move`, only the narration. On a card that has or had an own move, a `move` is not sent: the
-   * words are only answered, and no retry is spent on `own_move_taken` (decision 0079).
+   * words are only answered, and no retry is spent on `own_move_taken` (decision 0079; AGT-116
+   * brings the table in line with decision 0081, where a card takes another move after a fall).
    */
   async ownMoveOrAnswer(narration: string, move?: { ability: Ability; skill: Skill; dc: number; success: string; failure?: string }): Promise<ToolOutcome> {
     const words = this.cardWords;

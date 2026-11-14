@@ -488,6 +488,7 @@ impl Campaign {
             choices: world::Deck::offer_ids(card, &self.world.state.deeds),
             said: Default::default(),
             own_move: None,
+            fell: Vec::new(),
         };
         Some(OfferedCard {
             id: card.id.clone(),

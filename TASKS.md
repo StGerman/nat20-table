@@ -46,7 +46,6 @@ The contract review is done: `/mnt/project-files/engine/api/review.md` and `cont
 | ID | Gap | Pri | Dest | Gate | Size | Status |
 |---|---|---|---|---|---|---|
 | API-24 | Plain ability checks with no skill (core's `D20CheckKind` has skills, saves and attacks only); ladder checks require a skill until then | P2 | Up | N | S | todo |
-| API-62 | Another own move after a fall, by another way, no count (decision 0081, option E; amends API-61): fall amendment §12 PR 1, goals and proposal in its §5 and §6: the three meanings (`own_move` accepted after a fall; `own_move_taken` while a move is among the choices; `bad_own_move` for a skill-and-success pair already rolled, or fallen twice, on the card, naming the pair) with their CHANGELOG lines at the next free dev version, protocol §4.13's two sentences rewritten, the world crate's list of ways that fell on the pending card, the server passing whether it rolled, `own_move.jsonl` re-recorded in two cases plus six new. No new field. Needs 0081 accepted and table #386 | P1 | Ours | - | S | todo (Milestone 12, fall amendment PR 1) |
 | API-57 | Scene deeds (design §4): contract `1.0.0-dev.N`, the first free after M12's last: `Consequence::Remember {deed}`, `Encounter.on_end` as ordered `EndRule {when: surrender{yielded} \| won, remember}`, `SceneCreature.npc` writing `killed_<npc>`; the Deeds paragraph of `contract/protocol.md` §4.13; fixture `scene_deeds.jsonl`; CHANGELOG; the server (`apply` gains `Remember`, `follow_blows` takes scene creatures' `npc`, `on_end` evaluated at `combat_over`); §4.2 rules 1 to 6, and rule 8's validator across packs in the server crate. `nat20_core` untouched | P1 | Ours | - | S | todo (Milestone 13, PR 5; after M12's exit pair; design `docs/design/m13-system-design.md` §4) |
 
 ## 2. Engine correctness (core)
@@ -188,3 +187,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-14: API-61 done (decision 0079 Accepted, contract 1.0.0-dev.72), row in docs/tasks-done.md
 - 2026-11-14: AGT-112 done (decision 0079 at the table), row in docs/tasks-done.md
 - 2026-11-14: decision 0081, option E (Stas, decision card 14:46Z; table #388): API-62 and AGT-116 (P1, before the next exit pair) written from the fall amendment §12; AGT-113 widened to several moves on one card and now needs AGT-116
+- 2026-11-14: API-62 done (decision 0081 option E, contract 1.0.0-dev.73), row in docs/tasks-done.md
