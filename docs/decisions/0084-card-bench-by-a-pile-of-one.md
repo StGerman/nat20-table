@@ -12,7 +12,8 @@ Facts, on main at 6d0766f:
 - The contract has no command that opens a named card.
 - A draw is by zone and `when`; "a pile of one puts its card on the table" with no pick (`crates/nat20-world/src/deck.rs`, `draw`).
 - A pack that carries its own `worlds/<map>` plays that world (`game/src/pack/campaign.ts`, `worldDir`). The ENG-35 test already copies a pack and its world to a temporary folder and writes one card into the copy's deck.
-- A fresh DM session costs 0.31 to 0.42 USD for its first `scene_open`; a warm `card_words` wake costs 0.04 to 0.06 USD (runs 16:05 and 01:42).
+- A new DM session pays one cache write of 0.31 to 0.42 USD on its first wake, and the loop opens a new DM session at every scene change; a warm `card_words` wake costs 0.04 to 0.06 USD (runs 16:05 and 01:42). Run 01:42 paid 0.92 USD from its start to its first road card.
+- A chained card is in play only after another card's choice adds it.
 - Live model calls run only on Stas's Mac (decision 0036).
 
 ## Options
@@ -20,7 +21,7 @@ Facts, on main at 6d0766f:
 ### A. A copied pack whose decks hold the one card (proposed)
 The bench copies the pack and its world to a temporary folder, takes every other card out of the copy's decks, cuts the route to the stretch that reaches the card, and plays the real loop.
 - Pro: no contract change and no engine change. The DM, the engine and the card run the code an evening runs. The technique is already in a test.
-- Con: a fresh session a card, about 0.5 USD and a minute before the first line. The copy may fail a deck check once cards are taken out. A route cut to start at its second place opens on a scene written for an arrival.
+- Con: two fresh DM sessions before the card, about 0.9 USD and a minute and a half before the first line, and again after every line that settles the card. It does not reach a chained card. The copy may fail a deck check once cards are taken out. A route cut to start at its second place opens on a scene written for an arrival.
 
 ### B. An engine command that opens a named card
 - Pro: any card, any place, one call.
@@ -32,17 +33,17 @@ Find a seed whose draws bring the card, and replay it.
 - Con: the seed breaks whenever a deck upstream of the draw changes, and the walk pays for every card before the one that matters.
 
 ### D. The DM's `card_words` wake alone, on a made-up table state
-- Pro: the cheapest line, about 0.05 USD with no session to open.
+- Pro: the cheapest line: one cache write, then about 0.05 USD a line, and no line ever settles the card.
 - Con: no engine behind it, so no vote, no roll and no outcome: it shows what the DM would call and not what the card does. It needs a hand-built state the game never produces, and that state rots with every prompt change.
 
 ## Decision
 
-Proposed: **A.** It is the only option where the line, the DM's call, the roll and the card's outcome all come from the code the table plays, and it costs no contract version. B buys convenience with a command play never uses. C is fragile for the same reason the scripted tests avoid seeds. D answers half the question for a tenth of the price; if the trial shows the DM's reading is the only thing the bench ever finds, D is the cheaper tool, and that is a reason to revisit.
+Proposed: **A.** It is the only option where the line, the DM's call, the roll and the card's outcome all come from the code the table plays, and it costs no contract version. B buys convenience with a command play never uses. C is fragile for the same reason the scripted tests avoid seeds. D answers half the question at about a third of the price; if the trial shows the DM's reading is the only thing the bench ever finds, D is the cheaper tool, and that is a reason to revisit.
 
 ## Consequences
 
 - `npm run play:card` and its report, in two table PRs beside Milestone 13 (`docs/design/card-bench.md` §6). Rows are Yan's, after Stas accepts the design.
-- The bench is tried on three or four cards before Stas's Milestone 13 evening, at an expected 4 to 6 USD and 10 to 15 minutes of Stas (design §5). It adds cost to the milestone and changes no exit rule (decisions 0043, 0065, 0066, 0074).
+- The bench is tried on three or four cards before Stas's Milestone 13 evening, at an expected 8 USD or so, about one more all-AI run, and four commands of Stas's (design §5). It adds cost to the milestone and changes no exit rule (decisions 0043, 0065, 0066, 0074).
 - The bench reports and gives no pass or fail. Findings are read by the analysis thread; the verdict on each is Stas's.
 - Whether the bench becomes a standing rule is a later decision with its own record (decision 0080).
 
