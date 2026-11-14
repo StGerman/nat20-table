@@ -25,7 +25,7 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 | `own_move_ran {choice: null, roll}` | the server, when the move named no failure and the roll fails, the proposer is down, or the engine cannot roll | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line if there was a roll, the DM's one or two sentences, a line that the move did not work, or could not be tried with `roll: null` (drafts, §12), the written choices again, unless the words left settle the card (then only its settled wake) |
 | the pending card's own move, marked spent (world crate only; the views show it as `own_move` no longer among the choices) | the world crate, on that fall | the views (`own_move` is no longer among the card's choices); the `own_move` command (`own_move_taken`) and `choose_card {choice: "own_move"}` (`unknown_choice`) | no own-move line and no "Your move" choice on the card |
 | the deed `own_move_<card>` | the world, whenever `own_move_ran` is logged, whatever it brought | the run report and the verdict row; no card in M12 | nowhere yet: owed on Zoya's board, left unread on purpose by decision 0068 |
-| `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move | nowhere; it is the check on rule 6 below |
+| `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move, and facts kept in a wake that told a fall | nowhere; it is the check on rule 6 below |
 
 No new deed id: `own_move_tried_<card>` would be a second deed nothing reads (question 1).
 
@@ -38,7 +38,7 @@ The one statement is the first bullet of §1.8 in the accepted design. As tests:
 3. After that fall: every word given for `own_move` is taken back (advice included) and the other words stand; on a player owner's card the freed Blades who can still speak advise again before the owner calls; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the words left are tallied at once and may settle the card; otherwise the Blades the card waits for (its `waiting_for`, read before each ask) and then a player owner (who keeps the call even when down) are asked, with no fallback in the round the fall happened in, and the card settles by `choose_card` as a card with no own move would (one word per seat, the tally as today). An engine error at the roll is a fall with `roll: null`.
 4. The deed `own_move_<card>` is in the deed book after every `own_move_ran`, with the `by` of the vote that settled on `own_move`, unchanged, as §1.5 of the design gives (today's rules: the voters for `own_move` who were up at that settle, or the owner on an owner's call, even when down; it may be empty).
 5. A move that names a `failure` replays the accepted fixture byte for byte.
-6. Not testable, so counted (§8 here): a narration from a `card_words` wake that put no move on the card tells no outcome, and no `remember` in that wake keeps one.
+6. Not testable, so counted (§8 here): a narration from a `card_words` wake that put no move on the card tells no outcome, and no `remember` in that wake keeps one; no `remember` in a wake that tells a fall (its own, or the settled card's) keeps how the attempt fell short.
 
 **What a fall costs: the move, and nothing else.** The party may still press the success choice's number. That is deliberate. A success gives nothing a number would not (the named choice runs in full, 0068), so a failure takes nothing a number would not; the roll decides whether the deed is done the player's way. Anything harsher (the success choice closing, lost time) punishes speaking in your own words, which is the opposite of the milestone.
 
@@ -80,7 +80,8 @@ Each is one change, with where it lives.
 
 In `game/src/play/exit.ts`, beside what §8 of the design lists:
 - own moves put on a card: with a failure choice, without one; for each, rolled or not, and what `own_move_ran` named (a choice, or none);
-- every answer in words that made no move: the card, the player's words, the DM's answer in full, and each `remember` fact kept in that wake or in a fall's own wake. At most a dozen lines a run; Stas reads them for an outcome ruled in words (rule 6). Zoya reads the same list for cards whose choices the players keep walking around.
+- every answer in words that made no move: the card, the player's words, the DM's answer in full, and each `remember` fact kept in that wake. At most a dozen lines a run; Stas reads them for an outcome ruled in words (rule 6). Zoya reads the same list for cards whose choices the players keep walking around.
+- apart, each `remember` fact kept in a wake that told a fall (its own, or the settled card's), with the card and the move's words; it should be none (rule 6).
 
 ## 9. Out
 
@@ -148,7 +149,7 @@ Folded into `docs/design/m12-system-design.md` in table #381: the Summary; §1.1
 | Part of a fall | Who decides it | Record | The player sees | Met again later |
 | --- | --- | --- | --- | --- |
 | that the move fell | the engine: the proposer's roll against the ladder DC (Rule 4); no roll when the proposer is down or the engine cannot roll | the roll in the engine log, cited in the transcript; `own_move_ran {choice: null, roll}` in the run's log, DM only | the roll line (none with `roll: null`) | no |
-| how it fell short | nobody: the DM tells it in one or two sentences from the player's words (the wake carries them) and the roll, and its wake forbids it to change anything, tell a choice happening or call `remember` (design §1.8) | the transcript, read by the narration judge | the sentences (told in the settled card's wake when the words left settle it at once) | only if the DM brings it up in the same run; nothing promises it |
+| how it fell short | nobody: the DM tells it in one or two sentences from the player's words (the wake carries them) and the roll; the fall's own wake forbids it to change anything or tell a choice happening, and both wakes that tell a fall forbid a `remember` of the attempt (design §1.8) | the transcript, read by the narration judge | the sentences (told in the settled card's wake when the words left settle it at once) | only if the DM brings it up in the same run; nothing promises it |
 | the move is spent | the world crate | the waiting card (`own_move` set, no longer offered); gone when the card resolves | the line that the move did not work, or could not be tried with `roll: null`, and no own-move choice; neither line when the words left settle the card at once | no |
 | what happens in the world | the table, by a written choice; the deck file says what that choice brings | the deed book, the customs, the cargo: `bread` takes one ration, writes `sedge_charm` and keeps `bread_shared`; `true_word` writes `sedge_charm` and `told_sedge_a_true_word`; `walk_past` writes `snubbed_sedge` and breaks `bread_shared` | the choice's own lines and the DM's narration | yes: five choices in the Wend decks read `sedge_charm` or `snubbed_sedge` |
 | that a move was made here | the world, on `own_move_ran` | the deed `own_move_bog_wifes_toll {by, day, contract}`, the same after a success | nothing | no reader in M12 (0068) |
@@ -159,7 +160,7 @@ Folded into `docs/design/m12-system-design.md` in table #381: the Summary; §1.1
 
 **What the dramaturg mechanism reads.** From the deed: that the party made a move of its own on this card, who and when. That is enough for an `if`, and it cannot tell a fall from a success. For a person in the world to say it aloud it needs the player's words, which today live only in the run's log; carrying them into the world's record is that milestone's first question for this row (design §1.5, 0068 Revisit). One warning for that design: a narrator given the words and not the result will make the result up, so it either forbids telling how the attempt came out, or asks Stas then whether the result travels with the words. Not reopened here.
 
-**No change to the rule** (design §1.5, §1.8). What this answer folds into §1.8 is the fall's wake: it carries the move's words, the person on the card reacts (Zoya, §16 follow-up), and it keeps no `remember`.
+**No change to the deed or the card rule** (design §1.5, §1.8). What this answer folds into §1.8 is the fall's text, in its own wake and in the settled card's: it carries the move's words, the person on the card reacts (Zoya, §16 follow-up), and it keeps no `remember`.
 
 ## 16. Vera and Zoya
 
