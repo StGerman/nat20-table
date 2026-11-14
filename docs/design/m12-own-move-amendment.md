@@ -1,6 +1,6 @@
 # Milestone 12 amendment: an own move when no choice fits
 
-Status: Proposed (2026-11-14). Amends `docs/design/m12-system-design.md` the Summary, §1.1, §1.2, §1.3, §1.4, §1.5, §1.6, §1.8, §8, §10 items 3 and 12 and §11; decision 0079 (Proposed) refines 0068. The direction is Stas's (exit run 2 thread, 2026-11-14 02:23Z), and so are the three answers in §15 (06:20Z); the whole is accepted when he merges table #381.
+Status: Proposed (2026-11-14). Amends `docs/design/m12-system-design.md` the Summary, §1.1, §1.2, §1.3, §1.4, §1.5, §1.6, §1.8, §8, §10 items 3, 7 and 12 and §11; decision 0079 (Proposed) refines 0068. The direction is Stas's (exit run 2 thread, 2026-11-14 02:23Z), and so are the three answers in §15 (06:20Z); the whole is accepted when he merges table #381.
 
 Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed drafts. The rule itself is folded into the accepted design in table #381 (§13); this file keeps the reasons, the contract goals, the PR list and the readers' quotes.
 
@@ -38,7 +38,7 @@ The one statement is the first bullet of §1.8 in the accepted design. As tests:
 3. After that fall: every word given for `own_move` is taken back (advice included) and the other words stand; on a player owner's card the freed Blades who can still speak advise again before the owner calls; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the words left are tallied at once and may settle the card; otherwise the Blades the card waits for (its `waiting_for`, read before each ask) and then a player owner (who keeps the call even when down) are asked, with no fallback in the round the fall happened in, and the card settles by `choose_card` as a card with no own move would (one word per seat, the tally as today). An engine error at the roll is a fall with `roll: null`.
 4. The deed `own_move_<card>` is in the deed book after every `own_move_ran`, with the `by` of the vote that settled on `own_move`, unchanged, as §1.5 of the design gives (today's rules: the voters for `own_move` who were up at that settle, or the owner on an owner's call, even when down; it may be empty).
 5. A move that names a `failure` replays the accepted fixture byte for byte.
-6. Not testable, so counted (§8 here): a narration from a `card_words` wake that put no move on the card tells no outcome, and no `remember` in that wake keeps one; no call of the DM's `remember` tool in a wake that tells a fall (its own, or the settled card's) keeps anything of the attempt; the deed `own_move_<card>` is written as rule 4 says.
+6. Not testable, so counted (§8 here): a narration from a `card_words` wake that put no move on the card tells no outcome, and no `remember` in that wake keeps one; no call of the DM's `remember` tool in a wake that tells a fall (its own, or the settled card's) keeps anything of the attempt.
 
 **What a fall costs: the move, and nothing else.** The party may still press the success choice's number. That is deliberate. A success gives nothing a number would not (the named choice runs in full, 0068), so a failure takes nothing a number would not; the roll decides whether the deed is done the player's way. Anything harsher (the success choice closing, lost time) punishes speaking in your own words, which is the opposite of the milestone.
 
@@ -97,7 +97,7 @@ In order. Row ids, sizes and prices are Yan's.
 | PR | What it lands | Depends on |
 | --- | --- | --- |
 | 0 | This amendment and decision 0079, with §13 folded into the accepted design, Zoya's board check and Vera's read of the lines in §12 | - |
-| 1 | `own_move` without a failure on the wire: contract, protocol §4.13, the world crate's pending card, the server's roll-then-log, the fixture cases of design §1.2 (six new, the roster save and load after a fall among them), CHANGELOG; 0079, its index row and 0068's row ("amended by 0079") marked Accepted | 0 accepted |
+| 1 | `own_move` without a failure on the wire: contract, protocol §4.13, the world crate's pending card, the server's roll-then-log, the fixture cases of design §1.2 (six new, the roster save and load after a fall among them), CHANGELOG; protocol §5's `card_own_move` row to `{actor, words, skill}`, as events.rs has it; 0079 and its index row marked Accepted, and the "(Proposed)" after "amended by 0079" dropped from 0068's index row | 0 accepted |
 | 2 | The same at the table: `own_move_or_answer`'s `move.failure` optional; the `card_words` rule in `dm.ts` and `loop.ts` (`cardWords`); the `remember` tool's description; the fall (a `road` wake tells it, the "did not work" and "never tried" lines with one Vera read, the seats asked again, the settled card's wake told of a fall); words on a card that already has a move are only answered; `seat-lines.ts` takes a null `choice` | 1 |
 | 3 | The run report and `m12-own-move`: §8 here, `wake` and `fall` on `memory` records, the row counts a fall (question 2, Stas: yes) | 2 |
 | 4 | The seat's four lines (a) to (d), one commit each, with a Vera read of a `seat.jsonl` stretch | - |
@@ -127,7 +127,7 @@ For Vera, without this file:
 
 ## 13. Text for the accepted design
 
-Folded into `docs/design/m12-system-design.md` in table #381: the Summary; §1.1 steps 3, 5, 6, 7; §1.2 (the command table, `bad_own_move`, world crate, server, events, protocol, fixture, CHANGELOG); §1.3; §1.4; §1.5; §1.6 (the own-move line and the AI tool after a fall); §1.8 (the rule's three cases, the DM tool, a fall, what it costs, the deed, tests, the run report); §8 `m12-own-move`; §10 items 3 and 12 (the scope departures); §11. The design is the one statement; this file does not repeat it.
+Folded into `docs/design/m12-system-design.md` in table #381: the Summary; §1.1 steps 3, 5, 6, 7; §1.2 (the command table, `bad_own_move`, world crate, server, events, protocol, fixture, CHANGELOG); §1.3; §1.4; §1.5; §1.6 (the own-move line and the AI tool after a fall); §1.8 (the rule's three cases, the DM tool, a fall, what it costs, the deed, tests, the run report); §8 `m12-own-move`; §10 items 3, 7 (the `memory` fields) and 12 (the scope departures); §11. The design is the one statement; this file does not repeat it.
 
 ## 14. Risks
 
