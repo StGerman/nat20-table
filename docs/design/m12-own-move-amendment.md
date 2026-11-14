@@ -1,8 +1,8 @@
 # Milestone 12 amendment: an own move when no choice fits
 
-Status: Proposed (2026-11-14). Amends `docs/design/m12-system-design.md` §1.1, §1.2, §1.4, §1.8, §8 and §11; decision 0079 (Proposed) refines 0068. The direction is Stas's (exit run 2 thread, 2026-11-14 02:23Z); the shape is for him to accept or reject.
+Status: Proposed (2026-11-14). Amends `docs/design/m12-system-design.md` §1.1, §1.2, §1.4, §1.5, §1.8, §8 and §11; decision 0079 (Proposed) refines 0068. The direction is Stas's (exit run 2 thread, 2026-11-14 02:23Z); the shape is for him to accept or reject.
 
-Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed drafts. §13 holds the exact text for each section of the accepted design, so the thread that owns that file can fold it in, in this PR or once Stas accepts.
+Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed drafts. The rule itself is folded into the accepted design in table #381 (§13); this file keeps the reasons, the contract goals, the PR list and the readers' quotes.
 
 **Goals, from the ask** (no scope of its own):
 1. When a choice fits the words' success and none can take the failure, the own move still goes on the card.
@@ -22,7 +22,7 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 | Fact | Who writes it, when | Who reads it | Where the player sees it |
 | --- | --- | --- | --- |
 | `own_move_set` with no `failure` | the server, when the DM puts the move on the card | the run report (moves with and without a failure), the verdict row | the move as a numbered choice in their own words (§1.6 of the design, unchanged) |
-| `own_move_ran {choice: null, roll}` | the server, when the roll fails or the proposer is down and the move named no failure | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line, the DM's one or two sentences, the line "Your move did not work…", the written choices again |
+| `own_move_ran {choice: null, roll}` | the server, when the roll fails or the proposer is down and the move named no failure | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line, the DM's one or two sentences, a line that the move did not work (draft, §12), the written choices again |
 | the pending card's own move, marked tried | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) and the `own_move` command (`own_move_taken`) | no own-move line and no "Your move" choice on the card |
 | the deed `own_move_<card>` | the world, whenever `own_move_ran` is logged, whatever it brought | the run report and the verdict row; no card in M12 | nowhere yet: owed on Zoya's board, left unread on purpose by decision 0068 |
 | `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move | nowhere; it is the check on rule 5 below |
@@ -31,11 +31,11 @@ No new deed id: `own_move_tried_<card>` would be a second deed nothing reads (qu
 
 ## 3. The rule
 
-The one statement is the new first bullet of §1.8, in §13 below. As tests:
+The one statement is the first bullet of §1.8 in the accepted design. As tests:
 
 1. `own_move` with no `failure` is accepted when `success` is offered on the card; every refusal of today stands.
 2. For a move with no `failure`, `card_resolved` is logged only after a successful roll. A failed roll, or a downed proposer, logs `own_move_ran` with `choice: null` and no `card_resolved`; the card is still on the table.
-3. After that fall: the words given for `own_move` are taken back and the other words stand; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the next `choose_card` settles the card as if no move had been made.
+3. After that fall: the words given for `own_move` are taken back and the other words stand; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the card is then settled by `choose_card` exactly as a card with no own move would be (one word per seat, the tally as today).
 4. The deed `own_move_<card>` is in the deed book after every `own_move_ran`, with the `by` of the seats whose word was the move.
 5. A move that names a `failure` replays the accepted fixture byte for byte.
 6. Not testable, so counted (§8 here): a narration from a `card_words` wake that put no move on the card tells no outcome, and no `remember` in that wake keeps one.
@@ -125,56 +125,19 @@ For Vera, without this file:
 
 | Where | Russian | English |
 | --- | --- | --- |
-| own move failed, the human's (new) | «Ваш ход не удался. Теперь выберите из написанного.» | "Your move did not work. Now pick one of the written choices." |
-| own move failed, another seat's (new) | «Ход Брена не удался. Теперь выберите из написанного.» | "Bren's move did not work. Now pick one of the written choices." |
+| own move failed, the human's (new, draft: PR 2 rewords it with its own Vera read, §16) | «Ваш ход не удался. Теперь выберите из написанного.» | "Your move did not work. Now pick one of the written choices." |
+| own move failed, another seat's (new, draft as above) | «Ход Брена не удался. Теперь выберите из написанного.» | "Bren's move did not work. Now pick one of the written choices." |
 | a card payment, the human's (changed) | «Вы платите: 4 серебряных.» (was «Вы платите пошлину: 4 серебряных.») | "You pay 4 silver pieces." (was "You pay 4 silver pieces toll.") |
 | a card payment, another's, Russian seat (changed) | «Брен платит: 4 серебряных.» (was «Брен платит пошлину: …») | unchanged: the wire's text |
 | after an answered word on a card (removed) | «Сказано за столом: Дорога всё ещё ждёт вашего слова: выбор от 1 до 3 или своими словами.» no longer shows | "Said at the table: The road still waits for your word…" no longer shows |
 
 ## 13. Text for the accepted design
 
-*Folded into `m12-system-design.md` in table #381, with the review's fixes on top: the rest of §1.2 (world crate, server, events, protocol, fixture, CHANGELOG) and §1.5 brought in line with §5 here; the downed proposer with no failure stated once in §1.1 step 5; the fall line kept as a draft for PR 2 (Vera, §16); Zoya's question-3 sentence added to the prompt ("The scene still answers…"). Where this section and the design differ, the design wins.*
-
-**§1.8, title and a note at its top:**
-
-> ### 1.8 When no choice fits (question 7)
->
-> *Amended 2026-11-14 (decision 0079), after exit run 2 (`full-2026-11-14T01-42-04-072Z`): 9 answers in a player's own words made 0 own moves, and 2 of them were plans. A move no longer needs a failure choice, and words no choice fits are answered and nothing more. This section is the one statement of the rule; §1.1, §1.2, §1.4 and §11 point here.*
-
-**§1.8, the first bullet ("The rule") becomes:**
-
-> - **The rule.** The DM reads the words against the card's choices and finds one of three cases:
->   1. *One choice is what the words bring if they work, and another is plainly what happens if they fail.* The move names both, and they differ. The failure is never a choice that breaks a custom (the engine refuses it) and never a deliberate act the words did not ask for, such as taking, opening or searching (the prompt says so; nothing can test it).
->   2. *A choice fits the success and none can take the failure.* The move names the success alone. If the table votes for it and the roll fails, or the proposer is down, no choice runs: the card stays on the table, the words given for `own_move` are taken back, `own_move` is no longer offered, and the seats decide the card on a written choice. The move is spent: one own move per card, tried or not.
->   3. *No choice is what the words would bring.* No move: the DM answers in one or two sentences and the card waits.
->
->   In all three the narration answers the attempt and never how it turns out: nobody in the scene agrees to it, refuses it or gives way, and nothing is won or lost by it. The engine's roll and the card's choices decide that, and the DM keeps no `remember` of an outcome. The prompt, in the road section and in the wake: "A player's words on the road card: answer with own_move_or_answer. If one of the card's choices is what the words bring when they work, make them a move: the check they call for, that choice as success, and your narration. Name a failure only when another choice is plainly what happens when the attempt fails, never one that breaks a custom and never a deliberate act the words did not ask for; with no failure named, a failed roll leaves the card waiting and the move is spent. If no choice is what the words would bring, give only the narration, one or two sentences, and the card waits. When the words simply are one of the card's choices, say so in the scene and let the card wait for that choice: you never decide a card for a player. A success brings a fight only when the words asked for one. Your narration answers the attempt only, never how it turns out: nobody in the scene agrees to it, refuses it or gives way, and nothing is won or lost by it; the engine's roll and the card's choices decide that. Never call remember for how an attempt turned out." The `remember` tool's description gains: "Never how a player's attempt turned out: the roll and the card record that."
-
-**§1.8, in the "DM tool" bullet:** `move?: {skill, dc, success, failure}` becomes `move?: {skill, dc, success, failure?}`.
-
-**§1.8, three bullets added after "The card waits":**
-
-> - **A fall** (case 2, the roll failed). The engine logs the roll and `own_move_ran` with `choice: null` (§1.2). The loop wakes the DM as it does for a settled card, in a `road` wake: "<actor>'s own move failed its roll: tell how the attempt falls short, in one or two sentences. Nothing else changes and nobody is worse off for it; the card still waits: do not decide it." The seat then shows «Ваш ход не удался. Теперь выберите из написанного.» ("Your move did not work. Now pick one of the written choices."; «Ход Брена не удался. …» for another seat's), and the card goes to the seats again, the human first (0062), with no own move and no own-move line. An AI seat whose word was taken back is asked for a `choose_card`. Words said on a card that already has a move, tried or not, are answered and make no move.
-> - **What a fall costs:** the move, and nothing else; the success choice can still be picked by its number. A success gives nothing a number would not, so a failure takes nothing a number would not.
-> - **The deed** `own_move_<card>` is written whenever `own_move_ran` is logged, a fall included: it carries no result (§1.5).
-
-**§1.8, "Tests" gains:** a loop test with a fake DM that names no failure and an engine seed where the roll fails: the fall's wake runs, the line shows, and the human is asked again with the written choices only; a prompt test that the three cases are in the road section.
-
-**§1.8, the last bullet becomes:** "**The run report** counts the moves made with and without a failure choice, and lists every answer that made no move: the card, the words, the DM's answer and any fact it kept with `remember` in that wake."
-
-**§1.1 step 3:** "it names the check and the two choices" becomes "it names the check, the success choice and, where one fits, the failure choice (§1.8)". **Step 5:** after "runs the failure choice" add "(none named: the card waits, §1.8)". **Step 6:** add at the end "A move with no failure choice is rolled before `card_resolved`, which is logged only on a success (§1.8)." **Step 7:** "the named choice writes" becomes "the choice that ran writes, if one ran".
-
-**§1.2:** in the command table, `failure` is "no" under Required and reads "Another choice id offered on this card, or none (§1.8)". The refusals table stands; `bad_own_move` applies only when a failure is named, and its message for one that breaks a custom ends "or none". The state, event, protocol, fixture and CHANGELOG paragraphs gain what §5 of the amendment lists.
-
-**§1.4:** the third bullet becomes "One own move per card, and no retry. A failure decides the card on the failure choice, or leaves it waiting when none was named (§1.8)." The fourth bullet becomes "Which choice may take a failure, and what happens when none can: §1.8."
-
-**§8, `m12-own-move`:** add "A move with no failure choice whose roll failed logs no `card_resolved` on `own_move`; the report lists it, and whether it counts for the row is Stas's ruling on question 2 of the amendment."
-
-**§11, the third risk ("The DM can map words badly"):** "two different choices offered on the card" becomes "a success offered on the card and, when one is named, a different failure that breaks no custom (§1.8)". Add: "Exit run 2 was that test: 2 plans, 0 moves. The rule of §1.8 is the answer, and its own risk is below." Then a new risk: "**The DM may stop naming failures**, since leaving one out is always legal. Then no own move costs anything anywhere. The report counts moves with and without a failure; run 1 of the next pair shows the split before Stas sits down."
+Folded into `docs/design/m12-system-design.md` in table #381: §1.1 steps 3, 5, 6, 7; §1.2 (the command table, `bad_own_move`, world crate, server, events, protocol, fixture, CHANGELOG); §1.4; §1.5; §1.8 (the rule's three cases, the DM tool, a fall, what it costs, the deed, tests, the run report); §8 `m12-own-move`; §11. The design is the one statement; this file does not repeat it.
 
 ## 14. Risks
 
-- **Most likely to sink it: the DM stops naming failures** (§13, the new §11 risk). Cheapest test: the count in the all-AI run's report.
+- **Most likely to sink it: the DM stops naming failures** (the new §11 risk in the design). Cheapest test: the count in the all-AI run's report.
 - **The card un-settled.** The world crate today takes a card off the table the moment the vote settles it; a move with no failure keeps it there until the roll. The fixture's fall case, then `choose_card`, is the test, and it is the first thing PR 1 writes.
 - **The narration still rules.** A prompt line cannot stop a model telling a refusal. The §8 list makes it a dozen lines a person reads, and PR 5 an independent flag.
 - **Exit row 4** reads the first `card <id> goes to the seats` line per card; after a fall the loop logs the line again for the same card, and the check must take the first.
@@ -189,10 +152,10 @@ For Vera, without this file:
 
 Both run on 2026-11-14 by the calling thread with the repo's `vera` and `zoya` agents. Vera read a seat stretch built from §12 (a card, an answer to words, the move as choice 4, a failed roll line, the fall line, the choices again, two payment lines), never this file.
 
-**What the thread takes from them** (for Stas, not yet in §1–§13):
+**What the thread takes from them** (for Stas):
 - The fall line «Ваш ход не удался. Теперь выберите из написанного.» is where Vera became a passenger, and Zoya hears «Ваш ход» as "your turn" and «выберите из написанного» as officialese. The wording is redone in PR 2 with its own Vera read; the rule (the move is spent) stays unless Stas changes it.
 - Zoya disagrees with question 1: one id with no result means no reader can ever pay a fall off. Her smaller fix is the result inside the deed (already in 0079 Revisit), not a second id.
-- Question 3: Zoya agrees answer-only, but "nothing is ruled" must not read as "nothing happens": the person reacts with what the plan costs them or asks something back, and a companion speaks. This is a wording for the §1.8 prompt, to be folded in if Stas agrees.
+- Question 3: Zoya agrees answer-only, but "nothing is ruled" must not read as "nothing happens": the person reacts with what the plan costs them or asks something back, and a companion speaks. Its sentence is folded into the §1.8 prompt ("The scene still answers…"); Stas may strike it with question 3.
 - «Вы платите: 4 серебряных.»: drop the colon (Zoya), and Vera asks whom and what for; the DM's narration carries that.
 
 ### Vera (repo `vera` agent), verbatim
