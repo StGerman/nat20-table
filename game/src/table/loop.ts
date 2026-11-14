@@ -1189,7 +1189,8 @@ export class TableLoop {
     const made = this.dmTools.ownMoveMade;
     const answer = this.dmTools.cardAnswer;
     // The run report counts words a card took no move from (design §1.8).
-    // Words on a card that has or had a move could make none: the DM is not counted for finding no fitting choice.
+    // Words on a card that has or had a move could make none: the DM is not counted for finding no
+    // fitting choice. Words naming an AC or DC are still counted, as before decision 0079.
     if (!made && !card.own_move) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
     return { made, ...(answer ? { answer } : {}) };
   }
@@ -1230,15 +1231,20 @@ export class TableLoop {
           this.table.show({ kind: "info", title: words.noSuchNumber, text: words.stillWaits(choices.length) });
           continue;
         }
-        const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
+        let fell = false;
+        const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, (r) => {
+          // A move that fell takes back only the words given for it (decision 0079).
+          fell = picked.about!.id === OWN_MOVE && r.events.some((e) => e.kind === "own_move_ran" && e.choice == null);
+          return "your word is given";
+        });
         if (!outcome.ok) {
           await this.humanRejected(outcome);
           showCard = true;
           continue;
         }
         this.table.log("intent", `${human} on the road card: ${picked.label}`, human);
-        // A word that ran a move which fell was taken back: the fall's wake tells it, not this line.
-        if (!(await this.fellSince(card))) this.table.tellDm(`${human} ${owner ? "made the caravan's call" : "gave their word"} on the road card: ${picked.label}`);
+        // A word for a move that fell was taken back: the fall's wake tells it, not this line.
+        if (!fell) this.table.tellDm(`${human} ${owner ? "made the caravan's call" : "gave their word"} on the road card: ${picked.label}`);
         return;
       }
       if (intent.kind === "text") {

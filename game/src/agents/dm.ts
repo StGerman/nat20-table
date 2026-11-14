@@ -497,7 +497,7 @@ export class ModelDm implements DmAgent {
               success: z.string().describe("The card's choice id a success brings."),
               failure: z
                 .string()
-                .optional()
+                .nullish()
                 .describe("The card's choice id a failure brings, only when one plainly is: never one that breaks a custom or is a deliberate act the words did not ask for. Leave it out when none fits."),
             })
             .optional(),
@@ -506,7 +506,7 @@ export class ModelDm implements DmAgent {
           this.bound((t) => {
             // A move on answer-only words is dropped anyway: its DC costs no retry.
             if (i.move && !t.cardWords?.answerOnly && !LADDER.includes(i.move.dc)) return refuse(`a DC from the ladder: ${LADDER.join(", ")}`);
-            return t.ownMoveOrAnswer(i.narration, i.move && { ability: SKILL_ABILITY[i.move.skill], ...i.move });
+            return t.ownMoveOrAnswer(i.narration, i.move && { ability: SKILL_ABILITY[i.move.skill], ...i.move, failure: i.move.failure ?? undefined });
           }),
       ),
       seatTool(
