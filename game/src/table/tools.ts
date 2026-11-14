@@ -306,8 +306,7 @@ export class PlayerTools {
     const card = r.result?.cmd === "get_state" && r.result.state.view === "player" ? r.result.state.world?.card : undefined;
     if (!card) return this.answer(notNow("no road card waits for your word"));
     // A move that fell is no longer among the choices (decision 0079): only a written choice is left.
-    if (moveFell(card)) return this.answer(notNow("the card's own move was tried and fell: give your word on a written choice with choose_card"));
-    if (card.own_move) return this.answer(notNow("the card already has an own move: give your word on it with choose_card"));
+    if (card.own_move) return this.answer(notNow(moveFell(card) ? "the card's own move was tried and fell: give your word on a written choice with choose_card" : "the card already has an own move: give your word on it with choose_card"));
     if (card.said.some((s) => s.actor === this.me)) return this.answer(notNow("you have already given your word on this card"));
     if (!words.trim()) return this.answer(notNow("say in one sentence what your character does"));
     this.ownWords = words.trim();
@@ -1093,7 +1092,7 @@ export class DmTools {
     const said = await this.narrate(narration);
     if (!said.ok) return said;
     this.cardAnswer = narration;
-    if (dropped) return { ...said, text: `${said.text}; the card already has or had an own move, so this move is not sent: the words are only answered` };
+    if (dropped) return { ...said, text: `${said.text}; ${words.answerOnly}, so this move is not sent: the words are only answered` };
     return already ? { ...said, text: `${said.text}; the own move you made first stays on the card, this move is not sent` } : said;
   }
 

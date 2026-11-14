@@ -851,7 +851,8 @@ export class TableLoop {
         this.ownMove = { actor: event.actor, words: event.words };
         return;
       case "own_move_set":
-        this.ownMove = { card: event.card, actor: event.actor, ...(this.ownMove?.actor === event.actor ? { words: this.ownMove.words } : {}) };
+        // card_own_move and own_move_set come as a pair in one response.
+        this.ownMove = { ...this.ownMove, card: event.card, actor: event.actor };
         return;
       case "own_move_ran":
         if (event.choice == null) await this.ownMoveFell(event.card, event.roll != null);
@@ -1079,14 +1080,13 @@ export class TableLoop {
     if (!now) return false;
     const human = this.table.human;
     const agent = this.agents.get(owner);
-    const before = now;
     if (owner === human) {
       await this.humanCard(now, true);
     } else if (agent) {
       await this.aiCard(agent, "Make the caravan's call", true);
     }
     // A call for an own move that fell gets no fallback in this round (decision 0079).
-    if (await this.fellSince(before)) return true;
+    if (await this.fellSince(now)) return true;
     now = await ready();
     if (!now) return false;
     const { choices, preset } = cardChoices(now);
@@ -1168,11 +1168,9 @@ export class TableLoop {
         undefined,
         `A player's words on the road card: ${handle} says or does: "${words}"`,
         cardDrawnLine(card),
-        card.own_move
-          ? "The card already has or had an own move, so these words make none: call own_move_or_answer with your narration only, one or two sentences, and the card waits. The scene still answers: a person on the card, if there is one, says what the plan would cost them or asks something back."
-          : movable
-            ? OWN_MOVE_RULE
-            : "These words can't go on the card as they are said: call own_move_or_answer with your narration only, one or two sentences, and the card waits.",
+        answerOnly
+          ? `${answerOnly[0].toUpperCase()}${answerOnly.slice(1)}, so these words make no move: call own_move_or_answer with your narration only, one or two sentences, and the card waits. The scene still answers: a person on the card, if there is one, says what the plan would cost them or asks something back.`
+          : OWN_MOVE_RULE,
       );
     } finally {
       this.table.hold = undefined;
@@ -1211,16 +1209,15 @@ export class TableLoop {
         this.table.show({ kind: "info", title: words.onTheRoad, text: words.ownMoveFell(this.fellLine.rolled) });
         this.fellLine = undefined;
       }
-      // A card that has or had an own move takes a number; words said now are only answered.
-      const ownWords = !card.own_move;
-      this.cardList = { kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(ownWords ? [words.ownMoveLine] : [])], choices };
+      this.cardList = { kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(card.own_move ? [] : [words.ownMoveLine])], choices };
       this.table.show(this.cardList);
-      const intent = await this.ask({ kind: "card", line: ownWords ? words.cardPrompt : words.cardPromptNumber }).finally(() => (this.cardList = undefined));
+      // The prompt keeps "or your own words" after a move: words at the table are never refused (design §1.8).
+      const intent = await this.ask({ kind: "card", line: words.cardPrompt }).finally(() => (this.cardList = undefined));
       if (!intent) return;
       if (intent.kind === "option") {
         const picked = choices.find((c) => c.number === intent.number);
         if (!picked) {
-          this.table.show({ kind: "info", title: words.noSuchNumber, text: words.stillWaits(choices.length, ownWords) });
+          this.table.show({ kind: "info", title: words.noSuchNumber, text: words.stillWaits(choices.length) });
           continue;
         }
         const outcome = await send(this.table, human, { cmd: "choose_card", actor: human, choice: picked.about!.id }, () => "your word is given");
@@ -1241,10 +1238,10 @@ export class TableLoop {
           return;
         }
         card = (await this.dmWorld())?.card ?? card;
-        this.table.show({ kind: "info", title: words.saidAtTable, text: words.stillWaits(choices.length, ownWords) });
+        this.table.show({ kind: "info", title: words.saidAtTable, text: words.stillWaits(choices.length) });
         continue;
       }
-      this.table.show({ kind: "info", title: words.onTheRoad, text: words.stillWaits(choices.length, ownWords) });
+      this.table.show({ kind: "info", title: words.onTheRoad, text: words.stillWaits(choices.length) });
     }
   }
 

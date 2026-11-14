@@ -80,8 +80,6 @@ export interface SeatWords extends TableWords {
   choicesTitle: string;
   /** The card's prompt line. A card takes no Enter (AGT-101). */
   cardPrompt: string;
-  /** The card prompt once the card has or had an own move: a number only. */
-  cardPromptNumber: string;
   /** The end of the line Enter takes, on the level-up and road lists. */
   marked: string;
   /** After the choice most of the others gave. */
@@ -89,7 +87,7 @@ export interface SeatWords extends TableWords {
   /** An own move on the card, as a numbered choice: in the words the player said, with the skill it takes. */
   ownMoveChoice(mine: boolean, name: string, words: string, skill: Skill): string;
   /** After words a card took no move from: the card still waits. */
-  stillWaits(count: number, ownWords?: boolean): string;
+  stillWaits(count: number): string;
   /** After an own move that fell (decision 0079): it was tried and failed, or it could not be tried, and the written choices wait. Never "you got it wrong". */
   ownMoveFell(tried: boolean): string;
   /** The fight's move pick, its line and the walk to a creature or a place (AGT-98). */
@@ -150,11 +148,10 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     ownMoveLine: "Something else: say it in your own words.",
     choicesTitle: "Choices",
     cardPrompt: "A choice's number, or your own words.",
-    cardPromptNumber: "Your choice: a number from the list.",
     marked: "(Enter)",
     othersChoice: "(the others' choice)",
     ownMoveChoice: (mine, name, words, skill) => `${mine ? "Your move" : `${name}'s move`}: "${words}" (${titled(skill)})`,
-    stillWaits: (count, ownWords = true) => ownWords ? `The road still waits for your word: a choice, 1 to ${count}, or your own words.` : "The road waits for your decision: a number from the list.",
+    stillWaits: (count) => `The road still waits for your word: a choice, 1 to ${count}, or your own words.`,
     ownMoveFell: (tried) => `${tried ? "It did not work." : "It never came to that."} Decide what now from the list below.`,
     moveMenu: "Move…",
     endTurn: "End turn",
@@ -243,11 +240,10 @@ export const SEAT_WORDS: Record<Language, SeatWords> = {
     ownMoveLine: "Или что-то своё: скажите своими словами.",
     choicesTitle: "Выборы",
     cardPrompt: "Номер выбора или своими словами.",
-    cardPromptNumber: "Ваш выбор: номер из списка.",
     marked: "(Enter)",
     othersChoice: "(выбор остальных)",
     ownMoveChoice: (mine, name, words, skill) => `${mine ? "Ваш ход" : `${name} предлагает`}: «${words}» (${SKILLS_RU[skill]})`,
-    stillWaits: (count, ownWords = true) => ownWords ? `Дорога всё ещё ждёт вашего слова: выбор от 1 до ${count} или своими словами.` : "Дорога ждёт вашего решения: номер из списка.",
+    stillWaits: (count) => `Дорога всё ещё ждёт вашего слова: выбор от 1 до ${count} или своими словами.`,
     ownMoveFell: (tried) => `${tried ? "Не получилось." : "До этого дело так и не дошло."} Решайте, что теперь, по списку ниже.`,
     moveMenu: "Идти…",
     endTurn: "Закончить ход",

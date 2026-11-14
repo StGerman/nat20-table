@@ -283,6 +283,7 @@ test("words on a card that already had an own move are only answered: no second 
   const out = await tools.ownMoveOrAnswer("The farmer shakes his head.", { ability: "charisma", skill: "persuasion", dc: 10, success: "clear" });
   assert.equal(out.ok, true);
   assert.equal(sent, 0, "no own_move reaches the engine");
+  assert.match(out.ok ? out.text : "", /the card already has or had an own move, so this move is not sent/, "the DM is told the loop's reason");
 });
 
 test("a road card's choices for the human: the others' choice is named, and Enter takes none", () => {
