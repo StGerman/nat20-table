@@ -18,20 +18,20 @@ The gap is everything a live model decides. How the DM reads a player's words, w
 | Runs on milestone builds | 5 | 10 (3 of them 1-to-2-minute cheap runs) |
 | Run cost, USD | 35.45 | 44.29 |
 | Exit pairs played / passed | 3 / 1 | 3 / 0 |
-| Stas at the table, wall time | 1.09 h in 2 evenings | 3.09 h in 3 evenings (38.3 + 120.0 + 27.2 min; at least 81 of the 120 were the table waiting with no input) |
+| Stas at the table, wall time | 1.09 h in 2 evenings | 3.09 h in 3 evenings (38.3 + 120.0 + 27.2 min; 81 of the 120 were the table waiting on Stas's own seat) |
 
-Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.json` of the ten runs `full-2026-11-12T19-02…` to `full-2026-11-14T01-42…` in nat20-runs `master` 65c0e7c; checked by Yan (§7).
+Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.json` of the ten runs `full-2026-11-12T19-02…` to `full-2026-11-14T01-42…` in nat20-runs `master` 65c0e7c; checked by Yan (§7). `docs/roadmap.md`'s own M12 row dates from 2026-11-11 and shows no runs; it is Yan's file and his next `roadmap` brings it up to these numbers.
 
 | M12 run | What failed | What would see it without a full run |
 |---|---|---|
 | 11-12 19:02, Stas's trial (2.50 USD, 38 min) | not an exit half: a roster already spent by an earlier session | nothing proposed here |
 | 11-13 14:15 and 15:33 (2.19 + 8.54 USD) | 0 AI own moves in 28 card wakes, twice | a seat bench (§4, considered and not proposed): the card wakes alone; decision 0074 has since made this row reported, not gated |
 | 11-13 15:26 (8.83 USD) | void: played on a stale checkout with local changes | a slip in starting the run, not a test gap; outside this proposal |
-| 11-13 16:05 (5.70 USD, 120 min of Stas) | own move 0: Stas's real plan came between cards, where no own move exists, and the DM read all 4 of his card lines correctly. Two build defects also failed gating rows (a creature's name shown in English; a fight started on a neutral spent the retries) | own move: nothing, a person at the seat. The two build defects: scripted loop tests, which exist as a kind |
+| 11-13 16:05 (5.70 USD, 120 min of Stas) | own move 0: Stas's real plan came between cards, where no own move exists, and the DM read all 4 of his card lines correctly. Two build defects also failed gating rows (a creature's name shown in English; a fight started on a neutral spent the retries). The run then stood 81 minutes waiting on Stas's seat and ended on the 120-minute limit, which failed row 1 and the rows that need the contract finished | own move: nothing, a person at the seat. The two build defects: scripted loop tests, which exist as a kind. The time limit: nothing, the seat was left |
 | 11-13 21:16 (8.57 USD) | the all-AI half of pair 3; it passed with its own-move row read as reported (0074) | not a failure; listed so the ten runs add up, with the three cheap runs (1.01 USD) |
 | 11-14 01:42 (6.95 USD, 27 min of Stas) | `bog_wifes_toll` has no failure the design allows for Stas's plan; `salt_on_credit` has no choice his plan could land on. Not gating: on `salt_on_credit` the DM narrated a refusal with no roll and remembered it as fact | nothing certain. A person trying lines on those two cards before the evening might have met the holes (§4) |
 
-M11's exit failures were structural and were fixed with scripted tests; they are outside this proposal.
+M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-thread`) were fixed with scripted tests on main.
 
 **The honest tally.** Nothing considered here would have saved a run or an evening for certain on this record. Both failed M12 exit evenings failed on a plan a person said: 01:42 in a design hole that table #381 proposes to close, 16:05 on a plan said between cards, which nothing proposed anywhere addresses. So this doc promises neither fewer evenings nor fewer dollars. It names one candidate: a way to try a player's line on one chosen card against the live DM, so that an evening is not the only place to find out that a plan has nowhere to land. In run 01:42 that took 16 minutes of play to reach.
 
@@ -59,7 +59,7 @@ It is not designed, and this doc does not ask for it to be built. Review found t
 - **What a pass is.** A live DM is not deterministic; a case needs samples and a threshold, set from measured rates.
 - **Who runs it.** Decision 0036 keeps live calls on Stas's Mac, by his hand or through a Remote Control session he approves (blocked in practice so far); a cloud API key would need 0036 revisited. A cloud thread cannot run a case it adds.
 
-Unit prices, from the two ecd1f9e runs' `usage.jsonl`: a `dm/card_words` wake is about 0.11 USD in a warm session, a session's first call about 0.4 USD; an all-AI run is 8.57 USD and an evening of Stas 5.70 to 6.95 USD. A bench is not cheaper in dollars than a run once it repeats cases; what it would buy is minutes instead of an evening, if it works.
+Unit prices, from the `usage.jsonl` of runs 16:05, 21:16 and 01:42: a `dm/card_words` wake is about 0.11 USD in a warm session, a session's first call about 0.4 USD; an all-AI run is 8.57 USD and an evening of Stas 5.70 to 6.95 USD. A bench is not cheaper in dollars than a run once it repeats cases; what it would buy is minutes instead of an evening, if it works.
 
 **Considered, not proposed.**
 - A seat bench (a card to the live AI players, counting what they do). Its one question so far, "do AI players ever call `own_move`?", stopped gating under 0074.

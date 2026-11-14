@@ -11,7 +11,7 @@ Stas asked for testing of card content and player decisions closer to unit or co
 - Structure is already tested with no model: seeded contract fixtures, and scripted walks of whole contracts in `game/test/campaign-loop.test.ts` that assert the verdict rows. M11's structural exit failures were fixed with tests there.
 - What a live model decides is first tested by a run of a whole contract: `play:scene` brings a live DM to a chosen scene, nothing brings one to a chosen road card.
 - Milestone 12 has played ten runs and three exit pairs and passed none: 44.29 USD and 3.09 h of Stas at the table (wall time) by 2026-11-14, from the runs' `usage.jsonl` and `run.json` in nat20-runs `master` 65c0e7c.
-- Its two failed exit evenings: run 16:05 failed its own-move row on a plan Stas said between cards, where no own move exists, and two more gating rows on build defects a scripted test can see; run 01:42 failed on two cards with no room for his plan, reached after 16 minutes of play.
+- Its two failed exit evenings: run 16:05 failed its own-move row on a plan Stas said between cards, where no own move exists, two more gating rows on build defects a scripted test can see, and the time limit with the table waiting on his seat; run 01:42 failed on two cards with no room for his plan, reached after 16 minutes of play.
 - Nothing considered would have saved a run or an evening for certain on that record.
 
 ## Options
@@ -38,13 +38,13 @@ Proposed: B. It beats A at the price of one sentence in each design doc. It beat
 
 ## Consequences
 
-- From the first milestone design written after acceptance, every exit row names the lowest layer that tests it: a scripted test, a full run, or "a person". A full-run failure that a scripted test could have seen gets that test in the fix's PR. The M12 and M13 designs are not amended.
+- From the first milestone design written after acceptance, every exit row names the lowest layer that tests it: a scripted test, a full run, or "a person". A full-run failure that a scripted test could have seen gets that test in the fix's PR. The M12 and M13 designs are not amended. The accepting PR adds the rule to CLAUDE.md as one line, where design authors read it.
 - If Stas wants it, the card bench gets its own system design; no rows before that is accepted.
 - No accepted decision and no scope changes.
 
 ## Revisit when
 
-A card bench design is accepted and one milestone has used the bench: then option D is decided on that record.
+A card bench design is accepted and one milestone has used the bench: then option D is decided on that record. Or a milestone in which a full run is again the first place a defect is found that a scripted test could have seen: then the rule is not being followed.
 
 ## Sources
 
