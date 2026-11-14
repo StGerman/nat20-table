@@ -27,7 +27,7 @@ const CHOICE = {
 
 test("a level-up choice for the human: the recommended pick first, then each option in plain words", () => {
   assert.deepEqual(levelUpChoices(CHOICE).map((c) => `${c.number}. ${c.label}`), [
-    "1. Take the recommended: Aid",
+    "1. Take the recommended: Aid (Enter)",
     "2. Aid: More Hit Points for three friends.",
     "3. Hold Person",
   ]);

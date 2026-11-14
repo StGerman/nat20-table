@@ -93,7 +93,7 @@ export type HumanPrompt =
   /** The DM offered a surrender: accept it (1), fight on (2), or say what you do (AGT-30). */
   | { kind: "surrender" }
   /** A road card waits for the human's word, asked first as a Blade (AGT-87) and last as the owner: a number, or Enter for the marked choice. */
-  | { kind: "card" }
+  | { kind: "card"; /** The prompt line in the run's language; it names Enter only when a choice is marked (AGT-101). */ line?: string }
   /** A choice for the human's new level (AGT-80): a number, or Enter for the recommended pick. */
   | { kind: "level_up" }
   /** The DM says the party moves on or settles for the night, and the human drives the caravan (AGT-80): Enter on the first line, or not yet. */
@@ -210,6 +210,8 @@ export type DmWake =
   | "road"
   /** A draw offered two or three road cards (AGT-88): pick one with pick_card. */
   | "pick"
+  /** A player's own words on the road card waiting (API-56, AGT-99): an own move, or only an answer. */
+  | "card_words"
   /** The journey is over (AGT-91): suggest up to two road cards, as JSON in the final answer. */
   | "suggest"
   | "summary";

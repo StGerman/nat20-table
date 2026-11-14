@@ -3,9 +3,10 @@
 // follow-up pick for the rest; variants, multi-target and area options open a follow-up pick from
 // the option's own list. Built only from the human's own `legal_actions` and state, both already
 // projected for the human's viewer.
-import type { ActionCost, ActionOption, Aim, Handle, LevelUpChoice, Lodging, MoveTarget, Pace, Side, State, TargetCandidate, WorldPlayer } from "@nat20-table/engine-client";
+import type { ActionCost, ActionOption, Aim, Handle, LevelUpChoice, Lodging, MoveTarget, Pace, Side, Skill, State, TargetCandidate, WorldPlayer } from "@nat20-table/engine-client";
 import type { LegalActionsResult } from "../view.ts";
 import type { DecisionInput } from "./tools.ts";
+import { SEAT_WORDS, type SeatWords } from "./words.ts";
 
 /** What picking a numbered line does. */
 export type ChoiceAct =
@@ -131,17 +132,37 @@ export function roadChoices(world: WorldPlayer, first: number, human?: Handle): 
   return items.map((item, i) => ({ number: first + i, ...item }));
 }
 
+/** A road card as `cardChoices` reads it: the player's own view or the DM's. */
+export interface CardSeen {
+  choices: Array<{ id: string; text: string }>;
+  said: Array<{ actor: Handle; choice: string }>;
+  own_move?: { actor: Handle; skill: Skill } | null;
+}
+
 /**
- * A road card as the human's numbered choices (AGT-80): one per choice, and `preset` the one Enter
- * takes, the choice most of the others gave (the first of them on a tie), or the first choice.
+ * A road card as the human's numbered choices (AGT-80): one per choice, an own move (API-56) in the
+ * words its player said, with its skill. `preset` is the choice most of the others gave (the first
+ * of them on a tie), or the first choice: the loop's fallbacks go with it. The human's card takes
+ * no Enter (AGT-101, Stas 2026-11-11): the others' choice is named, never preset.
  */
-export function cardChoices(card: { choices: Array<{ id: string; text: string }>; said: Array<{ actor: Handle; choice: string }> }): { choices: Choice[]; preset: number } {
+export function cardChoices(card: CardSeen, words: SeatWords = SEAT_WORDS.en, me?: Handle): { choices: Choice[]; preset: number } {
   const count = new Map<string, number>();
   for (const s of card.said) count.set(s.choice, (count.get(s.choice) ?? 0) + 1);
   let top: string | undefined;
   for (const s of card.said) if (top === undefined || (count.get(s.choice) ?? 0) > (count.get(top) ?? 0)) top = s.choice;
-  const choices = card.choices.map((c, i) => ({ number: i + 1, label: c.id === top ? `${c.text} (the others' choice)` : c.text, about: { id: c.id } }));
-  return { choices, preset: (card.choices.findIndex((c) => c.id === top) + 1) || 1 };
+  const move = card.own_move ?? undefined;
+  const text = (c: { id: string; text: string }) =>
+    c.id === OWN_MOVE && move ? words.ownMoveChoice(move.actor === me, capitalized(move.actor), c.text, move.skill) : c.text;
+  const choices = card.choices.map((c, i) => ({ number: i + 1, label: c.id === top ? `${text(c)} ${words.othersChoice}` : text(c), about: { id: c.id } }));
+  const at = card.choices.findIndex((c) => c.id === top) + 1;
+  return { choices, preset: at || 1 };
+}
+
+/** The choice id an own move takes on a card (API-56). */
+export const OWN_MOVE = "own_move";
+
+function capitalized(handle: Handle): string {
+  return handle.charAt(0).toUpperCase() + handle.slice(1);
 }
 
 /**
@@ -153,7 +174,7 @@ export function levelUpChoices(choice: LevelUpChoice, picked: readonly string[] 
   const name = new Map(choice.options.map((o) => [o.id, o.name]));
   const recommended = choice.recommended.map((id) => name.get(id) ?? id).join(", ");
   return [
-    { number: 1, label: `Take the recommended: ${recommended}`, about: { id: "recommended" } },
+    { number: 1, label: `Take the recommended: ${recommended} ${SEAT_WORDS.en.marked}`, about: { id: "recommended" } },
     ...choice.options
       .filter((o) => !picked.includes(o.id))
       .map((o, i) => ({ number: i + 2, label: `${o.name}${o.summary ? `: ${o.summary}` : ""}`, about: { id: o.id } })),
