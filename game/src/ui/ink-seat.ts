@@ -387,8 +387,12 @@ export class InkSeat implements Seat {
     if (RELEASES.has(event.kind)) this.release();
     // Only info, options and status lines are a command's answer; anything else keeps its kind.
     const answers = this.answeringCommand && (event.kind === "info" || event.kind === "options" || event.kind === "status");
-    if (event.kind !== "engine") this.drawn(answers ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
-    else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));
+    // The same options list again, over the one already pinned, changes nothing on the screen: the record skips it (AGT-114).
+    const repeated = event.kind === "options" && this.view.options !== undefined && JSON.stringify(this.view.options) === JSON.stringify(event);
+    if (!repeated) {
+      if (event.kind !== "engine") this.drawn(answers ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
+      else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));
+    }
     switch (event.kind) {
       case "situation":
         // The loop refreshes the panel before each step, ahead of the narration of what came

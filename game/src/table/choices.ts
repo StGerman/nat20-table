@@ -54,12 +54,14 @@ type Item = Omit<Choice, "number">;
 /**
  * The numbered list for the human's options. In a fight it ends with a move pick (anchors and the
  * creatures the human can see) and End turn; out of combat moving is the DM's call, made in words.
+ * `rested` is out of a fight with the human's character at full Hit Points (their own sheet): no
+ * Second Wind line, and one potion line that opens its targets (AGT-114).
  */
-export function buildChoices(result: LegalActionsResult, state: State | undefined, combat: boolean, talk: SeatTalk = ENGLISH): Choice[] {
+export function buildChoices(result: LegalActionsResult, state: State | undefined, combat: boolean, talk: SeatTalk = ENGLISH, rested = false): Choice[] {
   const about = (option: ActionOption) => aboutOf(option, talk.names);
   // Out of a fight the actions that only a fight has stay off the list (run 2026-11-13); words still start one.
-  const options = combat ? result.options : result.options.filter((o) => !fightOnly(o.option_id));
-  const items = options.flatMap((option) => optionItems(option, talk).map((item) => tagged(item, about(option))));
+  const options = combat ? result.options : result.options.filter((o) => !fightOnly(o.option_id) && !(rested && o.option_id === SECOND_WIND));
+  const items = options.flatMap((option) => optionItems(option, talk, !combat && rested).map((item) => tagged(item, about(option))));
   if (combat && state) {
     const moves = moveItems(state, reachOf(result, state), talk);
     const dash = result.options.find((o) => o.option_id === "dash");
@@ -68,6 +70,8 @@ export function buildChoices(result: LegalActionsResult, state: State | undefine
   if (combat && result.can_end_turn) items.push({ label: talk.words.endTurn, act: { kind: "end_turn" }, about: { id: "end_turn" } });
   return numbered(items);
 }
+
+const SECOND_WIND = "fighter/second_wind";
 
 /** Actions with a use only in a fight: attacks, Dash, Disengage, Dodge, Action Surge, Rage and the like. */
 const FIGHT_ONLY = new Set(["dash", "disengage", "dodge", "fighter/action_surge", "help/assist_attack_roll", "monster/nimble_escape", "barbarian/rage", "barbarian/extend_rage"]);
@@ -250,7 +254,7 @@ function targetItems(option: ActionOption, targets: TargetCandidate[], talk: Sea
   }));
 }
 
-function optionItems(option: ActionOption, talk: SeatTalk): Item[] {
+function optionItems(option: ActionOption, talk: SeatTalk, rested = false): Item[] {
   const name = talk.names.option(option.option_id, option.name);
   const variantName = (v: { variant: string; name: string }) => talk.names.variant(v.variant, v.name);
   const targets = byDistance(option.targets);
@@ -277,6 +281,8 @@ function optionItems(option: ActionOption, talk: SeatTalk): Item[] {
       // A potion is for a friend, so it lists the creatures on no hostile side instead (you first).
       const wanted = targets.filter((t) => (option.item ? t.side !== "hostile" : t.side === "hostile"));
       const inReach = wanted.filter((t) => t.in_range);
+      // At full Hit Points on the road a potion is one line that opens its targets, never a line per target (AGT-114).
+      if (rested && option.item) return wanted.length > 0 ? [{ label: `${name}…`, next: numbered(targetItems(option, wanted, talk)) }] : [];
       const quick = inReach.length > 0 ? inReach : wanted.slice(0, 1);
       const rest = targets.filter((t) => !quick.includes(t));
       const lines = targetItems(option, quick, talk);

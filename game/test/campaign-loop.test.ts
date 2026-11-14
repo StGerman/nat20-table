@@ -154,6 +154,29 @@ test("words on a road card are said at the table, the DM answers them with no mo
   }
 });
 
+test("after the DM answered the human's words the seat adds no line that the road still waits (AGT-114 a)", async () => {
+  const walk = traveller();
+  let spoke = false;
+  const seat = new ScriptedSeat("bren", [], (prompt, s) => {
+    if (prompt.kind === "card" && !spoke) {
+      spoke = true;
+      return { kind: "text", text: "Ask him for the papers that let him take a toll." };
+    }
+    return walk(prompt, s);
+  });
+  const t = await testTable({ seed: 1, human: "bren", players: ["maren"], seat });
+  try {
+    const dm = new ScriptedDm({ card_words: async (tools) => void (await tools.ownMoveOrAnswer("The man shrugs and holds out his hand.")) });
+    const loop = new TableLoop({ table: t.table, dm, players: [new ScriptedPlayer("maren")], maxSteps: 200, campaign: { party: ["bren", "maren"], dayLimit: 1 } });
+    await loop.run("vale_town");
+    assert.ok(spoke, "the words were said");
+    assert.deepEqual(seat.shown.filter((e) => e.kind === "info" && (e.title === "Said at the table" || /still waits for your word/.test(e.text))), [], "no line after an answered word");
+    assert.ok(seat.shown.filter((e) => e.kind === "options" && e.title === "Choices").length >= 2, "the choices come again");
+  } finally {
+    t.close();
+  }
+});
+
 /** A scripted DM that makes every player's words on a card an own move: Persuasion DC 10, the card's first choice on a success, its second on a failure. */
 function movingDm(): ScriptedDm {
   return new ScriptedDm({
