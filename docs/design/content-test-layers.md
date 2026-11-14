@@ -23,13 +23,14 @@ What each failed run found, and what could have found it sooner:
 | Run | What failed | What sees it without a full run |
 |---|---|---|
 | M11 pair 1, both halves (7.74 + 5.87 USD, 39 min of Stas) | no arrival card could be met; no card reads a deed *The Way Back* writes | a scripted walk of the contract (L1). The human half is already saved by decision 0065: Stas plays only after the all-AI half has passed |
+| M11 pair 2, all-AI half (8.82 USD) | 9 deeds written, 0 read by a later card: on the way down no card on the route could read them | the same walk (L1): the row "a deed written and later read" at 0 |
 | M12 11-12 19:02, Stas's trial (2.50 USD, 38 min) | not an exit half: a roster already spent by an earlier session | nothing proposed here |
-| M12 11-13 14:15 and 15:33 (2.19 + 8.54 USD) | 0 AI own moves in 28 card wakes, twice | the card wakes alone would have shown it once. One all-AI half was needed anyway, and decision 0074 then made this row reported, not gated |
+| M12 11-13 14:15 and 15:33 (2.19 + 8.54 USD) | 0 AI own moves in 28 card wakes, twice | a seat bench (the card wakes alone), which §3 does not propose: decision 0074 has since made this row reported, not gated |
 | M12 11-13 15:26 (8.83 USD) | void: played on the wrong checkout | no layer; a build check before the run starts |
 | M12 11-13 16:05 (5.70 USD, 120 min of Stas) | own move 0: Stas's real plan came between cards, where no own move exists; the DM read all 4 of his card lines correctly | nothing; a person at the seat |
 | M12 11-14 01:42 (6.95 USD, 27 min of Stas) | `bog_wifes_toll` has no failure the design allows for Stas's plan; `salt_on_credit` has no choice his plan could land on | nothing certain; the plan fuzz of §3 might have |
 
-**The honest tally.** Against today's rules (0065 and 0074 included), layers below a full run would have saved for certain one all-AI run in M11 (7.74 USD) and one in M12 (2.19 to 8.54 USD), and no evening of Stas. Both of his failed M12 exit evenings failed on a plan a person said, in a design hole that table #381 proposes to close by design. So this proposal does not promise fewer evenings or fewer dollars. It offers three things: structural holes found in CI for nothing; the DM's reading of a player's words tested on one card in minutes, not in a run and an analysis thread; and one unproven tool, the plan fuzz, aimed at what cost him those two evenings.
+**The honest tally.** Against today's rules (0065 and 0074 included), the layers proposed here would have saved for certain two all-AI runs in M11 (7.74 + 8.82 = 16.56 USD), nothing in M12, and no evening of Stas. Both of his failed M12 exit evenings failed on a plan a person said: 01:42 in a design hole that table #381 proposes to close; 16:05 on a plan said between cards, which nothing proposed anywhere addresses. So this proposal does not promise fewer evenings or fewer dollars. It offers three things: structural holes found in CI for nothing; the DM's reading of a player's words tested on one card in minutes, not in a run and an analysis thread; and one unproven tool, the plan fuzz, aimed at what cost him those two evenings.
 
 ## 2. The rule
 
@@ -42,19 +43,19 @@ What each failed run found, and what could have found it sooner:
 
 | Layer | What it runs | Model | Where | Red or report |
 |---|---|---|---|---|
-| L0 Deck lint | rules over deck JSON | none | `pack:check`, CI | warnings; a rule becomes an error after Stas has ruled its first hits |
-| L1 Contract walk | engine, scripted DM and scripted seats through a whole contract, many seeds | none | a test in the `ts` job | red from the day it lands: it is free and deterministic |
+| L0 Deck lint | rules over deck JSON | none | `pack:check`, CI | a report first; a rule gates after Stas has ruled its first hits |
+| L1 Contract walk | engine, scripted DM and scripted seats through a whole contract, many seeds | none | a test in the `ts` job | a report first; a row at 0 gates after Stas has ruled what main shows today |
 | L2 DM bench, with the plan fuzz | one card, one player line, to the live DM | live | Stas's Mac, one command | a report, in shadow for one milestone |
 | Exit pair | as today | live | Stas's Mac | as today |
 
 The own-move names below (`card_words`, `own_move`) are from the M12 stack (table #346 to #381), not yet on main.
 
-**L0 Deck lint.** The deck's semantics live in `crates/nat20-world/src/deck.rs`, which already emits warnings (`route_warnings`, `untagged_fight_warnings`) that reach `npm run pack:check` as `deck:` lines. L0 adds warnings there, not a second reading of the deck in TypeScript. Candidate rules, each written against the design and bible in force when its PR is written:
+**L0 Deck lint.** The deck's semantics live in `crates/nat20-world/src/deck.rs`, which already emits warnings (`route_warnings`, `untagged_fight_warnings`) that reach `npm run pack:check` as `deck:` lines. L0 adds warnings there, not a second reading of the deck in TypeScript. `game/test/pack-check.test.ts` today fails on any repo-pack warning outside two known shapes, so each rule's PR lists its hits on main and either fixes the cards or adds the shape to that list, as Stas rules. Candidate rules, each written against the design and bible in force when its PR is written:
 
-- Own move has room. On main's design (§1.4 and §1.8: success and failure are two different choices, and a failure never lands on a choice that breaks a custom) a throwaway script over the 44 cards finds `peddler` (`share`, and `send_off` which breaks `bread_shared`). It does not find `bog_wifes_toll`, which failed on §1.4's other half, "a deliberate act the words did not ask for": that is not in the data. Decision 0079 (table #381, Proposed) makes the failure optional; if it is accepted, this rule is dropped or rewritten against it.
+- Own move has room: a card has at least two choices that break no custom. On main's design (§1.4 and §1.8: success and failure are two different choices, and a failure never lands on a choice that breaks a custom) a plan that lands on a card's only non-breaking choice has no failure to fall to. A throwaway script over the 44 cards finds one such card, `peddler` (`share`, and `send_off` which breaks `bread_shared`). It does not find `bog_wifes_toll`, which failed on §1.4's other half, "a deliberate act the words did not ask for": that is not in the data. Decision 0079 (table #381, Proposed) makes the failure optional; if it is accepted, this rule is dropped or rewritten against it.
 - The two commandments table #382 proposes (a world card fits every quest; a chain has no dead stretch), written with Zoya.
 
-**L1 Contract walk.** The scripted DM and scripted seats exist (`game/src/table/scripted.ts`, `game/test/stand-in.ts`), and CI already replays seeded fixtures with no model. L1 walks each contract over a set of seeds, with seats that vote by a fixed policy (first choice, last choice, seeded random), and reports for every structural exit row (journeys, pay, cards decided, an arrival card met, a deed written and later read) the share of seeds it passes on, and every card never drawn. A row at 0 fails the test: M11 pair 1 was a row at 0. Own move is not in it: M12 design §1.8 fixes that the scripted DM never calls `own_move`; walking that path would need a second scripted DM policy, and is not proposed now.
+**L1 Contract walk.** The scripted DM and scripted seats exist (`game/src/table/scripted.ts`, `game/test/stand-in.ts`), and CI already replays seeded fixtures with no model. L1 walks each contract over a set of seeds, with seats that vote by a fixed policy (first choice, last choice, seeded random), and reports for every structural exit row (journeys, pay, cards decided, an arrival card met, a deed written and later read) the share of seeds it passes on, and every card never drawn. A row at 0 is the finding: M11 pairs 1 and 2 were each a row at 0. The L1 PR reports what main shows today; MAP-15 already records deeds no drawn card reads, so a row may be at 0 now. The test gates once those are fixed or accepted. Own move is not in it: M12 design §1.8 fixes that the scripted DM never calls `own_move`; walking that path would need a second scripted DM policy, and is not proposed now.
 
 **L2 DM bench.** One case is a file: card id, the seed and scripted policy that bring a walk to that card, the player's line, and what must hold in the DM's tool calls (answer or own move; a legal skill, DC step, `success` and `failure`; never an outcome with no roll). The harness walks to the card with no model, then hands the live DM its `card_words` wake. Two limits: the live DM starts with no memory of the evening before the card, unlike the recorded run; and handing a walk over to a live agent is new harness code, the main risk in the estimate of §5. The engine has no restore command, and none is proposed. The first cases are Stas's own 13 lines typed on open cards in runs 16:05 and 01:42 (transcripts, Langfuse per decision 0073). Each case runs 3 times and the bench reports raw counts; what counts as a pass is set from its measured rates, not here.
 
@@ -62,13 +63,13 @@ The own-move names below (`card_words`, `own_move`) are from the M12 stack (tabl
 
 **Not proposed: a seat bench.** The same harness could ask the AI players a card and count what they do. Its one question so far, "do AI players ever call `own_move`?", stopped gating under 0074. It is built when a milestone gates on what AI players do.
 
-**Who runs the bench.** Decision 0036 put the live calls of Milestones 6 and 7 on Stas's Mac under his login, with no API key in the cloud, and practice has kept that. So the bench is one command Stas runs before he starts the all-AI run, the way he starts that run today; it is not a gate on every prompt PR. 0036 names "a run is needed from a cloud thread" as its reason to revisit: question 2.
+**Who runs the bench.** Decision 0036 put the live calls of Milestones 6 and 7 on Stas's Mac under his login, with no API key in the cloud, and practice has kept that. So the bench is one command Stas runs before he starts the all-AI run, the way he starts that run today; it is not a gate on every prompt PR. 0036 also allows a thread to run a live step on that Mac through a Remote Control session Stas approves; the project's notes record that route as blocked in practice. And 0036 names "a run is needed from a cloud thread" as its reason to revisit. Question 2 asks which of the three.
 
 ## 4. Gates
 
 The exit pair's rules do not change: decisions 0043, 0065 and 0074 and the milestone scopes stand.
 
-Added: L1 fails the `ts` job on a row at 0. L0 warns. The bench and the fuzz run once before the exit pair of one milestone and report; that milestone's close records what they caught, what they missed and what they cost.
+Added: L0 and L1 report in CI, and each rule or row gates once Stas has ruled what it finds on main. The bench and the fuzz run once before the exit pair of one milestone and report; that milestone's close records what they caught, what they missed and what they cost.
 
 Whether Stas's evening can move to once a milestone, and whether a fix covered by a lower-layer case can stand without replaying the pair, are for a later decision, on that record. Today's record does not support either (§1).
 
@@ -95,7 +96,7 @@ Running, from the two ecd1f9e runs' `usage.jsonl`: a `dm/card_words` wake is abo
 ## 6. Questions for Stas
 
 1. Accept the direction: the rule of §2; L0 and L1 in CI; the DM bench and the fuzz as a report for one milestone; the pair's rules unchanged until that record exists?
-2. The bench runs on your Mac by one command. Do you want a cloud option instead (an API key in the cloud environment, a dollar cap a pass, 0036 revisited in its own record), so a thread can run it without you?
+2. Who runs the bench: you, by one command on your Mac; a thread through a Remote Control session you approve (0036 allows it; blocked in practice so far); or a cloud thread on an API key with a dollar cap a pass (0036 revisited in its own record)?
 3. Start now (L0 and L1 can land beside M12; the bench needs the M12 stack on main), or after M12 closes?
 
 ## 7. Yan's numbers (fallback agent, extract, 2026-11-14)
