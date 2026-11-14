@@ -1,6 +1,6 @@
 # 0079. An own move may name no failure choice; words no choice fits are answered and nothing more
 
-- **Status:** Proposed
+- **Status:** Accepted (table #381, merged by Stas 2026-11-14 08:33Z into table #380's branch; marked by API-61)
 - **Date:** 2026-11-14
 - **Decided by:** Stas, in part: the direction after exit run 2 (2026-11-14 02:23Z, «поправить дизайн через Льва») and the amendment's three questions (06:20Z, quoted in `docs/design/m12-own-move-amendment.md` §15): one deed with no result in it, a fall counts for exit row 2, and words no choice fits get only an answer. The rest of the shape is Lev's proposal; the record is Accepted when Stas merges table #381, and PR 1 marks it so (amendment §10). It refines decision 0068 and does not replace it.
 

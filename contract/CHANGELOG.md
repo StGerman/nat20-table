@@ -3,6 +3,9 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.72 (2026-11-14)
+- Meaning (API-61, decision 0079, protocol §4.13): `own_move.failure` is optional: with none, a failed roll, a downed proposer or an engine error at the roll runs no choice and the card stays on the table unless the words left settle it (the words given for `own_move` are taken back, `own_move` is no longer offered, a second is refused `own_move_taken`); `own_move_ran.choice` is null then; for such a move `card_resolved` on `own_move` follows the roll and is logged only on a success. `CardDm.own_move.failure` and `own_move_set.failure` are left out when none; after a fall `own_move` stays in both views and leaves the card's choices. Three fields widen (`own_move.failure`, `OwnMoveDm.failure`, `own_move_set.failure` to optional; `own_move_ran.choice` to nullable); `check-breaking` lists none of them against main. A move that names a failure is unchanged, byte for byte. Fixture: `own_move.jsonl` gains the no-failure cases of design §1.2. Other fixtures change by version only.
+
 ## 1.0.0-dev.71 (2026-11-13)
 - Meaning (API-60, protocol §4 "Who can fight", Stas 2026-11-13): `start_fight` takes a neutral participant and turns it hostile; before, a neutral was refused with `bad_request` ("X is neutral and takes no side in a fight."). It counts as hostile for the one-on-each-side rule. Additive: new event `turned_hostile{handles}` (public), logged before `combat_started`. A creature that had surrendered and turns hostile is no longer one `loot` may take from. Fixture: `start_fight.jsonl` places a neutral and fights it. Other fixtures change by version only.
 

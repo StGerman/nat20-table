@@ -45,15 +45,16 @@ export interface OwnMoveMet {
   skill: string;
   dc: number;
   success: string;
-  failure: string;
+  /** The choice a failure brings; absent when the move named none (decision 0079). */
+  failure?: string;
   /** Each seat's word on the card, in order. */
   votes: Array<{ by: Handle; choice: string }>;
   /** The card's decision; absent while it waited at the run's end. */
   decided?: { choice: string; how: string };
-  /** The proposer's roll and its outcome; `null` when the proposer was down and the failure ran without one. */
+  /** The proposer's roll and its outcome; `null` when there was none: the proposer was down, or, for a move with no failure, the engine could not make it (decision 0079). */
   roll?: { id: string; outcome: string } | null;
-  /** The choice the own move brought. */
-  ran?: string;
+  /** The choice the own move brought; `null` when it named no failure and fell (decision 0079). */
+  ran?: string | null;
   /** The deed's record in this run, when it was written here. */
   deed?: { contract: number; by: Handle[] };
   /** Seats whose word on the card was a fallback ("goes with the others"). */
@@ -76,7 +77,7 @@ export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], p
     else if (e.kind === "card_own_move" && card) card.words = e.words;
     else if (e.kind === "card_advice" && card) card.votes.push({ by: e.actor, choice: e.choice });
     else if (e.kind === "own_move_set" && card) {
-      open = { card: e.card, actor: e.actor, words: card.words ?? "", skill: e.skill, dc: e.dc, success: e.success, failure: e.failure, votes: card.votes, fallbacks: [], down: false };
+      open = { card: e.card, actor: e.actor, words: card.words ?? "", skill: e.skill, dc: e.dc, success: e.success, failure: e.failure ?? undefined, votes: card.votes, fallbacks: [], down: false };
       out.push(open);
     } else if (e.kind === "card_resolved" && card) {
       if (open && open.card === card.id && !open.decided) {
@@ -92,6 +93,8 @@ export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], p
       card = undefined;
     } else if (e.kind === "own_move_ran" && open && e.card === open.card) {
       open.ran = e.choice;
+      // The words on the move end here: after a fall the card waits, and its new words are not the move's.
+      open.votes = [...open.votes];
       open.roll = e.roll ? { id: e.roll, outcome: rolls.get(e.roll) ?? "missing" } : null;
     } else if (e.kind === "deed_remembered" && open && e.deed === `own_move_${open.card}`) {
       open.deed = { contract: e.contract, by: e.by };
@@ -220,9 +223,9 @@ export function exitReport(run: RunRecord, log: Event[], transcript: TranscriptR
   const moves = ownMovesMet(log, transcript, partyOf(run));
   const out = ["", "## Not a passenger", "", `Own moves put on a card: ${moves.length}`];
   moves.forEach((m, i) => {
-    const roll = m.roll === null ? "no roll (the proposer was down)" : m.roll ? `${m.roll.id}, ${m.roll.outcome}` : "not rolled";
+    const roll = m.roll === null ? "no roll (the proposer was down, or the roll could not be made)" : m.roll ? `${m.roll.id}, ${m.roll.outcome}` : "not rolled";
     out.push(
-      `${i + 1}. ${m.card}, ${m.actor}: "${m.words}"; ${m.skill} DC ${m.dc}; success brings ${m.success}, failure ${m.failure}; votes: ${m.votes.map((v) => `${v.by} ${v.choice}`).join(", ") || "none"}; ${m.decided ? `decided on ${m.decided.choice} (${m.decided.how})` : "not decided"}${m.decided?.choice === "own_move" ? `; ${roll}; brought ${m.ran ?? "?"}` : ""}${m.fallbacks.length > 0 ? `; fallback votes: ${m.fallbacks.join(", ")}` : ""}`,
+      `${i + 1}. ${m.card}, ${m.actor}: "${m.words}"; ${m.skill} DC ${m.dc}; success brings ${m.success}, failure ${m.failure ?? "none named"}; votes: ${m.votes.map((v) => `${v.by} ${v.choice}`).join(", ") || "none"}; ${m.decided ? `decided on ${m.decided.choice} (${m.decided.how})` : "not decided"}${m.decided?.choice === "own_move" ? `; ${roll}; brought ${m.ran ?? "?"}` : ""}${m.fallbacks.length > 0 ? `; fallback votes: ${m.fallbacks.join(", ")}` : ""}`,
     );
   });
   // Words a seat said on a card that the DM did not turn into an own move.

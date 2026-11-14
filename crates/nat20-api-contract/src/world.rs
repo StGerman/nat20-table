@@ -136,9 +136,10 @@ pub struct CardDm {
     /// with nothing to find.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scout: Option<Skill>,
-    /// The own move on the card (API-56), once the DM put it there: its check and the two
+    /// The own move on the card (API-56), once the DM put it there: its check and the
     /// choices a success and a failure bring. Its words are the choice `own_move` in
-    /// `choices`. Absent while the card has none.
+    /// `choices` while it can still be voted for; a move that fell stays here and is no
+    /// longer among the choices (decision 0079). Absent while the card has none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub own_move: Option<OwnMoveDm>,
 }
@@ -157,8 +158,10 @@ pub struct OwnMoveDm {
     pub dc: u8,
     /// The choice id a success brings.
     pub success: String,
-    /// The choice id a failure brings.
-    pub failure: String,
+    /// The choice id a failure brings; absent when none was named, and a fall runs no
+    /// choice (decision 0079).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<String>,
 }
 
 /// A seat's own move on the card on the table, as a player sees it (API-56): who said it and
@@ -236,7 +239,8 @@ pub struct CardPlayer {
     pub said: Vec<CardSaid>,
     /// The Blades who still have to speak.
     pub waiting_for: Vec<Handle>,
-    /// The own move on the card (API-56): who said it and the check it tries. Absent while
+    /// The own move on the card (API-56): who said it and the check it tries. It stays after
+    /// a fall, when `own_move` is no longer among the choices (decision 0079). Absent while
     /// the card has none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub own_move: Option<OwnMovePlayer>,
