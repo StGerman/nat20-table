@@ -222,6 +222,21 @@ test("the seat hands the run what it drew, in order: a command's answer as `comm
   }
 });
 
+test("the run's record skips an options list equal to the one already pinned (AGT-114 a)", () => {
+  const drawn: Array<{ kind: string; text: string }> = [];
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), record: (d) => drawn.push(d) });
+  startAt(seat, 80, 24);
+  try {
+    const list = { kind: "options" as const, title: "Choices", lines: ["1. Pay", "2. Walk on"], choices: [] };
+    seat.show(list);
+    seat.show({ ...list });
+    seat.show({ ...list, lines: ["1. Pay", "2. Walk on", "3. Ask"] });
+    assert.equal(drawn.filter((d) => d.kind === "options").length, 2, "the repeat is not recorded, a changed list is");
+  } finally {
+    seat.stop();
+  }
+});
+
 test("the wheel's turns in what the terminal sent, in order; a click, a release or a move is none (AGT-94)", () => {
   assert.deepEqual(wheelsIn("\u001b[<64;1;1M\u001b[<65;80;24M\u001b[<68;1;1M"), [-1, 1, -1]);
   assert.deepEqual(wheelsIn("\u001b[<0;1;1M\u001b[<0;1;1m\u001b[<35;1;1M"), []);

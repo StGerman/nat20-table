@@ -1275,12 +1275,14 @@ export class TableLoop {
       if (intent.kind === "text") {
         // Words on the card: the DM makes them an own move, the human's word, or answers them in
         // the scene and the card still waits for a choice (AGT-96, AGT-99).
-        if ((await this.cardWords(human, intent.text)).made) {
+        const said = await this.cardWords(human, intent.text);
+        if (said.made) {
           this.table.log("intent", `${human} on the road card: own move "${intent.text}"`, human);
           return;
         }
         card = (await this.dmWorld())?.card ?? card;
-        this.table.show({ kind: "info", title: words.saidAtTable, text: words.stillWaits(choices.length) });
+        // The DM's answer is the table's reply and the choices stay pinned above the prompt: only a wake that gave no answer says the road still waits (AGT-114).
+        if (!said.answer) this.table.show({ kind: "info", title: words.saidAtTable, text: words.stillWaits(choices.length) });
         continue;
       }
       this.table.show({ kind: "info", title: words.onTheRoad, text: words.stillWaits(choices.length) });
