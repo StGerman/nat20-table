@@ -163,21 +163,22 @@ pub enum RejectReason {
     /// `travel`, `rest_night`, `pass_time` or `scout` while a road card waits for its
     /// decision, or while a draw's cards wait for the DM's pick (API-53).
     CardPending,
-    /// `choose_card` with no card on the table, also while a draw's cards wait for the DM's
-    /// pick.
+    /// `choose_card` or `own_move` with no card on the table, also while a draw's cards wait
+    /// for the DM's pick.
     NoCard,
     /// `pick_card` when no cards are offered, or with a card that is not one of them (API-53),
     /// or a fallback pick of any card but the first offered (ENG-42).
     CardNotOffered,
-    /// `choose_card` by a creature with no say on this card, `scout` by a creature that is
+    /// `choose_card` by a creature with no say on this card, `own_move` for one, `scout` by a creature that is
     /// not a Hired Blade, or `choose_card`, `scout`, `level_up` or `answer_level_up` not sent
     /// as the actor itself.
     NoSay,
-    /// `choose_card` by a seat that already spoke on this card.
+    /// `choose_card` by a seat that already spoke on this card, or `own_move` for one.
     AlreadySpoke,
-    /// `choose_card` by a player owner before every Hired Blade advised.
+    /// `choose_card` or `own_move` by a player owner before every Hired Blade advised.
     WaitingForAdvice,
-    /// `choose_card` with a choice the card does not have.
+    /// `choose_card` with a choice the card does not have, or `own_move` naming a success or
+    /// failure the card does not offer.
     UnknownChoice,
     /// `level_up` by a character without the Experience Points for its next level.
     NotEnoughXp,
@@ -192,4 +193,9 @@ pub enum RejectReason {
     /// `answer_level_up` with picks that are not the choice's options, repeat one, or are not
     /// as many as it asks; the message lists the options.
     BadPicks,
+    /// `own_move` on a card that already carries an own move (API-56): one per card.
+    OwnMoveTaken,
+    /// `own_move` whose success and failure are the same choice, or whose failure breaks a
+    /// custom (API-56); the message says which, so the DM can correct it.
+    BadOwnMove,
 }

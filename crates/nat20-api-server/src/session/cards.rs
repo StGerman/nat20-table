@@ -5,7 +5,7 @@
 use nat20_api_contract::{
     Ability, AdvantageState, ApiError, CardCame, CheckSpec, CommandResult, DiceRolled, ErrorCode,
     EventKind, Handle, LedgerReason, LifeState, Mode, Placement, RejectReason, RollId, RollKind,
-    RollOutcome, RollView, Side, Visibility,
+    RollOutcome, RollView, Side, Skill, Visibility,
 };
 use nat20_world as world;
 
@@ -311,46 +311,14 @@ impl Session {
                 "choose_card is a player's word: send it as your own creature.",
             ));
         }
-        let Some(campaign) = self.campaign.as_ref() else {
-            return Err(error(
-                ErrorCode::NoCampaign,
-                "No campaign is running; the game starts one with start_campaign.",
-            ));
-        };
-        if !campaign.world.state.deck.offered.is_empty() {
-            return Err(rejected(
-                RejectReason::NoCard,
-                "The road card is not on the table yet; the DM is still choosing it.",
-            ));
-        }
-        if campaign.world.state.deck.pending.is_none() {
-            return Err(rejected(
-                RejectReason::NoCard,
-                "No road card is waiting for a decision.",
-            ));
-        }
-        if self.game_mut()?.mode() == Mode::Combat {
-            return Err(error(
-                ErrorCode::WrongMode,
-                "A fight is running; the card waits until it is over.",
-            ));
-        }
+        self.card_open("The road card is not on the table yet; the DM is still choosing it.")?;
         let table = self.table();
         let campaign = self.campaign.as_mut().expect("checked above");
         let world = &mut campaign.world;
         let spoken = world
             .deck
             .speak(&mut world.state.deck, &table, actor, choice)
-            .map_err(|e| {
-                let reason = match &e {
-                    world::CardError::NoCard => RejectReason::NoCard,
-                    world::CardError::UnknownChoice(_) => RejectReason::UnknownChoice,
-                    world::CardError::NoSay(_) => RejectReason::NoSay,
-                    world::CardError::AlreadySpoke(_) => RejectReason::AlreadySpoke,
-                    world::CardError::WaitingFor(_) => RejectReason::WaitingForAdvice,
-                };
-                rejected(reason, format!("{}.", capitalised(&e.to_string())))
-            })?;
+            .map_err(card_rejected)?;
         if table.blades.iter().any(|b| b == actor) {
             self.push(Pending::public(
                 None,
@@ -368,7 +336,144 @@ impl Session {
         })
     }
 
-    /// Logs the decision and runs the choice's effects.
+    /// Refuses a word on the card unless one is on the table and no fight is running, as
+    /// `choose_card` and `own_move` both need; `offered` answers while cards are offered.
+    fn card_open(&mut self, offered: &str) -> Result<(), ApiError> {
+        let Some(campaign) = self.campaign.as_ref() else {
+            return Err(error(
+                ErrorCode::NoCampaign,
+                "No campaign is running; the game starts one with start_campaign.",
+            ));
+        };
+        if !campaign.world.state.deck.offered.is_empty() {
+            return Err(rejected(RejectReason::NoCard, offered));
+        }
+        if campaign.world.state.deck.pending.is_none() {
+            return Err(rejected(
+                RejectReason::NoCard,
+                "No road card is waiting for a decision.",
+            ));
+        }
+        if self.game_mut()?.mode() == Mode::Combat {
+            return Err(error(
+                ErrorCode::WrongMode,
+                "A fight is running; the card waits until it is over.",
+            ));
+        }
+        Ok(())
+    }
+
+    /// `own_move`: the DM puts a seat's own words on the card on the table (API-56), as a
+    /// ladder check that brings one of two offered choices. The seat's word is given for it,
+    /// so it may settle the card.
+    pub fn own_move(
+        &mut self,
+        actor: &str,
+        text: &str,
+        (ability, skill, dc): (Ability, Skill, u8),
+        (success, failure): (&str, &str),
+        viewer: &Viewer,
+    ) -> Result<CommandResult, ApiError> {
+        if *viewer != Viewer::Dm {
+            return Err(error(
+                ErrorCode::NotVisible,
+                "own_move is the DM's call; send it as dm.",
+            ));
+        }
+        self.card_open("The road card is not on the table yet; pick it first (pick_card).")?;
+        let length = text.chars().count();
+        if !(1..=OWN_MOVE_MAX_CHARS).contains(&length) {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!(
+                    "An own move's words are 1 to {OWN_MOVE_MAX_CHARS} characters, not {length}."
+                ),
+            ));
+        }
+        // The words reach every player: they never carry a target number (protocol §5).
+        if crate::leaks::names_a_target_number(text) {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "An own move's words reach every player, so they never name a DC or an AC.",
+            ));
+        }
+        // The check is a ladder check's, refused as `request_check` refuses it.
+        if !world::DC_LADDER.contains(&u32::from(dc)) {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!("A ladder DC is one of 5, 10, 15, 20, 25 or 30, not {dc}."),
+            ));
+        }
+        if !crate::adapter::sheet::skill_fits(ability, skill) {
+            return Err(error(
+                ErrorCode::NotImplemented,
+                format!("{skill:?} checks with another ability than its own are not served yet."),
+            ));
+        }
+        let wire = |v: serde_json::Value| v.as_str().expect("a wire enum is a string").to_owned();
+        let mv = world::OwnMove {
+            actor: actor.to_owned(),
+            text: text.to_owned(),
+            ability: wire(serde_json::to_value(ability).expect("an ability serializes")),
+            skill: wire(serde_json::to_value(skill).expect("a skill serializes")),
+            dc: u32::from(dc),
+            success: success.to_owned(),
+            failure: failure.to_owned(),
+        };
+        let table = self.table();
+        let campaign = self.campaign.as_mut().expect("checked above");
+        let world = &mut campaign.world;
+        let card = world
+            .state
+            .deck
+            .pending
+            .as_ref()
+            .map(|p| p.card.clone())
+            .unwrap_or_default();
+        let spoken = world
+            .deck
+            .own_move(&mut world.state.deck, &table, mv)
+            .map_err(card_rejected)?;
+        self.push(Pending::public(
+            None,
+            EventKind::CardOwnMove {
+                actor: Handle(actor.to_owned()),
+                words: text.to_owned(),
+                skill,
+            },
+        ));
+        self.push(Pending {
+            round: None,
+            visibility: Visibility::Dm,
+            kind: EventKind::OwnMoveSet {
+                card,
+                actor: Handle(actor.to_owned()),
+                ability,
+                skill,
+                dc,
+                success: success.to_owned(),
+                failure: failure.to_owned(),
+            },
+        });
+        if table.blades.iter().any(|b| b == actor) {
+            self.push(Pending::public(
+                None,
+                EventKind::CardAdvice {
+                    actor: Handle(actor.to_owned()),
+                    choice: world::OWN_MOVE.to_owned(),
+                },
+            ));
+        }
+        if let Some(resolution) = spoken {
+            self.resolve_card(resolution)?;
+        }
+        Ok(CommandResult::OwnMove {
+            state: self.state_for(viewer)?,
+        })
+    }
+
+    /// Logs the decision and runs the choice's effects; for an own move, rolls the
+    /// proposer's check and runs the branch it lands on (API-56).
     fn resolve_card(&mut self, resolution: world::Resolution) -> Result<(), ApiError> {
         self.push(Pending::public(
             None,
@@ -377,10 +482,66 @@ impl Session {
                 decided: campaign::decided(resolution.decided),
             },
         ));
+        if let Some(mv) = &resolution.own_move {
+            self.run_own_move(&resolution.card, mv, &resolution.by)?;
+        }
         self.run_effects(&resolution.effects, &resolution.by)?;
         // A destination's arrival card is decided: the escort settles now (ENG-35).
         self.settle_if_arrived()?;
         Ok(())
+    }
+
+    /// An own move the card was decided on (API-56): the proposer rolls the check through
+    /// core if they are up, and the branch it lands on runs with the resolution's `by`. A
+    /// downed proposer rolls nothing, and the failure runs.
+    fn run_own_move(
+        &mut self,
+        card: &str,
+        run: &world::OwnMoveRun,
+        by: &[String],
+    ) -> Result<(), ApiError> {
+        let mv = &run.mv;
+        let up = self
+            .game
+            .as_ref()
+            .is_some_and(|g| g.has_creature(&mv.actor) && g.is_up(&mv.actor));
+        let (roll, success) = if up {
+            let (ability, skill) =
+                campaign::parse_check(&mv.ability, &mv.skill).ok_or_else(|| {
+                    error(ErrorCode::Internal, "an own move names no ability or skill")
+                })?;
+            let spec = CheckSpec::Ladder {
+                ability,
+                skill: Some(skill),
+                dc: u8::try_from(mv.dc).unwrap_or(u8::MAX),
+            };
+            let outcome = self.game_mut()?.request_check(&mv.actor, &spec);
+            self.push_entries();
+            let outcome = outcome?;
+            let roll = self
+                .roll_keys
+                .get(&outcome.key)
+                .cloned()
+                .expect("the check's roll was logged");
+            (Some(roll), outcome.success)
+        } else {
+            (None, false)
+        };
+        let (choice, effects) = if success {
+            (&mv.success, &run.success)
+        } else {
+            (&mv.failure, &run.failure)
+        };
+        self.push(Pending {
+            round: None,
+            visibility: Visibility::Dm,
+            kind: EventKind::OwnMoveRan {
+                card: card.to_owned(),
+                choice: choice.clone(),
+                roll,
+            },
+        });
+        self.run_effects(effects, by)
     }
 
     /// The handles an effect touches, in party order. A check rolls for those on their feet
@@ -662,6 +823,23 @@ fn world_roll(sides: u32, value: u32, why: &str) -> RollView {
         dc_source: None,
         advantage_sources: Vec::new(),
     }
+}
+
+/// The most characters an own move's words may hold (API-56).
+const OWN_MOVE_MAX_CHARS: usize = 300;
+
+/// A refused word on a card, on the wire.
+fn card_rejected(e: world::CardError) -> ApiError {
+    let reason = match &e {
+        world::CardError::NoCard => RejectReason::NoCard,
+        world::CardError::UnknownChoice(_) => RejectReason::UnknownChoice,
+        world::CardError::NoSay(_) => RejectReason::NoSay,
+        world::CardError::AlreadySpoke(_) => RejectReason::AlreadySpoke,
+        world::CardError::WaitingFor(_) => RejectReason::WaitingForAdvice,
+        world::CardError::OwnMoveTaken => RejectReason::OwnMoveTaken,
+        world::CardError::BadOwnMove(_) => RejectReason::BadOwnMove,
+    };
+    rejected(reason, format!("{}.", capitalised(&e.to_string())))
 }
 
 fn capitalised(text: &str) -> String {

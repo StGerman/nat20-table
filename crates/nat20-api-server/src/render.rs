@@ -253,6 +253,23 @@ pub fn text(kind: &EventKind) -> String {
         ),
         EventKind::CardAdvice { actor, choice } => format!("{} says: {choice}.", actor.0),
         EventKind::CardResolved { choice, .. } => format!("The card is decided: {choice}."),
+        EventKind::CardOwnMove { actor, words, .. } => {
+            format!("{} says something else: {words}", actor.0)
+        }
+        EventKind::OwnMoveSet {
+            card,
+            actor,
+            success,
+            failure,
+            ..
+        } => format!(
+            "{}'s own move on {card}: a success brings {success}, a failure {failure}.",
+            actor.0
+        ),
+        EventKind::OwnMoveRan { choice, roll, .. } => match roll {
+            Some(_) => format!("The own move brings {choice}."),
+            None => format!("The proposer is down: the own move brings {choice} without a roll."),
+        },
         EventKind::CargoChanged { good, change } => {
             if *change >= 0 {
                 format!("The caravan gains {change} {good}.")

@@ -11,8 +11,8 @@ use nat20_api_contract::{
     Ability, CaravanView, CardChoiceDm, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget,
     CardWhen, CargoView, CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade,
     EscortDm, EscortView, EventKind, Handle, LegView, MilesToday, NpcAttitude, NpcDm, OfferedCard,
-    Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain, TripLegView,
-    TripView, WagonView, Watch, WorldDm, WorldPosition,
+    OwnMoveDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain,
+    TripLegView, TripView, WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -155,6 +155,23 @@ impl Campaign {
                 }
                 // A contract under way is the saved party's: another party can't take it up.
                 let mut state = state;
+                // An own move on the card was checked when it arrived; a roster is read again.
+                if let Some(mv) = state
+                    .deck
+                    .pending
+                    .as_ref()
+                    .and_then(|p| p.own_move.as_ref())
+                    && !parse_check(&mv.ability, &mv.skill)
+                        .is_some_and(|(a, s)| crate::adapter::sheet::skill_fits(a, s))
+                {
+                    return Err(error(
+                        ErrorCode::BadRoster,
+                        format!(
+                            "The roster's own move is not a check: {} / {}.",
+                            mv.ability, mv.skill
+                        ),
+                    ));
+                }
                 if state.pack.is_none() {
                     state.pack = file.id.clone();
                 }
@@ -470,6 +487,7 @@ impl Campaign {
             card: card.id.clone(),
             choices: world::Deck::offer_ids(card, &self.world.state.deeds),
             said: Default::default(),
+            own_move: None,
         };
         Some(OfferedCard {
             id: card.id.clone(),
@@ -538,6 +556,18 @@ impl Campaign {
                 .collect(),
             note: card.note.clone(),
             scout: card.scout.map(scout_skill),
+            own_move: pending.own_move.as_ref().map(|mv| {
+                let (ability, skill) =
+                    parse_check(&mv.ability, &mv.skill).expect("checked when it arrived");
+                OwnMoveDm {
+                    actor: Handle(mv.actor.clone()),
+                    ability,
+                    skill,
+                    dc: u8::try_from(mv.dc).unwrap_or(u8::MAX),
+                    success: mv.success.clone(),
+                    failure: mv.failure.clone(),
+                }
+            }),
         })
     }
 
@@ -900,6 +930,17 @@ pub fn choices_dm(card: &world::Card, pending: Option<&world::PendingCard>) -> V
             keeps: c.keeps.clone(),
             breaks: c.breaks.clone(),
         })
+        // A seat's own move, last, in its own words (API-56).
+        .chain(
+            pending
+                .and_then(|p| p.own_move.as_ref())
+                .map(|mv| CardChoiceDm {
+                    id: world::OWN_MOVE.to_owned(),
+                    text: mv.text.clone(),
+                    keeps: Vec::new(),
+                    breaks: Vec::new(),
+                }),
+        )
         .collect()
 }
 
