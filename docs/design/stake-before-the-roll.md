@@ -1,6 +1,6 @@
 # Own move, any outcome: the stake before the roll (system design)
 
-Status: Proposed. Lev Neiman, 2026-11-14, branch `table/stake-before-the-roll-design` on table #394 (6d1feaac). A milestone after Milestone 13; Yan numbers it. No scope document: the goals below are decision 0083 and the seven decisions of Stas's that came with the ask on 2026-11-14 (any outcome behind a stake; the sentences DM-only; the split by whose hands; a natural 20 and 1; torture never described; the same rule in scenes; the review's open rows). The fourth was replaced the same day by his 19:39Z ruling (§16 item 8). §16 holds that ruling and nine open questions. Evidence: the rules review (project file `engine/m12/rules-review/rules-review.md`). Author's read: this page carries no verdict on itself. Zoya's board check and Vera's read are quoted verbatim in §17, with what each changed. §12 and rules 8, 9 and 13 are a second draft written after both and have not been read again.
+Status: Proposed. Lev Neiman, 2026-11-14, branch `table/stake-before-the-roll-design` on table #394 (6d1feaac). A milestone after Milestone 13; Yan numbers it. No scope document: the goals below are decision 0083 and the seven decisions of Stas's that came with the ask on 2026-11-14 (any outcome behind a stake; the sentences DM-only; the split by whose hands; a natural 20 and 1; torture never described; the same rule in scenes; the review's open rows). The fourth was replaced the same day by his 19:39Z ruling (§16 item 8). §16 holds that ruling and Stas's answers to the nine questions (2026-11-14 20:31Z). Evidence: the rules review (project file `engine/m12/rules-review/rules-review.md`). Author's read: this page carries no verdict on itself. Zoya's board check and Vera's read are quoted verbatim in §17, with what each changed. §12 and rules 8, 9 and 13 are a second draft written after both and have not been read again.
 
 ## 1. Summary
 
@@ -73,11 +73,12 @@ This is how coin, cargo, Hit Points and deaths stay typed (decision 1; 0083 "Rev
 6. The engine's result is never changed by anyone. A natural 20 on a stake roll is a success by core's rule (§6); a natural 1 has no rule of its own. The cause carries `natural: 20` or `natural: 1` when the d20 showed it.
 7. One roll per seat, per skill, per card on the table or per scene load: a second is `rejected`, `already_attempted`, and the DM answers from the kept sentence or takes another way. (What is left of decision 0081; §16 item 5.)
 8. A stake that closes a card (`closed` or `fight{choice}`) also writes every deed that all of the card's offered choices write on every path (the card's markers, such as `crossed_millbeck`). `after: fight{choice}` also runs every `remember` and `add_card` in the effect list that holds the fight, before the fight, and no other kind of effect from it. Counted today: no list that holds a fight holds coin or cargo. Without this rule a card closed by a stake would shut every later card that reads its deeds.
-9. Recall. When a card is shown or a scene loads, the engine logs `stakes_recalled` with every kept cause that applies, each marked with why: `here` (made at this card or scene before); `person` (its `about` names someone here: a creature in the scene, an `npc` of the card's fight, a roster person whose place is the card's zone); `thread` (this card's `if` or `unless`, or a choice's, reads a deed that the card where the cause was made can write: the authors' own links, so no new field); `company` (about `company`, made in this contract). Newest first, at most five. Nothing applies: no event. A `company` cause is the company's own state: the DM keeps it true, and nobody on the card reacts to it unless another reason also holds.
+9. Recall. When a card is shown or a scene loads, the engine logs `stakes_recalled` with every kept cause that applies, each marked with why: `here` (made at this card or scene before); `person` (its `about` names someone here: a creature in the scene, an `npc` of the card's fight, a roster person whose place is the card's zone); `thread` (this card's `if` or `unless`, or a choice's, reads a deed that the card where the cause was made can write: the authors' own links, so no new field). Newest first, at most five. Nothing applies: no event. There is no party-wide reason: a cause about `company` comes back only by one of these three, and the seats remember it on their own (rule 14).
 10. Before the roll, no player view, event, `text` or `message` holds either sentence; after it, the unpicked sentence, every `about` id and the DC stay out of them for good (Rule 3). The kept sentence reaches a player only in the DM's narration after the roll (D7) and in later recall, never as a field of a player view type. The visibility scan gains a case with both sentences as markers before the roll and the unpicked one after it.
 11. A company stake the vote did not choose rolls nothing and writes nothing.
 12. A roster saved with causes loads with them; a roster saved before this contract version loads with none (an optional field with a default, as the M13 design §3 item 7 reserved).
 13. While the human's character has a say on the card and has given neither a word nor a stake on it, an own-hands stake by any other seat with `after: closed` or `after: fight{choice}` is `rejected`, `bad_stake`. A table with no human is not bound. (Zoya's amendment, §17: the human decides first.)
+14. Each player remembers the others' deeds on their own (Stas, 2026-11-14 20:31Z). When the DM tells a kept sentence, every AI seat at the table hears it as told and may keep it in its own notes, in its own words, by the `note` it has today. The engine hands no seat a cause, no seat reads another's notes, and a seat that was not at the table does not know it. The human remembers as the person at the keyboard does.
 
 ## 5. Contract
 
@@ -91,7 +92,7 @@ Goals: one command carries the whole stake before the roll; the kept outcome is 
 | Event `stake_kept` | `deed`, `at`, and the cause | DM only |
 | `DeedCause` | `by`, `words`, `roll` (unique in its session), `success`, `natural?: 20 \| 1`, `sentence`, `about`, `contract` | DM only |
 | `DeedDm.causes`, and `causes` on the roster's deed | `DeedCause[]`, optional, left out when empty | DM only; the roster file |
-| Event `stakes_recalled` | `at`, `causes`, each with `why: here \| person \| thread \| company` | DM only |
+| Event `stakes_recalled` | `at`, `causes`, each with `why: here \| person \| thread` | DM only |
 | `OwnMoveDm.stake` | the two outcomes, while a company stake waits for the vote; `OwnMovePlayer` unchanged (actor, ability, skill) | DM only |
 | `CardDecided::OwnAct` | how a card was decided when an own-hands stake closed it. Kept, with its reader: `card_resolved.decided` is a required field of a public event, and the run report prints it for every card (`game/src/play/exit.ts`); without the variant an own-hands close would be logged as a majority that never voted | public, as `card_resolved` is |
 | Errors | `bad_stake` (new reason); `already_attempted`, `no_card`, `no_say`, `wrong_mode` reused | as today |
@@ -121,7 +122,7 @@ These replace `OWN_MOVE_RULE` (`game/src/table/tools.ts`) and two lines of the D
 | D7 | The DM tells the kept sentence and never the other one. `natural: 20`: told at its fullest. `natural: 1`: told at its worst; when a 1 still succeeds, the barest success. | judge, `stake` |
 | D8 | Torture and mutilation: the act happens when the roll says so, and the telling turns away. The line says that it was done and what it left (who is changed, what they do now), never the act itself, the wound being made or the pain. The same holds every later time a recalled cause is told. | judge, `described_torture` |
 | D9 | The DM never acts, speaks or feels for the human's character (bible guardrail 8; broken at «Ты отпускаешь Пиклера»). | judge, `acted_for_player` |
-| D10 | At `stakes_recalled`, one sentence of the telling shows a cause recalled as `here`, `person` or `thread`, before the choices or in the scene's opening. A `company` cause is kept true and no stranger knows it. | judge, `recall_untold` |
+| D10 | At `stakes_recalled`, one sentence of the telling shows a cause recalled as `here`, `person` or `thread`, before the choices or in the scene's opening. No cause is handed as the party's shared memory (rule 14). | judge, `recall_untold` |
 | D11 | After an own-hands act the card waits only when every written choice left still makes sense; otherwise the outcome closes the card or starts its fight. When it waits, the telling ends on the card's question as it now stands, and no line of the table stands in for that. | report list (the choices left after each own act); Stas |
 
 Prompt lines (`game/src/agents/dm.ts`), the rule each must carry:
@@ -161,7 +162,7 @@ Zoya's board check (§17) names what the five phrases owe. The carrier for each,
 | --- | --- | --- |
 | The tongue, at every later card that speaks of the bridge | rule 9 `thread`: eight cards read the bridge's deeds; rule 8 writes `toll_men_fought` so `osric_hears` and `bridge_word` open. Tried first: recall by person, which fails because the bridge is `once` and Col and Dunn are named only in its own fight | nothing, if Zoya's board accepts a thread through a marker |
 | The bog-wife's bird, in the Highsteads | rule 9 `thread` reaches the four cards that read her charm | "reaches the Highsteads": no carrier yet. No card at Gwyn's reads a deed of hers, and she has no id |
-| The ridge woman, by the next contract | none | no carrier yet: no card reads a deed of `salt_on_credit`, and a `company` cause ends with its contract. A reader card is a question for Zoya and Stas, not a draft of mine (§16 item 4) |
+| The ridge woman, by the next contract | none | no carrier yet: no card reads a deed of `salt_on_credit`, and no recall is party-wide (rule 14). A reader card is a question for Zoya and Stas, not a draft of mine (§16 item 4) |
 
 ## 9. The narration judge
 
@@ -240,10 +241,10 @@ Sizes are my guess for Yan to price; row ids are his.
 | 7 | `table:` the run report and the exit rows | §10 | M | 5 |
 | 8 | `table:` the voice of a turned-away line | the DM voice skill and one bible example, drafted by Zoya | S | — |
 | 9 | `table:` the vote by words (separable) | D1's first answer, §12 line 1, the report's list of such votes | S | 5; §16 item 6 |
-| 10 | `table:` the `company` recall (separable) | rule 9's `company` reason, D10's second sentence | S | 4; §16 item 10 |
+| 10 | `table:` each seat remembers what it saw (separable) | rule 14: one line in the AI player prompt (`game/src/agents/player.ts`, "Speaking and notes") that a deed another seat did, as told, is worth a note | XS | 5 |
 | 11 | the exit pair | run 1, then Stas | — | 5 to 8 |
 
-PRs 9 and 10 can land after the stake PRs, or after the pair, and §16 items 6 and 10 do not block PRs 1 to 8. No exit row of §10 depends on either: `stake-came-back` is met by a `here`, `person` or `thread` recall, and `stake-answered` reads only the talk list. Until PR 9 lands, words that are a written choice are answered as today (the DM says so and the seat presses the button). Until PR 10 lands, a `company` cause is in `world.deeds` and in the judge's state but is not handed at later cards, so `stake-told` is at more risk on a run with a company stake.
+PRs 9 and 10 can land after the stake PRs, or after the pair, and neither blocks PRs 1 to 8. No exit row of §10 depends on either: `stake-came-back` is met by a `here`, `person` or `thread` recall, and `stake-answered` reads only the talk list. Until PR 9 lands, words that are a written choice are answered as today (the DM says so and the seat presses the button). Until PR 10 lands, an AI seat notes another's deed only when its own prompt already leads it to.
 
 Docs for the calling thread, not mine: the supersession marks on 0068, 0079 and 0081 once Stas accepts; Yan's rows.
 
@@ -259,6 +260,9 @@ Docs for the calling thread, not mine: the supersession marks on 0068, 0079 and 
 
 ## 16. Decisions for Stas
 
+Answered by Stas, 2026-11-14 20:31Z: «Да» to every recommendation below, and on item 10: «каждый игрок запоминает сам поступки других». Item 10 is replaced by rule 14; the rest stand as recommended. A Proposed record follows (item 1).
+
+
 1. **May an own-hands outcome close the card or start its fight, with no vote?** Recommended: yes, and never run a written choice (§4 table). It costs the company its say on a fight one seat started. The alternative, the card always waits, is the scene Vera was shown (§17): the toll still on the list after the tongue, and «в следующий раз… просто нажала бы «1»». With it goes D11: a card waits after an own act only when every choice left still makes sense. Real alternatives: a Proposed record follows your answer (this ask was for one file).
 2. **Do AI seats get the same rule?** Changed after Zoya's read: my first answer, one rule for every seat, let an AI seat start a fight for the human before he spoke, against the bible's "decides first". Recommended now: her amendment, rule 13 (an AI seat's own act cannot close a card or start its fight until the human has given a word or a stake on it), plus the table's cap of two stakes per AI seat per card. It costs one engine rule that knows the human's seat. The stricter alternative: an AI seat's own act never closes a card; then the all-AI half does not exercise the path.
 3. **A maiming is a kept sentence and moves no Hit Points; a killing is never a sentence and needs a fight.** Recommended: yes. Cost: a man with no fingers fights at full strength.
@@ -268,7 +272,7 @@ Docs for the calling thread, not mine: the supersession marks on 0068, 0079 and 
 7. **In a scene every stake is own hands; a scene has no vote.** Recommended: yes. I am following this rule where yours are silent.
 8. **Decided, 2026-11-14 19:39Z, recorded here and not a question:** a natural 20 on an own-move stake roll is a success even when the total misses the DC; stake rolls only; no natural-1 rule (a 1 keeps SRD behaviour, is marked `natural: 1` and told at its worst); the rule lives in core on `demo` as an opt-in flag, never in table code. It replaces "a 20 that misses is the best possible failure". Its cost is the second risk of §15.
 9. **No scope document.** Recommended: none; §1's goals stand in, and Yan writes rows from §14 once this is accepted (0083, Consequences).
-10. **A `company` cause is handed at every later card of its contract, as the company's own state.** Zoya reads this as against Consequence 2 ("only those who saw or heard react") and proposes limiting it to cards in the same zone. Recommended: keep it, with the change made in rule 9 and D10: the DM keeps it true and no stranger reacts to it. Limiting it by zone would let the telling forget who rides on the wagon one zone later. Her board has not read the changed rule.
+10. **Replaced by Stas's answer: each player remembers the others' deeds on their own (rule 14).** No party-wide or zone-wide recall. What was asked: whether a `company` cause is handed at every later card of its contract (recommended) or only in the same zone (Zoya). Both are gone; the seats that were at the table carry it, as Consequence 2 says ("only those who saw or heard react").
 
 ## 17. Vera and Zoya
 
@@ -294,7 +298,7 @@ Her line numbers are the first draft's.
 | 1 | The deed id is named a marker (§3). D10 is now a judge kind, `recall_untold`, not a count. "Recalled nowhere" in the report is the list of what is owed |
 | 2 | Checked on the files: true. Rule 9 gains `thread`, recall along the `if` links authors already wrote; eight cards read the bridge's deeds, `gwyn_news` among them, so the retelling keeps a carrier with no new ids |
 | 3, 4 | `thread` reaches four cards for the bog-wife and none for `salt_on_credit` (counted). The Highsteads and the next contract stay owed: §8, §16 item 4 |
-| 5 | Stays, changed: a `company` cause is state the DM keeps true, and no stranger reacts to it (rule 9, D10). Her zone limit is the alternative in §16 item 10 |
+| 5 | Resolved by Stas (§16 item 10): no party-wide recall and no zone limit; each seat remembers on its own (rule 14), which is her Consequence 2 "only those who saw or heard" |
 | 6 | Rule 8 now runs the `remember` and `add_card` beside the fight; "first in file order" counts nested effects |
 | 7, 8 | D8 covers every recall; D3 says "or a feeling"; her amendment is rule 13 and §16 item 2 follows it |
 | 9, 10 | The line is cut (Vera, below); §12 uses the card's text |
