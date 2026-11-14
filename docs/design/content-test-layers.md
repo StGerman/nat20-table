@@ -18,7 +18,7 @@ The gap is everything a live model decides. How the DM reads a player's words, w
 | Runs on milestone builds | 5 | 10 (3 of them 1-to-2-minute cheap runs) |
 | Run cost, USD | 35.45 | 44.29 |
 | Exit pairs played / passed | 3 / 1 | 3 / 0 |
-| Stas at the table, wall time | 1.09 h in 2 evenings | 3.09 h in 3 evenings (38.3 + 120.0 + 27.2 min; 81 of the 120 were the table waiting on Stas's own seat) |
+| Stas at the table, wall time | 1.09 h in 2 evenings | 3.09 h in 3 evenings (38.3 + 120.0 + 27.2 min; for 81 of the 120 the seat showed no prompt and no input came) |
 
 Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.json` of the ten runs `full-2026-11-12T19-02…` to `full-2026-11-14T01-42…` in nat20-runs `master` 65c0e7c; checked by Yan (§7). `docs/roadmap.md`'s own M12 row dates from 2026-11-11 and shows no runs; it is Yan's file and his next `roadmap` brings it up to these numbers.
 
@@ -28,12 +28,12 @@ Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.
 | 11-13 14:15 and 15:33 (2.19 + 8.54 USD) | 0 AI own moves in 28 card wakes, twice | a seat bench (§4, considered and not proposed): the card wakes alone; decision 0074 has since made this row reported, not gated |
 | 11-13 15:26 (8.83 USD) | void: played on a stale checkout with local changes | a slip in starting the run, not a test gap; outside this proposal |
 | 11-13 16:05 (5.70 USD, 120 min of Stas) | own move 0: Stas's real plan came between cards, where no own move exists, and the DM read all 4 of his card lines correctly. Two build defects also failed gating rows (a creature's name shown in English; a fight started on a neutral spent the retries). After the night the seat showed no options list and no prompt, and the run stood 81 minutes with no input and ended on the 120-minute limit, which failed row 1 and the rows that need the contract finished | own move: nothing, a person at the seat. The two build defects, and the missing prompt after a night: scripted loop and seat tests, which exist as a kind |
-| 11-13 21:16 (8.57 USD) | the all-AI half of pair 3. Its `verdict.json` says FAIL on the own-move row, because the report code still gates a row that decision 0074 made reported; the analysis reads the run as passed | the mismatch between the report code and 0074: a `verdict.test.ts` case. Listed so the ten runs add up, with the three cheap runs (1.01 USD) |
+| 11-13 21:16 (8.57 USD) | the all-AI half of pair 3. Its `verdict.json` says FAIL on the own-move row: the report code still gates a row that decision 0074 made reported. 0074 left that code unchanged on purpose on the pair 2 build; this is a later build. The analysis reads the run as passed | not a failure of content. Listed so the ten runs add up, with the three cheap runs (1.01 USD) |
 | 11-14 01:42 (6.95 USD, 27 min of Stas) | `bog_wifes_toll` has no failure the design allows for Stas's plan; `salt_on_credit` has no choice his plan could land on. Not gating: on `salt_on_credit` the DM narrated a refusal with no roll and remembered it as fact | nothing certain. A person trying lines on those two cards before the evening might have met the holes (§4) |
 
 M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-thread`) were fixed with scripted tests on main.
 
-**The honest tally.** Nothing considered here would have saved a run or an evening for certain on this record. Run 16:05 comes closest: three of its failures had a cause a scripted test can see, but its own-move row would have failed anyway. Both failed M12 exit evenings failed on a plan a person said: 01:42 in a design hole that table #381 proposes to close, 16:05 on a plan said between cards, which nothing proposed anywhere addresses. So this doc promises neither fewer evenings nor fewer dollars. It names one candidate: a way to try a player's line on one chosen card against the live DM, so that an evening is not the only place to find out that a plan has nowhere to land. In run 01:42 that took 16 minutes of play to reach.
+**The honest tally.** Nothing considered here would have saved a run or an evening for certain on this record. Run 16:05 comes closest: three of its failures had a cause a scripted test can see, and a seat test for the missing prompt would have given that evening back its last 81 minutes. Its own-move row had not passed when the seat stopped prompting; whether it would have is not known. Both failed M12 exit evenings failed on a plan a person said: 01:42 in a design hole that table #381 proposes to close, 16:05 on a plan said between cards, which nothing proposed anywhere addresses. So this doc promises neither fewer evenings nor fewer dollars. It names one candidate: a way to try a player's line on one chosen card against the live DM, so that an evening is not the only place to find out that a plan has nowhere to land. In run 01:42 that took 16 minutes of play to reach.
 
 ## 3. The rule
 
@@ -59,7 +59,7 @@ It is not designed, and this doc does not ask for it to be built. Review found t
 - **What a pass is.** A live DM is not deterministic; a case needs samples and a threshold, set from measured rates.
 - **Who runs it.** Decision 0036 keeps live calls on Stas's Mac, by his hand or through a Remote Control session he approves (blocked in practice so far); a cloud API key would need 0036 revisited. A cloud thread cannot run a case it adds.
 
-Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_words` wakes, 10 cost 0.04 to 0.06 USD and 3 cost 0.32 to 0.35 USD, the 3 with a cache write of about 60 thousand tokens. An all-AI run (21:16) is 8.57 USD and an evening of Stas 5.70 to 6.95 USD. So a bench line costs cents while the cache is warm, and dollars are not what decides this; the design work and Stas's review are.
+Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_words` wakes, 10 cost 0.04 to 0.06 USD and 3 cost 0.32 to 0.35 USD, the 3 with a cache write of about 60 thousand tokens. An all-AI run (21:16) is 8.57 USD and an evening of Stas 5.70 to 6.95 USD. Which of the two prices a bench line pays depends on the open points above (a fresh session for every line, or not), so no total is given.
 
 **Considered, not proposed.**
 - A seat bench (a card to the live AI players, counting what they do). Its one question so far, "do AI players ever call `own_move`?", stopped gating under 0074.
@@ -69,13 +69,14 @@ Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_word
 
 ## 5. Gates
 
-Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. Accepting the rule of §3 adds it to CLAUDE.md, so design authors read it. The line, under Rule 8: "Every exit row in a milestone design names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person. A run failure that a test with no model could have seen gets that test in the fix's PR (decision 0080)." If Stas accepts on the PR, this thread sets 0080 to Accepted and adds that line in this same PR before he merges.
+Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. Accepting the rule of §3 adds it to CLAUDE.md, so design authors read it. The line, under Rule 8: "Every exit row in a milestone design names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person. A run failure that a test with no model could have seen gets that test in the fix's PR (decision 0080)." If Stas accepts on the PR, this thread sets 0080 to Accepted and adds that line in this same PR before he merges, with the same sentence in `.claude/skills/yan/references/scope.md` and `.claude/skills/lev/references/design.md`, where exit rows and designs are drafted.
 
 ## 6. Questions for Stas
 
 1. Accept the rule of §3, as the CLAUDE.md line drafted in §5?
 2. Do you want the card bench designed: its own short system design, answering the open points of §4, with a cost, before any decision to build it? Or is the answer to your ask "the scripted layer is already there, and the rest is your evening"?
 3. If designed: for M13, after M12 closes? It needs the M12 stack on main either way.
+4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05), if table #379 does not already fix it; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan?
 
 ## 7. Yan's numbers (fallback agent, extract, 2026-11-14)
 
