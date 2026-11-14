@@ -15,10 +15,10 @@ The gap is everything a live model decides. How the DM reads a player's words, w
 
 | | M11 (baseline) | M12 so far (2026-11-14) |
 |---|---|---|
-| Runs on milestone builds | 5 | 10 (3 of them 1-to-2-minute cheap runs) |
+| Runs played | 5 | 10 (3 of them 1-to-2-minute cheap runs; 1 void, on a stale checkout) |
 | Run cost, USD | 35.45 | 44.29 |
 | Exit pairs played / passed | 3 / 1 | 3 / 0 |
-| Stas at the table, wall time | 1.09 h in 2 evenings | 3.09 h in 3 evenings (38.3 + 120.0 + 27.2 min; for 81 of the 120 the seat showed no prompt and no input came) |
+| Stas at the table, wall time | 1.09 h in 2 evenings | 3.09 h in 3 evenings (38.3 + 120.0 + 27.2 min; for 81 of the 120 Stas had stepped away and the table waited on his seat) |
 
 Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.json` of the ten runs `full-2026-11-12T19-02…` to `full-2026-11-14T01-42…` in nat20-runs `master` 65c0e7c; checked by Yan (§7). `docs/roadmap.md`'s own M12 row dates from 2026-11-11 and shows no runs; it is Yan's file and his next `roadmap` brings it up to these numbers.
 
@@ -27,22 +27,22 @@ Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl` and `run.
 | 11-12 19:02, Stas's trial (2.50 USD, 38 min) | not an exit half: a roster already spent by an earlier session | nothing proposed here |
 | 11-13 14:15 and 15:33 (2.19 + 8.54 USD) | 0 AI own moves in 28 card wakes, twice | a seat bench (§4, considered and not proposed): the card wakes alone; decision 0074 has since made this row reported, not gated |
 | 11-13 15:26 (8.83 USD) | void: played on a stale checkout with local changes | a slip in starting the run, not a test gap; outside this proposal |
-| 11-13 16:05 (5.70 USD, 120 min of Stas) | own move 0: Stas's real plan came between cards, where no own move exists, and the DM read all 4 of his card lines correctly. Two build defects also failed gating rows (a creature's name shown in English; a fight started on a neutral spent the retries). After the night the seat showed no options list and no prompt, and the run stood 81 minutes with no input and ended on the 120-minute limit, which failed row 1 and the rows that need the contract finished | own move: nothing, a person at the seat. The two build defects, and the missing prompt after a night: scripted loop and seat tests, which exist as a kind |
+| 11-13 16:05 (5.70 USD, 120 min of Stas) | own move 0: Stas's real plan came between cards, where no own move exists, and the DM read all 4 of his card lines correctly. Two build defects also failed gating rows (a creature's name shown in English; a fight started on a neutral spent the retries). At 16:44 Stas stepped away (his words, 19:20Z); the table waited on his seat for 81 minutes and the run ended on the 120-minute limit, which failed row 1 and the rows that need the contract finished. The analysis also flags, as minor, that after a night the seat shows no options list and no prompt | own move: nothing, a person at the seat. The two build defects: scripted loop tests, which exist as a kind. The time limit: nothing, the person left |
 | 11-13 21:16 (8.57 USD) | the all-AI half of pair 3. Its `verdict.json` says FAIL on the own-move row: the report code still gates a row that decision 0074 made reported. 0074 left that code unchanged on purpose on the pair 2 build; this is a later build. The analysis reads the run as passed | not a failure of content. Listed so the ten runs add up, with the three cheap runs (1.01 USD) |
 | 11-14 01:42 (6.95 USD, 27 min of Stas) | `bog_wifes_toll` has no failure the design allows for Stas's plan; `salt_on_credit` has no choice his plan could land on. Not gating: on `salt_on_credit` the DM narrated a refusal with no roll and remembered it as fact | nothing certain. A person trying lines on those two cards before the evening might have met the holes (§4) |
 
 M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-thread`) were fixed with scripted tests on main.
 
-**The honest tally.** Nothing considered here would have saved a run or an evening for certain on this record. Run 16:05 comes closest: three of its failures had a cause a scripted test can see, and a seat test for the missing prompt would have given that evening back its last 81 minutes. Its own-move row had not passed when the seat stopped prompting; whether it would have is not known. Both failed M12 exit evenings failed on a plan a person said: 01:42 in a design hole that table #381 proposes to close, 16:05 on a plan said between cards, which nothing proposed anywhere addresses. So this doc promises neither fewer evenings nor fewer dollars. It names one candidate: a way to try a player's line on one chosen card against the live DM, so that an evening is not the only place to find out that a plan has nowhere to land. In run 01:42 that took 16 minutes of play to reach.
+**The honest tally.** Nothing considered here would have saved a run or an evening for certain on this record. Run 16:05 comes closest: two of its failures had a cause a scripted test can see. But its own-move row stood at 0 on a plan said between cards, and its time limit fell after Stas stepped away with the contract unfinished, so that evening fails with those two tests in place as well. Both failed M12 exit evenings failed on a plan a person said: 01:42 in a design hole that table #381 proposes to close, 16:05 on a plan said between cards, which nothing proposed anywhere addresses. So this doc promises neither fewer evenings nor fewer dollars. It names one candidate: a way to try a player's line on one chosen card against the live DM, so that an evening is not the only place to find out that a plan has nowhere to land. In run 01:42 that took 16 minutes of play to reach.
 
 ## 3. The rule
 
 **A full run should not be the first place a defect is found, when a cheaper layer can see it.** This is already the practice for structure (§1); the rule makes it explicit.
 
-1. From the first milestone design written after acceptance, every exit row names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the contract (`play:scene`), a full run with its audit and judge, or "a person". The M12 and M13 designs are not amended.
+1. From the first milestone scope or design written after acceptance, every exit row names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the contract (`play:scene`), a full run with its audit and judge, or "a person". The M12 and M13 scopes and designs are not amended.
 2. From acceptance, for fix PRs opened after it: when a full run fails, the analysis says whether a test with no model could have seen it. If one could, the fix's PR adds it, as the M11 fixes did. The rerun the pair's rules require is still played.
 
-The record's own examples: run 16:05's two build defects (a creature's name in English, a fight started on a neutral) and its missing prompt after a night, all of a kind a scripted test sees.
+The record's own examples: run 16:05's two build defects (a creature's name in English, a fight started on a neutral) both of a kind a scripted test sees.
 
 ## 4. A candidate: the card bench
 
@@ -69,14 +69,14 @@ Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_word
 
 ## 5. Gates
 
-Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. Accepting the rule of §3 adds it to CLAUDE.md, so design authors read it. The line, under Rule 8: "Every exit row in a milestone design names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person. A run failure that a test with no model could have seen gets that test in the fix's PR (decision 0080)." If Stas accepts on the PR, this thread sets 0080 to Accepted and adds that line in this same PR before he merges, with the same sentence in `.claude/skills/yan/references/scope.md` and `.claude/skills/lev/references/design.md`, where exit rows and designs are drafted.
+Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. Accepting the rule of §3 adds it to CLAUDE.md, so scope and design authors read it. The line, under Rule 8: "In a milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the contract, a full run, or a person. When a full run fails on something a test with no model could have seen, the fix's PR adds that test, and the rerun is still played (decision 0080)." If Stas accepts on the PR, this thread sets 0080 to Accepted and adds that line in this same PR before he merges, with the same sentence in `.claude/skills/yan/references/scope.md` and `.claude/skills/lev/references/design.md`, where a scope's exit criterion and a design are drafted.
 
 ## 6. Questions for Stas
 
 1. Accept the rule of §3, as the CLAUDE.md line drafted in §5?
 2. Do you want the card bench designed: its own short system design, answering the open points of §4, with a cost, before any decision to build it? Or is the answer to your ask "the scripted layer is already there, and the rest is your evening"?
 3. If designed: for M13, after M12 closes? It needs the M12 stack on main either way.
-4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05), if table #379 does not already fix it; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan?
+4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05, a minor flag in its analysis), if table #379 does not already fix it; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan?
 
 ## 7. Yan's numbers (fallback agent, extract, 2026-11-14)
 
