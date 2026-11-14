@@ -23,7 +23,7 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 | --- | --- | --- | --- |
 | `own_move_set` with no `failure` | the server, when the DM puts the move on the card | the run report (moves with and without a failure), the verdict row | the move as a numbered choice in their own words (§1.6 of the design, unchanged) |
 | `own_move_ran {choice: null, roll}` | the server, when the move named no failure and the roll fails, the proposer is down, or the engine cannot roll | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line, the DM's one or two sentences, a line that the move did not work (draft, §12), the written choices again |
-| the pending card's own move, marked spent (`CardDm.own_move.spent`) | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) and the `own_move` command (`own_move_taken`) | no own-move line and no "Your move" choice on the card |
+| the pending card's own move, marked spent (world crate only; the views show it as `own_move` no longer among the choices) | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) and the `own_move` command (`own_move_taken`) | no own-move line and no "Your move" choice on the card |
 | the deed `own_move_<card>` | the world, whenever `own_move_ran` is logged, whatever it brought | the run report and the verdict row; no card in M12 | nowhere yet: owed on Zoya's board, left unread on purpose by decision 0068 |
 | `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move | nowhere; it is the check on rule 6 below |
 
@@ -53,10 +53,10 @@ No new owed row. A tried move writes the deed 0068 already owes, `own_move_<card
 - G2. With none, a failed roll or a downed proposer runs no choice and leaves the card on the table.
 - G3. For a move with no failure, `card_resolved` is logged only after the move's own roll succeeds, so no client sees such a card resolved and then waiting. (The success choice's own check may still error after it, as any choice's does today.) A move that names a failure keeps the accepted order (G6).
 - G4. One own move per card, tried or not.
-- G5. Nothing hidden reaches a player view (Rule 3): players learn of the fall from their own view (`CardPlayer.own_move.spent`, the card's choices) and, when there was one, the public roll; `success`, `failure` and the DC stay DM only.
+- G5. Nothing hidden reaches a player view (Rule 3): players learn of the fall from their own view (`own_move` set but no longer among the choices) and, when there was one, the public roll; `success`, `failure` and the DC stay DM only.
 - G6. A move that names a failure, and every fixture line recorded for one, is unchanged.
 
-**Proposal** (one PR, Rule 1 order; the next free version, dev.72 if it lands first): the shape is in the accepted design, §1.2 (command table, world crate, server, events, protocol §4.13, fixture cases, CHANGELOG line), not repeated here. In short: `own_move.failure` optional; `own_move_ran.choice` nullable; for a move with no failure the roll comes before `card_resolved`; no new event or reject reason; `CardDm.own_move` and `CardPlayer.own_move` gain `spent`. A new event (`own_move_fell`) was the alternative; the existing one already records "what the roll brought", and the verdict row reads it.
+**Proposal** (one PR, Rule 1 order; the next free version, dev.72 if it lands first): the shape is in the accepted design, §1.2 (command table, world crate, server, events, protocol §4.13, fixture cases, CHANGELOG line), not repeated here. In short: `own_move.failure` optional; `own_move_ran.choice` nullable; for a move with no failure the roll comes before `card_resolved`; no new event or reject reason; no new view field: a fallen move stays in both views and leaves the choices. A new event (`own_move_fell`) was the alternative; the existing one already records "what the roll brought", and the verdict row reads it.
 
 **Additive or breaking (Rule 2).** The request change is additive. Three response fields widen from a string to optional or null, which `check-breaking` will list; dev allows it with the CHANGELOG line.
 
