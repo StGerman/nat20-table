@@ -14,7 +14,7 @@ import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, t
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { BarkTools, cardDrawnLine, DmTools, HandTools, movedText, OWN_MOVE_RULE, PlayerTools, ReactionFloor, send } from "./tools.ts";
+import { BarkTools, cardDrawnLine, DmTools, HandTools, moveFell, movedText, OWN_MOVE_RULE, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import { usageBlock, type UsageLog } from "../usage.ts";
 import type { Language } from "../agents/language.ts";
 import { refusedRu, SEAT_WORDS, UI_WORDS, type SeatWords } from "./words.ts";
@@ -929,14 +929,14 @@ export class TableLoop {
     const actor = move?.actor ?? world?.card?.own_move?.actor ?? "the proposer";
     // The words come from this run's log; a card carried over a save and load has none.
     const words = move?.words ? ` («${move.words}»)` : "";
+    const failed = `${actor}'s own move${words} failed its roll: tell how the attempt falls short, in one or two sentences. The scene still answers: a person on the card, if there is one, reacts to the try, and a companion may speak.`;
     if (!waits) {
-      this.fellSettled = `${actor}'s own move${words} was never tried (${actor} is down or not here): say so in one sentence, with no roll for the move.`;
+      // Only a downed proposer's fall settles at once (design §1.8); a rolled one is told as rolled.
+      this.fellSettled = rolled ? failed : `${actor}'s own move${words} was never tried (${actor} is down or not here): say so in one sentence, with no roll for the move.`;
       return;
     }
     const up = rolled || (await this.isUp(actor));
-    const text = rolled
-      ? `${actor}'s own move${words} failed its roll: tell how the attempt falls short, in one or two sentences. The scene still answers: a person on the card, if there is one, reacts to the try, and a companion may speak.`
-      : `${actor}'s own move${words} was never tried (${up ? "the attempt could not be made" : `${actor} is down or not here`}): say so in one sentence, with no roll for the move.`;
+    const text = rolled ? failed : `${actor}'s own move${words} was never tried (${up ? "the attempt could not be made" : `${actor} is down or not here`}): say so in one sentence, with no roll for the move.`;
     await this.wakeDm(
       "road",
       undefined,
@@ -948,7 +948,8 @@ export class TableLoop {
     const card = (await this.dmWorld())?.card;
     const human = this.table.human;
     const owner = world && card?.target === "caravan" && !world.caravan.owner.includes(":") ? world.caravan.owner : undefined;
-    const asked = card?.id === id && human && (card.waiting_for.includes(human) || (owner === human && card.waiting_for.length === 0));
+    // A player owner is asked for the call once the freed Blades have advised again.
+    const asked = card?.id === id && human && (card.waiting_for.includes(human) || owner === human);
     if (asked && !this.table.ended) this.table.show({ kind: "info", title: this.words.onTheRoad, text: this.words.ownMoveFell(rolled) });
   }
 
@@ -1052,9 +1053,11 @@ export class TableLoop {
         this.table.fallbacks += 1;
         this.table.log("fallback", `${handle} gives no word on the road card: goes with the others (${choice})`, handle, { cause: this.causeOf(handle) });
         await send(this.table, handle, { cmd: "choose_card", actor: handle, choice }, () => `went with the others: ${choice}`);
+        if (await fell()) return true;
       }
     }
-    if (owner !== undefined) await this.ownerCard(card.id, owner);
+    // A fall on the owner's call starts a fresh round too.
+    if (owner !== undefined && (await this.ownerCard(card.id, owner))) return true;
     this.cardAsked.set(card.id, this.table.engine.logHead);
     return true;
   }
@@ -1063,13 +1066,13 @@ export class TableLoop {
    * A player owner's call on a caravan card, once every Blade has advised (S2): the human owner is
    * asked as on any card, an AI owner is woken; an owner who gives no word goes with the advice.
    */
-  private async ownerCard(id: string, owner: Handle): Promise<void> {
+  private async ownerCard(id: string, owner: Handle): Promise<boolean> {
     const ready = async () => {
       const now = (await this.dmWorld())?.card;
       return now && now.id === id && now.waiting_for.length === 0 && !this.table.ended ? now : undefined;
     };
     let now = await ready();
-    if (!now) return;
+    if (!now) return false;
     const human = this.table.human;
     const agent = this.agents.get(owner);
     const before = now;
@@ -1078,14 +1081,17 @@ export class TableLoop {
     } else if (agent) {
       await this.aiCard(agent, "Make the caravan's call", true);
     }
-    now = await ready();
     // A call for an own move that fell gets no fallback in this round (decision 0079).
-    if (!now || (!moveFell(before) && moveFell(now))) return;
+    const after = (await this.dmWorld())?.card;
+    if (!moveFell(before) && after?.id === id && moveFell(after)) return true;
+    now = await ready();
+    if (!now) return false;
     const { choices, preset } = cardChoices(now);
     const choice = choices[preset - 1].about!.id;
     this.table.fallbacks += 1;
     this.table.log("fallback", `${owner} makes no call on the road card: goes with the Blades' advice (${choice})`, owner, { cause: this.causeOf(owner) });
     await send(this.table, owner, { cmd: "choose_card", actor: owner, choice }, () => `went with the advice: ${choice}`);
+    return false;
   }
 
   /**
@@ -2648,11 +2654,6 @@ export function roadCardAhead(world: WorldDm | undefined): boolean {
 const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
 
 /** The AI players' own-move line in a card briefing (AGT-99), while the card has no own move. */
-/** A card whose own move fell (decision 0079): the move is still on it, and no longer among its choices. */
-export function moveFell(card: { own_move?: unknown; choices: Array<{ id: string }> }): boolean {
-  return Boolean(card.own_move) && !card.choices.some((c) => c.id === OWN_MOVE);
-}
-
 export const OWN_MOVE_INVITE = "The written choices are only the obvious ones: if your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move, in one sentence.";
 
 /** The engine's limit on an own move's words (API-56). */

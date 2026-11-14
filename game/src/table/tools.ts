@@ -305,7 +305,7 @@ export class PlayerTools {
     const card = r.result?.cmd === "get_state" && r.result.state.view === "player" ? r.result.state.world?.card : undefined;
     if (!card) return this.answer(notNow("no road card waits for your word"));
     // A move that fell is no longer among the choices (decision 0079): only a written choice is left.
-    if (card.own_move && !card.choices.some((c) => c.id === "own_move")) return this.answer(notNow("the card's own move was tried and fell: give your word on a written choice with choose_card"));
+    if (moveFell(card)) return this.answer(notNow("the card's own move was tried and fell: give your word on a written choice with choose_card"));
     if (card.own_move) return this.answer(notNow("the card already has an own move: give your word on it with choose_card"));
     if (card.said.some((s) => s.actor === this.me)) return this.answer(notNow("you have already given your word on this card"));
     if (!words.trim()) return this.answer(notNow("say in one sentence what your character does"));
@@ -1072,7 +1072,8 @@ export class DmTools {
   async ownMoveOrAnswer(narration: string, move?: { ability: Ability; skill: Skill; dc: number; success: string; failure?: string }): Promise<ToolOutcome> {
     const words = this.cardWords;
     if (!words) return notNow("no player's words on a road card wait for your answer");
-    if (move && words.answerOnly) {
+    const dropped = Boolean(move && words.answerOnly);
+    if (dropped) {
       this.table.log("system", `the card already has or had an own move: ${words.actor}'s words are only answered`, "table");
       move = undefined;
     }
@@ -1091,6 +1092,7 @@ export class DmTools {
     const said = await this.narrate(narration);
     if (!said.ok) return said;
     this.cardAnswer = narration;
+    if (dropped) return { ...said, text: `${said.text}; the card already has or had an own move, so this move is not sent: the words are only answered` };
     return already ? { ...said, text: `${said.text}; the own move you made first stays on the card, this move is not sent` } : said;
   }
 
@@ -1135,6 +1137,11 @@ export class DmTools {
     if (said.ok) this.table.end("the adventure is over");
     return said.ok ? { ok: true, text: "the adventure is over" } : said;
   }
+}
+
+/** A card whose own move fell (decision 0079): the move is still on it, and no longer among its choices. */
+export function moveFell(card: { own_move?: unknown; choices: Array<{ id: string }> }): boolean {
+  return Boolean(card.own_move) && !card.choices.some((c) => c.id === "own_move");
 }
 
 /** The own-move rule (decision 0079, design §1.8): in the road section and in the `card_words` wake. */
