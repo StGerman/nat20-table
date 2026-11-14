@@ -15,21 +15,6 @@
     ],
     "party": [
         {
-            "handle": "bren",
-            "seat": "human",
-            "card": "cards/bren.md",
-            "names": [
-                "Bren",
-                "Брен",
-                "Брена",
-                "Брену",
-                "Бреном",
-                "Брене"
-            ],
-            "name_ru": "Брен",
-            "_comment": "The human's seat by default; the card is for runs where an AI plays Bren."
-        },
-        {
             "handle": "torva",
             "seat": "ai",
             "card": "cards/torva.md",
@@ -43,7 +28,22 @@
                 "Торвой"
             ],
             "name_ru": "Торва",
-            "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped."
+            "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped. First in the party, so with no human at the table she is asked first on a road card (M12 exit run 1: Bren, asked first, took a written choice on all 7 cards and the others followed the first word on 27 of 28 votes). The order also sets the party_start anchors and who eats first in camp."
+        },
+        {
+            "handle": "bren",
+            "seat": "human",
+            "card": "cards/bren.md",
+            "names": [
+                "Bren",
+                "Брен",
+                "Брена",
+                "Брену",
+                "Бреном",
+                "Брене"
+            ],
+            "name_ru": "Брен",
+            "_comment": "The human's seat by default; the card is for runs where an AI plays Bren."
         },
         {
             "handle": "maren",
