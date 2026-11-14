@@ -1,6 +1,6 @@
 # Milestone 12 amendment: an own move when no choice fits
 
-Status: Proposed (2026-11-14). Amends `docs/design/m12-system-design.md` §1.1, §1.2, §1.4, §1.5, §1.8, §8 and §11; decision 0079 (Proposed) refines 0068. The direction is Stas's (exit run 2 thread, 2026-11-14 02:23Z); the shape is for him to accept or reject.
+Status: Proposed (2026-11-14). Amends `docs/design/m12-system-design.md` §1.1, §1.2, §1.4, §1.5, §1.6, §1.8, §8 and §11; decision 0079 (Proposed) refines 0068. The direction is Stas's (exit run 2 thread, 2026-11-14 02:23Z); the shape is for him to accept or reject.
 
 Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed drafts. The rule itself is folded into the accepted design in table #381 (§13); this file keeps the reasons, the contract goals, the PR list and the readers' quotes.
 
@@ -21,9 +21,9 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 
 | Fact | Who writes it, when | Who reads it | Where the player sees it |
 | --- | --- | --- | --- |
-| `own_move_set` with no `failure` | the server, when the DM puts the move on the card | the run report (moves with and without a failure), the verdict row | the move as a numbered choice in their own words (§1.6 of the design, unchanged) |
+| `own_move_set` with no `failure` | the server, when the DM puts the move on the card | the run report (moves with and without a failure), the verdict row | the move as a numbered choice in their own words (§1.6 of the design; its own-move line and the AI tool are gone once a card has or had a move) |
 | `own_move_ran {choice: null, roll}` | the server, when the move named no failure and the roll fails, the proposer is down, or the engine cannot roll | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line, the DM's one or two sentences, a line that the move did not work (draft, §12), the written choices again |
-| the pending card's own move, marked spent (world crate only; the views show it as `own_move` no longer among the choices) | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) and the `own_move` command (`own_move_taken`) | no own-move line and no "Your move" choice on the card |
+| the pending card's own move, marked spent (world crate only; the views show it as `own_move` no longer among the choices) | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) the `own_move` command (`own_move_taken`) and `choose_card {choice: "own_move"}` (`unknown_choice`) | no own-move line and no "Your move" choice on the card |
 | the deed `own_move_<card>` | the world, whenever `own_move_ran` is logged, whatever it brought | the run report and the verdict row; no card in M12 | nowhere yet: owed on Zoya's board, left unread on purpose by decision 0068 |
 | `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move | nowhere; it is the check on rule 6 below |
 
@@ -50,7 +50,7 @@ No new owed row. A tried move writes the deed 0068 already owes, `own_move_<card
 
 **Goals.**
 - G1. An own move may name no failure choice.
-- G2. With none, a failed roll or a downed proposer runs no choice and leaves the card on the table.
+- G2. With none, a failed roll, a downed proposer or an engine error at the roll runs no choice and leaves the card on the table, unless the words left settle it.
 - G3. For a move with no failure, `card_resolved` is logged only after the move's own roll succeeds, so no client sees such a card resolved and then waiting. (The success choice's own check may still error after it, as any choice's does today.) A move that names a failure keeps the accepted order (G6).
 - G4. One own move per card, tried or not.
 - G5. Nothing hidden reaches a player view (Rule 3): players learn of the fall from their own view (`own_move` set but no longer among the choices) and, when there was one, the public roll; `success`, `failure` and the DC stay DM only.
@@ -96,7 +96,7 @@ In order. Row ids, sizes and prices are Yan's.
 | PR | What it lands | Depends on |
 | --- | --- | --- |
 | 0 | This amendment and decision 0079, with §13 folded into the accepted design, Zoya's board check and Vera's read of the lines in §12 | - |
-| 1 | `own_move` without a failure on the wire: contract, protocol §4.13, the world crate's pending card, the server's roll-then-log, the fixture cases of design §1.2 (five new, the roster save and load after a fall among them), CHANGELOG | 0 accepted |
+| 1 | `own_move` without a failure on the wire: contract, protocol §4.13, the world crate's pending card, the server's roll-then-log, the fixture cases of design §1.2 (six new, the roster save and load after a fall among them), CHANGELOG | 0 accepted |
 | 2 | The same at the table: `own_move_or_answer`'s `move.failure` optional; the `card_words` rule in `dm.ts` and `loop.ts` (`cardWords`); the `remember` tool's description; the fall (a `road` wake tells it, the "did not work" line, the seats asked again); words on a card that already has a move are only answered; `seat-lines.ts` takes a null `choice` | 1 |
 | 3 | The run report and `m12-own-move`: §8 here, `wake` on `memory` records, the row's reading as Stas rules question 2 | 2 |
 | 4 | The seat's four lines (a) to (d), one commit each, with a Vera read of a `seat.jsonl` stretch | - |
@@ -125,7 +125,7 @@ For Vera, without this file:
 
 ## 13. Text for the accepted design
 
-Folded into `docs/design/m12-system-design.md` in table #381: §1.1 steps 3, 5, 6, 7; §1.2 (the command table, `bad_own_move`, world crate, server, events, protocol, fixture, CHANGELOG); §1.4; §1.5; §1.8 (the rule's three cases, the DM tool, a fall, what it costs, the deed, tests, the run report); §8 `m12-own-move`; §11. The design is the one statement; this file does not repeat it.
+Folded into `docs/design/m12-system-design.md` in table #381: §1.1 steps 3, 5, 6, 7; §1.2 (the command table, `bad_own_move`, world crate, server, events, protocol, fixture, CHANGELOG); §1.4; §1.5; §1.6 (the own-move line and the AI tool after a fall); §1.8 (the rule's three cases, the DM tool, a fall, what it costs, the deed, tests, the run report); §8 `m12-own-move`; §11. The design is the one statement; this file does not repeat it.
 
 ## 14. Risks
 
