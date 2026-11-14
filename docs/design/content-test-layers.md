@@ -39,6 +39,8 @@ Most of these needed one card, one state and one line, not an hour of play. Two 
 
 ## 3. The layers
 
+The own-move names below (`card_words`, `own_move`, `own_move_or_answer`) are from the M12 stack (table #346 to #381), not yet on main.
+
 | Layer | What it runs | Model calls | Where | Cost a run | Catches |
 |---|---|---|---|---|---|
 | L0 Deck lint | rules over deck, pack and world JSON | none | CI, every PR | 0 | holes in the content's structure |
@@ -54,9 +56,9 @@ Per-wake costs are means from `usage.jsonl` of the two ecd1f9e runs (`dm/card_wo
 
 `npm run pack:check` already loads a pack through the engine. L0 adds rules that today live only in Zoya's bible and in design prose, as code, with the commandment or design line each one enforces in its message:
 
-- **Own move has room** (M12 design §1.8, as amended by decision 0079 if accepted): for every card, the pair the design needs exists. On main's rule (two different choices, the failure never custom-breaking) a 20-line script over the 44 cards finds `peddler` today: 2 choices, 1 of them breaking. `bog_wifes_toll` needs the "deliberate act not asked for" mark that the design says "nothing can test"; the lint makes it testable by one optional boolean on a choice, or 0079 removes the need.
-- **A world card fits every quest** (bible, MAP-24 commandment 8): a card in `worlds/<id>/deck/` names no client, cargo or destination id of any `campaign.json`.
-- **A chain has no dead stretch and one path falls** (MAP-24 commandment 5): over the deed graph, no path of three cards in a row where the choice taken moves neither money nor standing, and at least one path loses and goes on.
+- **Own move has room** (M12 design §1.8, as amended by decision 0079 in table #381 if accepted): for every card, the pair the design needs exists. On main's rule (two different choices, the failure never custom-breaking) a 20-line script over the 44 cards finds `peddler` today: 2 choices, 1 of them breaking. `bog_wifes_toll` needs the "deliberate act not asked for" mark that the design says "nothing can test"; the lint makes it testable by one optional boolean on a choice, or 0079 removes the need.
+- **A world card fits every quest** (bible, Story-space commandment 8 as table #382 proposes it): a card in `worlds/<id>/deck/` names no client, cargo or destination id of any `campaign.json`.
+- **A chain has no dead stretch and one path falls** (Consequence commandment 5 as table #382 proposes it): over the deed graph, no path of three cards in a row where the choice taken moves neither money nor standing, and at least one path loses and goes on.
 - **Deeds come back** (Consequence 2): the list of deeds written and never read, as a number per pack. Reported, not gated: the board owns the debt. A throwaway count today: 122 written, 26 read by an `if` or `unless`.
 - **A choice names the action** and **2 or 3 choices**: shape rules the engine or Zoya's card test already has stay where they are; L0 only adds what no code checks.
 
@@ -106,7 +108,7 @@ Stas's run changes meaning. It is no longer the first live test of a mechanism; 
 | A fix after Stas's run | new build, both halves again | a lower-layer case + the fix; layers re-run; the all-AI run again only if the fix touches the loop, the contract or the engine; Stas again only for a row only he can rule |
 | Same build | both halves, always | the confirming run and Stas's evening start on one build; a later fix covered by a lower-layer case does not void them |
 
-This supersedes the "same build, both halves again" consequence of 0043 and narrows the exit pair of 0065. Rules 3 and 4, the audit and the judge do not change.
+If accepted, this supersedes the "same build, both halves again" consequence of 0043 and narrows the exit pair of 0065. Rules 3 and 4, the audit and the judge do not change.
 
 ## 5. Cost
 
