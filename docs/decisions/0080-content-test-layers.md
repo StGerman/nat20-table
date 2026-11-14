@@ -40,15 +40,15 @@ Why B: over A it costs a layer named beside each exit row, a test in the fix's P
 
 ## Consequences
 
-- From 2026-11-15, every exit row in a new milestone scope or design names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or "a person". The M12 and M13 scopes and designs predate it and are not amended.
-- From 2026-11-15: when a full run fails, its analysis says whether a test with no model could have seen it, and if one could, the fix's PR adds that test.
-- The rule is in CLAUDE.md under Rule 8, in the wording of design §5, and in Yan's scope reference and Lev's design reference, added in this PR on Stas's acceptance.
+- From 2026-11-15, every exit row in a milestone scope or design first drafted from that date names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or "a person". Scopes and designs drafted earlier (M12, M13, the Allies in fights scope) are not amended.
+- From 2026-11-15: when a full run fails, its analysis says whether a test with no model could have seen it, and if one could, the fix's PR adds that test. The rerun the pair's rules require is still played.
+- The rule is one bullet in CLAUDE.md under Rule 8, and its exit-row sentence is in Yan's scope reference and Lev's design reference, all added in this PR. Where a doc and CLAUDE.md differ on the wording, CLAUDE.md is the rule.
 - The card bench gets its own system design, in its own PR, to be tried on Milestone 13; no rows before that design is accepted. Making the bench a standing rule needs its own record after the trial.
 - No accepted decision and no scope changes.
 
 ## Revisit when
 
-At Milestone 13's close: Stas's 19:42Z words can also be read as putting this rule, and not only the bench, on trial for that milestone, so the close sweep reports what the bench and the rule's fix-PR half each caught, and he keeps or drops them. The exit-row half has nothing to show there: Milestone 13's scope and design predate it. And when a layer below the full run, the card bench or another, has caught a failure that a full run also showed (Yan's amendment, design §7): then option D is decided on that record. The rule itself is reopened when two milestone scopes or designs in a row name only "a full run" or "a person" beside every exit row: then it is changing nothing.
+At Milestone 13's close: Stas's 19:42Z words can also be read as putting this rule, and not only the bench, on trial for that milestone, so the close sweep reports what the bench and the rule's fix-PR half each caught, and he keeps or drops them. The exit-row half has nothing to show there: Milestone 13's scope and design were drafted before it. And when a layer below the full run, the card bench or another, has caught a failure that a full run also showed (Yan's amendment, design §7): then option D is decided on that record. The rule itself is reopened when two milestone scopes or designs in a row name only "a full run" or "a person" beside every exit row: then it is changing nothing.
 
 ## Sources
 

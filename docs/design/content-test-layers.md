@@ -1,6 +1,6 @@
 # Testing content below the exit pair: what exists, the gap, one candidate
 
-- **Status:** The rule of §3 accepted by Stas, 2026-11-14 16:59Z (decision 0080). At 19:42Z he answered the rest of §6: the card bench of §4 is designed and tried on Milestone 13, in its own design doc and PR, and the gaps of question 4 get rows (AGT-118, AGT-119). §1, §2 and §4 describe main as it stood at 07:00Z that day; Milestone 12 was merged and closed later the same day (decision 0082), and where that changed a fact the text says so
+- **Status:** The rule of §3 accepted by Stas, 2026-11-14 16:59Z (decision 0080); the CLAUDE.md line's wording, with its start date, is his when he merges table #383. At 19:42Z he answered the rest of §6: the card bench of §4 is designed and tried on Milestone 13, in its own design doc and PR, and the gaps of question 4 get rows (AGT-118, AGT-119). §1, §2 and §4 describe main as it stood at 07:00Z that day; Milestone 12 was merged and closed later the same day (decision 0082), and where that changed a fact the text says so
 - **Date:** 2026-11-14
 - **Decision:** `docs/decisions/0080-content-test-layers.md`
 - **Asked by:** Stas, 2026-11-14 06:55Z: the process "looks end-to-end, we need something closer to unit or component tests; be bold"
@@ -39,7 +39,7 @@ M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-
 
 **A full run should not be the first place a defect is found, when a cheaper layer can see it.** This is already the practice for structure (§1); the rule makes it explicit.
 
-1. From 2026-11-15, every exit row in a new milestone scope or design names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the exit run (`play:scene`), a full run with its audit and judge, or "a person". The M12 and M13 scopes and designs predate it and are not amended.
+1. From 2026-11-15, every exit row in a milestone scope or design first drafted from that date names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the exit run (`play:scene`), a full run with its audit and judge, or "a person". Scopes and designs drafted earlier (M12, M13, the Allies in fights scope) are not amended.
 2. From 2026-11-15: when a full run fails, the analysis says whether a test with no model could have seen it. If one could, the fix's PR adds it, as the M11 fixes did. The rerun the pair's rules require is still played.
 
 The record's own examples are run 16:05's two build defects, a creature's name in English and a fight started on a neutral: both are of a kind a scripted test sees.
@@ -69,11 +69,11 @@ Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_word
 
 ## 5. Gates
 
-Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. The accepted rule of §3 is in CLAUDE.md, so scope and design authors read it. The line, under Rule 8: "From 2026-11-15 (decision 0080): every exit row in a new milestone scope or design names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or a person. When a full run fails, its analysis says whether a test with no model could have seen it; if one could, the fix's PR adds that test, and the rerun is still played." Stas accepted it in the thread on 2026-11-14, so this PR sets 0080 to Accepted and adds that line, with its exit-row sentence in `.claude/skills/yan/references/scope.md` (for a scope) and `.claude/skills/lev/references/design.md` (for a design), where a scope's exit criterion and a design are drafted.
+Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. The accepted rule of §3 is in CLAUDE.md, so scope and design authors read it. The line is the bullet under Rule 8 that cites decision 0080; this doc does not repeat it. Stas accepted the rule in the thread on 2026-11-14 as two sentences quoted to him; the line adds a start date, the analysis step and "the rerun is still played", and those are his when he merges table #383. The exit-row sentence is also in `.claude/skills/yan/references/scope.md` (item 4) and `.claude/skills/lev/references/design.md` (item 11), where a scope's exit criterion and a design are drafted.
 
 ## 6. Questions for Stas
 
-1. Accept the rule of §3, as the CLAUDE.md line drafted in §5? **Answered 2026-11-14 16:59Z: yes, add it to CLAUDE.md.**
+1. Accept the rule of §3, as a line in CLAUDE.md? **Answered 2026-11-14 16:59Z: yes, add it to CLAUDE.md. The line's exact wording is accepted with the merge (§5).**
 2. Do you want the card bench designed: its own short system design, answering the open points of §4, with a cost, before any decision to build it? Or is the answer to your ask "the scripted layer is already there, and the rest is your evening"? **Answered 2026-11-14 19:42Z: design it and try it on M13; if it works, it becomes a standing rule («Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным»).**
 3. If designed: for M13, after M12 closes? It needs the M12 stack on main either way. **Answered with question 2: M13. The M12 stack is on main.**
 4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05, a minor flag in its analysis); table #379 was not checked for it when this was written; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan? **Answered 2026-11-14 19:42Z: yes. Yan wrote AGT-118 (the checkout check) and AGT-119 (the prompt after a night; the rows of table #379 and table #392 do not name it, and the row's first step is to confirm it on main). `peddler` gets no row: decision 0079, accepted since, makes the failure choice optional, so an own move lands there.**
