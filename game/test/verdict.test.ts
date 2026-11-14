@@ -82,6 +82,9 @@ test("an AI player's fallback after its retries ran out fails row 5; a timeout i
   assert.equal(spent.rows.find((r) => r.row === "5")?.status, "fail");
   const slow = computeVerdict(folder(runRecord(), [{ kind: "fallback", speaker: "dm", text: "the DM's narrate is skipped", cause: "timeout" }]));
   assert.equal(slow.verdict, "PASS", slow.why);
+  // A wake cut after its narration is reported apart, never as a fallback (AGT-97).
+  const cut = computeVerdict(folder(runRecord(), [{ kind: "fallback", speaker: "dm", text: "the DM's road ran out of time after its narration", cause: "cut_after_narration", wake: "road" }]));
+  assert.match(cut.rows.find((r) => r.row === "5")?.detail ?? "", /^fallbacks: none; wakes cut after their narration: 1 \(road\);/);
 });
 
 test("a human decision refused more than twice is a flag: pending until Stas answers, a fail if he confirms it", () => {

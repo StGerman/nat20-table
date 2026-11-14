@@ -494,6 +494,33 @@ test("two narrations made at once show each engine line once", async () => {
   assert.equal(t.table.transcript.records.filter((r) => r.channel === "dm" && r.text === loaded).length, 1);
 });
 
+test("a DM wake that runs out of time after its narration is logged as cut, not skipped (AGT-97)", async () => {
+  let first = true;
+  const { t } = await play({
+    seed: 27,
+    players: { maren: {} },
+    seat: seatThen([]),
+    dm: {
+      scene_open: async (tools) => {
+        await tools.narrate("The yard is quiet.");
+        if (first) {
+          first = false;
+          throw new TurnTimeout("dm: turn timed out");
+        }
+      },
+    },
+  });
+  const records = t.table.transcript.records;
+  const opening = records.find((r) => r.kind === "narration" && r.text === "The yard is quiet.");
+  assert.equal(opening?.wake, "scene_open");
+  const error = records.find((r) => r.kind === "error" && r.speaker === "dm");
+  assert.deepEqual([error?.wake, error?.narrated], ["scene_open", true]);
+  const cut = records.find((r) => r.kind === "fallback" && r.speaker === "dm");
+  assert.equal(cut?.cause, "cut_after_narration");
+  assert.match(cut?.text ?? "", /ran out of time after its narration/);
+  assert.ok(!records.some((r) => r.kind === "fallback" && /scene_open is skipped/.test(r.text)), "never logged as skipped");
+});
+
 // --- Reactions in a fight (party talk §5 R1, AGT-34) ------------------------------------------------
 
 test("in a fight, a salient event wakes every AI player who may react at once, and only the first line is heard", async () => {

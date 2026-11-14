@@ -1,6 +1,6 @@
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene s1_village_green","rolls":[],"log_head":2}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s1_village_green loaded in explore mode.","rolls":[],"log_head":2}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":2}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":2,"wake":"scene_open"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r3] bren rolls a Wisdom (Insight) check: 1d20 (19) +2 = 21 vs DC 12, success.","rolls":["r3"],"log_head":5}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's check succeeds.","rolls":[],"log_head":5}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Flag knows_miller_debt is set.","rolls":[],"log_head":5}
@@ -8,14 +8,14 @@
 {"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":5}
 {"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":5}
 {"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":5}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":5}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":5,"wake":"table_turn"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s2_mill_road loaded in explore mode.","rolls":[],"log_head":6}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene s2_mill_road","rolls":[],"log_head":6}
 {"at":"t","speaker":"bren","channel":"notes:bren","kind":"note","text":"summary: bren remembers the scene.","rolls":[],"log_head":6}
 {"at":"t","speaker":"torva","channel":"notes:torva","kind":"note","text":"summary: torva remembers the scene.","rolls":[],"log_head":6}
 {"at":"t","speaker":"maren","channel":"notes:maren","kind":"note","text":"summary: maren remembers the scene.","rolls":[],"log_head":6}
 {"at":"t","speaker":"ilsa","channel":"notes:ilsa","kind":"note","text":"summary: ilsa remembers the scene.","rolls":[],"log_head":6}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":6}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":6,"wake":"scene_open"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r7] bren rolls a Wisdom (Survival) check: 1d20 (16) +2 = 18 vs DC 12, success.","rolls":["r7"],"log_head":10}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's check succeeds.","rolls":[],"log_head":10}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r9] bren rolls a Wisdom (Perception) check: 1d20 (10) +2 = 12 vs DC 13, failure.","rolls":["r9"],"log_head":10}
@@ -24,14 +24,14 @@
 {"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":10}
 {"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":10}
 {"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":10}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":10}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":10,"wake":"table_turn"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s3_mill_yard loaded in explore mode.","rolls":[],"log_head":11}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene s3_mill_yard","rolls":[],"log_head":11}
 {"at":"t","speaker":"bren","channel":"notes:bren","kind":"note","text":"summary: bren remembers the scene.","rolls":[],"log_head":11}
 {"at":"t","speaker":"torva","channel":"notes:torva","kind":"note","text":"summary: torva remembers the scene.","rolls":[],"log_head":11}
 {"at":"t","speaker":"maren","channel":"notes:maren","kind":"note","text":"summary: maren remembers the scene.","rolls":[],"log_head":11}
 {"at":"t","speaker":"ilsa","channel":"notes:ilsa","kind":"note","text":"summary: ilsa remembers the scene.","rolls":[],"log_head":11}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Foes wait ahead.","rolls":[],"log_head":11}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Foes wait ahead.","rolls":[],"log_head":11,"wake":"scene_open"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat begins: wolf_3, goblin_2, torva, maren, wolf_2, goblin_3, goblin_4, wolf_1, ilsa, goblin_1, bren.","rolls":[],"log_head":39}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r13] wolf_3 rolls initiative: 1d20 (17) +2 = 19.","rolls":["r13"],"log_head":39}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r14] goblin_2 rolls initiative: 1d20 (15) +2 = 17.","rolls":["r14"],"log_head":39}
@@ -60,7 +60,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2's turn ends.","rolls":[],"log_head":39}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":39}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer prone.","rolls":[],"log_head":39}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":39}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":39,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on wolf_3.","rolls":[],"log_head":47}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r41] torva rolls an attack roll vs wolf_3: 2d20 (12, 17, kept 17) +5 = 22 vs AC 12, hit.","rolls":["r41"],"log_head":47}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r42] torva rolls bludgeoning damage:  +4 = 4.","rolls":["r42"],"log_head":47}
@@ -68,7 +68,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 has 7/11 Hit Points.","rolls":[],"log_head":47}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":47}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":47}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":47}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":47,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":47}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Guiding Bolt on goblin_1.","rolls":[],"log_head":79}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r49] maren rolls an attack roll vs goblin_1: 1d20 (15) +4 = 19 vs AC 15, hit.","rolls":["r49"],"log_head":79}
@@ -78,7 +78,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 is dead.","rolls":[],"log_head":79}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 is under Guiding Bolt from maren.","rolls":[],"log_head":79}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":79}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":79}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":79,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":79}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 moves.","rolls":[],"log_head":79}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn ends.","rolls":[],"log_head":79}
@@ -102,7 +102,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva has 1/23 Hit Points.","rolls":[],"log_head":79}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is now prone.","rolls":[],"log_head":79}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1's turn ends.","rolls":[],"log_head":79}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":79}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":79,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":79}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on wolf_1.","rolls":[],"log_head":88}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r81] ilsa rolls an attack roll vs wolf_1: 1d20 (16) +4 = 20 vs AC 12, hit.","rolls":["r81"],"log_head":88}
@@ -110,7 +110,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 takes 9 fire damage.","rolls":[],"log_head":88}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 has 2/11 Hit Points.","rolls":[],"log_head":88}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":88}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":88}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":88,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":88}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":115}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_1.","rolls":[],"log_head":115}
@@ -120,7 +120,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 has 0/11 Hit Points.","rolls":[],"log_head":115}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_1 is dead.","rolls":[],"log_head":115}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":115}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":115}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":115,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 2 begins.","rolls":[],"log_head":115}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":115}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 uses Wolf Bite attack on torva.","rolls":[],"log_head":115}
@@ -139,7 +139,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":115}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r113] torva rolls a death saving throw: 1d20 (1) = 1 vs DC 10, failure.","rolls":["r113"],"log_head":115}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":115}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":115}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":115,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":115}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Healing Word on torva.","rolls":[],"log_head":149}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r117] maren rolls healing: 2d4 (3, 3) +2 = 8.","rolls":["r117"],"log_head":149}
@@ -155,7 +155,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is dead.","rolls":[],"log_head":149}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is under Guiding Bolt from maren.","rolls":[],"log_head":149}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":149}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":149}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":149,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_1 is no longer under Guiding Bolt.","rolls":[],"log_head":149}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":149}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 uses Wolf Bite attack on bren.","rolls":[],"log_head":149}
@@ -173,22 +173,22 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Shortbow attack on maren.","rolls":[],"log_head":149}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r145] goblin_4 rolls an attack roll vs maren: 1d20 (5) +4 = 9 vs AC 18, miss.","rolls":["r145"],"log_head":149}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":149}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":149}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":149,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":149}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on wolf_3.","rolls":[],"log_head":156}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r151] ilsa rolls an attack roll vs wolf_3: 1d20 (4) +4 = 8 vs AC 12, miss.","rolls":["r151"],"log_head":156}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":156}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":156}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":156,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":156}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer prone.","rolls":[],"log_head":156}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":156}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":156,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_2.","rolls":[],"log_head":174}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r158] bren rolls an attack roll vs wolf_2: 1d20 (18) +5 = 23 vs AC 12, hit.","rolls":["r158"],"log_head":174}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r159] bren rolls slashing damage: 1d8 (2) +3 = 5.","rolls":["r159"],"log_head":174}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 takes 5 slashing damage.","rolls":[],"log_head":174}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 has 6/11 Hit Points.","rolls":[],"log_head":174}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":174}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":174}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":174,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 3 begins.","rolls":[],"log_head":174}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn.","rolls":[],"log_head":174}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 uses Wolf Bite attack on torva.","rolls":[],"log_head":174}
@@ -199,7 +199,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3's turn ends.","rolls":[],"log_head":174}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":174}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer prone.","rolls":[],"log_head":174}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":174}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":174,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on wolf_3.","rolls":[],"log_head":182}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r176] torva rolls an attack roll vs wolf_3: 2d20 (9, 19, kept 19) +5 = 24 vs AC 12, hit.","rolls":["r176"],"log_head":182}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r177] torva rolls bludgeoning damage:  +4 = 4.","rolls":["r177"],"log_head":182}
@@ -207,7 +207,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 has 3/11 Hit Points.","rolls":[],"log_head":182}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":182}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":182}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":182}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":182,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":182}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_3.","rolls":[],"log_head":214}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r184] goblin_3 rolls a Dexterity saving throw: 1d20 (2) +2 = 4 vs DC 12, failure.","rolls":["r184"],"log_head":214}
@@ -215,7 +215,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 takes 7 radiant damage.","rolls":[],"log_head":214}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 has 3/10 Hit Points.","rolls":[],"log_head":214}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":214}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":214}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":214,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_2 is no longer under Guiding Bolt.","rolls":[],"log_head":214}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":214}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 uses Wolf Bite attack on bren.","rolls":[],"log_head":214}
@@ -239,7 +239,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren takes 10 piercing damage.","rolls":[],"log_head":214}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren has 4/17 Hit Points.","rolls":[],"log_head":214}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":214}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":214}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":214,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":214}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on wolf_3.","rolls":[],"log_head":225}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r216] ilsa rolls an attack roll vs wolf_3: 1d20 (11) +4 = 15 vs AC 12, hit.","rolls":["r216"],"log_head":225}
@@ -248,29 +248,29 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 has 0/11 Hit Points.","rolls":[],"log_head":225}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_3 is dead.","rolls":[],"log_head":225}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":225}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":225}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":225,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":225}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer prone.","rolls":[],"log_head":225}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":225}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":225,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_2.","rolls":[],"log_head":235}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r227] bren rolls an attack roll vs wolf_2: 1d20 (3) +5 = 8 vs AC 12, miss.","rolls":["r227"],"log_head":235}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":235}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":235}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":235,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 4 begins.","rolls":[],"log_head":235}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":235}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Reckless Attack Advantage.","rolls":[],"log_head":235}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":235}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":235,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":241}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Dash.","rolls":[],"log_head":241}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Dash.","rolls":[],"log_head":241}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":241}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":241}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":241}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":241,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":241}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_3.","rolls":[],"log_head":265}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r243] goblin_3 rolls a Dexterity saving throw: 1d20 (12) +2 = 14 vs DC 12, success.","rolls":["r243"],"log_head":265}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":265}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":265}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":265,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2's turn.","rolls":[],"log_head":265}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 uses Wolf Bite attack on bren.","rolls":[],"log_head":265}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r247] wolf_2 rolls an attack roll vs bren: 1d20 (13) +4 = 17 vs AC 19, miss.","rolls":["r247"],"log_head":265}
@@ -289,18 +289,18 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Dash.","rolls":[],"log_head":265}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is now unconscious.","rolls":[],"log_head":265}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":265}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":265}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":265,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":265}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":266}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":267}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":267}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":267,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on wolf_2.","rolls":[],"log_head":276}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r269] ilsa rolls an attack roll vs wolf_2: 1d20 (15) +4 = 19 vs AC 12, hit.","rolls":["r269"],"log_head":276}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r270] ilsa rolls fire damage: 1d10 (2) = 2.","rolls":["r270"],"log_head":276}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 takes 2 fire damage.","rolls":[],"log_head":276}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 has 4/11 Hit Points.","rolls":[],"log_head":276}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":276}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":276}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":276,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":276}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Potion of Healing on torva.","rolls":[],"log_head":296}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren gives torva a Potion of Healing.","rolls":[],"log_head":296}
@@ -316,18 +316,18 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 has 0/11 Hit Points.","rolls":[],"log_head":296}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_2 is dead.","rolls":[],"log_head":296}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":296}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":296}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":296,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 5 begins.","rolls":[],"log_head":296}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":296}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":297}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":298}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":298}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":298,"wake":"narrate"}
 {"at":"t","speaker":"torva","channel":"run","kind":"retry","text":"torva: move refused: rejected (insufficient_resource): torva has no movement left this turn to get any closer.","rolls":[],"log_head":298}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Dash.","rolls":[],"log_head":303}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Dash.","rolls":[],"log_head":303}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":303}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":303}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":303}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":303,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":303}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_3.","rolls":[],"log_head":325}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r305] goblin_3 rolls a Dexterity saving throw: 1d20 (4) +2 = 6 vs DC 12, failure.","rolls":["r305"],"log_head":325}
@@ -335,7 +335,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 takes 1 radiant damage.","rolls":[],"log_head":325}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 has 2/10 Hit Points.","rolls":[],"log_head":325}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":325}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":325}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":325,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":325}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 uses Scimitar attack on torva.","rolls":[],"log_head":325}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r314] goblin_3 rolls an attack roll vs torva: 1d20 (10) +4 = 14 vs AC 13, hit.","rolls":["r314"],"log_head":325}
@@ -347,28 +347,28 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Scimitar attack on torva.","rolls":[],"log_head":325}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r321] goblin_4 rolls an attack roll vs torva: 1d20 (2) +4 = 6 vs AC 13, miss.","rolls":["r321"],"log_head":325}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":325}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":325}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":325,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":325}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":332}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_3.","rolls":[],"log_head":332}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r328] ilsa rolls an attack roll vs goblin_3: 1d20 (2) +4 = 6 vs AC 15, miss.","rolls":["r328"],"log_head":332}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":332}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":332}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":332,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":332}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":336}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Dash.","rolls":[],"log_head":336}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is under Dash.","rolls":[],"log_head":336}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":336}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":337}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":337}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":337,"wake":"narrate"}
 {"at":"t","speaker":"bren","channel":"run","kind":"retry","text":"bren: submit refused: unknown_option: dash is not one of bren's options right now; see legal_actions.","rolls":[],"log_head":338}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":346}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":346}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":346}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":346,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 6 begins.","rolls":[],"log_head":346}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":346}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Dash.","rolls":[],"log_head":346}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":346}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":346,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on goblin_4.","rolls":[],"log_head":354}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r348] torva rolls an attack roll vs goblin_4: 2d20 (19, 6, kept 19) +5 = 24 vs AC 15, hit.","rolls":["r348"],"log_head":354}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r349] torva rolls bludgeoning damage:  +4 = 4.","rolls":["r349"],"log_head":354}
@@ -376,12 +376,12 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 6/10 Hit Points.","rolls":[],"log_head":354}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":354}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":354}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":354}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":354,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":354}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_3.","rolls":[],"log_head":373}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r356] goblin_3 rolls a Dexterity saving throw: 1d20 (20) +2 = 22 vs DC 12, success.","rolls":["r356"],"log_head":373}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":373}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":373}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":373,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3's turn.","rolls":[],"log_head":373}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 uses Monster Nimble Escape.","rolls":[],"log_head":373}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 is under Disengage.","rolls":[],"log_head":373}
@@ -393,7 +393,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 uses Scimitar attack on bren.","rolls":[],"log_head":373}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r369] goblin_4 rolls an attack roll vs bren: 1d20 (11) +4 = 15 vs AC 19, miss.","rolls":["r369"],"log_head":373}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4's turn ends.","rolls":[],"log_head":373}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":373}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":373,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":373}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":384}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_3.","rolls":[],"log_head":384}
@@ -402,10 +402,10 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 takes 1 fire damage.","rolls":[],"log_head":384}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 has 1/10 Hit Points.","rolls":[],"log_head":384}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":384}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":384}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":384,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":384}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer under Dash.","rolls":[],"log_head":384}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":384}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":384,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on goblin_4.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r386] bren rolls an attack roll vs goblin_4: 1d20 (12) +5 = 17 vs AC 15, hit.","rolls":["r386"],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r387] bren rolls slashing damage: 1d8 (7) +3 = 10.","rolls":["r387"],"log_head":404}
@@ -413,23 +413,23 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 has 0/10 Hit Points.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_4 is dead.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":404}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":404}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":404,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 7 begins.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Reckless Attack Advantage.","rolls":[],"log_head":404}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":404}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":404,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 surrenders.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over: the other side surrendered.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva gains 87 XP, 387 in all.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren gains 87 XP, 387 in all.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa gains 87 XP, 387 in all.","rolls":[],"log_head":404}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren gains 87 XP, 387 in all.","rolls":[],"log_head":404}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The fight is over.","rolls":[],"log_head":404}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The fight is over.","rolls":[],"log_head":404,"wake":"combat_over"}
 {"at":"t","speaker":"bren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":404}
 {"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":404}
 {"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":404}
 {"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":404}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":404}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":404,"wake":"table_turn"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_3 is no longer under Disengage.","rolls":[],"log_head":406}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s4_captured_goblin loaded in explore mode.","rolls":[],"log_head":406}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene s4_captured_goblin","rolls":[],"log_head":406}
@@ -437,7 +437,7 @@
 {"at":"t","speaker":"torva","channel":"notes:torva","kind":"note","text":"summary: torva remembers the scene.","rolls":[],"log_head":406}
 {"at":"t","speaker":"maren","channel":"notes:maren","kind":"note","text":"summary: maren remembers the scene.","rolls":[],"log_head":406}
 {"at":"t","speaker":"ilsa","channel":"notes:ilsa","kind":"note","text":"summary: ilsa remembers the scene.","rolls":[],"log_head":406}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":406}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":406,"wake":"scene_open"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r407] bren rolls a d10 Hit Point Die: 1d10 (1) +2 = 3.","rolls":["r407"],"log_head":419}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren regains 3 Hit Points.","rolls":[],"log_head":419}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 7/20 Hit Points.","rolls":[],"log_head":419}
@@ -455,14 +455,14 @@
 {"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":419}
 {"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":419}
 {"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":419}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":419}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":419,"wake":"table_turn"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s5_mill_cellar loaded in explore mode.","rolls":[],"log_head":420}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene s5_mill_cellar","rolls":[],"log_head":420}
 {"at":"t","speaker":"bren","channel":"notes:bren","kind":"note","text":"summary: bren remembers the scene.","rolls":[],"log_head":420}
 {"at":"t","speaker":"torva","channel":"notes:torva","kind":"note","text":"summary: torva remembers the scene.","rolls":[],"log_head":420}
 {"at":"t","speaker":"maren","channel":"notes:maren","kind":"note","text":"summary: maren remembers the scene.","rolls":[],"log_head":420}
 {"at":"t","speaker":"ilsa","channel":"notes:ilsa","kind":"note","text":"summary: ilsa remembers the scene.","rolls":[],"log_head":420}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Foes wait ahead.","rolls":[],"log_head":420}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Foes wait ahead.","rolls":[],"log_head":420,"wake":"scene_open"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat begins: goblin_5, goblin_7, boss, bren, wolf_4, maren, ilsa, goblin_6, torva, wolf_5.","rolls":[],"log_head":447}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r422] goblin_5 rolls initiative: 1d20 (20) +2 = 22.","rolls":["r422"],"log_head":447}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r423] goblin_7 rolls initiative: 1d20 (19) +2 = 21.","rolls":["r423"],"log_head":447}
@@ -489,11 +489,11 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":447}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r445] boss rolls an attack roll vs bren: 1d20 (1) +4 = 5 vs AC 19, miss.","rolls":["r445"],"log_head":447}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":447}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":447}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":447,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":447}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":448}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":449}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":449}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":449,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_4.","rolls":[],"log_head":459}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r451] bren rolls an attack roll vs wolf_4: 1d20 (12) +5 = 17 vs AC 12, hit.","rolls":["r451"],"log_head":459}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r452] bren rolls slashing damage: 1d8 (8) +3 = 11.","rolls":["r452"],"log_head":459}
@@ -501,17 +501,17 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_4 has 0/11 Hit Points.","rolls":[],"log_head":459}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_4 is dead.","rolls":[],"log_head":459}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":459}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":459}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":459,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":459}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on boss.","rolls":[],"log_head":463}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r461] boss rolls a Dexterity saving throw: 1d20 (14) +2 = 16 vs DC 12, success.","rolls":["r461"],"log_head":463}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":463}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":463}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":463,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":463}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_7.","rolls":[],"log_head":474}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r465] ilsa rolls an attack roll vs goblin_7: 1d20 (2) +4 = 6 vs AC 15, miss.","rolls":["r465"],"log_head":474}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":474}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":474}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":474,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn.","rolls":[],"log_head":474}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 uses Shortbow attack on bren.","rolls":[],"log_head":474}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r469] goblin_6 rolls an attack roll vs bren: 1d20 (20) +4 = 24 vs AC 19, critical hit.","rolls":["r469"],"log_head":474}
@@ -519,7 +519,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren takes 6 piercing damage.","rolls":[],"log_head":474}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 1/20 Hit Points.","rolls":[],"log_head":474}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn ends.","rolls":[],"log_head":474}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":474}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":474,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":474}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":516}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on wolf_5.","rolls":[],"log_head":516}
@@ -529,7 +529,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_5 has 7/11 Hit Points.","rolls":[],"log_head":516}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":516}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":516}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":516}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":516,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_5's turn.","rolls":[],"log_head":516}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_5 uses Wolf Bite attack on torva.","rolls":[],"log_head":516}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r485] wolf_5 rolls an attack roll vs torva: 2d20 (11, 4, kept 11) +4 = 15 vs AC 13, hit.","rolls":["r485"],"log_head":516}
@@ -564,7 +564,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 1/20 Hit Points.","rolls":[],"log_head":516}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is conscious.","rolls":[],"log_head":516}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is no longer unconscious.","rolls":[],"log_head":516}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":516}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":516,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":527}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on wolf_5.","rolls":[],"log_head":527}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r519] bren rolls an attack roll vs wolf_5: 1d20 (7) +5 = 12 vs AC 12, hit.","rolls":["r519"],"log_head":527}
@@ -573,12 +573,12 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_5 has 0/11 Hit Points.","rolls":[],"log_head":527}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"wolf_5 is dead.","rolls":[],"log_head":527}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":527}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":527}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":527,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":527}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_5.","rolls":[],"log_head":531}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r529] goblin_5 rolls a Dexterity saving throw: 1d20 (16) +2 = 18 vs DC 12, success.","rolls":["r529"],"log_head":531}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":531}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":531}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":531,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":531}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_6.","rolls":[],"log_head":544}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r533] ilsa rolls an attack roll vs goblin_6: 1d20 (19) +4 = 23 vs AC 15, hit.","rolls":["r533"],"log_head":544}
@@ -586,7 +586,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 takes 5 fire damage.","rolls":[],"log_head":544}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 has 5/10 Hit Points.","rolls":[],"log_head":544}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":544}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":544}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":544,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn.","rolls":[],"log_head":544}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 uses Shortbow attack on bren.","rolls":[],"log_head":544}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r540] goblin_6 rolls an attack roll vs bren: 1d20 (13) +4 = 17 vs AC 19, miss.","rolls":["r540"],"log_head":544}
@@ -594,7 +594,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":544}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer under Reckless Attack Advantage.","rolls":[],"log_head":544}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer prone.","rolls":[],"log_head":544}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":544}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":544,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":584}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on goblin_6.","rolls":[],"log_head":584}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r547] torva rolls an attack roll vs goblin_6: 2d20 (18, 17, kept 18) +5 = 23 vs AC 15, hit.","rolls":["r547"],"log_head":584}
@@ -603,7 +603,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 has 1/10 Hit Points.","rolls":[],"log_head":584}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":584}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":584}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":584}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":584,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 3 begins.","rolls":[],"log_head":584}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_5's turn.","rolls":[],"log_head":584}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_5 uses Shortbow attack on bren.","rolls":[],"log_head":584}
@@ -631,7 +631,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":584}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r580] bren rolls a death saving throw: 1d20 (10) = 10 vs DC 10, success.","rolls":["r580"],"log_head":584}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":584}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":584}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":584,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":584}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_5.","rolls":[],"log_head":591}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r586] goblin_5 rolls a Dexterity saving throw: 1d20 (8) +2 = 10 vs DC 12, failure.","rolls":["r586"],"log_head":591}
@@ -639,12 +639,12 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_5 takes 7 radiant damage.","rolls":[],"log_head":591}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_5 has 3/10 Hit Points.","rolls":[],"log_head":591}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":591}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":591}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":591,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":591}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_7.","rolls":[],"log_head":618}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r593] ilsa rolls an attack roll vs goblin_7: 1d20 (1) +4 = 5 vs AC 15, miss.","rolls":["r593"],"log_head":618}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":618}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":618}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":618,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn.","rolls":[],"log_head":618}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn ends.","rolls":[],"log_head":618}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 4 begins.","rolls":[],"log_head":618}
@@ -664,7 +664,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":618}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r614] bren rolls a death saving throw: 1d20 (13) = 13 vs DC 10, success.","rolls":["r614"],"log_head":618}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":618}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":618}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":618,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":618}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_5.","rolls":[],"log_head":626}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r620] goblin_5 rolls a Dexterity saving throw: 1d20 (3) +2 = 5 vs DC 12, failure.","rolls":["r620"],"log_head":626}
@@ -673,7 +673,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_5 has 0/10 Hit Points.","rolls":[],"log_head":626}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_5 is dead.","rolls":[],"log_head":626}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":626}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":626}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":626,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":626}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_7.","rolls":[],"log_head":657}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r628] ilsa rolls an attack roll vs goblin_7: 1d20 (19) +4 = 23 vs AC 15, hit.","rolls":["r628"],"log_head":657}
@@ -681,7 +681,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_7 takes 1 fire damage.","rolls":[],"log_head":657}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_7 has 9/10 Hit Points.","rolls":[],"log_head":657}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":657}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":657}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":657,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn.","rolls":[],"log_head":657}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn ends.","rolls":[],"log_head":657}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 5 begins.","rolls":[],"log_head":657}
@@ -700,7 +700,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":657}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r653] bren rolls a death saving throw: 1d20 (1) = 1 vs DC 10, failure.","rolls":["r653"],"log_head":657}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":657}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":657}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":657,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":657}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_7.","rolls":[],"log_head":664}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r659] goblin_7 rolls a Dexterity saving throw: 1d20 (6) +2 = 8 vs DC 12, failure.","rolls":["r659"],"log_head":664}
@@ -708,12 +708,12 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_7 takes 3 radiant damage.","rolls":[],"log_head":664}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_7 has 6/10 Hit Points.","rolls":[],"log_head":664}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":664}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":664}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":664,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":664}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_7.","rolls":[],"log_head":690}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r666] ilsa rolls an attack roll vs goblin_7: 1d20 (3) +4 = 7 vs AC 15, miss.","rolls":["r666"],"log_head":690}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":690}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":690}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":690,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn.","rolls":[],"log_head":690}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn ends.","rolls":[],"log_head":690}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 6 begins.","rolls":[],"log_head":690}
@@ -730,7 +730,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r685] bren rolls a death saving throw: 1d20 (10) = 10 vs DC 10, success.","rolls":["r685"],"log_head":690}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren is stable.","rolls":[],"log_head":690}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":690}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":690}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":690,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":690}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_7.","rolls":[],"log_head":697}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r692] goblin_7 rolls a Dexterity saving throw: 1d20 (4) +2 = 6 vs DC 12, failure.","rolls":["r692"],"log_head":697}
@@ -738,12 +738,12 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_7 takes 2 radiant damage.","rolls":[],"log_head":697}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_7 has 4/10 Hit Points.","rolls":[],"log_head":697}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":697}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":697}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":697,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":697}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_7.","rolls":[],"log_head":722}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r699] ilsa rolls an attack roll vs goblin_7: 1d20 (4) +4 = 8 vs AC 15, miss.","rolls":["r699"],"log_head":722}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":722}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":722}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":722,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn.","rolls":[],"log_head":722}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn ends.","rolls":[],"log_head":722}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 7 begins.","rolls":[],"log_head":722}
@@ -759,12 +759,12 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":722}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":722}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":722}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":722}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":722,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":722}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on goblin_7.","rolls":[],"log_head":726}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r724] goblin_7 rolls a Dexterity saving throw: 1d20 (17) +2 = 19 vs DC 12, success.","rolls":["r724"],"log_head":726}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":726}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":726}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":726,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":726}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_7.","rolls":[],"log_head":751}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r728] ilsa rolls an attack roll vs goblin_7: 1d20 (17) +4 = 21 vs AC 15, hit.","rolls":["r728"],"log_head":751}
@@ -773,7 +773,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_7 has 0/10 Hit Points.","rolls":[],"log_head":751}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_7 is dead.","rolls":[],"log_head":751}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":751}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":751}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":751,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn.","rolls":[],"log_head":751}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn ends.","rolls":[],"log_head":751}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 8 begins.","rolls":[],"log_head":751}
@@ -786,7 +786,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":751}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":752}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":753}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":753}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":753,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Potion of Healing on bren.","rolls":[],"log_head":764}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren gives bren a Potion of Healing.","rolls":[],"log_head":764}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r756] maren rolls healing: 2d4 (2, 4) +2 = 8.","rolls":["r756"],"log_head":764}
@@ -797,14 +797,14 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on boss.","rolls":[],"log_head":764}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r762] boss rolls a Dexterity saving throw: 1d20 (11) +2 = 13 vs DC 12, success.","rolls":["r762"],"log_head":764}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":764}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":764}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":764,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":764}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":768}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Dash.","rolls":[],"log_head":768}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is under Dash.","rolls":[],"log_head":768}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":768}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":769}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":769}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":769,"wake":"narrate"}
 {"at":"t","speaker":"ilsa","channel":"run","kind":"retry","text":"ilsa: submit refused: unknown_option: dash is not one of ilsa's options right now; see legal_actions.","rolls":[],"log_head":777}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Potion of Healing on torva.","rolls":[],"log_head":786}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa gives torva a Potion of Healing.","rolls":[],"log_head":786}
@@ -815,7 +815,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is no longer unconscious.","rolls":[],"log_head":786}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":786}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":786}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":786}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":786,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn.","rolls":[],"log_head":786}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 uses Monster Nimble Escape.","rolls":[],"log_head":786}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 is under Disengage.","rolls":[],"log_head":786}
@@ -823,16 +823,16 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 uses Shortbow attack on ilsa.","rolls":[],"log_head":786}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r784] goblin_6 rolls an attack roll vs ilsa: 1d20 (6) +4 = 10 vs AC 11, miss.","rolls":["r784"],"log_head":786}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6's turn ends.","rolls":[],"log_head":786}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":786}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":786,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":786}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":787}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva moves.","rolls":[],"log_head":788}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":788}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":788,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva uses Barbarian Reckless Attack (Unarmed) on boss.","rolls":[],"log_head":817}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r790] torva rolls an attack roll vs boss: 2d20 (1, 11, kept 11) +5 = 16 vs AC 17, miss.","rolls":["r790"],"log_head":817}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva is under Reckless Attack Advantage.","rolls":[],"log_head":817}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":817}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":817}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":817,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 9 begins.","rolls":[],"log_head":817}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn.","rolls":[],"log_head":817}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Scimitar attack on torva.","rolls":[],"log_head":817}
@@ -851,24 +851,24 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Shortbow attack on bren.","rolls":[],"log_head":817}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r815] boss rolls an attack roll vs bren: 1d20 (7) +4 = 11 vs AC 19, miss.","rolls":["r815"],"log_head":817}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":817}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":817}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":817,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":817}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":824}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on boss.","rolls":[],"log_head":824}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r820] bren rolls an attack roll vs boss: 1d20 (11) +5 = 16 vs AC 17, miss.","rolls":["r820"],"log_head":824}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":824}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":824}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":824,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":824}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":825}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren moves.","rolls":[],"log_head":826}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":826}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":826,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren uses Sacred Flame on boss.","rolls":[],"log_head":831}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r828] boss rolls a Dexterity saving throw: 1d20 (11) +2 = 13 vs DC 12, success.","rolls":["r828"],"log_head":831}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":831}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":831}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":831,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":831}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is no longer under Dash.","rolls":[],"log_head":831}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":831}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":831,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on goblin_6.","rolls":[],"log_head":863}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r833] ilsa rolls an attack roll vs goblin_6: 1d20 (20) +4 = 24 vs AC 15, critical hit.","rolls":["r833"],"log_head":863}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r834] ilsa rolls critical fire damage: 2d10 (1, 4) = 5.","rolls":["r834"],"log_head":863}
@@ -877,7 +877,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 is dead.","rolls":[],"log_head":863}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"goblin_6 is no longer under Disengage.","rolls":[],"log_head":863}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":863}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":863}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":863,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 10 begins.","rolls":[],"log_head":863}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":863}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r844] torva rolls a death saving throw: 1d20 (12) = 12 vs DC 10, success.","rolls":["r844"],"log_head":863}
@@ -893,7 +893,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren is unconscious.","rolls":[],"log_head":863}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren is now unconscious.","rolls":[],"log_head":863}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":863}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":863}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":863,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":863}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on boss.","rolls":[],"log_head":875}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r865] bren rolls an attack roll vs boss: 1d20 (18) +5 = 23 vs AC 17, hit.","rolls":["r865"],"log_head":875}
@@ -901,22 +901,22 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss takes 11 slashing damage.","rolls":[],"log_head":875}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss has 10/21 Hit Points.","rolls":[],"log_head":875}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":875}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":875}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":875,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":875}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r873] maren rolls a death saving throw: 1d20 (15) = 15 vs DC 10, success.","rolls":["r873"],"log_head":875}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":875}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":875}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":875,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":875}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":898}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on boss.","rolls":[],"log_head":898}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r878] ilsa rolls an attack roll vs boss: 1d20 (11) +4 = 15 vs AC 17, miss.","rolls":["r878"],"log_head":898}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":898}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":898}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":898,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 11 begins.","rolls":[],"log_head":898}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":898}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r884] torva rolls a death saving throw: 1d20 (5) = 5 vs DC 10, failure.","rolls":["r884"],"log_head":898}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":898}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":898}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":898,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn.","rolls":[],"log_head":898}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Monster Nimble Escape.","rolls":[],"log_head":898}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is under Disengage.","rolls":[],"log_head":898}
@@ -928,29 +928,29 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r900] boss rolls an attack roll vs ilsa: 1d20 (10) +4 = 14 vs AC 16, miss.","rolls":["r900"],"log_head":903}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is under Shield.","rolls":[],"log_head":903}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":903}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":903}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":903,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":903}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":914}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on boss.","rolls":[],"log_head":914}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r906] bren rolls an attack roll vs boss: 1d20 (3) +5 = 8 vs AC 17, miss.","rolls":["r906"],"log_head":914}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn ends.","rolls":[],"log_head":914}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":914}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":914,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn.","rolls":[],"log_head":914}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r911] maren rolls a death saving throw: 1d20 (14) = 14 vs DC 10, success.","rolls":["r911"],"log_head":914}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren's turn ends.","rolls":[],"log_head":914}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn.","rolls":[],"log_head":914}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is no longer under Shield.","rolls":[],"log_head":914}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":914}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":914,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa moves.","rolls":[],"log_head":938}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa uses Fire Bolt on boss.","rolls":[],"log_head":938}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r917] ilsa rolls an attack roll vs boss: 1d20 (5) +4 = 9 vs AC 17, miss.","rolls":["r917"],"log_head":938}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa's turn ends.","rolls":[],"log_head":938}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":938}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":938,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Round 12 begins.","rolls":[],"log_head":938}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn.","rolls":[],"log_head":938}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r923] torva rolls a death saving throw: 1d20 (4) = 4 vs DC 10, failure.","rolls":["r923"],"log_head":938}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva's turn ends.","rolls":[],"log_head":938}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":938}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":938,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn.","rolls":[],"log_head":938}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is no longer under Disengage.","rolls":[],"log_head":938}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss uses Monster Nimble Escape.","rolls":[],"log_head":938}
@@ -966,7 +966,7 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa has 6/14 Hit Points.","rolls":[],"log_head":946}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is under Shield.","rolls":[],"log_head":946}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss's turn ends.","rolls":[],"log_head":946}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":946}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":946,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren's turn.","rolls":[],"log_head":946}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren moves.","rolls":[],"log_head":959}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren uses Longsword attack on boss.","rolls":[],"log_head":959}
@@ -976,18 +976,18 @@
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss has 0/21 Hit Points.","rolls":[],"log_head":959}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is dead.","rolls":[],"log_head":959}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"boss is no longer under Disengage.","rolls":[],"log_head":959}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":959}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"Steel and teeth flash.","rolls":[],"log_head":959,"wake":"narrate"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Combat is over. The party side wins.","rolls":[],"log_head":959}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren gains 112 XP, 499 in all.","rolls":[],"log_head":959}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"maren gains 112 XP, 499 in all.","rolls":[],"log_head":959}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa gains 112 XP, 499 in all.","rolls":[],"log_head":959}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"torva gains 112 XP, 499 in all.","rolls":[],"log_head":959}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The fight is over.","rolls":[],"log_head":959}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The fight is over.","rolls":[],"log_head":959,"wake":"combat_over"}
 {"at":"t","speaker":"bren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":959}
 {"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":959}
 {"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":959}
 {"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":959}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":959}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"You move on.","rolls":[],"log_head":959,"wake":"table_turn"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"ilsa is no longer under Shield.","rolls":[],"log_head":961}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"Scene s6_wrap_up loaded in explore mode.","rolls":[],"log_head":961}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"scene s6_wrap_up","rolls":[],"log_head":961}
@@ -995,7 +995,7 @@
 {"at":"t","speaker":"torva","channel":"notes:torva","kind":"note","text":"summary: torva remembers the scene.","rolls":[],"log_head":961}
 {"at":"t","speaker":"maren","channel":"notes:maren","kind":"note","text":"summary: maren remembers the scene.","rolls":[],"log_head":961}
 {"at":"t","speaker":"ilsa","channel":"notes:ilsa","kind":"note","text":"summary: ilsa remembers the scene.","rolls":[],"log_head":961}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":961}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"A new place opens before you.","rolls":[],"log_head":961,"wake":"scene_open"}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"[r962] bren rolls a d10 Hit Point Die: 1d10 (10) +2 = 12.","rolls":["r962"],"log_head":968}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren regains 12 Hit Points.","rolls":[],"log_head":968}
 {"at":"t","speaker":"engine","channel":"dm","kind":"engine","text":"bren has 16/20 Hit Points.","rolls":[],"log_head":968}
@@ -1007,5 +1007,5 @@
 {"at":"t","speaker":"torva","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":968}
 {"at":"t","speaker":"maren","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":968}
 {"at":"t","speaker":"ilsa","channel":"run","kind":"hand","text":"PASS","rolls":[],"log_head":968}
-{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The road ends here.","rolls":[],"log_head":968}
+{"at":"t","speaker":"dm","channel":"table","kind":"narration","text":"The road ends here.","rolls":[],"log_head":968,"wake":"table_turn"}
 {"at":"t","speaker":"table","channel":"run","kind":"system","text":"run ended: the adventure is over","rolls":[],"log_head":968}
