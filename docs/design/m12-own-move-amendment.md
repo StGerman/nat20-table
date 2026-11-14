@@ -35,7 +35,7 @@ The one statement is the first bullet of §1.8 in the accepted design. As tests:
 
 1. `own_move` with no `failure` is accepted when `success` is offered on the card; every refusal of today stands.
 2. For a move with no `failure`, `card_resolved` is logged only after a successful roll. A failed roll, or a downed proposer (`roll: null`), logs `own_move_ran` with `choice: null` and no `card_resolved`; the card is still on the table.
-3. After that fall: every word given for `own_move` is taken back (advice included) and the other words stand; on a player owner's card the owner may call again at once; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the card is then settled by `choose_card` exactly as a card with no own move would be (one word per seat, the tally as today).
+3. After that fall: every word given for `own_move` is taken back (advice included) and the other words stand; on a player owner's card the freed Blades advise again before the owner calls; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the card is then settled by `choose_card` exactly as a card with no own move would be (one word per seat, the tally as today).
 4. The deed `own_move_<card>` is in the deed book after every `own_move_ran`, with the `by` §1.5 of the design gives (the seats whose word was for `own_move`, or the owner alone on an owner's call).
 5. A move that names a `failure` replays the accepted fixture byte for byte.
 6. Not testable, so counted (§8 here): a narration from a `card_words` wake that put no move on the card tells no outcome, and no `remember` in that wake keeps one.
@@ -51,12 +51,12 @@ No new owed row. A tried move writes the deed 0068 already owes, `own_move_<card
 **Goals.**
 - G1. An own move may name no failure choice.
 - G2. With none, a failed roll or a downed proposer runs no choice and leaves the card on the table.
-- G3. For a move with no failure, `card_resolved` is logged only when a choice is certain to run, so no client sees such a card resolved and then waiting. A move that names a failure keeps the accepted order (G6).
+- G3. For a move with no failure, `card_resolved` is logged only after the move's own roll succeeds, so no client sees such a card resolved and then waiting. (The success choice's own check may still error after it, as any choice's does today.) A move that names a failure keeps the accepted order (G6).
 - G4. One own move per card, tried or not.
 - G5. Nothing hidden reaches a player view (Rule 3): players learn of the fall from the public roll and from the card's choices; `success`, `failure` and the DC stay DM only.
 - G6. A move that names a failure, and every fixture line recorded for one, is unchanged.
 
-**Proposal** (one PR, Rule 1 order; the next free version, dev.72 if it lands first): the shape is in the accepted design, §1.2 (command table, world crate, server, events, protocol §4.13, fixture cases, CHANGELOG line), not repeated here. In short: `own_move.failure` optional; `own_move_ran.choice` nullable; for a move with no failure the roll comes before `card_resolved`; no new event, view field or reject reason. A new event (`own_move_fell`) was the alternative; the existing one already records "what the roll brought", and the verdict row reads it.
+**Proposal** (one PR, Rule 1 order; the next free version, dev.72 if it lands first): the shape is in the accepted design, §1.2 (command table, world crate, server, events, protocol §4.13, fixture cases, CHANGELOG line), not repeated here. In short: `own_move.failure` optional; `own_move_ran.choice` nullable; for a move with no failure the roll comes before `card_resolved`; no new event or reject reason; `CardDm.own_move` gains `tried`. A new event (`own_move_fell`) was the alternative; the existing one already records "what the roll brought", and the verdict row reads it.
 
 **Additive or breaking (Rule 2).** The request change is additive. Three response fields widen from a string to optional or null, which `check-breaking` will list; dev allows it with the CHANGELOG line.
 
