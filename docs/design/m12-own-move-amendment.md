@@ -107,7 +107,7 @@ In order. Row ids, sizes and prices are Yan's.
 
 On one build that carries PRs 1 to 4, the all-AI run first (decision 0066), then Stas's:
 - `m12-own-move` passes as design §8 reads it: on a card decided by the run's own move, or on a move that fell once the card is settled on a written choice (question 2);
-- for every move with no failure in either run, the log holds the order of rule 2, and a fall is followed by the card settled on a written choice;
+- for every move with no failure in either run, the log holds the order of rule 2, and a fall runs no choice for the move: the card goes back to the seats, or settles at once on a written choice;
 - the §8 list is in both reports, and Stas has read run 2's for an outcome ruled in words;
 - in run 2's `seat.jsonl`: no "road still waits" line after an answered word, each card's text once, no "toll" or «пошлин» on any card payment, for any payer, in either language, no Second Wind line on the road at full Hit Points;
 - the Vera fallback reads from `seat.jsonl` a card where words were answered and, if the run has one, a fall; her answer is quoted verbatim.
