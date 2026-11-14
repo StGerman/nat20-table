@@ -59,6 +59,7 @@ A, with the same deed and no result in it, and answers only for words no choice 
 
 - One more contract version in dev (dev.72 if it lands first): `own_move.failure` becomes optional; `own_move_ran.choice` is `null` when no choice ran; for such a move `card_resolved` on `own_move` is logged after the roll and only on a success. A move that names a failure behaves and replays as before.
 - 0068's sentences "the success and failure choices must be two different choices" and "a failure decides the card" now hold only for a move that names a failure. One own move per card stays, tried or not.
+- 0068's Revisit line "a reader for the deed, which needs the player's words or the result in it" narrows to the words: the deed carries no result (Stas, amendment §15 question 1).
 - The DM prompt's `card_words` rule and the `remember` tool's description change; no code can test what a narration rules, so the run report lists every answer that made no move, with the words and any fact the DM kept in that wake, and every fact kept with `remember` in a wake that told a fall.
 - Exit row 2 counts a move that fell, whether the card then waited or was settled at once by the words left (Stas, amendment §15 question 2): a departure from scope §4 row 2 (design §10 item 12).
 - A fall leaves nothing in the world's record that a success does not: the deed is the same, and only the run's own log (`own_move_ran` with `choice: null`) tells them apart. What a fall brings is the roll, the DM's one or two sentences and the written choice the table then picks (amendment §15.1). Zoya folds her board row for a fall into the `own_move_<card>` row, which stays owed (amendment §16, follow-up).
@@ -67,7 +68,7 @@ A, with the same deed and no result in it, and answers only for words no choice 
 ## Revisit when
 
 - An exit run shows the DM leaving the failure out where a choice plainly is what failing brings, in more than half of the own moves made: then B's simplicity is being paid for anyway, and B is the honest rule.
-- The report's list shows a plan no choice could carry on two runs in a row: then the plain table line, or a card change, is due.
+- The report's list shows two plans no choice could carry in one exit pair's reports: then the plain table line, or a card change, is due.
 - The dramaturg mechanism designs a reader for `own_move_<card>`: it carries the player's words first (the deed stays one id, Stas, 2026-11-14), and whether the result travels with the words is that design's question: it forbids telling the result, or asks Stas (amendment §15.1).
 
 ## Sources
