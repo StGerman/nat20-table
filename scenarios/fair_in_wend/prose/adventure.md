@@ -1,16 +1,16 @@
 # Fair in Wend
 
-A living-world sandbox for four level 2 or 3 characters, about three game days and up to two hours of play: an escort contract down the Wend valley, from the hill farms to the autumn fair. The setting is in the shared lore (`the_wend_valley.md`); the map, the road cards and the people of each place belong to the world (`worlds/wend/`), not to this pack.
+A living-world sandbox for four level 2 or 3 characters, about four game days and up to two hours of play: an escort contract down the Wend valley, from the hill farms to the autumn fair. The setting is in the shared lore (`the_wend_valley.md`); the map, the road cards and the people of each place belong to the world (`worlds/wend/`), not to this pack.
 
 ## What the party is told
 
-Odda Vell, a grain factor from Saltmouth, buys the Highsteads' wheat every autumn and sells it at the Saltmouth fair. This year the hill folk talk of goblins on the move, and her usual drover has gone home with a broken arm. She has hired the Grey Lantern company as Hired Blades to see her wagon safe to the fair: two gold pieces a day each, one day paid now, the rest when the wagon stands on the fair ground. The contract is made on an evening at the Highsteads. The road runs down the slope track to Wendford, then along the river road to Saltmouth: a night here, a long day or two on the road, and the fair on the third day.
+Odda Vell, a grain factor from Saltmouth, buys the Highsteads' wheat every autumn and sells it at the Saltmouth fair. This year the hill folk talk of goblins on the move, and her usual drover has gone home with a broken arm. She has hired the Grey Lantern company as Hired Blades to see her wagon safe to the fair: two gold pieces a day each, one day paid now, the rest when the wagon stands on the fair ground. The contract is made on an evening at the Highsteads. The road runs down the slope track to Wendford, then along the river road to Saltmouth: a night here, two nights on the road, and the fair on the fourth day.
 
 ## The truth (DM only)
 
 - Odda is honest and careful with coin. The contract is exactly what she said, and she pays it in full when the wagon arrives. A Blade who falls on the road is paid for the days served; she says so if asked.
 - The goblins moving south are hungry, not hunting the party. They watch the slope track and take what is easy. The road cards bring them, and the wolves and men of the river road, as the engine draws them.
-- Nobody on the road knows more about the Hollow King than the rumour in the lore. The Barrow Oak is a place the hill folk avoid; it is a hook for a later adventure, not for this one, and the route does not go there.
+- Nobody on the road knows more about the Hollow King than the rumour in the lore. The Barrow Oak is a place the hill folk avoid, except to push a copper into its roots; it is a hook for a later adventure, not for this one, and the route does not go there.
 
 ## Running this pack
 

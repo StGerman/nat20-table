@@ -148,6 +148,7 @@ fn wend() -> World {
         vec![
             "wendford".into(),
             "millbeck_bridge".into(),
+            "midwend".into(),
             "wendmouth".into(),
         ],
         caravan,
@@ -166,7 +167,7 @@ fn the_first_leg_down_from_wendford_always_meets_the_millbeck_toll_once() {
         .travel(Some("millbeck_bridge"), Pace::Normal, false)
         .unwrap();
     assert!(leg.arrived);
-    assert_eq!(leg.miles, 8);
+    assert_eq!(leg.miles, 12);
     // The Millbeck zone holds the toll card alone: any roll draws it.
     let mut dice = nat20_world::ListDice::new([100]);
     let card = world.draw_after_leg("bridge_road", &mut dice).unwrap();
@@ -187,9 +188,7 @@ fn the_river_road_below_the_bridge_draws_a_lowland_card() {
     world
         .travel(Some("millbeck_bridge"), Pace::Normal, false)
         .unwrap();
-    world
-        .travel(Some("wendmouth"), Pace::Normal, false)
-        .unwrap();
+    world.travel(Some("midwend"), Pace::Normal, false).unwrap();
     let mut dice = nat20_world::ListDice::new([1, 1, 1]);
     let nat20_world::Drawn::Offered(cards) = world.draw_after_leg("river_road", &mut dice).unwrap()
     else {
@@ -202,18 +201,30 @@ fn the_river_road_below_the_bridge_draws_a_lowland_card() {
 }
 
 #[test]
-fn wendmouth_is_a_day_downriver_by_wagon() {
+fn wendmouth_is_two_days_downriver_by_wagon() {
     let mut world = wend();
     let to_bridge = world
         .travel(Some("millbeck_bridge"), Pace::Normal, false)
         .unwrap();
+    assert_eq!(to_bridge.miles, 12);
+    // A normal day is 24 miles: 12 are left, short of Midwend's 14.
+    let short = world.travel(Some("midwend"), Pace::Normal, false).unwrap();
+    assert!(!short.arrived);
+    assert_eq!(short.miles, 12);
+    assert_eq!(world.miles_left_today(Pace::Normal), 0);
+    world.pass_night(world.night_minutes());
+    let to_midwend = world.travel(None, Pace::Normal, false).unwrap();
+    assert!(to_midwend.arrived);
     let leg = world
         .travel(Some("wendmouth"), Pace::Normal, false)
         .unwrap();
     assert!(leg.arrived);
-    assert_eq!(to_bridge.miles + leg.miles, 20);
-    // A normal day is 24 miles; 4 are left.
-    assert_eq!(world.miles_left_today(Pace::Normal), 4);
+    assert_eq!(
+        to_bridge.miles + short.miles + to_midwend.miles + leg.miles,
+        40
+    );
+    // 2 + 14 of the second day's 24; 8 are left.
+    assert_eq!(world.miles_left_today(Pace::Normal), 8);
 }
 
 #[test]
@@ -245,6 +256,12 @@ fn only_the_valley_floor_is_known_at_the_start() {
     known.sort_unstable();
     assert_eq!(
         known,
-        ["millbeck_bridge", "pells_mill", "wendford", "wendmouth"]
+        [
+            "midwend",
+            "millbeck_bridge",
+            "pells_mill",
+            "wendford",
+            "wendmouth"
+        ]
     );
 }

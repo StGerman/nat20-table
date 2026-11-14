@@ -6,8 +6,8 @@
 
 **Wants.** The salt in the hills before the slaughter, dry; his wool in the spring from farms that can still pay. This autumn the goblins took the flocks, and he is afraid half of them can't.
 
-**Knows and tells.** Every farm on the slopes and what each owes him. That salt is dear this year and he doesn't know why either; the price at the quay went up and he paid it. That Rufus buys hill farmers' debts, and that he, Fenn, gives credit instead, and that this is not the same as being kind.
+**Knows and tells.** Every farm on the slopes and what each owes him. That salt is dear this year: the price at the salt house went up and he paid it. That Rufus buys hill farmers' debts, and that he, Fenn, gives credit instead, and that this is not the same as being kind.
 
-**Hides.** That he can't afford many more unpaid springs. That he has never once refused a farm with children on it, and that this year he means to.
+**Hides.** That he can't afford many more unpaid springs. That he has never once refused a farm with children on it, and that this year he means to. Why salt is dear (the lore): every Saltmouth dealer knows, and one who talks the town's business up the valley loses his welcome at the salt house, so he never says it.
 
 **On the cards.** On a caravan card he asks the Blades what they think, listens, and nearly always does what most of them say. He will not leave the wagon, the salt or the iron behind for anyone; if a card offers it, he says no and says why.
