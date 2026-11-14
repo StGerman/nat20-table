@@ -257,11 +257,11 @@ export function lateCalls(usage: UsageRecord[]): Map<string, number> {
 
 const partyOf = (run: RunRecord): Handle[] => [...(run.seats.human ? [run.seats.human] : []), ...run.seats.ai];
 
-/** The report's Milestone 12 section: every own move, the words that found none, p95 against pair 3, the late calls, and the opening and first card. */
+/** The report's Milestone 12 section: the DM's voice (AGT-102), every own move, the words that found none, p95 against pair 3, the late calls, and the opening and first card. */
 export function exitReport(run: RunRecord, log: Event[], transcript: TranscriptRecord[], usage: UsageRecord[]): string[] {
   if (!log.some((e) => e.kind === "card_shown")) return [];
   const moves = ownMovesMet(log, transcript, partyOf(run));
-  const out = ["", "## Not a passenger", "", `Own moves put on a card: ${moves.length}`];
+  const out = ["", "## Not a passenger", "", `Voice: ${run.settings.voice?.value ?? "plain (no voice setting in this run)"}`, `Own moves put on a card: ${moves.length}`];
   moves.forEach((m, i) => {
     const roll = m.roll === null ? "no roll (the proposer was down, or the roll could not be made)" : m.roll ? `${m.roll.id}, ${m.roll.outcome}` : "not rolled";
     const place = m.place > 1 || m.later ? ` (move ${m.place} on the card${m.earlier.length > 0 ? `; earlier ways: ${m.earlier.map((x) => `${x.skill} for ${x.success}`).join(", ")}` : ""})` : "";
