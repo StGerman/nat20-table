@@ -13,7 +13,7 @@ A card, a DM prompt line and a player prompt line are first tested by a whole pl
 - once because Stas's real plan came between cards, where no own move exists;
 - once because a card has no failure the design allows, and another has no choice a plan could land on.
 
-The first and the last needed one card, one state and one line to show; the third needed a person. The constraint is Stas's hours and the subscription's limits (0065), and a full run spends both.
+The first needed only the card wakes to show. The second needed a person. Of the third, a rule over the deck JSON finds the first card, and the second needed a plan nobody had written down. The constraint is Stas's hours and the subscription's limits (0065), and a full run spends both.
 
 ## Options
 
@@ -27,8 +27,8 @@ The first and the last needed one card, one state and one line to show; the thir
 
 ### C. Layers below the run, and the run only confirms
 - Deck lint and a scripted contract walk in CI; a DM bench and a seat bench on demand (one card, one state, one line, the live model); one all-AI confirming run; one evening of Stas at milestone close. Every full-run failure becomes a lower-layer case before any rerun. A fix that a lower-layer case covers does not void the runs already played.
-- Pro: Stas plays once, to rule what only a person can (about 0.45 h a milestone against 1.09 and 3.09); a bench answers in minutes for about 0.1 USD a case; the golden set starts from his own 13 recorded lines.
-- Con: 5 to 6 PRs into a queue of 22 open ones before it pays; the dollar saving is small (8 to 15 USD a milestone); benches draw on the subscription; "same build" stops being absolute, so a fix can ride on a bench that missed something; two of M12's findings needed a person, so one evening can still fail.
+- Pro: Stas plays one evening a milestone (0.5 to 2 h) instead of one for every pair attempt (3 evenings and 3.09 h in M12); a bench answers in minutes for about 0.1 USD a case; the golden set starts from his own 13 recorded lines.
+- Con: 5 to 6 PRs into a queue of 22 open ones before it pays; no dollar saving (benches cost about what the runs they replace cost); on a milestone that would have passed its first pair, nothing is saved; benches are live calls, so by 0036 Stas runs them on his Mac; "same build" stops being absolute, so a fix can ride on a bench that missed something; two of M12's findings needed a person, so one evening can still fail.
 
 ### D. C without Stas's evening as a gate
 - Pro: cheapest.
@@ -40,7 +40,8 @@ Proposed: C. Design: `docs/design/content-test-layers.md`.
 
 ## Consequences
 
-- A layer joins a gate only after a backtest: it catches a recorded M11 or M12 failure on the build that had it (Yan's amendment).
+- A layer joins a gate only after a backtest: it catches a recorded M11 or M12 failure on the build that had it (Yan's amendment). This holds for L3 too.
+- Decision 0036 stands: benches run on Stas's Mac. A cloud bench would need its own record superseding 0036.
 
 - Every exit row in a milestone's design doc names its lowest layer; a row gates on a full run only when no lower layer can see it.
 - New commands and CI steps (deck lint, contract walk, `bench:dm`, `bench:seat`); rows only after Stas accepts.

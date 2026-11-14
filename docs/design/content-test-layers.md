@@ -35,7 +35,7 @@ Most of these needed one card, one state and one line, not an hour of play. Two 
 **A defect is caught at the cheapest layer that can see it. A full run confirms; it does not discover.** Two consequences:
 
 1. Every exit row of a milestone names its lowest layer in the design doc. A row may gate on a full run only when no lower layer can see it.
-2. Every failure a full run does find becomes a case at a lower layer before the next full run starts. A rerun without a new lower-layer case is not allowed: it is how M12 spent four runs on one row.
+2. Every failure a full run does find becomes a case at a lower layer before the next full run starts. A rerun without a new lower-layer case is not allowed: it is how M12 spent four runs on one row. The one exception is a row only a person can rule (§3, L5): it has no lower layer, the design doc says so beside the row, and Stas's evening is played again.
 
 ## 3. The layers
 
@@ -56,7 +56,7 @@ Per-wake costs are means from `usage.jsonl` of the two ecd1f9e runs (`dm/card_wo
 
 `npm run pack:check` already loads a pack through the engine. L0 adds rules that today live only in Zoya's bible and in design prose, as code, with the commandment or design line each one enforces in its message:
 
-- **Own move has room** (M12 design §1.8, as amended by decision 0079 in table #381 if accepted): for every card, the pair the design needs exists. On main's rule (two different choices, the failure never custom-breaking) a 20-line script over the 44 cards finds `peddler` today: 2 choices, 1 of them breaking. `bog_wifes_toll` needs the "deliberate act not asked for" mark that the design says "nothing can test"; the lint makes it testable by one optional boolean on a choice, or 0079 removes the need.
+- **Own move has room** (M12 design §1.4 for the failure rule and §1.8 for the pair, as amended by decision 0079 in table #381 if accepted): for every card, the pair the design needs exists. On main's rule (two different choices, the failure never custom-breaking) a 20-line script over the 44 cards finds `peddler` today: 2 choices, 1 of them breaking. `bog_wifes_toll` needs the "deliberate act not asked for" mark that the design says "nothing can test"; the lint makes it testable by one optional boolean on a choice, or 0079 removes the need.
 - **A world card fits every quest** (bible, Story-space commandment 8 as table #382 proposes it): a card in `worlds/<id>/deck/` names no client, cargo or destination id of any `campaign.json`.
 - **A chain has no dead stretch and one path falls** (Consequence commandment 5 as table #382 proposes it): over the deed graph, no path of three cards in a row where the choice taken moves neither money nor standing, and at least one path loses and goes on.
 - **Deeds come back** (Consequence 2): the list of deeds written and never read, as a number per pack. Reported, not gated: the board owns the debt. A throwaway count today: 122 written, 26 read by an `if` or `unless`.
@@ -121,21 +121,23 @@ If accepted, this supersedes the "same build, both halves again" consequence of 
 | Gates into CLAUDE.md, the roadmap's Delivery columns, the design-doc template | 1 | docs only, with the decision accepted |
 | **Total** | **5 to 6 table PRs** | no core PR, no contract change expected |
 
-Yan's estimate (§8), per milestone, with three bench passes of each kind paid back (about 14 USD):
+Per milestone, from the doc's own prices. A bench pass of each kind is about 5.5 USD at one sample a case (L2 about 2.5, L3 about 3) and about 10 USD at the three samples §3 proposes; three passes of each are 16.5 to 30 USD. Yan's estimate (§8) priced them at about 14 USD; the table uses the wider range.
 
-| Shape | Run cost today | Proposed | Stas at the table today | Proposed |
+| Shape | Run cost today | Proposed: runs + benches | Stas at the table today | Proposed |
 |---|---|---|---|---|
-| M11 (3 pairs, 1 passed) | 35.45 USD | about 27 USD | 1.09 h | about 0.45 h |
-| M12 so far (3 pairs, 0 passed) | 44.29 USD | about 29 USD | 3.09 h | about 0.45 h |
+| M11 (3 pairs, 1 passed) | 35.45 USD | 13.65 + 16.5 to 30 = about 30 to 44 USD | 1.09 h in 2 evenings | 1 evening, 0.5 to 2 h |
+| M12 so far (3 pairs, 0 passed) | 44.29 USD | 14.6 + 16.5 to 30 = about 31 to 45 USD | 3.09 h in 3 evenings | 1 evening, 0.5 to 2 h |
 
-The saving in dollars is small: 8 to 15 USD a milestone. The saving that matters is Stas's hours (three evenings become one) and the calendar: a bench answers in minutes and needs nobody at the seat. The price is 5 to 6 more PRs in a review queue that already holds 22 open table PRs; Stas's review hours a PR have no baseline, so that cost is not priced.
+**There is no dollar saving to promise.** Benches cost about what the runs they replace cost. What changes is where the hours go: three evenings become one when the layers catch what they claim, and a bench answers in minutes with nobody at the seat. On a milestone shaped like M11 a single long evening can cost Stas more table time than today (2 h against 1.09 h); the gain is real only on a milestone shaped like M12. The recorded evenings on a working build were 27 and 39 minutes; 0.45 h in §8 is the shortest of them, not an estimate.
+
+The price is 5 to 6 more PRs in a review queue that already holds 22 open table PRs; Stas's review hours a PR have no baseline, so that cost is not priced.
 
 ## 6. Risks
 
-- **The layers have no recall record yet** (Yan). Until they do, they cannot replace a run. So the first PRs are a backtest: L0, L1 and L2 must catch the recorded M11 and M12 failures of §1 on the builds that had them. A layer earns its place in a gate only after it catches a failure a recorded run also caught.
+- **The layers have no recall record yet** (Yan). Until they do, they cannot replace a run. So the first PRs are a backtest: L0, L1, L2 and L3 must each catch the recorded M11 and M12 failure §1 assigns to it, on the build that had it (for L3: an own-move rate near 0 on 970023d or 162de4c). A layer earns its place in a gate only after it catches a failure a recorded run also caught.
 - **One human run can still fail.** Two of the M12 findings needed a person. If Stas's evening fails on a row only he can rule, it is played again: 0.5 to 2 h and a day each time.
 
-- **A bench is a model call, so it draws on the subscription** (decision 0036) and cannot run in CI. Where it runs is question 2.
+- **A bench is a model call.** By decision 0036 every live model call runs on Stas's Mac under his login, cloud threads have no API key, and CI never calls a model. So a bench is one command Stas runs, like a full run, and it draws on the subscription. Running benches from a cloud thread would need an API key and a decision that supersedes 0036; that is question 2, and 0080 does not assume it.
 - **Golden sets rot.** A set is only as good as the lines in it; it grows only by rule 2 of §2 and from Stas's real lines, never by invented cases beyond a first handful.
 - **k of n hides a flaky prompt.** The bench reports the raw counts, not only pass or fail.
 - **L1 policies are not players.** A walk proves a row can pass, not that it will with a person. That is why L4 and L5 stay.
@@ -144,7 +146,7 @@ The saving in dollars is small: 8 to 15 USD a milestone. The saving that matters
 ## 7. Questions for Stas
 
 1. Accept the rule of §2 (a full run confirms; every full-run failure becomes a lower-layer case before a rerun)?
-2. Where do benches run: on your Mac by one command (as full runs do today), or may a cloud thread run them on the API key in the environment, with a dollar cap a pass (proposed: 10 USD)?
+2. Benches run on your Mac by one command, as 0036 says for every live call. Do you want a cloud option instead (an API key in the cloud environment, a dollar cap a pass, 0036 superseded by its own record), so a thread can run a bench without you?
 3. Stas's evening once at milestone close, not a half of every pair attempt: yes?
 4. A fix after your evening that a lower-layer case covers does not void the runs (supersedes 0043's same-build consequence): yes?
 5. Start now, inside M12, with L0 and the DM bench on your 13 lines before the next exit attempt, or after M12 closes?
