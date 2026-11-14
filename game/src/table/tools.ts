@@ -632,7 +632,7 @@ export class DmTools {
   /** The DM's last line to the whole table, for the next scene's opening to continue from (M10 P1). */
   lastLine: string | undefined;
   /** A player's words on the road card a `card_words` wake answers (AGT-99): the loop sets them for the wake. */
-  cardWords: { actor: Handle; words: string; answerOnly?: boolean } | undefined;
+  cardWords: { actor: Handle; words: string; answerOnly?: string } | undefined;
   /** The own move the wake put on the card, if one did. */
   ownMoveMade = false;
   /** The narration that answered the words, once one showed. */
@@ -1075,7 +1075,7 @@ export class DmTools {
     if (!words) return notNow("no player's words on a road card wait for your answer");
     const dropped = Boolean(move && words.answerOnly);
     if (dropped) {
-      this.table.log("system", `the card already has or had an own move: ${words.actor}'s words are only answered`, "table");
+      this.table.log("system", `${words.answerOnly}: ${words.actor}'s words are only answered`, "table");
       move = undefined;
     }
     // One move per wake: once it is on the card, a retry only rewrites the narration.

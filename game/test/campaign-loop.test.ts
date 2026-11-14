@@ -279,7 +279,7 @@ test("words on a card that already had an own move are only answered: no second 
   const tools = new DmTools({ log: () => {}, narrate: async () => ({ ok: true, text: "said" }), oneAtATime: (_: string, f: () => Promise<unknown>) => f() } as never);
   let sent = 0;
   (tools as unknown as { table: { engine: unknown } }).table.engine = { request: async () => ((sent += 1), { ok: true }) };
-  tools.cardWords = { actor: "bren", words: "Try again.", answerOnly: true };
+  tools.cardWords = { actor: "bren", words: "Try again.", answerOnly: "the card already has or had an own move" };
   const out = await tools.ownMoveOrAnswer("The farmer shakes his head.", { ability: "charisma", skill: "persuasion", dc: 10, success: "clear" });
   assert.equal(out.ok, true);
   assert.equal(sent, 0, "no own_move reaches the engine");
