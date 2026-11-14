@@ -473,6 +473,23 @@ test("own moves after a fall: each move read on its own, a fall counted once its
   const open = folder(run, [], withSeq([shown, ...move("persuasion", "clear"), { kind: "card_advice", actor: "maren", choice: "own_move" }, ...fall("r31")]));
   assert.match(row(open, "m12-own-move").detail, /not counted, fell, and the card was not settled/);
   assert.equal(row(open, "m12-own-move").status, "fail");
+  // Nor does a fall that a later move followed, while the card still waits at the run's end.
+  const openLater = folder(run, [], withSeq([shown, ...move("persuasion", "clear"), ...fall("r31"), ...move("athletics", "clear")]));
+  assert.match(row(openLater, "m12-own-move").detail, /\(move 1\) by maren: not counted, fell, and the card was not settled/);
+  assert.equal(row(openLater, "m12-own-move").status, "fail");
+
+  // A card where the human fell once and an AI seat once: one fall at each side, not two at the last faller's.
+  const mixed = withSeq([
+    shown,
+    { kind: "card_own_move", actor: "bren", words: "I ask", skill: "persuasion" },
+    { kind: "own_move_set", card: "fallen_tree", actor: "bren", ability: "charisma", skill: "persuasion", dc: 10, success: "clear" },
+    ...fall("r31"),
+    ...move("athletics", "clear"),
+    ...fall("r32"),
+    { kind: "card_resolved", choice: "around", decided: "majority" },
+  ]);
+  const mixedReport = exitReport({ ...run, seats: { ...run.seats, human: "bren" } } as typeof run, mixed as never, [], []).join("\n");
+  assert.match(mixedReport, /Falls per card: fallen_tree 2; the most on one card: at bren's seat 1, among AI seats 1/);
 
   // Words answered after a fall are marked.
   const said = folder(run, [{ kind: "system", text: "no fitting choice: torva's words on the road card fallen_tree made no own move", log_head: 6 }], withSeq([shown, ...move("persuasion", "clear"), { kind: "card_advice", actor: "maren", choice: "own_move" }, ...fall("r31")]));

@@ -57,6 +57,8 @@ export interface OwnMoveMet {
   decided?: { choice: string; how: string };
   /** A move came after this one on the card: this one fell and the card waited (decision 0081). */
   later: boolean;
+  /** The card was decided in this run, on this move, a later one or a written choice. */
+  settled: boolean;
   /** The seq of this move's fall in the session log, when it fell. */
   fellAt?: number;
   /** The proposer's roll and its outcome; `null` when there was none: the proposer was down, or, for a move with no failure, the engine could not make it (decision 0079). */
@@ -95,7 +97,7 @@ export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], p
     else if (e.kind === "own_move_set" && card) {
       // A move after a fall is on the same card: the one before it is told a later move followed.
       for (const m of card.moves) m.later = true;
-      const move: OwnMoveMet = { card: e.card, actor: e.actor, words: card.words ?? "", skill: e.skill, dc: e.dc, success: e.success, failure: e.failure ?? undefined, place: card.moves.length + 1, earlier: card.moves.map((m) => ({ skill: m.skill, success: m.success })), votes: card.votes, later: false, fallbacks: [], down: false };
+      const move: OwnMoveMet = { card: e.card, actor: e.actor, words: card.words ?? "", skill: e.skill, dc: e.dc, success: e.success, failure: e.failure ?? undefined, place: card.moves.length + 1, earlier: card.moves.map((m) => ({ skill: m.skill, success: m.success })), votes: card.votes, later: false, settled: false, fallbacks: [], down: false };
       card.moves.push(move);
       out.push(move);
     } else if (e.kind === "own_move_ran" && seen.get(e.card)?.moves.length) {
@@ -115,6 +117,7 @@ export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], p
       // Written once, at the first own_move_ran on the card: every move on it uses this record.
       deeds.set(e.deed.slice("own_move_".length), { contract: e.contract, by: e.by });
     } else if (e.kind === "card_resolved" && card) {
+      for (const m of card.moves) m.settled = true;
       const open = card.moves.at(-1);
       if (open && !open.decided) {
         open.decided = { choice: e.choice, how: e.decided };
@@ -134,9 +137,9 @@ function counted(m: OwnMoveMet): string | undefined {
     // A fall is a valid outcome, with a roll or without one (decision 0081): it counts once the card is settled, on a later move or a written choice.
     if (m.fallbacks.length > 0) return `a fallback vote (${m.fallbacks.join(", ")})`;
     if (m.roll && m.roll.outcome !== "failure") return `${m.roll.id} fell, but it is not in the log as a failed check`;
+    if (!m.settled) return "fell, and the card was not settled";
     if (m.later) return undefined;
-    if (!m.decided) return "fell, and the card was not settled";
-    return m.decided.choice === "own_move" ? "fell, but the card was decided on own_move" : undefined;
+    return m.decided?.choice === "own_move" ? "fell, but the card was decided on own_move" : undefined;
   }
   if (m.decided?.choice !== "own_move") return m.decided ? `decided on ${m.decided.choice}` : "not decided";
   if (m.fallbacks.length > 0) return `a fallback vote (${m.fallbacks.join(", ")})`;
@@ -270,12 +273,14 @@ export function exitReport(run: RunRecord, log: Event[], transcript: TranscriptR
     );
   });
   // Falls per card, and the most on one card, at the human's seat and among the AI seats (decision 0081 Revisit).
-  const falls = new Map<string, { actor: Handle; n: number }>();
-  for (const m of moves) if (m.ran === null) falls.set(m.card, { actor: m.actor, n: (falls.get(m.card)?.n ?? 0) + 1 });
-  const most = (pick: (actor: Handle) => boolean) => Math.max(0, ...[...falls.values()].filter((f) => pick(f.actor)).map((f) => f.n));
+  const fell = moves.filter((m) => m.ran === null);
+  const falls = new Map<string, number>();
+  for (const m of fell) falls.set(m.card, (falls.get(m.card) ?? 0) + 1);
+  // Counted per seat side: a card where the human fell once and an AI seat once is one each.
+  const most = (pick: (actor: Handle) => boolean) => Math.max(0, ...[...falls.keys()].map((c) => fell.filter((m) => m.card === c && pick(m.actor)).length));
   const human = run.seats.human;
   out.push(
-    `Falls per card: ${[...falls].map(([c, f]) => `${c} ${f.n}`).join(", ") || "none"}; the most on one card: ${human ? `at ${human}'s seat ${most((a) => a === human)}, among AI seats ${most((a) => a !== human)}` : `${most(() => true)} (no human seat in this run)`}`,
+    `Falls per card: ${[...falls].map(([c, f]) => `${c} ${f}`).join(", ") || "none"}; the most on one card: ${human ? `at ${human}'s seat ${most((a) => a === human)}, among AI seats ${most((a) => a !== human)}` : `${most(() => true)} (no human seat in this run)`}`,
   );
   // Words a seat said on a card that the DM did not turn into an own move; those said after a fall on that card are marked.
   // A same-way refusal (`bad_own_move`) is not in the session log or the transcript, so it cannot be marked here.
