@@ -103,6 +103,10 @@ pub struct Card {
     pub target: Target,
     /// What the players read
     pub text: String,
+    /// What the players read in a Russian run (MAP-19, decision 0067); the table reads it from
+    /// the deck file, so it is never projected
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_ru: Option<String>,
     /// A place id: the card is in play only once the party has discovered it
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub requires: Option<String>,
@@ -285,6 +289,9 @@ pub struct Choice {
     pub id: String,
     /// What the players read
     pub text: String,
+    /// What the players read in a Russian run (MAP-19), as on the card
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_ru: Option<String>,
     /// An NPC owner takes this choice whatever the advice (the merchant will not risk the
     /// cargo); the DM narrates why. At most one per card, caravan cards only
     #[serde(default)]

@@ -4,6 +4,7 @@
     "format_version": 1,
     "id": "the_silent_mill",
     "title": "The Silent Mill",
+    "title_ru": "Тихая мельница",
     "licence": "CC-BY-4.0",
     "credit": "nat20-table contributors",
     "prose": ["prose/adventure.md"],
