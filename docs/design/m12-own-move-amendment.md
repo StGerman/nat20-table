@@ -133,6 +133,8 @@ For Vera, without this file:
 
 ## 13. Text for the accepted design
 
+*Folded into `m12-system-design.md` in table #381, with the review's fixes on top: the rest of §1.2 (world crate, server, events, protocol, fixture, CHANGELOG) and §1.5 brought in line with §5 here; the downed proposer with no failure stated once in §1.1 step 5; the fall line kept as a draft for PR 2 (Vera, §16); Zoya's question-3 sentence added to the prompt ("The scene still answers…"). Where this section and the design differ, the design wins.*
+
 **§1.8, title and a note at its top:**
 
 > ### 1.8 When no choice fits (question 7)

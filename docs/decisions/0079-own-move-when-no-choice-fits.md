@@ -28,7 +28,7 @@ The move names a check and a success choice. If the vote goes to it and the roll
 
 ### C. Roll at once from the table, with `request_check`, and give the proposer's word to the success choice
 - Pro: no contract change.
-- Con: the roll gates nothing, because after a failure the same seat presses the same number; the table never votes on the move (0068, option A); the engine writes no deed.
+- Con: the table never votes on the move (0068, option A), and the engine writes no deed. After a failure the same seat can press the same number, but that is true of A as well (below).
 
 ### D. A failed roll with no failure choice settles the card with no effects
 - Pro: the card's decision stays final at the vote.
@@ -46,6 +46,9 @@ The move names a check and a success choice. If the vote goes to it and the roll
 - The DM answers the words and nothing more (proposed): nobody in the scene agrees, refuses or gives way, and no outcome goes into `remember`. Con: an honest plan gets an answer that settles nothing.
 - The DM rules it in the scene, as in run 2: con, the narrator decides an outcome the engine never rolled, and its memory carries that through the rest of the run.
 - The table says in plain words that this card cannot carry the plan: con, the DM would have to label its own answer, and a first-time player may read the line as "you typed it wrong". Left out; see Revisit.
+
+### What A buys, honestly
+Under A a fall can still end on the success choice by its number (on `bog_wifes_toll`: `bread`), so the end on the card is the same as C's. What A buys over C is the table's vote on the player's words and the deed in the engine's book; what it costs is a contract version, a card that stays pending across the roll, words taken back and a re-ask. Zoya (amendment §16): both ends equal a written choice until a reader can tell a fall from a success, which is question 1.
 
 ## Decision
 
