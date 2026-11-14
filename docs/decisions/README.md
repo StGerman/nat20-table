@@ -90,6 +90,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0079](0079-own-move-when-no-choice-fits.md) | An own move may name no failure choice; words no choice fits are answered and nothing more | Accepted (table #381, 2026-11-14) | 2026-11-14 | Stas (in part) |
 | [0081](0081-second-own-move-after-a-fall.md) | After an own move falls, the card takes another by another way: no count at the human's seat, AI seats held to two (option E, no price) | Accepted | 2026-11-14 | Stas |
 | [0082](0082-m12-merged-without-a-passed-exit-pair.md) | Milestone 12 merges without a passed exit pair: closed, not done; an exception to 0043 for this milestone only | Accepted | 2026-11-14 | Stas |
+| [0084](0084-card-bench-by-a-pile-of-one.md) | The card bench reaches its card by a pile of one in a copied pack, with no contract change; tried on Milestone 13 | Proposed | 2026-11-14 | not decided (Stas) |
 
 ## Open questions to watch
 
