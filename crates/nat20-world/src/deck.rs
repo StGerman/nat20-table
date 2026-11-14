@@ -722,9 +722,11 @@ pub enum CardError {
     AlreadySpoke(String),
     /// The owner decides only after every Blade has advised; these still have to
     WaitingFor(Vec<String>),
-    /// The card already carries an own move (API-56)
+    /// The card has an own move among its choices (API-56); after a fall it takes another
+    /// (decision 0081)
     OwnMoveTaken,
-    /// An own move's success and failure are the same choice, or its failure breaks a custom
+    /// An own move's success and failure are the same choice, its failure breaks a custom, or
+    /// its way already fell on the card (decision 0081)
     BadOwnMove(String),
 }
 
@@ -1406,12 +1408,11 @@ impl Deck {
             .as_mut()
             .filter(|mv| mv.failure.is_none())?;
         mv.spent = true;
-        let way = FellWay {
+        pending.fell.push(FellWay {
             skill: mv.skill.clone(),
             success: mv.success.clone(),
             rolled,
-        };
-        pending.fell.push(way);
+        });
         pending.said.retain(|_, choice| choice != OWN_MOVE);
         let resolution = settle(card, pending, table);
         if resolution.is_some() {
@@ -1479,13 +1480,13 @@ impl Deck {
             return Err(CardError::OwnMoveTaken);
         }
         // A way is closed by one rolled fall, or by two with no roll.
-        let closed: u32 = pending
-            .fell
-            .iter()
-            .filter(|w| w.skill == mv.skill && w.success == mv.success)
-            .map(|w| if w.rolled { 2 } else { 1 })
-            .sum();
-        if closed >= 2 {
+        let same = || {
+            pending
+                .fell
+                .iter()
+                .filter(|w| w.skill == mv.skill && w.success == mv.success)
+        };
+        if same().any(|w| w.rolled) || same().count() >= 2 {
             return Err(CardError::BadOwnMove(format!(
                 "this way already fell on this card ({} toward {}); name another way, or answer the words and make no move",
                 mv.skill, mv.success
@@ -2339,7 +2340,12 @@ mod tests {
             d.speak(&mut state, &table, "bren", OWN_MOVE),
             Err(CardError::UnknownChoice(OWN_MOVE.into()))
         );
-        // The same way was rolled and fell: it is not rolled twice (decision 0081).
+        // The same way was rolled and fell: it is not rolled twice (decision 0081), and a move
+        // that is also badly formed is told it is the same way first.
+        assert!(matches!(
+            d.own_move(&mut state, &table, own("maren", "give", "give")),
+            Err(CardError::BadOwnMove(why)) if why.contains("already fell")
+        ));
         assert!(matches!(
             d.own_move(&mut state, &table, own_alone("maren", "give")),
             Err(CardError::BadOwnMove(why)) if why.contains("already fell")

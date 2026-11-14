@@ -420,7 +420,7 @@ The party is hired to see the caravan to a place (API-47). The terms sit in `cam
 | `world.card` text, choices, `said`, `waiting_for` | yes | yes | yes |
 | `traveled`, `place_discovered`, `night`, `card_drawn`, `card_advice`, `card_resolved`, `cargo_changed`, `time_lost`, `time_passed` | yes | yes | yes |
 | `card_own_move` `{actor, words, skill}` (who answered in their own words, what they said, and the check it takes) | yes | yes | yes |
-| `world.card.own_move` `{actor, ability, skill}` (who answered in their own words and the check it takes; it stays after a fall) | yes | yes | yes |
+| `world.card.own_move` `{actor, ability, skill}` (who answered in their own words and the check it takes; it stays after a fall, until another own move replaces it) | yes | yes | yes |
 | `own_move_set`, `own_move_ran` and `world.card.own_move.{dc, success, failure}` (the own move's DC, the choice each outcome brings, and the one it brought, or none after a fall) | yes | no | no |
 | `world.npcs`: every place NPC with `monster`, `attitude`, `met`, `hp` and `notes` | yes | no; met NPCs only, with `id`, `name`, `place` and `alive` | no; as the owner |
 | `world.escort`: the terms, each Blade's days served and pay, `done`; `escort_settled` | yes | yes | yes |

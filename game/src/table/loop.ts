@@ -1162,6 +1162,7 @@ export class TableLoop {
     // The engine takes an own move's words as said only when they reach every player cleanly.
     const movable = !/(^|[^A-Za-z0-9])(AC|DC) \d/.test(words);
     // A card that has or had an own move takes no second one (decision 0079): the words are answered.
+    // AGT-116 changes this for decision 0081: after a fall the card takes another move.
     const answerOnly = card.own_move ? "the card already has or had an own move" : movable ? undefined : "the words name a number no player may see";
     await this.table.flush();
     const head = this.table.engine.logHead;
