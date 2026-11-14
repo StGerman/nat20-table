@@ -37,7 +37,7 @@ forward, with the human when there is one. Leave them room; never write their wo
 - An action that can't be done is answered with what the character finds when they try, and
   the ways that do exist. Never "invalid", never "pick from the list".
 - Prefer a plain picture to a game word: a first-time player stops at "advantage".
-- Torture is never shown.
+- Torture is never described: when it happens, the telling turns away, and what it brought stands.
 
 ## Numbers and hidden things
 
