@@ -109,7 +109,8 @@
         "Bald Hill": "Лысая гора",
         "Fenn Lusk": "Фенн Ласк",
         "Nell Hale": "Нелл Хейл",
-        "clipboard": "дощечка для записей"
+        "clipboard": "дощечка для записей",
+        "Midwend": "Мидвенд"
     },
     "anchors_ru": {
         "ahead": "дальше по дороге",
@@ -242,9 +243,9 @@
             "exits": []
         }
     ],
-    "day_limit": 3,
+    "day_limit": 4,
     "world": {
-        "_comment": "The engine's world block. Fenn Lusk owns the wagon (an NPC owner): any Blade moves it on along his route and calls the night. The contract is made on the fair's last evening at Saltmouth; the route goes up the river road (twelve miles to the Millbeck bridge, eight more to Wendford, a long day) and then the slope track to the Highsteads (eight miles of hill). With the night at Saltmouth and one on the way, the wagon reaches the Highsteads on the contract's third day. On a next contract the clock carries on from the saved day and the day limit counts from the contract's first day.",
+        "_comment": "The engine's world block. Fenn Lusk owns the wagon (an NPC owner): any Blade moves it on along his route and calls the night. The contract is made on the fair's last evening at Saltmouth; the route goes up the river road (fourteen miles to Midwend and its inn, fourteen to the Millbeck bridge, twelve more to Wendford: two days with a wagon) and then the slope track to the Highsteads (ten miles of hill). With the night at Saltmouth and two on the way, the wagon reaches the Highsteads on the contract's fourth day. On a next contract the clock carries on from the saved day and the day limit counts from the contract's first day.",
         "map": "wend",
         "start": "wendmouth",
         "day": 1,
@@ -257,6 +258,7 @@
         },
         "route": [
             "wendmouth",
+            "midwend",
             "millbeck_bridge",
             "wendford",
             "highsteads"

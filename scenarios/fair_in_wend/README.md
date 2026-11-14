@@ -1,6 +1,6 @@
 # Fair in Wend
 
-A living-world sandbox for Milestone 9 (MAP-7): the Grey Lantern company, as Hired Blades, escorts Odda Vell's wagon of hill-farm wheat from the Highsteads down to the Saltmouth fair. About three game days and up to two hours of play, on the shared Wend map (`worlds/wend/`). The human plays a Hired Blade; the merchant is an NPC.
+A living-world sandbox for Milestone 9 (MAP-7): the Grey Lantern company, as Hired Blades, escorts Odda Vell's wagon of hill-farm wheat from the Highsteads down to the Saltmouth fair. About four game days and up to two hours of play, on the shared Wend map (`worlds/wend/`). The human plays a Hired Blade; the merchant is an NPC.
 
 Everything in this folder is for the DM. Players see only what the DM narrates, the engine's lines and, for AI players, their own card.
 

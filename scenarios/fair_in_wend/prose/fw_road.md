@@ -1,10 +1,11 @@
 # On the road
 
-The one road scene for every stretch and every camp: the slope track from the Highsteads to Wendford (hills, slow with a wagon) and the river road from Wendford to Saltmouth (a good road along the water meadows).
+The one road scene for every stretch and every camp: the slope track from the Highsteads to Wendford (hills, slow with a wagon) and the river road from Wendford to Saltmouth (a good road along the water meadows, two days with a wagon, past the Millbeck bridge and Midwend, a market village with an inn halfway down).
 
 **Read aloud, by stretch.**
 - *The slope track:* the wagon brakes squealing on the steep turns, heather and bog on either side, the valley opening below in grey light.
 - *The river road:* willows, mud, the brown river on one side and the water meadows on the other; a carter's shrine to Embra at every mile.
+- *Midwend:* a market village halfway down, its green crowded with carts going the same way, the inn yard lit late the night before the fair.
 - *A camp:* the wagon drawn off the road, the horses hobbled, a small fire, Odda counting the sacks again by lantern light.
 
 **How to run it.**
