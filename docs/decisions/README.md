@@ -87,8 +87,8 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0076](0076-allies-in-fights-option-a-first.md) | Allies in fights: the fed dog surprises the wolves first (A); the dog, horses and the Merchant as creatures wait in the backlog (B, C); a judge check for a creature narrated fighting but absent from the fight | Accepted | 2026-11-12 | Stas |
 | [0077](0077-witnessed-deeds-on-a-card.md) | A deed a person witnessed (or was told in front of the party) shows on that person's card as one authored line; supersedes 0063 for that case only | Proposed | 2026-11-13 | not decided (Stas) |
 | [0078](0078-attacked-neutral-turns-hostile.md) | A neutral named in `start_fight` turns hostile (`turned_hostile`), with no new command | Accepted | 2026-11-13 | Stas |
-| [0079](0079-own-move-when-no-choice-fits.md) | An own move may name no failure choice; words no choice fits are answered and nothing more | Superseded by 0083 | 2026-11-14 | Stas (in part) |
-| [0081](0081-second-own-move-after-a-fall.md) | After an own move falls, the card takes another by another way: no count at the human's seat, AI seats held to two (option E, no price) | Superseded by 0083 | 2026-11-14 | Stas |
+| [0079](0079-own-move-when-no-choice-fits.md) | An own move may name no failure choice; words no choice fits are answered and nothing more | Accepted; superseded in part by 0083 | 2026-11-14 | Stas (in part) |
+| [0081](0081-second-own-move-after-a-fall.md) | After an own move falls, the card takes another by another way: no count at the human's seat, AI seats held to two (option E, no price) | Accepted; superseded in part by 0083 | 2026-11-14 | Stas |
 | [0082](0082-m12-merged-without-a-passed-exit-pair.md) | Milestone 12 merges without a passed exit pair: closed, not done; an exception to 0043 for this milestone only | Accepted | 2026-11-14 | Stas |
 | [0083](0083-own-move-any-outcome.md) | A player's own move may bring any outcome: the DM writes the stake before the roll, the engine keeps the one the roll picked in the deed; torture happens off the telling; the human's own act rolls at once; supersedes part of 0068 | Accepted | 2026-11-14 | Stas |
 
