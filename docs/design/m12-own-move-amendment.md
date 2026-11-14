@@ -23,7 +23,7 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 | --- | --- | --- | --- |
 | `own_move_set` with no `failure` | the server, when the DM puts the move on the card | the run report (moves with and without a failure), the verdict row | the move as a numbered choice in their own words (§1.6 of the design, unchanged) |
 | `own_move_ran {choice: null, roll}` | the server, when the roll fails or the proposer is down and the move named no failure | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line, the DM's one or two sentences, a line that the move did not work (draft, §12), the written choices again |
-| the pending card's own move, marked tried | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) and the `own_move` command (`own_move_taken`) | no own-move line and no "Your move" choice on the card |
+| the pending card's own move, marked spent (`CardDm.own_move.spent`) | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) and the `own_move` command (`own_move_taken`) | no own-move line and no "Your move" choice on the card |
 | the deed `own_move_<card>` | the world, whenever `own_move_ran` is logged, whatever it brought | the run report and the verdict row; no card in M12 | nowhere yet: owed on Zoya's board, left unread on purpose by decision 0068 |
 | `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move | nowhere; it is the check on rule 6 below |
 
