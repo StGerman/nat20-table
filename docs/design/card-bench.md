@@ -40,7 +40,7 @@ The bench does the same for a card that is not chained:
 3. Cut the copy's `world.start` and `world.route` to the shortest stretch that reaches the card: start at the last place on the pack's route that has a scene, before the road (a road card) or the place (an arrival card) of the card's zone. On today's two campaign packs that is one or two legs for every zone on a route.
 4. Play it with the real loop: the live DM, scripted AI seats, and a scripted human seat that moves the caravan on until the card is on the table, then types the lines.
 
-Cards that read deeds (`if`): the bench takes `--roster NAME` and plays on a copy of that roster in a temporary `--rosters` folder, so the saved party is never written over. Milestone 13's two Wendford arrival cards read Mill deeds; their roster is one saved by a run of *The Silent Mill* (§5).
+Cards that read deeds (`if`): the bench takes `--roster NAME` and plays on a copy of that roster in a temporary `--rosters` folder, so the saved party is never written over. Every bench run starts from a fresh copy of the pack and of the roster: a run saves its roster when it ends, and a card decided in one run (`once`) would be gone from the next. Milestone 13's two Wendford arrival cards read Mill deeds; their roster is one saved by a run of *The Silent Mill* (§5).
 
 Out of this version: night cards, and chained cards (`chained: true`, eight on main), which are in play only after another card's choice adds them, so reaching one means deciding that card first. Nothing in the Milestone 13 trial needs either.
 
@@ -119,7 +119,7 @@ Stas keeps or drops it. A reading to start from: keep it if number 1 is at least
 
 Two table PRs, beside Milestone 13: outside its exit, its rows and its PR count. Rows and sizes are Yan's, after Stas accepts this design.
 
-1. **The bench command.** The temporary pack (§3), the caravan-moving scripted seat (today a helper inside `game/test/campaign-loop.test.ts`, moved to `game/src/table/scripted.ts`), `--card`, `--lines`, `--roster`. Tested with no model, in CI: for each campaign pack and every road and arrival card its route reaches that is not chained and reads no deed, with a scripted DM, the copy loads and that card is the first card on the table. A card that reads deeds needs a roster, so the test also plays one such card on a roster that a scripted contract saves in the same test.
+1. **The bench command.** The temporary pack (§3), the caravan-moving scripted seat (today a helper inside `game/test/campaign-loop.test.ts`, moved to `game/src/table/scripted.ts`), `--card`, `--lines`, `--roster`. The run driver refuses scripted players on a campaign without `--seat ink` ("scripted players never move the caravan"); `play:card` passes that guard because its scripted seat does move it, and the guard stays for every other command. Tested with no model, in CI: for each campaign pack and every road and arrival card its route reaches that is not chained and reads no deed, with a scripted DM, the copy loads and that card is the first card on the table. A card that reads deeds needs a roster, so the test also plays one such card on a roster that a scripted contract saves in the same test.
 2. **The report.** `bench.md` (§4), tested with no model on a scripted DM that turns words into an own move.
 
 No contract change, no engine change, no new player-facing text, so Rule 1 does not apply and Vera, Zoya and Lev have nothing of theirs to read. The live half cannot be tested from a cloud thread (decision 0036): its first real run is Stas's.
