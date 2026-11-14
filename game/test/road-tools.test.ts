@@ -14,7 +14,7 @@ import { testTable } from "./helpers.ts";
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 const CHOICE = { model: "claude-sonnet-5-5", effort: "low" } as const;
 const SEAT = ["my_sheet", "look", "legal_actions", "submit_decision", "move", "end_turn", "react", "say"];
-const ROAD = ["travel", "rest_night", "scout", "choose_card", "level_up", "answer_level_up"];
+const ROAD = ["travel", "rest_night", "scout", "choose_card", "own_move", "level_up", "answer_level_up"];
 
 test("the road and level-up tools join a player's seat only in a living-world pack, before note", () => {
   const party = castParty(MILL);

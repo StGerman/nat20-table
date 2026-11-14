@@ -13,7 +13,7 @@ import { z } from "zod";
 import { TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { GOODS_SINCE, russianNames } from "../pack/adventure.ts";
 import type { PackText } from "../pack/read.ts";
-import type { DmTools } from "../table/tools.ts";
+import { OWN_MOVE_RULE, type DmTools } from "../table/tools.ts";
 import type { DmAgent, DmWake, ToolOutcome } from "../table/types.ts";
 import type { UsageLog } from "../usage.ts";
 import { dmLanguage, type Language } from "./language.ts";
@@ -36,7 +36,21 @@ const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary", "suggest
  * call drains in the background. Not `scene_open`, `table_turn` or `summary`, which go on with
  * tools after narrating (`load_scene`, `request_check`, `short_rest`).
  */
-export const DM_SETTLE_ON: Partial<Record<DmWake, readonly string[]>> = { narrate: ["narrate"], combat_over: ["narrate"], pick: ["pick_card"] };
+export const DM_SETTLE_ON: Partial<Record<DmWake, readonly string[]>> = {
+  narrate: ["narrate"],
+  combat_over: ["narrate"],
+  // AGT-97: these wakes narrate last, so the wake ends when the narration returns, never on the cap.
+  road: ["narrate"],
+  pick: ["narrate"],
+  card: ["narrate"],
+  card_words: ["own_move_or_answer"],
+};
+
+/**
+ * A player's words on a card (AGT-99): a refused own move and its retry rewrite the narration, so
+ * the wake gets more time than a narration's, as an entry of its own beside the long wakes.
+ */
+export const DM_CARD_WORDS_TIMEOUT_MS = 30_000;
 
 /** The DM's craft guidance (D10): our own text, one skill per file, for the DM session only. */
 export const CRAFT_PLUGIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../dm-craft");
@@ -249,10 +263,13 @@ export const DM_ROAD_PROMPT = [
   "",
   "- The party travels with a merchant's caravan between places on a map; get_state shows the world: the day and hour, where the caravan is, the places and roads, the card waiting, the escort contract, the people who live in each place.",
   "- The players move the caravan on and end the day, never you: you have no travel, rest or card tool. When the party says in the story that they move on, or settles down for the night (they make camp, go to sleep, set a watch, take rooms), call propose_road: the table asks whoever drives the caravan at once, and the caravan moves or the night passes only if they agree. Never tell a player to find or pick a line on a panel: propose_road puts it in front of them. When a scene loads after a journey, open it as the arrival: the road behind them in a sentence, then the place.",
-  "- \"A road card was settled\": narrate what came of it in one to three sentences. A card can bring a fight: start_fight or place_creature from your list, with a cause in the story.",
+  "- \"A road card was settled\": narrate what came of it in one to three sentences. When its check failed, first say in the story what went wrong, then what it costs. A card can bring a fight: start_fight or place_creature from your list, with a cause in the story.",
   "- A card's choice may say which customs it keeps or breaks (\"keeps word_kept\"). When that choice is taken, show how the people who saw or heard it take it, in a look, a word or a silence, never a judgement from you. Never say the custom's id at the table.",
-  "- \"Pick a road card\": a draw offered two or three cards. Pick with pick_card, by this rule, in order: the card that continues what the party did (it reads a deed, or follows from one); failing that, the card that gives the human's character the clearest problem to act on; between two that do equally well, the one that can come to a fight. Never pick a card to spare the party a fight. Say why in one line. Narrate nothing yet: the table hears the card next.",
+  "- \"Pick a road card\": a draw offered two or three cards. Pick with pick_card, by this rule, in order: the card that continues what the party did (it reads a deed, or follows from one); failing that, the card that gives the human's character the clearest problem to act on; between two that do equally well, the one that can come to a fight. Never pick a card to spare the party a fight. Say why in one line, then narrate the card's opening: narrate before the pick is refused.",
+  "- \"A road card is on the table\": a card came with no pick. Open it in two to four sentences, on what the people in it do and want. Do not retell the card's words, which the table shows next; do not decide it or tell how a choice turns out.",
+  "- Make every other call (propose_road, start_fight, place_creature, pass_time) before you narrate; narrate last.",
   "- The scout: a Hired Blade may walk ahead of the caravan. When a road card comes, the engine rolls the scout's look first (scout_looked). If they saw it, open the card on what the scout saw, ahead of the others, and let the scout speak first; if they missed it, the card meets the whole party at once. Never say the roll or the skill.",
+  `- "A player's words on the road card": ${OWN_MOVE_RULE}`,
   "- \"The night passed\": the night and the morning in one to three sentences, as the engine says: who slept well, who went hungry. Hunger and weariness are told as what shows.",
   "- \"The caravan reached ... and the merchant paid the Blades\": the arrival and the pay as a scene, with the merchant's own words. Name an amount only as the engine's lines give it, never a sum of your own.",
   "- Time in a place: the journey and the nights move the clock, and nothing else does. When the party spends time where they are (a meal, a long talk, a search, a wait), call pass_time once for it, with the span the story took: short_while, hour, or watch (until the next part of the day). Time in a place shortens the day's road. Never past midnight: the night is the players' call.",
@@ -288,6 +305,11 @@ export class ModelDm implements DmAgent {
   private described = new Set<string>();
   /** The bound tools while a wake runs; a call outside a wake (after a timeout) does nothing. */
   private current: DmTools | undefined;
+  /**
+   * The tools of the last wake, while that wake ended with its turn answered: `remember` writes
+   * through them after a settling tool ended the turn. A timed-out or failed wake keeps none.
+   */
+  private lastTools: DmTools | undefined;
   /** What it established in fiction (spec §3.6), in order. */
   readonly memory: string[] = [];
   /** What it wrote at the end of each scene (AGT-6). */
@@ -302,11 +324,14 @@ export class ModelDm implements DmAgent {
 
   async wake(wake: DmWake, briefing: string, tools: DmTools): Promise<string | void> {
     this.current = tools;
+    // Only the wake that just ended well keeps its tools for a late `remember` (Copilot on table #379).
+    this.lastTools = undefined;
     this.previewed = undefined;
     try {
       const seed = this.session ? undefined : this.seed(await tools.getState());
       this.session ??= this.openSession();
       const result = await this.session.turn(seed ? `${seed}\n\n${briefing}` : briefing, wake);
+      this.lastTools = tools;
       if (wake === "summary" || wake === "suggest") return result.final;
     } catch (error) {
       // As for a player: a timed-out session goes on, a plan limit stops the run, and after any
@@ -338,6 +363,7 @@ export class ModelDm implements DmAgent {
     const craft = this.config.craft ?? "prompt";
     return {
       agent: "dm",
+      role: "dm",
       choice: this.config.choice,
       systemPrompt: this.systemPrompt,
       tools: this.seatTools,
@@ -346,7 +372,9 @@ export class ModelDm implements DmAgent {
       settleOn: DM_SETTLE_ON,
       ...(this.config.preview ? { onPartial: (tool: string, json: string) => this.partial(tool, json) } : {}),
       turnTimeoutMs: this.config.turnTimeoutMs ?? DM_TURN_TIMEOUT_MS,
-      ...(this.config.turnTimeoutMs === undefined ? { turnTimeoutsMs: Object.fromEntries(DM_LONG_WAKES.map((w) => [w, DM_LONG_WAKE_TIMEOUT_MS])) } : {}),
+      ...(this.config.turnTimeoutMs === undefined
+        ? { turnTimeoutsMs: { ...Object.fromEntries(DM_LONG_WAKES.map((w) => [w, DM_LONG_WAKE_TIMEOUT_MS])), card_words: DM_CARD_WORDS_TIMEOUT_MS } }
+        : {}),
     };
   }
 
@@ -444,16 +472,17 @@ export class ModelDm implements DmAgent {
               handle: z.string().describe("A new handle: letters, digits and _, such as bandit_1."),
               place: z.string().optional().describe("A place in the scene (anchor id)."),
               beside: handle.optional().describe("A creature to stand beside."),
+              name: z.string().optional().describe("What the table calls it, in the language you narrate in (such as «Пиклер»); without it, the list entry's name."),
             },
             (i) =>
               this.bound((t) => {
                 if (Boolean(i.place) === Boolean(i.beside)) return refuse("give either a place or a creature to stand beside");
-                return t.placeCreature(i.entry, i.handle, i.place ? { place: i.place } : { near: i.beside! });
+                return t.placeCreature(i.entry, i.handle, i.place ? { place: i.place } : { near: i.beside! }, i.name);
               }),
           ),
           seatTool(
             "start_fight",
-            "Start a fight the scene's encounters don't hold, among creatures present: at least one on each side, every one standing. The engine rolls Initiative and plays the monsters. It ends only when one side is down.",
+            "Start a fight the scene's encounters don't hold, among creatures present: someone of the party and someone against them, every one standing. A neutral creature you name turns hostile and stays so: the fight is the attack on it, or its attack on the party. The engine rolls Initiative and plays the monsters. It ends only when one side is down.",
             { participants: z.array(handle).describe("Every creature in the fight.") },
             (i) => this.bound((t) => t.startFight(i.participants)),
           ),
@@ -465,6 +494,30 @@ export class ModelDm implements DmAgent {
         "A draw offered two or three road cards: put one on the table, by its id, with one line of why. The others stay in the deck for later. The table hears only the card you pick.",
         { card: z.string().describe("The offered card's id."), reason: z.string().describe("One line: why this card now.") },
         (i) => this.bound((t) => t.pickCard(i.card, i.reason)),
+      ),
+      seatTool(
+        "own_move_or_answer",
+        "Answer a player's own words on the road card waiting (\"A player's words on the road card\"). With move, their words become an own move on the card: the check they call for (a skill and a DC from the ladder), the card's choice a success brings and, only when another choice plainly is what a failure brings, that choice; with no failure, a failed roll runs no choice and the card is decided on a written choice, by the words left or by the seats asked again. The seats then vote on it as on any choice. Without move, only your narration answers them, and the card waits. Narration answers the words, the attempt only, never how it turns out.",
+        {
+          narration: z.string().describe("One to three sentences: what the people in the scene say or do at the words."),
+          move: z
+            .object({
+              skill: z.enum(SKILLS),
+              dc: z.number().int().describe(`From the ladder: ${LADDER.join(", ")}.`),
+              success: z.string().describe("The card's choice id a success brings."),
+              failure: z
+                .string()
+                .nullish()
+                .describe("The card's choice id a failure brings, only when one plainly is: never one that breaks a custom or is a deliberate act the words did not ask for. Leave it out when none fits."),
+            })
+            .optional(),
+        },
+        (i) =>
+          this.bound((t) => {
+            // A move on answer-only words is dropped anyway: its DC costs no retry.
+            if (i.move && !t.cardWords?.answerOnly && !LADDER.includes(i.move.dc)) return refuse(`a DC from the ladder: ${LADDER.join(", ")}`);
+            return t.ownMoveOrAnswer(i.narration, i.move && { ability: SKILL_ABILITY[i.move.skill], ...i.move, failure: i.move.failure ?? undefined });
+          }),
       ),
       seatTool(
         "pass_time",
@@ -618,14 +671,17 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "remember",
-        "Keep a fact you established in fiction for the rest of the adventure. Fiction only: no Hit Points, Armor Class or DCs.",
+        "Keep a fact you established in fiction for the rest of the adventure. Fiction only: no Hit Points, Armor Class or DCs. When you answer a player's words with own_move_or_answer, never keep how the attempt turned out: the roll and the card record that.",
         { fact: z.string() },
-        (i) =>
-          this.bound((t) => {
-            const outcome = t.remember(i.fact);
-            if (outcome.ok) this.memory.push(i.fact);
-            return outcome;
-          }),
+        // Memory changes no state at the table, so it is kept after a settling tool ended the turn
+        // too (run 2026-11-13: two facts lost after own_move_or_answer).
+        (i) => {
+          const t = this.current ?? this.lastTools;
+          if (!t) return Promise.resolve(reply("not now: nothing is waiting on you", true));
+          const outcome = t.remember(i.fact);
+          if (outcome.ok) this.memory.push(i.fact);
+          return Promise.resolve(reply(outcome.text, !outcome.ok));
+        },
       ),
       seatTool(
         "end_adventure",
@@ -638,7 +694,7 @@ export class ModelDm implements DmAgent {
     const humanOnly = new Set(["offer_surrender", "legal_actions", "submit", "end_turn", "ask_human"]);
     // On the road the journey loads the scenes and the contract or the days end the run (AGT-80):
     // a DM that loaded a scene would move the party off the map, and one that ended the adventure would end the run early.
-    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : ["propose_road", "pass_time", "pick_card"]);
+    const scenesOnly = new Set(this.config.livingWorld ? ["load_scene", "end_adventure"] : ["propose_road", "pass_time", "pick_card", "own_move_or_answer"]);
     return tools.filter((tool) => (human || !humanOnly.has(tool.name)) && !scenesOnly.has(tool.name));
   }
 }

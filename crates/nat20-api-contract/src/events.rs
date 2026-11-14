@@ -8,9 +8,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AdvantageState, CardCame, CardChoiceView, CardDecided, CardTarget, CardWhen, ClockView,
-    Condition, DamageType, DeedDm, Handle, LegView, LifeState, Mode, NightView, OfferedCard,
-    OptionId, PointFt, RollId, Side, state::CombatOverReason,
+    Ability, AdvantageState, CardCame, CardChoiceView, CardDecided, CardTarget, CardWhen,
+    ClockView, Condition, DamageType, DeedDm, Handle, LegView, LifeState, Mode, NightView,
+    OfferedCard, OptionId, PointFt, RollId, Side, Skill, state::CombatOverReason,
 };
 
 /// One log entry.
@@ -75,6 +75,12 @@ pub enum EventKind {
     /// are now `neutral` and stay in the scene.
     Surrendered {
         /// The creatures that surrendered, in the encounter's order.
+        handles: Vec<Handle>,
+    },
+    /// Neutral creatures turned hostile: the DM named them in a `start_fight`, so the party has
+    /// attacked them or they the party. They are now `hostile`, and stay so after the fight.
+    TurnedHostile {
+        /// The creatures that turned, in the order `start_fight` listed them.
         handles: Vec<Handle>,
     },
     /// Creatures fled: the DM ended the fight with `end_combat{fled}` while their encounter
@@ -433,7 +439,8 @@ pub enum EventKind {
     /// `start_campaign`'s own lines: the party traveled from where the last contract ended to
     /// this one's start. The DM tells the trip in one line. Public.
     TripToStart {
-        /// The place the party was in when the last contract ended.
+        /// Where the party set out from: the place it was in when the last contract ended,
+        /// or, when it ended out on a road, the end of that road nearer this contract's start.
         from: String,
         /// The days the trip took at a normal pace: 0 when the party was already there.
         days: u32,
@@ -465,6 +472,52 @@ pub enum EventKind {
         /// The pick's one-line reason; absent for a soon card.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
+    },
+    /// A seat's own move went on the card on the table (API-56; protocol §4.13): the DM turned
+    /// the seat's words into a check. Public: the words were said aloud, and the skill says
+    /// what the seats vote for. `own_move_set` comes with it, DM only.
+    CardOwnMove {
+        /// The seat whose words they are.
+        actor: Handle,
+        /// The words, as said: `words`, since the event's own `text` is its line.
+        words: String,
+        /// The check's skill.
+        skill: Skill,
+    },
+    /// The own move's mapping (API-56), right after `card_own_move`: the run record's copy of
+    /// what the DM view loses once the card is decided. DM only.
+    OwnMoveSet {
+        /// The card id.
+        card: String,
+        /// The seat whose words they are.
+        actor: Handle,
+        /// The check's ability.
+        ability: Ability,
+        /// The check's skill.
+        skill: Skill,
+        /// The check's DC, from the ladder.
+        dc: u8,
+        /// The choice id a success brings.
+        success: String,
+        /// The choice id a failure brings; absent when none was named (decision 0079).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        failure: Option<String>,
+    },
+    /// The card was decided on its own move and the proposer's check is rolled (API-56):
+    /// after `card_resolved` and the roll, before the named choice's effects. For a move
+    /// with no failure (decision 0079) the roll comes first: on a success `card_resolved`
+    /// and then this event; on a fall this event with `choice: null`, the deed, and the card
+    /// back on the table. DM only: which choice the roll brought is the DM's; players see
+    /// its effects and the narration.
+    OwnMoveRan {
+        /// The card id.
+        card: String,
+        /// The choice id whose effects run; null when the move named no failure and fell,
+        /// and no choice runs.
+        choice: Option<String>,
+        /// The proposer's check roll; null when the proposer was down, or, for a move with
+        /// no failure, when the engine could not make the roll.
+        roll: Option<RollId>,
     },
     /// The card that goes on the table, as the DM sees it (AGT-91), right before its
     /// `card_drawn`, after any `card_picked` and `scout_looked`: logged for every card, so a

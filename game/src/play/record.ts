@@ -11,6 +11,15 @@ import type { StopKind } from "../table/types.ts";
 import type { RosterRecord } from "./roster.ts";
 import type { Settings } from "./settings.ts";
 
+/** The JSON lines of a run file, none when it is missing. */
+export function readLines<T>(file: string): T[] {
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line) as T);
+}
+
 /** The run folder's format: bumped when a file in it changes shape. */
 export const RUN_FORMAT = 1;
 
@@ -87,4 +96,15 @@ export function packOfRun(dir: string): string {
     recorded = undefined;
   }
   return recorded && existsSync(recorded) ? recorded : path.join(REPO, "scenarios/the_silent_mill");
+}
+
+/** A run's Langfuse tags (AGT-16), as run.json recorded them: profile, pack and roster; none without a run.json. */
+export function tagsOfRun(dir: string): string[] {
+  try {
+    const record = readRunRecord(dir);
+    const pack = record.settings.pack?.value as string | undefined;
+    return [record.profile?.name ?? "no-profile", ...(pack ? [path.basename(path.resolve(pack))] : []), ...(record.roster ? [`roster:${record.roster.name}`] : [])];
+  } catch {
+    return [];
+  }
 }

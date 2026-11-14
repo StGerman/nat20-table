@@ -7,6 +7,10 @@ import type { Roster } from "@nat20-table/engine-client";
 import { ScriptedSeat } from "../src/table/scripted.ts";
 import { TableState, type TextGuard } from "../src/table/state.ts";
 import type { Seat } from "../src/table/types.ts";
+import type { Language } from "../src/agents/language.ts";
+import { seatCards } from "../src/pack/campaign.ts";
+import { castParty } from "../src/play/run.ts";
+import { SeatNames } from "../src/table/seat-lines.ts";
 import { Transcript } from "../src/table/transcript.ts";
 
 /** The engine's own test scenes, used as a pack. */
@@ -38,6 +42,8 @@ export async function testTable<S extends Seat = ScriptedSeat>(options: {
   guards?: (engine: GameEngine) => { narrationGuard: TextGuard; speechGuard: TextGuard };
   /** A party an earlier session saved (API-45). */
   roster?: Roster;
+  /** The seat's language (AGT-98): Russian names from the pack and its cards' Russian words. */
+  language?: Language;
 }): Promise<TestTable<S>> {
   const runDir = mkdtempSync(path.join(tmpdir(), "table-"));
   const engine = await GameEngine.start({ pack: options.pack ?? TEST_PACK, runDir, seed: options.seed, ...(options.roster ? { roster: options.roster } : {}) });
@@ -52,6 +58,7 @@ export async function testTable<S extends Seat = ScriptedSeat>(options: {
     narrationGuard: options.narrationGuard,
     speechGuard: options.speechGuard,
     ...options.guards?.(engine),
+    ...(options.language === "ru" ? { names: new SeatNames("ru", castParty(options.pack ?? TEST_PACK).seatRu), cards: seatCards(options.pack ?? TEST_PACK) } : {}),
   });
   return {
     table,
