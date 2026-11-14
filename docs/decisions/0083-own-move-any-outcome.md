@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-14
 - **Decided by:** Stas, 2026-11-14: «свой ход может вести к любым исходам это правило!» (17:55Z), five answers in the project chat (19:21Z), «делаем» (19:23Z). The table rules review (project files `engine/m12/rules-review/rules-review.md`, read by Lev Neiman) found where the cap came from.
-- **Supersedes:** in 0068, the rule that an own move's success and failure must be choices the card already offers, and the vote on an own move that is the human's character's own act. Supersedes 0079 and 0081 (on the Milestone 12 stack) in full.
+- **Supersedes:** 0079 and 0081 in full. In part: 0068 (an own move's success and failure must be choices the card already offers; the vote on an own move that is the human's character's own act) and 0070 (torture "never shown" becomes "never described"). The lines this overrides in accepted scopes stay as written: `docs/scope/not-a-passenger-scope.md` §2 item 1 and §3 ("An own move never invents an outcome") and `docs/scope/allies-in-fights-scope.md` ("Torture stays never shown").
 
 ## Context
 
@@ -41,6 +41,7 @@ C, with Stas's five answers:
 - Lev Neiman drafts the mechanism's system design (records, contract version, DM prompt, what a later card reads). No `TASKS.md` row until Stas accepts it.
 - The DM prompt's `OWN_MOVE_RULE` and the prompt line "You never decide an outcome" change with that design, not before: today's code still carries the cap.
 - Rows from the review stay open for that design: words that are a written choice count as that seat's vote; a "yes" or "no" from a person comes only from a roll; a consequence of a roll is recorded by the engine, not kept only in DM memory; the same stake rule in scenes.
+- `game/src/agents/dm.ts` ("You never decide an outcome") contradicts Rule 4's new sentence until that design lands.
 - The condensed project instructions are resynced from CLAUDE.md after this merges.
 
 ## Revisit when
@@ -50,6 +51,6 @@ C, with Stas's five answers:
 
 ## Sources
 
-- The review: project files `engine/m12/rules-review/rules-review.md`.
+- Project files (not in the repo): the review `engine/m12/rules-review/rules-review.md`; the note `engine/m11/own-move-on-a-card.md`.
 - Runs `full-2026-11-13T16-05-31-438Z`, `full-2026-11-14T01-42-04-072Z`, `full-2026-11-14T17-19-50-900Z` (live notes).
 - Decisions 0068, 0071; scope `docs/scope/not-a-passenger-scope.md`.
