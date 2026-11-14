@@ -1,24 +1,43 @@
 # The Wend valley
 
-A quiet farming valley at the northern edge of a small kingdom whose lord rarely looks this far north. Written for *The Silent Mill*; other packs may use it.
+A quiet farming valley in the north-east corner of a small kingdom whose lord rarely looks this far. Written for *The Silent Mill*; *Fair in Wend* and *The Way Back* use it too, and other packs may.
 
 ## Places
 
-- **The river Wend** runs south out of the Hollin Hills, slow and brown, and turns every mill in the valley.
+- **The river Wend** runs south out of the Hollin Hills, slow and brown, and turns every mill in the valley. Above the mouth of the Millbeck the mill weirs and the fords close it to boats; below it, the Saltmouth boatmen pole flat barges between the bridge and the town. A barge goes down with the current in half a day and comes back up only on a tow rope, with horses on the bank. A farmer with a wagon loads it once in the farmyard and drives it to the fair: it is cheaper than unloading at the bridge and paying the boatmen.
 - **Wendford** is a village of forty households where the old road crosses the river: a green with a well and an old oak, the reeve's house with its porch on the green, a shrine to Embra, sheep on the slopes. The market town is a day downriver.
 - **Pell's mill** stands a mile upriver at the end of a hedged lane: a stone mill with an undershot wheel and a sluice gate above it, a cobbled yard with a woodpile and an old kennel, a storeroom inside the door, and a cellar under the stones where the grain is kept dry. A back door lets out onto the millrace.
-- **The Hollin Hills** close the valley to the north: heather, bog and old barrows.
-- **Saltmouth** (a draft name) is the fair town at the river's mouth, twenty miles downriver from Wendford: a day with a wagon. It sells salt, iron and cloth, and south of it lie salt pans and an old ferry landing.
-- **The Highsteads** are upland farms eight miles up the slopes from Wendford, under the hills: wool, honey and peat.
+- **The Hollin Hills** close the valley to the north: heather, bog and old barrows. Beyond them is nobody's land; the hills are the valley's edge, not a border.
+- **The Highsteads** are upland farms eight miles up the slopes from Wendford, under the hills: wool, honey and peat. Above the farms stand the summer huts on the high pasture, where the families take the flocks from late spring to the first frost and leave the huts empty the rest of the year.
+- **Bald Hill** is the bare hill above the Highsteads, on the path to the Barrow Oak. Col and Dunn's farm stands on its shoulder. The valley called it Bald Hill long before anyone now living, and people lit fires on its top on certain nights once; nobody says why any more.
+- **The Barrow Oak** is a hollow oak on a barrow at the valley's northern edge. The hill folk keep away from it, except to push a copper into its roots when they want something they cannot ask a person for.
+- **Saltmouth** is the fair town and the valley's port at the river's mouth, twenty miles downriver from Wendford: a day with a wagon. It sells salt, iron and cloth, and the whole world passes through it, a few of everyone. Its harbour is silting up: the old quay under the town walls stands on mud at low water, with mooring rings in the wall above dry ground, and the ships now lie at an outer quay a mile out, where lighters carry their cargo to the town. By the outer quay stands the caravanserai, the house for anyone who pays a night: a square of walls round a yard with a well, stores and stables below, rooms above, one gate shut at dusk and opened at dawn. Ships from far ports wait off a small island in the harbour mouth before anyone from them may land.
+- **The salt flats** lie south of Saltmouth: salt pans, mud and creeks, crossed on foot at low tide. The road from town ends at the old ferry landing four miles out. Across the south channel stands an empty customs house on the far bank, and three miles beyond it the far dyke.
 - **The old road** runs west and east through Wendford; the caravans that use it come from far cities the valley rarely sees.
 
 The map of these places, with roads and miles, is `worlds/wend/map.json`.
 
+## The kingdom and its border
+
+- The kingdom is small: a strip of coast and the valleys that run down to it. Its lord holds court in a harbour town about a day's sail west along the coast, which the valley has never seen. The Wend is the kingdom's far corner. A **reeve** is a village's headman, chosen by the households and answerable to the lord's steward, who visits once a year.
+- Past the far dyke live the **Free Host**: free fighting men and their families on the marshes, under no lord. They keep a hard faith of their own, choose their captain in a circle, and swear oaths instead of signing papers. They take in anyone who comes to them, clothe and arm them, and never hand them back: a runaway's debts do not cross the dyke. The Free Host are not the lord's subjects and owe him nothing.
+- Until last winter the border ran along the south channel below Saltmouth, and the salt flats were the Free Host's. The ferry crossed the channel, and the customs house on the far bank was theirs. That was the lord's border war: fought along the whole length of the border, at breaches and walls far from the flats.
+- The peace was not made by either side. Both called in the **Wizards' Council**, a court and parliament of mages that sits in the trading cities over the sea, judges quarrels between lands and makes the laws for magic. The Council drew the new line on its map without setting foot on the flats: the flats went to the lord, and the border moved to the far dyke. The Council's surveyors are setting stones along the dyke, each cut with the Council's mark; half the places are still empty. The Free Host signed and do not keep it: stones set by day are pulled up at night. The ferry stopped, and the customs house stands empty.
+- The battle-mages of the war fought under the Council's watch; what the Council allows a mage to do in a war is its law, not the lord's.
+
+## Salt and Saltmouth's treasury
+
+- Salt pays for Saltmouth. The old salt house holds the lord's charter for the salt pans, and the duty on every sack sold under it pays for the town's walls, the fair warden and the lighters to the outer quay. As the harbour silts and the outer quay costs more, the duty goes up: this is why salt is dear this year. Nobody in the valley knows it; they only see the price.
+- The new ground on the flats is not named in the old charter, so pans there are worked outside it, and past the far dyke salt carries no duty at all. Salt that crosses the flats at low tide, either way, is a hole in the town's treasury, and the town has every reason to watch the flats.
+- Coin is silver pennies. A mill is the richest thing a village owns after its land, and a stopped one is felt in every kitchen within a week.
+
+## The sea
+
+- From Saltmouth ships go west along the coast to the lord's harbour, out to small islands that belong to nobody and grow rich whenever a coast is closed to trade, and over the sea to the trading cities where the Wizards' Council sits. None of this is on the map yet.
+
 ## People and customs
 
-- A **reeve** is a village's headman, chosen by the households and answerable to the lord's steward, who visits once a year. The reeve keeps the tally sticks, settles small quarrels and lends from the common chest.
 - **Embra, the Hearth Mother**, is the valley's goddess of home fires, bread and mercy. Her sign is a round loaf scored with a cross. Her priests are expected to feed the hungry and to spare an enemy who yields.
-- Coin is silver pennies. A mill is the richest thing a village owns after its land, and a stopped one is felt in every kitchen within a week.
 
 ## The goblins of the hills
 
@@ -28,4 +47,4 @@ The map of these places, with roads and miles, is `worlds/wend/map.json`.
 
 ## The Grey Lantern company
 
-The four pregenerated characters served together in the Grey Lantern company, hired soldiers paid off last winter when the lord's border war ended. They have travelled together since, taking guard work where they find it, and they reach Wendford on the morning the adventure begins.
+The four pregenerated characters served together in the Grey Lantern company, hired soldiers paid off last winter when the lord's border war ended. They fought at the breaches, far from the salt flats: they know the border moved, but not where it runs on the flats. They have travelled together since, taking guard work where they find it, and they reach Wendford on the morning the adventure begins.

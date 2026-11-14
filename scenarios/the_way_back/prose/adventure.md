@@ -10,8 +10,8 @@ Fenn Lusk, a salt dealer from Saltmouth, takes salt and iron up to the hill farm
 
 - Fenn is honest, anxious and exact. The contract is what he said, and he pays it in full at the Highsteads. A Blade who falls on the road is paid for the days served.
 - This autumn the goblins took the flocks off the ridges (the Hungry hills). Fenn is afraid half the farms he sells to can't pay in spring, and he is right. He sells on credit where Rufus buys debts: the Blades see the other side of the same trouble.
-- Salt is dear this year and nobody in the valley knows why. The cause is off the map, far from Wend; never name it, and never let anyone on screen explain it. What the table sees is the price.
-- The road has the party's own past on it: the Millbeck bridge, Wendford, the farm under the ridge, Gwyn at the fold gate. The cards that read what the party did open each payoff with one plain sentence of what happened last time; say it.
+- Salt is dear this year and nobody in the valley knows why. The cause is in Saltmouth: the old salt house raised the duty on salt to pay for a harbour that is silting up (the lore, *Salt and Saltmouth's treasury*). Nobody on the road knows it; never let anyone on screen explain it in this contract. What the table sees is the price.
+- The road has the party's own past on it: the Millbeck bridge, Wendford, the farm on Bald Hill, Gwyn at the fold gate. The cards that read what the party did open each payoff with one plain sentence of what happened last time; say it.
 
 ## Running this pack
 
