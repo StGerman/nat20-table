@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-14
-- **Decided by:** pending. Stas chose the direction after exit run 2 (2026-11-14 02:23Z: «поправить дизайн через Льва»); the shape below is Lev's proposal (`docs/design/m12-own-move-amendment.md`). It refines decision 0068 and does not replace it.
+- **Decided by:** Stas, in part; the record becomes Accepted when he merges table #381. He chose the direction after exit run 2 (2026-11-14 02:23Z: «поправить дизайн через Льва»); the shape below is Lev's proposal (`docs/design/m12-own-move-amendment.md`). It refines decision 0068 and does not replace it. On 2026-11-14 06:20Z Stas decided the amendment's three questions: the deed («Поступок own_move_\<card> один всегда один! Как ты можешь написать провал если сам поступок не известен»), a fall counts for exit row 2 («Да»), and words no choice fits get only an answer («только ответ в сцене, человек реагирует и это логично»).
 
 ## Context
 
@@ -38,35 +38,37 @@ The move names a check and a success choice. If the vote goes to it and the roll
 - Pro: no mechanism changes.
 - Con: content on every card a plan can hit, in this pack and the next; it does nothing for words no choice fits.
 
-### The deed for a tried move (within A)
-- The same deed, `own_move_<card>` (proposed): 0068 says the deed carries no result, so "the party made an own move on this card" is as true of a failed one. No new id, no validator change, no new owed row on Zoya's board.
+### The deed for a tried move (within A; decided by Stas, 2026-11-14)
+- The same deed, `own_move_<card>`, with no result in it (chosen): 0068 says the deed carries no result, so "the party made an own move on this card" is as true of a failed one. No new id, no validator change. Con: nothing in the world's record tells a fall from a success, so no later reader can pay a fall off.
 - A second deed, `own_move_tried_<card>`: con, a second id that nothing reads in Milestone 12, when the first already waits for a reader.
+- The result inside the one deed (Zoya's fallback, amendment §16): pro, a later reader could tell a fall from a success. Con, Stas's: a "failed" mark says nothing while what was tried is free words no reader has.
 
 ### Words no choice fits (the `salt_on_credit` case)
-- The DM answers the words and nothing more (proposed): nobody in the scene agrees, refuses or gives way, and no outcome goes into `remember`. Con: an honest plan gets an answer that settles nothing.
+- The DM answers the words and nothing more (chosen; Stas, 2026-11-14): nobody in the scene agrees, refuses or gives way, and no outcome goes into `remember`. Con: an honest plan gets an answer that settles nothing.
 - The DM rules it in the scene, as in run 2: con, the narrator decides an outcome the engine never rolled, and its memory carries that through the rest of the run.
 - The table says in plain words that this card cannot carry the plan: con, the DM would have to label its own answer, and a first-time player may read the line as "you typed it wrong". Left out; see Revisit.
 
 ### What A buys, honestly
-Under A a fall can still end on the success choice by its number (on `bog_wifes_toll`: `bread`), so the end on the card is the same as C's. What A buys over C is the table's vote on the player's words and the deed in the engine's book; what it costs is a contract version, a card that stays pending across the roll, words taken back and a re-ask. Zoya (amendment §16): both ends equal a written choice until a reader can tell a fall from a success, which is question 1.
+Under A a fall can still end on the success choice by its number (on `bog_wifes_toll`: `bread`), so the end on the card is the same as C's. What A buys over C is the table's vote on the player's words and the deed in the engine's book; what it costs is a contract version, a card that stays pending across the roll, words taken back and a re-ask. Zoya (amendment §16): both ends equal a written choice until a reader can tell a fall from a success, which is question 1. Stas ruled it on 2026-11-14: one deed, no result; what a fall then brings is in the amendment's §15.1.
 
 ## Decision
 
-A, with the same deed, and answers only for words no choice fits. A failed roll with no failure choice costs the move and nothing else, on purpose: a success gives nothing a number would not, so a failure takes nothing a number would not.
+A, with the same deed and no result in it (the deed: Stas, 2026-11-14), and answers only for words no choice fits. A failed roll with no failure choice costs the move and nothing else, on purpose: a success gives nothing a number would not, so a failure takes nothing a number would not.
 
 ## Consequences
 
 - One more contract version in dev (dev.72 if it lands first): `own_move.failure` becomes optional; `own_move_ran.choice` is `null` when no choice ran; for such a move `card_resolved` on `own_move` is logged after the roll and only on a success. A move that names a failure behaves and replays as before.
 - 0068's sentences "the success and failure choices must be two different choices" and "a failure decides the card" now hold only for a move that names a failure. One own move per card stays, tried or not.
 - The DM prompt's `card_words` rule and the `remember` tool's description change; no code can test what a narration rules, so the run report lists every answer that made no move, with the words and any fact the DM kept in that wake.
-- Exit row 2 as the scope words it ("a card decided by Stas's own move") does not count a move that fell (whether the card then waited or was settled at once by the words left); whether it should is question 2 of the amendment, which recommends it does.
+- Exit row 2 as the scope words it ("a card decided by Stas's own move") does not count a move that fell (whether the card then waited or was settled at once by the words left); Stas ruled that the row counts it (2026-11-14, amendment §15 question 2), a departure from scope §4 row 2 recorded in design §10 item 12.
+- A fall leaves nothing in the world's record that a success does not: the deed is the same, and only the run's own log (`own_move_ran` with `choice: null`) tells them apart. What a fall brings is the roll, the DM's one or two sentences and the written choice the table then picks (amendment §15.1). Zoya folds her board row for a fall into the `own_move_<card>` row, which stays owed (amendment §16, follow-up).
 - The seat gains two lines (the move did not work after a roll; it could not be tried with `roll: null`), shown to the Blades the card waits for and a player owner after an own move fails and the card still waits (not when the words left settle it).
 
 ## Revisit when
 
 - An exit run shows the DM leaving the failure out where a choice plainly is what failing brings, in more than half of the own moves made: then B's simplicity is being paid for anyway, and B is the honest rule.
 - The report's list shows a plan no choice could carry on two runs in a row: then the plain table line, or a card change, is due.
-- The dramaturg mechanism wants a reader that tells a tried move from a successful one: then the deed needs the result in it, which 0068 already lists.
+- The dramaturg mechanism gives `own_move_<card>` a reader: the deed stays one, with no result in it (Stas, 2026-11-14), and the reader first needs the player's words; how the attempt came out is that design's question only once the words are carried.
 
 ## Sources
 
