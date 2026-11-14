@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-14
-- **Decided by:** Stas, in part; Accepted when he merges table #381, and marked so by the next PR (amendment §10, PR 1). He chose the direction after exit run 2 (2026-11-14 02:23Z: «поправить дизайн через Льва»); the shape below is Lev's proposal (`docs/design/m12-own-move-amendment.md`). It refines decision 0068 and does not replace it. On 2026-11-14 06:20Z Stas decided the amendment's three questions: the deed («Поступок own_move_\<card> один всегда один! Как ты можешь написать провал если сам поступок не известен»), a fall counts for exit row 2 («Да»), and words no choice fits get only an answer («только ответ в сцене, человек реагирует и это логично»).
+- **Decided by:** Stas, in part: the direction after exit run 2 (2026-11-14 02:23Z, «поправить дизайн через Льва») and the amendment's three questions (06:20Z, quoted in `docs/design/m12-own-move-amendment.md` §15): one deed with no result in it, a fall counts for exit row 2, and words no choice fits get only an answer. The rest of the shape is Lev's proposal; the record is Accepted when Stas merges table #381, and PR 1 marks it so (amendment §10). It refines decision 0068 and does not replace it.
 
 ## Context
 
@@ -53,7 +53,7 @@ Under A a fall can still end on the success choice by its number (on `bog_wifes_
 
 ## Decision
 
-A, with the same deed and no result in it (the deed: Stas, 2026-11-14), and answers only for words no choice fits. A failed roll with no failure choice costs the move and nothing else, on purpose: a success gives nothing a number would not, so a failure takes nothing a number would not.
+A, with the same deed and no result in it, and answers only for words no choice fits. A failed roll with no failure choice costs the move and nothing else, on purpose: a success gives nothing a number would not, so a failure takes nothing a number would not.
 
 ## Consequences
 
