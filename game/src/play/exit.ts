@@ -51,7 +51,7 @@ export interface OwnMoveMet {
   votes: Array<{ by: Handle; choice: string }>;
   /** The card's decision; absent while it waited at the run's end. */
   decided?: { choice: string; how: string };
-  /** The proposer's roll and its outcome; `null` when the proposer was down and the failure ran without one. */
+  /** The proposer's roll and its outcome; `null` when there was none: the proposer was down, or, for a move with no failure, the engine could not make it (decision 0079). */
   roll?: { id: string; outcome: string } | null;
   /** The choice the own move brought; `null` when it named no failure and fell (decision 0079). */
   ran?: string | null;
@@ -223,7 +223,7 @@ export function exitReport(run: RunRecord, log: Event[], transcript: TranscriptR
   const moves = ownMovesMet(log, transcript, partyOf(run));
   const out = ["", "## Not a passenger", "", `Own moves put on a card: ${moves.length}`];
   moves.forEach((m, i) => {
-    const roll = m.roll === null ? "no roll (the proposer was down)" : m.roll ? `${m.roll.id}, ${m.roll.outcome}` : "not rolled";
+    const roll = m.roll === null ? "no roll (the proposer was down, or the roll could not be made)" : m.roll ? `${m.roll.id}, ${m.roll.outcome}` : "not rolled";
     out.push(
       `${i + 1}. ${m.card}, ${m.actor}: "${m.words}"; ${m.skill} DC ${m.dc}; success brings ${m.success}, failure ${m.failure ?? "none named"}; votes: ${m.votes.map((v) => `${v.by} ${v.choice}`).join(", ") || "none"}; ${m.decided ? `decided on ${m.decided.choice} (${m.decided.how})` : "not decided"}${m.decided?.choice === "own_move" ? `; ${roll}; brought ${m.ran ?? "?"}` : ""}${m.fallbacks.length > 0 ? `; fallback votes: ${m.fallbacks.join(", ")}` : ""}`,
     );

@@ -555,12 +555,13 @@ impl Session {
             .world;
         let settled = world.deck.own_move_fell(&mut world.state.deck, &table);
         self.push_own_move_ran(&resolution.card, None, roll);
-        // The fall's part: the deed alone, with the resolution's `by`.
-        self.run_effects(&run.failure, &resolution.by)?;
-        match settled {
-            Some(settled) => self.resolve_card(settled),
-            None => Ok(()),
+        // The fall's part: the deed alone, with the resolution's `by`. A card the words left
+        // settled is resolved even if the deed fails, since it is already off the table.
+        let deed = self.run_effects(&run.failure, &resolution.by);
+        if let Some(settled) = settled {
+            self.resolve_card(settled)?;
         }
+        deed
     }
 
     /// An own move the card was decided on (API-56): the proposer rolls the check through
