@@ -568,6 +568,22 @@ pub struct PendingCard {
     /// A seat's own move on the card (API-56): the choice [`OWN_MOVE`], offered last
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub own_move: Option<OwnMove>,
+    /// The ways that fell on this card (decision 0081), in order: no way is rolled twice
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fell: Vec<FellWay>,
+}
+
+/// A way an own move was tried on a card and fell (decision 0081): a skill toward a success
+/// choice.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FellWay {
+    /// The check's skill, in snake_case
+    pub skill: String,
+    /// The choice a success would have brought
+    pub success: String,
+    /// Whether the check was rolled; a way that fell with no roll may be tried once more
+    pub rolled: bool,
 }
 
 /// A seat's own words on the card on the table, turned by the DM into a ladder check that
@@ -593,7 +609,7 @@ pub struct OwnMove {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failure: Option<String>,
     /// The move fell (decision 0079): it is no longer offered, and the card waits for a
-    /// written choice. One own move per card, tried or not
+    /// written choice or for another own move by another way (decision 0081)
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub spent: bool,
 }
@@ -1316,6 +1332,7 @@ impl Deck {
             choices: offered_ids(card, deeds),
             said: BTreeMap::new(),
             own_move: None,
+            fell: Vec::new(),
         });
     }
 
@@ -1372,10 +1389,16 @@ impl Deck {
     }
 
     /// An own move with no failure fell (decision 0079): a failed roll, a downed proposer or
-    /// no roll at all. The move is spent and every word given for it is taken back; the words
-    /// left are tallied as [`Deck::speak`] tallies them. Returns the decision when they settle
-    /// the card, and takes the card off the table then.
-    pub fn own_move_fell(&self, state: &mut DeckState, table: &Table) -> Option<Resolution> {
+    /// no roll at all (`rolled` says which). The move is spent, its way is kept on the card
+    /// (decision 0081) and every word given for it is taken back; the words left are tallied
+    /// as [`Deck::speak`] tallies them. Returns the decision when they settle the card, and
+    /// takes the card off the table then.
+    pub fn own_move_fell(
+        &self,
+        state: &mut DeckState,
+        table: &Table,
+        rolled: bool,
+    ) -> Option<Resolution> {
         let pending = state.pending.as_mut()?;
         let card = self.card(&pending.card)?;
         let mv = pending
@@ -1383,6 +1406,12 @@ impl Deck {
             .as_mut()
             .filter(|mv| mv.failure.is_none())?;
         mv.spent = true;
+        let way = FellWay {
+            skill: mv.skill.clone(),
+            success: mv.success.clone(),
+            rolled,
+        };
+        pending.fell.push(way);
         pending.said.retain(|_, choice| choice != OWN_MOVE);
         let resolution = settle(card, pending, table);
         if resolution.is_some() {
@@ -1424,7 +1453,10 @@ impl Deck {
     /// A seat's own move goes on the card on the table (API-56): the move joins the card as
     /// the choice [`OWN_MOVE`], and the seat's word is given for it, as by [`Deck::speak`].
     /// `success` must be a choice offered on the card; a `failure`, when named, another one
-    /// that breaks no custom. Returns the decision when the seat's word settles the card.
+    /// that breaks no custom. One move at a time: after a fall the card takes another, by
+    /// another way (decision 0081): a skill toward a success that was already rolled on this
+    /// card, or that already fell twice, is refused. Returns the decision when the seat's
+    /// word settles the card.
     pub fn own_move(
         &self,
         state: &mut DeckState,
@@ -1443,8 +1475,19 @@ impl Deck {
             None => None,
         };
         may_speak(pending, card, table, &mv.actor)?;
-        if pending.own_move.is_some() {
+        if pending.own_move.as_ref().is_some_and(|mv| !mv.spent) {
             return Err(CardError::OwnMoveTaken);
+        }
+        let same: Vec<&FellWay> = pending
+            .fell
+            .iter()
+            .filter(|w| w.skill == mv.skill && w.success == mv.success)
+            .collect();
+        if same.iter().any(|w| w.rolled) || same.len() >= 2 {
+            return Err(CardError::BadOwnMove(format!(
+                "this way already fell on this card ({} toward {}); name another way, or answer the words and make no move",
+                mv.skill, mv.success
+            )));
         }
         if let Some(failure) = failure {
             if failure.id == mv.success {
@@ -2050,6 +2093,7 @@ mod tests {
                 choices: Vec::new(),
                 said: BTreeMap::new(),
                 own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -2083,6 +2127,7 @@ mod tests {
                 choices: Vec::new(),
                 said: BTreeMap::new(),
                 own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -2103,6 +2148,7 @@ mod tests {
                 choices: Vec::new(),
                 said: BTreeMap::new(),
                 own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -2130,6 +2176,7 @@ mod tests {
                 choices: Vec::new(),
                 said: BTreeMap::new(),
                 own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -2162,6 +2209,7 @@ mod tests {
                 choices: Vec::new(),
                 said: BTreeMap::new(),
                 own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -2190,6 +2238,7 @@ mod tests {
                 choices: Vec::new(),
                 said: BTreeMap::new(),
                 own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };
@@ -2207,6 +2256,7 @@ mod tests {
                 choices: Vec::new(),
                 said: BTreeMap::new(),
                 own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         }
@@ -2275,7 +2325,7 @@ mod tests {
                 .unwrap()
                 .is_some()
         );
-        assert_eq!(d.own_move_fell(&mut state, &table), None);
+        assert_eq!(d.own_move_fell(&mut state, &table, true), None);
         let card = state.pending.as_ref().unwrap();
         assert!(card.own_move.as_ref().unwrap().spent);
         assert!(card.said.is_empty());
@@ -2287,10 +2337,11 @@ mod tests {
             d.speak(&mut state, &table, "bren", OWN_MOVE),
             Err(CardError::UnknownChoice(OWN_MOVE.into()))
         );
-        assert_eq!(
+        // The same way was rolled and fell: it is not rolled twice (decision 0081).
+        assert!(matches!(
             d.own_move(&mut state, &table, own_alone("maren", "give")),
-            Err(CardError::OwnMoveTaken)
-        );
+            Err(CardError::BadOwnMove(why)) if why.contains("already fell")
+        ));
         d.speak(&mut state, &table, "bren", "refuse").unwrap();
         let done = d
             .speak(&mut state, &table, "maren", "refuse")
@@ -2299,6 +2350,72 @@ mod tests {
         assert_eq!(done.choice, "refuse");
         assert!(done.own_move.is_none());
         assert!(state.pending.is_none());
+    }
+
+    #[test]
+    fn after_a_fall_the_card_takes_another_own_move_by_another_way() {
+        let d = deck();
+        let table = npc_table();
+        let mut state = pending("beggar");
+        d.own_move(&mut state, &table, own_alone("bren", "give"))
+            .unwrap();
+        d.speak(&mut state, &table, "maren", OWN_MOVE).unwrap();
+        assert_eq!(d.own_move_fell(&mut state, &table, true), None);
+        // Another skill toward the same choice is another way.
+        let mut other = own_alone("maren", "give");
+        other.skill = "insight".into();
+        assert_eq!(d.own_move(&mut state, &table, other.clone()), Ok(None));
+        let card = state.pending.as_ref().unwrap();
+        assert!(!card.own_move.as_ref().unwrap().spent);
+        assert_eq!(
+            card.speakable(d.card("beggar").unwrap()).last().unwrap(),
+            OWN_MOVE
+        );
+        // One move at a time.
+        let mut third = own_alone("bren", "refuse");
+        third.skill = "athletics".into();
+        assert_eq!(
+            d.own_move(&mut state, &table, third),
+            Err(CardError::OwnMoveTaken)
+        );
+        assert!(
+            d.speak(&mut state, &table, "bren", OWN_MOVE)
+                .unwrap()
+                .is_some()
+        );
+        assert_eq!(d.own_move_fell(&mut state, &table, true), None);
+        let card = state.pending.as_ref().unwrap();
+        assert_eq!(card.fell.len(), 2, "the engine counts no falls, only ways");
+        assert!(matches!(
+            d.own_move(&mut state, &table, other),
+            Err(CardError::BadOwnMove(_))
+        ));
+    }
+
+    #[test]
+    fn a_way_that_fell_with_no_roll_is_taken_once_more_and_then_refused() {
+        let d = deck();
+        let table = npc_table();
+        let mut state = pending("beggar");
+        for _ in 0..2 {
+            d.own_move(&mut state, &table, own_alone("bren", "give"))
+                .unwrap();
+            d.speak(&mut state, &table, "maren", OWN_MOVE).unwrap();
+            assert_eq!(d.own_move_fell(&mut state, &table, false), None);
+        }
+        assert!(matches!(
+            d.own_move(&mut state, &table, own_alone("bren", "give")),
+            Err(CardError::BadOwnMove(_))
+        ));
+        // The ways that fell are saved with the card and left out when there are none.
+        let saved = serde_json::to_value(state.pending.as_ref().unwrap()).unwrap();
+        assert_eq!(saved["fell"].as_array().unwrap().len(), 2);
+        assert!(
+            serde_json::to_value(pending("beggar").pending.unwrap())
+                .unwrap()
+                .get("fell")
+                .is_none()
+        );
     }
 
     #[test]
@@ -2327,7 +2444,7 @@ mod tests {
             blades: vec!["maren".into(), "torva".into()],
             ..three
         };
-        let settled = d.own_move_fell(&mut state, &up).unwrap();
+        let settled = d.own_move_fell(&mut state, &up, false).unwrap();
         assert_eq!(
             (settled.choice.as_str(), settled.decided),
             ("give", Decided::Tie)
@@ -2354,7 +2471,7 @@ mod tests {
         assert_eq!(done.decided, Decided::Owner);
         assert!(state.pending.is_some(), "the card waits for the roll");
         // The owner's call is no word in the tally; Bren's advice for the move is taken back.
-        assert_eq!(d.own_move_fell(&mut state, &table), None);
+        assert_eq!(d.own_move_fell(&mut state, &table, true), None);
         assert_eq!(
             d.speak(&mut state, &table, "ilsa", "push"),
             Err(CardError::WaitingFor(vec!["bren".into()]))
@@ -2392,7 +2509,7 @@ mod tests {
             ..npc_table()
         };
         // Today's settle, never settle_unattended: Maren's kept word decides.
-        let settled = d.own_move_fell(&mut state, &nobody).unwrap();
+        let settled = d.own_move_fell(&mut state, &nobody, false).unwrap();
         assert_eq!(settled.choice, "refuse");
         assert!(state.pending.is_none());
     }
@@ -2633,6 +2750,7 @@ mod tests {
                 choices: Vec::new(),
                 said: BTreeMap::new(),
                 own_move: None,
+                fell: Vec::new(),
             }),
             ..DeckState::default()
         };

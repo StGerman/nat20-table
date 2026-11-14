@@ -346,7 +346,9 @@ pub enum Command {
     /// effects. With no failure named, a fall (a failed roll, a downed actor, or an engine
     /// error at the roll) runs no choice: the words given for `own_move` are taken back and
     /// the card waits for a written choice, unless the words left settle it (decision 0079).
-    /// One own move per card, tried or not. DM only.
+    /// One own move at a time: after a fall the card takes another, by another way (a skill
+    /// toward a success choice that was already rolled on this card, or that already fell
+    /// twice, is `rejected`, `bad_own_move`; decision 0081). DM only.
     OwnMove {
         /// The seat whose words these are: one with a say on the card that has not spoken yet
         /// (a Hired Blade, or a player owner once every Blade has advised).

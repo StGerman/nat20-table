@@ -3,6 +3,12 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.73 (2026-11-14)
+- Meaning (API-62, decision 0081, protocol §4.13): `own_move` after a fall is accepted: the card takes another own move from a seat with a say and no word, and it replaces the spent one in both views. The engine counts no falls.
+- Meaning (API-62): `own_move_taken` now means a move is among the card's choices (before: the card has or had one).
+- Meaning (API-62): `bad_own_move` also covers a way that fell: a skill toward a success choice that was already rolled on this card, or that fell twice with no roll; its message names the skill and the choice.
+- No shape changes, so `check-breaking` lists nothing. A roster saved after a fall on dev.72 loads with no ways kept, so that one way could be rolled once more (dev only). Fixture: `own_move.jsonl` re-records two cases (a second `own_move` after a fall; the roster saved after a fall) and gains the cases of the 0081 amendment §5. Other fixtures change by version only.
+
 ## 1.0.0-dev.72 (2026-11-14)
 - Meaning (API-61, decision 0079, protocol §4.13): `own_move.failure` is optional: with none, a failed roll, a downed proposer or an engine error at the roll runs no choice and the card stays on the table unless the words left settle it (the words given for `own_move` are taken back, `own_move` is no longer offered, a second is refused `own_move_taken`); `own_move_ran.choice` is null then; for such a move `card_resolved` on `own_move` follows the roll and is logged only on a success. `CardDm.own_move.failure` and `own_move_set.failure` are left out when none; after a fall `own_move` stays in both views and leaves the card's choices. Three fields widen (`own_move.failure`, `OwnMoveDm.failure`, `own_move_set.failure` to optional; `own_move_ran.choice` to nullable); `check-breaking` lists none of them against main. A move that names a failure is unchanged, byte for byte. Fixture: `own_move.jsonl` gains the no-failure cases of design §1.2. Other fixtures change by version only.
 
