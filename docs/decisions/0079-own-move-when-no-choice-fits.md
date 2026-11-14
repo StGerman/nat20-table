@@ -17,7 +17,7 @@ A success gives the party nothing a number would not: the named choice runs in f
 
 ## Options
 
-### A. The failure choice is optional; with none, a failed roll leaves the card waiting (proposed)
+### A. The failure choice is optional; with none, a failed roll leaves the card waiting (chosen)
 The move names a check and a success choice. If the vote goes to it and the roll fails (or the proposer is down, or the engine cannot roll), no choice runs, the card is decided on a written choice (at once if the words left settle it), and the move is spent.
 - Pro: the bog-wife's card takes the move; a failed roll never acts for the player, by structure and not by prompt; moves that name a failure keep their teeth and their fixtures.
 - Con: the card's decision is no longer final at the vote for such a move: the server rolls before it logs `card_resolved`. A failed attempt costs only the move.
@@ -59,7 +59,7 @@ A, with the same deed and no result in it, and answers only for words no choice 
 
 - One more contract version in dev (dev.72 if it lands first): `own_move.failure` becomes optional; `own_move_ran.choice` is `null` when no choice ran; for such a move `card_resolved` on `own_move` is logged after the roll and only on a success. A move that names a failure behaves and replays as before.
 - 0068's sentences "the success and failure choices must be two different choices" and "a failure decides the card" now hold only for a move that names a failure. One own move per card stays, tried or not.
-- The DM prompt's `card_words` rule and the `remember` tool's description change; no code can test what a narration rules, so the run report lists every answer that made no move, with the words and any fact the DM kept in that wake.
+- The DM prompt's `card_words` rule and the `remember` tool's description change; no code can test what a narration rules, so the run report lists every answer that made no move, with the words and any fact the DM kept in that wake, and every fact kept with `remember` in a wake that told a fall.
 - Exit row 2 counts a move that fell, whether the card then waited or was settled at once by the words left (Stas, amendment §15 question 2): a departure from scope §4 row 2 (design §10 item 12).
 - A fall leaves nothing in the world's record that a success does not: the deed is the same, and only the run's own log (`own_move_ran` with `choice: null`) tells them apart. What a fall brings is the roll, the DM's one or two sentences and the written choice the table then picks (amendment §15.1). Zoya folds her board row for a fall into the `own_move_<card>` row, which stays owed (amendment §16, follow-up).
 - The seat gains two lines (the move did not work after a roll; it could not be tried with `roll: null`), shown to the Blades the card waits for and a player owner after an own move fails and the card still waits (not when the words left settle it).
@@ -68,10 +68,10 @@ A, with the same deed and no result in it, and answers only for words no choice 
 
 - An exit run shows the DM leaving the failure out where a choice plainly is what failing brings, in more than half of the own moves made: then B's simplicity is being paid for anyway, and B is the honest rule.
 - The report's list shows a plan no choice could carry on two runs in a row: then the plain table line, or a card change, is due.
-- The dramaturg mechanism designs a reader for `own_move_<card>`: it carries the player's words first (the deed stays one id, Stas, 2026-11-14), and whether the result travels with the words is asked of Stas then (amendment §15.1).
+- The dramaturg mechanism designs a reader for `own_move_<card>`: it carries the player's words first (the deed stays one id, Stas, 2026-11-14), and whether the result travels with the words is that design's question: it forbids telling the result, or asks Stas (amendment §15.1).
 
 ## Sources
 
-- `docs/design/m12-own-move-amendment.md` (the amendment); `docs/design/m12-system-design.md` §1.4, §1.8, §11; decision 0068.
+- `docs/design/m12-own-move-amendment.md` (the amendment); `docs/design/m12-system-design.md` §1.4, §1.5, §1.8, §8, §10 item 12, §11; decision 0068.
 - Run `full-2026-11-14T01-42-04-072Z`: `seat.jsonl` lines 01:55:19 to 02:06:29, `report.md` "Words on a card that got no own move: 9"; analysis in the project files, `engine/m12/runs/full-2026-11-14T01-42-04-072Z/analysis.md`.
 - The cards: `worlds/wend/deck/hills.json` (`bog_wifes_toll`, `peddler`), `scenarios/the_way_back/deck/fenn.json` (`salt_on_credit`).
