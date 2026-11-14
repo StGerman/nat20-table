@@ -59,7 +59,7 @@ A, with the same deed, and answers only for words no choice fits. A failed roll 
 - One more contract version in dev (dev.72 if it lands first): `own_move.failure` becomes optional; `own_move_ran.choice` is `null` when no choice ran; for such a move `card_resolved` on `own_move` is logged after the roll and only on a success. A move that names a failure behaves and replays as before.
 - 0068's sentences "the success and failure choices must be two different choices" and "a failure decides the card" now hold only for a move that names a failure. One own move per card stays, tried or not.
 - The DM prompt's `card_words` rule and the `remember` tool's description change; no code can test what a narration rules, so the run report lists every answer that made no move, with the words and any fact the DM kept in that wake.
-- Exit row 2 as the scope words it ("a card decided by Stas's own move") does not count a move that failed and left the card waiting; whether it should is question 2 of the amendment.
+- Exit row 2 as the scope words it ("a card decided by Stas's own move") does not count a move that fell (whether the card then waited or was settled at once by the words left); whether it should is question 2 of the amendment, which recommends it does.
 - The seat gains two lines (the move did not work after a roll; it could not be tried with `roll: null`), shown to the seats whose word was taken back when an own move fails and the card still waits (not when the words left settle it).
 
 ## Revisit when
