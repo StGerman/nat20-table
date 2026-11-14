@@ -1,6 +1,6 @@
 # 0080. Every exit row names the lowest layer that tests it; a card bench is designed and tried on Milestone 13
 
-- **Status:** Accepted
+- **Status:** Accepted (Stas, 2026-11-14, in two answers; the CLAUDE.md line's wording when he merges table #383)
 - **Date:** 2026-11-14
 - **Decided by:** Stas, 2026-11-14 16:59Z (testing thread: «Да давай добавим в CLAUDE.md»), on the rule as quoted to him in two sentences: every exit row in a new scope or design names the cheapest layer that tests it, and a run failure a test with no model could have seen gets that test in the fix's PR. The CLAUDE.md line adds a start date, the analysis step and "the rerun is still played"; those three he accepts by merging table #383, not by that answer. Drafted from his ask of 06:55Z. At 19:42Z, on the card bench: «Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным»
 
@@ -40,15 +40,15 @@ Why B: over A it costs a layer named beside each exit row, a test in the fix's P
 
 ## Consequences
 
-- From the first milestone scope or design written after 2026-11-14, every exit row names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or "a person". The M12 and M13 scopes and designs are not amended for it; an amendment to either written after that date names the layer for the exit rows it states or refines.
-- For fix PRs opened after 2026-11-14: when a full run fails, its analysis says whether a test with no model could have seen it, and if one could, the fix's PR adds that test.
+- From 2026-11-15, every exit row in a new milestone scope or design names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or "a person". The M12 and M13 scopes and designs predate it and are not amended.
+- From 2026-11-15: when a full run fails, its analysis says whether a test with no model could have seen it, and if one could, the fix's PR adds that test.
 - The rule is in CLAUDE.md under Rule 8, in the wording of design §5, and in Yan's scope reference and Lev's design reference, added in this PR on Stas's acceptance.
 - The card bench gets its own system design, in its own PR, to be tried on Milestone 13; no rows before that design is accepted. Making the bench a standing rule needs its own record after the trial.
 - No accepted decision and no scope changes.
 
 ## Revisit when
 
-At Milestone 13's close: Stas's 19:42Z words can also be read as putting this rule, and not only the bench, on trial for that milestone, so the close sweep reports what the rule and the bench each caught, and he keeps or drops them. And when a layer below the full run, the card bench or another, has caught a failure that a full run also showed (Yan's amendment, design §7): then option D is decided on that record. The rule itself is reopened when two milestone scopes or designs in a row name only "a full run" or "a person" beside every exit row: then it is changing nothing.
+At Milestone 13's close: Stas's 19:42Z words can also be read as putting this rule, and not only the bench, on trial for that milestone, so the close sweep reports what the bench and the rule's fix-PR half each caught, and he keeps or drops them. The exit-row half has nothing to show there: Milestone 13's scope and design predate it. And when a layer below the full run, the card bench or another, has caught a failure that a full run also showed (Yan's amendment, design §7): then option D is decided on that record. The rule itself is reopened when two milestone scopes or designs in a row name only "a full run" or "a person" beside every exit row: then it is changing nothing.
 
 ## Sources
 

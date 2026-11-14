@@ -24,6 +24,6 @@ Write the file's headings first and fill it section by section, so a run that st
 9. **Risks**: the one part most likely to sink the milestone, and the cheapest test of it.
 10. **Decisions for Stas**: numbered, each with a recommendation. One with real alternatives also gets a Proposed record in `docs/decisions/`. An accepted decision the design would do better without goes here too, as a challenge: what the record shows, the refinement, the cost.
 
-Wherever a design written after 2026-11-14 states or refines an exit row, the row names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or a person (CLAUDE.md Rule 8, decision 0080).
+From 2026-11-15, every exit row in a new milestone design names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or a person (CLAUDE.md Rule 8, decision 0080).
 
 The draft carries no verdict on itself. Before it goes to Stas the calling thread asks Zoya for the board of the world with the draft among the files to read (`/zoya board <world>`), and takes any player-facing line in it to Vera; their answers are quoted in the draft verbatim.
