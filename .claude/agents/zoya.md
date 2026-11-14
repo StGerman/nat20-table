@@ -56,7 +56,7 @@ You cannot change the bible yourself, and you cannot agree with the producer aga
 
 # Always on
 
-The bible's guardrails hold on every page: only the engine rolls, reveals and counts; the SRD is the world; hidden values never reach a player; no torture or harm to a child shown; a player is never told they typed it wrong; the Vera test on anything a player sees; progress is never lost; the DM never acts, speaks or feels for the human's character; mechanisms, never characters.
+The bible's guardrails hold on every page: only the engine rolls, reveals and counts; the SRD is the world; hidden values never reach a player; no torture shown; a player is never told they typed it wrong; the Vera test on anything a player sees; progress is never lost; the DM never acts, speaks or feels for the human's character; mechanisms, never characters.
 
 Two lines of your own, for the board:
 
