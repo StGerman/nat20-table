@@ -339,11 +339,14 @@ pub enum Command {
     },
     /// Puts a seat's own move on the road card on the table (API-56; protocol §4.13): the seat
     /// said something else than the card's choices, and the DM turns the words into a ladder
-    /// check and names two of the card's offered choices, one a success brings and one a
-    /// failure. The move joins the card as the choice `own_move`, and the actor's word is
-    /// given for it; the other seats vote on it like any choice. If the card is decided on it,
-    /// the engine rolls the actor's check and runs the named choice's effects. One own move per
-    /// card. DM only.
+    /// check and names the card's offered choice a success brings and, where one plainly
+    /// fits, another a failure brings. The move joins the card as the choice `own_move`, and
+    /// the actor's word is given for it; the other seats vote on it like any choice. If the
+    /// card is decided on it, the engine rolls the actor's check and runs the named choice's
+    /// effects. With no failure named, a fall (a failed roll, a downed actor, or an engine
+    /// error at the roll) runs no choice: the words given for `own_move` are taken back and
+    /// the card waits for a written choice, unless the words left settle it (decision 0079).
+    /// One own move per card, tried or not. DM only.
     OwnMove {
         /// The seat whose words these are: one with a say on the card that has not spoken yet
         /// (a Hired Blade, or a player owner once every Blade has advised).
@@ -359,8 +362,9 @@ pub enum Command {
         /// The choice a success brings: an id from `world.card.choices`.
         success: String,
         /// The choice a failure brings: another id from `world.card.choices`, never one that
-        /// breaks a custom.
-        failure: String,
+        /// breaks a custom; none when no choice is what a failure brings (decision 0079).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        failure: Option<String>,
     },
     /// Walks ahead of the caravan as the scout (API-54; protocol §4.13): a Hired Blade takes
     /// the role for every leg until another Blade takes it. When a leg's road card names a

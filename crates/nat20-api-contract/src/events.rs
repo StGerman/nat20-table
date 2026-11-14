@@ -499,19 +499,24 @@ pub enum EventKind {
         dc: u8,
         /// The choice id a success brings.
         success: String,
-        /// The choice id a failure brings.
-        failure: String,
+        /// The choice id a failure brings; absent when none was named (decision 0079).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        failure: Option<String>,
     },
     /// The card was decided on its own move and the proposer's check is rolled (API-56):
-    /// after `card_resolved` and the roll, before the named choice's effects. DM only: which
-    /// choice the roll brought is the DM's; players see its effects and the narration.
+    /// after `card_resolved` and the roll, before the named choice's effects. For a move
+    /// with no failure (decision 0079) the roll comes first: on a success `card_resolved`
+    /// and then this event; on a fall this event with `choice: null`, the deed, and the card
+    /// back on the table. DM only: which choice the roll brought is the DM's; players see
+    /// its effects and the narration.
     OwnMoveRan {
         /// The card id.
         card: String,
-        /// The choice id whose effects run.
-        choice: String,
-        /// The proposer's check roll; null when the proposer was down and the failure ran
-        /// without a roll.
+        /// The choice id whose effects run; null when the move named no failure and fell,
+        /// and no choice runs.
+        choice: Option<String>,
+        /// The proposer's check roll; null when the proposer was down, or, for a move with
+        /// no failure, when the engine could not make the roll.
         roll: Option<RollId>,
     },
     /// The card that goes on the table, as the DM sees it (AGT-91), right before its

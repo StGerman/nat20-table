@@ -267,13 +267,23 @@ pub fn text(kind: &EventKind) -> String {
             success,
             failure,
             ..
-        } => format!(
-            "{}'s own move on {card}: a success brings {success}, a failure {failure}.",
-            actor.0
-        ),
-        EventKind::OwnMoveRan { choice, roll, .. } => match roll {
-            Some(_) => format!("The own move brings {choice}."),
-            None => format!("The proposer is down: the own move brings {choice} without a roll."),
+        } => match failure {
+            Some(failure) => format!(
+                "{}'s own move on {card}: a success brings {success}, a failure {failure}.",
+                actor.0
+            ),
+            None => format!(
+                "{}'s own move on {card}: a success brings {success}; a failure brings no choice.",
+                actor.0
+            ),
+        },
+        EventKind::OwnMoveRan { choice, roll, .. } => match (choice, roll) {
+            (Some(choice), Some(_)) => format!("The own move brings {choice}."),
+            (Some(choice), None) => {
+                format!("The proposer is down: the own move brings {choice} without a roll.")
+            }
+            (None, Some(_)) => "The own move fails: no choice runs.".to_owned(),
+            (None, None) => "The own move was never tried: no choice runs.".to_owned(),
         },
         EventKind::CargoChanged { good, change } => {
             if *change >= 0 {

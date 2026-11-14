@@ -44,7 +44,6 @@ The contract review is done: `/mnt/project-files/engine/api/review.md` and `cont
 
 | ID | Gap | Pri | Dest | Gate | Size | Status |
 |---|---|---|---|---|---|---|
-| API-61 | Own move with no failure choice, on the wire and in the world (decision 0079; amends API-56): amendment §10 PR 1, with the shape in design §1.2 and the goals in amendment §5 (contract, protocol §4.13 and the §5 row split, world crate, server, six fixture cases, CHANGELOG at the next free dev version); the same PR marks 0079 Accepted | P1 | Ours | - | M | todo (Milestone 12, amendment PR 1) |
 | API-24 | Plain ability checks with no skill (core's `D20CheckKind` has skills, saves and attacks only); ladder checks require a skill until then | P2 | Up | N | S | todo |
 
 ## 2. Engine correctness (core)
@@ -162,3 +161,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-13: AGT-111 done (exit run 2 fixes), row in docs/tasks-done.md; an attacked neutral turning hostile follows as API-60, contract first
 - 2026-11-13: API-60 done (decision 0078): an attacked neutral turns hostile in `start_fight`; row in docs/tasks-done.md
 - 2026-11-14: own-move amendment accepted (decision 0079, table #381, merged into table #380's branch): API-61, AGT-112..114 (P1, before the next exit pair) and AGT-115 (P2, optional) written from amendment §10; Milestone 12 exit criterion and AGT-103 say what 0079 changed; API-56 and AGT-99 stay done in docs/tasks-done.md, as landed
+- 2026-11-14: API-61 done (decision 0079 Accepted, contract 1.0.0-dev.72), row in docs/tasks-done.md
