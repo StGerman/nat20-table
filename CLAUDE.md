@@ -52,7 +52,7 @@ Lev designs how the world carries what the party did, and reads cards and runs f
 Status, exit criteria and task ids for each milestone are in `TASKS.md` § Milestones. Work one milestone at a time, in order, unless the task list says a row is independent.
 
 1. Fighter vs Goblin Warrior through the headless API (done 2026-10-16)
-2. Repo split and contract v1
+2. Repo split and contract v1 (done 2026-10-17)
 3. Exploration and checks (done 2026-10-18)
 4. The party: Cleric and healing, Human, items, pregens (done 2026-10-21)
 5. Monsters (done 2026-10-23)
@@ -61,7 +61,7 @@ Status, exit criteria and task ids for each milestone are in `TASKS.md` § Miles
 
 Milestone 8 (upstream proposal) was dropped on 2026-10-18: upstream declines AI-authored contributions (`docs/decisions/0023-long-lived-fork.md`).
 
-After Milestone 7 the order is 10, then 9. Milestone 10, Speed and polish, was done on 2026-11-01, closed on a `play:cheap` run with Stas at the table (`docs/decisions/0056-m10-closed-on-cheap-run.md`). Milestone 9, Living world (was Improvised play), was done on 2026-11-06, closed on two exit runs of *Fair in Wend* on one build, one all AI and one with Stas as a Hired Blade (`docs/decisions/0060-m9-closed.md`; scope `docs/scope/living-world-scope.md`, design `docs/design/m9-system-design.md`). Milestone 11, Word on the road, was done on 2026-11-08: the road remembers what the party did, within a contract and across contracts (scope `docs/scope/living-world-scope.md` §8, spec and design `docs/design/m11-system-design.md`, decision 0063). Milestone 12, Not a passenger, is next; order and cost in `docs/roadmap.md`.
+After Milestone 7 the order is 10, then 9. Milestone 10, Speed and polish, was done on 2026-11-01, closed on a `play:cheap` run with Stas at the table (`docs/decisions/0056-m10-closed-on-cheap-run.md`). Milestone 9, Living world (was Improvised play), was done on 2026-11-06, closed on two exit runs of *Fair in Wend* on one build, one all AI and one with Stas as a Hired Blade (`docs/decisions/0060-m9-closed.md`; scope `docs/scope/living-world-scope.md`, design `docs/design/m9-system-design.md`). Milestone 11, Word on the road, was done on 2026-11-08: the road remembers what the party did, within a contract and across contracts (scope `docs/scope/living-world-scope.md` §8, spec and design `docs/design/m11-system-design.md`, decision 0063). Milestone 12, Not a passenger, closed on 2026-11-14 without passing its exit; its own move was capped to a card's written choices, which decision 0083 removes. Order and cost in `docs/roadmap.md`.
 
 ## Design in brief
 
@@ -175,6 +175,7 @@ Any change to what crosses the engine boundary (a command, field, event, error c
 - Only the engine decides that a roll happens and resolves it. No command, tool or agent sets a roll result, a check outcome, damage or HP directly.
 - Every roll has a session-unique id (`rN`) that is never reused or rewritten. Transcripts cite roll ids; the audit fails on any uncited, edited or invented roll.
 - The DM agent picks checks from the scenario or the SRD DC ladder. It never rules success.
+- Before the roll, the DM writes what a success and a failure bring in the fiction; the engine rolls, keeps the one the roll picked and records it. Rule 4 never limits what an outcome may be, only who rolls and rules it (decision 0083).
 
 ## Rule 5: the core boundary
 
@@ -218,13 +219,13 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 ## Rule 8: tasks, PRs, CI
 
 - `TASKS.md` is the only task list: no GitHub issues and no TODO comments without a row. Every PR that closes or creates a gap updates its row in the same PR. ID prefixes: API, ENG, MON, CHR, ITM, CHK, MAP, AGT, UPS, DAT, CON.
-- Each row carries Pri (P0 blocks a demo run, P1 needed for acceptance, P2 optional), Dest (Fork, Ours; older `Up` and `Up?` rows read as Fork), Size and Status (todo, partial, done, won't do; won't do counts as closed and says why). The Gate column is retired with Milestone 8.
+- Each row carries Pri (P0 blocks a demo run, P1 needed for acceptance, P2 optional), Dest (Fork, Ours; older `Up` and `Up?` rows read as Fork), Size and Status (todo, partial, done, won't do; won't do counts as closed and says why).
 - When the last row of a milestone closes and its exit criterion holds, mark the milestone done in `TASKS.md` with the date.
 - One concern per PR. Write the PR description as Before / After / How.
 - Stacked PRs (each one based on the branch of the open PR below it) are linked as a GitHub stack ([`gh stack`](https://docs.github.com/en/pull-requests/reference/stacked-prs-cli-commands)). Locally that is `gh stack submit` or `gh stack link`. A Claude session can't install the extension and has no GraphQL, so it uses the [REST API](https://docs.github.com/rest/pulls/stacks): `POST repos/{owner}/{repo}/stacks` with `pull_requests` listed from bottom to top, then `POST repos/{owner}/{repo}/stacks/{n}/add` for each new PR on top.
 - Every PR we open, code or docs, gets a Claude code review (`/engineering:code-review`) against `.github/copilot-instructions.md` before it goes to Stas.
   - Each finding is fixed or answered the way Copilot findings are: a reply quoting the fix commit's message, or the reason it stays, with the Claude Code footer.
-  - The verdict goes on the PR as a review comment in this shape: 🟢 Approved (no open findings) or 🟠 Changes recommended (open findings, listed), and the review re-runs on every new head until it is 🟢.
+  - The verdict goes on the PR as a review comment in this shape: 🟢 Approved (no open findings) or 🟠 Changes recommended (open findings, listed). The review runs one round: a later head is reviewed again only for a correctness fix, and other findings become a `TASKS.md` row (decision 0083).
   - A Copilot round is extra, when its quota allows.
 - Name PRs after their repo. A PR title is a lowercase repo prefix, a colon and plain English: `table:` for this repo, `core:` for the fork `StGerman/nat20` (`table: Character sheets (get_sheet)`). Branches are `<component>/<milestone>-<task-id>-<short-description>` in lowercase kebab-case, in both repos (Stas, 2026-11-02). The component is the part of the system the change is about: `core` (the fork), `ledger` (`crates/nat20-ledger`), `world` (`crates/nat20-world`), `table` (everything else in this repo: server, contract, game, content, docs, CI). Examples: `core/m9-eng-32-passive-checks`, `ledger/m9-con-17-ledger-crate`, `table/m9-con-16-living-world-scope`. Leave out the milestone or task id when the work has none (`table/branch-naming-rule`). Never the auto-generated `claude/...` session branch names. Closed milestone specs and accepted decision records that show `core/<topic>` or `table/<topic>` branches without a milestone and task id predate this rule and stay as written; this rule wins. Refer to PRs as `table #N` or `core #N`, never by a bare number; `upstream #N` names the closed upstream PRs and issue. Dependabot PRs and branches keep their own names.
 - A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.

@@ -1,6 +1,6 @@
 # 0070. Children are not exempt from harm on screen
 
-- **Status:** Accepted
+- **Status:** Accepted; its torture half superseded in part by 0083 (never described, not never happening)
 - **Date:** 2026-11-12
 - **Decided by:** Stas, thread "Bring companions and animals into fights" (2026-11-12 19:30Z and 19:32Z)
 
