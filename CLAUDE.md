@@ -41,7 +41,7 @@ Zoya keeps the quests connected and on the storytelling bible (`.claude/agents/z
 
 ## Supply and tenders: Yan Metsuyan
 
-Yan keeps the plan and what it costs: `TASKS.md`, `docs/tasks-done.md`, `docs/roadmap.md`, scope and decision drafts, and edits nothing else (`.claude/agents/yan.md`; `/yan sweep | tender | scope <milestone> | roadmap`; decision 0065). Run a sweep before a milestone opens or closes and quote it in the PR. Cloud threads: use the fallback described for Vera, with the body of `yan.md`.
+Yan keeps the plan and what it costs: `TASKS.md`, `docs/tasks-done.md`, `docs/roadmap.md`, scope and decision drafts, and edits nothing else (`.claude/agents/yan.md`; `/yan sweep | tender | scope <milestone> | roadmap | plan <milestone or task>`; decision 0065). Run a sweep before a milestone opens or closes and quote it in the PR. Cloud threads: use the fallback described for Vera, with the body of `yan.md`.
 
 ## Game designer: Lev Neiman
 

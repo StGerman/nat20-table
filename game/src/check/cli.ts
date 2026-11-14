@@ -3,8 +3,10 @@
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
+import { setTurnTracer } from "../agents/sdk-session.ts";
 import { refuseApiKey } from "../play/run.ts";
-import { packOfRun } from "../play/record.ts";
+import { tracerFromEnv } from "../tracing.ts";
+import { packOfRun, tagsOfRun } from "../play/record.ts";
 import { writeVerdict } from "../play/verdict.ts";
 import { NARRATION_DIGEST } from "./digest.ts";
 import { ScriptedJudge } from "./judge.ts";
@@ -22,7 +24,10 @@ if (!dir || !existsSync(dir) || !["model", "scripted"].includes(values.judge!)) 
 if (values.judge === "model") refuseApiKey();
 // A digest from an older build is replayed again only when asked: it is the engine's word for that run.
 if (values["new-digest"]) rmSync(path.join(dir, NARRATION_DIGEST), { force: true });
-const check = await narrationCheck(values.pack ?? packOfRun(dir), dir, values.judge === "scripted" ? new ScriptedJudge() : modelJudgeFor(dir));
+// The judge's turns join the run's Langfuse session when tracing is on (AGT-16).
+const tracer = values.judge === "model" ? await tracerFromEnv({ sessionId: path.basename(path.resolve(dir)), tags: [...tagsOfRun(dir), "audit:narration"] }) : undefined;
+setTurnTracer(tracer);
+const check = await narrationCheck(values.pack ?? packOfRun(dir), dir, values.judge === "scripted" ? new ScriptedJudge() : modelJudgeFor(dir)).finally(() => tracer?.flush());
 for (const line of check.lines) console.log(line);
 const verdict = writeVerdict(dir);
 console.log(`Verdict: ${verdict.verdict}: ${verdict.why}`);
