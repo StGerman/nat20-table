@@ -160,7 +160,7 @@ Folded into `docs/design/m12-system-design.md` in table #381: the Summary; §1.1
 
 **What the dramaturg mechanism reads.** From the deed: that the party made a move of its own on this card, who and when. That is enough for an `if`, and it cannot tell a fall from a success. For a person in the world to say it aloud it needs the player's words, which today live only in the run's log; carrying them into the world's record is that milestone's first question for this row (design §1.5, 0068 Revisit). One warning for that design: a narrator given the words and not the result will make the result up, so it either forbids telling how the attempt came out, or asks Stas then whether the result travels with the words. Not reopened here.
 
-**No change to the deed or the card rule** (design §1.5, §1.8). What this answer folds into §1.8 is the fall's text, in its own wake and in the settled card's: it carries the move's words, the person on the card reacts (Zoya, §16 follow-up), and it keeps no `remember`.
+**No change to the deed or the card rule** (design §1.5, §1.8). What this answer folds into §1.8 is the fall's text, in its own wake and in the settled card's: it carries the move's words, after a failed roll a person on the card, if there is one, reacts to the try (Zoya, §16 follow-up), and it tells the DM not to call `remember` for the attempt.
 
 ## 16. Vera and Zoya
 
@@ -169,7 +169,7 @@ Both run on 2026-11-14 by the calling thread with the repo's `vera` and `zoya` a
 **What the thread takes from them** (for Stas):
 - The fall line «Ваш ход не удался. Теперь выберите из написанного.» is where Vera became a passenger, and Zoya hears «Ваш ход» as "your turn" and «выберите из написанного» as officialese. The wording is redone in PR 2 with its own Vera read; the rule (the move is spent) stays unless Stas changes it.
 - Zoya disagrees with question 1: one id with no result means no reader can ever pay a fall off. Her smaller fix is the result inside the deed, not a second id. Stas ruled against both on 2026-11-14 (§15, question 1); what a fall then brings is in §15.1, and she folded her fall row into the `own_move_<card>` row (follow-up below).
-- Question 3: Zoya agrees answer-only, but "nothing is ruled" must not read as "nothing happens": the person reacts with what the plan costs them or asks something back, and a companion speaks. Its sentence is folded into the §1.8 `card_words` prompt ("The scene still answers: the person says what the plan would cost them…"), and Stas kept it with question 3.
+- Question 3: Zoya agrees answer-only, but "nothing is ruled" must not read as "nothing happens": the person reacts with what the plan costs them or asks something back, and a companion speaks. Its sentence is folded into the §1.8 `card_words` prompt ("The scene still answers: a person on the card, if there is one, says what the plan would cost them…"), and Stas kept it with question 3.
 - «Вы платите: 4 серебряных.»: drop the colon (Zoya), and Vera asks whom and what for; the DM's narration carries that.
 
 ### Vera (repo `vera` agent), verbatim
