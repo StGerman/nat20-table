@@ -1032,8 +1032,11 @@ export class TableLoop {
       );
     }
     this.framed = card.id;
-    // A fall's text for a settled card goes only in that card's own card_resolved wake.
+    // A fall's text for a settled card goes only in that card's own card_resolved wake; a fall
+    // kept for another card is stale once this one is framed.
     this.fellSettled = undefined;
+    if (this.fellLine?.card !== card.id) this.fellLine = undefined;
+    if (this.ownMove?.card !== undefined && this.ownMove.card !== card.id) this.ownMove = undefined;
     if (this.table.ended) return false;
     this.table.log("system", `card ${card.id} goes to the seats`);
     await this.table.flush();
@@ -1184,8 +1187,8 @@ export class TableLoop {
     const made = this.dmTools.ownMoveMade;
     const answer = this.dmTools.cardAnswer;
     // The run report counts words a card took no move from (design §1.8).
-    // Answer-only words could make no move: the DM is not counted for finding no fitting choice.
-    if (!made && !answerOnly) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
+    // Words on a card that has or had a move could make none: the DM is not counted for finding no fitting choice.
+    if (!made && !card.own_move) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
     return { made, ...(answer ? { answer } : {}) };
   }
 
@@ -1232,7 +1235,8 @@ export class TableLoop {
           continue;
         }
         this.table.log("intent", `${human} on the road card: ${picked.label}`, human);
-        this.table.tellDm(`${human} ${owner ? "made the caravan's call" : "gave their word"} on the road card: ${picked.label}`);
+        // A word that ran a move which fell was taken back: the fall's wake tells it, not this line.
+        if (!(await this.fellSince(card))) this.table.tellDm(`${human} ${owner ? "made the caravan's call" : "gave their word"} on the road card: ${picked.label}`);
         return;
       }
       if (intent.kind === "text") {
