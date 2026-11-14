@@ -487,7 +487,7 @@ export class ModelDm implements DmAgent {
       ),
       seatTool(
         "own_move_or_answer",
-        "Answer a player's own words on the road card waiting (\"A player's words on the road card\"). With move, their words become an own move on the card: the check they call for (a skill and a DC from the ladder), the card's choice a success brings and, only when another choice plainly is what a failure brings, that choice; with no failure, a failed roll runs no choice and the card waits for a written one. The seats then vote on it as on any choice. Without move, only your narration answers them, and the card waits. Narration answers the words, the attempt only, never how it turns out.",
+        "Answer a player's own words on the road card waiting (\"A player's words on the road card\"). With move, their words become an own move on the card: the check they call for (a skill and a DC from the ladder), the card's choice a success brings and, only when another choice plainly is what a failure brings, that choice; with no failure, a failed roll runs no choice and the card is decided on a written choice, by the words left or by the seats asked again. The seats then vote on it as on any choice. Without move, only your narration answers them, and the card waits. Narration answers the words, the attempt only, never how it turns out.",
         {
           narration: z.string().describe("One to three sentences: what the people in the scene say or do at the words."),
           move: z

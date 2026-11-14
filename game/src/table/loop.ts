@@ -1097,7 +1097,8 @@ export class TableLoop {
     this.table.fallbacks += 1;
     this.table.log("fallback", `${owner} makes no call on the road card: goes with the Blades' advice (${choice})`, owner, { cause: this.causeOf(owner) });
     await send(this.table, owner, { cmd: "choose_card", actor: owner, choice }, () => `went with the advice: ${choice}`);
-    return false;
+    // The fallback call can itself be the move that falls: a fresh round follows then.
+    return this.fellSince(now);
   }
 
   /**
