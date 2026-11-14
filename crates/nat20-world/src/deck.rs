@@ -1378,7 +1378,11 @@ impl Deck {
     pub fn own_move_fell(&self, state: &mut DeckState, table: &Table) -> Option<Resolution> {
         let pending = state.pending.as_mut()?;
         let card = self.card(&pending.card)?;
-        pending.own_move.as_mut()?.spent = true;
+        let mv = pending
+            .own_move
+            .as_mut()
+            .filter(|mv| mv.failure.is_none())?;
+        mv.spent = true;
         pending.said.retain(|_, choice| choice != OWN_MOVE);
         // Nobody left who can speak: the card is settled as a card nobody can speak on is.
         if table.blades.is_empty() {
@@ -1516,23 +1520,18 @@ fn resolve(
         .filter(|_| choice == OWN_MOVE)
         .map(|mv| {
             // The deed comes first, as a choice's own `remember` does, so a fight stays last.
-            let branch = |id: &str| {
+            // With no choice named (a fall, decision 0079), the branch is the deed alone.
+            let branch = |id: Option<&str>| {
                 let mut effects = vec![Effect::Remember {
                     deed: own_move_deed(&card.id),
                 }];
-                effects.extend(effects_of(id));
+                effects.extend(id.map(effects_of).unwrap_or_default());
                 effects
             };
             OwnMoveRun {
                 mv: mv.clone(),
-                success: branch(&mv.success),
-                // With no failure named, the fall's part is the deed alone (decision 0079).
-                failure: match &mv.failure {
-                    Some(failure) => branch(failure),
-                    None => vec![Effect::Remember {
-                        deed: own_move_deed(&card.id),
-                    }],
-                },
+                success: branch(Some(&mv.success)),
+                failure: branch(mv.failure.as_deref()),
             }
         });
     Resolution {

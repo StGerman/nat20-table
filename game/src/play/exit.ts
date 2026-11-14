@@ -225,7 +225,7 @@ export function exitReport(run: RunRecord, log: Event[], transcript: TranscriptR
   moves.forEach((m, i) => {
     const roll = m.roll === null ? "no roll (the proposer was down)" : m.roll ? `${m.roll.id}, ${m.roll.outcome}` : "not rolled";
     out.push(
-      `${i + 1}. ${m.card}, ${m.actor}: "${m.words}"; ${m.skill} DC ${m.dc}; success brings ${m.success}, failure ${m.failure}; votes: ${m.votes.map((v) => `${v.by} ${v.choice}`).join(", ") || "none"}; ${m.decided ? `decided on ${m.decided.choice} (${m.decided.how})` : "not decided"}${m.decided?.choice === "own_move" ? `; ${roll}; brought ${m.ran ?? "?"}` : ""}${m.fallbacks.length > 0 ? `; fallback votes: ${m.fallbacks.join(", ")}` : ""}`,
+      `${i + 1}. ${m.card}, ${m.actor}: "${m.words}"; ${m.skill} DC ${m.dc}; success brings ${m.success}, failure ${m.failure ?? "none named"}; votes: ${m.votes.map((v) => `${v.by} ${v.choice}`).join(", ") || "none"}; ${m.decided ? `decided on ${m.decided.choice} (${m.decided.how})` : "not decided"}${m.decided?.choice === "own_move" ? `; ${roll}; brought ${m.ran ?? "?"}` : ""}${m.fallbacks.length > 0 ? `; fallback votes: ${m.fallbacks.join(", ")}` : ""}`,
     );
   });
   // Words a seat said on a card that the DM did not turn into an own move.
