@@ -63,7 +63,7 @@
             "pack_slot": "lair_of_arachas"
         },
         {
-            "_comment": "The old ferry landing four miles east of Saltmouth on the old channel, with the salt flats across it (lore, The old channel): a free slot for the next pack.",
+            "_comment": "The salt flats across the old channel, east of Saltmouth: the road runs four miles to the old ferry landing, and the flats are crossed on foot at low tide (lore, The old channel). A free slot for the next pack.",
             "id": "salt_flats",
             "name": "The salt flats",
             "name_ru": "солончаки",
