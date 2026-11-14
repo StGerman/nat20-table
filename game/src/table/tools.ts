@@ -632,6 +632,8 @@ export class DmTools {
   lastLine: string | undefined;
   /** A player's words on the road card a `card_words` wake answers (AGT-99): the loop sets them for the wake. */
   cardWords: { actor: Handle; words: string; answerOnly?: string } | undefined;
+  /** The words whose dropped move was logged, so a retry logs it no more. */
+  private droppedFor: DmTools["cardWords"];
   /** The own move the wake put on the card, if one did. */
   ownMoveMade = false;
   /** The narration that answered the words, once one showed. */
@@ -1074,7 +1076,9 @@ export class DmTools {
     if (!words) return notNow("no player's words on a road card wait for your answer");
     const dropped = Boolean(move && words.answerOnly);
     if (dropped) {
-      this.table.log("system", `${words.answerOnly}: ${words.actor}'s words are only answered`, "table");
+      // Logged once per wake (each wake sets new cardWords): a retry drops the same move again.
+      if (this.droppedFor !== words) this.table.log("system", `${words.answerOnly}: ${words.actor}'s words are only answered`, "table");
+      this.droppedFor = words;
       move = undefined;
     }
     // One move per wake: once it is on the card, a retry only rewrites the narration.

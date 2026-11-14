@@ -1032,6 +1032,8 @@ export class TableLoop {
       );
     }
     this.framed = card.id;
+    // A fall's text for a settled card goes only in that card's own card_resolved wake.
+    this.fellSettled = undefined;
     if (this.table.ended) return false;
     this.table.log("system", `card ${card.id} goes to the seats`);
     await this.table.flush();
@@ -1181,7 +1183,8 @@ export class TableLoop {
     const made = this.dmTools.ownMoveMade;
     const answer = this.dmTools.cardAnswer;
     // The run report counts words a card took no move from (design §1.8).
-    if (!made) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
+    // Answer-only words could make no move: the DM is not counted for finding no fitting choice.
+    if (!made && !answerOnly) this.table.log("system", `no fitting choice: ${handle}'s words on the road card ${card.id} made no own move`, "table");
     return { made, ...(answer ? { answer } : {}) };
   }
 
