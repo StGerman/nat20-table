@@ -1384,10 +1384,6 @@ impl Deck {
             .filter(|mv| mv.failure.is_none())?;
         mv.spent = true;
         pending.said.retain(|_, choice| choice != OWN_MOVE);
-        // Nobody left who can speak: the card is settled as a card nobody can speak on is.
-        if table.blades.is_empty() {
-            return self.settle_unattended(state, table);
-        }
         let resolution = settle(card, pending, table);
         if resolution.is_some() {
             state.pending = None;
@@ -2376,26 +2372,28 @@ mod tests {
     }
 
     #[test]
-    fn a_fall_with_nobody_left_to_speak_settles_the_card_by_its_default() {
+    fn a_fall_with_nobody_up_tallies_the_words_downed_seats_kept() {
         let d = deck();
-        let one = Table {
-            owner: Owner::Npc("tobin".into()),
-            blades: vec!["bren".into()],
-            tie_breaker: Some("bren".into()),
-        };
+        let table = npc_table();
         let mut state = pending("beggar");
+        // Maren's written word is kept when she is downed; Bren proposes and is downed too.
+        d.speak(&mut state, &table, "maren", "refuse").unwrap();
+        let only_bren = Table {
+            blades: vec!["bren".into()],
+            ..npc_table()
+        };
         let done = d
-            .own_move(&mut state, &one, own_alone("bren", "give"))
+            .own_move(&mut state, &only_bren, own_alone("bren", "give"))
             .unwrap()
             .unwrap();
         assert!(done.rolls_first());
         let nobody = Table {
             blades: Vec::new(),
-            ..one
+            ..npc_table()
         };
+        // Today's settle, never settle_unattended: Maren's kept word decides.
         let settled = d.own_move_fell(&mut state, &nobody).unwrap();
-        assert_eq!(settled.decided, Decided::Default);
-        assert!(settled.by.is_empty());
+        assert_eq!(settled.choice, "refuse");
         assert!(state.pending.is_none());
     }
 

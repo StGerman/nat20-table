@@ -539,7 +539,7 @@ impl Session {
                     decided: campaign::decided(resolution.decided),
                 },
             ));
-            self.push_own_move_ran(&resolution.card, Some(&run.mv.success), roll);
+            self.push_own_move_ran(&resolution.card, Some(run.mv.success.as_str()), roll);
             self.run_effects(&run.success, &resolution.by)?;
             // A destination's arrival card is decided: the escort settles now (ENG-35).
             self.settle_if_arrived()?;
@@ -576,9 +576,9 @@ impl Session {
         let mv = &run.mv;
         let (roll, success) = self.roll_own_move(mv)?;
         let (choice, effects) = if success {
-            (Some(&mv.success), &run.success)
+            (Some(mv.success.as_str()), &run.success)
         } else {
-            (mv.failure.as_ref(), &run.failure)
+            (mv.failure.as_deref(), &run.failure)
         };
         self.push_own_move_ran(card, choice, roll);
         self.run_effects(effects, by)
@@ -613,13 +613,13 @@ impl Session {
     }
 
     /// `own_move_ran` (API-56): the choice the roll brought, or none after a fall.
-    fn push_own_move_ran(&mut self, card: &str, choice: Option<&String>, roll: Option<RollId>) {
+    fn push_own_move_ran(&mut self, card: &str, choice: Option<&str>, roll: Option<RollId>) {
         self.push(Pending {
             round: None,
             visibility: Visibility::Dm,
             kind: EventKind::OwnMoveRan {
                 card: card.to_owned(),
-                choice: choice.cloned(),
+                choice: choice.map(str::to_owned),
                 roll,
             },
         });
