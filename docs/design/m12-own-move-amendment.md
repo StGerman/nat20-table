@@ -25,7 +25,7 @@ Why a file of its own: the M12 design is Accepted, and Lev edits only Proposed d
 | `own_move_ran {choice: null, roll}` | the server, when the roll fails or the proposer is down and the move named no failure | the game loop (the DM's wake for the fall, the card back to the seats), the run report, the verdict row | the roll line, the DM's one or two sentences, a line that the move did not work (draft, §12), the written choices again |
 | the pending card's own move, marked tried | the world crate, on that fall | the views (`own_move` is no longer among the card's choices) and the `own_move` command (`own_move_taken`) | no own-move line and no "Your move" choice on the card |
 | the deed `own_move_<card>` | the world, whenever `own_move_ran` is logged, whatever it brought | the run report and the verdict row; no card in M12 | nowhere yet: owed on Zoya's board, left unread on purpose by decision 0068 |
-| `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move | nowhere; it is the check on rule 5 below |
+| `wake` on a transcript `memory` record | the game loop, when the DM calls `remember` | the run report: facts kept in a `card_words` wake that made no move | nowhere; it is the check on rule 6 below |
 
 No new deed id: `own_move_tried_<card>` would be a second deed nothing reads (question 1).
 
@@ -34,9 +34,9 @@ No new deed id: `own_move_tried_<card>` would be a second deed nothing reads (qu
 The one statement is the first bullet of §1.8 in the accepted design. As tests:
 
 1. `own_move` with no `failure` is accepted when `success` is offered on the card; every refusal of today stands.
-2. For a move with no `failure`, `card_resolved` is logged only after a successful roll. A failed roll, or a downed proposer, logs `own_move_ran` with `choice: null` and no `card_resolved`; the card is still on the table.
-3. After that fall: the words given for `own_move` are taken back and the other words stand; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the card is then settled by `choose_card` exactly as a card with no own move would be (one word per seat, the tally as today).
-4. The deed `own_move_<card>` is in the deed book after every `own_move_ran`, with the `by` of the seats whose word was the move.
+2. For a move with no `failure`, `card_resolved` is logged only after a successful roll. A failed roll, or a downed proposer (`roll: null`), logs `own_move_ran` with `choice: null` and no `card_resolved`; the card is still on the table.
+3. After that fall: every word given for `own_move` is taken back (advice included) and the other words stand; on a player owner's card the owner may call again at once; the card's choices no longer list `own_move`; a second `own_move` is refused `own_move_taken`; the card is then settled by `choose_card` exactly as a card with no own move would be (one word per seat, the tally as today).
+4. The deed `own_move_<card>` is in the deed book after every `own_move_ran`, with the `by` §1.5 of the design gives (the seats whose word was for `own_move`, or the owner alone on an owner's call).
 5. A move that names a `failure` replays the accepted fixture byte for byte.
 6. Not testable, so counted (§8 here): a narration from a `card_words` wake that put no move on the card tells no outcome, and no `remember` in that wake keeps one.
 
@@ -51,7 +51,7 @@ No new owed row. A tried move writes the deed 0068 already owes, `own_move_<card
 **Goals.**
 - G1. An own move may name no failure choice.
 - G2. With none, a failed roll or a downed proposer runs no choice and leaves the card on the table.
-- G3. `card_resolved` is logged only when a choice is certain to run, so no client sees a card resolved and then waiting.
+- G3. For a move with no failure, `card_resolved` is logged only when a choice is certain to run, so no client sees such a card resolved and then waiting. A move that names a failure keeps the accepted order (G6).
 - G4. One own move per card, tried or not.
 - G5. Nothing hidden reaches a player view (Rule 3): players learn of the fall from the public roll and from the card's choices; `success`, `failure` and the DC stay DM only.
 - G6. A move that names a failure, and every fixture line recorded for one, is unchanged.
@@ -96,7 +96,7 @@ In order. Row ids, sizes and prices are Yan's.
 | PR | What it lands | Depends on |
 | --- | --- | --- |
 | 0 | This amendment and decision 0079, with §13 folded into the accepted design, Zoya's board check and Vera's read of the lines in §12 | - |
-| 1 | `own_move` without a failure on the wire: contract, protocol §4.13, the world crate's pending card, the server's roll-then-log, the four fixture cases, CHANGELOG | 0 accepted |
+| 1 | `own_move` without a failure on the wire: contract, protocol §4.13, the world crate's pending card, the server's roll-then-log, the fixture cases of design §1.2 (five new, the roster save and load after a fall among them), CHANGELOG | 0 accepted |
 | 2 | The same at the table: `own_move_or_answer`'s `move.failure` optional; the `card_words` rule in `dm.ts` and `loop.ts` (`cardWords`); the `remember` tool's description; the fall (a `road` wake tells it, the "did not work" line, the seats asked again); words on a card that already has a move are only answered; `seat-lines.ts` takes a null `choice` | 1 |
 | 3 | The run report and `m12-own-move`: §8 here, `wake` on `memory` records, the row's reading as Stas rules question 2 | 2 |
 | 4 | The seat's four lines (a) to (d), one commit each, with a Vera read of a `seat.jsonl` stretch | - |
