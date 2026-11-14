@@ -88,3 +88,14 @@ export function packOfRun(dir: string): string {
   }
   return recorded && existsSync(recorded) ? recorded : path.join(REPO, "scenarios/the_silent_mill");
 }
+
+/** A run's Langfuse tags (AGT-16), as run.json recorded them: profile, pack and roster; none without a run.json. */
+export function tagsOfRun(dir: string): string[] {
+  try {
+    const record = readRunRecord(dir);
+    const pack = record.settings.pack?.value as string | undefined;
+    return [record.profile?.name ?? "no-profile", ...(pack ? [path.basename(path.resolve(pack))] : []), ...(record.roster ? [`roster:${record.roster.name}`] : [])];
+  } catch {
+    return [];
+  }
+}
