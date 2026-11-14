@@ -473,7 +473,11 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   assert.ok(!mill.includes("pick_card"));
   // Own move (AGT-99): the road's DM answers a player's words on a card with own_move_or_answer, by the rule.
   assert.ok(names.includes("own_move_or_answer") && !mill.includes("own_move_or_answer"));
-  assert.match(dm.systemPrompt, /- "A player's words on the road card": .*If no two choices fit, give only the narration.*A failure never brings a choice that breaks a custom, or a deliberate act the words did not ask for; a success brings a fight only when the words asked for one/);
+  // The three cases of decision 0079 (design §1.8), in the road section.
+  assert.match(dm.systemPrompt, /- "A player's words on the road card": Answer with own_move_or_answer\. First, when the words simply are one of the card's choices, say so in the scene/);
+  assert.match(dm.systemPrompt, /Name a failure only when another choice is plainly what happens when the attempt fails, never one that breaks a custom and never a deliberate act the words did not ask for; with no failure named, a failed roll runs no choice and the move is spent\./);
+  assert.match(dm.systemPrompt, /If no choice is what the words would bring, give only the narration, one or two sentences, and the card waits\./);
+  assert.match(dm.systemPrompt, /a person on the card, if there is one, says what the plan would cost them or asks something back.*never call remember for how the attempt turned out\./);
   // Scouting at the table (AGT-90): the DM opens a scouted card on what the scout saw.
   assert.match(dm.systemPrompt, /- The scout: .*If they saw it, open the card on what the scout saw/);
   // Story-space (AGT-89, design decision 9): five rules on the road, the human's character named in the second.

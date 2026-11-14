@@ -14,7 +14,7 @@ import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, t
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
-import { BarkTools, cardDrawnLine, DmTools, HandTools, movedText, PlayerTools, ReactionFloor, send } from "./tools.ts";
+import { BarkTools, cardDrawnLine, DmTools, HandTools, movedText, OWN_MOVE_RULE, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import { usageBlock, type UsageLog } from "../usage.ts";
 import type { Language } from "../agents/language.ts";
 import { refusedRu, SEAT_WORDS, UI_WORDS, type SeatWords } from "./words.ts";
@@ -419,6 +419,11 @@ export class TableLoop {
   private firstDay: number | undefined;
   /** The human's experience when the campaign started, for what the journey earned. */
   private startXp: number | undefined;
+  /** Each own move put on a card in this run, by card id: who proposed it and their words (`card_own_move`), for the fall's text (decision 0079). */
+  private ownMoves = new Map<string, { actor: Handle; words?: string }>();
+  private lastOwnWords: { actor: Handle; words: string } | undefined;
+  /** A fall whose words left settled the card at once: its never-tried text goes in that card's `road` wake. */
+  private fellSettled: string | undefined;
   /** The road cards the run has asked about, by the engine's log head when each was drawn, so a card that won't settle stops the run. */
   private cardAsked = new Map<string, number>();
   /** The human's open level-up choice, from the engine's last answer (AGT-80). */
@@ -841,16 +846,32 @@ export class TableLoop {
   private async roadEvent(event: Event): Promise<void> {
     const campaign = this.campaign!;
     switch (event.kind) {
-      case "card_resolved":
+      case "card_own_move":
+        this.lastOwnWords = { actor: event.actor, words: event.words };
+        return;
+      case "own_move_set":
+        this.ownMoves.set(event.card, { actor: event.actor, ...(this.lastOwnWords?.actor === event.actor ? { words: this.lastOwnWords.words } : {}) });
+        this.lastOwnWords = undefined;
+        return;
+      case "own_move_ran":
+        if (event.choice == null) await this.ownMoveFell(event.card, event.roll != null);
+        return;
+      case "card_resolved": {
         this.framed = undefined;
+        // A fall the words left settled at once: the settled card's wake tells both (design §1.8).
+        const fell = this.fellSettled;
+        this.fellSettled = undefined;
         await this.wakeDm(
           "road",
           undefined,
+          ...(fell ? [fell] : []),
           `A road card was settled: ${event.text}`,
           "The engine has already applied the card: any fight it brings has started and any creature it brings is placed. Narrate what comes of it in one to three sentences; never start the fight again. Name coin or a price only as the engine's lines give it, never a sum of your own.",
+          ...(fell ? ["Then tell how the card was settled."] : []),
         );
         await this.settle();
         return;
+      }
       case "night": {
         const next = await this.dmWorld();
         await this.wakeDm(
@@ -894,6 +915,48 @@ export class TableLoop {
         } else await this.closeJourney(event.destination);
         return;
     }
+  }
+
+  /**
+   * An own move with no failure fell (decision 0079, design §1.8): its roll failed, or nothing was
+   * rolled. The DM tells the fall in its own `road` wake and the seats the card waits for see one
+   * line; when the words left settled the card at once, the settled card's wake tells it instead.
+   */
+  private async ownMoveFell(id: string, rolled: boolean): Promise<void> {
+    const world = await this.dmWorld();
+    const waits = world?.card?.id === id;
+    const move = this.ownMoves.get(id);
+    const actor = move?.actor ?? world?.card?.own_move?.actor ?? "the proposer";
+    // The words come from this run's log; a card carried over a save and load has none.
+    const words = move?.words ? ` («${move.words}»)` : "";
+    if (!waits) {
+      this.fellSettled = `${actor}'s own move${words} was never tried (${actor} is down or not here): say so in one sentence, with no roll for the move.`;
+      return;
+    }
+    const up = rolled || (await this.isUp(actor));
+    const text = rolled
+      ? `${actor}'s own move${words} failed its roll: tell how the attempt falls short, in one or two sentences. The scene still answers: a person on the card, if there is one, reacts to the try, and a companion may speak.`
+      : `${actor}'s own move${words} was never tried (${up ? "the attempt could not be made" : `${actor} is down or not here`}): say so in one sentence, with no roll for the move.`;
+    await this.wakeDm(
+      "road",
+      undefined,
+      text,
+      "Nothing else changes and nobody is worse off for it; the card still waits: do not decide it, and never tell or remember any of the card's choices happening.",
+    );
+    await this.settle();
+    // One plain line, for the seats the card waits for: the written choices wait.
+    const card = (await this.dmWorld())?.card;
+    const human = this.table.human;
+    const owner = world && card?.target === "caravan" && !world.caravan.owner.includes(":") ? world.caravan.owner : undefined;
+    const asked = card?.id === id && human && (card.waiting_for.includes(human) || (owner === human && card.waiting_for.length === 0));
+    if (asked && !this.table.ended) this.table.show({ kind: "info", title: this.words.onTheRoad, text: this.words.ownMoveFell(rolled) });
+  }
+
+  /** Whether `handle` is in the scene and conscious, as the engine's `table()` checks it. */
+  private async isUp(handle: Handle): Promise<boolean> {
+    const r = await this.table.engine.request("dm", { cmd: "get_state" });
+    const state = r.result?.cmd === "get_state" && r.result.state.view === "dm" ? r.result.state : undefined;
+    return Boolean(state?.creatures.some((c) => c.handle === handle && c.life_state === "conscious"));
   }
 
   /**
@@ -963,13 +1026,21 @@ export class TableLoop {
     this.table.log("system", `card ${card.id} goes to the seats`);
     await this.table.flush();
     const human = this.table.human;
+    // An own move that falls ends the round it fell in (decision 0079): no fallback word and no
+    // owner's fallback call; a fresh round starts after the fall's wake.
+    const fell = async () => {
+      const now = (await this.dmWorld())?.card;
+      return !moveFell(card) && now?.id === card.id && moveFell(now);
+    };
     if (human && card.waiting_for.includes(human) && !this.table.ended) await this.humanCard(card);
+    if (await fell()) return true;
     for (const handle of card.waiting_for) {
       const agent = this.agents.get(handle);
       if (!agent || this.table.ended) continue;
       const now = (await this.dmWorld())?.card;
       if (!now || now.id !== card.id || !now.waiting_for.includes(handle)) continue;
       await this.aiCard(agent, "Give your word");
+      if (await fell()) return true;
     }
     const now = (await this.dmWorld())?.card;
     // Whoever is still silent goes with the others (a failed wake or a refusal).
@@ -1001,13 +1072,15 @@ export class TableLoop {
     if (!now) return;
     const human = this.table.human;
     const agent = this.agents.get(owner);
+    const before = now;
     if (owner === human) {
       await this.humanCard(now, true);
     } else if (agent) {
       await this.aiCard(agent, "Make the caravan's call", true);
     }
     now = await ready();
-    if (!now) return;
+    // A call for an own move that fell gets no fallback in this round (decision 0079).
+    if (!now || (!moveFell(before) && moveFell(now))) return;
     const { choices, preset } = cardChoices(now);
     const choice = choices[preset - 1].about!.id;
     this.table.fallbacks += 1;
@@ -1074,7 +1147,7 @@ export class TableLoop {
     const movable = !/(^|[^A-Za-z0-9])(AC|DC) \d/.test(words);
     await this.table.flush();
     const head = this.table.engine.logHead;
-    this.dmTools.cardWords = { actor: handle, words: cutAtWord(words, OWN_MOVE_MAX_CHARS) };
+    this.dmTools.cardWords = { actor: handle, words: cutAtWord(words, OWN_MOVE_MAX_CHARS), ...(card.own_move ? { answerOnly: true } : {}) };
     this.dmTools.ownMoveMade = false;
     this.dmTools.cardAnswer = undefined;
     this.table.hold = (e) => e.seq > head;
@@ -1084,9 +1157,12 @@ export class TableLoop {
         undefined,
         `A player's words on the road card: ${handle} says or does: "${words}"`,
         cardDrawnLine(card),
-        movable
-          ? "If the words are a move, call own_move_or_answer with the check they call for, two different choices for success and failure, and your narration. If no two choices fit, give only the narration, one or two sentences, and the card waits. Answer the attempt only, never how it turns out."
-          : "These words can't go on the card as they are said: call own_move_or_answer with your narration only, one or two sentences, and the card waits.",
+        // A card that has or had an own move takes no second one (decision 0079): the words are answered.
+        movable && !card.own_move
+          ? OWN_MOVE_RULE
+          : card.own_move
+            ? "The card already has or had an own move, so these words make none: call own_move_or_answer with your narration only, one or two sentences, and the card waits. The scene still answers: a person on the card, if there is one, says what the plan would cost them or asks something back."
+            : "These words can't go on the card as they are said: call own_move_or_answer with your narration only, one or two sentences, and the card waits.",
       );
     } finally {
       this.table.hold = undefined;
@@ -2572,6 +2648,11 @@ export function roadCardAhead(world: WorldDm | undefined): boolean {
 const CARD_OPENING = "Open it in two to four sentences, on what the people in it do and want: do not retell the card's words, which the table shows next, and do not decide it or tell how a choice turns out. Narrate last.";
 
 /** The AI players' own-move line in a card briefing (AGT-99), while the card has no own move. */
+/** A card whose own move fell (decision 0079): the move is still on it, and no longer among its choices. */
+export function moveFell(card: { own_move?: unknown; choices: Array<{ id: string }> }): boolean {
+  return Boolean(card.own_move) && !card.choices.some((c) => c.id === OWN_MOVE);
+}
+
 export const OWN_MOVE_INVITE = "The written choices are only the obvious ones: if your character would rather try something of their own (talk someone round, a trick, a skill they are good at), say it with own_move, in one sentence.";
 
 /** The engine's limit on an own move's words (API-56). */
@@ -2598,6 +2679,7 @@ function cardLines(card: CardPlayer, owner = false, invite = true): string[] {
     `A road card waits for your word (${whose}): ${card.text}`,
     `Choices: ${card.choices.map((c) => `${c.id}: ${c.id === OWN_MOVE && move ? `${move.actor}'s own move, "${c.text}" (${move.skill})` : c.text}`).join(" | ")}`,
     ...(card.said.length > 0 ? [`Said so far: ${card.said.map((x) => `${x.actor} ${x.choice}`).join(", ")}.`] : []),
+    ...(move && moveFell(card) ? [`${move.actor}'s own move on this card was tried and fell: no choice came of it, and the card waits for a written choice.`] : []),
     ...(move || !invite ? [] : [OWN_MOVE_INVITE]),
   ];
 }
