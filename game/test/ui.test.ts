@@ -382,6 +382,30 @@ test("a potion's quick picks are you and your allies, never a hostile", async ()
   }
 });
 
+test("on the road at full Hit Points the list has no Second Wind and one potion line that opens its targets (AGT-114 d)", async () => {
+  const t = await testTable({ seed: 1 });
+  try {
+    t.table.observe(await t.engine.request("dm", { cmd: "load_scene", scene_id: "m5_s3_yard" }));
+    const listed = await t.engine.request("bren", { cmd: "legal_actions", actor: "bren" });
+    assert.ok(listed.result?.cmd === "legal_actions");
+    const result = listed.result as LegalActionsResult;
+    const hurt = buildChoices(result, undefined, false);
+    assert.ok(hurt.some((c) => c.about?.id === "fighter/second_wind"), "hurt: Second Wind is offered");
+    assert.ok(hurt.filter((c) => c.about?.id === "use/potion_of_healing").length > 1, "hurt: a potion line per quick target");
+    const full = buildChoices(result, undefined, false, undefined, true);
+    assert.equal(full.some((c) => c.about?.id === "fighter/second_wind"), false, full.map((c) => c.label).join("; "));
+    const potion = full.filter((c) => c.about?.id === "use/potion_of_healing");
+    assert.equal(potion.length, 1, potion.map((c) => c.label).join("; "));
+    assert.equal(potion[0]!.act, undefined, "the line opens its targets");
+    assert.ok(potion[0]!.next && potion[0]!.next.length > 0 && potion[0]!.next.every((c) => c.target?.side !== "hostile"));
+    assert.ok(!full.some((c) => /another/i.test(c.label)), full.map((c) => c.label).join("; "));
+    // In a fight nothing changes.
+    assert.ok(buildChoices(result, undefined, true, undefined, true).some((c) => c.about?.id === "fighter/second_wind"));
+  } finally {
+    t.close();
+  }
+});
+
 test("a dead creature's empty turns are told to nobody, and its turns before it died still are", () => {
   const at = (seq: number, kind: Event["kind"], rest: object): Event =>
     ({ seq, kind, text: `${seq}`, visibility: { scope: "public" }, ...rest }) as Event;

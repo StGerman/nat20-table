@@ -2390,7 +2390,9 @@ export class TableLoop {
       return;
     }
     this.lastOptions = listed.result as LegalActionsResult;
-    this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat, this.talk);
+    // At full Hit Points on the road (their own sheet) healing has no use (AGT-114).
+    const rested = !combat && state?.view === "player" && state.me.hp >= state.me.hp_max;
+    this.top = this.shown = buildChoices(this.lastOptions, combat ? state : undefined, combat, this.talk, rested);
     // Out of a fight, whoever may drive the caravan can move it on or end the day (AGT-80).
     if (!combat && state?.view === "player" && state.world) {
       const road = roadChoices(state.world, this.top.length + 1, human, this.talk);
