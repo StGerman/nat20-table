@@ -331,7 +331,7 @@ impl Server {
                 &actor.0,
                 text,
                 (*ability, *skill, *dc),
-                (success, failure),
+                (success, failure.as_deref()),
                 viewer,
             ),
             Command::Scout { actor } => session.scout(&actor.0, viewer),

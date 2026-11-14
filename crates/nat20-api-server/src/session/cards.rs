@@ -364,14 +364,15 @@ impl Session {
     }
 
     /// `own_move`: the DM puts a seat's own words on the card on the table (API-56), as a
-    /// ladder check that brings one of two offered choices. The seat's word is given for it,
-    /// so it may settle the card.
+    /// ladder check that brings an offered choice on a success and, when one is named, another
+    /// on a failure (decision 0079). The seat's word is given for it, so it may settle the
+    /// card.
     pub fn own_move(
         &mut self,
         actor: &str,
         text: &str,
         (ability, skill, dc): (Ability, Skill, u8),
-        (success, failure): (&str, &str),
+        (success, failure): (&str, Option<&str>),
         viewer: &Viewer,
     ) -> Result<CommandResult, ApiError> {
         if *viewer != Viewer::Dm {
@@ -418,7 +419,8 @@ impl Session {
             skill: wire(serde_json::to_value(skill).expect("a skill serializes")),
             dc: u32::from(dc),
             success: success.to_owned(),
-            failure: failure.to_owned(),
+            failure: failure.map(str::to_owned),
+            spent: false,
         };
         let table = self.table();
         let campaign = self.campaign.as_mut().expect("checked above");
@@ -452,7 +454,7 @@ impl Session {
                 skill,
                 dc,
                 success: success.to_owned(),
-                failure: failure.to_owned(),
+                failure: failure.map(str::to_owned),
             },
         });
         if table.blades.iter().any(|b| b == actor) {
@@ -473,8 +475,17 @@ impl Session {
     }
 
     /// Logs the decision and runs the choice's effects; for an own move, rolls the
-    /// proposer's check and runs the branch it lands on (API-56).
+    /// proposer's check and runs the branch it lands on (API-56). An own move with no failure
+    /// rolls before the card is decided, and a fall leaves the card to the words left
+    /// (decision 0079).
     fn resolve_card(&mut self, resolution: world::Resolution) -> Result<(), ApiError> {
+        if let Some(run) = resolution
+            .own_move
+            .as_ref()
+            .filter(|run| run.mv.failure.is_none())
+        {
+            return self.resolve_own_move_alone(&resolution, run);
+        }
         self.push(Pending::public(
             None,
             EventKind::CardResolved {
@@ -491,6 +502,62 @@ impl Session {
         Ok(())
     }
 
+    /// An own move with no failure the vote settled on (decision 0079): the card is still on
+    /// the table, and the proposer rolls first. A success decides the card on the move and runs
+    /// the success branch. A fall (a failed roll, a downed proposer, or an engine error at the
+    /// roll, taken as a fall with no roll) runs no choice: the deed is written, the move is
+    /// spent, the words for it are taken back, and the card is decided now only if the words
+    /// left settle it.
+    fn resolve_own_move_alone(
+        &mut self,
+        resolution: &world::Resolution,
+        run: &world::OwnMoveRun,
+    ) -> Result<(), ApiError> {
+        let (roll, success) = match self.roll_own_move(&run.mv) {
+            Ok(rolled) => rolled,
+            Err(err) => {
+                eprintln!(
+                    "own move on {}: the roll failed, taken as a fall: {}",
+                    resolution.card, err.message
+                );
+                (None, false)
+            }
+        };
+        if success {
+            let world = &mut self
+                .campaign
+                .as_mut()
+                .expect("a card needs a campaign")
+                .world;
+            world.deck.own_move_won(&mut world.state.deck);
+            self.push(Pending::public(
+                None,
+                EventKind::CardResolved {
+                    choice: resolution.choice.clone(),
+                    decided: campaign::decided(resolution.decided),
+                },
+            ));
+            self.push_own_move_ran(&resolution.card, Some(&run.mv.success), roll);
+            self.run_effects(&run.success, &resolution.by)?;
+            // A destination's arrival card is decided: the escort settles now (ENG-35).
+            self.settle_if_arrived()?;
+            return Ok(());
+        }
+        self.push_own_move_ran(&resolution.card, None, roll);
+        // The fall's part: the deed alone, with the resolution's `by`.
+        self.run_effects(&run.failure, &resolution.by)?;
+        let table = self.table();
+        let world = &mut self
+            .campaign
+            .as_mut()
+            .expect("a card needs a campaign")
+            .world;
+        match world.deck.own_move_fell(&mut world.state.deck, &table) {
+            Some(settled) => self.resolve_card(settled),
+            None => Ok(()),
+        }
+    }
+
     /// An own move the card was decided on (API-56): the proposer rolls the check through
     /// core if they are up, and the branch it lands on runs with the resolution's `by`. A
     /// downed proposer rolls nothing, and the failure runs.
@@ -501,47 +568,55 @@ impl Session {
         by: &[String],
     ) -> Result<(), ApiError> {
         let mv = &run.mv;
+        let (roll, success) = self.roll_own_move(mv)?;
+        let (choice, effects) = if success {
+            (Some(&mv.success), &run.success)
+        } else {
+            (mv.failure.as_ref(), &run.failure)
+        };
+        self.push_own_move_ran(card, choice, roll);
+        self.run_effects(effects, by)
+    }
+
+    /// The proposer's check (API-56): the roll id and whether it succeeded, or no roll and a
+    /// failure when the proposer is down or not here.
+    fn roll_own_move(&mut self, mv: &world::OwnMove) -> Result<(Option<RollId>, bool), ApiError> {
         let up = self
             .game
             .as_ref()
             .is_some_and(|g| g.has_creature(&mv.actor) && g.is_up(&mv.actor));
-        let (roll, success) = if up {
-            let (ability, skill) =
-                campaign::parse_check(&mv.ability, &mv.skill).ok_or_else(|| {
-                    error(ErrorCode::Internal, "an own move names no ability or skill")
-                })?;
-            let spec = CheckSpec::Ladder {
-                ability,
-                skill: Some(skill),
-                dc: u8::try_from(mv.dc).unwrap_or(u8::MAX),
-            };
-            let outcome = self.game_mut()?.request_check(&mv.actor, &spec);
-            self.push_entries();
-            let outcome = outcome?;
-            let roll = self
-                .roll_keys
-                .get(&outcome.key)
-                .cloned()
-                .expect("the check's roll was logged");
-            (Some(roll), outcome.success)
-        } else {
-            (None, false)
+        if !up {
+            return Ok((None, false));
+        }
+        let (ability, skill) = campaign::parse_check(&mv.ability, &mv.skill)
+            .ok_or_else(|| error(ErrorCode::Internal, "an own move names no ability or skill"))?;
+        let spec = CheckSpec::Ladder {
+            ability,
+            skill: Some(skill),
+            dc: u8::try_from(mv.dc).unwrap_or(u8::MAX),
         };
-        let (choice, effects) = if success {
-            (&mv.success, &run.success)
-        } else {
-            (&mv.failure, &run.failure)
-        };
+        let outcome = self.game_mut()?.request_check(&mv.actor, &spec);
+        self.push_entries();
+        let outcome = outcome?;
+        let roll = self
+            .roll_keys
+            .get(&outcome.key)
+            .cloned()
+            .expect("the check's roll was logged");
+        Ok((Some(roll), outcome.success))
+    }
+
+    /// `own_move_ran` (API-56): the choice the roll brought, or none after a fall.
+    fn push_own_move_ran(&mut self, card: &str, choice: Option<&String>, roll: Option<RollId>) {
         self.push(Pending {
             round: None,
             visibility: Visibility::Dm,
             kind: EventKind::OwnMoveRan {
                 card: card.to_owned(),
-                choice: choice.clone(),
+                choice: choice.cloned(),
                 roll,
             },
         });
-        self.run_effects(effects, by)
     }
 
     /// The handles an effect touches, in party order. A check rolls for those on their feet
