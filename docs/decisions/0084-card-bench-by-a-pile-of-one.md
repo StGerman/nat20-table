@@ -12,7 +12,7 @@ Facts, on main at 6d0766f:
 - The contract has no command that opens a named card.
 - A draw is by zone and `when`; "a pile of one puts its card on the table" with no pick (`crates/nat20-world/src/deck.rs`, `draw`).
 - A pack that carries its own `worlds/<map>` plays that world (`game/src/pack/campaign.ts`, `worldDir`). The ENG-35 test already copies a pack and its world to a temporary folder and writes one card into the copy's deck.
-- A new DM session pays one cache write of 0.31 to 0.42 USD, and the loop opens a new DM session each time a scene loads, so a card one leg from the start is in the second or the third session. A warm `card_words` wake costs 0.04 to 0.06 USD (runs 16:05, 21:16 and 01:42). Run 01:42 had paid 0.79 USD when its first road card reached the seats, in its second session.
+- A new DM session pays one cache write of 0.27 to 0.42 USD, and the loop opens a new DM session each time a scene loads, so a card one leg from the start is in the second or the third session. A warm `card_words` wake costs 0.04 to 0.06 USD (runs 16:05, 21:16 and 01:42). Run 01:42 had paid 0.79 USD when its first road card reached the seats, in its second session.
 - A chained card is in play only after another card's choice adds it.
 - Live model calls run only on Stas's Mac (decision 0036).
 
@@ -43,7 +43,7 @@ Proposed: **A.** It is the only option where the line, the DM's call, the roll a
 ## Consequences
 
 - `npm run play:card` and its report, in two table PRs beside Milestone 13 (`docs/design/card-bench.md` §6). Rows are Yan's, after Stas accepts the design.
-- The bench is tried on three or four cards before Stas's Milestone 13 evening, at an expected 7.5 to 10 USD, about one more all-AI run of *Fair in Wend*, and four commands of Stas's (design §5). It adds cost to the milestone and changes no exit rule (decisions 0043, 0065, 0066, 0074).
+- The bench is tried on three or four cards before Stas's Milestone 13 evening, at an expected 7.5 to 10 USD for four cards, about one more all-AI run of *Fair in Wend*, and one command of Stas's a card (design §5). It adds cost to the milestone and changes no exit rule (decisions 0043, 0065, 0066, 0074).
 - The bench reports and gives no pass or fail. Findings are read by the analysis thread; the verdict on each is Stas's.
 - Whether the bench becomes a standing rule is a later decision with its own record (decision 0080).
 

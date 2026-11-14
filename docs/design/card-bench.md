@@ -77,7 +77,7 @@ The report is the DM's side of the table, like a run's analysis. It is never sho
 **Cards.** Three or four:
 
 - the two new Wendford arrival cards of MAP-20, which the row `m13-carried` rests on: the first time a live DM and a person's words meet one of them is otherwise Stas's run 2. Each reads `wenna_saved` and its own yard deed (`snitt_yielded` or `yard_to_the_end`), and one Mill run writes only one of the two yard deeds, so each card needs its own roster;
-- `bog_wifes_toll` and `salt_on_credit`, with the plans Stas said on them in run 01:42. No live run has tried those plans since decision 0079 changed what an own move may be. Their rules change again under decision 0083 (open table #394), so this is a control for the bench, not a test of the rules.
+- `bog_wifes_toll` and `salt_on_credit`, with the plans Stas said on them in run 01:42. No live run is known to have tried those plans since decision 0079 changed what an own move may be: the one run with Stas on such a build (17:19 on 2026-11-14, not an exit run, decision 0082) is known here from its live notes, which record his words at the Millbeck bridge only; its run folder is not in nat20-runs at 65c0e7c. Their rules change again under decision 0083 (open table #394), so this is a control for the bench, not a test of the rules.
 
 **Lines.** Five a card. For the two older cards, Stas's recorded lines on them from runs 16:05 and 01:42, read from the run files, made up to five. For the two new cards the thread drafts five from the card's text (a question, a plan that fits a choice, a plan that fits none, a plan that commits the whole party, a joke) and Stas edits or replaces them. Lines files live with the run copies in `/mnt/project-files/engine/m13/bench/`, not in the repo: the recorded ones are run data.
 
@@ -90,7 +90,7 @@ Recommended: the first if PR 1 shows it works, else the second.
 
 **Cost.** From the DM's rows in the `usage.jsonl` of runs 16:05, 21:16 and 01:42 (`api_equivalent_usd`).
 
-- A new DM session pays one cache write of 55 to 80 thousand tokens, 0.31 to 0.42 USD. It lands on the session's first wake, or on the second when the first times out: that happened in 5 of the 9 new sessions of runs 16:05 and 01:42 and adds 0.02 to 0.12 USD and a lost wake of 12 to 30 s. The estimates below leave the timeouts out.
+- A new DM session pays one cache write of 53 to 80 thousand tokens, 0.27 to 0.42 USD. It lands on the session's first wake, or on the second when the first times out: that happened in 5 of the 9 new sessions of runs 16:05 and 01:42 and adds 0.02 to 0.12 USD and a lost wake of 12 to 30 s. The estimates below leave the timeouts out.
 - The loop opens a new DM session each time a scene loads (`game/src/table/loop.ts`, `closeScene`, `dm.newScene`). How many load before a card depends on the way to it. In run 21:16 the first leg of *Fair in Wend* loaded one, Wendford's, and the leg's road card was played in that session. In run 01:42 the leg from Wendford to the Highsteads loaded two: `twb_road`, where `bog_wifes_toll` came, then `twb_highsteads`, where `salt_on_credit` and the arrival card `gwyn_cheese` came. All four trial cards are one leg from a place with a scene (§3), so each is in the second or the third session of its bench run.
 - Warm wakes: `scene_open` 0.04 to 0.05, `summary` 0.02, `road` 0.02 to 0.05, `card` 0.02 to 0.04, `card_words` 0.04 to 0.06 USD and 9 to 24 s.
 - Run 01:42 had paid 0.79 USD when its first road card reached the seats, in its second DM session (0.425 + 0.039 + 0.019 + 0.308), in 55 s of DM wakes.
@@ -153,4 +153,4 @@ No contract change, no engine change, no new player-facing text, so Rule 1 does 
 - `docs/design/content-test-layers.md` §2, §4; `docs/decisions/0080-content-test-layers.md` (table #383)
 - `crates/nat20-world/src/deck.rs` (`draw`, `Drawn::Table`); `game/src/pack/campaign.ts` (`worldDir`); `game/test/campaign-loop.test.ts` (ENG-35, `blade`, `movingDm`); `game/src/play/driver.ts` (`--roster`, `--rosters`, `--seat`); `game/src/agents/dm.ts` (`card_words`, `own_move_or_answer`); `game/src/table/loop.ts` (`closeScene`, `dm.newScene` at a scene change)
 - `docs/design/m13-system-design.md` §1, §8 (the reader card, the exit pair); decisions 0036, 0043, 0079, 0081
-- nat20-runs `master` 65c0e7c: `full-2026-11-13T16-05-31-438Z`, `full-2026-11-13T21-16-03-269Z` and `full-2026-11-14T01-42-04-072Z` (`usage.jsonl`), and their `analysis.md` in `/mnt/project-files/engine/m12/runs/`
+- nat20-runs `master` 65c0e7c: `full-2026-11-13T16-05-31-438Z`, `full-2026-11-13T21-16-03-269Z` and `full-2026-11-14T01-42-04-072Z` (`usage.jsonl`), and their `analysis.md` in `/mnt/project-files/engine/m12/runs/`; `live-notes.md` of `full-2026-11-14T17-19-50-900Z` there
