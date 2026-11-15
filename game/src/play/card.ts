@@ -7,14 +7,14 @@
 // `--roster NAME` plays a copy of a saved party, for a card that reads deeds; `--seat ink` lets a
 // person type instead of the file. Every other setting is a play command's (`settings.ts`).
 // The live DM runs on Stas's Mac under his Claude login (decision 0036); `--dm scripted` plays the
-// same walk with no model. The run itself is in driver.ts.
+// same walk with no model, in English. The run itself is in driver.ts.
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { REPO } from "../paths.ts";
 import { benchSeat, votesOwnMove, type BenchSeatLog } from "../table/scripted.ts";
-import { BenchError, benchLines, benchPack, benchRoster, packsReaching, type BenchLines } from "./bench.ts";
+import { BenchError, benchLines, benchPack, benchPlan, benchRoster, packsReaching, savedParty, type BenchLines } from "./bench.ts";
 import { npmCommand, playRun } from "./driver.ts";
 import { resolveSettings, SettingError, SETTINGS } from "./settings.ts";
 
@@ -40,10 +40,13 @@ try {
   refuse(`${error instanceof Error ? error.message : String(error)}\n${USAGE}`);
 }
 /** The command's own defaults: Russian, scripted AI seats, no judge, and stops that keep a lost bench run cheap. */
-const defaults = { lang: "ru", players: "scripted", "no-audit": true, "time-limit-min": 15, "stall-rounds": 6 } as const;
+const live = { lang: "ru", players: "scripted", "no-audit": true, "time-limit-min": 15, "stall-rounds": 6 } as const;
+let defaults: Partial<Record<keyof typeof SETTINGS, string | number | boolean>> = live;
 let flags: ReturnType<typeof resolveSettings>["values"];
 let typedPack: boolean;
 try {
+  // The scripted DM's lines are English, which a Russian run's narration guard refuses: a run with no model is English unless --lang says otherwise.
+  if (resolveSettings(rest, live).values.dm === "scripted") defaults = { ...live, lang: "en" };
   const settings = resolveSettings(rest, defaults);
   flags = settings.values;
   typedPack = settings.provenance.pack?.from !== "default";
@@ -74,6 +77,23 @@ if (own.lines) {
   if (!person && read.lines.length === 0) refuse(`--lines ${own.lines}: no line to type. One line of the player's words a row; a row that starts with # is a note, one that starts with ~ is left out.`);
 }
 
+// Everything the bench can refuse is refused here, before a pack or a saved party is copied.
+try {
+  const plan = benchPlan(flags.pack, card);
+  if (plan.needs.length > 0 && flags.roster === undefined) refuse(`${card} comes only to a party that remembers ${plan.needs.join(", ")}: play it on a saved party with --roster NAME.`);
+} catch (error) {
+  if (!(error instanceof BenchError)) throw error;
+  refuse(`${error.message} ${reaching()}`);
+}
+if (flags.roster !== undefined) {
+  try {
+    savedParty(flags.rosters, flags.roster);
+  } catch (error) {
+    if (!(error instanceof BenchError)) throw error;
+    refuse(error.message);
+  }
+}
+
 const recordedPack = path.relative(REPO, path.resolve(flags.pack)).startsWith("..") ? path.resolve(flags.pack) : path.relative(REPO, path.resolve(flags.pack));
 let typed = 0;
 let runs = 0;
@@ -96,12 +116,9 @@ for (;;) {
       if (flags.roster !== undefined) benchRoster(flags.rosters, flags.roster, path.join(root, "rosters"));
     } catch (error) {
       if (!(error instanceof BenchError)) throw error;
-      refuse(`${error.message}${runs === 0 && !/no saved party/.test(error.message) ? ` ${reaching()}` : ""}`);
+      refuse(error.message);
     }
     const { plan } = copy;
-    if (runs === 0 && plan.needs.length > 0 && flags.roster === undefined) {
-      refuse(`${card} comes only to a party that remembers ${plan.needs.join(", ")}: play it on a saved party with --roster NAME.`);
-    }
     const log: BenchSeatLog = { reached: false, typed: [] };
     runs += 1;
     if (!person) console.log(`\nBench run ${runs} of ${card}: ${plan.route.join(" > ")}, ${read.lines.length - typed} line${read.lines.length - typed === 1 ? "" : "s"} to type.`);

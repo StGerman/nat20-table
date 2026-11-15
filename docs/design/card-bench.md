@@ -70,7 +70,7 @@ The command:
 npm run play:card -- --card bog_wifes_toll --pack scenarios/the_way_back --lines lines.txt   # add --roster NAME for a card that reads deeds
 ```
 
-The seat leaves the table at its first prompt after the card is settled, so a settled choice that starts a fight is told and the fight is not played. `--dm scripted` plays the same walk with no model: its DM answers a line that ends in `?` and makes any other line an own move, which is how CI runs the command. Every bench run writes its own run folder, `runs/card-<time>/`, whose `run.json` names the card, the pack and the cut route under `bench`.
+The seat leaves the table at its first prompt after the card is settled, so a settled choice that starts a fight is told and the fight is not played. `--dm scripted` plays the same walk with no model, in English unless `--lang` says otherwise: its DM answers a line that ends in `?` and makes any other line an own move, which is how CI runs the command. Every bench run writes its own run folder, `runs/card-<time>/`, whose `run.json` names the card, the pack and the cut route under `bench`.
 
 The scripted AI seats always vote for the own move, so the roll always happens. What AI players do with a card is a different question (the seat bench, considered and not proposed in `content-test-layers.md` §4).
 

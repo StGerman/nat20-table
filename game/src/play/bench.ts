@@ -193,13 +193,19 @@ function startScene(dir: string, world: World, start: string): void {
   writeFileSync(file(start), JSON.stringify({ ...scene, creatures: [...(scene.creatures ?? []), ...placed] }, null, 4) + "\n");
 }
 
+/** The file of the saved party `name`; refuses a name with no saved party, since the bench never starts a new one. */
+export function savedParty(rosters: string, name: string): string {
+  const file = path.join(rosters, `${name}.json`);
+  if (!existsSync(file)) throw new BenchError(`--roster ${name}: no saved party ${path.relative(process.cwd(), file) || file}. The card bench plays a copy of a saved party and never starts a new one.`);
+  return file;
+}
+
 /**
  * The bench's copy of the saved party `name` in the folder `into` (design §3): the roster file and
  * its hash chain, so the run plays and saves the copy and the saved party is never written over.
  */
 export function benchRoster(rosters: string, name: string, into: string): void {
-  const file = path.join(rosters, `${name}.json`);
-  if (!existsSync(file)) throw new BenchError(`--roster ${name}: no saved party ${path.relative(process.cwd(), file) || file}. The card bench plays a copy of a saved party and never starts a new one.`);
+  const file = savedParty(rosters, name);
   mkdirSync(into, { recursive: true });
   cpSync(file, path.join(into, `${name}.json`));
   const chain = path.join(rosters, `${name}.chain.jsonl`);

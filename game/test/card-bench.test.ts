@@ -5,7 +5,7 @@
 // `play:card` runs end to end with a scripted DM.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -226,7 +226,11 @@ test("play:card runs end to end with a scripted DM: it passes the scripted-playe
     writeFileSync(lines, "# the bog-wife\nWhat do you want for the crossing?\n~ As we agreed at the fair, let us pass.\nWe carry your peat to the Highsteads instead.\nAnd who taught you the way?\n");
     const node = ["--experimental-strip-types", "--no-warnings"];
     const card = path.join(REPO, "game/src/play/card.ts");
-    const play = (...args: string[]) => spawnSync(process.execPath, [...node, card, "--dm", "scripted", "--no-upload", "--seed", "3", "--out", path.join(out, "runs"), ...args], { encoding: "utf8" });
+    // The command's temporary copies go under this folder, so the test sees what a run leaves behind.
+    const tmp = path.join(out, "tmp");
+    mkdirSync(tmp);
+    const play = (...args: string[]) =>
+      spawnSync(process.execPath, [...node, card, "--dm", "scripted", "--no-upload", "--seed", "3", "--out", path.join(out, "runs"), ...args], { encoding: "utf8", env: { ...process.env, TMPDIR: tmp } });
 
     const run = play("--card", "bog_wifes_toll", "--pack", WAY_BACK, "--lines", lines);
     assert.equal(run.status, 0, run.stderr || run.stdout);
@@ -239,6 +243,9 @@ test("play:card runs end to end with a scripted DM: it passes the scripted-playe
     const file = (run: string, name: string) => readFileSync(path.join(out, "runs", run, name), "utf8");
     const record = JSON.parse(file(folder!, "run.json")) as RunRecord;
     assert.equal(record.command, "play:card");
+    // The scripted DM's lines are English, so a run with no model is English and the narration guard refuses none of them.
+    assert.deepEqual(record.settings.lang, { value: "en", from: "default" });
+    assert.doesNotMatch(file(folder!, "report.md"), /narration refused/);
     assert.deepEqual(record.bench, { card: "bog_wifes_toll", pack: "scenarios/the_way_back", route: ["wendford", "highsteads"], lines_file: lines, left_out: ["As we agreed at the fair, let us pass."] });
     // Bench run 1: the question is answered and the card waits; the plan becomes an own move and settles it. The seat's other inputs are the road's numbered lines.
     const typed = (run: string) =>
@@ -256,6 +263,7 @@ test("play:card runs end to end with a scripted DM: it passes the scripted-playe
     assert.match(file(folders[1]!, "report.md"), /First card: bog_wifes_toll/);
     // The temporary copy is gone, and the pack's own play commands still refuse scripted players on a campaign.
     assert.ok(!existsSync(record.settings.pack!.value as string), "the copy is removed when the bench run ends");
+    assert.deepEqual(readdirSync(tmp), [], "both copies are removed");
     const scene = spawnSync(process.execPath, [...node, path.join(REPO, "game/src/play/full.ts"), "--dm", "scripted", "--players", "scripted", "--pack", FAIR, "--no-upload", "--out", path.join(out, "other")], { encoding: "utf8" });
     assert.equal(scene.status, 2);
     assert.match(scene.stderr, /scripted players never move the caravan/);
@@ -265,6 +273,7 @@ test("play:card runs end to end with a scripted DM: it passes the scripted-playe
       const r = play(...args);
       assert.equal(r.status, 2, r.stdout);
       assert.match(r.stderr, why);
+      assert.deepEqual(readdirSync(tmp), [], `refused before anything is copied: ${args.join(" ")}`);
     };
     refused(["--pack", FAIR, "--lines", lines], /--card names the card to bench/);
     refused(["--card", "bog_wifes_toll", "--lines", lines], /--pack names the campaign pack to bench bog_wifes_toll in\. The packs that reach bog_wifes_toll: scenarios\/fair_in_wend, scenarios\/the_way_back\./);
