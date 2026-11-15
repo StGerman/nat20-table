@@ -1,8 +1,8 @@
 # The card bench: one card, a live DM, a list of lines
 
-- **Status:** Proposed. Nothing is built and no TASKS.md row exists until Stas accepts this design (decision 0080: "the design comes first, with its cost")
+- **Status:** Accepted by Stas, 2026-11-14 21:06Z, with all five recommendations of §9 («Да, ок по всем» on the thread's decision card, after he merged table #397). Nothing is built yet
 - **Date:** 2026-11-14
-- **Decision:** `docs/decisions/0084-card-bench-by-a-pile-of-one.md` (Proposed)
+- **Decision:** `docs/decisions/0084-card-bench-by-a-pile-of-one.md` (Accepted)
 - **Asked by:** Stas, 2026-11-14 19:42Z: «Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным»
 - **Builds on:** `docs/design/content-test-layers.md` §4 and decision 0080 (table #383), which name the bench as a candidate and list six open points. This doc answers them
 
@@ -68,6 +68,8 @@ The scripted AI seats always vote for the own move, so the roll always happens. 
 - the DM's words to the table;
 - USD and seconds.
 
+A line the lines file marks as left out, because it leans on an earlier scene (§2), is named in the report and not typed.
+
 The report is the DM's side of the table, like a run's analysis. It is never shown to a player (Rule 3).
 
 **Reading it.** The analysis thread gives each line one of four readings: *landed* (an own move on a choice that fits the words), *answered* (a question got an answer and nothing changed), *nowhere to land* (a plan with no choice to carry it, or a refusal), *ruled without a roll* (an outcome narrated or remembered with no roll, as on `salt_on_credit` in run 01:42). The last two are findings. The verdict on a finding is Stas's.
@@ -117,7 +119,7 @@ Stas keeps or drops it. A reading to start from: keep it if number 1 is at least
 
 ## 6. Build
 
-Two table PRs, beside Milestone 13: outside its exit, its rows and its PR count. Rows and sizes are Yan's, after Stas accepts this design.
+Two table PRs, beside Milestone 13: outside its exit, its rows and its PR count. Rows, written by Yan after Stas accepted this design: AGT-123 (the command), AGT-124 (the report) and AGT-125 (the trial of §5).
 
 1. **The bench command.** The temporary pack (§3), the caravan-moving scripted seat (today a helper inside `game/test/campaign-loop.test.ts`, moved to `game/src/table/scripted.ts`), `--card`, `--lines`, `--roster`. The run driver refuses scripted players on a campaign without `--seat ink` ("scripted players never move the caravan"); `play:card` passes that guard because its scripted seat does move it, and the guard stays for every other command. Tested with no model, in CI: for each campaign pack and every road and arrival card its route reaches that is not chained and reads no deed, with a scripted DM, the copy loads and that card is the first card on the table. A card that reads deeds needs a roster, so the test also plays one such card on a roster that a scripted contract saves in the same test.
 2. **The report.** `bench.md` (§4), tested with no model on a scripted DM that turns words into an own move.
@@ -141,6 +143,8 @@ No contract change, no engine change, no new player-facing text, so Rule 1 does 
 - **It tests guesses.** Both real plans of run 01:42 were ones nobody predicted. Five lines a card will miss the sixth.
 
 ## 9. Questions for Stas
+
+**All five answered 2026-11-14 21:06Z: «Да, ок по всем», each as recommended.**
 
 1. Accept the design: a temporary pack with a pile of one, lines from a file, a report with no pass or fail? Recommended: yes.
 2. The trial's cards: the new Wendford arrival cards (both, or the one run 1's roster opens, §5) plus `bog_wifes_toll` and `salt_on_credit`, about 7.5 to 10 USD? Or the new cards alone, about 3.7 to 5 USD? Recommended: all four. Two new cards with five guessed lines each may find nothing, and a trial that finds nothing says little about the bench.
