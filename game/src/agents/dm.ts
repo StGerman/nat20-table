@@ -25,11 +25,13 @@ export const DM_TURN_TIMEOUT_MS = 12_000;
 
 /**
  * The DM's wakes that may run longer: opening a scene (a fresh session's first turn writes the
- * whole prompt to the cache), resolving the table's turn (several tool calls) and the scene's
- * summary. A timeout there drops a scene's beats, such as its rest, not just a line of narration.
+ * whole prompt to the cache), resolving the table's turn (several tool calls), the scene's
+ * summary, and picking a road card, which is often a fresh session's first turn and narrates the
+ * card's opening after `pick_card` (AGT-120). A timeout there drops a scene's beats, such as its
+ * rest or a card's opening, not just a line of narration.
  */
 export const DM_LONG_WAKE_TIMEOUT_MS = 30_000;
-const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary", "suggest"];
+const DM_LONG_WAKES: DmWake[] = ["scene_open", "table_turn", "summary", "suggest", "pick"];
 
 /**
  * The wakes a successful `narrate` ends for the loop (M10 S2, decision 0053): the model's closing
