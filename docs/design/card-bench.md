@@ -1,6 +1,6 @@
 # The card bench: one card, a live DM, a list of lines
 
-- **Status:** Accepted by Stas, 2026-11-14 21:06Z, with all five recommendations of §9 («Да, ок по всем» on the thread's decision card, after he merged table #397). Nothing is built yet
+- **Status:** Accepted by Stas, 2026-11-14 21:06Z, with all five recommendations of §9 («Да, ок по всем» on the thread's decision card, after he merged table #397). The command is built (AGT-123, §6 item 1, with what the build found in §3); the report (AGT-124) and the trial (AGT-125) are not
 - **Date:** 2026-11-14
 - **Decision:** `docs/decisions/0084-card-bench-by-a-pile-of-one.md` (Accepted)
 - **Asked by:** Stas, 2026-11-14 19:42Z: «Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным»
@@ -40,13 +40,21 @@ The bench does the same for a card that is not chained:
 3. Cut the copy's `world.start` and `world.route` to the shortest stretch that reaches the card: start at the last place on the pack's route that has a scene, before the road (a road card) or the place (an arrival card) of the card's zone. On today's two campaign packs that is one or two legs for every zone on a route.
 4. Play it with the real loop: the live DM, scripted AI seats, and a scripted human seat that moves the caravan on until the card is on the table, then types the lines.
 
+What the build found (AGT-123), on main at 07322a1:
+
+- **The first scene must place the party.** The engine starts a contract only in a scene that places creatures, and only a pack's own first scene does (`fw_highsteads`, `twb_wendmouth`); every other scene takes a carried party at its `party_start` anchors. So a copy that starts elsewhere also puts the party of the pack's own first scene into its new first scene, at those anchors, as the engine places a carried party. Still no contract or engine change.
+- **The stretch ends where the card's leg ends, and so does the contract.** The copy's route stops at the far end of the card's leg and the escort's destination moves there. A card that never comes (its deeds do not hold on this party, or it is gone from its world) then ends the bench run in a paid contract after the stretch, not at the pack's far end.
+- **One to three legs, not one or two.** With Midwend on both routes, an arrival card of Saltmouth in *Fair in Wend* and one of Wendford in *The Way Back* are three legs from the last place with a scene: a scripted walk to `the_fair_price` loads five scenes and passes one night before the card, so by §5's count of one new DM session a scene load it costs more than the estimates there. All four cards of the Milestone 13 trial (§5) are one leg.
+- **No deck check objected to a copy.** The engine checks a deck's shape when it loads and not that every deed read is written (that check runs in `crates/nat20-world/tests/worlds.rs`), so nothing had to be kept in a far zone. The copy keeps only the chained cards the benched card's choices add, and what those add, because an `add_card` must name a card.
+- **A place that plays the road scene is no start**, because the road scene loads again on the way.
+
 Cards that read deeds (`if`): the bench takes `--roster NAME` and plays on a copy of that roster in a temporary `--rosters` folder, so the saved party is never written over. Every bench run starts from a fresh copy of the pack and of the roster: a run saves its roster when it ends, and a card decided in one run (`once`) would be gone from the next. Milestone 13's two Wendford arrival cards read Mill deeds; their roster is one saved by a run of *The Silent Mill* (§5).
 
 Out of this version: night cards, and chained cards (`chained: true`, eight on main), which are in play only after another card's choice adds them, so reaching one means deciding that card first. Nothing in the Milestone 13 trial needs either.
 
 ## 4. A bench run, and what is written down
 
-The lines are a text file, one line of the player's words per row, given with `--lines FILE`. With `--seat ink` a person types instead.
+The lines are a text file, one line of the player's words per row, given with `--lines FILE`. A row that starts with `#` is a note; a row that starts with `~` is a line left out (below). With `--seat ink` a person types instead.
 
 For each line the human's seat types it at the card's prompt and the bench waits for the table to settle:
 
@@ -55,6 +63,14 @@ For each line the human's seat types it at the card's prompt and the bench waits
 - the card is decided: the bench run ends. Lines left over start a fresh run each time.
 
 When the lines run out with the card still waiting, the bench stops. It never picks a number.
+
+The command:
+
+```bash
+npm run play:card -- --card bog_wifes_toll --pack scenarios/the_way_back --lines lines.txt   # add --roster NAME for a card that reads deeds
+```
+
+The seat leaves the table at its first prompt after the card is settled, so a settled choice that starts a fight is told and the fight is not played. `--dm scripted` plays the same walk with no model, in English unless `--lang` says otherwise: its DM answers a line that ends in `?` and makes any other line an own move, which is how CI runs the command. Every bench run writes its own run folder, `runs/card-<time>/`, whose `run.json` names the card, the pack and the cut route under `bench`.
 
 The scripted AI seats always vote for the own move, so the roll always happens. What AI players do with a card is a different question (the seat bench, considered and not proposed in `content-test-layers.md` §4).
 
@@ -137,7 +153,7 @@ No contract change, no engine change, no new player-facing text, so Rule 1 does 
 ## 8. Risks
 
 - **The copy may not load.** Taking cards out can fail the deck's own checks, for one a deed that is read with no card left to write it. PR 1's test runs the copy for every card it covers; where a check objects, the copy keeps the card it needs in a zone the cut route does not cross.
-- **A cut route may not start cleanly.** A contract opened at its second place has a scene written for an arrival, not for a start. The DM may narrate oddly before the card. It costs one wake and is visible in the report.
+- **A cut route may not start cleanly.** A contract opened at its second place has a scene written for an arrival, not for a start. The DM may narrate oddly before the card. It costs one wake and is visible in the report. The build found the harder half of this: such a scene places no party, and the copy now does (§3).
 - **The bench DM is colder than the evening's DM.** No scenes behind it and no table talk. A line can land on the bench and fail in the evening, or the other way. Number 2 of §5 measures exactly this.
 - **The price is an estimate until the first run.** Whether the prompt cache carries from one process to the next is not measured; the table in §5 assumes it does not. At two or three cache writes before every card the DM's wake alone (decision 0084, option D) would cost about a third of the trial's price, and tells less.
 - **It tests guesses.** Both real plans of run 01:42 were ones nobody predicted. Five lines a card will miss the sixth.

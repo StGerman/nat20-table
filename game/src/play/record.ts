@@ -66,6 +66,12 @@ export interface RunRecord {
   roster?: RosterRecord;
   /** A living-world run (M9): its first game day and its last, on the world clock (a next contract starts on the saved day, M11); absent for scenes in order. The verdict checks the Milestone 9 exit on it (AGT-81). */
   campaign?: { start_day: number; day_limit: number | null };
+  /**
+   * A card bench run (AGT-123): the card, the pack it was benched in, from the repo's root when it
+   * is in the repo (`settings.pack` is the run's temporary copy of it, gone when the run ends), the
+   * copy's cut route, the lines file and the lines it marks left out. Absent for every other command.
+   */
+  bench?: { card: string; pack: string; route: string[]; lines_file: string | null; left_out: string[] };
 }
 
 /** The checkout a run comes from: its commit, and whether tracked files had changes. */
@@ -90,12 +96,18 @@ export function readRunRecord(runDir: string): RunRecord {
  */
 export function packOfRun(dir: string): string {
   let recorded: string | undefined;
+  let benched: string | undefined;
   try {
-    recorded = readRunRecord(dir).settings.pack?.value as string | undefined;
+    const record = readRunRecord(dir);
+    recorded = record.settings.pack?.value as string | undefined;
+    benched = record.bench?.pack;
   } catch {
     recorded = undefined;
   }
-  return recorded && existsSync(recorded) ? recorded : path.join(REPO, "scenarios/the_silent_mill");
+  if (recorded && existsSync(recorded)) return recorded;
+  // A card bench run played a temporary copy: the pack it was cut from stands in for it.
+  const cutFrom = benched === undefined ? undefined : path.resolve(REPO, benched);
+  return cutFrom && existsSync(cutFrom) ? cutFrom : path.join(REPO, "scenarios/the_silent_mill");
 }
 
 /** A run's Langfuse tags (AGT-16), as run.json recorded them: profile, pack and roster; none without a run.json. */
