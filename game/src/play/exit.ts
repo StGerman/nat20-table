@@ -1,5 +1,6 @@
 // The Milestone 12 exit (AGT-103, design `docs/design/m12-system-design.md` §8): the verdict rows
-// `m12-own-move`, `m12-order`, `m12-language` and `m12-readable`, the report's own-move section,
+// `m12-order`, `m12-language` and `m12-readable` (`m12-own-move` is retired: the milestone closed
+// not done, decision 0082), the report's own-move section,
 // and the seat replay that gives an all-AI run's Vera read the lines a seat would have drawn. Pure
 // functions of the run folder, like the rest of the verdict.
 import { existsSync } from "node:fs";
@@ -57,37 +58,28 @@ export interface OwnMoveMet {
   decided?: { choice: string; how: string };
   /** A move came after this one on the card: this one fell and the card waited (decision 0081). */
   later: boolean;
-  /** The card was decided in this run, on this move, a later one or a written choice. */
-  settled: boolean;
   /** The seq of this move's fall in the session log, when it fell. */
   fellAt?: number;
   /** The proposer's roll and its outcome; `null` when there was none: the proposer was down, or, for a move with no failure, the engine could not make it (decision 0079). */
   roll?: { id: string; outcome: string } | null;
   /** The choice the own move brought; `null` when it named no failure and fell (decision 0079). */
   ran?: string | null;
-  /** The deed's record in this run, when it was written here; a card has one, shared by all its moves. */
-  deed?: { contract: number; by: Handle[] };
   /** Seats whose word on the card was a fallback ("goes with the others"). */
   fallbacks: Handle[];
-  /** The proposer was down or dead when the card was decided. */
-  down: boolean;
 }
 
 /** The own moves in a run, from the session log, with the fallbacks the transcript logged on their cards. */
 export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], party: readonly Handle[] = []): OwnMoveMet[] {
   const out: OwnMoveMet[] = [];
-  const life = new Map<Handle, string>();
   type Seated = { id: string; votes: OwnMoveMet["votes"]; words?: string; moves: OwnMoveMet[]; roundAt: number };
   let card: Seated | undefined;
   // Every card's state stays after it is decided: a move that wins on a card logs its own_move_ran after the card's decision.
   const seen = new Map<string, Seated>();
-  const deeds = new Map<string, NonNullable<OwnMoveMet["deed"]>>();
   const rolls = new Map<string, string>();
   // The fallback votes logged in a round: a transcript line's `log_head` is the session log's head when it was written.
   const fallbacksIn = (from: number, to: number) => transcript.filter((r) => r.kind === "fallback" && party.includes(r.speaker) && r.log_head >= from && r.log_head < to).map((r) => r.speaker);
   for (const e of log) {
     if (e.kind === "roll") rolls.set(e.roll.id, e.roll.outcome);
-    else if (e.kind === "life_state") life.set(e.target, e.state);
     else if (e.kind === "card_shown") {
       card = { id: e.card, votes: [], moves: [], roundAt: e.seq };
       seen.set(e.card, card);
@@ -97,7 +89,7 @@ export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], p
     else if (e.kind === "own_move_set" && card) {
       // A move after a fall is on the same card: the one before it is told a later move followed.
       for (const m of card.moves) m.later = true;
-      const move: OwnMoveMet = { card: e.card, actor: e.actor, words: card.words ?? "", skill: e.skill, dc: e.dc, success: e.success, failure: e.failure ?? undefined, place: card.moves.length + 1, earlier: card.moves.map((m) => ({ skill: m.skill, success: m.success })), votes: card.votes, later: false, settled: false, fallbacks: [], down: false };
+      const move: OwnMoveMet = { card: e.card, actor: e.actor, words: card.words ?? "", skill: e.skill, dc: e.dc, success: e.success, failure: e.failure ?? undefined, place: card.moves.length + 1, earlier: card.moves.map((m) => ({ skill: m.skill, success: m.success })), votes: card.votes, later: false, fallbacks: [] };
       card.moves.push(move);
       out.push(move);
     } else if (e.kind === "own_move_ran" && seen.get(e.card)?.moves.length) {
@@ -113,59 +105,16 @@ export function ownMovesMet(log: Event[], transcript: TranscriptRecord[] = [], p
         its.votes = [];
         its.roundAt = e.seq;
       }
-    } else if (e.kind === "deed_remembered" && e.deed.startsWith("own_move_")) {
-      // Written once, at the first own_move_ran on the card: every move on it uses this record.
-      deeds.set(e.deed.slice("own_move_".length), { contract: e.contract, by: e.by });
     } else if (e.kind === "card_resolved" && card) {
-      for (const m of card.moves) m.settled = true;
       const open = card.moves.at(-1);
       if (open && !open.decided) {
         open.decided = { choice: e.choice, how: e.decided };
-        open.down = (life.get(open.actor) ?? "conscious") !== "conscious";
         if (open.fellAt === undefined) open.fallbacks = fallbacksIn(card.roundAt, e.seq);
       }
       card = undefined;
     }
   }
-  for (const m of out) m.deed = deeds.get(m.card);
   return out;
-}
-
-/** Whether an own move counts for exit row 2, each move read on its own: decided on it, by no fallback vote, its roll cited, and the branch named for the result run; or a fall, once its card is settled. */
-function counted(m: OwnMoveMet): string | undefined {
-  if (m.ran === null) {
-    // A fall is a valid outcome, with a roll or without one (decision 0081): it counts once the card is settled, on a later move or a written choice.
-    if (m.fallbacks.length > 0) return `a fallback vote (${m.fallbacks.join(", ")})`;
-    if (m.roll && m.roll.outcome !== "failure") return `${m.roll.id} fell, but it is not in the log as a failed check`;
-    if (!m.settled) return "fell, and the card was not settled";
-    if (m.later) return undefined;
-    return m.decided?.choice === "own_move" ? "fell, but the card was decided on own_move" : undefined;
-  }
-  if (m.decided?.choice !== "own_move") return m.decided ? `decided on ${m.decided.choice}` : "not decided";
-  if (m.fallbacks.length > 0) return `a fallback vote (${m.fallbacks.join(", ")})`;
-  if (m.ran === undefined) return "no own_move_ran";
-  if (m.roll === null) return m.down && m.ran === m.failure ? undefined : "no roll, and the proposer was up";
-  if (m.roll === undefined) return "no roll";
-  if (m.roll.outcome !== "success" && m.roll.outcome !== "failure") return `${m.roll.id} is not in the log as a check`;
-  const named = m.roll.outcome === "success" ? m.success : m.failure;
-  return m.ran === named ? undefined : `${m.roll.id} was a ${m.roll.outcome}, but ${m.ran} ran`;
-}
-
-/** Row 2, own move: one counted own move, by an AI player in an all-AI run, by the human with a human at the seat. */
-export function ownMoveRow(run: RunRecord, moves: OwnMoveMet[]): VerdictRow {
-  const human = run.seats.human;
-  const title = human ? `Own move: a card decided by ${human}'s own words, the roll cited, the branch named, the deed kept` : "Own move: a card decided by an AI player's own words, the roll cited, the branch named, the deed kept";
-  const theirs = moves.filter((m) => (human ? m.actor === human : run.seats.ai.includes(m.actor)));
-  const ok = theirs.filter((m) => counted(m) === undefined);
-  const describe = (m: OwnMoveMet) => {
-    const why = counted(m);
-    const deed = m.deed ? `deed own_move_${m.card} (contract ${m.deed.contract})` : `own_move_${m.card} not written this run (held from an earlier contract, or never)`;
-    const place = m.place > 1 || m.later ? ` (move ${m.place})` : "";
-    const brought = m.ran === null ? `fell, ${m.later ? "then another move" : `then ${m.decided?.choice ?? "?"}`}` : `brought ${m.ran}`;
-    return `${m.card}${place} by ${m.actor}: ${why ? `not counted, ${why}` : `${m.roll ? m.roll.id : "no roll, proposer down"}, ${brought}; ${deed}`}`;
-  };
-  const detail = `${moves.length} own moves put on a card, ${theirs.length} by ${human ?? "AI players"}${theirs.length > 0 ? `: ${theirs.map(describe).join("; ")}` : ""}`;
-  return { row: "m12-own-move", title, status: ok.length > 0 ? "pass" : "fail", detail };
 }
 
 /**
@@ -312,7 +261,6 @@ export function exitReport(run: RunRecord, log: Event[], transcript: TranscriptR
 export function exitRows(dir: string, run: RunRecord, log: Event[], transcript: TranscriptRecord[], answer: ReadableAnswer | undefined): VerdictRow[] {
   const seatFile = path.join(dir, SEAT_JSONL);
   return [
-    ownMoveRow(run, ownMovesMet(log, transcript, partyOf(run))),
     readableRow(answer),
     orderRow(log, transcript),
     languageRow(run, existsSync(seatFile) ? readLines<SeatRecord>(seatFile) : undefined),

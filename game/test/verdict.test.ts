@@ -303,7 +303,7 @@ test("the Milestone 11 rows: the deck at work, a thread, story-space flags, and 
   assert.equal(computeVerdict(folder(runRecord())).rows.some((r) => r.row.startsWith("m11-")), false);
 });
 
-test("the Milestone 12 rows: an own move counted only with its roll, its branch and no fallback vote; cards after their framing; one language at a Russian seat; the Vera read is Stas's (AGT-103)", () => {
+test("the Milestone 12 rows: cards after their framing; one language at a Russian seat; the Vera read is Stas's (AGT-103)", () => {
   const run = runRecord({ campaign: { start_day: 1, day_limit: 3 }, roster: { name: "wend", party: "new" } as never });
   const row = (dir: string, id: string) => computeVerdict(dir).rows.find((r) => r.row === id)!;
   const seated = [
@@ -312,8 +312,6 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
   ] as Array<Partial<TranscriptRecord>>;
 
   const good = folder(run, seated, withSeq(OWN_MOVE));
-  assert.equal(row(good, "m12-own-move").status, "pass", row(good, "m12-own-move").detail);
-  assert.match(row(good, "m12-own-move").detail, /fallen_tree by maren: r30, brought clear; deed own_move_fallen_tree \(contract 2\)/);
   assert.equal(row(good, "m12-order").status, "pass");
   assert.equal(row(good, "m12-language").status, "reported", "an all-AI run has no seat to scan");
   assert.equal(row(good, "m12-readable").status, "pending", "no Vera read yet");
@@ -324,14 +322,6 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
   writeFileSync(path.join(good, CONFIRMATIONS_JSON), JSON.stringify(READ));
   assert.equal(computeVerdict(good).verdict, "FAIL", "the M11 rows still gate (one card only)");
 
-  // A success that brought the failure's branch, a fallback vote on the card, a human run with only an AI's own move.
-  const wrong = folder(run, seated, withSeq(OWN_MOVE.map((e) => (e.kind === "own_move_ran" ? { ...e, choice: "around" } : e))));
-  assert.match(row(wrong, "m12-own-move").detail, /r30 was a success, but around ran/);
-  assert.equal(row(wrong, "m12-own-move").status, "fail");
-  const silent = folder(run, [...seated, { speaker: "torva", kind: "fallback", text: "torva gives no word on the road card: goes with the others (own_move)", log_head: 4 }], withSeq(OWN_MOVE));
-  assert.match(row(silent, "m12-own-move").detail, /not counted, a fallback vote \(torva\)/);
-  const human = folder({ ...run, seats: { human: "bren", ai: ["torva", "maren", "ilsa"] } }, seated, withSeq(OWN_MOVE));
-  assert.equal(row(human, "m12-own-move").status, "fail", "run 2 needs the human's own move");
 
   // A card at the seats with no framing narration after it went on the table; a settling wake cut after its narration.
   const early = folder(run, [{ speaker: "dm", kind: "narration", text: "Night falls.", wake: "road", log_head: 1 }, seated[1]!, { speaker: "dm", kind: "fallback", cause: "cut_after_narration", wake: "road", text: "cut", log_head: 2 }], withSeq(OWN_MOVE));
@@ -382,9 +372,6 @@ test("the Milestone 12 rows: an own move counted only with its roll, its branch 
   ]));
   assert.ok(seatReplay(blades).includes("  The Blades decide together."));
 
-  // A roll own_move_ran cites that the log does not hold never counts.
-  const unlogged = folder(run, seated, withSeq(OWN_MOVE.filter((e) => e.kind !== "roll")));
-  assert.match(row(unlogged, "m12-own-move").detail, /r30 is not in the log as a check/);
 });
 
 test("the run report's Word on the road lists deeds, cards, pay-offs, draw-three counts, fights, scout looks and suggested cards (AGT-91)", () => {
@@ -423,9 +410,8 @@ test("the run report's Word on the road lists deeds, cards, pay-offs, draw-three
   assert.doesNotMatch(offeredLine(offered, 1), /Reads/);
 });
 
-test("own moves after a fall: each move read on its own, a fall counted once its card is settled, votes started after the fall, one deed for the card (AGT-113)", () => {
+test("own moves after a fall in the run report: each move read on its own, votes started after the fall (AGT-113)", () => {
   const run = runRecord({ campaign: { start_day: 1, day_limit: 3 }, roster: { name: "wend", party: "new" } as never });
-  const row = (dir: string, id: string) => computeVerdict(dir).rows.find((r) => r.row === id)!;
   const move = (skill: string, success: string) => [
     { kind: "card_own_move", actor: "maren", words: `I try ${skill}`, skill },
     { kind: "own_move_set", card: "fallen_tree", actor: "maren", ability: "charisma", skill, dc: 10, success },
@@ -438,14 +424,15 @@ test("own moves after a fall: each move read on its own, a fall counted once its
   const deed = { kind: "deed_remembered", deed: "own_move_fallen_tree", by: ["maren"], day: 2, contract: 2 };
   const reportOf = (dir: string) => exitReport(run, readLines(path.join(dir, SESSION_LOG)), readLines(path.join(dir, "transcript.jsonl")), []).join("\n");
 
-  // A fall, then a written choice: counted once the card is settled; the report says what it was decided on.
+  // A fall, then a written choice: the report says what it was decided on.
   const oneFall = folder(run, [], withSeq([shown, ...move("persuasion", "clear"), { kind: "card_advice", actor: "maren", choice: "own_move" }, ...fall("r31"), { kind: "card_advice", actor: "torva", choice: "around" }, { kind: "card_resolved", choice: "around", decided: "majority" }, deed]));
-  assert.equal(row(oneFall, "m12-own-move").status, "pass", row(oneFall, "m12-own-move").detail);
-  assert.match(row(oneFall, "m12-own-move").detail, /fallen_tree by maren: r31, fell, then around; deed own_move_fallen_tree \(contract 2\)/);
   assert.match(reportOf(oneFall), /fell \(roll r31\); the card was then decided on around \(majority\)/);
   assert.match(reportOf(oneFall), /Falls per card: fallen_tree 1; the most on one card: 1 \(no human seat in this run\)/);
+  // A seat whose word on the move's round was the loop's fallback is named on that move.
+  const silent = folder(run, [{ speaker: "torva", kind: "fallback", text: "torva gives no word on the road card: goes with the others (own_move)", log_head: 2 }], withSeq([shown, ...move("persuasion", "clear"), { kind: "card_advice", actor: "maren", choice: "own_move" }, ...fall("r31"), { kind: "card_advice", actor: "torva", choice: "around" }, { kind: "card_resolved", choice: "around", decided: "majority" }, deed]));
+  assert.match(reportOf(silent), /fell \(roll r31\); .*; fallback votes: torva/);
 
-  // Two falls, then a win by another way: three entries on one card, places 1 to 3, votes not carried over, the one deed shared.
+  // Two falls, then a win by another way: three entries on one card, places 1 to 3, votes not carried over.
   const win = folder(run, [], withSeq([
     shown,
     ...move("persuasion", "clear"), { kind: "card_advice", actor: "maren", choice: "own_move" }, ...fall("r31"),
@@ -460,26 +447,14 @@ test("own moves after a fall: each move read on its own, a fall counted once its
   assert.deepEqual(moves.map((m) => m.place), [1, 2, 3]);
   assert.deepEqual(moves.map((m) => m.votes.map((v) => v.by)), [["maren"], ["torva"], ["ilsa"]]);
   assert.deepEqual(moves[2].earlier, [{ skill: "persuasion", success: "clear" }, { skill: "athletics", success: "clear" }]);
-  assert.ok(moves.every((m) => m.deed?.contract === 2), "a later move uses the card's one deed record");
-  assert.equal(row(win, "m12-own-move").status, "pass", row(win, "m12-own-move").detail);
-  assert.match(row(win, "m12-own-move").detail, /fallen_tree \(move 1\) by maren: r31, fell, then another move; .*fallen_tree \(move 3\) by maren: r33, brought clear/);
   assert.match(reportOf(win), /2\. fallen_tree \(move 2 on the card; earlier ways: persuasion for clear\), maren: .*; fell \(roll r32\); the card waited and took another move/);
   assert.match(reportOf(win), /3\. fallen_tree \(move 3 on the card; earlier ways: persuasion for clear, athletics for clear\), maren: .*votes: ilsa own_move; decided on own_move \(majority\); r33, success; brought clear/);
   assert.match(reportOf(win), /Falls per card: fallen_tree 2/);
 
-  // A fall with no roll (the proposer was down), settled at once by the words left: counts, and the report says no roll was made.
+  // A fall with no roll (the proposer was down), settled at once by the words left: the report says no roll was made.
   const noRoll = folder(run, [], withSeq([shown, ...move("persuasion", "clear"), { kind: "card_advice", actor: "maren", choice: "own_move" }, ...fall(null), { kind: "card_resolved", choice: "around", decided: "majority" }, deed]));
-  assert.equal(row(noRoll, "m12-own-move").status, "pass", row(noRoll, "m12-own-move").detail);
   assert.match(reportOf(noRoll), /fell with no roll \(the proposer was down, or the roll could not be made\); the card was then decided on around/);
 
-  // A fall whose card never settled does not count.
-  const open = folder(run, [], withSeq([shown, ...move("persuasion", "clear"), { kind: "card_advice", actor: "maren", choice: "own_move" }, ...fall("r31")]));
-  assert.match(row(open, "m12-own-move").detail, /not counted, fell, and the card was not settled/);
-  assert.equal(row(open, "m12-own-move").status, "fail");
-  // Nor does a fall that a later move followed, while the card still waits at the run's end.
-  const openLater = folder(run, [], withSeq([shown, ...move("persuasion", "clear"), ...fall("r31"), ...move("athletics", "clear")]));
-  assert.match(row(openLater, "m12-own-move").detail, /\(move 1\) by maren: not counted, fell, and the card was not settled/);
-  assert.equal(row(openLater, "m12-own-move").status, "fail");
 
   // A card where the human fell once and an AI seat once: one fall at each side, not two at the last faller's.
   const mixed = withSeq([
