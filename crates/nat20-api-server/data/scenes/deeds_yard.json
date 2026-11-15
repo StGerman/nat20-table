@@ -1,0 +1,123 @@
+{
+    "id": "deeds_yard",
+    "description": "Scene deeds (API-57): a yard where a check writes a deed either way, a fight's end writes one of two deeds by ordered rules, and a goblin who is a person of the story writes killed_grak when it dies. Carry Bren and Maren in with load_scene{party}.",
+    "anchors": [
+        {
+            "id": "yard_gate",
+            "name": "the yard gate",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "woodpile",
+            "name": "the woodpile",
+            "position_ft": {
+                "x_ft": 5.0,
+                "y_ft": 0.0,
+                "z_ft": 0.0
+            }
+        },
+        {
+            "id": "shed_door",
+            "name": "the shed door",
+            "position_ft": {
+                "x_ft": 0.0,
+                "y_ft": 5.0,
+                "z_ft": 0.0
+            }
+        }
+    ],
+    "party_start": [
+        "yard_gate",
+        "yard_gate"
+    ],
+    "creatures": [
+        {
+            "handle": "goblin_1",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "anchor",
+                "anchor": "woodpile"
+            },
+            "npc": "grak"
+        },
+        {
+            "handle": "goblin_2",
+            "monster": "goblin_warrior",
+            "side": "hostile",
+            "control": "scripted",
+            "at": {
+                "kind": "anchor",
+                "anchor": "shed_door"
+            }
+        }
+    ],
+    "checks": [
+        {
+            "id": "count_tracks",
+            "test": {
+                "kind": "skill",
+                "skill": "perception"
+            },
+            "dc": 10,
+            "on_success": [
+                {
+                    "kind": "remember",
+                    "deed": "tracks_counted"
+                }
+            ],
+            "on_failure": [
+                {
+                    "kind": "remember",
+                    "deed": "tracks_lost"
+                }
+            ]
+        }
+    ],
+    "encounters": [
+        {
+            "id": "yard_fight",
+            "participants": [
+                "bren",
+                "maren",
+                "goblin_1",
+                "goblin_2"
+            ],
+            "surrender": {
+                "creatures": [
+                    "goblin_1",
+                    "goblin_2"
+                ],
+                "any_of": [
+                    {
+                        "kind": "standing_at_most",
+                        "count": 1
+                    }
+                ]
+            },
+            "on_end": [
+                {
+                    "when": {
+                        "kind": "surrender",
+                        "yielded": [
+                            "goblin_1",
+                            "goblin_2"
+                        ]
+                    },
+                    "remember": "yard_yielded"
+                },
+                {
+                    "when": {
+                        "kind": "won"
+                    },
+                    "remember": "yard_to_the_end"
+                }
+            ]
+        }
+    ]
+}

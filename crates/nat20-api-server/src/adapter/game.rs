@@ -12,7 +12,7 @@ use nat20_api_contract::{
     ActionCost, ActionOption, Aim, Anchor, ApiError, AreaAim, AreaShape as WireAreaShape,
     CheckSpec, CheckTest, CheckView, CombatOverReason, ConcentrationEndReason, Condition,
     Consequence, Control, CreatureFull, DcSource, Encounter, EncounterView, EndCombatReason,
-    ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec, HitDiceSpend,
+    EndWhen, ErrorCode, ErrorHint, EventKind, Handle, Hazard, HealthBand, HelpSpec, HitDiceSpend,
     HitPointsRegained, Mode, MoveTarget, OptionArea, OptionId, OptionVariant, Placement, PointFt,
     PregenFile, ReactionOption, RejectReason, RollId, RosterCharacter, RosterChoice, ScenarioCheck,
     SceneFile, Sheet, Side, Spawn, SpawnUnless, SpawnView, SpawnWhen, SurrenderCondition,
@@ -119,6 +119,19 @@ struct Candidate {
     prone: bool,
     /// A creature friendly to the attacker, conscious and not Incapacitated, is beside it.
     engaged: bool,
+}
+
+/// The deed a scene fight's end writes (API-57), worked out from the scene file alone: the
+/// session, which holds the world, writes it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FightEnd {
+    /// Every deed the encounter's `on_end` names: when the world remembers any of them, the fight
+    /// was fought before and keeps its first outcome.
+    pub named: Vec<String>,
+    /// The deed of the first rule that holds; `None` when none holds or the party lost.
+    pub deed: Option<String>,
+    /// The party-side participants, in the encounter's order, downed ones included.
+    pub by: Vec<String>,
 }
 
 struct Scene {
@@ -311,6 +324,9 @@ pub struct Game {
     spawn_round: u32,
     /// Creatures that surrendered this session; `loot` may take what they carry.
     yielded: HashSet<Entity>,
+    /// How the last scene fight ended, for its `on_end` deeds (API-57), until the session takes
+    /// it with the `combat_over` it came with.
+    fight_end: Option<FightEnd>,
     /// How many times the engine did not settle this session; each is a bug, reported on stderr.
     stalls: usize,
     /// The option list the last `legal_actions` built, kept for the `submit` that follows it
@@ -661,6 +677,7 @@ impl Game {
             provokers: None,
             spawn_round: 0,
             yielded: HashSet::new(),
+            fight_end: None,
             stalls: 0,
             listed: None,
             next_turn: false,
@@ -687,6 +704,76 @@ impl Game {
             }
             _ => self.options(entity),
         }
+    }
+
+    /// The deeds a scenario check of this scene remembers on `success` or failure (API-57). The
+    /// session writes them right after the check's `check_resolved`; a hazard never has one.
+    pub fn check_deeds(&self, check_id: &str, success: bool) -> Vec<String> {
+        let Some(check) = self.scene.checks.iter().find(|c| c.id == check_id) else {
+            return Vec::new();
+        };
+        let consequences = if success {
+            &check.on_success
+        } else {
+            &check.on_failure
+        };
+        consequences
+            .iter()
+            .filter_map(|c| match c {
+                Consequence::Remember { deed } => Some(deed.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The `on_end` outcome of the scene fight whose `combat_over` was just logged, once.
+    pub fn take_fight_end(&mut self) -> Option<FightEnd> {
+        self.fight_end.take()
+    }
+
+    /// Works out what a scene fight's end writes (API-57): `None` for a fight that is not the
+    /// scene's or declares no `on_end`. `surrendered` are the creatures that gave up, if it ended
+    /// so.
+    fn end_deeds(&self, winner: Option<Side>, surrendered: &[Entity]) -> Option<FightEnd> {
+        let encounter = self
+            .scene_encounter
+            .as_ref()
+            .and_then(|id| self.scene.encounters.iter().find(|e| e.id == *id))?;
+        if encounter.on_end.is_empty() {
+            return None;
+        }
+        let yielded: Vec<String> = surrendered.iter().map(|e| self.handle_of(*e)).collect();
+        let deed = (winner == Some(Side::Party))
+            .then(|| {
+                encounter.on_end.iter().find(|rule| match &rule.when {
+                    EndWhen::Surrender { yielded: counted } => {
+                        counted.iter().any(|h| yielded.contains(&h.0))
+                    }
+                    EndWhen::Won {} => true,
+                })
+            })
+            .flatten()
+            .map(|rule| rule.remember.clone());
+        let by = encounter
+            .participants
+            .iter()
+            .filter(|h| {
+                self.scene
+                    .creatures
+                    .iter()
+                    .any(|c| c.handle == h.0 && c.side == Side::Party)
+            })
+            .map(|h| h.0.clone())
+            .collect();
+        Some(FightEnd {
+            named: encounter
+                .on_end
+                .iter()
+                .map(|r| r.remember.clone())
+                .collect(),
+            deed,
+            by,
+        })
     }
 
     /// Log entries produced since the last call, in order, without `seq`.
@@ -1333,6 +1420,9 @@ impl Game {
                     );
                     self.pending.extend(entries);
                 }
+                // The session writes it into the world, which the game does not hold
+                // ([`Game::check_deeds`]).
+                Consequence::Remember { .. } => {}
             }
         }
     }
@@ -1965,6 +2055,7 @@ impl Game {
             surprise: None,
             surrender: None,
             end_reasons: Vec::new(),
+            on_end: Vec::new(),
         });
         let started = self.start_combat(&id);
         if started.is_err() {
@@ -2289,6 +2380,7 @@ impl Game {
             control: Control::Scripted,
             at: at.clone(),
             carries: carries.cloned(),
+            npc: None,
         };
         // A fight that ended by itself is closed before anything new is placed.
         self.drain();
@@ -2544,6 +2636,7 @@ impl Game {
             .creatures
             .retain(|c| !fleeing.contains(&c.entity));
         self.stand_up();
+        self.fight_end = self.end_deeds(winner, &surrendering);
         self.pending.push(combat_over(round, winner, reason));
         self.pending.extend(xp);
         self.encounter = None;
@@ -4018,6 +4111,7 @@ impl Game {
         self.engine.end_encounter(&encounter);
         self.drain();
         self.stand_up();
+        self.fight_end = self.end_deeds(winner, &[]);
         self.pending
             .push(combat_over(round, winner, CombatOverReason::SideDown));
         self.pending.extend(xp);
