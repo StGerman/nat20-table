@@ -131,7 +131,7 @@ test("a Russian seat on the road to Wend reads Russian, cards and goods included
   const seat = new ScriptedSeat("bren", [], blade());
   const t = await testTable({ seed: 3, pack, human: "bren", players: party, seat, language: "ru" });
   try {
-    const loop = new TableLoop({ table: t.table, dm: roadDm(), players: party.map((h) => new ScriptedPlayer(h)), maxSteps: 300, language: "ru", campaign: { party: ["bren", ...party], dayLimit: 3, keepsParty: true } });
+    const loop = new TableLoop({ table: t.table, dm: roadDm(), players: party.map((h) => new ScriptedPlayer(h)), maxSteps: 300, language: "ru", campaign: { party: ["bren", ...party], dayLimit: 4, keepsParty: true } });
     await loop.run("fw_highsteads");
   } finally {
     t.close();

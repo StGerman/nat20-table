@@ -1,9 +1,10 @@
 # On the road
 
-The one road scene for every stretch and every camp: the river road from Saltmouth past the Millbeck bridge to Wendford (a good road along the water meadows, a long day) and the slope track from Wendford up to the Highsteads (hills, slow with a heavy wagon).
+The one road scene for every stretch and every camp: the river road from Saltmouth past Midwend and the Millbeck bridge to Wendford (a good road along the water meadows, two days with a wagon; Midwend is a market village with an inn halfway up) and the slope track from Wendford up to the Highsteads (hills, slow with a heavy wagon).
 
 **Read aloud, by stretch.**
 - *The river road:* willows going yellow, the brown river high after the rain, the shrines to Embra at every mile, and the same road you came down a few days ago, which looks different going up.
+- *Midwend:* the green swept bare after the fair, the inn half empty, the carts that passed you on the way down now going home light.
 - *The slope track:* the horses leaning into their collars, Fenn walking beside them to spare them his weight, the valley falling away behind in grey light.
 - *A camp:* the wagon drawn off the road, the horses hobbled, a small fire, Fenn ticking the sacks again by lantern light.
 
