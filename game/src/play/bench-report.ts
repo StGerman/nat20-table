@@ -94,13 +94,18 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
     const ran = upTo.find((e): e is Extract<Event, { kind: "own_move_ran" }> => e.kind === "own_move_ran" && e.card === bench.card);
     const decided = upTo.find((e): e is Extract<Event, { kind: "card_resolved" }> => e.kind === "card_resolved");
     // The block runs to the next line. After the card's decision it ends when the seat acts again, another card reaches the
-    // seats, or the DM is woken for anything but the card's outcome (the arrival's scene, say).
+    // seats, or the DM speaks of anything but the card's outcome: a wake of another kind (the arrival's scene, say), or
+    // a narration after the `road` narration that told the outcome (the cut contract's pay, for an arrival card).
+    let told = false;
     const end = decided
-      ? rest.findIndex(
-          (r) =>
-            r.log_head >= decided.seq &&
-            (r.speaker === line.speaker || (r.kind === "system" && /^card \S+ goes to the seats$/.test(r.text)) || (r.speaker === "dm" && r.wake !== undefined && r.wake !== "card_words" && r.wake !== "road")),
-        )
+      ? rest.findIndex((r) => {
+          if (r.log_head < decided.seq) return false;
+          const narrates = r.speaker === "dm" && r.kind === "narration";
+          if (r.speaker === line.speaker || (r.kind === "system" && /^card \S+ goes to the seats$/.test(r.text)) || (told && narrates)) return true;
+          if (r.speaker === "dm" && r.wake !== undefined && r.wake !== "card_words" && r.wake !== "road") return true;
+          told ||= narrates && r.wake === "road";
+          return false;
+        })
       : -1;
     const records = end < 0 ? rest : rest.slice(0, end);
     const events = end < 0 ? upTo : upTo.filter((e) => e.seq <= rest[end]!.log_head);

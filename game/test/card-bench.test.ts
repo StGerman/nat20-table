@@ -373,9 +373,10 @@ test("the bench report from a run's records: a fact kept after its wake settled 
     said(9, "bren", "run", "intent", "bren on the road card: Pay him."),
     said(16, "dm", "memory:dm", "memory", "The toll-man let them through\nand kept the coin."),
     said(16, "dm", "table", "narration", "The coin changes hands.", { wake: "road" }),
-    // The arrival's scene and the next card are not the card's outcome.
-    said(16, "dm", "table", "narration", "The gate of b stands open.", { wake: "scene_open" }),
+    // The cut contract's pay, the arrival's scene and the next card are not the card's outcome.
     said(16, "dm", "table", "narration", "The Blades are paid.", { wake: "road" }),
+    said(16, "dm", "memory:dm", "memory", "summary: The pay."),
+    said(16, "dm", "table", "narration", "The gate of b stands open.", { wake: "scene_open" }),
     said(18, "table", "run", "system", "card other goes to the seats"),
     said(18, "dm", "table", "narration", "Another card.", { wake: "card" }),
     said(19, "bren", "table", "intent", "Not a line of the bench", { human: true }),
@@ -389,8 +390,8 @@ test("the bench report from a run's records: a fact kept after its wake settled 
     wake("dm", "card_words", 0.04, 5000, ["remember", "own_move_or_answer", "own_move_or_answer"]),
     wake("dm", "road", 0.02, 2000, ["narrate", "remember"]),
     wake("dm", "road", 0.03, 3000, ["narrate", "remember"]),
-    wake("dm", "scene_open", 0.02, 2000, ["narrate"]),
     wake("dm", "road", 0.02, 2000, ["narrate"]),
+    wake("dm", "scene_open", 0.02, 2000, ["narrate"]),
   ];
   const run = {
     run_id: "card-test",
