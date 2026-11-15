@@ -8,12 +8,14 @@
 // No index is committed: this script is the index, so no shared file collects one line per PR.
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TASKS = path.join(ROOT, 'tasks');
 const DONE = path.join(ROOT, 'docs/tasks-done.md');
 
 const PREFIXES = ['API', 'ENG', 'MON', 'CHR', 'ITM', 'CHK', 'MAP', 'AGT', 'UPS', 'DAT', 'CON'];
+const ID_RE = new RegExp(`^(${PREFIXES.join('|')})-\\d+$`);
 const ENUMS = {
   pri: ['P0', 'P1', 'P2'],
   dest: ['Fork', 'Ours'],
@@ -26,13 +28,14 @@ const BACKLOG = 'backlog';
 
 /** Flat YAML front matter: `key: value`, the value bare or a JSON string. */
 function frontMatter(file) {
-  const text = fs.readFileSync(file, 'utf8');
+  const text = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
   const m = /^---\n([\s\S]*?)\n---\n/.exec(text);
   if (!m) return { error: 'no front matter' };
   const fm = {};
   for (const line of m[1].split('\n')) {
     const kv = /^([a-z_]+):\s*(.*)$/.exec(line);
     if (!kv) return { error: `front matter line is not \`key: value\`: ${line}` };
+    if (kv[1] in fm) return { error: `key ${kv[1]} given twice` };
     let v = kv[2];
     if (v.startsWith('"')) {
       try { v = JSON.parse(v); } catch { return { error: `bad quoted value for ${kv[1]}` }; }
@@ -58,11 +61,12 @@ function load() {
         if (fm.type !== 'Milestone') errors.push(`${rel}: type must be Milestone`);
         if (!MILESTONE_STATES.includes(fm.state)) errors.push(`${rel}: state must be one of ${MILESTONE_STATES.join(', ')}`);
         if (!fm.title) errors.push(`${rel}: title is required`);
+        if (fm.number !== undefined && !/^[1-9]\d*$/.test(fm.number)) errors.push(`${rel}: number must be a whole number`);
         milestones.set(entry.name, fm);
         continue;
       }
       if (fm.type !== 'Task') { errors.push(`${rel}: type must be Task`); continue; }
-      if (!new RegExp(`^(${PREFIXES.join('|')})-\\d+$`).test(fm.id ?? '')) errors.push(`${rel}: id must be PREFIX-N with a known prefix`);
+      if (!ID_RE.test(fm.id ?? '')) errors.push(`${rel}: id must be PREFIX-N with a known prefix`);
       if (`${fm.id}.md` !== f.name) errors.push(`${rel}: file name must be <id>.md`);
       if (!fm.title) errors.push(`${rel}: title is required`);
       for (const [k, vals] of Object.entries(ENUMS)) {
@@ -73,6 +77,13 @@ function load() {
   }
   for (const folder of new Set(tasks.map(t => t.folder))) {
     if (folder !== BACKLOG && !milestones.has(folder)) errors.push(`tasks/${folder}/: a milestone folder needs milestone.md`);
+  }
+  const numbers = new Map();
+  for (const [folder, m] of milestones) {
+    if (m.number === undefined) continue;
+    if (numbers.has(m.number)) errors.push(`tasks/${folder}/milestone.md: number ${m.number} also in tasks/${numbers.get(m.number)}/`);
+    numbers.set(m.number, folder);
+    if (m.state === 'done' && tasks.some(t => t.folder === folder && OPEN.has(t.state))) errors.push(`tasks/${folder}/milestone.md: done, but tasks in it are open`);
   }
   return { tasks, milestones, errors };
 }
@@ -117,9 +128,11 @@ function list(args) {
   const { tasks, milestones, errors } = load();
   if (errors.length) console.error(`warning: ${errors.length} problem(s); run \`check\``);
   const num = id => [id.split('-')[0], Number(id.split('-')[1])];
-  const folders = [...new Set(tasks.map(t => t.folder))]
-    .filter(f => !only || f === only)
-    .sort((a, b) => (a === BACKLOG) - (b === BACKLOG) || a.localeCompare(b));
+  const known = [...new Set(tasks.map(t => t.folder))];
+  if (only && !known.includes(only)) { console.error(`no folder tasks/${only}/; folders: ${known.join(', ')}`); process.exit(2); }
+  // Milestones by number, unnumbered ones after them, the backlog last.
+  const rank = f => (f === BACKLOG ? Infinity : Number(milestones.get(f)?.number ?? 1e9));
+  const folders = known.filter(f => !only || f === only).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   const cell = s => String(s).replace(/\|/g, '\\|');
   for (const folder of folders) {
     const rows = tasks.filter(t => t.folder === folder && (all || OPEN.has(t.state)))
@@ -137,4 +150,5 @@ const [cmd = 'list', ...rest] = process.argv.slice(2);
 if (cmd === 'check') check();
 else if (cmd === 'next') next(rest[0]);
 else if (cmd === 'list') list(rest);
-else list([cmd, ...rest]);
+else if (cmd.startsWith('--') || fs.existsSync(path.join(TASKS, cmd))) list([cmd, ...rest]);
+else { console.error(`unknown command ${cmd}: list, check or next`); process.exit(2); }

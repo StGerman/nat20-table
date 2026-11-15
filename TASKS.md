@@ -55,5 +55,5 @@ What is left, which PR did what, what it waits on.
 - A PR that lands, opens or changes a task edits that task's file in the same PR (Rule 8).
 - A closed task stays where it is with `state: done` or `wont-do`. It never moves to `docs/tasks-done.md`.
 - A task changes milestone by `git mv tasks/<old>/<ID>.md tasks/<new>/`.
-- A new milestone is a new folder with its `milestone.md` (`type: Milestone`, `title`, `description`, `state`: `open`, `done`, `closed` or `dropped`). When its exit criterion holds, its `state` becomes `done` and its Status gives the date.
+- A new milestone is a new folder with its `milestone.md` (`type: Milestone`, `title`, `description`, `state`: `open`, `done`, `closed` or `dropped`, and `number` once Stas gives it one). `npm run tasks` lists milestones by `number`, unnumbered ones after them, the backlog last. When its exit criterion holds and none of its tasks is open, its `state` becomes `done` and its Status gives the date.
 - No change log and no committed index. The PR title and `git log -- tasks/` are the history; `npm run tasks` is the index.

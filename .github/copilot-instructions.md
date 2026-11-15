@@ -6,9 +6,9 @@ This repository wraps the Nat20 D&D 5e rules engine (`nat20_core`) in a typed JS
 
 - Pull requests here are routinely several hundred lines. That size is accepted. Review the whole diff, but never flag a PR for being large or ask for it to be split.
 - Report a finding only when it changes behaviour, breaks a rule below, breaks the wire contract, leaks hidden data to a player, breaks a licence rule, or would turn CI red. Each finding must name the realistic input or path that triggers it.
-- Use High for rule, contract, visibility, licence and SRD violations and for wrong game outcomes. Use Medium for other real defects: a crash, a flaky or wrong test, a fixture that no longer matches, a missing required update (CHANGELOG, generated files, TASKS.md row).
+- Use High for rule, contract, visibility, licence and SRD violations and for wrong game outcomes. Use Medium for other real defects: a crash, a flaky or wrong test, a fixture that no longer matches, a missing required update (CHANGELOG, generated files, task file in `tasks/`).
 - Do not report Low or informational findings. No comments on style, formatting, naming, wording, comment text, doc phrasing, import order, or "consider" refactors. `cargo fmt`, `clippy -D warnings` and `tsc` already gate those in CI.
-- Do not ask for human approval of choices that are already recorded. A decision in `docs/decisions/`, `contract/protocol.md`, a milestone spec in `docs/milestones/`, or the PR description's Before / After / How is settled; review the code against it, not the choice itself. Known gaps that have a `TASKS.md` row or a `not_implemented` answer are not findings.
+- Do not ask for human approval of choices that are already recorded. A decision in `docs/decisions/`, `contract/protocol.md`, a milestone spec in `docs/milestones/`, or the PR description's Before / After / How is settled; review the code against it, not the choice itself. Known gaps that have a task in `tasks/` or a `not_implemented` answer are not findings.
 - When nothing meets this bar, report no issues and recommend approval. Do not list minor observations to fill the review.
 - Do not repeat a finding that a reply on its thread already answered with a reason, unless the new code still has the defect.
 

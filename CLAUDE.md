@@ -220,7 +220,7 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 ## Rule 8: tasks, PRs, CI
 
 - `tasks/` is the only task list, one file per task (decision 0085): no GitHub issues and no TODO comments without a task. Every PR that closes or creates a gap edits that task's file in the same PR; a closed task keeps its file, and nothing keeps a change log. ID prefixes: API, ENG, MON, CHR, ITM, CHK, MAP, AGT, UPS, DAT, CON.
-- Each row carries Pri (P0 blocks a demo run, P1 needed for acceptance, P2 optional), Dest (Fork, Ours; older `Up` and `Up?` rows read as Fork), Size and Status (todo, partial, done, won't do; won't do counts as closed and says why).
+- Each task's front matter carries `pri` (P0 blocks a demo run, P1 needed for acceptance, P2 optional), `dest` (Fork, Ours), `size` and `state` (`todo`, `partial`, `done`, `wont-do`; `wont-do` counts as closed and its Status note says why); the legend is `TASKS.md`.
 - When the last task of a milestone closes and its exit criterion holds, set `state: done` in its `milestone.md` with the date.
 - One concern per PR. Write the PR description as Before / After / How.
 - Stacked PRs (each one based on the branch of the open PR below it) are linked as a GitHub stack ([`gh stack`](https://docs.github.com/en/pull-requests/reference/stacked-prs-cli-commands)). Locally that is `gh stack submit` or `gh stack link`. A Claude session can't install the extension and has no GraphQL, so it uses the [REST API](https://docs.github.com/rest/pulls/stacks): `POST repos/{owner}/{repo}/stacks` with `pull_requests` listed from bottom to top, then `POST repos/{owner}/{repo}/stacks/{n}/add` for each new PR on top.
