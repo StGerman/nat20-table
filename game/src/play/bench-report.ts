@@ -48,8 +48,14 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
   const answers = dm.flatMap((u, i) => (u.purpose === "card_words" ? [i] : []));
   const split = answers.length === at.length;
   const reaching = dm.slice(0, answers[0] ?? dm.length);
-  // A line's wakes: the one that answered it, and the `road` wake right after it, which tells what a decided card brought.
-  const wakesOf = (n: number) => (split ? [answers[n]!, ...(dm[answers[n]! + 1]?.purpose === "road" ? [answers[n]! + 1] : [])] : []);
+  // A line's wakes: the one that answered it, and the `road` wake right after it, which tells what a decided card or a fallen
+  // move brought. A card a person settled by a number after a fall has two: the fall's, then the card's.
+  const wakesOf = (n: number, roads: number) => {
+    if (!split) return [];
+    const its = [answers[n]!];
+    while (its.length <= roads && dm[its.at(-1)! + 1]?.purpose === "road") its.push(its.at(-1)! + 1);
+    return its;
+  };
   // Which wake kept a fact. A wake settles for the table on its answer, and a `remember` later in the same turn lands after the
   // seat has typed its next line, so a fact's place in the transcript does not say. `usage.jsonl` lists each turn's tool calls
   // in order, and each `remember` call left one transcript record in the same order: the two are matched one to one.
@@ -87,8 +93,15 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
     const move = upTo.find((e): e is Extract<Event, { kind: "own_move_set" }> => e.kind === "own_move_set" && e.card === bench.card);
     const ran = upTo.find((e): e is Extract<Event, { kind: "own_move_ran" }> => e.kind === "own_move_ran" && e.card === bench.card);
     const decided = upTo.find((e): e is Extract<Event, { kind: "card_resolved" }> => e.kind === "card_resolved");
-    // The block runs to the next line. After the card's decision it ends when the seat acts again or another card reaches the seats.
-    const end = decided ? rest.findIndex((r) => r.log_head >= decided.seq && (r.speaker === line.speaker || (r.kind === "system" && /^card \S+ goes to the seats$/.test(r.text)))) : -1;
+    // The block runs to the next line. After the card's decision it ends when the seat acts again, another card reaches the
+    // seats, or the DM is woken for anything but the card's outcome (the arrival's scene, say).
+    const end = decided
+      ? rest.findIndex(
+          (r) =>
+            r.log_head >= decided.seq &&
+            (r.speaker === line.speaker || (r.kind === "system" && /^card \S+ goes to the seats$/.test(r.text)) || (r.speaker === "dm" && r.wake !== undefined && r.wake !== "card_words" && r.wake !== "road")),
+        )
+      : -1;
     const records = end < 0 ? rest : rest.slice(0, end);
     const events = end < 0 ? upTo : upTo.filter((e) => e.seq <= rest[end]!.log_head);
     // An own move with no failure named that fell: the card waits, and the words after the fall are told apart from those before it.
@@ -96,6 +109,7 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
     const settled = decided?.seq ?? Number.POSITIVE_INFINITY;
     const advice = (after: number, before: number) => events.flatMap((e) => (e.kind === "card_advice" && e.seq > after && e.seq < before ? [`${e.actor} ${e.choice}`] : []));
     const votes = advice(0, fell ?? settled);
+    const later = fell === undefined ? [] : advice(fell, settled);
     const said = records.filter((r) => r.speaker === "dm" && r.kind === "narration");
     const answered = said.some((r) => r.wake === "card_words");
 
@@ -108,7 +122,7 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
           : "- The DM's call: none reached the table",
     );
     // What `remember` left is told by the wake that called it, where the wakes are known; else by its place in the transcript.
-    const its = wakesOf(n);
+    const its = wakesOf(n, decided && later.length > 0 ? 2 : 1);
     const called = byWake && split ? left.filter((r) => its.includes(wakeOf.get(r)!)) : records.filter(calledRemember);
     // Engine refusals, guard refusals and failed wakes, as the table logged them.
     const refused = [
@@ -125,7 +139,6 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
     // A person at the seat may settle the card by a number after their words (`--seat ink`); the bench's scripted seat never does.
     const picked = rest.filter((r) => r.speaker === line.speaker && r.channel === "run" && r.kind === "intent" && r.log_head < settled && !r.text.includes(' on the road card: own move "'));
     out.push(...picked.map((r) => `- The seat then chose without words: ${r.text}`));
-    const later = fell === undefined ? [] : advice(fell, settled);
     if (later.length > 0) out.push(`- Votes after the fall: ${later.join(", ")}`);
     out.push(decided ? `- The card was decided: ${named(decided.choice)} (${decided.decided})` : "- The card was not decided on this line");
     // What the decision or the fall did: the engine's own lines after it, until the road goes on. The cut contract ends at the
