@@ -1,8 +1,8 @@
 # 0077. A deed a person witnessed shows on their card
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-13
-- **Decided by:** not decided. Stas chose the direction on 2026-11-13 20:00Z, answer 6 to the clickable-names questions («"Помнит: ты кормил её пса"… в "Свои в бою"», `docs/scope/allies-in-fights-scope.md` §10). Lev Neiman proposes option B and the wording under Decision; Stas decides, and the merge is his yes.
+- **Decided by:** Stas, 2026-11-13 20:25Z («В целом да по всему»), answering "0077 as drafted?" with yes, option B as written. Before that, Stas chose the direction on 2026-11-13 20:00Z, answer 6 to the clickable-names questions («"Помнит: ты кормил её пса"… в "Свои в бою"», `docs/scope/allies-in-fights-scope.md` §10). Lev Neiman proposes option B and the wording under Decision; Stas decides, and the merge is his yes.
 - **Supersedes:** [0063](0063-m11-the-road-remembers.md), in one constraint of its Context only ("deeds and picks are DM-only"), and only for the one case under Decision. Picks stay DM-only. Everything else in 0063 stands.
 
 ## Context
