@@ -61,6 +61,7 @@ function load() {
         if (fm.type !== 'Milestone') errors.push(`${rel}: type must be Milestone`);
         if (!MILESTONE_STATES.includes(fm.state)) errors.push(`${rel}: state must be one of ${MILESTONE_STATES.join(', ')}`);
         if (!fm.title) errors.push(`${rel}: title is required`);
+        if (!fm.description) errors.push(`${rel}: description is required`);
         if (fm.number !== undefined && !/^[1-9]\d*$/.test(fm.number)) errors.push(`${rel}: number must be a whole number`);
         milestones.set(entry.name, fm);
         continue;
