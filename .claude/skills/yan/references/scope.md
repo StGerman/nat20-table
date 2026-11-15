@@ -1,6 +1,6 @@
 # scope <milestone>: the spec draft
 
-Goal: a scope spec Stas can accept in one read, so the system design and the rows can follow. Regulate first: no TASKS.md rows until the spec and the system design are both merged.
+Goal: a scope spec Stas can accept in one read, so the system design and the rows can follow. Regulate first: no task files until the spec and the system design are both merged.
 
 ## Read
 
