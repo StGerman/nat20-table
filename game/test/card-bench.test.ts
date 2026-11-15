@@ -292,7 +292,9 @@ test("play:card runs end to end with a scripted DM: it passes the scripted-playe
     assert.match(moved!, new RegExp(`^- The own move brought: \`${rolled[2] === "success" ? "bread" : "true_word"}\``, "m"));
     assert.match(moved!, /^- The card was decided: `own_move` \(majority\)$/m);
     assert.match(moved!, /^- Then the engine logged:\n  - The world remembers own_move_bog_wifes_toll, by bren, torva, maren, ilsa\.$/m);
-    assert.match(moved!, /^- remember:\n  - before any decision:\n    > The road heard a plan\.$/m);
+    assert.match(moved!, /^- remember:\n  - by its place in the transcript:\n    > The road heard a plan\.$/m);
+    // The cut contract's pay at the end of the card's leg is not what the card did.
+    assert.doesNotMatch(moved!, /The caravan reaches|in wages/);
     assert.match(moved!, /  - card_words:\n    > The road hears the plan\.\n  - road:\n    > The caravan moves on along the road\.\n/);
     assert.match(first, /## Left out, not typed\n\n- As we agreed at the fair, let us pass\.\n$/);
     // Bench run 2 numbers its line after the two typed before it, and says the card still waits.
@@ -327,7 +329,7 @@ test("play:card runs end to end with a scripted DM: it passes the scripted-playe
   }
 });
 
-test("the bench report from a run's records: an engine refusal with its reason, an own move that fell, a fact kept after the decision, a card a person settled by a number, and each line's cost", () => {
+test("the bench report from a run's records: a fact kept after its wake settled goes to its own line, an engine refusal with its reason, an own move that fell and a card then settled by a number, and each line's cost", () => {
   const event = (seq: number, kind: string, text: string, rest: object = {}) => ({ seq, scene: "s", visibility: { scope: "dm" }, text, kind, ...rest }) as unknown as Event;
   const log = [
     event(1, "card_shown", "toll goes on the table.", { card: "toll", zone: "millbeck", when: "road" }),
@@ -340,38 +342,46 @@ test("the bench report from a run's records: an engine refusal with its reason, 
     event(8, "own_move_ran", "The own move brings nothing.", { card: "toll", choice: null, roll: "r6" }),
     event(9, "deed_remembered", "The world remembers own_move_toll, by bren.", { deed: "own_move_toll", by: ["bren"] }),
     event(10, "card_advice", "bren says: pay.", { actor: "bren", choice: "pay" }),
-    event(11, "card_resolved", "The card is decided: pay.", { choice: "pay", decided: "majority" }),
-    event(12, "ledger", "bren pays 2 silver pieces in toll.", {}),
-    event(13, "time_lost", "The caravan loses 20 minutes.", { minutes: 20 }),
-    event(14, "roll", "world rolls road card: 1d100 (39) = 39.", { roll: { id: "r14", kind: "table", outcome: "value" } }),
-    event(15, "card_shown", "other goes on the table.", { card: "other", zone: "millbeck", when: "road" }),
+    event(11, "card_advice", "torva says: pay.", { actor: "torva", choice: "pay" }),
+    event(12, "card_resolved", "The card is decided: pay.", { choice: "pay", decided: "majority" }),
+    event(13, "ledger", "bren pays 2 silver pieces in toll.", { reason: "toll" }),
+    event(14, "time_lost", "The caravan loses 20 minutes.", { minutes: 20 }),
+    // The cut contract ends at the card's leg: its pay is not the card's doing.
+    event(15, "ledger", "npc:fenn pays bren 2 gold pieces in wages.", { reason: "wage" }),
+    event(16, "escort_settled", "The caravan reaches b; the Blades are paid what they are owed.", { destination: "b" }),
+    event(17, "roll", "world rolls road card: 1d100 (39) = 39.", { roll: { id: "r17", kind: "table", outcome: "value" } }),
+    event(18, "card_shown", "other goes on the table.", { card: "other", zone: "millbeck", when: "road" }),
+    event(19, "own_move_set", "bren's own move on other.", { card: "other", actor: "bren", ability: "wisdom", skill: "insight", dc: 10, success: "x", failure: null }),
   ];
   const said = (log_head: number, speaker: string, channel: TranscriptRecord["channel"], kind: TranscriptRecord["kind"], text: string, rest: Partial<TranscriptRecord> = {}): TranscriptRecord => ({ at: "t", speaker, channel, kind, text, rolls: [], log_head, ...rest });
   const transcript = [
     said(2, "dm", "table", "narration", "A man steps out at the bridge.", { wake: "card" }),
     said(2, "table", "run", "system", "card toll goes to the seats"),
+    said(2, "bren", "table", "intent", "What does he charge?", { human: true }),
+    said(2, "dm", "table", "narration", "Two silver a head, he says.", { wake: "card_words" }),
     said(2, "bren", "table", "intent", "I lean on him", { human: true }),
+    // The first line's wake settled on its answer; its `remember` landed after the seat typed the second line.
+    said(2, "dm", "memory:dm", "memory", "The toll is two silver a head."),
+    said(2, "dm", "run", "retry", "memory refused: it names a DC"),
     said(2, "dm", "run", "retry", "dm: own_move refused: invalid_request (bad_own_move): the failure pay breaks no custom the words asked for"),
     said(4, "dm", "table", "narration", "He looks you up and down.", { wake: "card_words" }),
-    said(9, "bren", "table", "intent", "What does he charge?", { human: true }),
-    said(9, "dm", "table", "narration", "Two silver a head, he says.", { wake: "card_words" }),
     said(9, "dm", "memory:dm", "memory", "summary: The road so far."),
     said(9, "bren", "run", "intent", "bren on the road card: Pay him."),
-    said(13, "dm", "memory:dm", "memory", "The toll-man let them through\nand kept the coin."),
-    said(13, "dm", "table", "narration", "The coin changes hands.", { wake: "road" }),
-    said(15, "table", "run", "system", "card other goes to the seats"),
-    said(15, "dm", "table", "narration", "Another card.", { wake: "card" }),
-    said(15, "bren", "table", "intent", "Not a line of the bench", { human: true }),
+    said(16, "dm", "memory:dm", "memory", "The toll-man let them through\nand kept the coin."),
+    said(16, "dm", "table", "narration", "The coin changes hands.", { wake: "road" }),
+    said(18, "table", "run", "system", "card other goes to the seats"),
+    said(18, "dm", "table", "narration", "Another card.", { wake: "card" }),
+    said(19, "bren", "table", "intent", "Not a line of the bench", { human: true }),
   ];
-  const wake = (agent: string, purpose: string, usd: number, wall_ms: number, rest: Partial<UsageRecord> = {}) => ({ agent, purpose, api_equivalent_usd: usd, wall_ms, outcome: "ok", ...rest }) as UsageRecord;
+  const wake = (agent: string, purpose: string, usd: number, wall_ms: number, tools: string[], rest: Partial<UsageRecord> = {}) => ({ agent, purpose, api_equivalent_usd: usd, wall_ms, outcome: "ok", tools, ...rest }) as UsageRecord;
   const usage = [
-    wake("dm", "scene_open", 0.3, 20_000),
-    wake("dm", "card", 0.04, 5000, { outcome: "timeout" }),
-    wake("dm", "card_words", 0.05, 6000, { settled_early: true, waited_ms: 4000 }),
-    wake("torva", "card", 0.01, 1000),
-    wake("dm", "card_words", 0.04, 5000),
-    wake("dm", "road", 0.03, 3000),
-    wake("dm", "card", 0.02, 2000),
+    wake("dm", "scene_open", 0.3, 20_000, ["narrate"]),
+    wake("dm", "card", 0.04, 5000, [], { outcome: "timeout" }),
+    wake("dm", "card_words", 0.05, 6000, ["own_move_or_answer", "remember"], { settled_early: true, waited_ms: 4000 }),
+    wake("torva", "card", 0.01, 1000, ["choose_card"]),
+    wake("dm", "card_words", 0.04, 5000, ["remember", "own_move_or_answer", "own_move_or_answer"]),
+    wake("dm", "road", 0.03, 3000, ["narrate", "remember"]),
+    wake("dm", "card", 0.02, 2000, ["narrate"]),
   ];
   const run = {
     run_id: "card-test",
@@ -386,31 +396,29 @@ test("the bench report from a run's records: an engine refusal with its reason, 
   assert.match(report, /^- Lines: typed by a person at the seat; 2 typed in this bench run$/m);
   assert.match(report, /^- The card: settled on `pay` \(Pay him\.\) \(majority\)$/m);
   assert.match(report, /^- Cost: 0\.49 USD for the bench run; before the first line \(scene_open, card \(timeout\)\): 0\.34 USD, 25\.0 s of DM wakes$/m);
-  const [, fell, paid, ...more] = report.split(/^## /m);
+  assert.doesNotMatch(report, /is not split|is not known/);
+  const [, asked, leaned, ...more] = report.split(/^## /m);
   assert.deepEqual(more, [], "words after the card's decision are no line, and nothing was left out");
-  // Line 1: refused once, then an own move with no failure, which fell on the engine's roll; the card waits.
-  assert.match(fell!, /^Line 1: "I lean on him"$/m);
-  assert.match(fell!, /^- The DM's call: an own move, intimidation \(charisma\) DC 15; success brings `talk` \(Talk him down\.\), failure names no choice$/m);
-  assert.match(fell!, /^- Refused or failed:\n  - retry: dm: own_move refused: invalid_request \(bad_own_move\): the failure pay breaks no custom the words asked for$/m);
-  assert.match(fell!, /^- Votes: torva own_move$/m);
-  assert.match(fell!, /^- The own move's roll: r6: bren rolls a Charisma \(Intimidation\) check: 1d20 \(4\) \+1 = 5 vs DC 15, failure\.$/m);
-  assert.match(fell!, /^- The own move brought: no choice: it fell, and the move is spent$/m);
-  assert.match(fell!, /^- The card was not decided on this line$/m);
-  assert.match(fell!, /^- Then the engine logged:\n  - The world remembers own_move_toll, by bren\.\n- remember: none$/m);
-  assert.match(fell!, /^- Cost: 0\.05 USD, 4\.0 s of DM wakes \(card_words\)$/m);
-  // Line 2: answered; the person then took a number; what the choice did, to where the next card's draw begins.
-  assert.match(paid!, /^- The DM's call: an answer, no own move; the card waits$/m);
-  assert.match(paid!, /^- The seat then chose without words: bren on the road card: Pay him\.$/m);
-  assert.match(paid!, /^- Votes: bren pay$/m);
-  assert.match(paid!, /^- The card was decided: `pay` \(Pay him\.\) \(majority\)$/m);
-  assert.match(paid!, /^- Then the engine logged:\n  - bren pays 2 silver pieces in toll\.\n  - The caravan loses 20 minutes\.\n- remember:\n  - after the decision:\n    > The toll-man let them through\n    > and kept the coin\.$/m);
-  assert.match(paid!, /^- The DM's words to the table:\n  - card_words:\n    > Two silver a head, he says\.\n  - road:\n    > The coin changes hands\.\n- Cost: 0\.07 USD, 8\.0 s of DM wakes \(card_words, road\)$/m);
-  assert.doesNotMatch(report, /Another card|The road so far|r14|Not a line of the bench/);
+  // Line 1: answered. Its fact stands with it, though the transcript holds it after the second line.
+  assert.match(asked!, /^Line 1: "What does he charge\?"$/m);
+  assert.match(asked!, /^- The DM's call: an answer, no own move; the card waits$/m);
+  assert.match(asked!, /^- The card was not decided on this line\n- remember:\n  - in its card_words wake:\n    > The toll is two silver a head\.\n- The DM's words to the table:\n  - card_words:\n    > Two silver a head, he says\.\n- Cost: 0\.05 USD, 4\.0 s of DM wakes \(card_words\)$/m);
+  // Line 2: refused once, then an own move with no failure, which fell on the engine's roll; the person then took a number.
+  assert.match(leaned!, /^Line 2: "I lean on him"$/m);
+  assert.match(leaned!, /^- The DM's call: an own move, intimidation \(charisma\) DC 15; success brings `talk` \(Talk him down\.\), failure names no choice$/m);
+  assert.match(leaned!, /^- Refused or failed:\n  - retry: dm: own_move refused: invalid_request \(bad_own_move\): the failure pay breaks no custom the words asked for\n  - retry: memory refused: it names a DC$/m);
+  assert.match(leaned!, /^- Votes: torva own_move\n- The own move's roll: r6: bren rolls a Charisma \(Intimidation\) check: 1d20 \(4\) \+1 = 5 vs DC 15, failure\.\n- The own move brought: no choice: it fell, and the move is spent\n- The seat then chose without words: bren on the road card: Pay him\.\n- Votes after the fall: bren pay, torva pay\n- The card was decided: `pay` \(Pay him\.\) \(majority\)$/m);
+  // What the fall and the choice did, and not the cut contract's pay after it.
+  assert.match(leaned!, /^- Then the engine logged:\n  - The world remembers own_move_toll, by bren\.\n  - bren pays 2 silver pieces in toll\.\n  - The caravan loses 20 minutes\.\n- remember:\n  - in its road wake:\n    > The toll-man let them through\n    > and kept the coin\.$/m);
+  assert.match(leaned!, /^- The DM's words to the table:\n  - card_words:\n    > He looks you up and down\.\n  - road:\n    > The coin changes hands\.\n- Cost: 0\.07 USD, 8\.0 s of DM wakes \(card_words, road\)$/m);
+  assert.doesNotMatch(report, /Another card|The road so far|r17|Not a line of the bench|in wages|Blades are paid|insight/);
 
-  // A wake count that does not match the lines: the cost is given whole and split for no line.
+  // Wakes that do not match the lines or the facts: the cost is given whole, and the facts by their place in the transcript.
   const unsplit = benchReport(run, log, transcript, usage.filter((u) => u.api_equivalent_usd !== 0.04 || u.purpose !== "card_words")).join("\n");
   assert.match(unsplit, /^- Cost is not split by line: 1 card_words wakes for 2 lines$/m);
-  assert.doesNotMatch(unsplit, /s of DM wakes \(card_words/);
+  assert.match(unsplit, /^- The wake of a kept fact is not known: 2 remember calls in usage\.jsonl for 3 in the transcript\. Facts are listed by their place in the transcript$/m);
+  assert.doesNotMatch(unsplit, /s of DM wakes \(card_words|in its \w+ wake/);
+  assert.match(unsplit.split(/^## /m)[2]!, /^- remember:\n  - by its place in the transcript:\n    > The toll is two silver a head\.\n  - by its place in the transcript:\n    > The toll-man let them through\n/m);
   // A card that never came, and a run of another command.
   assert.match(benchReport({ ...run, bench: { ...run.bench!, card: "absent", left_out: ["As agreed last night"] } }, log, transcript, []).join("\n"), /^- The card: never came to the table\n- Cost: no model calls\n[^#]*## Left out, not typed\n\n- As agreed last night$/m);
   assert.deepEqual(benchReport({ ...run, bench: undefined }, log, transcript, usage), []);

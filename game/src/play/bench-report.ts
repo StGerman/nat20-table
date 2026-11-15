@@ -13,10 +13,13 @@ import type { RunRecord } from "./record.ts";
 /** The report's file in a bench run's folder. */
 export const BENCH_MD = "bench.md";
 
-/** Engine events that are the road going on, not what a decided card did: a block's list ends before the first, or before the draw roll of a next card. */
-const MOVES_ON = new Set<Event["kind"]>(["traveled", "scene_loaded", "card_shown", "cards_offered"]);
+/** Engine events that are the road going on, not what a decided card did: a block's list ends before the first. */
+const MOVES_ON = new Set<Event["kind"]>(["traveled", "scene_loaded", "card_shown", "cards_offered", "escort_settled"]);
 /** The decision's own events, which a block tells in its own rows. */
 const TOLD = new Set<Event["kind"]>(["card_own_move", "own_move_set", "card_advice", "card_resolved", "own_move_ran"]);
+/** What a `remember` call left in the transcript: the fact, or the guard's refusal of it. A scene's summary is the loop's, not a call. */
+const kept = (r: TranscriptRecord) => r.kind === "memory" && r.channel === "memory:dm" && !r.text.startsWith("summary:");
+const calledRemember = (r: TranscriptRecord) => kept(r) || (r.kind === "retry" && r.speaker === "dm" && r.text.startsWith("memory refused: "));
 
 const usd = (records: UsageRecord[]) => records.reduce((sum, u) => sum + u.api_equivalent_usd, 0).toFixed(2);
 const seconds = (records: UsageRecord[]) => (records.reduce((sum, u) => sum + waitedMs(u), 0) / 1000).toFixed(1);
@@ -45,6 +48,15 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
   const answers = dm.flatMap((u, i) => (u.purpose === "card_words" ? [i] : []));
   const split = answers.length === at.length;
   const reaching = dm.slice(0, answers[0] ?? dm.length);
+  // A line's wakes: the one that answered it, and the `road` wake right after it, which tells what a decided card brought.
+  const wakesOf = (n: number) => (split ? [answers[n]!, ...(dm[answers[n]! + 1]?.purpose === "road" ? [answers[n]! + 1] : [])] : []);
+  // Which wake kept a fact. A wake settles for the table on its answer, and a `remember` later in the same turn lands after the
+  // seat has typed its next line, so a fact's place in the transcript does not say. `usage.jsonl` lists each turn's tool calls
+  // in order, and each `remember` call left one transcript record in the same order: the two are matched one to one.
+  const calls = dm.flatMap((u, i) => (u.tools ?? []).filter((t) => t === "remember").map(() => i));
+  const left = transcript.filter(calledRemember);
+  const byWake = dm.length > 0 && calls.length === left.length;
+  const wakeOf = new Map(byWake ? left.map((r, i) => [r, calls[i]!]) : []);
 
   const settledBy = resolved?.kind === "card_resolved" ? `settled on ${named(resolved.choice)} (${resolved.decided})` : "still waiting when the bench run ended";
   const out = [
@@ -59,6 +71,7 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
       ? "- Cost: no model calls"
       : `- Cost: ${usd(usage)} USD for the bench run; before the first line (${wakes(reaching) || "no DM wake"}): ${usd(reaching)} USD, ${seconds(reaching)} s of DM wakes`,
     ...(usage.length > 0 && !split ? [`- Cost is not split by line: ${answers.length} card_words wakes for ${at.length} lines`] : []),
+    ...(dm.length > 0 && !byWake ? [`- The wake of a kept fact is not known: ${calls.length} remember calls in usage.jsonl for ${left.length} in the transcript. Facts are listed by their place in the transcript`] : []),
     "",
     "No pass and no fail: a person reads the DM's words beside its calls and the engine's lines.",
   ];
@@ -69,24 +82,24 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
   at.forEach((index, n) => {
     const line = transcript[index]!;
     const next = at[n + 1] !== undefined ? transcript[at[n + 1]!]!.log_head : Number.POSITIVE_INFINITY;
-    const events = log.filter((e) => e.seq > line.log_head && e.seq <= next);
-    const find = <K extends Event["kind"]>(kind: K) => events.find((e): e is Extract<Event, { kind: K }> => e.kind === kind);
-    const move = find("own_move_set");
-    const ran = find("own_move_ran");
-    const decided = find("card_resolved");
-    // The decision, or the fall of an own move with no failure named: the votes come before it, what the engine did after it.
-    const from = Math.min(decided?.seq ?? Number.POSITIVE_INFINITY, ran?.seq ?? Number.POSITIVE_INFINITY);
-    const votes = events.flatMap((e) => (e.kind === "card_advice" && e.seq < from ? [`${e.actor} ${e.choice}`] : []));
-    // The block runs to the next line. After the card's decision it ends when the seat acts again or another card reaches the seats.
     const rest = transcript.slice(index + 1, at[n + 1] ?? transcript.length);
+    const upTo = log.filter((e) => e.seq > line.log_head && e.seq <= next);
+    const move = upTo.find((e): e is Extract<Event, { kind: "own_move_set" }> => e.kind === "own_move_set" && e.card === bench.card);
+    const ran = upTo.find((e): e is Extract<Event, { kind: "own_move_ran" }> => e.kind === "own_move_ran" && e.card === bench.card);
+    const decided = upTo.find((e): e is Extract<Event, { kind: "card_resolved" }> => e.kind === "card_resolved");
+    // The block runs to the next line. After the card's decision it ends when the seat acts again or another card reaches the seats.
     const end = decided ? rest.findIndex((r) => r.log_head >= decided.seq && (r.speaker === line.speaker || (r.kind === "system" && /^card \S+ goes to the seats$/.test(r.text)))) : -1;
     const records = end < 0 ? rest : rest.slice(0, end);
+    const events = end < 0 ? upTo : upTo.filter((e) => e.seq <= rest[end]!.log_head);
+    // An own move with no failure named that fell: the card waits, and the words after the fall are told apart from those before it.
+    const fell = ran && !ran.choice ? ran.seq : undefined;
+    const settled = decided?.seq ?? Number.POSITIVE_INFINITY;
+    const advice = (after: number, before: number) => events.flatMap((e) => (e.kind === "card_advice" && e.seq > after && e.seq < before ? [`${e.actor} ${e.choice}`] : []));
+    const votes = advice(0, fell ?? settled);
     const said = records.filter((r) => r.speaker === "dm" && r.kind === "narration");
     const answered = said.some((r) => r.wake === "card_words");
-    const on = log.filter((e) => e.kind === "card_shown" && e.seq <= line.log_head).at(-1);
 
     out.push("", `## Line ${(bench.lines_before ?? 0) + n + 1}: "${line.text}"`, "");
-    if (on?.kind === "card_shown" && on.card !== bench.card) out.push(`- Typed at \`${on.card}\`, a card the benched card's choice added.`);
     out.push(
       move
         ? `- The DM's call: an own move, ${move.skill} (${move.ability}) DC ${move.dc}; success brings ${named(move.success)}, failure ${move.failure ? named(move.failure) : "names no choice"}`
@@ -94,42 +107,50 @@ export function benchReport(run: RunRecord, log: Event[], transcript: Transcript
           ? "- The DM's call: an answer, no own move; the card waits"
           : "- The DM's call: none reached the table",
     );
+    // What `remember` left is told by the wake that called it, where the wakes are known; else by its place in the transcript.
+    const its = wakesOf(n);
+    const called = byWake && split ? left.filter((r) => its.includes(wakeOf.get(r)!)) : records.filter(calledRemember);
     // Engine refusals, guard refusals and failed wakes, as the table logged them.
-    const refused = records.filter((r) => r.kind === "retry" || r.kind === "error" || r.kind === "fallback" || (r.kind === "system" && r.text.endsWith("words are only answered")));
+    const refused = [
+      ...records.filter((r) => !calledRemember(r) && (r.kind === "retry" || r.kind === "error" || r.kind === "fallback" || (r.kind === "system" && r.text.endsWith("words are only answered")))),
+      ...called.filter((r) => !kept(r)),
+    ];
     if (refused.length > 0) out.push("- Refused or failed:", ...refused.map((r) => `  - ${r.kind}${r.wake ? ` (${r.wake})` : ""}: ${r.text}`));
-    // A person at the seat may settle the card by a number after their words (`--seat ink`); the bench's scripted seat never does.
-    const picked = rest.filter((r) => r.speaker === line.speaker && r.channel === "run" && r.kind === "intent" && r.log_head < from && !r.text.includes(' on the road card: own move "'));
-    if (picked.length > 0) out.push(...picked.map((r) => `- The seat then chose without words: ${r.text}`));
     if (votes.length > 0) out.push(`- Votes: ${votes.join(", ")}`);
     if (ran) {
       const roll = ran.roll ? log.find((e) => e.kind === "roll" && e.roll.id === ran.roll) : undefined;
       out.push(`- The own move's roll: ${roll ? `${ran.roll}: ${roll.text}` : "none (the proposer was down, or the roll could not be made)"}`);
       out.push(`- The own move brought: ${ran.choice ? named(ran.choice) : "no choice: it fell, and the move is spent"}`);
     }
+    // A person at the seat may settle the card by a number after their words (`--seat ink`); the bench's scripted seat never does.
+    const picked = rest.filter((r) => r.speaker === line.speaker && r.channel === "run" && r.kind === "intent" && r.log_head < settled && !r.text.includes(' on the road card: own move "'));
+    out.push(...picked.map((r) => `- The seat then chose without words: ${r.text}`));
+    const later = fell === undefined ? [] : advice(fell, settled);
+    if (later.length > 0) out.push(`- Votes after the fall: ${later.join(", ")}`);
     out.push(decided ? `- The card was decided: ${named(decided.choice)} (${decided.decided})` : "- The card was not decided on this line");
-    // What the decision or the fall did: the engine's own lines after it, until the road goes on. A fight is named and not played.
+    // What the decision or the fall did: the engine's own lines after it, until the road goes on. The cut contract ends at the
+    // card's leg, so its pay follows at once and is not the card's doing. A fight is named and not played.
+    const from = Math.min(settled, ran?.seq ?? Number.POSITIVE_INFINITY);
     const did: string[] = [];
     for (const e of events) {
       if (e.seq <= from || TOLD.has(e.kind)) continue;
-      if (MOVES_ON.has(e.kind) || (e.kind === "roll" && e.roll.kind === "table")) break;
+      if (MOVES_ON.has(e.kind) || (e.kind === "roll" && e.roll.kind === "table") || (e.kind === "ledger" && e.reason === "wage")) break;
       // The own move's roll and its check stand in their own row.
       if ((e.kind === "roll" && e.roll.id === ran?.roll) || (e.kind === "check_resolved" && e.roll_id === ran?.roll)) continue;
       did.push(`  - ${e.kind === "roll" ? `${e.roll.id}: ` : ""}${e.text}`);
       if (e.kind === "combat_started") break;
     }
     if (decided || ran) out.push(did.length > 0 ? "- Then the engine logged:" : "- Then the engine logged nothing more for the card", ...did);
-    // `remember` calls only: a scene's summary is the loop's, not a call.
-    const kept = records.filter((r) => r.kind === "memory" && r.channel === "memory:dm" && !r.text.startsWith("summary:"));
+    // Every fact the DM kept in the line's wakes; where the wake is not known, the facts between this line and the next.
+    const facts = called.filter(kept);
     out.push(
-      kept.length > 0 ? "- remember:" : "- remember: none",
-      ...kept.flatMap((r) => [`  - ${decided && r.log_head >= decided.seq ? "after the decision" : "before any decision"}:`, ...quote(r.text).map((l) => `  ${l}`)]),
+      facts.length > 0 ? "- remember:" : "- remember: none",
+      ...facts.flatMap((r) => [`  - ${byWake && split ? `in its ${dm[wakeOf.get(r)!]!.purpose} wake` : "by its place in the transcript"}:`, ...quote(r.text).map((l) => `  ${l}`)]),
     );
     out.push(said.length > 0 ? "- The DM's words to the table:" : "- The DM's words to the table: none", ...said.flatMap((r) => [`  - ${r.wake ?? "narration"}:`, ...quote(r.text).map((l) => `  ${l}`)]));
     if (split) {
-      // The wake that answered the line, and the `road` wake right after it, which tells what a decided card brought.
-      const first = answers[n]!;
-      const its = dm.slice(first, first + (dm[first + 1]?.purpose === "road" ? 2 : 1));
-      out.push(`- Cost: ${usd(its)} USD, ${seconds(its)} s of DM wakes (${wakes(its)})`);
+      const turns = its.map((i) => dm[i]!);
+      out.push(`- Cost: ${usd(turns)} USD, ${seconds(turns)} s of DM wakes (${wakes(turns)})`);
     }
   });
 
