@@ -145,7 +145,13 @@ fn the_mill_writes_its_deeds_into_the_wend_world() {
     assert_eq!(
         scene_deeds(&mill),
         BTreeSet::from(
-            ["snitt_yielded", "yard_to_the_end", "wenna_saved", "killed_gritch"].map(String::from)
+            [
+                "snitt_yielded",
+                "yard_to_the_end",
+                "wenna_saved",
+                "killed_gritch"
+            ]
+            .map(String::from)
         )
     );
 }
@@ -155,7 +161,7 @@ fn the_mill_writes_its_deeds_into_the_wend_world() {
 /// rescue, none. A pile of one goes on the table with no draw-three and no pick (M11).
 #[test]
 fn wendford_meets_the_party_with_the_card_its_yard_wrote() {
-    use nat20_world::{Deed, DeedBook, DeckState, When};
+    use nat20_world::{DeckState, Deed, DeedBook, When};
     let wend = repo().join("worlds/wend");
     let deck = deck(&wend).join(deck(&repo().join("scenarios/fair_in_wend")));
     let map: Value = read(&wend.join("map.json"));
