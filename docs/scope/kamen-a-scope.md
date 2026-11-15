@@ -63,11 +63,11 @@ Rule of 2026-11-14: before any code, run the scope against five things Stas woul
 | «Зарубить писаря» / «отрезать ему пальцы» | half | a fight, and `killed_<npc>`; a mutilation has no outcome without the stake |
 | «Забрать книгу и сжечь» | no, unless the author wrote it | no deed comes from the DM's word (Rule 4); as a written check it works, as an unforeseen act it does not |
 
-Three of five, and all three only because the author wrote them in. This is the ceiling Milestone 12 failed on (0082): an act nobody foresaw gets talk and no outcome. Two things soften it here and neither removes it. The post is one place whose obvious acts can be listed and written (ask, lie, refuse, turn back, fight, take the book), and the second contract's choice is a vote by nature. Recommendation: build it, write the book and the bribe in as checks, and say in the exit that an unforeseen act at the post is counted and not gated. Not recommended: holding the milestone until the stake returns.
+Three of five, and all three only because the author wrote them in. The design redoes the table against its own cards (its §7): three and two halves, the book counted as a half until something the table hears reads `book_taken`. This is the ceiling Milestone 12 failed on (0082): an act nobody foresaw gets talk and no outcome. Two things soften it here and neither removes it. The post is one place whose obvious acts can be listed and written (ask, lie, refuse, turn back, fight, take the book), and the second contract's choice is a vote by nature. Recommendation: build it, write the book and the bribe in as checks, and say in the exit that an unforeseen act at the post is counted and not gated. Not recommended: holding the milestone until the stake returns.
 
 ## 6. Exit criterion
 
-Each row names the lowest layer that tests it (0080).
+Each row names the lowest layer that tests it (0080). The design's §12 holds the rows in full and splits row 3, because the card bench does not reach a night card yet.
 
 | # | Row | Layer |
 |---|---|---|
@@ -117,8 +117,9 @@ B against A saves 6 USD and 25 to 40 min of the table: the pair is 20 USD (0.56 
 
 Amendment (proposed; rules silent, followed here): a scope's cost prices the Claude Code build per PR by size, as table #412 does; the baseline counts in-game runs only. Why: 137 USD of builds against 26 USD of runs needs its own line.
 
+Added by the thread after Yan priced it: the design's one revision takes his bench row as its own PR (the bench reaches a night card; his S, 11 USD, 15 to 20 min of review), so the plan is 10 PRs and 179 USD at best. He has not re-priced it, and the design says his S may be more than that PR needs.
+
 ## 8. Questions for Stas
 
 1. **Without the stake, three of five (§5).** Answered by Stas, 2026-11-15 22:15Z («Да давай так»): build it now without the stake, with the obvious acts at the post written in as checks, so that the stake can later lie on top with no rework: the deeds those checks write stay the same.
-2. **The family that will not leave:** the three-card pressure chain in this milestone, or later? Recommended by the design, see its questions.
-3. **Exit row 5:** a pair of two contracts each is four runs. The design and Yan say what it costs and whether one contract in Stas's half is enough.
+2. Every other question is in the design's §15, each with a recommendation: A, eight on the mechanism, scope and exit (the three-card pressure on the family is A2, the exit pair is A7); B, eleven of Zoya's on the story.
