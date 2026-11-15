@@ -1,8 +1,8 @@
 # 0084. The card bench reaches its card by a pile of one in a copied pack
 
-- **Status:** Proposed
+- **Status:** Accepted (Stas, 2026-11-14 21:06Z)
 - **Date:** 2026-11-14
-- **Decided by:** Stas, when he accepts `docs/design/card-bench.md`. He asked for the design on 2026-11-14 19:42Z («Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным»); the options and the recommendation below are the thread's
+- **Decided by:** Stas. He asked for the design on 2026-11-14 19:42Z («Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным») and merged it as a draft (table #397) at 21:05Z with no words. Asked on a decision card in the thread whether the merge accepts the design and all five recommendations of its §9, he chose «Да, ок по всем» at 21:06Z. The options and the recommendation below are the thread's
 
 ## Context
 
@@ -38,11 +38,11 @@ Find a seed whose draws bring the card, and replay it.
 
 ## Decision
 
-Proposed: **A.** It is the only option where the line, the DM's call, the roll and the card's outcome all come from the code the table plays, and it costs no contract version. B buys convenience with a command play never uses. C is fragile for the same reason the scripted tests avoid seeds. D answers half the question at about a third of the price; if the trial shows the DM's reading is the only thing the bench ever finds, D is the cheaper tool, and that is a reason to revisit.
+Accepted: **A**, with the five recommendations of design §9: the design as written; the four trial cards; the thread drafts the lines and Stas edits them; a cap of 12 USD and 20 minutes of Stas's for the trial; two PRs beside Milestone 13, outside its exit and PR count. It is the only option where the line, the DM's call, the roll and the card's outcome all come from the code the table plays, and it costs no contract version. B buys convenience with a command play never uses. C is fragile for the same reason the scripted tests avoid seeds. D answers half the question at about a third of the price; if the trial shows the DM's reading is the only thing the bench ever finds, D is the cheaper tool, and that is a reason to revisit.
 
 ## Consequences
 
-- `npm run play:card` and its report, in two table PRs beside Milestone 13 (`docs/design/card-bench.md` §6). Rows are Yan's, after Stas accepts the design.
+- `npm run play:card` and its report, in two table PRs beside Milestone 13 (`docs/design/card-bench.md` §6): rows AGT-123 and AGT-124. The Milestone 13 trial is row AGT-125.
 - The bench is tried on three or four cards before Stas's Milestone 13 evening, at an expected 7.5 to 10 USD for four cards, about one more all-AI run of *Fair in Wend*, and one command of Stas's a card (design §5). It adds cost to the milestone and changes no exit rule (decisions 0043, 0065, 0066, 0074).
 - The bench reports and gives no pass or fail. Findings are read by the analysis thread; the verdict on each is Stas's.
 - Whether the bench becomes a standing rule is a later decision with its own record (decision 0080).
