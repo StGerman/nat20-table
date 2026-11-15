@@ -196,3 +196,4 @@ From `/mnt/project-files/engine/design/system-design.md` §6-7. The API leaves t
 - 2026-11-14: AGT-121 done (humour in every beat of the Plain voice, told once a card), row in docs/tasks-done.md
 - 2026-11-14: AGT-122 done (Vera's fourth section, where it got dull), row in docs/tasks-done.md
 - 2026-11-14: MAP-26 done (the widow card's joke line and note fix, by Zoya's read; Stas «Да»), row in docs/tasks-done.md
+- 2026-11-14: AGT-120 done (the DM's card pick gets the 30 s long wake; Stas «Да»), row in docs/tasks-done.md
