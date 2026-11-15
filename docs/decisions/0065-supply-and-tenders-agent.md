@@ -1,6 +1,6 @@
 # 0065. A supply and tenders agent keeps the plan and its cost
 
-- **Status:** Accepted
+- **Status:** Accepted; §1 (closed rows move to `docs/tasks-done.md`) superseded by [0085](0085-one-file-per-task.md)
 - **Date:** 2026-11-08
 - **Decided by:** Stas (post-M11 backlog thread, persona doc "Supply and tender agent", 2026-11-08)
 

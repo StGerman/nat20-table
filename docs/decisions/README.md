@@ -25,7 +25,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0014](0014-level-2-pregens.md) | Four level 2 pregens: Fighter, Cleric, Wizard, optional Barbarian | Accepted | 2026-10-16 | Stas (scope) |
 | [0015](0015-scripted-monster-turns.md) | Monster turns run on a scripted engine policy, not an LLM | Accepted | 2026-10-16 | Stas (scope) |
 | [0016](0016-client-contract-deferred.md) | No client talks to the engine; the public client contract is deferred | Accepted, wire deferred | 2026-10-16 | Claude proposed; Stas acknowledged |
-| [0017](0017-tasks-md-only-list.md) | TASKS.md is the only task list | Accepted | 2026-10-16 | Stas (design approval) |
+| [0017](0017-tasks-md-only-list.md) | TASKS.md is the only task list | Accepted, form superseded by 0085 | 2026-10-16 | Stas (design approval) |
 | [0018](0018-original-scenario.md) | Run an original one-shot, The Silent Mill, not a published adventure | Accepted | 2026-10-16 | Stas (scope) |
 | [0019](0019-game-stack.md) | Game side: TypeScript, Ink and the Claude Agent SDK | Accepted, not built | 2026-10-16 | Stas (scope) |
 | [0020](0020-send-u1-u2-upstream-early.md) | Send the engine-plumbing items U1 and U2 upstream now, not at Milestone 8 | Superseded by 0023 | 2026-10-17 | Stas (decision card) |
@@ -93,6 +93,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0082](0082-m12-merged-without-a-passed-exit-pair.md) | Milestone 12 merges without a passed exit pair: closed, not done; an exception to 0043 for this milestone only | Accepted | 2026-11-14 | Stas |
 | [0083](0083-own-move-any-outcome.md) | A player's own move may bring any outcome: the DM writes the stake before the roll, the engine keeps the one the roll picked in the deed; torture happens off the telling; the human's own act rolls at once; supersedes part of 0068 | Accepted | 2026-11-14 | Stas |
 | [0084](0084-card-bench-by-a-pile-of-one.md) | The card bench reaches its card by a pile of one in a copied pack, with no contract change; tried on Milestone 13 | Accepted | 2026-11-14 | Stas |
+| [0085](0085-one-file-per-task.md) | One file per task under `tasks/`, a folder per milestone (OKF); no change log, no committed index, closed tasks stay put | Proposed | 2026-11-15 | Stas (decision card) |
 | [0087](0087-a-lie-lives-in-quoted-speech.md) | A lie lives only in a character's quoted speech: no player view, card text, table line, place name or narrator's own sentence states a false fact; the place line beside a false claim is exact (which bank, how far to the border) | Proposed | 2026-11-15 | Stas (rule accepted 2026-11-14 12:03Z; the record on merge) |
 | [0088](0088-the-world-counts-only-what-exists.md) | The world counts only what exists: coin, goods, land and holdings, debts and wages, days, a creature's own state; regard is never a number, it is deeds named persons saw or were told of; the test: can it be handed over, owed or lost? | Proposed | 2026-11-15 | Stas (rule accepted 2026-11-14 14:08Z; the record on merge) |
 
