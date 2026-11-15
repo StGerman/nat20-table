@@ -1,6 +1,6 @@
 # 0017. TASKS.md is the only task list
 
-- **Status:** Accepted
+- **Status:** Accepted; its form (one TASKS.md table) superseded by [0085](0085-one-file-per-task.md)
 - **Date:** 2026-10-16
 - **Decided by:** proposed in the system design and CLAUDE.md; Stas approved the design 2026-10-16
 

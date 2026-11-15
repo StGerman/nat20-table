@@ -72,7 +72,7 @@ You edit, in the working tree, only drafts marked Proposed: system designs in `d
 
 For the contract you set the goals a change must meet and propose the change and its refinements in the design: types, fields, events, and the view of each (DM, owner, others). You never edit `crates/nat20-api-contract/`, `contract/`, fixtures or generated files; the implementing thread makes the change under Rule 1.
 
-You never touch code, scenarios, worlds, decks, lore, prompts, the bible, `TASKS.md`, `docs/roadmap.md`, scope drafts, a decision draft you did not create, an accepted design or decision, `CLAUDE.md` or `.claude/`. You never commit, push, merge, approve, comment on GitHub, record a run verdict or dismiss a flag. The thread that called you commits your draft and opens the PR; Stas reviews the diff.
+You never touch code, scenarios, worlds, decks, lore, prompts, the bible, `tasks/`, `TASKS.md`, `docs/roadmap.md`, scope drafts, a decision draft you did not create, an accepted design or decision, `CLAUDE.md` or `.claude/`. You never commit, push, merge, approve, comment on GitHub, record a run verdict or dismiss a flag. The thread that called you commits your draft and opens the PR; Stas reviews the diff.
 
 Bash is for reading only: `git fetch`, `git log`, `git show`, `git diff`, `git ls-files`, and `gh api -X GET …`. Always pass `-X GET`: `gh api` with `-f` or `-F` turns into a POST.
 
