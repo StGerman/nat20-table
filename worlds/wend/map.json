@@ -2,7 +2,7 @@
     "_comment": "The Wend valley (MAP-6, Milestone 9): the hand-written core of the map that carries Fair in Wend now and The Lair of Arachas later. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Places from lore/the_wend_valley.md and the Milestone 9 spec. A pack does not draw the map: it names the pack_slot it fills. Places with discovered false, roads to them and the edges are DM data only. Distances in miles; terrain and good roads set the maximum pace (SRD 5.2.1, Travel Terrain, Good Roads). A place's scene comes from the pack, so none is set here: travel loads the campaign's road scene until a pack names one. Inn prices are room and board per person per night, from the SRD 5.1 lodging and meal prices (a 2014 fill under Rule 7).",
     "places": [
         {
-            "_comment": "The fair town at the river's mouth, a day downriver from Wendford. Salt, iron and cloth.",
+            "_comment": "The fair town at the river's mouth, two days downriver from Wendford. Salt, iron and cloth.",
             "id": "wendmouth",
             "name": "Saltmouth",
             "name_ru": "Солтмут",
@@ -22,12 +22,22 @@
             "inn_cp": 40
         },
         {
-            "_comment": "Where the river road crosses the Millbeck, eight miles below Wendford: a footbridge, a willow hut and a ford upstream. A stop on the road, not a market; its stretch of road is the Millbeck zone, which holds only the toll card (B8).",
+            "_comment": "Where the river road crosses the Millbeck, twelve miles below Wendford: a footbridge, a willow hut and a ford upstream. A stop on the road, not a market; its stretch of road is the Millbeck zone, which holds only the toll card (B8).",
             "id": "millbeck_bridge",
             "name": "The Millbeck bridge",
             "name_ru": "мост через Миллбек",
             "kind": "crossing",
             "discovered": true
+        },
+        {
+            "_comment": "A market village halfway down the river road, fourteen miles above Saltmouth: a market on fair days and an inn, the Halfway, where the wagons going down to the fair stop for the night.",
+            "id": "midwend",
+            "name": "Midwend",
+            "name_ru": "Мидвенд",
+            "kind": "village",
+            "market": true,
+            "discovered": true,
+            "inn_cp": 40
         },
         {
             "_comment": "A mile upriver at the end of a hedged lane. The Silent Mill.",
@@ -63,7 +73,7 @@
             "pack_slot": "lair_of_arachas"
         },
         {
-            "_comment": "Salt pans and an old ferry landing south of Saltmouth: a free slot for the next pack.",
+            "_comment": "The salt flats across the old channel, east of Saltmouth: the road runs six miles to the old ferry landing, and the flats are crossed on foot at low tide (lore, The old channel). A free slot for the next pack.",
             "id": "salt_flats",
             "name": "The salt flats",
             "name_ru": "солончаки",
@@ -77,17 +87,27 @@
             "id": "bridge_road",
             "from": "wendford",
             "to": "millbeck_bridge",
-            "miles": 8,
+            "miles": 12,
             "terrain": "grassland",
             "good_road": true,
             "zone": "millbeck"
         },
         {
-            "_comment": "The river road from the Millbeck bridge to the fair: with the upper stretch, a day with a wagon at a normal pace.",
+            "_comment": "The river road from the Millbeck bridge to Midwend.",
             "id": "river_road",
             "from": "millbeck_bridge",
+            "to": "midwend",
+            "miles": 14,
+            "terrain": "grassland",
+            "good_road": true,
+            "zone": "lowland"
+        },
+        {
+            "_comment": "The river road from Midwend to the fair. With the two stretches above it, forty miles from Wendford: two days with a wagon at a normal pace.",
+            "id": "lower_road",
+            "from": "midwend",
             "to": "wendmouth",
-            "miles": 12,
+            "miles": 14,
             "terrain": "grassland",
             "good_road": true,
             "zone": "lowland"
@@ -104,7 +124,7 @@
             "id": "slope_track",
             "from": "wendford",
             "to": "highsteads",
-            "miles": 8,
+            "miles": 10,
             "terrain": "hill",
             "zone": "slopes"
         },
@@ -128,7 +148,7 @@
             "id": "salt_road",
             "from": "wendmouth",
             "to": "salt_flats",
-            "miles": 4,
+            "miles": 6,
             "terrain": "coastal",
             "zone": "coast"
         }

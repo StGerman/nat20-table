@@ -730,7 +730,7 @@ test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid an
       scene_open: async (tools, briefing) => void (await tools.narrate(`Here is ${/Scene ([a-z0-9_]+) is loaded/.exec(briefing)?.[1]}.`)),
       suggest: async () => '{"cards": [{"id": "fair_debt", "text": "A stall-keeper remembers the party."}], "why": ["it carries on the fair"]}',
     });
-    const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
+    const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 4, keepsParty: true } });
     const report = await loop.run("fw_highsteads");
     assert.equal(report.ended, "the escort contract is done", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
     // The journey's end (B7): one last turn in Saltmouth, the DM's closing, then the end card.
@@ -913,11 +913,11 @@ test("the exit pair, scripted (MAP-12): Fair in Wend, then The Way Back on the s
   try {
     // The clock carries on from run 1, and the day limit counts from the contract's first day.
     assert.equal(run2.report.ended, "the escort contract is done", JSON.stringify(run2.t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
-    // Its days, as run.json records them: from the carried day, three of them (Copilot on table #321).
+    // Its days, as run.json records them: from the carried day, four of them (Copilot on table #321).
     const days = run2.report.campaignDays!;
     assert.ok(days.start > 1, JSON.stringify(days));
-    assert.equal(days.last, days.start + 2);
-    assert.deepEqual(run1.report.campaignDays, { start: 1, last: 3 });
+    assert.equal(days.last, days.start + 3);
+    assert.deepEqual(run1.report.campaignDays, { start: 1, last: 4 });
     const log = await run2.t.engine.request("dm", { cmd: "events", since: 0 });
     assert.ok(log.result?.cmd === "events");
     // The bridge is gone for the world, so its stop meets The bridge again, which reads a run 1 deed (exit row 5).
@@ -1164,6 +1164,10 @@ test("an arrival card at the destination is decided before the human's last turn
   const pack = mkdtempSync(path.join(tmpdir(), "arrival-"));
   cpSync(path.join(REPO, "scenarios/fair_in_wend"), pack, { recursive: true });
   cpSync(path.join(REPO, "worlds/wend"), path.join(pack, "worlds/wend"), { recursive: true });
+  // The pack's own arrival card at the fair gate leaves, so the dice can't pick it over this one.
+  const odda = path.join(pack, "deck/odda.json");
+  const oddaDeck = JSON.parse(readFileSync(odda, "utf8")) as { cards: { id: string }[] };
+  writeFileSync(odda, JSON.stringify({ ...oddaDeck, cards: oddaDeck.cards.filter((c) => c.id !== "the_fair_gate") }));
   writeFileSync(
     path.join(pack, "worlds/wend/deck/arrival.json"),
     JSON.stringify({
@@ -1187,7 +1191,7 @@ test("an arrival card at the destination is decided before the human's last turn
   try {
     const party = ["bren", "torva", "maren", "ilsa"];
     const dm = new ScriptedDm({});
-    const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 3, keepsParty: true } });
+    const loop = new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 400, campaign: { party, dayLimit: 4, keepsParty: true } });
     const report = await loop.run("fw_highsteads");
     assert.equal(report.ended, "the escort contract is done", JSON.stringify(t.table.transcript.records.filter((r) => r.channel === "run").slice(-5)));
     const quay = seat.shown.findIndex((e) => e.kind === "options" && e.title === "Choices" && e.lines.some((l) => l.includes("Let him carry them")));
