@@ -97,3 +97,5 @@ Why the project is shaped the way it is: one record per decision that had real a
 ## Open questions to watch
 
 None are open as of 2026-10-18. The likeliest to reopen: 0006 (if the human finds rolls opaque in playtests), 0012 (if anchors prove too coarse), 0016 (when a real client is planned).
+| [0087](0087-a-lie-lives-in-quoted-speech.md) | A lie lives only in a character's quoted speech: no player view, card text, table line, place name or narrator's own sentence states a false fact; the place line beside a false claim is exact (which bank, how far to the border) | Proposed | 2026-11-15 | Stas (rule accepted 2026-11-14 12:03Z; the record on merge) |
+| [0088](0088-the-world-counts-only-what-exists.md) | The world counts only what exists: coin, goods, land and holdings, debts and wages, days, a creature's own state; regard is never a number, it is deeds named persons saw or were told of; the test: can it be handed over, owed or lost? | Proposed | 2026-11-15 | Stas (rule accepted 2026-11-14 14:08Z; the record on merge) |
