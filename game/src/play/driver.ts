@@ -56,6 +56,7 @@ import { ScriptedJudge } from "../check/judge.ts";
 import { modelJudgeFor, narrationCheck } from "../check/narration.ts";
 import { SUGGESTED_CARDS, wordReport } from "./word.ts";
 import { exitReport, SEAT_JSONL } from "./exit.ts";
+import { BENCH_MD, benchReport } from "./bench-report.ts";
 import { checkout, readLines, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, suggestionLine, timingLines, type Casting, type PackParty } from "./run.ts";
@@ -554,10 +555,12 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...transcript.records.filter((r) => r.speaker === "dm" && r.kind === "narration").map((r) => `> ${r.text}`),
   ].join("\n");
   writeFileSync(path.join(runDir, "report.md"), report + "\n");
+  // The card bench's own report (AGT-124): one block for each line typed at the card.
+  if (record.bench) writeFileSync(path.join(runDir, BENCH_MD), benchReport(record, sessionLog, transcript.records, usage.records).join("\n") + "\n");
   const verdict = writeVerdict(runDir);
   const folder = path.relative(process.cwd(), runDir);
   const name = path.basename(runDir);
-  const written = `Written to ${folder}/. Send report.md back to the thread, or the whole folder zipped: (cd ${JSON.stringify(path.dirname(folder))} && zip -qr ${name}.zip ${name})`;
+  const written = `Written to ${folder}/. Send ${record.bench ? BENCH_MD : "report.md"} back to the thread, or the whole folder zipped: (cd ${JSON.stringify(path.dirname(folder))} && zip -qr ${name}.zip ${name})`;
   const verdictLine = `Verdict: ${verdict.verdict}: ${verdict.why}`;
   ink?.check(CHECK_REPORT, "done");
   // Last, so a slow or failed push never holds back the record or the verdict.

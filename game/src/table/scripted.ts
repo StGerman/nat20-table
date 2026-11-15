@@ -262,8 +262,8 @@ function roadScript(): DmScript {
 /**
  * The card bench's DM without a model (AGT-123, `play:card -- --dm scripted`): `roadDm`, and at a
  * player's words on a card it answers a question (words that end in `?`) and makes any other words
- * an own move: Persuasion DC 10, the card's first choice on a success and its second on a failure.
- * The engine rolls it (Rule 4).
+ * an own move: Persuasion DC 10, the card's first choice on a success and its second on a failure,
+ * and one fact kept with `remember`. The engine rolls it (Rule 4).
  */
 export function benchDm(): ScriptedDm {
   return new ScriptedDm({
@@ -274,6 +274,7 @@ export function benchDm(): ScriptedDm {
       // While an own move waits for the table's word, the loop asks for an answer only.
       if (question || ids.length < 2 || briefing.includes("These words make no move")) return void (await tools.ownMoveOrAnswer("The road gives its answer."));
       await tools.ownMoveOrAnswer("The road hears the plan.", { ability: "charisma", skill: "persuasion", dc: 10, success: ids[0]!, failure: ids[1]! });
+      tools.remember("The road heard a plan.");
     },
   });
 }

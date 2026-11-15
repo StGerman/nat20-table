@@ -69,9 +69,10 @@ export interface RunRecord {
   /**
    * A card bench run (AGT-123): the card, the pack it was benched in, from the repo's root when it
    * is in the repo (`settings.pack` is the run's temporary copy of it, gone when the run ends), the
-   * copy's cut route, the lines file and the lines it marks left out. Absent for every other command.
+   * copy's cut route, the lines file, the lines it marks left out, and how many of its lines the
+   * bench runs before this one typed (AGT-124). Absent for every other command.
    */
-  bench?: { card: string; pack: string; route: string[]; lines_file: string | null; left_out: string[] };
+  bench?: { card: string; pack: string; route: string[]; lines_file: string | null; left_out: string[]; lines_before?: number };
 }
 
 /** The checkout a run comes from: its commit, and whether tracked files had changes. */

@@ -129,7 +129,7 @@ for (;;) {
         defaults,
         // A campaign goes where its road takes it: the plan is the pack's scenes, as in play:full.
         allScenes: true,
-        bench: { seat: benchSeat(read.lines.slice(typed), log), card: votesOwnMove, record: { card, pack: recordedPack, route: plan.route, lines_file: own.lines ?? null, left_out: read.leftOut } },
+        bench: { seat: benchSeat(read.lines.slice(typed), log), card: votesOwnMove, record: { card, pack: recordedPack, route: plan.route, lines_file: own.lines ?? null, left_out: read.leftOut, lines_before: typed } },
       },
       [...rest, "--pack", copy.dir, ...(flags.roster !== undefined ? ["--rosters", path.join(root, "rosters")] : [])],
     );

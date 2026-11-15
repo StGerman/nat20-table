@@ -1,6 +1,6 @@
 # The card bench: one card, a live DM, a list of lines
 
-- **Status:** Accepted by Stas, 2026-11-14 21:06Z, with all five recommendations of §9 («Да, ок по всем» on the thread's decision card, after he merged table #397). The command is built (AGT-123, §6 item 1, with what the build found in §3); the report (AGT-124) and the trial (AGT-125) are not
+- **Status:** Accepted by Stas, 2026-11-14 21:06Z, with all five recommendations of §9 («Да, ок по всем» on the thread's decision card, after he merged table #397). The command (AGT-123, §6 item 1, with what the build found in §3) and the report (AGT-124, §6 item 2, with how it is read from the run in §4) are built; the trial (AGT-125) is not run
 - **Date:** 2026-11-14
 - **Decision:** `docs/decisions/0084-card-bench-by-a-pile-of-one.md` (Accepted)
 - **Asked by:** Stas, 2026-11-14 19:42Z: «Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным»
@@ -87,6 +87,15 @@ The scripted AI seats always vote for the own move, so the roll always happens. 
 A line the lines file marks as left out, because it leans on an earlier scene (§2), is named in the report and not typed.
 
 The report is the DM's side of the table, like a run's analysis. It is never shown to a player (Rule 3).
+
+**How the report is built (AGT-124).** The driver writes `bench.md` beside `report.md`, from the run's own records: the session log, the transcript and `usage.jsonl`. Four things follow from that:
+
+- It shows what a call left behind, not the call. An own move the engine took shows its skill, DC and choices; one the engine refused shows the refusal's reason, as the table logged it, and not what was sent.
+- What a choice did is the engine's own lines after the decision, word for word, until the road goes on: deeds, coin, lost time, a check the choice calls for, a fight starting. The cut contract ends at the card's leg, so its pay follows the decision at once; the list stops before it.
+- A fact the DM kept is listed with the wake that kept it. A wake settles for the table on its answer, and a `remember` later in the same turn lands after the scripted seat has typed its next line, so a fact's place in the transcript does not say which line it belongs to. `usage.jsonl` lists each turn's tool calls in order and each `remember` left one transcript record in the same order, so the report matches them one to one. When the two counts differ, or the DM is scripted, it says so and lists the facts by their place in the transcript. A fact that tells an outcome and was kept in a line's `card_words` wake is the *ruled without a roll* reading.
+- A line's cost is its `card_words` wake and the `road` wake right after it, which tells what a decided card or a fallen own move brought; a card a person settles by a number after a fall has two such wakes. The block ends with the `road` narration that tells the outcome: the arrival's scene and the cut contract's pay are not the card's. The walk to the card is priced apart, at the top; seconds are how long the table waited on the DM. With a scripted DM there is no cost to show.
+
+Each bench run has its own folder and its own `bench.md`; lines are numbered across the bench runs of one lines file.
 
 **Reading it.** The analysis thread gives each line one of four readings: *landed* (an own move on a choice that fits the words), *answered* (a question got an answer and nothing changed), *nowhere to land* (a plan with no choice to carry it, or a refusal), *ruled without a roll* (an outcome narrated or remembered with no roll, as on `salt_on_credit` in run 01:42). The last two are findings. The verdict on a finding is Stas's.
 
