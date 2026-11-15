@@ -4,7 +4,7 @@
 // cursor per viewer so each seat is shown each event once.
 import { writeFileSync } from "node:fs";
 import path from "node:path";
-import { EngineClient, type Command, type Event, type Response, type Roster, type Viewer } from "@nat20-table/engine-client";
+import { EngineClient, type Command, type Event, type Response, type Roster, type Site, type Viewer } from "@nat20-table/engine-client";
 import { engineBinary } from "./paths.ts";
 
 export { engineBinary, REPO } from "./paths.ts";
@@ -21,7 +21,7 @@ export interface EngineStart {
   /** The party saved by an earlier run (API-45): each pregen in it is rebuilt as saved when a scene loads it. */
   roster?: Roster;
   /** Where a pack with no campaign is played in a world (ENG-44): `adventure.json`'s `site`. */
-  site?: { map: string; place: string };
+  site?: Site;
   binary?: string;
   timeoutMs?: number;
 }

@@ -988,7 +988,6 @@ pub fn reads(
     out
 }
 
-/// `<pack>/worlds/<id>` when the pack carries its world, else the shared worlds directory.
 /// The hour a site session's world stands at: a pack with no campaign names none.
 const SITE_HOUR: u32 = 8;
 
@@ -1049,10 +1048,15 @@ impl SiteWorld {
                     Ok(state) if !state.escort.as_ref().is_some_and(|e| e.done) => {
                         return Err(error(
                             ErrorCode::BadRoster,
-                            format!(
-                                "The party is still on the road in {}; finish that journey first.",
-                                state.pack.as_deref().unwrap_or("another journey")
-                            ),
+                            match state.pack.as_deref() {
+                                Some(pack) => format!(
+                                    "The party is still on the road in {pack}; finish that journey first."
+                                ),
+                                None => {
+                                    "The party is still on the road; finish that journey first."
+                                        .to_string()
+                                }
+                            },
                         ));
                     }
                     Ok(state) => (state.at.clone(), world::SavedWorld::from(state).memory),
@@ -1077,6 +1081,7 @@ impl SiteWorld {
     }
 }
 
+/// `<pack>/worlds/<id>` when the pack carries its world, else the shared worlds directory.
 fn world_dir(data_dir: &Path, id: &str) -> PathBuf {
     let own = data_dir.join("worlds").join(id);
     if own.is_dir() {
