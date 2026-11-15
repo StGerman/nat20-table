@@ -105,10 +105,19 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     const mapFile = path.join(worldDir(dir, map), "map.json");
     if (!existsSync(mapFile)) problem(`site: there is no world map ${map}`);
     else {
-      const places = (JSON.parse(readFileSync(mapFile, "utf8")) as { places: Array<{ id: string; pack_slot?: string }> }).places;
-      const found = places.find((p) => p.id === place);
-      if (!found) problem(`site: the world map ${map} has no place ${place}`);
-      else if (found.pack_slot !== adventure.id) problem(`site: place ${place} has pack_slot ${found.pack_slot ?? "none"}, not ${adventure.id}`);
+      let places: Array<{ id: string; pack_slot?: string }> | undefined;
+      try {
+        const read = JSON.parse(readFileSync(mapFile, "utf8")) as { places?: unknown };
+        if (Array.isArray(read.places)) places = read.places as Array<{ id: string; pack_slot?: string }>;
+        else problem(`site: the world map ${map} has no places list`);
+      } catch (error) {
+        problem(`site: the world map ${map} does not read: ${(error as Error).message}`);
+      }
+      if (places) {
+        const found = places.find((p) => p?.id === place);
+        if (!found) problem(`site: the world map ${map} has no place ${place}`);
+        else if (found.pack_slot !== adventure.id) problem(`site: place ${place} has pack_slot ${found.pack_slot ?? "none"}, not ${adventure.id}`);
+      }
     }
   }
   if (!(FORMAT_VERSIONS as readonly number[]).includes(adventure.format_version)) {

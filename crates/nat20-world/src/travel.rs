@@ -199,18 +199,7 @@ impl Memory {
     /// Remembers a deed done today by `by` in the contract under way, as [`World::remember`]
     /// does. Returns whether it is new.
     pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
-        if self.deeds.contains_key(deed) {
-            return false;
-        }
-        self.deeds.insert(
-            deed.to_string(),
-            Deed {
-                by,
-                day: self.clock.day,
-                contract: self.contract,
-            },
-        );
-        true
+        remember_in(&mut self.deeds, deed, by, self.clock.day, self.contract)
     }
 
     /// This memory taken up at `start` by the next contract or site (ENG-37, ENG-44): the
@@ -621,18 +610,8 @@ impl World {
     /// Remembers a deed done today by `by` in the contract under way. A deed done again
     /// keeps its first record. Returns whether it is new.
     pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
-        if self.state.deeds.contains_key(deed) {
-            return false;
-        }
-        self.state.deeds.insert(
-            deed.to_string(),
-            Deed {
-                by,
-                day: self.state.clock.day,
-                contract: self.state.contract,
-            },
-        );
-        true
+        let state = &mut self.state;
+        remember_in(&mut state.deeds, deed, by, state.clock.day, state.contract)
     }
 
     /// Draws after a leg along `road`. Returns what the draw did: a card on the table, or cards
@@ -859,6 +838,16 @@ impl World {
             .cloned()
             .ok_or(TravelError::RouteDone)
     }
+}
+
+/// Writes `deed` into `book` as done on `day` in `contract` by `by`, unless the book holds it
+/// already: a deed done again keeps its first record. Returns whether it is new.
+fn remember_in(book: &mut DeedBook, deed: &str, by: Vec<String>, day: u32, contract: u32) -> bool {
+    if book.contains_key(deed) {
+        return false;
+    }
+    book.insert(deed.to_string(), Deed { by, day, contract });
+    true
 }
 
 #[cfg(test)]
