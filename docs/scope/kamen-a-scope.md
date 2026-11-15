@@ -1,6 +1,6 @@
 # The post on the flats (working title «Камень A»): scope
 
-Status: Proposed, for Stas's review. Drafted 2026-11-15 on main 4d865d9 in the «Камень A» design thread; cost (§7) by Yan Metsuyan (0065). No number: TASKS.md § Milestones has no row for it (roadmap amendment 1). No task rows until this scope and the design (`docs/design/kamen-a-system-design.md`) are both accepted. «Камень» is a working title and never reaches a screen.
+Status: Proposed, for Stas's review. Drafted 2026-11-15 on main 4d865d9 in the «Камень A» design thread; cost (§7) by Yan Metsuyan (0065). No number: it has no milestone folder under `tasks/` (roadmap amendment 1). No task rows until this scope and the design (`docs/design/kamen-a-system-design.md`) are both accepted. «Камень» is a working title and never reaches a screen.
 Ask: Stas 2026-11-15 22:04Z, to draft this milestone's design beside Milestone 13's build. Order (Stas, 2026-11-14 12:50Z and 2026-11-15 22:06Z): Milestone 13, then Allies in fights, then this; before Arachas. The stake before the roll (decision 0083, `docs/design/stake-before-the-roll.md`) went to the backlog on 2026-11-15 22:06Z, so nothing here may need it.
 Inputs: the feedback thread of 2026-11-14 (Lev and Zoya on the idea, Stas's answers of 11:58Z, 12:03Z and 14:08Z, listed in §2); `lore/the_wend_valley.md` after table #387 and #405; `worlds/wend/map.json` (`salt_flats`, `pack_slot: wendmouth_spare`).
 
