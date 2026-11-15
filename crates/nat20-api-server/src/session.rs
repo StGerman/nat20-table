@@ -1496,11 +1496,10 @@ impl Session {
                 let Some(end) = game.take_fight_end() else {
                     return Vec::new();
                 };
-                let fought_before = end.named.iter().any(|d| self.remembers(d));
-                match end.deed {
-                    Some(deed) if !fought_before => vec![(deed, end.by)],
-                    _ => Vec::new(),
+                if end.named.iter().any(|d| self.remembers(d)) {
+                    return Vec::new();
                 }
+                vec![(end.deed, end.by)]
             }
             _ => Vec::new(),
         }

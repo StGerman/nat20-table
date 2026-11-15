@@ -128,8 +128,8 @@ pub struct FightEnd {
     /// Every deed the encounter's `on_end` names: when the world remembers any of them, the fight
     /// was fought before and keeps its first outcome.
     pub named: Vec<String>,
-    /// The deed of the first rule that holds; `None` when none holds or the party lost.
-    pub deed: Option<String>,
+    /// The deed of the first rule that holds.
+    pub deed: String,
     /// The party-side participants, in the encounter's order, downed ones included.
     pub by: Vec<String>,
 }
@@ -144,6 +144,9 @@ struct Scene {
     encounters: Vec<Encounter>,
     /// Scenario checks already rolled in this scene; each is rolled at most once (decision D3).
     attempted: HashSet<String>,
+    /// Authored encounters started in this scene, so `start_fight` knows which still owe their
+    /// `on_end` deed (API-57).
+    fought: HashSet<String>,
     spawns: Vec<Spawn>,
     /// Spawns already placed in this scene; each is placed at most once.
     placed: BTreeSet<String>,
@@ -627,6 +630,7 @@ impl Game {
             hazards: scene.hazards.clone(),
             encounters: scene.encounters.clone(),
             attempted: HashSet::new(),
+            fought: HashSet::new(),
             spawns: scene.spawns.clone(),
             placed: BTreeSet::new(),
             pregens,
@@ -655,6 +659,7 @@ impl Game {
                 hazards: Vec::new(),
                 encounters: Vec::new(),
                 attempted: HashSet::new(),
+                fought: HashSet::new(),
                 spawns: Vec::new(),
                 placed: BTreeSet::new(),
                 pregens: HashMap::new(),
@@ -732,28 +737,28 @@ impl Game {
     }
 
     /// Works out what a scene fight's end writes (API-57): `None` for a fight that is not the
-    /// scene's or declares no `on_end`. `surrendered` are the creatures that gave up, if it ended
-    /// so.
+    /// scene's, that the party did not win, or where no `on_end` rule holds. `surrendered` are the
+    /// creatures that gave up, if it ended so.
     fn end_deeds(&self, winner: Option<Side>, surrendered: &[Entity]) -> Option<FightEnd> {
         let encounter = self
             .scene_encounter
             .as_ref()
             .and_then(|id| self.scene.encounters.iter().find(|e| e.id == *id))?;
-        if encounter.on_end.is_empty() {
+        if winner != Some(Side::Party) {
             return None;
         }
         let yielded: Vec<String> = surrendered.iter().map(|e| self.handle_of(*e)).collect();
-        let deed = (winner == Some(Side::Party))
-            .then(|| {
-                encounter.on_end.iter().find(|rule| match &rule.when {
-                    EndWhen::Surrender { yielded: counted } => {
-                        counted.iter().any(|h| yielded.contains(&h.0))
-                    }
-                    EndWhen::Won {} => true,
-                })
-            })
-            .flatten()
-            .map(|rule| rule.remember.clone());
+        let deed = encounter
+            .on_end
+            .iter()
+            .find(|rule| match &rule.when {
+                EndWhen::Surrender { yielded: counted } => {
+                    counted.iter().any(|h| yielded.contains(&h.0))
+                }
+                EndWhen::Won {} => true,
+            })?
+            .remember
+            .clone();
         let by = encounter
             .participants
             .iter()
@@ -1991,6 +1996,7 @@ impl Game {
             .start_surprised_encounter(entities.into_iter().collect(), surprised);
         self.encounter = Some(encounter);
         self.scene_encounter = Some(encounter_id.to_owned());
+        self.scene.fought.insert(encounter_id.to_owned());
         self.encounter_seen = 0;
         self.winner = None;
         self.scripted_turn = None;
@@ -2007,6 +2013,28 @@ impl Game {
     pub fn start_fight(&mut self, participants: &[Handle]) -> Result<(), ApiError> {
         if self.running_encounter().is_some() {
             return Err(error(ErrorCode::WrongMode, "Combat is already running."));
+        }
+        // A fight an authored encounter writes deeds for, and not yet fought here, is started by
+        // that encounter, so its end is remembered (API-57).
+        if let Some(encounter) = self.scene.encounters.iter().find(|e| {
+            !e.on_end.is_empty()
+                && !self.scene.fought.contains(&e.id)
+                && participants.iter().any(|h| {
+                    e.participants.contains(h)
+                        && self
+                            .scene
+                            .creatures
+                            .iter()
+                            .any(|c| c.handle == h.0 && c.side != Side::Party)
+                })
+        }) {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!(
+                    "The scene's encounter {} is this fight; start it with start_combat{{encounter_id: {}}}.",
+                    encounter.id, encounter.id
+                ),
+            ));
         }
         for (i, handle) in participants.iter().enumerate() {
             if participants[..i].contains(handle) {
