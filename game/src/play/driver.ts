@@ -56,6 +56,7 @@ import { ScriptedJudge } from "../check/judge.ts";
 import { modelJudgeFor, narrationCheck } from "../check/narration.ts";
 import { SUGGESTED_CARDS, wordReport } from "./word.ts";
 import { exitReport, SEAT_JSONL } from "./exit.ts";
+import { m13Report } from "./m13.ts";
 import { BENCH_MD, benchReport } from "./bench-report.ts";
 import { checkout, readLines, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
@@ -553,6 +554,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
     ...wordReport(runDir, sessionLog),
     ...exitReport(record, sessionLog, transcript.records, usage.records),
+    ...m13Report(runDir, record, sessionLog, flags.pack),
     ...(narration ? ["", ...narration.lines] : []),
     "",
     ...timingLines(record),

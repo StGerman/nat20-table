@@ -12,7 +12,11 @@ import path from "node:path";
 import { NARRATION_DIGEST, readDigest, runDigest } from "./digest.ts";
 import { judgeRun, ModelJudge, type CheckLine, type Judge } from "./judge.ts";
 import { CONFIRMATIONS_JSON, NARRATION_CHECK } from "../play/verdict.ts";
-import { readRunRecord, RUN_JSON } from "../play/record.ts";
+import { readLines as readRecords, readRunRecord, RUN_JSON } from "../play/record.ts";
+import { cardLines, carriedCard, JUDGE_QUESTION, outcomesOf, questionText, type CarriedAnswer } from "../play/m13.ts";
+import { SESSION_LOG } from "../engine.ts";
+import { CARRIED_QUESTION } from "./judge.ts";
+import type { Event } from "@nat20-table/engine-client";
 
 /** An earlier check, moved aside while a new one runs: its answers carry over only to the same flags. */
 export const PREVIOUS_CHECK = "narration-check.previous.jsonl";
@@ -56,7 +60,25 @@ export async function narrationCheck(pack: string, dir: string, judge: Judge): P
   } catch (error) {
     return { ok: false, lines: [`Narration check: the judge stopped: ${(error as Error).message}. Run it again with npm run audit:narration -- ${dir}`] };
   }
+  // The Milestone 13 question (AGT-104): on a carried roster, does the DM name what the party did at the mill?
+  const question = path.join(dir, JUDGE_QUESTION);
+  rmSync(question, { force: true });
+  const record = existsSync(path.join(dir, RUN_JSON)) ? readRunRecord(dir) : undefined;
+  const card = record?.roster?.party === "continue" && judge.ask ? carriedCard(readRecords<Event>(path.join(dir, SESSION_LOG)), outcomesOf(pack)) : undefined;
+  let asked: CarriedAnswer | undefined;
+  if (card && judge.ask) {
+    const lines = cardLines(run.digests, card);
+    if (lines.length > 0) {
+      try {
+        const numbers = lines.map((d) => d.line);
+        asked = { question: CARRIED_QUESTION, card: card.card, lines: numbers, ...(await judge.ask(questionText(card, lines), numbers)) };
+      } catch (error) {
+        return { ok: false, lines: [`Narration check: the judge stopped on the question: ${(error as Error).message}. Run it again with npm run audit:narration -- ${dir}`] };
+      }
+    }
+  }
   writeFileSync(current, found.map((f) => JSON.stringify(f) + "\n").join(""));
+  if (asked) writeFileSync(question, JSON.stringify(asked, null, 2) + "\n");
   if (existsSync(previous)) {
     dropStaleAnswers(dir, readLines(previous), found);
     rmSync(previous);
@@ -69,6 +91,7 @@ export async function narrationCheck(pack: string, dir: string, judge: Judge): P
       `Narration check: ${run.digests.length} narration lines, ${flags.length} flags for Stas, ${untracked.length} untracked props.`,
       ...flags.map((f) => ("claim" in f ? `- ${f.id} (line ${f.line}, ${f.kind}): ${f.claim}; evidence ${f.evidence_seq.join(", ") || "the state"}. "${f.text}"` : "")),
       ...untracked.map((f) => ("item" in f ? `- ${f.id} (line ${f.line}): untracked: ${f.item}` : "")),
+      ...(asked ? [`${CARRIED_QUESTION} ${asked.answer} (card ${asked.card}${asked.line !== null ? `, line ${asked.line}: "${asked.quote}"` : ""})`] : []),
     ],
   };
 }

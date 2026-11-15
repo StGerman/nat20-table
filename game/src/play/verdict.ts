@@ -9,9 +9,10 @@ import type { Event, Handle } from "@nat20-table/engine-client";
 import { SESSION_LOG } from "../engine.ts";
 import type { TranscriptRecord } from "../table/types.ts";
 import { percentile, waitedMs, type UsageRecord } from "../usage.ts";
-import { readLines, readRunRecord, RUN_JSON, type RunRecord } from "./record.ts";
+import { packOfRun, readLines, readRunRecord, RUN_JSON, type RunRecord } from "./record.ts";
 import { TARGET_P95_MS } from "./run.ts";
 import { exitRows, type ReadableAnswer } from "./exit.ts";
+import { carriedRow, firstWorldDeeds, outcomesOf, sceneOutcomesOf, readableRow as carriedReadableRow, readCarriedAnswer, writtenRow, type CarriedReads } from "./m13.ts";
 
 export const VERDICT_JSON = "verdict.json";
 /** The audit stage's output: whether `nat20-audit` passed, and what it printed. */
@@ -421,7 +422,7 @@ export function computeVerdict(dir: string): Verdict {
   const log = readLines<Event>(path.join(dir, SESSION_LOG));
   const usage = readLines<UsageRecord>(path.join(dir, "usage.jsonl"));
   const confirmations = readJson<Record<string, unknown>>(path.join(dir, CONFIRMATIONS_JSON)) ?? {};
-  const { added, "m12-readable": readable, ...answered } = confirmations;
+  const { added, "m12-readable": readable, "m13-readable": carriedReads, ...answered } = confirmations;
   const answers = answered as Record<string, { answer: string }>;
   // An untracked prop is listed, not flagged (spec §4.3): Stas has nothing to answer for it.
   const narrationFlags: Flag[] = readLines<{ id: string; line?: number; claim?: string; kind?: string; untracked?: boolean }>(path.join(dir, NARRATION_CHECK)).filter((f) => !f.untracked).map((f) => {
@@ -441,7 +442,21 @@ export function computeVerdict(dir: string): Verdict {
   const retries = retryRows(run, transcript, answers);
   const progress = run.campaign ? campaignRows(run, log, readLines<EngineLogLine>(path.join(dir, ENGINE_LOG)), readText(path.join(dir, ENGINE_STDERR))) : [timeRow(run)];
   const word = run.campaign ? [...wordRows(run, log, narrationFlags, existsSync(path.join(dir, NARRATION_CHECK))), ...exitRows(dir, run, log, transcript, readable as ReadableAnswer | undefined)] : [];
-  const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...word, ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
+  // The Milestone 13 rows (AGT-104): run 1 is a pack played at a site; run 2 a campaign on its roster.
+  const pack = packOfRun(dir);
+  const atSite = !run.campaign && existsSync(path.join(pack, "adventure.json")) && (JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8")) as { site?: unknown }).site !== undefined;
+  const carried = run.campaign
+    ? carriedRow(run, log, transcript, outcomesOf(pack), readCarriedAnswer(dir), narrationFlags, existsSync(path.join(dir, NARRATION_CHECK)), {
+        deeds: firstWorldDeeds(readLines(path.join(dir, ENGINE_LOG))),
+        scene: sceneOutcomesOf(pack),
+      })
+    : undefined;
+  const m13 = carried
+    ? [carried, carriedReadableRow(run, carriedReads as CarriedReads | undefined, carried.status !== "reported")]
+    : atSite
+      ? [writtenRow(run, log, outcomesOf(pack))]
+      : [];
+  const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...word, ...m13, ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
   const flags = [...narrationFlags, ...retries.flags];
   const not_eligible = [
     ...(run.build.dirty ? ["the checkout had changes"] : []),
