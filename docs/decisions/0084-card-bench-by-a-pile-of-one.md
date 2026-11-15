@@ -38,7 +38,7 @@ Find a seed whose draws bring the card, and replay it.
 
 ## Decision
 
-Accepted: **A**, with the five recommendations of design §9: the design as written; the four trial cards; the thread drafts the lines and Stas edits them; a cap of 12 USD and 20 minutes of Stas's for the trial; two PRs beside Milestone 13, outside its exit and PR count. It is the only option where the line, the DM's call, the roll and the card's outcome all come from the code the table plays, and it costs no contract version. B buys convenience with a command play never uses. C is fragile for the same reason the scripted tests avoid seeds. D answers half the question at about a third of the price; if the trial shows the DM's reading is the only thing the bench ever finds, D is the cheaper tool, and that is a reason to revisit.
+Accepted: **A**, with the five recommendations of design §9: the design as written; the trial's cards as design §5 has them (the new Wendford arrival cards, both or the one run 1's roster opens, plus `bog_wifes_toll` and `salt_on_credit`); the thread drafts the lines and Stas edits them; a cap of 12 USD and 20 minutes of Stas's for the trial; two PRs beside Milestone 13, outside its exit and PR count. It is the only option where the line, the DM's call, the roll and the card's outcome all come from the code the table plays, and it costs no contract version. B buys convenience with a command play never uses. C is fragile for the same reason the scripted tests avoid seeds. D answers half the question at about a third of the price; if the trial shows the DM's reading is the only thing the bench ever finds, D is the cheaper tool, and that is a reason to revisit.
 
 ## Consequences
 

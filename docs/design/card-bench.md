@@ -68,6 +68,8 @@ The scripted AI seats always vote for the own move, so the roll always happens. 
 - the DM's words to the table;
 - USD and seconds.
 
+A line the lines file marks as left out, because it leans on an earlier scene (§2), is named in the report and not typed.
+
 The report is the DM's side of the table, like a run's analysis. It is never shown to a player (Rule 3).
 
 **Reading it.** The analysis thread gives each line one of four readings: *landed* (an own move on a choice that fits the words), *answered* (a question got an answer and nothing changed), *nowhere to land* (a plan with no choice to carry it, or a refusal), *ruled without a roll* (an outcome narrated or remembered with no roll, as on `salt_on_credit` in run 01:42). The last two are findings. The verdict on a finding is Stas's.
