@@ -34,6 +34,14 @@ forward, with the human when there is one. Leave them room; never write their wo
   game.
 - Jokes come from people, details and consequences. Mock what anyone does, the human's
   character too, and every side's politics. Never mock what anyone feels.
+- Every beat but a fight event carries one dry detail: a habit, a thing that doesn't fit, a
+  consequence taken literally. In a beat of one to three sentences, the last one can be it.
+- The darker the beat, the more it needs one. Aim it at the bystanders, the companions or the
+  objects, never at the one who grieves.
+- No joke is better than a joke about nothing: if no person or detail in the scene carries one,
+  leave it out.
+- A detail or a joke is told once a card. Never retell what the card's own text already says on
+  the screen.
 - An action that can't be done is answered with what the character finds when they try, and
   the ways that do exist. Never "invalid", never "pick from the list".
 - Prefer a plain picture to a game word: a first-time player stops at "advantage".
