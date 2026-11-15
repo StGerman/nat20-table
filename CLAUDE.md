@@ -12,7 +12,7 @@ This file holds the rules and points to everything else. When it disagrees with 
 |---|---|
 | What we are building and what "done" means | `docs/scope/demo-run-scope.md` (the Demo Run, frozen); `docs/scope/living-world-scope.md` (Milestone 9 on) |
 | How the system is split and why | `docs/design/system-design.md` |
-| What to do next: task list and milestone status | `TASKS.md` (open rows); closed rows in `docs/tasks-done.md`; order, gates and cost per milestone in `docs/roadmap.md` |
+| What to do next: task list and milestone status | `tasks/` (one file per task, a folder per milestone; `npm run tasks`; legend in `TASKS.md`); before 2026-11-15, `docs/tasks-done.md`; order, gates and cost per milestone in `docs/roadmap.md` |
 | Contract v1 behaviour (commands, events, errors, visibility) | `contract/protocol.md` |
 | Why a decision was made, what was rejected, when to revisit | `docs/decisions/README.md` |
 
@@ -41,7 +41,7 @@ Zoya keeps the quests connected and on the storytelling bible (`.claude/agents/z
 
 ## Supply and tenders: Yan Metsuyan
 
-Yan keeps the plan and what it costs: `TASKS.md`, `docs/tasks-done.md`, `docs/roadmap.md`, scope and decision drafts, and edits nothing else (`.claude/agents/yan.md`; `/yan sweep | tender | scope <milestone> | roadmap | plan <milestone or task>`; decision 0065). Run a sweep before a milestone opens or closes and quote it in the PR. Cloud threads: use the fallback described for Vera, with the body of `yan.md`.
+Yan keeps the plan and what it costs: `tasks/`, `docs/roadmap.md`, scope and decision drafts, and edits nothing else (`.claude/agents/yan.md`; `/yan sweep | tender | scope <milestone> | roadmap | plan <milestone or task>`; decision 0065). Run a sweep before a milestone opens or closes and quote it in the PR. Cloud threads: use the fallback described for Vera, with the body of `yan.md`.
 
 ## Game designer: Lev Neiman
 
@@ -49,7 +49,7 @@ Lev designs how the world carries what the party did, and reads cards and runs f
 
 ## Milestones
 
-Status, exit criteria and task ids for each milestone are in `TASKS.md` § Milestones. Work one milestone at a time, in order, unless the task list says a row is independent.
+Status, exit criteria and task ids for each milestone are in `tasks/<folder>/milestone.md` (Milestones 1 to 11: `docs/tasks-done.md`). Work one milestone at a time, in order, unless the task list says a row is independent.
 
 1. Fighter vs Goblin Warrior through the headless API (done 2026-10-16)
 2. Repo split and contract v1 (done 2026-10-17)
@@ -116,8 +116,9 @@ Run `check:contract`, the cargo checks above (fmt, clippy, test, doc, deny) and 
 | `docs/design/` | System design | Yes |
 | `docs/decisions/` | Decision records: one file per decision, index in `README.md` | Yes; never rewrite an accepted one, supersede it |
 | `docs/scope/` | Demo Run scope (accepted by Stas) | Only with Stas's agreement |
-| `TASKS.md` | Task list and milestone status | Yes, per Rule 8 |
-| `docs/tasks-done.md` | Closed TASKS.md rows (done, won't do) and the change log before 2026-11-08, moved unchanged | Yes, by moving closed rows in |
+| `tasks/` | The task list: `<folder>/<ID>.md` per task, `<folder>/milestone.md` per milestone, `backlog/` (decision 0085) | Yes, per Rule 8 |
+| `TASKS.md` | The task list's legend and rules | Only when the format changes |
+| `docs/tasks-done.md` | Rows closed before 2026-11-15, the old change log, Milestones 1 to 11 | **Never** (frozen) |
 | `docs/roadmap.md` | Milestone order, each gate, what waits on Stas, and the delivery numbers against the Milestone 11 baseline (decision 0065) | Yes, by Yan's `roadmap` |
 
 ## Architecture
@@ -218,9 +219,9 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 
 ## Rule 8: tasks, PRs, CI
 
-- `TASKS.md` is the only task list: no GitHub issues and no TODO comments without a row. Every PR that closes or creates a gap updates its row in the same PR. ID prefixes: API, ENG, MON, CHR, ITM, CHK, MAP, AGT, UPS, DAT, CON.
-- Each row carries Pri (P0 blocks a demo run, P1 needed for acceptance, P2 optional), Dest (Fork, Ours; older `Up` and `Up?` rows read as Fork), Size and Status (todo, partial, done, won't do; won't do counts as closed and says why).
-- When the last row of a milestone closes and its exit criterion holds, mark the milestone done in `TASKS.md` with the date.
+- `tasks/` is the only task list, one file per task (decision 0085): no GitHub issues and no TODO comments without a task. Every PR that closes or creates a gap edits that task's file in the same PR; a closed task keeps its file, and nothing keeps a change log. ID prefixes: API, ENG, MON, CHR, ITM, CHK, MAP, AGT, UPS, DAT, CON.
+- Each task's front matter carries `pri` (P0 blocks a demo run, P1 needed for acceptance, P2 optional), `dest` (Fork, Ours), `size` and `state` (`todo`, `partial`, `done`, `wont-do`; `wont-do` counts as closed and its Status note says why); the legend is `TASKS.md`.
+- When the last task of a milestone closes and its exit criterion holds, set `state: done` in its `milestone.md` with the date.
 - One concern per PR. Write the PR description as Before / After / How.
 - Stacked PRs (each one based on the branch of the open PR below it) are linked as a GitHub stack ([`gh stack`](https://docs.github.com/en/pull-requests/reference/stacked-prs-cli-commands)). Locally that is `gh stack submit` or `gh stack link`. A Claude session can't install the extension and has no GraphQL, so it uses the [REST API](https://docs.github.com/rest/pulls/stacks): `POST repos/{owner}/{repo}/stacks` with `pull_requests` listed from bottom to top, then `POST repos/{owner}/{repo}/stacks/{n}/add` for each new PR on top.
 - Every PR we open, code or docs, gets a Claude code review (`/engineering:code-review`) against `.github/copilot-instructions.md` before it goes to Stas.
@@ -231,16 +232,16 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 - A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.
 - Never skip, disable or quarantine a test to get green. Never push an empty commit to retrigger CI.
 - From 2026-11-15 (decision 0080), two things. Every exit row in a milestone scope or design first drafted from that date names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or a person. And when a full run fails from that date, its analysis says whether a test with no model could have seen it; if one could, the fix's PR adds that test, and the rerun the exit pair's rules require is still played.
-- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `world-pure`, `rust-lint`, `rust-test`, `rust-test-arm64`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
+- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `world-pure`, `tasks`, `rust-lint`, `rust-test`, `rust-test-arm64`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
 
 ## Rule 9: dependencies
 
-Stay current, behind a cooldown and hard gates, in both repos (`docs/decisions/0024-dependency-policy.md`). The config that enforces it is TASKS.md UPS-11 to UPS-15. Where a line below says "until UPS-n", the interim rule applies until that row is done.
+Stay current, behind a cooldown and hard gates, in both repos (`docs/decisions/0024-dependency-policy.md`). The config that enforces it is UPS-11 to UPS-15. Where a line below says "until UPS-n", the interim rule applies until that row is done.
 
 - Dependabot runs weekly on cargo, npm, GitHub Actions and the Rust toolchain. In the fork it runs on `demo`, which must be the default branch because Dependabot reads its config only there. It waits 3 days after a patch release and 7 after a minor or major one; Actions and the toolchain wait 7 days for any release. Security updates skip the wait and merge within 48 hours.
 - Breaking means a new major, or a new minor of a 0.x crate (Cargo semver). Dependabot can't tell a 0.x minor from a 1.x minor, so the grouped cargo PR carries patch updates only, and each cargo minor arrives as its own PR.
 - Grouped patch PRs, npm and Actions minor and patch PRs, and cargo minor PRs of crates at 1.0 or later are merged by Claude once CI is green, within 7 days.
-- A breaking bump becomes its own `core:` or `table:` PR on a `core/deps-<crate>` or `table/deps-<crate>` branch with the code it needs, reviewed by Stas, adopted within 30 days. A crate held back longer needs a TASKS.md row saying why.
+- A breaking bump becomes its own `core:` or `table:` PR on a `core/deps-<crate>` or `table/deps-<crate>` branch with the code it needs, reviewed by Stas, adopted within 30 days. A crate held back longer needs a task saying why.
 - Nothing merges on red. `cargo deny check bans licenses sources` gates PRs in both repos. `advisories` stays off the gate (decision 0022) and runs daily on a schedule; a red run gets a P0 row the same day. In the fork, deny covers `nat20_core`, not his GUI (UPS-13).
 - Lockfiles are committed and builds run `--locked`. Our workflows pin Actions by commit SHA; upstream's own workflow files in the fork are left as he wrote them, so syncs don't conflict. Committed manifests take git dependencies only from our own repos, pinned by `rev`, never `branch`.
 - The Rust toolchain is pinned to an exact stable release in `rust-toolchain.toml` in both repos. Each new release arrives as its own Dependabot PR after the 7-day wait. If CI is green on it unchanged, Claude merges it within 7 days. If the release needs lint or code fixes, Claude adds them to that PR and Stas reviews it (decision 0027).

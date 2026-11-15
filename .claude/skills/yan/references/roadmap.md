@@ -4,7 +4,7 @@ Goal: Stas sees the order of work, each gate, what waits on him and what each mi
 
 ## Read
 
-- The milestone table in `TASKS.md`; accepted records in `docs/decisions/README.md`; the scope files in `docs/scope/`.
+- The milestone files `tasks/*/milestone.md` and the frozen table of Milestones 1 to 11 in `docs/tasks-done.md`; accepted records in `docs/decisions/README.md`; the scope files in `docs/scope/`.
 - Open PRs and open decision cards the caller names, for "Waiting on Stas".
 - For the Delivery row of a closed milestone: its scope PR's and exit decision's dates, `git log origin/main` for its PRs, and in nat20-runs `runs/<id>/` the runs whose `run.json` `build.table_commit` is a commit of that milestone: `api_equivalent_usd` summed over `usage.jsonl`, and `started_at` to `ended_at` for runs whose `seats.human` is set.
 
