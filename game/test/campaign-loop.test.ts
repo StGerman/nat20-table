@@ -12,7 +12,7 @@ import { cardChoices, fightOnly, roadChoices } from "../src/table/choices.ts";
 import { SEAT_WORDS } from "../src/table/words.ts";
 import { OWN_MOVE_INVITE, TableLoop, cutAtWord, roadCardAhead } from "../src/table/loop.ts";
 import { AI_FALLS_MAX, DmTools } from "../src/table/tools.ts";
-import { ScriptedDm, ScriptedPlayer, ScriptedSeat } from "../src/table/scripted.ts";
+import { ScriptedDm, ScriptedPlayer, ScriptedSeat, caravanSeat } from "../src/table/scripted.ts";
 import type { HumanPrompt, PlayerIntent } from "../src/table/types.ts";
 import { DM_ROAD_PROMPT } from "../src/agents/dm.ts";
 import { readCampaign } from "../src/pack/campaign.ts";
@@ -686,25 +686,8 @@ test("the DM lets time pass in a place: the watch moves on, and a span past midn
   }
 });
 
-/** A Hired Blade who moves the caravan on whenever it may, and makes camp when the day's travel is spent. */
-function blade(): (prompt: HumanPrompt, seat: ScriptedSeat) => PlayerIntent {
-  let listed = false;
-  let seen = 0;
-  return (prompt, seat) => {
-    if (prompt.kind !== "explore") return prompt.kind === "combat_turn" || prompt.kind === "pick" ? ScriptedSeat.fight(prompt, seat) : ScriptedSeat.pass(prompt, seat);
-    if (!listed) {
-      listed = true;
-      return { kind: "command", name: "options" };
-    }
-    listed = false;
-    // A refused move since the last pick: the day's travel is spent, so the night comes.
-    const refused = seat.shown.slice(seen).some((e) => e.kind === "info" && e.title === "Not accepted");
-    seen = seat.shown.length;
-    const want = refused ? "Make camp for the night" : "Move on with the caravan";
-    const choice = seat.choices.find((c) => c.label === want) ?? seat.choices.find((c) => c.label === "Make camp for the night");
-    return choice ? { kind: "option", number: choice.number } : { kind: "text", text: "I keep watch." };
-  };
-}
+/** A Hired Blade who moves the caravan on whenever it may, and makes camp when the day's travel is spent: the game's own caravan-moving seat. */
+const blade = caravanSeat;
 
 test("Fair in Wend plays from the Highsteads to the fair: every Blade is paid and the run ends with the contract done", async () => {
   const pack = path.join(REPO, "scenarios/fair_in_wend");

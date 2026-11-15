@@ -42,7 +42,7 @@ import { GameEngine, REPO, SESSION_LOG } from "../engine.ts";
 import { readCampaign, seatCards } from "../pack/campaign.ts";
 import { readPack } from "../pack/read.ts";
 import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
-import { chainDm, chainScenes, roadDm, ScriptedPlayer, ScriptedSeat, walkOnDm } from "../table/scripted.ts";
+import { benchDm, chainDm, chainScenes, roadDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type ScriptedPlayerPolicy, type SeatPolicy } from "../table/scripted.ts";
 import { TableState } from "../table/state.ts";
 import { SeatNames } from "../table/seat-lines.ts";
 import { Transcript } from "../table/transcript.ts";
@@ -56,6 +56,7 @@ import { ScriptedJudge } from "../check/judge.ts";
 import { modelJudgeFor, narrationCheck } from "../check/narration.ts";
 import { SUGGESTED_CARDS, wordReport } from "./word.ts";
 import { exitReport, SEAT_JSONL } from "./exit.ts";
+import { BENCH_MD, benchReport } from "./bench-report.ts";
 import { checkout, readLines, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
 import { audit, castParty, endState, guards, partyRoster, refuseApiKey, reportSections, runFolder, scenePlan, startAt, suggestionLine, timingLines, type Casting, type PackParty } from "./run.ts";
@@ -74,6 +75,18 @@ export interface PlayCommand {
   defaults?: Partial<Record<SettingName, string | number | boolean>>;
   /** With neither --scene nor --scenes, play every scene of the pack, in order. */
   allScenes?: boolean;
+  /** The card bench (AGT-123): `play:card` only. */
+  bench?: Bench;
+}
+
+/** What the card bench gives a run (AGT-123, `docs/design/card-bench.md`): its scripted seats and its line in `run.json`. */
+export interface Bench {
+  /** The scripted human seat's policy: it moves the caravan to the card and types the lines there. */
+  seat: SeatPolicy;
+  /** The scripted AI players' word on a card. */
+  card: NonNullable<ScriptedPlayerPolicy["card"]>;
+  /** What `run.json` says of the bench run. */
+  record: NonNullable<RunRecord["bench"]>;
 }
 
 /** The npm script that started this process, when it is a play command; `fallback` otherwise. */
@@ -196,7 +209,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   }
   if (flags.dm === "model" || flags.players === "model") refuseApiKey();
   // Scripted players never move the caravan (AGT-80): on a campaign, the road needs model players or you at the keyboard.
-  if (campaign && flags.players === "scripted" && flags.seat !== "ink") {
+  // The card bench's scripted seat does move it (AGT-123), so `play:card` alone passes.
+  if (campaign && flags.players === "scripted" && flags.seat !== "ink" && !play.bench) {
     console.error(`${flags.pack} is a campaign: scripted players never move the caravan, so play it with --players model or --seat ink.`);
     process.exit(2);
   }
@@ -296,6 +310,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     adventure: pack.adventure.scenes.map((s) => s.id),
     time_limit_min: flags["time-limit-min"],
     ...(campaign ? { campaign: { start_day: campaign.startDay, day_limit: campaign.dayLimit ?? null } } : {}),
+    ...(play.bench ? { bench: play.bench.record } : {}),
     scenes: [],
     started_at: new Date().toISOString(),
     ended_at: null,
@@ -308,7 +323,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   writeRunRecord(runDir, record);
 
   const transcript = new Transcript(path.join(runDir, "transcript.jsonl"), () => engine.logHead);
-  const seat: Seat | undefined = ink ?? (party.human ? new ScriptedSeat(party.human, [], ScriptedSeat.fight, party.ai) : undefined);
+  const seat: Seat | undefined = ink ?? (party.human ? new ScriptedSeat(party.human, [], play.bench?.seat ?? ScriptedSeat.fight, party.ai) : undefined);
   const table = new TableState({
     engine,
     human: party.human,
@@ -338,14 +353,16 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // A pack with a campaign file runs the living world: the AI players get the road tools (AGT-80).
   const livingWorld = campaign !== undefined;
   const players: PlayerAgent[] = party.ai.map((handle) =>
-    flags.players === "scripted" ? new ScriptedPlayer(handle) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle)!, choice: playerChoice, language, withHuman: Boolean(party.human), ...(party.human ? { human: party.human } : {}), russianNames: party.russianNames, usage, livingWorld }),
+    flags.players === "scripted" ? new ScriptedPlayer(handle, play.bench ? { card: play.bench.card } : {}) : new ModelPlayer({ handle, card: party.cards.get(handle)!, characterClass: party.classes.get(handle)!, choice: playerChoice, language, withHuman: Boolean(party.human), ...(party.human ? { human: party.human } : {}), russianNames: party.russianNames, usage, livingWorld }),
   );
   const fights = Object.fromEntries(pack.adventure.scenes.flatMap((s) => (s.encounters[0] ? [[s.id, s.encounters[0].encounter]] : [])));
   // A scripted whole-adventure run walks every scene (AGT-39); a scene run ends after its first fight.
   const scripted = () =>
     // On the road the journey loads the scenes (AGT-80): the scripted DM narrates each wake in one line.
     campaign
-      ? roadDm()
+      ? play.bench
+        ? benchDm()
+        : roadDm()
       : play.allScenes
       ? chainDm(chainScenes(pack.adventure.scenes), everyone, everyone[0])
       : walkOnDm(pack.adventure.scenes.map((s) => s.id), fights, everyone);
@@ -538,10 +555,12 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...transcript.records.filter((r) => r.speaker === "dm" && r.kind === "narration").map((r) => `> ${r.text}`),
   ].join("\n");
   writeFileSync(path.join(runDir, "report.md"), report + "\n");
+  // The card bench's own report (AGT-124): one block for each line typed at the card.
+  if (record.bench) writeFileSync(path.join(runDir, BENCH_MD), benchReport(record, sessionLog, transcript.records, usage.records).join("\n") + "\n");
   const verdict = writeVerdict(runDir);
   const folder = path.relative(process.cwd(), runDir);
   const name = path.basename(runDir);
-  const written = `Written to ${folder}/. Send report.md back to the thread, or the whole folder zipped: (cd ${JSON.stringify(path.dirname(folder))} && zip -qr ${name}.zip ${name})`;
+  const written = `Written to ${folder}/. Send ${record.bench ? BENCH_MD : "report.md"} back to the thread, or the whole folder zipped: (cd ${JSON.stringify(path.dirname(folder))} && zip -qr ${name}.zip ${name})`;
   const verdictLine = `Verdict: ${verdict.verdict}: ${verdict.why}`;
   ink?.check(CHECK_REPORT, "done");
   // Last, so a slow or failed push never holds back the record or the verdict.

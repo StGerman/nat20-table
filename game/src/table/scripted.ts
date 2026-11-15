@@ -2,10 +2,11 @@
 // through the same bound tools as the model agents, from a fixed policy, so the loop, bindings,
 // transcript and audit are tested deterministically with a seeded engine.
 import type { ActionOption, Handle, State } from "@nat20-table/engine-client";
-import type { Choice } from "./choices.ts";
+import { OWN_MOVE, type Choice } from "./choices.ts";
 import type { DmTools, PlayerTools } from "./tools.ts";
 import type { DmAgent, DmWake, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, Seat, TableEvent } from "./types.ts";
 import { reactingTo, type LegalActionsResult } from "../view.ts";
+import { SEAT_WORDS } from "./words.ts";
 
 /** A combat policy: what a scripted player does on its turn. */
 export type CombatPolicy = (tools: PlayerTools) => Promise<void>;
@@ -226,11 +227,15 @@ export class ScriptedDm implements DmAgent {
  * plain line and starts nothing.
  */
 export function roadDm(): ScriptedDm {
+  return new ScriptedDm(roadScript());
+}
+
+function roadScript(): DmScript {
   const line = (text: string) => async (tools: DmTools) => {
     await offerAnySurrender(tools);
     await tools.narrate(text);
   };
-  return new ScriptedDm({
+  return {
     scene_open: line("The caravan comes to a new place."),
     table_turn: line("The road waits for the party's next move."),
     narrate: line("The moment passes as the engine says."),
@@ -251,6 +256,26 @@ export function roadDm(): ScriptedDm {
     },
     card: line("A road card meets the caravan."),
     summary: async () => "The caravan went on along the road.",
+  };
+}
+
+/**
+ * The card bench's DM without a model (AGT-123, `play:card -- --dm scripted`): `roadDm`, and at a
+ * player's words on a card it answers a question (words that end in `?`) and makes any other words
+ * an own move: Persuasion DC 10, the card's first choice on a success and its second on a failure,
+ * and one fact kept with `remember`. The engine rolls it (Rule 4).
+ */
+export function benchDm(): ScriptedDm {
+  return new ScriptedDm({
+    ...roadScript(),
+    card_words: async (tools, briefing) => {
+      const question = /says or does: ".*\?"$/m.test(briefing);
+      const ids = [...(/^Its choices: (.*)$/m.exec(briefing)?.[1] ?? "").matchAll(/(?:^|\| )([a-z0-9_]+): /g)].map((m) => m[1]!);
+      // While an own move waits for the table's word, the loop asks for an answer only.
+      if (question || ids.length < 2 || briefing.includes("These words make no move")) return void (await tools.ownMoveOrAnswer("The road gives its answer."));
+      await tools.ownMoveOrAnswer("The road hears the plan.", { ability: "charisma", skill: "persuasion", dc: 10, success: ids[0]!, failure: ids[1]! });
+      tools.remember("The road heard a plan.");
+    },
   });
 }
 
@@ -544,3 +569,79 @@ export class ScriptedSeat implements Seat {
 function harms(choice: Choice): boolean {
   return choice.act?.kind === "submit" && !choice.act.decision.option_id.startsWith("help/") && !choice.act.decision.option_id.startsWith("use/");
 }
+
+/** A human seat's policy: what it answers a prompt with, by what the seat was shown. */
+export type SeatPolicy = (prompt: HumanPrompt, seat: ScriptedSeat) => PlayerIntent;
+
+/** The title of a refused move's line, in either language. */
+const REFUSED: ReadonlySet<string> = new Set([SEAT_WORDS.en.notAccepted, SEAT_WORDS.ru.notAccepted]);
+
+/**
+ * A Hired Blade who moves the caravan (AGT-80, AGT-123): out of a fight it lists the options, then
+ * moves the caravan on along the merchant's route whenever it may, and makes camp once a move was
+ * refused (the day's travel is spent) or none is offered. It fights by rule and passes every other
+ * prompt. It picks a line by what the line does, so it plays in either language.
+ */
+export function caravanSeat(): SeatPolicy {
+  let listed = false;
+  let seen = 0;
+  return (prompt, seat) => {
+    if (prompt.kind !== "explore") return prompt.kind === "combat_turn" || prompt.kind === "pick" ? ScriptedSeat.fight(prompt, seat) : ScriptedSeat.pass(prompt, seat);
+    if (!listed) {
+      listed = true;
+      return { kind: "command", name: "options" };
+    }
+    listed = false;
+    // A refused move since the last pick: the day's travel is spent, so the night comes.
+    const refused = seat.shown.slice(seen).some((e) => e.kind === "info" && REFUSED.has(e.title));
+    seen = seat.shown.length;
+    const moveOn = refused ? undefined : seat.choices.find((c) => c.act?.kind === "travel" && c.act.pace === "normal" && c.act.to === undefined);
+    const choice = moveOn ?? seat.choices.find((c) => c.act?.kind === "rest_night" && c.act.where === "camp");
+    return choice ? { kind: "option", number: choice.number } : { kind: "text", text: "I keep watch." };
+  };
+}
+
+/** What the card bench's seat did in one bench run (AGT-123). */
+export interface BenchSeatLog {
+  /** Whether a card reached the seat. */
+  reached: boolean;
+  /** The lines it typed at the card, in order. */
+  typed: string[];
+  /** Why it left the table: the card was settled, or the lines ran out with the card waiting. Unset when the run ended some other way. */
+  left?: "settled" | "lines_out";
+}
+
+/**
+ * The card bench's human seat (AGT-123, `docs/design/card-bench.md` §4): it moves the caravan on
+ * until a card waits for its word, then types `lines` at the card's prompt, one for each time the
+ * card asks. It never picks a number: when the lines run out with the card waiting it leaves the
+ * table, and it leaves at the first prompt after the card is settled. `log` keeps what it did.
+ */
+export function benchSeat(lines: readonly string[], log: BenchSeatLog): SeatPolicy {
+  const walk = caravanSeat();
+  const leave = (why: NonNullable<BenchSeatLog["left"]>): PlayerIntent => {
+    log.left ??= why;
+    return { kind: "command", name: "quit" };
+  };
+  return (prompt, seat) => {
+    if (prompt.kind === "card") {
+      log.reached = true;
+      const line = lines[log.typed.length];
+      if (line === undefined) return leave("lines_out");
+      log.typed.push(line);
+      return { kind: "text", text: line };
+    }
+    // Any other prompt after the card: the card no longer waits for the seat's word.
+    return log.reached ? leave("settled") : walk(prompt, seat);
+  };
+}
+
+/**
+ * A scripted player's word on a card at the card bench (AGT-123): for the own move when one is
+ * among the choices, so its roll always happens; else the first choice listed.
+ */
+export const votesOwnMove: NonNullable<ScriptedPlayerPolicy["card"]> = async (tools, briefing) => {
+  const ids = [...(/^Choices: (.*)$/m.exec(briefing)?.[1] ?? "").matchAll(/(?:^|\| )([a-z0-9_]+): /g)].map((m) => m[1]!);
+  const choice = ids.includes(OWN_MOVE) ? OWN_MOVE : ids[0];
+  if (choice) await tools.chooseCard(choice);
+};
