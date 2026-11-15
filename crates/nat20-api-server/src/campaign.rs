@@ -139,57 +139,69 @@ impl Campaign {
                         format!("The roster's world does not read: {e}."),
                     )
                 })?;
-            let state = world::WorldState::from(state);
-            if !state.escort.as_ref().is_some_and(|e| e.done) {
-                // A contract under way is its own pack's: another pack on this map can't open
-                // it (ENG-38). A roster saved before packs were remembered names none.
-                if let (Some(saved_pack), Some(this)) = (&state.pack, &file.id)
-                    && saved_pack != this
-                {
-                    return Err(error(
-                        ErrorCode::BadRoster,
-                        format!(
-                            "The party is still on the road in {saved_pack}; finish that journey first."
-                        ),
-                    ));
+            match state.resume() {
+                // A site session saved a memory and no contract (ENG-44): it is taken up like a
+                // finished contract's, the party setting out from the place it was left at.
+                Err(memory) => {
+                    let Some(place) = memory.left_at.clone() else {
+                        return Err(error(
+                            ErrorCode::BadRoster,
+                            "The roster's world has no contract and no place the party was left at.",
+                        ));
+                    };
+                    let from = world::Position::At { place };
+                    carried = Some(built.carry(&from, *memory, setup.hour));
                 }
-                // A contract under way is the saved party's: another party can't take it up.
-                let mut state = state;
-                // An own move on the card was checked when it arrived; a roster is read again.
-                if let Some(mv) = state
-                    .deck
-                    .pending
-                    .as_ref()
-                    .and_then(|p| p.own_move.as_ref())
-                    && !parse_check(&mv.ability, &mv.skill)
-                        .is_some_and(|(a, s)| crate::adapter::sheet::skill_fits(a, s))
-                {
-                    return Err(error(
-                        ErrorCode::BadRoster,
-                        format!(
-                            "The roster's own move is not a check: {} / {}.",
-                            mv.ability, mv.skill
-                        ),
-                    ));
+                Ok(state) if !state.escort.as_ref().is_some_and(|e| e.done) => {
+                    // A contract under way is its own pack's: another pack on this map can't open
+                    // it (ENG-38). A roster saved before packs were remembered names none.
+                    if let (Some(saved_pack), Some(this)) = (&state.pack, &file.id)
+                        && saved_pack != this
+                    {
+                        return Err(error(
+                            ErrorCode::BadRoster,
+                            format!(
+                                "The party is still on the road in {saved_pack}; finish that journey first."
+                            ),
+                        ));
+                    }
+                    // A contract under way is the saved party's: another party can't take it up.
+                    let mut state = state;
+                    // An own move on the card was checked when it arrived; a roster is read again.
+                    if let Some(mv) = state
+                        .deck
+                        .pending
+                        .as_ref()
+                        .and_then(|p| p.own_move.as_ref())
+                        && !parse_check(&mv.ability, &mv.skill)
+                            .is_some_and(|(a, s)| crate::adapter::sheet::skill_fits(a, s))
+                    {
+                        return Err(error(
+                            ErrorCode::BadRoster,
+                            format!(
+                                "The roster's own move is not a check: {} / {}.",
+                                mv.ability, mv.skill
+                            ),
+                        ));
+                    }
+                    if state.pack.is_none() {
+                        state.pack = file.id.clone();
+                    }
+                    if let Some(escort) = &state.escort
+                        && escort.blades != party.iter().map(|h| h.0.clone()).collect::<Vec<_>>()
+                    {
+                        return Err(error(
+                            ErrorCode::BadRoster,
+                            format!(
+                                "The roster's escort contract is under way with {}; start the campaign with that party.",
+                                escort.blades.join(", ")
+                            ),
+                        ));
+                    }
+                    built.state = state;
+                    resumed = true;
                 }
-                if state.pack.is_none() {
-                    state.pack = file.id.clone();
-                }
-                if let Some(escort) = &state.escort
-                    && escort.blades != party.iter().map(|h| h.0.clone()).collect::<Vec<_>>()
-                {
-                    return Err(error(
-                        ErrorCode::BadRoster,
-                        format!(
-                            "The roster's escort contract is under way with {}; start the campaign with that party.",
-                            escort.blades.join(", ")
-                        ),
-                    ));
-                }
-                built.state = state;
-                resumed = true;
-            } else {
-                carried = Some(built.carry_memory(state, setup.hour));
+                Ok(state) => carried = Some(built.carry_memory(state, setup.hour)),
             }
         }
         // The place NPCs (API-48), after the state: a roster's NPCs keep what happened to them.
@@ -977,6 +989,94 @@ pub fn reads(
 }
 
 /// `<pack>/worlds/<id>` when the pack carries its world, else the shared worlds directory.
+/// The hour a site session's world stands at: a pack with no campaign names none.
+const SITE_HOUR: u32 = 8;
+
+/// The world memory of a session played at a site, for a pack with no campaign (ENG-44,
+/// decision 0075): its scene deeds go here, and `save_roster` saves it with no contract part.
+/// Its clock does not move during the session.
+#[derive(Debug, Clone)]
+pub struct SiteWorld {
+    /// The world map's id.
+    pub map: String,
+    /// The place on it where the pack is played and the party is left.
+    pub place: String,
+    /// The memory the session writes into.
+    pub memory: world::Memory,
+}
+
+impl SiteWorld {
+    /// Opens `site` on its map. A roster whose world is on the same map with no contract under
+    /// way is carried: the contract count goes up by one and the day moves on by one plus the
+    /// walk to the place. A contract under way is `bad_roster`; another map starts fresh.
+    pub fn open(
+        data_dir: &Path,
+        site: &nat20_api_contract::Site,
+        roster: Option<&nat20_api_contract::Roster>,
+    ) -> Result<Self, nat20_api_contract::ApiError> {
+        let refuse = |message: String| error(ErrorCode::BadRequest, message);
+        if !scene::is_plain_name(&site.map) {
+            return Err(refuse(format!(
+                "The site's map {:?} is not a plain name.",
+                site.map
+            )));
+        }
+        let path = world_dir(data_dir, &site.map).join("map.json");
+        let text = std::fs::read_to_string(&path)
+            .map_err(|_| refuse(format!("There is no world map {}.", site.map)))?;
+        let map: world::WorldMap = serde_json::from_str(&text)
+            .map_err(|e| refuse(format!("The world map {} is not valid: {e}.", site.map)))?;
+        if map.place(&site.place).is_none() {
+            return Err(refuse(format!(
+                "The world map {} has no place {}.",
+                site.map, site.place
+            )));
+        }
+        let saved = roster
+            .and_then(|r| r.world.as_ref())
+            .filter(|w| w.map == site.map);
+        let memory = match saved {
+            None => world::Memory::new(SITE_HOUR),
+            Some(saved) => {
+                let state: world::SavedWorld = serde_json::from_value(saved.state.clone())
+                    .map_err(|e| {
+                        error(
+                            ErrorCode::BadRoster,
+                            format!("The roster's world does not read: {e}."),
+                        )
+                    })?;
+                let (from, memory) = match state.resume() {
+                    Ok(state) if !state.escort.as_ref().is_some_and(|e| e.done) => {
+                        return Err(error(
+                            ErrorCode::BadRoster,
+                            format!(
+                                "The party is still on the road in {}; finish that journey first.",
+                                state.pack.as_deref().unwrap_or("another journey")
+                            ),
+                        ));
+                    }
+                    Ok(state) => (state.at.clone(), world::SavedWorld::from(state).memory),
+                    Err(memory) => {
+                        let Some(place) = memory.left_at.clone() else {
+                            return Err(error(
+                                ErrorCode::BadRoster,
+                                "The roster's world has no contract and no place the party was left at.",
+                            ));
+                        };
+                        (world::Position::At { place }, *memory)
+                    }
+                };
+                memory.carried(&map, &from, &site.place, SITE_HOUR).0
+            }
+        };
+        Ok(SiteWorld {
+            map: site.map.clone(),
+            place: site.place.clone(),
+            memory,
+        })
+    }
+}
+
 fn world_dir(data_dir: &Path, id: &str) -> PathBuf {
     let own = data_dir.join("worlds").join(id);
     if own.is_dir() {

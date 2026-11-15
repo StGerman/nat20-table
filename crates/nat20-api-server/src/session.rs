@@ -26,7 +26,7 @@ use crate::{
         events::Pending,
         game::{DAYS_FOOD_QUARTER_LB, Game, TriggerCause, Wait},
     },
-    campaign::{Campaign, clock_view},
+    campaign::{Campaign, SiteWorld, clock_view},
     errors::{error, rejected, with_awaiting},
     projection::{self, FullState, Viewer, WorldFull},
     render, scene,
@@ -78,6 +78,9 @@ pub struct Session {
     /// decided and any fight it started to be over (ENG-35). Not saved in a roster: a roster
     /// saved with the road card on the table loses the arrival card, never the pay.
     arrival_due: Option<String>,
+    /// The world memory of a session played at a site (ENG-44): a pack with no campaign
+    /// writes its scene deeds here. Never beside a campaign.
+    site: Option<SiteWorld>,
 }
 
 impl Session {
@@ -86,6 +89,7 @@ impl Session {
         protocol_version: &str,
         seed: u32,
         roster: Option<Roster>,
+        site: Option<SiteWorld>,
     ) -> Self {
         let mut session = Self {
             data_dir,
@@ -106,6 +110,7 @@ impl Session {
             rollers: HashMap::new(),
             last_blow: HashMap::new(),
             last_actor: None,
+            site,
         };
         session.push(Pending {
             round: None,
@@ -398,6 +403,15 @@ impl Session {
             return Err(error(
                 ErrorCode::NotVisible,
                 "start_campaign is the game's setup command; send it as dm.",
+            ));
+        }
+        if let Some(site) = &self.site {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!(
+                    "This session is played at {} on the {} map, with no campaign; save the roster and start the campaign in a new session.",
+                    site.place, site.map
+                ),
             ));
         }
         if self.campaign.is_some() {
@@ -1157,6 +1171,32 @@ impl Session {
                     campaign.left(id, now);
                 }
             }
+        }
+        // A site session saves its memory with the place it left the party at, and no contract
+        // part, so no contract can be played again from its start (ENG-44).
+        if let Some(site) = &self.site {
+            let mut memory = site.memory.clone();
+            memory.left_at = Some(site.place.clone());
+            let state = world::SavedWorld {
+                memory,
+                contract: None,
+            };
+            return Ok(CommandResult::SaveRoster {
+                roster: Roster {
+                    format: ROSTER_FORMAT,
+                    characters,
+                    world: Some(RosterWorld {
+                        map: site.map.clone(),
+                        state: serde_json::to_value(state).map_err(|e| {
+                            error(
+                                ErrorCode::Internal,
+                                format!("The world memory does not serialize: {e}."),
+                            )
+                        })?,
+                    }),
+                    contract_start: None,
+                },
+            });
         }
         let world = match &saving {
             Some(campaign) => Some(RosterWorld {

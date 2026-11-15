@@ -20,8 +20,8 @@ pub struct Roster {
     /// The party's characters, in party order.
     pub characters: Vec<RosterCharacter>,
     /// The world as the engine left it: the clock, where the caravan is, its wagons and cargo,
-    /// the places discovered, the deck. Absent when no campaign ran. Opaque to clients: give it
-    /// back unchanged.
+    /// the places discovered, the deck. Absent when neither a campaign nor a site session
+    /// (`new_session.site`) ran. Opaque to clients: give it back unchanged.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub world: Option<RosterWorld>,
     /// The party and the world as they stood when the contract under way, or the last one,
@@ -53,8 +53,19 @@ pub struct RosterWorld {
     /// contract (ENG-37).
     pub map: String,
     /// The world's state, as the engine wrote it: `{memory, contract}` (API-51), the part that
-    /// outlives a contract and the part the next one rebuilds.
+    /// outlives a contract and the part the next one rebuilds; `contract` is absent when a site
+    /// session saved it (ENG-44), and the next campaign on this map takes up the memory.
     pub state: serde_json::Value,
+}
+
+/// A place in a world where a pack with no campaign is played (ENG-44).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Site {
+    /// The world map's id, e.g. `wend`.
+    pub map: String,
+    /// A place id on that map, e.g. `pells_mill`: where the party is left when the session ends.
+    pub place: String,
 }
 
 /// One character as it left a game session: a pregen with a history. Hit Points are not kept;

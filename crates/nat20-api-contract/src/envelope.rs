@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     Ability, ApiError, Awaiting, Carries, Coins, Event, Handle, LegView, LevelUpChoice, Lodging,
-    NightView, OptionId, Pace, Placement, PointFt, PromptId, RollId, Roster, Sheet, Side, Skill,
-    State, TimeSpan, V1, Viewer,
+    NightView, OptionId, Pace, Placement, PointFt, PromptId, RollId, Roster, Sheet, Side, Site,
+    Skill, State, TimeSpan, V1, Viewer,
     state::{ActionOption, TurnBudget, UnavailableOption},
 };
 
@@ -46,6 +46,13 @@ pub enum Command {
         /// campaign on the same map takes up its world.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         roster: Option<Roster>,
+        /// The place in a world where a pack with no campaign is played (ENG-44, decision 0075):
+        /// its scene deeds are written into that world's memory, which `save_roster` saves and a
+        /// later campaign on the same map takes up (protocol §4.15). A roster whose world is on
+        /// this map with a contract under way is refused with `bad_roster`. DM-side setup; no
+        /// view carries it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        site: Option<Site>,
     },
     /// Loads a scene from the scenario and enters explore mode, in the session's one engine.
     /// Creatures in `party` carry over; every other creature of the previous scene leaves.

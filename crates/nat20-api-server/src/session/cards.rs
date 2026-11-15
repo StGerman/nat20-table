@@ -782,13 +782,20 @@ impl Session {
     /// The world remembers a deed (ENG-33) and logs `deed_remembered`, DM only (API-52). A deed
     /// done again keeps its first record and logs nothing.
     pub(super) fn remember(&mut self, deed: &str, by: Vec<String>) {
-        let Some(campaign) = self.campaign.as_mut() else {
+        // A campaign's world, or a site session's memory (ENG-44); with neither, nothing.
+        let record = if let Some(campaign) = self.campaign.as_mut() {
+            if !campaign.world.remember(deed, by) {
+                return;
+            }
+            campaign.world.state.deeds[deed].clone()
+        } else if let Some(site) = self.site.as_mut() {
+            if !site.memory.remember(deed, by) {
+                return;
+            }
+            site.memory.deeds[deed].clone()
+        } else {
             return;
         };
-        if !campaign.world.remember(deed, by) {
-            return;
-        }
-        let record = campaign.world.state.deeds[deed].clone();
         self.push(Pending {
             round: None,
             visibility: Visibility::Dm,
@@ -806,6 +813,10 @@ impl Session {
         self.campaign
             .as_ref()
             .is_some_and(|c| c.world.state.deeds.contains_key(deed))
+            || self
+                .site
+                .as_ref()
+                .is_some_and(|s| s.memory.deeds.contains_key(deed))
     }
 
     /// Follows the blows of a fight for the death deed (ENG-36): who rolled each roll, who dealt

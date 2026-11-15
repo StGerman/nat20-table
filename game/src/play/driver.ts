@@ -279,7 +279,13 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const started = await (async () => {
     let engine: GameEngine | undefined;
     try {
-      engine = await GameEngine.start({ pack: flags.pack, runDir, seed: flags.seed, ...(loaded ? { roster: loaded.roster } : {}) });
+      engine = await GameEngine.start({
+        pack: flags.pack,
+        runDir,
+        seed: flags.seed,
+        ...(loaded ? { roster: loaded.roster } : {}),
+        ...(pack.adventure.site ? { site: pack.adventure.site } : {}),
+      });
       // A campaign starts at its start place, with the party fresh in it; the loop starts the campaign.
       return { engine, carried: campaign ? undefined : await startAt(engine, flags.pack, plan.first, everyone) };
     } catch (error) {

@@ -510,6 +510,25 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 9007199254740991
+    },
+    "site": {
+      "description": "adventure.json only (ENG-44, decision 0075): the world map and the place on it where a pack with no campaign is played. The game passes it in new_session, so the pack's scene deeds go into that world's memory and a later campaign on the map reads them. The place's pack_slot must be this pack's id.",
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "place": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      },
+      "required": [
+        "map",
+        "place"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

@@ -99,6 +99,7 @@ pub fn run_chain(pack: &Path, seed: u32) -> ChainResult {
     table.dm(Command::NewSession {
         seed: Some(seed),
         roster: None,
+        site: None,
     });
     table.load("s1_village_green", &[]);
     table.load("s2_mill_road", &PARTY);

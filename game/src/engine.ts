@@ -20,6 +20,8 @@ export interface EngineStart {
   pregens?: string;
   /** The party saved by an earlier run (API-45): each pregen in it is rebuilt as saved when a scene loads it. */
   roster?: Roster;
+  /** Where a pack with no campaign is played in a world (ENG-44): `adventure.json`'s `site`. */
+  site?: { map: string; place: string };
   binary?: string;
   timeoutMs?: number;
 }
@@ -58,7 +60,7 @@ export class GameEngine {
       timeoutMs: start.timeoutMs,
     });
     const engine = new GameEngine(client, start.runDir);
-    const session = await engine.request("dm", { cmd: "new_session", seed: start.seed, ...(start.roster ? { roster: start.roster } : {}) });
+    const session = await engine.request("dm", { cmd: "new_session", seed: start.seed, ...(start.roster ? { roster: start.roster } : {}), ...(start.site ? { site: start.site } : {}) });
     if (!session.ok || session.result?.cmd !== "new_session") {
       client.close();
       throw new Error(`the engine refused a new session: ${session.error?.message}`);
