@@ -1,6 +1,6 @@
 # The Way Back
 
-The second contract of Milestone 11 (MAP-12, design "The Way Back"): the Grey Lantern company, as Hired Blades, escorts Fenn Lusk's wagon of salt and iron from the Saltmouth fair back up to the Highsteads. About three game days and up to two hours of play, on the shared Wend map (`worlds/wend/`). The human plays a Hired Blade; the merchant is an NPC. Played after *Fair in Wend* on the same roster, it is the exit pair's run 2: the road remembers the first contract. Played alone, on a new party, the cards that read deeds are not in the pile, and the rest plays as written.
+The second contract of Milestone 11 (MAP-12, design "The Way Back"): the Grey Lantern company, as Hired Blades, escorts Fenn Lusk's wagon of salt and iron from the Saltmouth fair back up to the Highsteads. About four game days and up to two hours of play, on the shared Wend map (`worlds/wend/`). The human plays a Hired Blade; the merchant is an NPC. Played after *Fair in Wend* on the same roster, it is the exit pair's run 2: the road remembers the first contract. Played alone, on a new party, the cards that read deeds are not in the pile, and the rest plays as written.
 
 Everything in this folder is for the DM. Players see only what the DM narrates, the engine's lines and, for AI players, their own card.
 

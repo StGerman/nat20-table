@@ -7,6 +7,6 @@ agent: vera
 background: false
 ---
 
-Here is text a player of this game would see. If it is a single file path, read that file and nothing else. Read it as yourself and answer in your three sections.
+Here is text a player of this game would see. If it is a single file path, read that file and nothing else. Read it as yourself and answer in your four sections.
 
 $ARGUMENTS

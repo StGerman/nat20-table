@@ -1,0 +1,90 @@
+# Testing content below the exit pair: what exists, the gap, one candidate
+
+- **Status:** The rule of §3 accepted by Stas, 2026-11-14 16:59Z (decision 0080); the CLAUDE.md line's wording, with its start date, is his when he merges table #383. At 19:42Z he answered the rest of §6: the card bench of §4 is designed and tried on Milestone 13, in its own design doc and PR, and the gaps of question 4 get rows (AGT-118, AGT-119). §1, §2 and §4 describe main as it stood at 07:00Z that day; Milestone 12 was merged and closed later the same day (decision 0082), and where that changed a fact the text says so
+- **Date:** 2026-11-14
+- **Decision:** `docs/decisions/0080-content-test-layers.md`
+- **Asked by:** Stas, 2026-11-14 06:55Z: the process "looks end-to-end, we need something closer to unit or component tests; be bold"
+
+## 1. What exists, and the gap
+
+Tests with no model are already deep. `contract/fixtures/` replays seeded transcripts. `game/test/campaign-loop.test.ts` walks whole contracts with a scripted DM and scripted seats and asserts the verdict rows of `game/src/play/verdict.ts`: after M11's exit pair 2 failed, its failure became the test "Fair in Wend's road always reads one of its own deeds, on the first choices or the last, whatever the dice (exit pair 2, run 1)"; the exit pair itself is scripted (MAP-12), and so is the arrival card at the destination (ENG-35). The M12 stack, merged on 2026-11-14, added scripted own-move tests to the same file. `npm run pack:check` loads every pack through the engine.
+
+The gap is everything a live model decides. How the DM reads a player's words, whether AI players use a tool they are offered, whether a card can hold the plan a person says: each is first tested by a run of a whole contract and its analysis thread. Smaller live runs exist: `npm run play:scene` plays chosen scenes of a pack with a scripted or a human seat, and `play:cheap` is a cheaper profile of the full run. But a road card belongs to a leg of a contract, not to a scene, and nothing brings a live DM to one chosen card.
+
+## 2. The record
+
+| | M11 (baseline) | M12 by 2026-11-14 07:00Z |
+|---|---|---|
+| Runs played | 5 | 7 (1 of them not eligible: a stale checkout with local changes) |
+| Run cost, USD | 35.45 | 43.28 |
+| Exit pairs played / passed | 3 / 1 | 3 / 0 |
+| Stas at the table, wall time | 1.09 h in 2 evenings | 3.09 h in 3 evenings (38.3 + 120.0 + 27.2 min; for 81 of the 120 Stas had stepped away and the table waited on his seat) |
+
+Sources: `docs/roadmap.md` § Delivery for M11; for M12, `usage.jsonl`, `run.json` and `verdict.json` of the seven runs of *Fair in Wend* and its return contract from `full-2026-11-12T19-02…` to `full-2026-11-14T01-42…` in nat20-runs `master` 65c0e7c; checked by Yan (§7). Three more runs sit between them, 1-to-2-minute `play:cheap` runs of one scene of *The Silent Mill* on the commits of the tracing PR (table #366), 1.01 USD together: they are not Milestone 12 runs and are not counted, though Yan's extract counts them. `docs/roadmap.md`'s own M12 row dates from 2026-11-11 and shows no runs; it is Yan's file and his next `roadmap` brings it up to date. After this table was counted Stas played one more run, and Milestone 12 was merged and closed without a passed exit pair (decision 0082); that run is not in these numbers.
+
+| M12 run | What failed | What would see it without a full run |
+|---|---|---|
+| 11-12 19:02, Stas's trial (2.50 USD, 38 min) | not an exit half: a roster already spent by an earlier session | nothing proposed here |
+| 11-13 14:15 and 15:33 (2.19 + 8.54 USD) | 0 AI own moves in 28 card wakes, twice | a seat bench (§4, considered and not proposed): the card wakes alone; decision 0074 has since made this row reported, not gated |
+| 11-13 15:26 (8.83 USD) | not eligible (`verdict.json`: FAIL, the checkout had changes): played on a stale checkout with local changes | a slip in starting the run, not a test gap; outside this proposal |
+| 11-13 16:05 (5.70 USD, 120 min of Stas) | own move 0: Stas's real plan came between cards, where no own move exists, and the DM read all 4 of his card lines correctly. Two build defects also failed gating rows (a creature's name shown in English; a fight started on a neutral spent the retries). At 16:44 Stas stepped away (his words, 2026-11-13 19:19Z, in the run's analysis); the table waited on his seat for 81 minutes and the run ended on the 120-minute limit, which failed row 1 and the rows that need the contract finished. The analysis also flags, as minor, that after that night, at the same 16:44, the seat showed no options list and no prompt; by Stas's account he had stepped away, and whether the missing prompt added to the wait is not known (AGT-119) | own move: nothing, a person at the seat. The two build defects: scripted loop tests, which exist as a kind. The time limit: nothing for a person who left; a scripted walk through a night for the missing prompt, if it played a part |
+| 11-13 21:16 (8.57 USD) | the all-AI half of pair 3. Its `verdict.json` says FAIL on the own-move row: the report code still gates a row that decision 0074 made reported. 0074 left that code unchanged on purpose on the pair 2 build; this is a later build. The analysis reads the run as passed | not a failure of content. Listed so the seven runs add up |
+| 11-14 01:42 (6.95 USD, 27 min of Stas) | `bog_wifes_toll` has no failure the design allows for Stas's plan; `salt_on_credit` has no choice his plan could land on. Not gating: on `salt_on_credit` the DM narrated a refusal with no roll and remembered it as fact | nothing certain. A person trying lines on those two cards before the evening might have met the holes (§4) |
+
+M11's exit failures are outside this doc; the structural ones (`m11-deck`, `m11-thread`) were fixed with scripted tests on main.
+
+**The honest tally.** Nothing considered here would have saved a run or an evening for certain on this record. Run 16:05 comes closest: two of its failures had a cause a scripted test can see. But its own-move row stood at 0 on a plan said between cards, and its time limit fell after Stas stepped away with the contract unfinished, so that evening fails with those two tests in place as well. Both failed M12 exit evenings failed on a plan a person said: 01:42 in a design hole that decision 0079 (table #381) has since closed, 16:05 on a plan said between cards, which nothing proposed anywhere addresses. So this doc promises neither fewer evenings nor fewer dollars. It names one candidate: a way to try a player's line on one chosen card against the live DM, so that an evening is not the only place to find out that a plan has nowhere to land. In run 01:42 that took 16 minutes of play to reach.
+
+## 3. The rule
+
+**A full run should not be the first place a defect is found, when a cheaper layer can see it.** This is already the practice for structure (§1); the rule makes it explicit.
+
+1. From 2026-11-15, every exit row in a milestone scope or design first drafted from that date names the lowest layer that tests it: a test with no model (a fixture, a scripted test, `pack:check`), a live run smaller than the exit run (`play:scene`), a full run with its audit and judge, or "a person". Scopes and designs drafted earlier (M12, M13, the Allies in fights scope) are not amended.
+2. When a full run fails from 2026-11-15, the analysis says whether a test with no model could have seen it. If one could, the fix's PR adds it, as the M11 fixes did. The rerun the pair's rules require is still played.
+
+The record's own examples are run 16:05's two build defects, a creature's name in English and a fight started on a neutral: both are of a kind a scripted test sees.
+
+## 4. A candidate: the card bench
+
+The own-move names below (`card_words`, `own_move`) are from the M12 stack, on main since 2026-11-14.
+
+The idea: one command puts a named road card on the table and hands it to the live DM, as `play:scene` does for a scene. A person types a line and sees what the DM does with it; or lines come from a file (Stas's own from runs 16:05 and 01:42, read from the runs' files) and the DM's tool calls are checked; or a model writes plans a person might say and the thread lists the ones that found nowhere to land (a plan fuzz).
+
+It is not designed, and this doc does not ask for it to be built. Review found these open, and each changes the cost:
+
+- **How a named card reaches the table.** A person can already play a campaign pack beside scripted AI seats (`--seat ink`; without a person the run driver refuses scripted players there, and the caravan-driving scripted policies live in test code). What is missing is the card: a seeded walk to it breaks whenever a deck upstream of the draw changes, and an engine command that opens a named card would be a contract change under Rule 1.
+- **One move a card.** M12 design §1.4 allowed one own move per card and no retry; decision 0081 has since let a card take another move, by another way, after a fall. A line that settles the card still needs the card set up again, and a fresh DM session or one that remembers the last try.
+- **No evening behind the card.** The bench DM has no memory of the scenes before it; a recorded line that leans on them will read differently.
+- **A narrated outcome is text.** In run 01:42 the DM narrated a refusal with no roll and called `remember` on it. A check over the wake's tool calls sees the `remember`; a refusal that is only narrated needs a judge on text.
+- **What a pass is.** A live DM is not deterministic; a case needs samples and a threshold, set from measured rates.
+- **Who runs it.** Decision 0036 keeps live calls on Stas's Mac, by his hand or through a Remote Control session he approves (blocked in practice so far); a cloud API key would need 0036 revisited. A cloud thread cannot run a case it adds.
+
+Unit prices, from the `usage.jsonl` of runs 16:05 and 01:42: of 13 `dm/card_words` wakes, 10 cost 0.04 to 0.06 USD and 3 cost 0.32 to 0.35 USD, the 3 with a cache write of about 60 thousand tokens. An all-AI run (21:16) is 8.57 USD and an evening of Stas 5.70 to 6.95 USD. Which of the two prices a bench line pays depends on the open points above (a fresh session for every line, or not), so no total is given.
+
+**Considered, not proposed.**
+- A seat bench (a card to the live AI players, counting what they do). Its one question so far, "do AI players ever call `own_move`?", stopped gating under 0074.
+- A build check on the run command. Run 15:26 was played on a checkout 44 commits behind the exit build. The verdict marks only a checkout with local changes not eligible, and only after the run; a clean stale checkout passes. A check against the intended commit is cheap and worth its own row; it is not a test of content, so it is not this doc's.
+- A deck lint beyond today's validator. The one rule ready today (a card has two choices that break no custom, from M12 design §1.4 and §1.8) finds `peddler` on main, does not find `bog_wifes_toll`, and is voided by decision 0079, accepted since, which makes an own move's failure optional.
+- Changing the exit pair: Stas plays once at milestone close, or a fix covered by a lower-layer case does not replay the pair. The record supports neither (§2).
+
+## 5. Gates
+
+Nothing in the exit pair's rules changes. Decisions 0043, 0065, 0066 and 0074 and the milestone scopes stand. The accepted rule of §3 is in CLAUDE.md, so scope and design authors read it. The line is the bullet under Rule 8 that cites decision 0080. §3 states the rule as it was proposed; where the two differ, CLAUDE.md is the rule. Stas accepted the rule in the thread on 2026-11-14 as two sentences quoted to him; the line adds a start date, the analysis step and "the rerun the exit pair's rules require is still played", and those are his when he merges table #383. The exit-row sentence is also in `.claude/skills/yan/references/scope.md` (item 4) and `.claude/skills/lev/references/design.md` (item 11), where a scope's exit criterion and a design are drafted, and both halves are in item 8 of `.github/copilot-instructions.md`, which code review reads.
+
+## 6. Questions for Stas
+
+1. Accept the rule of §3, as a line in CLAUDE.md? **Answered 2026-11-14 16:59Z: yes, add it to CLAUDE.md. The line's exact wording is accepted with the merge (§5).**
+2. Do you want the card bench designed: its own short system design, answering the open points of §4, with a cost, before any decision to build it? Or is the answer to your ask "the scripted layer is already there, and the rest is your evening"? **Answered 2026-11-14 19:42Z: design it and try it on M13; if it works, it becomes a standing rule («Проектировать стенд карточки давай потестируем на M13 и если пойдет сделаем это правило постоянным»).**
+3. If designed: for M13, after M12 closes? It needs the M12 stack on main either way. **Answered with question 2: M13. The M12 stack is on main.**
+4. Three small gaps turned up on the way and have no TASKS.md row, because this thread was told to write none: a check of the checkout against the intended commit before a run (15:26); the missing prompt after a night (16:05, a minor flag in its analysis); table #379 was not checked for it when this was written; `peddler` against the M12 two-choices rule, which decision 0079 may void. Rows for them, through Yan? **Answered 2026-11-14 19:42Z: yes. Yan wrote AGT-118 (the checkout check) and AGT-119 (the prompt after a night; AGT-111 and AGT-114, the rows of table #379 and table #392, do not name it, and the row's first step is to confirm it on main). `peddler` gets no row: decision 0079, accepted since, makes the failure choice optional, so an own move lands there.**
+
+## 7. Yan's numbers (extract, 2026-11-14)
+
+Yan was run from a cloud thread, read-only, from the repo's `.claude/agents/yan.md`; by CLAUDE.md's rule for cloud threads that counts as the fallback, which may have seen CLAUDE.md. His saving estimate assumed Stas's evening moves to once a milestone, which this doc does not propose, so it is not quoted. His baseline numbers are §2's first table.
+
+> Human time: 38.3 + 120.0 + 27.2 = 185.5 min. Of the 120 min at 16:05, 81 were the table waiting on bren and the run then hit the time limit.
+> 3 of the 10 runs are 1-to-2-minute cheap runs (1.01 USD together). 15:26 cost 8.83 USD on old build ab59b57 alongside 15:33, and it has no analysis. Write-off candidate.
+> 16:05, own move: only e2e. The DM classified 4/4 correctly; Bren's plans came between cards. 01:42, bog_wifes_toll: static lint. salt_on_credit having no success branch: only e2e or design. `remember` with no roll: golden DM set. [His "golden DM set" is this doc's recorded lines.]
+> Amendment (proposed, waits on Stas): a lower layer replaces a run only after it has caught a failure that a recorded e2e run also caught. Why: the layers have no recall baseline yet.
+
+On `bog_wifes_toll` this doc differs from Yan: a lint over the data as it stands does not find it (§4, considered). His "`remember` with no roll" is the outcome with no roll in §2's last row.

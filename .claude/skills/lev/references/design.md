@@ -11,7 +11,7 @@ Goal: a design Stas can accept or reject in one sitting, and a thread can implem
 
 ## Write
 
-Write the file's headings first and fill it section by section, so a run that stops early still leaves a draft. A file under `docs/design/`, status Proposed, laid out like the last accepted design, with the scope's questions answered by number. Whatever the layout, these ten things are in it:
+Write the file's headings first and fill it section by section, so a run that stops early still leaves a draft. A file under `docs/design/`, status Proposed, laid out like the last accepted design, with the scope's questions answered by number. Whatever the layout, these eleven things are in it:
 
 1. **Summary**: what a player will notice, in three sentences, and the moment they would retell the next day.
 2. **Records.** One table, a row per fact the world keeps: who writes it, when, who reads it, and where the player sees it. A row with no reader or no visible effect is cut, or listed under Out with the reason; a record an accepted design leaves unread on purpose stays, with that design cited.
@@ -23,5 +23,6 @@ Write the file's headings first and fill it section by section, so a run that st
 8. **PRs**: the list, in order, each with what it lands and what it depends on. New row ids, sizes and prices are Yan's.
 9. **Risks**: the one part most likely to sink the milestone, and the cheapest test of it.
 10. **Decisions for Stas**: numbered, each with a recommendation. One with real alternatives also gets a Proposed record in `docs/decisions/`. An accepted decision the design would do better without goes here too, as a challenge: what the record shows, the refinement, the cost.
+11. **Exit rows**, where the design states or refines any: from 2026-11-15, every exit row in a milestone design first drafted from that date names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or a person (CLAUDE.md Rule 8, decision 0080).
 
 The draft carries no verdict on itself. Before it goes to Stas the calling thread asks Zoya for the board of the world with the draft among the files to read (`/zoya board <world>`), and takes any player-facing line in it to Vera; their answers are quoted in the draft verbatim.
