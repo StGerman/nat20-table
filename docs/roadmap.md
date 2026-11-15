@@ -62,7 +62,7 @@ Cheapest saving for M12: Stas plays only after the all-AI half on the same build
 
 ## Amendments (proposed; rules silent, followed here)
 
-- A milestone gets a number only when TASKS.md § Milestones has its row; later work is listed unnumbered, in Stas's order, with its source. Why: numbers in accepted records (the shop as M17, scope §4 and 0057) have drifted from the order.
+- A milestone gets a number only when its `milestone.md` in `tasks/` carries a `number` (decision 0085; before it, a row of TASKS.md § Milestones); later work is listed unnumbered, in Stas's order, with its source. Why: numbers in accepted records (the shop as M17, scope §4 and 0057) have drifted from the order.
 - "PRs" counts merged table and core PRs that carry the milestone's rows, its scope PR included; fixes stacked on top after the exit pair count to the next milestone. Why: one rule for every row, so ratios compare like with like.
 - "Run cost" counts every run whose `build.table_commit` is in a milestone PR (`GET commits/<sha>/pulls`), failed runs and lone halves included. Why: stack builds are squashed away and never reach main.
 - "Days scope→exit" ends at the exit record; with none, at the last merge of the milestone's PRs. Why: M11 had no exit record until 0066 (table #336), which keeps the last merge as its end.
