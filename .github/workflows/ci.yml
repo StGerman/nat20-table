@@ -2,7 +2,7 @@
 # why the jobs are shaped this way is in docs/decisions/0022-ci-shape.md.
 #
 #   changes ─┬─ contract-fresh                      contract-compat (PR only)
-#            ├─ rust-lint                           contract-pure, world-pure
+#            ├─ rust-lint                           contract-pure, world-pure, tasks
 #            ├─ rust-test ─┬─ visibility            deny
 #            │             └─ ts                    advisories (not gating)
 #            └─ rust-test-arm64
@@ -298,13 +298,24 @@ jobs:
         with:
           command: check advisories
 
+  # The task list (decision 0085): one file per task under tasks/, checked on every PR,
+  # docs-only ones included. Plain Node, no npm ci.
+  tasks:
+    name: tasks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Every task file is well formed and every id is unique
+        run: node tools/tasks/tasks.mjs check
+
   # The only check branch protection needs: green when every gating job passed or was skipped
   # on purpose (docs-only PR, contract-compat on push). Adding or splitting jobs never touches
   # repo settings.
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [changes, contract-fresh, contract-compat, contract-pure, world-pure, rust-lint, rust-test, rust-test-arm64, visibility, ts, deny]
+    needs: [changes, tasks, contract-fresh, contract-compat, contract-pure, world-pure, rust-lint, rust-test, rust-test-arm64, visibility, ts, deny]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
