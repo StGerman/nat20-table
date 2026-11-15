@@ -25,11 +25,12 @@ As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the line 13 updated 2
 
 ## Backlog milestones
 
-Not ordered, no spec, no number (Stas, review of table #337, 2026-11-08).
+Not ordered, no spec, no number unless its bullet gives one (Stas, review of table #337, 2026-11-08); a working number is a placeholder, not a place in the order.
 
 - The player as a merchant (maybe the shop that `docs/scope/living-world-scope.md` §4 and decision 0057 number M17)
 - Telegram
 - A smarter table
+- Stake before the roll (own move, any outcome), working number M20: design `docs/design/stake-before-the-roll.md` merged (table #395, status Proposed), decision 0083; no scope document (design §16 item 9); no rows until Stas takes it out of the backlog (Stas, 2026-11-15 22:06Z)
 
 ## Waiting on Stas
 
