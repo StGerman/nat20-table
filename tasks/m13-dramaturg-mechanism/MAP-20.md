@@ -13,4 +13,4 @@ The Mill's deeds and the Wendford Mill cards (design §4.1, §4.4, §7): `yard_f
 
 ## Status
 
-Done in table #MAP20PR (Milestone 13, PR 7, stacked on table #413; design `docs/design/m13-system-design.md` §4.4): the cards `mill_goblin_taken_alive` and `mill_yard_to_the_end`, rule 7 in `crates/nat20-api-server/tests/deeds.rs`. Owed, from Zoya's board check: the six answer deeds are written and unread (Arachas plus glue); Osric's hill kin on the second card are a setup with no carrier yet.
+Done in table #415 (Milestone 13, PR 7, stacked on table #413; design `docs/design/m13-system-design.md` §4.4): the cards `mill_goblin_taken_alive` and `mill_yard_to_the_end`, rule 7 in `crates/nat20-api-server/tests/deeds.rs`. Owed, from Zoya's board check: the six answer deeds are written and unread (Arachas plus glue); Osric's hill kin on the second card are a setup with no carrier yet.
