@@ -35,7 +35,7 @@ Items 4 and 5 had no record; this PR adds one for each (0087, 0088, Proposed). T
 3. **The names.** What the family says, and what the human's character answers when asked (the truth, another name, nothing), is written as deeds on outcomes the engine records (Milestone 13's carriers), never on the DM's word.
 4. **The real road** past the post, open from the start, dearer and longer.
 5. **A reader in the same contract:** something later in the run reads what was said at the post.
-6. **The second contract:** it opens on the letter; the offer of §2 item 2; AI players object and never block.
+6. **The second contract:** it opens on the letter when the family was left at the post, and on a carter's word when it was walked to the Dyke; the offer of §2 item 2 comes only with the letter; AI players object and never block.
 7. **Traces** on the second contract, by §2 items 6 and 9.
 8. **The exact place line** (§2 item 4) wherever the party's position is shown.
 
@@ -48,7 +48,7 @@ Items 4 and 5 had no record; this PR adds one for each (0087, 0088, Proposed). T
 | Any outcome from the player's own words (the stake, 0083) | backlog (Stas, 2026-11-15) |
 | Errands, fronts and clocks, a scene that reads a deed, the attitude step | Arachas plus glue, unless the design shows this exit cannot stand without one; then it is a question to Stas, not an addition |
 | The fugitive met again past the real border; the country over the sea | off the map |
-| The three-card pressure on the family that will not leave (Lev and Zoya, 2026-11-14) | question 2 |
+| The three-card pressure on the family that will not leave (Lev and Zoya, 2026-11-14) | its own content PRs after this exit (Stas, 2026-11-16, design §15 A2) |
 | Coast places into `map.json` beyond what this route walks | the world PR of the map thread |
 
 ## 5. The five phrases
@@ -63,7 +63,7 @@ Rule of 2026-11-14: before any code, run the scope against five things Stas woul
 | «Зарубить писаря» / «отрезать ему пальцы» | half | a fight, and `killed_<npc>`; a mutilation has no outcome without the stake |
 | «Забрать книгу и сжечь» | no, unless the author wrote it | no deed comes from the DM's word (Rule 4); as a written check it works, as an unforeseen act it does not |
 
-Three of five, and all three only because the author wrote them in. The design redoes the table against its own cards (its §7): three and two halves, the book counted as a half until something the table hears reads `book_taken`. This is the ceiling Milestone 12 failed on (0082): an act nobody foresaw gets talk and no outcome. Two things soften it here and neither removes it. The post is one place whose obvious acts can be listed and written (ask, lie, refuse, turn back, fight, take the book), and the second contract's choice is a vote by nature. Recommendation: build it, write the book and the bribe in as checks, and say in the exit that an unforeseen act at the post is counted and not gated. Not recommended: holding the milestone until the stake returns.
+Three of five, and all three only because the author wrote them in. The design redoes the table against its own cards (its §7): three and two halves after Stas's answers of 2026-11-16, the book a half because Garth's open door (design §15 B5) answers it on one path of three. This is the ceiling Milestone 12 failed on (0082): an act nobody foresaw gets talk and no outcome. Two things soften it here and neither removes it. The post is one place whose obvious acts can be listed and written (ask, lie, refuse, turn back, fight, take the book), and the second contract's choice is a vote by nature. Recommendation: build it, write the book and the bribe in as checks, and say in the exit that an unforeseen act at the post is counted and not gated. Not recommended: holding the milestone until the stake returns.
 
 ## 6. Exit criterion
 
@@ -71,7 +71,7 @@ Each row names the lowest layer that tests it (0080). The design's §12 holds th
 
 | # | Row | Layer |
 |---|---|---|
-| 1 | Every deed the post can write is written on its outcome and read by the reader of In 5 and by the second contract's opening; the other family comes only when the letter was sent | test with no model (seeded, CI) |
+| 1 | Every deed the post can write is written on its outcome and read by the reader of In 5 and by the second contract's opening; the letter exists only when the family was left at the post, and after the real road the other family comes on a carter's spoken word, with no offer (Stas, design §15 A3) | test with no model (seeded, CI) |
 | 2 | No player view, card text or table line states the false fact; the place line names the bank and the distance | test with no model (visibility scan case; a table test) |
 | 3 | A live DM at the post quotes the lie and never asserts it, over the five phrases of §5 and five more | card bench (`npm run play:card`, 0084) or `play:scene`, smaller than a run |
 | 4 | Vera, on the post's lines and the second contract's opening | a person (the `vera` agent), before the content PR merges |
@@ -79,47 +79,34 @@ Each row names the lowest layer that tests it (0080). The design's §12 holds th
 
 ## 7. Cost
 
-Yan, 2026-11-15, on main 34cbac1 (table #409 and #410 merged; M13's API-57 and ENG-44 are table #411 and #413, open; the Allies design and tender are table #412, open). PRs from design §12. Build priced by size as the Allies tender in table #412 prices it (XS 5, S 11, M 21, L 40 USD; review XS 5 to 10, S 15 to 20, M 25 to 30, L 35 to 45 min). Runs priced on M12's logged all-AI runs (5.70 to 8.57 USD) and M11's two human halves (5.17 and 5.87 USD, 26.5 and 39.1 min). No run of a three-day contract exists, so every run number here is an estimate.
+Yan, 2026-11-16, on main 67f442d (M13 done 2026-11-16 on table #411, #413, #415, #416; the Allies design and estimate, table #412, merged 21:34Z; this scope and design are table #417, open, priced from the working tree after Stas's §15 answers). PR numbers are design §12's nine; the status PR is a tenth. §12 gives no sizes, so the sizes here are Yan's, priced as the Allies tender in table #412 prices them (XS 5, S 11, M 21, L 40 USD; review XS 5 to 10, S 15 to 20, M 25 to 30, L 35 to 45 min). Runs priced on M12's logged all-AI runs (5.70 to 8.57 USD) and M11's two human halves (5.17 and 5.87 USD, 26.5 and 39.1 min). No run of a contract with `day_limit: 5` exists, so every run number here is an estimate.
 
-| Field | Plan (§15 A7 as recommended: both contracts) | M11 baseline |
+| Field | Plan (both contracts, Stas in both, §15 A7) | M11 baseline |
 | --- | --- | --- |
-| Size | design §12's 8 PRs: 1 S (scope, design, 0087, 0088; mostly spent), 2 S rows, 3 XS bible lines, 4 M `settle` (Rule 1), 5 S world, 6 L first contract, 7 M second contract, 8 S exit; plus the status PR, XS | 19 rows |
-| PRs for Stas | 9 (the 8 and the status PR); 10 with one fix PR after a failed run | 27 |
-| Build USD | 137: 10, 11, 5, 21, 11, 42 (Zoya's and Vera's reads in), 21, 11, 5 | not counted |
-| Stas's review | about 3.6 h, two of his review evenings at 2.5 h: 40 min PR 1, 15 PR 2, 10 PR 3, 30 PR 4, 20 PR 5, 45 PR 6 (the Russian lines), 30 PR 7, 15 PR 8, 10 status (estimates) | not measured |
-| Card bench, exit row 3 | `names_for_the_book`: 1.4 to 9.5 USD, about 4.75 expected; about 10 min of Stas's. The dawn card: not reachable by the bench as built (below) | n/a |
-| Exit runs | 26 USD if the pair passes first time: the all-AI half, 2 contracts at about 7 (5.70 to 8.57), 14; Stas's half, 2 at about 6 (5.17 to 5.87), 12 | 5 runs, 35.45 USD |
-| Stas at the table | 55 to 80 min (25 to 40 a contract), only after the AI half passed; plus about 40 min at the Mac to start the AI half and rule its flags (20 a run, as table #412) | 65.6 min |
-| Days scope→exit | 7 to 13: no PR merges before M13 and Allies pass their exits (design §12); Allies' exit is 11-20 to 11-24 by table #412; this milestone's own work is 3 days best, 5 likely after it | 2.12 |
+| Size | 1 S (scope, design, 0087, 0088; mostly spent), 2 S rows, 3 XS bible lines, 4 M `settle`, `escort_dismissed` and the dismissal line (Rule 1), 5 S world (`the_dyke`, `old_landing`), 6 S the bench reaches a night card (XS if the saved roster loads with no code; the mid-contract start is cut, §12), 7 L first contract, 8 L second contract (nine cards, was M; B6's wage check dropped), 9 S exit; plus the status PR, XS | 19 rows |
+| PRs for Stas | 10 (the 9 and the status PR); 11 with one fix PR after a failed run | 27 |
+| Build USD | 169: 10, 11, 5, 21, 11, 11, 42, 42 (Zoya's and Vera's reads in each), 11, 5 | not counted |
+| Stas's review | about 4.1 h, two of his review evenings at 2.5 h, after the three Allies needs (its 7.4 h, table #412): 40 min PR 1, 15 PR 2, 10 PR 3, 30 PR 4, 20 PR 5, 15 PR 6, 45 PR 7, 45 PR 8 (the Russian lines of 15 cards), 15 PR 9, 10 status (estimates) | not measured |
+| Card bench, rows 3 and 3a | 5 cards, `names_for_the_book` and the four dawn variants, ten lines each: 6.5 to 50 USD, about 25 expected; about 30 min of Stas's (estimate). The night rest before a dawn line is not measured; priced at the arrival card's first line | n/a |
+| Exit runs | 26 USD if the pair passes first time, both contracts in each half: all AI, 2 at about 7 (5.70 to 8.57), 14; Stas's half, 2 at about 6 (5.17 to 5.87), 12. Up to 33 if every contract takes the fifth day: priced at a quarter of a run a day, no logged figure | 5 runs, 35.45 USD |
+| Stas at the table | 55 to 80 min (25 to 40 a contract), up to 100 with the fifth day (no logged figure), only after the AI half passed; plus about 40 min at the Mac to start the AI half and rule its flags (20 a run, as table #412) | 65.6 min |
+| Days, today to exit | 6 to 11: no PR merges before Allies passes its exit (design §12), 3 to 6 days from its design's merge on 11-16 (table #412 §14; M13's overlap is gone); this milestone's own work is 3 days best, 5 likely after it, PR 6 beside PR 4 and 5 | 2.12 |
 
-Totals: best 168 USD (137 build, 4.75 bench, 26 runs) and 5.3 h of Stas's (3.6 review, 0.2 bench, 0.7 Mac, 0.9 table); likely 186 USD and 6.4 h, with one failed all-AI half (below).
+Totals: best 220 USD (169 build, 25 bench, 26 runs) and 6.2 h of Stas's (4.1 review, 0.5 bench, 0.7 Mac, 0.9 table); likely 247 USD and 7.4 h, with the fifth day played in the AI half and one failed all-AI half (below).
 
-Target (0065, half the baseline): 13.5 PRs, 17.73 USD of runs, 33 min at the table, 1.06 days. Planned: 9 PRs (0.33); 26 USD of runs (0.73), over by 8.27; 55 to 80 min at the table (0.84 to 1.22), over; 7 to 13 days, over by 6 to 12, set by the order (M13, Allies, then this), not by this milestone's work.
+Target (0065, half the baseline): 13.5 PRs, 17.73 USD of runs, 33 min at the table, 1.06 days. Planned: 10 PRs (0.37); 26 to 33 USD of runs (0.73 to 0.93), over by 8.27 to 15.27; 55 to 100 min at the table (0.84 to 1.52), over; 6 to 11 days, over by 4.9 to 9.9, set by the order (Allies, then this), not by this milestone's work.
 
-**§15 A7, Stas's half, priced apart.** The all-AI half (14 USD, both contracts) is the same in each.
+**§15 A7.** Plan B, Stas in the first contract only (6 USD and 25 to 40 min less), was declined on 2026-11-16: he plays both.
 
-| Stas plays | Runs USD | At the table | What his half proves |
-| --- | --- | --- | --- |
-| A. Both contracts (the design's recommendation) | 12 | 55 to 80 min | his own answer at the book comes back on the next contract |
-| B. The first contract only | 6 | 25 to 40 min | his answer read back in the same contract (the dawn card); the reads across contracts only by the AI half and the seeded tests (exit row 1) |
-| C. The second only, on the AI half's roster | 6 | 25 to 40 min | somebody else's answer comes back to him (design §15 A7 argues against it) |
+**§15 A2, the pressure chain, outside the total.** Its own content PRs after this exit: 2 PRs (the content, its rows and status), 26 to 53 USD build, 35 to 50 min of review. Its live proof: if the three cards are chained, the bench does not reach them (`docs/design/card-bench.md` §3), so one all-AI contract run, about 7 USD and 20 min at the Mac, 0 at the table; or 0 run USD if it rides on the next milestone's exit run.
 
-B against A saves 6 USD and 25 to 40 min of the table: the pair is 20 USD (0.56 of the baseline, over the target by 2.27) and 25 to 40 min (0.38 to 0.61). The award is Stas's.
+**A failed all-AI half.** Contract 1 fails: 7 to 9 USD lost and contract 2 not played. Contract 2 fails: both rerun on the fix's build (0043), 14 to 18 USD lost. Either way one S fix PR (11 USD, 15 to 20 min of review), 20 to 40 min at the Mac for the rerun, a day, and 0 min at the table. Landed: 18 to 29 USD, 35 to 60 min of Stas's, 1 day. A failed Stas half costs the whole pair again on the fix's build: 37 to 44 USD with the fix, 55 to 100 min at the table, two evenings. On the record (M12 0 PASS in 8 runs; M11 1 pair passed in 3; M13's pair passed on 2026-11-16) the likely line carries one failed AI half.
 
-**§15 A2, the pressure chain, priced apart.**
+**Card bench, rows 3 and 3a.** Per card, at the measured price (table #412: 0.9 to 1.0 USD to the first line, 0.04 to 0.08 a further line), ten lines, questions first: 1.3 to 1.7 USD if no line settles it, 9 to 10 if every line does, about 5 expected (five bench runs: the plans and the false name each settle it). `names_for_the_book` is reached as built. The four dawn variants are reached after PR 6, each on a roster the seeded walk of exit row 1 saved (design §12); the DM's memory of the evening's talk and `settle` live stay with the pair and PR 4's fixture. If PR 6 slips past PR 7, the dawn card's first live reading is the all-AI half, where a finding costs a failed half (18 to 29 USD, a day).
 
-- In this milestone: one more content PR, M to L (21 to 42 USD, 25 to 35 min of review), on the chain after PR 6, about half a day more; no extra run; three more cards for the AI half to fail on.
-- Later, as its own content PRs after this exit: 2 PRs (the content, its rows and status), 26 to 53 USD build, 35 to 50 min of review. Its live proof: if the three cards are chained, the bench does not reach them (`docs/design/card-bench.md` §3), so one all-AI contract run, about 7 USD and 20 min at the Mac, 0 at the table; or 0 run USD if it rides on the next milestone's exit run.
-
-**A failed all-AI half.** Contract 1 fails: 7 USD lost and contract 2 not played. Contract 2 fails: both rerun on the fix's build (0043), 14 USD lost. Either way one S fix PR (11 USD, 15 to 20 min of review), 20 to 40 min at the Mac for the rerun, a day, and 0 min at the table. Landed: 18 to 25 USD, 35 to 60 min of Stas's, 1 day. A failed Stas half costs the whole pair again on the fix's build: 37 USD with the fix, 55 to 80 min at the table, two evenings. On the record (M12 0 PASS in 8 runs; M11 1 pair passed in 3) the likely line carries one failed AI half.
-
-**Card bench, exit row 3.** `names_for_the_book` is an arrival card one leg past Wendmouth and reads no deed, so the bench reaches it as built: about 0.9 USD to its first line (0.89 and 0.98 measured on 2026-11-15, table #412) and 0.05 a further line. Ten lines, the five phrases and five more, questions first: 1.4 USD if no line settles the card, 9.5 if every line does, about 4.75 expected (five bench runs: the plans and the false name each settle it). The dawn card is not reachable: it is a night card, out of the bench's first version (`docs/design/card-bench.md` §3 and §7), and its four variants read deeds written earlier in the same contract, which no saved roster carries. Two ways, neither in the totals: a bench row for night cards and a start in the middle of a contract (S, 11 USD, 15 to 20 min of review, before PR 6, then about 4.75 USD of bench runs), or the dawn card's first live reading is the all-AI half, where a finding costs a failed half (18 to 25 USD, a day). Design §12 names exit row 3 as the cheapest test of its likeliest risk, so this is a gap for the design to close, and the choice is Stas's.
-
-Amendment (proposed; rules silent, followed here): a scope's cost prices the Claude Code build per PR by size, as table #412 does; the baseline counts in-game runs only. Why: 137 USD of builds against 26 USD of runs needs its own line.
-
-Added by the thread after Yan priced it. His PR numbers above are the first draft's: his PR 6, 7 and 8 (first contract, second contract, exit) are PR 7, 8 and 9 in the design's §12 now, and the design's PR 6 is new: the design's one revision takes his bench row as its own PR (the bench reaches a night card; his S, 11 USD, 15 to 20 min of review), so the plan is 10 PRs and 179 USD at best. He has not re-priced it, and the design says his S may be more than that PR needs.
+Amendment (proposed; rules silent, followed here): a scope's cost prices the Claude Code build per PR by size, as table #412 does; the baseline counts in-game runs only. Why: 169 USD of builds against 26 USD of runs needs its own line.
 
 ## 8. Questions for Stas
 
 1. **Without the stake, three of five (§5).** Answered by Stas, 2026-11-15 22:15Z («Да давай так»): build it now without the stake, with the obvious acts at the post written in as checks, so that the stake can later lie on top with no rework: the deeds those checks write stay the same.
-2. Every other question is in the design's §15, each with a recommendation: A, eight on the mechanism, scope and exit (the three-card pressure on the family is A2, the exit pair is A7); B, eleven of Zoya's on the story.
+2. Every other question was in the design's §15: A, eight on the mechanism, scope and exit; B, eleven of Zoya's on the story. Answered by Stas, 2026-11-16 21:21Z to 21:32Z, by decision cards; each answer is recorded there. A as recommended: `settle` and `escort_dismissed` accepted, the three-card pressure on the family later as its own content PRs, a second contract after the real road, the bench reaches a night card, Stas plays both contracts, the old ferry landing added. In B he ruled against the recommendation twice: Hesta is not the brothers' sister and her relation to them is not named at the table (B1), and the carter brings only his word, no owed wage (B6).
