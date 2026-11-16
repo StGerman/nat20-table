@@ -172,11 +172,13 @@ export function carriedRow(run: RunRecord, log: Event[], transcript: TranscriptR
     ...(answer?.answer === "no" ? ["the judge answers no"] : []),
   ];
   const lines = new Set(answer?.lines ?? []);
-  const onIt = flags.filter((f) => f.row === "3" && f.source !== "hand" && lines.has(Number(/^n(\d+)-/.exec(f.id)?.[1])));
+  // Row 3's flags on the card's lines: the judge's and those Stas added by hand.
+  const onIt = flags.filter((f) => f.row === "3" && f.line !== undefined && lines.has(f.line));
   const confirmed = onIt.filter((f) => f.answer === "confirmed");
   const open = onIt.filter((f) => !f.answer);
   if (confirmed.length > 0) fails.push(`contradiction on its lines: ${confirmed.map((f) => f.id).join(", ")}`);
-  const head = `${card.card} read ${card.reads.map((d) => `${d.deed} (contract ${d.contract}, day ${d.day})`).join(", ")}${card.decided ? `; decided ${card.decided.choice} (${card.decided.how})` : ""}${card.wrote.length > 0 ? `; wrote ${card.wrote.join(", ")}` : ""}`;
+  // The pair is bound by the roster: run 2 loads the file run 1's m13-written row says it saved.
+  const head = `roster ${run.roster.name} loaded ${run.roster.loaded_sha256?.slice(0, 12) ?? "?"}; ${card.card} read ${card.reads.map((d) => `${d.deed} (contract ${d.contract}, day ${d.day})`).join(", ")}${card.decided ? `; decided ${card.decided.choice} (${card.decided.how})` : ""}${card.wrote.length > 0 ? `; wrote ${card.wrote.join(", ")}` : ""}`;
   const judgeSays = !judged || !answer ? "the judge has not answered" : answer.answer === "yes" ? `the judge: yes, line ${answer.line}: "${answer.quote}"` : "the judge: no";
   const detail = `${head}; ${judgeSays}${open.length > 0 ? `; flags on its lines to confirm: ${open.map((f) => f.id).join(", ")}` : ""}${fails.length > 0 ? `; ${fails.join("; ")}` : ""}`;
   if (fails.length > 0) return { row: "m13-carried", title, status: "fail", detail };

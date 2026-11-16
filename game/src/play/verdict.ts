@@ -12,7 +12,7 @@ import { percentile, waitedMs, type UsageRecord } from "../usage.ts";
 import { packOfRun, readLines, readRunRecord, RUN_JSON, type RunRecord } from "./record.ts";
 import { TARGET_P95_MS } from "./run.ts";
 import { exitRows, type ReadableAnswer } from "./exit.ts";
-import { carriedRow, firstWorldDeeds, outcomesOf, sceneOutcomesOf, readableRow as carriedReadableRow, readCarriedAnswer, writtenRow, type CarriedReads } from "./m13.ts";
+import { carriedCard, carriedRow, firstWorldDeeds, outcomesOf, sceneOutcomesOf, readableRow as carriedReadableRow, readCarriedAnswer, writtenRow, type CarriedReads } from "./m13.ts";
 
 export const VERDICT_JSON = "verdict.json";
 /** The audit stage's output: whether `nat20-audit` passed, and what it printed. */
@@ -44,6 +44,8 @@ export interface Flag {
   answer?: "confirmed" | "dismissed";
   /** `hand` for a flag Stas added in `confirmations.json` (`added[]`) that the judge missed (M10 P2); absent for the judge's and the retry count's. */
   source?: "hand";
+  /** The narration line it is about, when it is about one. */
+  line?: number;
 }
 
 /** A narration flag Stas adds by hand in `confirmations.json` under `added` (M10 P2, AGT-60). */
@@ -428,7 +430,7 @@ export function computeVerdict(dir: string): Verdict {
   const narrationFlags: Flag[] = readLines<{ id: string; line?: number; claim?: string; kind?: string; untracked?: boolean }>(path.join(dir, NARRATION_CHECK)).filter((f) => !f.untracked).map((f) => {
     const answer = answers[f.id]?.answer;
     // The story-space kind is the Milestone 11 row's (AGT-91), not row 3's.
-    return { id: f.id, row: f.kind === "story_space" ? "m11-story" : "3", text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
+    return { id: f.id, row: f.kind === "story_space" ? "m11-story" : "3", text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(f.line !== undefined ? { line: f.line } : {}), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
   });
   // Lines Stas ruled himself, which the judge missed (M10 P2): flags of row 3 like the judge's.
   const handFlags: Flag[] = (Array.isArray(added) ? (added as HandFlag[]) : []).map((f) => ({
@@ -437,6 +439,7 @@ export function computeVerdict(dir: string): Verdict {
     text: `hand: ${f.claim}${f.line !== undefined ? ` (line ${f.line})` : ""}`,
     answer: f.answer === "dismissed" ? "dismissed" : "confirmed",
     source: "hand",
+    ...(f.line !== undefined ? { line: f.line } : {}),
   }));
   narrationFlags.push(...handFlags);
   const retries = retryRows(run, transcript, answers);
@@ -452,7 +455,7 @@ export function computeVerdict(dir: string): Verdict {
       })
     : undefined;
   const m13 = carried
-    ? [carried, carriedReadableRow(run, carriedReads as CarriedReads | undefined, carried.status !== "reported")]
+    ? [carried, carriedReadableRow(run, carriedReads as CarriedReads | undefined, carriedCard(log, outcomesOf(pack)) !== undefined)]
     : atSite
       ? [writtenRow(run, log, outcomesOf(pack))]
       : [];

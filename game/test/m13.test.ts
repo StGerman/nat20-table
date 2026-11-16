@@ -145,6 +145,10 @@ test("m13-carried: the card read an earlier outcome, the Blades decided it, its 
   assert.equal(row(dir, "m13-carried")!.status, "pending");
   writeFileSync(path.join(dir, CONFIRMATIONS_JSON), JSON.stringify({ "n8-1": { answer: "confirmed" } }));
   assert.equal(row(dir, "m13-carried")!.status, "fail");
+  // A flag Stas adds by hand on one of its lines counts too.
+  writeFileSync(path.join(dir, NARRATION_CHECK), "");
+  writeFileSync(path.join(dir, CONFIRMATIONS_JSON), JSON.stringify({ added: [{ id: "h7-1", line: 7, claim: "Osric was not there" }] }));
+  assert.match(row(dir, "m13-carried")!.detail, /contradiction on its lines: h7-1/);
 
   const no = run2();
   writeFileSync(path.join(no, JUDGE_QUESTION), JSON.stringify({ ...ANSWER, answer: "no", line: null, quote: "" }));
@@ -166,6 +170,8 @@ test("m13-carried: the card read an earlier outcome, the Blades decided it, its 
   const owed = row(missed, "m13-carried")!;
   assert.equal(owed.status, "fail");
   assert.match(owed.detail, /the saved world held snitt_yielded, and no arrival card read it/);
+  // With no card there is nothing to read, whatever the carried row says.
+  assert.equal(row(missed, "m13-readable")!.status, "reported");
   const fresh = folder(runRecord({ settings: { pack: { value: FAIR, from: "flag" } } as never, campaign: { start_day: 1, day_limit: 3 }, roster: ROSTER as never }), WENDFORD);
   assert.equal(row(fresh, "m13-carried")!.status, "reported");
   assert.equal(row(fresh, "m13-readable")!.status, "reported");
@@ -219,6 +225,11 @@ test("the narration check asks the judge the carried question on the card's line
   const written = JSON.parse(readFileSync(path.join(dir, JUDGE_QUESTION), "utf8"));
   assert.deepEqual(written, { question: CARRIED_QUESTION, card: "mill_goblin_taken_alive", lines: [7, 8], answer: "yes", line: 7, quote: "you let the one in the yard live" });
   assert.match(check.lines.at(-1)!, /Does the DM name what the party did at the mill\? yes \(card mill_goblin_taken_alive, line 7/);
+  // A quote that is not on the line it names is not kept: the line itself is.
+  const made = run2();
+  writeFileSync(path.join(made, NARRATION_DIGEST), readFileSync(path.join(dir, NARRATION_DIGEST)));
+  assert.ok((await narrationCheck(FAIR, made, new ScriptedJudge([], { answer: "yes", line: 8, quote: "you let the one in the yard live" }))).ok);
+  assert.equal(JSON.parse(readFileSync(path.join(made, JUDGE_QUESTION), "utf8")).quote, "Osric notches the tally.");
   // A run not on a carried roster is never asked.
   const first = folder(runRecord({ roster: ROSTER as never }), MILL_LOG);
   writeFileSync(path.join(first, NARRATION_DIGEST), readFileSync(path.join(dir, NARRATION_DIGEST)));

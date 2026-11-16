@@ -71,7 +71,12 @@ export async function narrationCheck(pack: string, dir: string, judge: Judge): P
     if (lines.length > 0) {
       try {
         const numbers = lines.map((d) => d.line);
-        asked = { question: CARRIED_QUESTION, card: card.card, lines: numbers, ...(await judge.ask(questionText(card, lines), numbers)) };
+        const said = await judge.ask(questionText(card, lines), numbers);
+        // The quote is evidence only if it stands on the line it names: otherwise the line itself is kept.
+        const text = lines.find((d) => d.line === said.line)?.text ?? "";
+        const plain = (t: string) => t.toLowerCase().replace(/\s+/g, " ").trim();
+        const quote = said.answer === "yes" && (said.quote.trim() === "" || !plain(text).includes(plain(said.quote))) ? text : said.quote;
+        asked = { question: CARRIED_QUESTION, card: card.card, lines: numbers, ...said, quote };
       } catch (error) {
         return { ok: false, lines: [`Narration check: the judge stopped on the question: ${(error as Error).message}. Run it again with npm run audit:narration -- ${dir}`] };
       }

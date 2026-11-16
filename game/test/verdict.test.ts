@@ -151,7 +151,7 @@ test("a flag Stas adds by hand in confirmations.json counts in row 3 (M10 P2)", 
   writeFileSync(path.join(dir, CONFIRMATIONS_JSON), JSON.stringify({ n1: { answer: "dismissed" }, added: [{ id: "h9-1", line: 9, claim: "the wolf ducks behind the cart with no move" }] }));
   const v = computeVerdict(dir);
   assert.equal(v.verdict, "FAIL");
-  assert.deepEqual(v.flags.find((f) => f.id === "h9-1"), { id: "h9-1", row: "3", text: "hand: the wolf ducks behind the cart with no move (line 9)", answer: "confirmed", source: "hand" });
+  assert.deepEqual(v.flags.find((f) => f.id === "h9-1"), { id: "h9-1", row: "3", text: "hand: the wolf ducks behind the cart with no move (line 9)", answer: "confirmed", source: "hand", line: 9 });
   assert.match(v.rows.find((r) => r.row === "3")!.detail, /^2 flags: 1 confirmed, 1 dismissed, 0 to confirm$/);
   writeFileSync(path.join(dir, CONFIRMATIONS_JSON), JSON.stringify({ n1: { answer: "dismissed" }, added: [{ id: "h9-1", claim: "x", answer: "dismissed" }] }));
   assert.equal(computeVerdict(dir).verdict, "PASS", "a hand flag Stas dismisses again passes");
