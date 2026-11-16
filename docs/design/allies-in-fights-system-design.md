@@ -109,12 +109,12 @@ One view, "what your character knows", for every person: here, elsewhere, a comp
 
 ### 6.3 The card in the hero's words (the describer)
 
-Stas, 20:25Z and 20:38Z. Cost, once: Zoya's line reaches the player read by Vera; a reworded one reaches her unread.
+Stas, 20:25Z and 20:38Z, narrowed to `look` on 2026-11-16 (§16 item 8). Cost, once: Zoya's line reaches the player read by Vera; a reworded one reaches her unread.
 
-A tool-less agent `describe:<handle>`, the shape of `game/src/agents/suggest.ts`, Haiku 5.5 at low effort, for the human's seat only. Input: the viewer's own entry from `projection.rs`, cut to `look`, `heard`, `remembers`, plus the character's pack card and the language. Output: one line per line given. It is written ahead, when the viewer's lines for a person change; 5 s, silent failure, the authored line until a checked one is ready; cached per viewer, person and line hash, for the run, never in the roster (0071, 0034). No contract change.
+A tool-less agent `describe:<handle>`, the shape of `game/src/agents/suggest.ts`, Haiku 5.5 at low effort, for the human's seat only. Input: the viewer's own entry from `projection.rs`, cut to `look`, plus the character's pack card and the language. Output: one line per line given. `heard` and `remembers` show as authored, and a test checks each shown line equals its authored line. It is written ahead, when the viewer's lines for a person change; 5 s, silent failure, the authored line until a checked one is ready; cached per viewer, person and line hash, for the run, never in the roster (0071, 0034). No contract change.
 
 - **N9.** A reworded line is about the person described: no first-person word, no feeling, verdict, advice or plan of the viewer.
-- **N10.** A reworded line shows only if it has no digit or number word (`guards.ts`), names no roster person or glossary place its source lacks and no other capitalised word inside a sentence, keeps the person's grammatical gender (Vera's third read), keeps «вы» or «ваш отряд», keeps a listed opener on `heard`, and is at most 1.5 times the source's length. Otherwise the authored line shows.
+- **N10.** A reworded line shows only if it has no digit or number word (`guards.ts`), names no roster person or glossary place its source lacks and no other capitalised word inside a sentence, keeps the person's grammatical gender (Vera's third read), keeps «вы» or «ваш отряд», and is at most 1.5 times the source's length. Otherwise the authored line shows.
 
 ### 6.4 The judge (AGT-109)
 
@@ -333,6 +333,8 @@ Rules silent, followed here (amendments for Stas):
 - **Two L rows** (API-58, MAP-24) are the likeliest to need a second review round.
 
 ## 16. Decisions for Stas
+
+Answered by Stas on 2026-11-16 (decision cards in the milestone thread): item 1 no target, take what the dice give (ENG-48's table still prints the rates; nobody tunes `from` to a number); items 2, 3, 4, 5, 7, 8 and 9 as recommended; item 6 taken point by point, all six departures accepted. The text below is the question as asked.
 
 1. **How often an ally may die.** Recommended target on `night_wolves`, `stand`, everyone aboard: the Merchant dies in no more than one fight in ten, and some ally is hurt or killed in at least one in three. The author tunes `from` to it and ENG-48's table shows the result. Alternative: no target, take what the dice give. Cost of none: the death card may become the normal end of a contract.
 2. **What a dead horse costs.** Recommended now: nothing on the road; the caravan panel shows the team, the Merchant remembers it, one choice in that Merchant's deck reads it. What I would do next: a short team forces a Slow pace, where a slow traveller already does. Not now, because both packs arrive on day 4 of a day limit of 4, so a slower wagon could leave an exit run unfinished. Cost of waiting: "stand between the wolves and the horses" protects something that is free to lose.
