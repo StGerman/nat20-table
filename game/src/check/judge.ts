@@ -39,9 +39,20 @@ export interface JudgeReport {
   untracked: UntrackedProp[];
 }
 
+/** The judge's answer to one yes-or-no question about a few lines (AGT-104). */
+export interface JudgeAnswer {
+  answer: "yes" | "no";
+  /** The line that answers it, by its number; null when no line does. */
+  line: number | null;
+  /** That line's words that answer it, quoted; empty when no line does. */
+  quote: string;
+}
+
 /** Reads one batch of narration lines and reports on it. */
 export interface Judge {
   judge(batch: string, lines: number[]): Promise<JudgeReport>;
+  /** Answers one yes-or-no question about the lines in `text` (AGT-104); a judge without it is never asked. */
+  ask?(text: string, lines: number[]): Promise<JudgeAnswer>;
   close?(): Promise<void>;
 }
 
@@ -77,6 +88,22 @@ export function storySpacePrompt(human: string | undefined): string {
   return `One more kind, for this run only:
 - story_space: a line that opens a scene (its engine lines show a scene loaded, or a journey leg arriving) or narrates a road card settled (its engine lines show "The card is decided") leaves ${who} with no problem to act on: nobody wants anything of them, nothing is at stake that they can see, and no question is put to them, so the scene or the road just goes on pleasantly. Report it with the claim "pleasant nothing" and a few words on what the line offers instead. A line with a problem in it, however small or quiet, is not a flag; neither is a line that is not a scene opening or a settled card.`;
 }
+
+/**
+ * The Milestone 13 question (design `m13-system-design.md` §8, AGT-104), asked of a run whose
+ * card reads what the party did in an earlier contract: does the DM, around that card, name it?
+ */
+export const CARRIED_QUESTION = "Does the DM name what the party did at the mill?";
+
+export const ASK_PROMPT = `You read a few lines a Dungeons & Dragons game's Dungeon Master (DM) said aloud at the table, around one road card, and answer one question about them with yes or no. The message gives the question, what the engine's record says the party did earlier (each deed with who did it and the day), the card's own text, and the DM's lines, each with its number.
+
+Answer yes only if one of the DM's lines tells the table, in its own words, what the party did: the deed itself, not only the place or the people. The card's own text does not count, because the DM did not say it. Lines may be in any language; judge what they say. Give the number of the line that answers it and quote its words; with no, give no line and an empty quote. Call answer exactly once, and write nothing else.`;
+
+const answerInput = {
+  answer: z.enum(["yes", "no"]),
+  line: z.number().int().min(1).nullable().describe("The number of the line that answers yes; null for no."),
+  quote: z.string().describe("That line's words that name the deed, quoted; empty for no."),
+};
 
 const reportInput = {
   flags: z
@@ -135,6 +162,27 @@ export class ModelJudge implements Judge {
     }
     throw new Error(`the judge never called report for lines ${lines[0]} to ${lines[lines.length - 1]}`);
   }
+
+  async ask(text: string, lines: number[]): Promise<JudgeAnswer> {
+    // As with a batch: a turn that forgets the tool is asked again once, in a new session.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      let got: JudgeAnswer | undefined;
+      const answer = seatTool("answer", "Answer the question yes or no, with the line and its words. Call it exactly once.", answerInput, async (args) => {
+        // A line outside the ones given answers nothing.
+        const line = args.answer === "yes" && args.line !== null && lines.includes(args.line) ? args.line : null;
+        got = line === null ? { answer: "no", line: null, quote: "" } : { answer: "yes", line, quote: args.quote };
+        return reply(`Answered ${got.answer}.`);
+      });
+      const session = this.open({ agent: "judge", role: "judge", choice: this.choice, systemPrompt: ASK_PROMPT, tools: [answer], turnTimeoutMs: this.turnTimeoutMs });
+      try {
+        await session.turn(text, "narration question");
+      } finally {
+        await session.close();
+      }
+      if (got) return got;
+    }
+    throw new Error(`the judge never answered the question on lines ${lines[0]} to ${lines[lines.length - 1]}`);
+  }
 }
 
 /** A judge for tests: fixed flags, by line, and no model. */
@@ -142,13 +190,22 @@ export class ScriptedJudge implements Judge {
   readonly batches: string[] = [];
   private readonly flags: JudgeFlag[];
 
-  constructor(flags: JudgeFlag[] = []) {
+  readonly asked: string[] = [];
+  private readonly answer: JudgeAnswer;
+
+  constructor(flags: JudgeFlag[] = [], answer: JudgeAnswer = { answer: "no", line: null, quote: "" }) {
     this.flags = flags;
+    this.answer = answer;
   }
 
   async judge(batch: string, lines: number[]): Promise<JudgeReport> {
     this.batches.push(batch);
     return { flags: this.flags.filter((f) => lines.includes(f.line)), untracked: [] };
+  }
+
+  async ask(text: string): Promise<JudgeAnswer> {
+    this.asked.push(text);
+    return this.answer;
   }
 }
 
