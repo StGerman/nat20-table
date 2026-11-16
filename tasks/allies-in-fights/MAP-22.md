@@ -13,4 +13,4 @@ Where Gwyn's dog, the Merchant and the horses are during `night_wolves` (`worlds
 
 ## Status
 
-(after the M12 exit pair, after ENG-47, MAP-18 (table #352) and MAP-19 (table #355), which edit this card)
+todo. Design PR 4 (§13); moved from the backlog 2026-11-16. Needs ENG-47; MAP-18 (table #352) and MAP-19 (table #355) are merged. ENG-48's deck half rewrites this card's "none is in the fight" note line (design §4.2). Cost: XS, 5 USD build, Stas about 10 min review (§14)

@@ -13,4 +13,4 @@ A card's fight can start with its monsters surprised (allies in fights, option A
 
 ## Status
 
-(right after the M12 exit pair, its own PR; Stas 2026-11-12 21:22Z, scope table #365 §9)
+todo. Design PR 3 (`docs/design/allies-in-fights-system-design.md` §13); moved from the backlog 2026-11-16. Its M13 file (`session/cards.rs`, API-57) is on main: Milestone 13 closed 2026-11-16. Needs nothing; MAP-22 waits on it
