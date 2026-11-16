@@ -869,7 +869,7 @@ fn check_effects(
                     Some(_) => Some(format!("{skill} is not a {ability} check")),
                     None => Some(format!("{ability} / {skill} is not an ability and a skill")),
                 },
-                world::Effect::Fight { monsters } => monsters
+                world::Effect::Fight { monsters, .. } => monsters
                     .iter()
                     .find_map(|m| crate::adapter::monster::check(m.stat()).err()),
                 world::Effect::Cargo { good, .. } if goods.get(good).is_none() => {

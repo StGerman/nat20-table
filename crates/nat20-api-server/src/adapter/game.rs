@@ -1923,6 +1923,16 @@ impl Game {
     /// surprised side with Disadvantage, and runs scripted turns until a client decides.
     /// Participants not in the scene are left out.
     pub fn start_combat(&mut self, encounter_id: &str) -> Result<(), ApiError> {
+        self.start_combat_surprised(encounter_id, None)
+    }
+
+    /// `start_combat`, with `surprised` rolling Initiative with Disadvantage whatever the
+    /// scene's own surprise says (a card's surprised fight, ENG-47).
+    fn start_combat_surprised(
+        &mut self,
+        encounter_id: &str,
+        surprised: Option<Side>,
+    ) -> Result<(), ApiError> {
         if self.running_encounter().is_some() {
             return Err(error(ErrorCode::WrongMode, "Combat is already running."));
         }
@@ -1964,11 +1974,13 @@ impl Game {
             .collect();
         // The surprised side rolls initiative with Disadvantage once the scene's flag is set
         // (decision D4, SRD 5.2.1 Surprise).
-        let surprised_side: Option<Side> = found
-            .surprise
-            .as_ref()
-            .filter(|surprise| self.flags.contains(&surprise.when_flag))
-            .map(|surprise| surprise.surprised);
+        let surprised_side: Option<Side> = surprised.or_else(|| {
+            found
+                .surprise
+                .as_ref()
+                .filter(|surprise| self.flags.contains(&surprise.when_flag))
+                .map(|surprise| surprise.surprised)
+        });
         let standing = |side: Side| {
             arriving_sides.contains(&side)
                 || entities.iter().any(|e| {
@@ -2011,6 +2023,17 @@ impl Game {
     /// early end, added to the scene's encounters so the DM's view and `end_combat` treat it
     /// like any other.
     pub fn start_fight(&mut self, participants: &[Handle]) -> Result<(), ApiError> {
+        self.start_fight_surprised(participants, None)
+    }
+
+    /// `start_fight` with the `surprised` side rolling Initiative with Disadvantage (SRD 5.2.1,
+    /// Surprise): a card's fight whose monsters are caught unready (ENG-47). Only the server
+    /// starts one; the wire's `start_fight` has no surprise.
+    pub fn start_fight_surprised(
+        &mut self,
+        participants: &[Handle],
+        surprised: Option<Side>,
+    ) -> Result<(), ApiError> {
         if self.running_encounter().is_some() {
             return Err(error(ErrorCode::WrongMode, "Combat is already running."));
         }
@@ -2085,7 +2108,7 @@ impl Game {
             end_reasons: Vec::new(),
             on_end: Vec::new(),
         });
-        let started = self.start_combat(&id);
+        let started = self.start_combat_surprised(&id, surprised);
         if started.is_err() {
             self.scene.encounters.pop();
         }

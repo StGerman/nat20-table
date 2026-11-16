@@ -5,7 +5,7 @@ title: "A card's fight can start with its monsters surprised"
 pri: P2
 dest: Ours
 size: S
-state: todo
+state: done
 area: "2. Engine correctness (core)"
 ---
 
@@ -13,4 +13,4 @@ A card's fight can start with its monsters surprised (allies in fights, option A
 
 ## Status
 
-todo. Design PR 3 (`docs/design/allies-in-fights-system-design.md` §13); moved from the backlog 2026-11-16. Its M13 file (`session/cards.rs`, API-57) is on main: Milestone 13 closed 2026-11-16. Needs nothing; MAP-22 waits on it
+Done in the PR that marks this file: `surprise` on the deck `fight` effect (`crates/nat20-world/src/deck.rs`), `start_fight_surprised` in `adapter/game.rs`, protocol §4.13; the wire is unchanged. MAP-22 uses it next.
