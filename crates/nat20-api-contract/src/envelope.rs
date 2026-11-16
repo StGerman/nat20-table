@@ -261,7 +261,9 @@ pub enum Command {
     /// Starts a fight no authored encounter fits, among creatures present (API-34, decision
     /// 0035; protocol §4.4). The DM's command, and the one exception to "participants come from
     /// the scene file". Each participant must be in the scene, conscious and on the party or the
-    /// hostile side, listed once; at least one of each side. Initiative is rolled as for an
+    /// hostile side, listed once; at least one of each side. A creature of an authored encounter
+    /// that writes deeds (`on_end`) and has not been started in this scene is refused: that fight
+    /// starts with `start_combat` (API-57). Initiative is rolled as for an
     /// authored fight, with no surprise, no surrender condition and no early end: it ends when
     /// a side is down. The fight is listed in the DM's `encounters` as `fight_<n>`.
     StartFight {

@@ -76,7 +76,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.73"
+    "version": "1.0.0-dev.74"
   },
   "$defs": {
     "Ability": {
@@ -330,6 +330,25 @@
             "dice",
             "damage_type"
           ]
+        },
+        {
+          "description": "The world remembers a deed by the creature that rolled the check (API-57). Only under a\ncheck, never a hazard. With no world to write into, nothing is written or logged.",
+          "type": "object",
+          "properties": {
+            "deed": {
+              "description": "The deed id, in snake_case.",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "const": "remember"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "deed"
+          ]
         }
       ]
     },
@@ -433,6 +452,13 @@
           "description": "Encounter id, unique in the scene, e.g. `yard_fight`.",
           "type": "string"
         },
+        "on_end": {
+          "description": "What the world remembers when the fight ends with the party the winner (API-57): the\nfirst rule whose `when` holds writes its deed, and no later rule does. Nothing is written\nwhen the party loses, or when the world already remembers any deed these rules name, so\na fight fought again keeps its first outcome. `by` is the party-side participants in the\norder listed here, downed ones included. DM-only.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EndRule"
+          }
+        },
         "participants": {
           "description": "Every creature in the fight. A handle not defined in the scene must be carried in with\nthe party, so it is allowed only in a scene with a `party_start`.",
           "type": "array",
@@ -486,6 +512,66 @@
           "description": "The story ends the fight; the encounter must list `scenario` in its `end_reasons`.",
           "type": "string",
           "const": "scenario"
+        }
+      ]
+    },
+    "EndRule": {
+      "description": "One rule of an encounter's `on_end`: when it holds, and the deed it writes.",
+      "type": "object",
+      "properties": {
+        "remember": {
+          "description": "The deed id it writes, in snake_case.",
+          "type": "string"
+        },
+        "when": {
+          "description": "When the rule holds.",
+          "$ref": "#/$defs/EndWhen"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "when",
+        "remember"
+      ]
+    },
+    "EndWhen": {
+      "description": "When an `on_end` rule holds. Every rule needs the party to have won.",
+      "oneOf": [
+        {
+          "description": "The fight ended by `end_combat{reason:\"surrender\"}` and at least one of `yielded` is in\nthe `surrendered` event. The encounter must declare a surrender condition, and each\nhandle must be one of its `creatures`.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "surrender"
+            },
+            "yielded": {
+              "description": "The creatures whose surrender counts.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "yielded"
+          ]
+        },
+        {
+          "description": "`combat_over` names the party as the winner, for any reason.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "won"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
         }
       ]
     },
@@ -687,6 +773,13 @@
         },
         "monster": {
           "description": "A stat block id in the core registry's `monsters/`. A short id such as `goblin_warrior`\nmeans `nat20_core::monster.goblin_warrior`; a namespaced id such as\n`nat20_demo::monster.mill_rat` names a block in another registry namespace as it\nstands. Set this or `pregen`, not both.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "npc": {
+          "description": "The person of the story this creature is, in snake_case (`gritch`): the same id wherever\nthe person appears. Its death writes the deed `killed_<npc>` by the one who dealt the last\nblow (API-57, as a card fight's NPC does). Never on a party creature. DM-only.",
           "type": [
             "string",
             "null"

@@ -801,6 +801,13 @@ impl Session {
         });
     }
 
+    /// Whether the world remembers `deed`; with no world, nothing is remembered.
+    pub(super) fn remembers(&self, deed: &str) -> bool {
+        self.campaign
+            .as_ref()
+            .is_some_and(|c| c.world.state.deeds.contains_key(deed))
+    }
+
     /// Follows the blows of a fight for the death deed (ENG-36): who rolled each roll, who dealt
     /// the last damage to each creature, and, when a card fight's named NPC dies, the deed
     /// `killed_<npc>` by the one who dealt the last blow: returned, for the caller to remember

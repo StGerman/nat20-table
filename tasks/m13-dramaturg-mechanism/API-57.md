@@ -5,7 +5,7 @@ title: "Scene deeds"
 pri: P1
 dest: Ours
 size: S
-state: todo
+state: done
 area: "1. API contract and server (E1 follow-ups)"
 ---
 
@@ -13,4 +13,4 @@ Scene deeds (design §4): contract `1.0.0-dev.N`, the first free after M12's las
 
 ## Status
 
-(Milestone 13, PR 5; after M12's exit pair; design `docs/design/m13-system-design.md` §4)
+Done in table #411 (Milestone 13, PR 5; design `docs/design/m13-system-design.md` §4): contract `1.0.0-dev.74`, fixture `scene_deeds.jsonl`, rules 1 to 6 in `scene.rs`, rule 8 in `crates/nat20-api-server/tests/deeds.rs`. The Mill's own deeds are MAP-20.
