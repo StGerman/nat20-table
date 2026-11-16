@@ -450,6 +450,9 @@ export interface UiWords {
   busy: string;
   pausedTyped: string;
   answerYesNo: string;
+  /** The echo of y or n on a reaction. */
+  yes: string;
+  no: string;
   hint: {
     combatTurn(name: string): string;
     reaction: string;
@@ -558,6 +561,8 @@ export const UI_WORDS: Record<Language, UiWords> = {
     busy: "The table is busy: wait for your prompt. A command typed now is answered when it comes.",
     pausedTyped: "Paused: only commands until /pause again.",
     answerYesNo: "Answer y or n (да or нет), or the number of a reaction.",
+    yes: "yes",
+    no: "no",
     hint: {
       combatTurn: (name) => `Your turn: an option number, or what ${name} does in words. /options lists them again.`,
       reaction: "React? y or n (or the reaction's number).",
@@ -675,6 +680,8 @@ export const UI_WORDS: Record<Language, UiWords> = {
     busy: "Стол занят: дождитесь своей очереди. Команда, набранная сейчас, сработает, когда очередь придёт.",
     pausedTyped: "Пауза: пока только команды, до следующего /pause.",
     answerYesNo: "Ответьте «да» или «нет» или номером ответного хода.",
+    yes: "да",
+    no: "нет",
     hint: {
       combatTurn: (name) => `Ваш ход: номер из списка или своими словами, что делает ${name}. /options покажет список снова.`,
       reaction: "Ответить? «да» или «нет» (или номер ответа).",

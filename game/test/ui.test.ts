@@ -8,7 +8,8 @@ import { buildChoices } from "../src/table/choices.ts";
 import type { Situation } from "../src/table/situation.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { yardDm, ScriptedPlayer } from "../src/table/scripted.ts";
-import { InkSeat } from "../src/ui/ink-seat.ts";
+import { echoLine, InkSeat } from "../src/ui/ink-seat.ts";
+import { UI_WORDS } from "../src/table/words.ts";
 import { readLine } from "../src/ui/input.ts";
 import { eventLines, wrapText } from "../src/ui/lines.ts";
 import type { Event } from "@nat20-table/engine-client";
@@ -303,7 +304,7 @@ test("on the real loop, the terminal seat plays Bren's commands, and its engine 
     assert.equal(report.ended, "the human quit");
     const lines = seat.getView().lines.map((l) => l.text);
     assert.deepEqual(overlays.map((o) => o.title), ["Sheet", "Where", "Log"]);
-    assert.ok(lines.includes("> 1"), "an option number was played");
+    assert.ok(lines.some((l) => /^> 1\. \S/.test(l)), "an option was played, and the story names it");
     assert.match(overlays.find((o) => o.title === "Log")!.text, /\[r\d+\] /, "rolls are inline with their ids");
     assert.ok(lines.includes("The run is over: the human quit"));
     // Engine lines are the human's projection: no other creature's AC, no DC, no roll target.
@@ -444,7 +445,7 @@ test("↑/↓ light the options round the list and Enter on an empty line plays 
   seat.enter();
   assert.deepEqual(await asked, { kind: "option", number: 2 });
   assert.equal(seat.getView().highlight, undefined);
-  assert.ok(seat.getView().lines.some((l) => l.text === "> 2"), "the pick is echoed as its number");
+  assert.ok(seat.getView().lines.some((l) => l.text === "> 2. Second Wind"), "the pick is echoed as its list line");
   const again = seat.ask({ kind: "combat_turn" });
   seat.move(1);
   seat.type("3\r");
@@ -565,4 +566,18 @@ test("in a window too small to draw it, no command picker stands: the keys stay 
   seat.hideCommands(false);
   seat.type("/");
   assert.ok(seat.commandPicker, "a window big enough again draws it again");
+});
+
+test("a pick is echoed as the list line it named, a reaction's y or n as the word, and anything else as typed", () => {
+  const ru = UI_WORDS.ru;
+  const options = { kind: "options" as const, lines: ["1. Навалиться плечами на колесо и толкать.", "2. Снять самые тяжёлые мешки."], choices: [] };
+  assert.equal(echoLine("1", { kind: "option", number: 1 }, { options }, ru), "> 1. Навалиться плечами на колесо и толкать.");
+  assert.equal(echoLine(" 2 ", { kind: "option", number: 2 }, { options }, ru), "> 2. Снять самые тяжёлые мешки.");
+  // A number no line names stays as typed: the loop answers it.
+  assert.equal(echoLine("7", { kind: "option", number: 7 }, { options }, ru), "> 7");
+  assert.equal(echoLine("толкаю колесо", { kind: "text", text: "толкаю колесо" }, { options }, ru), "> толкаю колесо");
+  const reaction = { kind: "reaction" as const, summary: "goblin_1 leaves your reach.", options: ["Opportunity Attack"] };
+  assert.equal(echoLine("y", { kind: "reaction", take: true }, { reaction }, ru), "> да");
+  assert.equal(echoLine("n", { kind: "reaction", take: false }, { reaction }, UI_WORDS.en), "> no");
+  assert.equal(echoLine("1", { kind: "option", number: 1 }, { reaction, options }, ru), "> 1. Opportunity Attack");
 });
