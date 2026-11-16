@@ -36,7 +36,7 @@ Edge cases, decided with it:
 - A price that differs because of a deed is an authored card variant, never a multiplier.
 - A debt that grows is a ledger liability on terms the party has read: a new account, not a counter.
 - A bribe that wears off is counted in days.
-- A roster person's `attitude` stays: one person, one step on a deed that person saw, never summed across people, never decaying.
+- A roster person's `attitude` stays, and this rule adds nothing to it. It is not a count: it is one of three authored states of one named person (the SRD's), and it is that person's regard held where the rule says regard lives, in a named person. A deed that person saw may move it one step; nothing sums it across people, compares it, lets it decay, or shows it to a player as a number. What the rule forbids is a second thing beside it: a total, a score for the party, a faction's standing.
 
 ## Consequences
 
