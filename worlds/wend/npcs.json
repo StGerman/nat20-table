@@ -21,7 +21,7 @@
             "anchor": "by_the_wagon",
             "attitude": "indifferent",
             "carries": {"coins": {"sp": 8, "gp": 2}},
-            "notes": "Wendford's reeve: careful, proud, worried about money. Sent nobody to take a toll at the Millbeck bridge and is angry that someone does. Knows the Grey Lantern company if they played The Silent Mill."
+            "notes": "Wendford's reeve: careful, proud, worried about money. Sent nobody to take a toll at the Millbeck bridge and is angry that someone does."
         },
         {
             "id": "warden_brannock",

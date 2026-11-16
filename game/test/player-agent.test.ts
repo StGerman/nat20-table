@@ -222,7 +222,7 @@ test("a campaign's place NPCs get their Russian names in the DM's name line, nev
     "midwend: Мидвенд",
     "pells_mill: мельница Пелла",
     "highsteads: Хайстедс",
-    "snitts_camp: лагерь Снитта",
+    "snitts_camp: лагерь гоблинов",
     "barrow_oak: Курганный дуб",
     "salt_flats: солончаки",
   ];

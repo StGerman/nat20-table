@@ -191,6 +191,110 @@
                     ]
                 }
             ]
+        },
+        {
+            "id": "mill_goblin_taken_alive",
+            "zone": "wendford",
+            "when": "arrival",
+            "target": "blades",
+            "if": [
+                "wenna_saved",
+                "snitt_yielded"
+            ],
+            "once": true,
+            "text": "Up the lane the mill wheel is turning again. On the green, Wenna, the miller's apprentice you brought up out of the mill cellar, is telling anyone who will stand still what she saw on the way out: a goblin tied to a post inside the mill, alive. Half the green does not believe her. Osric, the reeve who speaks for the village, does. \"Well, now,\" he says to you. \"So that one gave up in the yard, and you let him live. I keep this village's tally. Whoever let him live owes Wendford for whatever he does from here. I want one name to notch on my tally. Whose?\"",
+            "text_ru": "Выше по проулку снова крутится мельничное колесо. На лугу Венна, подмастерье мельника, которую вы вывели из мельничного подвала, рассказывает каждому, кто готов постоять и послушать, что видела на выходе: в мельнице у столба привязан гоблин, живой. Половина луга ей не верит. Осрик, староста, который говорит за всю деревню, верит. «Ну-с, — говорит он вам. — Значит, этот во дворе сдался, и вы оставили его в живых. Счёт в этой деревне веду я. Кто оставил его в живых, тот теперь должен Вендфорду за всё, что он натворит дальше. Мне нужно одно имя, чтобы зарубить на бирке. Чьё?»",
+            "note": "Before the choices, say in one plain sentence what happened last time: at Pell's mill one goblin in the yard threw down its blade and the Blades took him alive, then freed Wenna in the cellar. \"Let him live\" means at the mill only. Wenna saw him tied to the post by the storeroom hearth, and nobody in Wendford knows what became of him after. Never say it, and never let Osric guess it. The cause, in one clause: «потому что вы оставили его в живых во дворе мельницы». Osric wants one name against the goblin on his tally. He is right that a spared enemy is the village's risk, and ugly in pricing a life like a loan. He does not ask the Blades' reasons. Maren speaks for mercy to one who yields; Ilsa says a name on a tally is as good as a signature. Joke: Osric has the notch cut before he has the name.",
+            "choices": [
+                {
+                    "id": "own_name",
+                    "text": "Give him your own name for the tally.",
+                    "text_ru": "Назвать ему своё имя для бирки.",
+                    "keeps": [
+                        "mercy_to_yielded"
+                    ],
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "named_self_for_the_goblin"
+                        }
+                    ]
+                },
+                {
+                    "id": "no_name",
+                    "text": "Tell him no name goes on it: the goblin should have died in the yard.",
+                    "text_ru": "Сказать, что имени не будет: гоблину надо было умереть во дворе.",
+                    "breaks": [
+                        "mercy_to_yielded"
+                    ],
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "said_the_goblin_should_have_died"
+                        }
+                    ]
+                },
+                {
+                    "id": "say_nothing",
+                    "text": "Say nothing, and leave Wenna to be believed or not.",
+                    "text_ru": "Промолчать и оставить Венну: пусть ей верят или нет.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "gave_osric_no_name"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "mill_yard_to_the_end",
+            "zone": "wendford",
+            "when": "arrival",
+            "target": "blades",
+            "if": [
+                "wenna_saved",
+                "yard_to_the_end"
+            ],
+            "once": true,
+            "text": "Up the lane the mill wheel is turning again. On the green, Wenna, the miller's apprentice you brought up out of the mill cellar, is telling anyone who will stand still what she saw on the way out: the goblins in the mill yard lying dead, every one. Half the green does not believe her. Osric, the reeve who speaks for the village, does. He does not sound angry; he sounds worried. \"Well, now,\" he says to you. \"Not one of them left to answer for taking her. They'll have kin in the hills, and kin come asking. When they come, somebody in Wendford has to tell them how it ended. What do I tell them?\"",
+            "text_ru": "Выше по проулку снова крутится мельничное колесо. На лугу Венна, подмастерье мельника, которую вы вывели из мельничного подвала, рассказывает каждому, кто готов постоять и послушать, что видела на выходе: гоблины во дворе мельницы лежат мёртвые, все до одного. Половина луга ей не верит. Осрик, староста, который говорит за всю деревню, верит. Голос у него не сердитый, а встревоженный. «Ну-с, — говорит он вам. — Не осталось ни одного, кто ответил бы за то, что её схватили. А у них в холмах есть родня, и родня приходит спросить. Когда придут, кому-то в Вендфорде придётся им рассказать, чем всё кончилось. Что мне им сказать?»",
+            "note": "Before the choices, say in one plain sentence what happened last time: at Pell's mill no goblin in the yard was taken alive, and the Blades freed Wenna in the cellar. Never call the yard's end the Blades' choice: the goblins fought to the last, or the last one on its feet was a wolf, and a wolf never yields. Never say whether any goblin begged. The cause, in one clause: «потому что со двора мельницы ни один гоблин не ушёл живым». The kin are Osric's fear, not a fact: no kin appears, and the DM adds nothing about them. Osric is right that the village has to answer to the hills, and ugly in wanting the Blades' words to answer with instead of his own. Maren speaks: she would have spared one who gave up, and she says so.",
+            "choices": [
+                {
+                    "id": "to_the_last",
+                    "text": "Tell him to say the goblins fought to the last.",
+                    "text_ru": "Сказать, чтобы говорил им: гоблины дрались до последнего.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "told_osric_they_fought_to_the_last"
+                        }
+                    ]
+                },
+                {
+                    "id": "send_them",
+                    "text": "Tell him to send the kin to you.",
+                    "text_ru": "Сказать, чтобы родню он отправлял к нам.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "sent_the_hill_kin_to_the_blades"
+                        }
+                    ]
+                },
+                {
+                    "id": "ask_back",
+                    "text": "Ask him what he would have done with a goblin who gave up.",
+                    "text_ru": "Спросить его, что бы он сделал с гоблином, который сдался.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "asked_osric_about_the_yielded"
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }

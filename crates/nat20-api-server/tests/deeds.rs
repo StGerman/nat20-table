@@ -135,3 +135,82 @@ fn the_test_pack_scenes_write_deeds() {
         assert!(deeds.contains(deed), "{deed}");
     }
 }
+
+/// The Mill's scenes write the deeds the Wendford cards read, and nothing else of the yard
+/// (design §4.1): the yard's two outcomes, the cellar's marker, the boss's death.
+#[test]
+fn the_mill_writes_its_deeds_into_the_wend_world() {
+    let mill = repo().join("scenarios/the_silent_mill");
+    assert_eq!(pack_map(&mill).as_deref(), Some("wend"));
+    assert_eq!(
+        scene_deeds(&mill),
+        BTreeSet::from(
+            [
+                "snitt_yielded",
+                "yard_to_the_end",
+                "wenna_saved",
+                "killed_gritch"
+            ]
+            .map(String::from)
+        )
+    );
+}
+
+/// Design §4.2 rule 7 on the shipped packs: with only the Mill's deeds remembered, *Fair in
+/// Wend*'s arrival pile at Wendford holds exactly the card for how the yard ended, and with no
+/// rescue, none. A pile of one goes on the table with no draw-three and no pick (M11).
+#[test]
+fn wendford_meets_the_party_with_the_card_its_yard_wrote() {
+    use nat20_world::{DeckState, Deed, DeedBook, When};
+    let wend = repo().join("worlds/wend");
+    let deck = deck(&wend).join(deck(&repo().join("scenarios/fair_in_wend")));
+    let map: Value = read(&wend.join("map.json"));
+    let discovered: BTreeSet<String> = map["places"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p["id"].as_str().unwrap().to_owned())
+        .collect();
+    let remembered = |deeds: &[&str]| -> DeedBook {
+        deeds
+            .iter()
+            .map(|d| {
+                let deed = Deed {
+                    by: vec!["bren".into()],
+                    day: 1,
+                    contract: 1,
+                };
+                (d.to_string(), deed)
+            })
+            .collect()
+    };
+    let pile = |deeds: &[&str]| -> Vec<String> {
+        deck.pile(
+            "wendford",
+            When::Arrival,
+            &discovered,
+            &remembered(deeds),
+            &DeckState::default(),
+        )
+        .into_iter()
+        .map(|c| c.id.clone())
+        .collect()
+    };
+    let reads = |id: &str, deed: &str| {
+        deck.card(id)
+            .and_then(|c| c.if_deeds.as_ref())
+            .is_some_and(|d| d.ids().iter().any(|i| i == deed))
+    };
+    for (yard, other) in [
+        ("snitt_yielded", "yard_to_the_end"),
+        ("yard_to_the_end", "snitt_yielded"),
+    ] {
+        let cards = pile(&["wenna_saved", yard, "killed_gritch"]);
+        assert_eq!(cards.len(), 1, "{yard}: {cards:?}");
+        assert!(reads(&cards[0], yard), "{yard}: {cards:?}");
+        assert!(!reads(&cards[0], other), "{yard}: {cards:?}");
+    }
+    assert!(pile(&["snitt_yielded"]).is_empty());
+    assert!(pile(&["yard_to_the_end"]).is_empty());
+    assert!(pile(&[]).is_empty());
+}

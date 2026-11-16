@@ -9,6 +9,7 @@
     "credit": "nat20-table contributors",
     "prose": ["prose/adventure.md"],
     "lore": ["../../lore/the_wend_valley.md"],
+    "site": { "map": "wend", "place": "pells_mill" },
     "party": [
         { "handle": "bren", "seat": "human", "card": "cards/bren.md", "names": ["Bren", "Брен", "Брена", "Брену", "Бреном", "Брене"], "name_ru": "Брен", "_comment": "The human's seat by default; the card is for runs where an AI plays Bren." },
         { "handle": "torva", "seat": "ai", "card": "cards/torva.md", "pronouns": "she/her", "names": ["Torva", "Торва", "Торвы", "Торве", "Торву", "Торвой"], "name_ru": "Торва", "_comment": "The optional third AI player (scope §3): with two AI players, Torva's seat is the one dropped." },
