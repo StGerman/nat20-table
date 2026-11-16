@@ -5,7 +5,7 @@ title: "A pack with no campaign joins the world"
 pri: P1
 dest: Ours
 size: M
-state: todo
+state: done
 area: "2. Engine correctness (core)"
 ---
 
@@ -13,4 +13,4 @@ A pack with no campaign joins the world (decision 0075; design §5): contract `1
 
 ## Status
 
-(Milestone 13, PR 6, after API-57; design `docs/design/m13-system-design.md` §5)
+Done in table #413 (Milestone 13, PR 6, stacked on table #411; design `docs/design/m13-system-design.md` §5): contract `1.0.0-dev.75`, fixture `site.jsonl` (refusals, then a site session's deed met by a card on the test world), `SiteWorld` in `campaign.rs`, `SavedWorld::resume`, `site` in the adventure schema and `pack:check`. The Mill's own `site` is MAP-20.

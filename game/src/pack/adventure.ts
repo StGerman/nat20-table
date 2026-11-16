@@ -202,6 +202,16 @@ export const Adventure = z
         "A living-world pack's campaign.json only (MAP-7): the engine's world block (map, start, hour, caravan, route, road_scene, scenes, escort). The engine reads and checks it; the game reads only start and scenes. Its scenes need no exits: the road joins them.",
       ),
     day_limit: z.number().int().min(1).optional().describe("A living-world pack only: the last game day a run plays; the night after it ends the run."),
+    site: z
+      .object({
+        map: z.string().regex(/^[A-Za-z0-9_-]+$/),
+        place: z.string().regex(/^[A-Za-z0-9_-]+$/),
+      })
+      .strict()
+      .optional()
+      .describe(
+        "adventure.json only (ENG-44, decision 0075): the world map and the place on it where a pack with no campaign is played. The game passes it in new_session, so the pack's scene deeds go into that world's memory and a later campaign on the map reads them. The place's pack_slot must be this pack's id.",
+      ),
   })
   .describe("A scenario pack's skeleton (M6 spec §4). DM-only, like the prose and scene files.");
 

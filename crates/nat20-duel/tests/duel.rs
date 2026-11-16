@@ -111,6 +111,7 @@ fn goblin_warrior_matches_the_srd_stat_block() {
         Command::NewSession {
             seed: None,
             roster: None,
+            site: None,
         },
     );
     client.send(
