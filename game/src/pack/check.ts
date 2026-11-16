@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../engine.ts";
 import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS, STAT_BLOCKS_SINCE } from "./adventure.ts";
-import { goodsWithoutRu, readCampaign, seatCards } from "./campaign.ts";
+import { goodsWithoutRu, readCampaign, seatCards, worldDir } from "./campaign.ts";
 import { skeletonFile } from "./read.ts";
 
 /** Every pack in the repository: each folder of `scenarios/`. */
@@ -36,6 +36,8 @@ interface SceneIds {
   creatures: Map<string, string>;
   /** The stat block id of each creature it places or spawns, by handle. */
   monsters: Map<string, string>;
+  /** The person of the story each creature is, by handle, where it names one (API-57). */
+  npcs: Map<string, string>;
   partyStarts: number;
 }
 
@@ -43,15 +45,18 @@ function sceneIds(file: string): SceneIds {
   const scene = JSON.parse(readFileSync(file, "utf8"));
   const creatures = new Map<string, string>();
   const monsters = new Map<string, string>();
+  const npcs = new Map<string, string>();
   for (const c of [...(scene.creatures ?? []), ...(scene.spawns ?? []).flatMap((s: { creatures?: unknown[] }) => s.creatures ?? [])]) {
     creatures.set(c.handle, c.side);
     if (typeof c.monster === "string") monsters.set(c.handle, c.monster);
+    if (typeof c.npc === "string") npcs.set(c.handle, c.npc);
   }
   return {
     checks: new Set((scene.checks ?? []).map((c: { id: string }) => c.id)),
     encounters: new Set((scene.encounters ?? []).map((e: { id: string }) => e.id)),
     creatures,
     monsters,
+    npcs,
     partyStarts: (scene.party_start ?? []).length,
   };
 }
@@ -92,6 +97,29 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   const campaign = name === "campaign.json";
   if (campaign && !adventure.world) problem("campaign.json has no world block");
   if (!campaign && (adventure.world || adventure.day_limit)) problem("world and day_limit belong in campaign.json, not adventure.json");
+  // A pack with no campaign joins a world at its site (ENG-44): the place is on the map, and its
+  // pack_slot is this pack's, so no other pack's place is borrowed.
+  if (campaign && adventure.site) problem("site belongs in adventure.json; a campaign names its world in its world block");
+  if (!campaign && adventure.site) {
+    const { map, place } = adventure.site;
+    const mapFile = path.join(worldDir(dir, map), "map.json");
+    if (!existsSync(mapFile)) problem(`site: there is no world map ${map}`);
+    else {
+      let places: Array<{ id: string; pack_slot?: string }> | undefined;
+      try {
+        const read = JSON.parse(readFileSync(mapFile, "utf8")) as { places?: unknown };
+        if (Array.isArray(read.places)) places = read.places as Array<{ id: string; pack_slot?: string }>;
+        else problem(`site: the world map ${map} has no places list`);
+      } catch (error) {
+        problem(`site: the world map ${map} does not read: ${(error as Error).message}`);
+      }
+      if (places) {
+        const found = places.find((p) => p?.id === place);
+        if (!found) problem(`site: the world map ${map} has no place ${place}`);
+        else if (found.pack_slot !== adventure.id) problem(`site: place ${place} has pack_slot ${found.pack_slot ?? "none"}, not ${adventure.id}`);
+      }
+    }
+  }
   if (!(FORMAT_VERSIONS as readonly number[]).includes(adventure.format_version)) {
     problem(`format_version ${adventure.format_version} is not one this game reads (${FORMAT_VERSIONS.join(", ")})`);
     return report;
@@ -210,6 +238,8 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
     if (!declared) continue;
     for (const hint of scene.checks) if (!declared.checks.has(hint.check)) problem(`scene ${scene.id} names check ${hint.check}, which its file doesn't declare`);
     for (const hint of scene.encounters) if (!declared.encounters.has(hint.encounter)) problem(`scene ${scene.id} names encounter ${hint.encounter}, which its file doesn't declare`);
+    // A scene creature's person of the story is one the skeleton lists (ENG-44), so its death deed names someone the DM knows.
+    for (const [handle, npc] of declared.npcs) if (!npcIds.has(npc)) problem(`scene ${scene.id}: ${handle} is npc ${npc}, which the skeleton doesn't list`);
     if (index === 0) {
       for (const member of adventure.party) {
         if (declared.creatures.get(member.handle) !== "party") problem(`the first scene doesn't place party member ${member.handle}`);
@@ -233,7 +263,7 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   const runDir = mkdtempSync(path.join(tmpdir(), "pack-check-"));
   let engine: GameEngine | undefined;
   try {
-    engine = await GameEngine.start({ pack: dir, runDir, seed: 1, binary: options.binary, pregens: options.pregens });
+    engine = await GameEngine.start({ pack: dir, runDir, seed: 1, binary: options.binary, pregens: options.pregens, ...(!campaign && adventure.site ? { site: adventure.site } : {}) });
     const party = adventure.party.map((p) => p.handle);
     // The creature kinds the scenes place, as the seat names them: what a glyph key may be. A kind
     // the engine shows on a scene's load is read from it; one that only ever arrives later (a spawn)

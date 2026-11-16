@@ -68,8 +68,9 @@ fn every_world_validates() {
         }
         all.validate(&map)
             .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
-        all.check_deeds_written(&Default::default())
-            .unwrap_or_else(|e| panic!("{} and its packs: {e}", dir.display()));
+        // That every deed a card reads is written is checked in the server crate
+        // (`crates/nat20-api-server/tests/deeds.rs`, design m13 §4.2 rule 8): a scene may write
+        // it, and only the server reads scene files.
         // Every choice's customs are the world's (ENG-39); a world without the file has none.
         let customs_file = dir.join("customs.json");
         let customs: CustomsFile = if customs_file.exists() {

@@ -600,7 +600,7 @@ export class InkSeat implements Seat {
         this.update({ overlay: { title: this.ui.help, text: helpText(this.ui), at: this.view.lines.length } });
         return;
       case "intent": {
-        this.add([{ tone: "prompt", text: `> ${draft.trim()}` }]);
+        this.add([{ tone: "prompt", text: echoLine(draft, typed.intent, this.view, this.ui) }]);
         const answer = this.answer;
         if (answer) {
           this.answer = undefined;
@@ -855,6 +855,18 @@ function Waiting({ seat, busy }: { seat: InkSeat; busy: SeatView["busy"] }) {
   }, [seat]);
   const seconds = busy ? Math.floor((seat.now() - busy.since) / 1000) : 0;
   return h(Text, textProps(TONE_STYLE.status, seat.palette), waitText(busy?.on, seconds, seat.animate ? frame : undefined, seat.ui));
+}
+
+/**
+ * What the story keeps of a line the human sent: a pick shows the list line it named ("> 1. Push the wheel"),
+ * so the scrollback says what was chosen after the list is gone; y or n on a reaction shows the word.
+ * A number no line names, words and commands stay as typed.
+ */
+export function echoLine(draft: string, intent: PlayerIntent, view: Pick<SeatView, "options" | "reaction">, ui: UiWords): string {
+  if (intent.kind === "reaction") return `> ${intent.take ? ui.yes : ui.no}`;
+  const lines = view.reaction ? view.reaction.options.map((o, i) => `${i + 1}. ${o}`) : view.options?.lines;
+  const picked = intent.kind === "option" ? previewOption(draft, lines) : undefined;
+  return `> ${picked ? picked.line : draft.trim()}`;
 }
 
 /** The option a typed number names, from the numbered lines on screen ("2. End turn" for "2"). */

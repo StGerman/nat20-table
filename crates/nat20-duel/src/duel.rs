@@ -44,7 +44,11 @@ fn play(client: &mut Client, seed: Option<u32>) -> (String, Vec<Event>) {
     call(
         client,
         &mut transcript,
-        Command::NewSession { seed, roster: None },
+        Command::NewSession {
+            seed,
+            roster: None,
+            site: None,
+        },
     );
     call(
         client,

@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.73"
+    "version": "1.0.0-dev.75"
   },
   "$defs": {
     "Ability": {
@@ -6007,6 +6007,17 @@
               ],
               "format": "uint32",
               "minimum": 0
+            },
+            "site": {
+              "description": "The place in a world where a pack with no campaign is played (ENG-44, decision 0075):\nits scene deeds are written into that world's memory, which `save_roster` saves and a\nlater campaign on the same map takes up (protocol §4.15). A roster whose world is on\nthis map with a contract under way is refused with `bad_roster`. DM-side setup; no\nview carries it.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Site"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "required": [
@@ -6529,7 +6540,7 @@
           ]
         },
         {
-          "description": "Starts a fight no authored encounter fits, among creatures present (API-34, decision\n0035; protocol §4.4). The DM's command, and the one exception to \"participants come from\nthe scene file\". Each participant must be in the scene, conscious and on the party or the\nhostile side, listed once; at least one of each side. Initiative is rolled as for an\nauthored fight, with no surprise, no surrender condition and no early end: it ends when\na side is down. The fight is listed in the DM's `encounters` as `fight_<n>`.",
+          "description": "Starts a fight no authored encounter fits, among creatures present (API-34, decision\n0035; protocol §4.4). The DM's command, and the one exception to \"participants come from\nthe scene file\". Each participant must be in the scene, conscious and on the party or the\nhostile side, listed once; at least one of each side. A creature of an authored encounter\nthat writes deeds (`on_end`) and has not been started in this scene is refused: that fight\nstarts with `start_combat` (API-57). Initiative is rolled as for an\nauthored fight, with no surprise, no surrender condition and no early end: it ends when\na side is down. The fight is listed in the DM's `encounters` as `fight_<n>`.",
           "type": "object",
           "properties": {
             "cmd": {
@@ -7424,7 +7435,7 @@
           "minimum": 0
         },
         "world": {
-          "description": "The world as the engine left it: the clock, where the caravan is, its wagons and cargo,\nthe places discovered, the deck. Absent when no campaign ran. Opaque to clients: give it\nback unchanged.",
+          "description": "The world as the engine left it: the clock, where the caravan is, its wagons and cargo,\nthe places discovered, the deck. Absent when neither a campaign nor a site session\n(`new_session.site`) ran. Opaque to clients: give it back unchanged.",
           "anyOf": [
             {
               "$ref": "#/$defs/RosterWorld"
@@ -7585,7 +7596,7 @@
           "type": "string"
         },
         "state": {
-          "description": "The world's state, as the engine wrote it: `{memory, contract}` (API-51), the part that\noutlives a contract and the part the next one rebuilds."
+          "description": "The world's state, as the engine wrote it: `{memory, contract}` (API-51), the part that\noutlives a contract and the part the next one rebuilds; `contract` is absent when a site\nsession saved it (ENG-44), and the next campaign on this map takes up the memory."
         }
       },
       "additionalProperties": false,
@@ -7869,6 +7880,25 @@
           "type": "string",
           "const": "neutral"
         }
+      ]
+    },
+    "Site": {
+      "description": "A place in a world where a pack with no campaign is played (ENG-44).",
+      "type": "object",
+      "properties": {
+        "map": {
+          "description": "The world map's id, e.g. `wend`.",
+          "type": "string"
+        },
+        "place": {
+          "description": "A place id on that map, e.g. `pells_mill`: where the party is left when the session ends.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "map",
+        "place"
       ]
     },
     "Skill": {

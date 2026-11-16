@@ -86,6 +86,11 @@ pub struct SceneCreature {
     /// once it falls or surrenders. Players never see it before then (protocol §5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub carries: Option<Carries>,
+    /// The person of the story this creature is, in snake_case (`gritch`): the same id wherever
+    /// the person appears. Its death writes the deed `killed_<npc>` by the one who dealt the last
+    /// blow (API-57, as a card fight's NPC does). Never on a party creature. DM-only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub npc: Option<String>,
 }
 
 /// What a creature carries for `loot`.
@@ -217,6 +222,12 @@ pub enum Consequence {
         /// The damage type.
         damage_type: DamageType,
     },
+    /// The world remembers a deed by the creature that rolled the check (API-57). Only under a
+    /// check, never a hazard. With no world to write into, nothing is written or logged.
+    Remember {
+        /// The deed id, in snake_case.
+        deed: String,
+    },
 }
 
 /// A fight the scene declares. The engine takes its participants, surprise and surrender rules
@@ -239,6 +250,38 @@ pub struct Encounter {
     /// governed by `surrender`, so it is not listed here.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub end_reasons: Vec<EndCombatReason>,
+    /// What the world remembers when the fight ends with the party the winner (API-57): the
+    /// first rule whose `when` holds writes its deed, and no later rule does. Nothing is written
+    /// when the party loses, or when the world already remembers any deed these rules name, so
+    /// a fight fought again keeps its first outcome. `by` is the party-side participants in the
+    /// order listed here, downed ones included. DM-only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub on_end: Vec<EndRule>,
+}
+
+/// One rule of an encounter's `on_end`: when it holds, and the deed it writes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EndRule {
+    /// When the rule holds.
+    pub when: EndWhen,
+    /// The deed id it writes, in snake_case.
+    pub remember: String,
+}
+
+/// When an `on_end` rule holds. Every rule needs the party to have won.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum EndWhen {
+    /// The fight ended by `end_combat{reason:"surrender"}` and at least one of `yielded` is in
+    /// the `surrendered` event. The encounter must declare a surrender condition, and each
+    /// handle must be one of its `creatures`.
+    Surrender {
+        /// The creatures whose surrender counts.
+        yielded: Vec<Handle>,
+    },
+    /// `combat_over` names the party as the winner, for any reason.
+    Won {},
 }
 
 /// A surprise rule: the named side rolls initiative with Disadvantage when the flag is set.

@@ -25,7 +25,7 @@ interface MapFile {
 }
 
 /** The world folder a campaign pack plays in: the pack's own `worlds/<map>`, else the shared one. */
-function worldDir(pack: string, map: string): string {
+export function worldDir(pack: string, map: string): string {
   const own = path.join(pack, "worlds", map);
   return existsSync(path.join(own, "map.json")) ? own : path.join(REPO, "worlds", map);
 }

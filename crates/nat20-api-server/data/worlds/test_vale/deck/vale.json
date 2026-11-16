@@ -1,5 +1,5 @@
 {
-    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. Dragging the tree aside remembers a deed (API-52), and the night card's fire choice reads it (AGT-91). The tower trail holds four cards that come only while the tree was not cleared (`unless`), so only the draw_three fixture meets them, and the DM picks among those a draw offers (API-53). Not shipped content; the Wend deck is MAP-6.",
+    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. The last two cards, arrival cards at the Crossing Inn, read how the yard fight of the test scene deeds_yard ended (ENG-44, design m13 §4.2 rule 7), so only a party that fought there meets one. Dragging the tree aside remembers a deed (API-52), and the night card's fire choice reads it (AGT-91). The tower trail holds four cards that come only while the tree was not cleared (`unless`), so only the draw_three fixture meets them, and the DM picks among those a draw offers (API-53). Not shipped content; the Wend deck is MAP-6.",
     "cards": [
         {
             "id": "fallen_tree",
@@ -107,6 +107,32 @@
                 {"id": "pass", "text": "Pass it by.", "keeps": ["road_keeps_its_own"], "effects": [{"do": "remember", "deed": "passed_the_cart"}]},
                 {"id": "search", "text": "Look through it.", "breaks": ["road_keeps_its_own"], "unless": "scouted", "effects": [{"do": "delay", "minutes": 15}]},
                 {"id": "ruts", "text": "Follow the wheel ruts back to where it left the trail.", "if": "scouted", "effects": [{"do": "remember", "deed": "followed_the_ruts"}]}
+            ]
+        },
+        {
+            "id": "word_of_the_yard_spared",
+            "zone": "crossing_inn",
+            "when": "arrival",
+            "target": "blades",
+            "if": "yard_yielded",
+            "once": true,
+            "text": "The innkeeper has heard that your company let the goblins in the yard give up.",
+            "choices": [
+                {"id": "own_it", "text": "Say they gave up.", "effects": [{"do": "remember", "deed": "owned_the_mercy"}]},
+                {"id": "shrug", "text": "Say nothing.", "effects": [{"do": "remember", "deed": "kept_quiet_on_the_yard"}]}
+            ]
+        },
+        {
+            "id": "word_of_the_yard_fought",
+            "zone": "crossing_inn",
+            "when": "arrival",
+            "target": "blades",
+            "if": "yard_to_the_end",
+            "once": true,
+            "text": "The innkeeper has heard that not one goblin left the yard alive.",
+            "choices": [
+                {"id": "own_it", "text": "Say it was a fight.", "effects": [{"do": "remember", "deed": "owned_the_fight"}]},
+                {"id": "shrug", "text": "Say nothing.", "effects": [{"do": "remember", "deed": "kept_quiet_on_the_yard"}]}
             ]
         }
     ]

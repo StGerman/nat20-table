@@ -226,7 +226,27 @@
                         "count": 1
                     }
                 ]
-            }
+            },
+            "on_end": [
+                {
+                    "when": {
+                        "kind": "surrender",
+                        "yielded": [
+                            "goblin_1",
+                            "goblin_2",
+                            "goblin_3",
+                            "goblin_4"
+                        ]
+                    },
+                    "remember": "snitt_yielded"
+                },
+                {
+                    "when": {
+                        "kind": "won"
+                    },
+                    "remember": "yard_to_the_end"
+                }
+            ]
         }
     ]
 }

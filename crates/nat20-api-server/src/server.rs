@@ -11,7 +11,9 @@ use nat20_api_contract::{
 };
 
 use crate::{
-    adapter, errors, paths,
+    adapter,
+    campaign::SiteWorld,
+    errors, paths,
     projection::{self, Viewer},
     session::Session,
 };
@@ -162,10 +164,14 @@ impl Server {
                     schema_sha256: SCHEMA_SHA256.trim().to_owned(),
                 });
             }
-            Command::NewSession { seed, roster } => {
+            Command::NewSession { seed, roster, site } => {
                 if let Some(roster) = roster {
                     check_roster(roster)?;
                 }
+                let site = site
+                    .as_ref()
+                    .map(|site| SiteWorld::open(&self.data_dir, site, roster.as_ref()))
+                    .transpose()?;
                 let seed = seed.unwrap_or_else(random_seed);
                 adapter::seed_dice(seed);
                 self.sessions_started += 1;
@@ -174,6 +180,7 @@ impl Server {
                     CONTRACT_VERSION,
                     seed,
                     roster.clone(),
+                    site,
                 ));
                 return Ok(CommandResult::NewSession {
                     session_id: format!("s{}", self.sessions_started),

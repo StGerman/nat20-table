@@ -150,8 +150,10 @@ pub const MILES_PER_DAY_BETWEEN: u32 = 24;
 pub struct SavedWorld {
     /// What outlives a contract
     pub memory: Memory,
-    /// What the next contract rebuilds
-    pub contract: ContractState,
+    /// What the next contract rebuilds; absent when a pack with no campaign saved the world
+    /// (a site session, ENG-44): it has a memory and no contract
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contract: Option<ContractState>,
 }
 
 /// The world's memory (ENG-37): kept when a contract is done.
@@ -174,6 +176,82 @@ pub struct Memory {
     /// The contract under way: 1 for the first
     #[serde(default = "first_contract", skip_serializing_if = "is_first_contract")]
     pub contract: u32,
+    /// The place the party was left at, when no contract part says where (a site session,
+    /// ENG-44); a saved contract's own position wins
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub left_at: Option<String>,
+}
+
+impl Memory {
+    /// A new world's memory: day 1 at `hour`, contract 1, nothing known or remembered (ENG-44).
+    pub fn new(hour: u32) -> Self {
+        Memory {
+            clock: Clock::at(1, hour, 0),
+            discovered: BTreeSet::new(),
+            deeds: DeedBook::new(),
+            deck: DeckState::default(),
+            npcs: BTreeMap::new(),
+            contract: first_contract(),
+            left_at: None,
+        }
+    }
+
+    /// Remembers a deed done today by `by` in the contract under way, as [`World::remember`]
+    /// does. Returns whether it is new.
+    pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
+        remember_in(&mut self.deeds, deed, by, self.clock.day, self.contract)
+    }
+
+    /// This memory taken up at `start` by the next contract or site (ENG-37, ENG-44): the
+    /// contract count goes up by one, and the clock moves to `start_hour` on the day after the
+    /// saved day plus the trip from `from` at a normal pace (one day per
+    /// [`MILES_PER_DAY_BETWEEN`] miles by the shortest road, rounded up). A party saved on a
+    /// road starts from whichever end of it is nearer `start` (ENG-41). The deck keeps what the
+    /// world keeps and drops the card on the table and the `once: "contract"` marks.
+    pub fn carried(
+        mut self,
+        map: &WorldMap,
+        from: &Position,
+        start: &str,
+        start_hour: u32,
+    ) -> (Self, Carried) {
+        let via = |end: &str, left: u32| {
+            map.miles_between(end, start)
+                .map(|m| (left + m, end.to_string()))
+        };
+        let (miles, from) = match from {
+            Position::At { place } => via(place, 0).unwrap_or((0, place.clone())),
+            // On a road, the party goes on or turns back, whichever end is nearer the start
+            // (ENG-41); an end with no road to the start never counts as nearer.
+            Position::OnRoad {
+                road,
+                toward,
+                miles_left,
+            } => {
+                let on = via(toward, *miles_left);
+                // A position past the road's length (a map changed since the save) never turns
+                // back for free.
+                let back = map
+                    .road(road)
+                    .and_then(|r| via(r.other_end(toward)?, r.miles.checked_sub(*miles_left)?));
+                match (on, back) {
+                    (Some(on), Some(back)) if back.0 < on.0 => back,
+                    (Some(on), _) => on,
+                    (None, Some(back)) => back,
+                    (None, None) => (*miles_left, toward.clone()),
+                }
+            }
+        };
+        let days = miles.div_ceil(MILES_PER_DAY_BETWEEN);
+        self.deck.pending = None;
+        self.deck.offered.clear();
+        self.deck.road = None;
+        self.deck.gone_for_contract.clear();
+        self.clock = Clock::at(self.clock.day + 1 + days, start_hour, 0);
+        self.contract += 1;
+        self.left_at = None;
+        (self, Carried { from, days })
+    }
 }
 
 /// The contract under way (ENG-37): rebuilt from the next pack's campaign file.
@@ -218,8 +296,9 @@ impl From<WorldState> for SavedWorld {
                 },
                 npcs: state.npcs,
                 contract: state.contract,
+                left_at: None,
             },
-            contract: ContractState {
+            contract: Some(ContractState {
                 at: state.at,
                 caravan: state.caravan,
                 traveled_today: state.traveled_today,
@@ -233,15 +312,20 @@ impl From<WorldState> for SavedWorld {
                 escort: state.escort,
                 pack: state.pack,
                 scout: state.scout,
-            },
+            }),
         }
     }
 }
 
-impl From<SavedWorld> for WorldState {
-    fn from(saved: SavedWorld) -> Self {
-        let SavedWorld { memory, contract } = saved;
-        WorldState {
+impl SavedWorld {
+    /// The world state to take up, when a contract was saved; a memory-only world (a site
+    /// session, ENG-44) is never resumed and gives its memory back instead.
+    pub fn resume(self) -> Result<WorldState, Box<Memory>> {
+        let SavedWorld { memory, contract } = self;
+        let Some(contract) = contract else {
+            return Err(Box::new(memory));
+        };
+        Ok(WorldState {
             clock: memory.clock,
             at: contract.at,
             discovered: memory.discovered,
@@ -269,7 +353,7 @@ impl From<SavedWorld> for WorldState {
             pack: contract.pack,
             contract: memory.contract,
             scout: contract.scout,
-        }
+        })
     }
 }
 
@@ -502,68 +586,32 @@ impl World {
     /// [`MILES_PER_DAY_BETWEEN`] miles by the shortest road, rounded up). A party saved on a
     /// road starts from whichever end of it is nearer, and `from` names that end.
     pub fn carry_memory(&mut self, saved: WorldState, start_hour: u32) -> Carried {
+        let from = saved.at.clone();
+        self.carry(&from, SavedWorld::from(saved).memory, start_hour)
+    }
+
+    /// Takes up a saved memory as [`World::carry_memory`] does, the party setting out from
+    /// `from`: a finished contract's position, or the place a site session left it at
+    /// ([`Memory::left_at`], ENG-44).
+    pub fn carry(&mut self, from: &Position, memory: Memory, start_hour: u32) -> Carried {
         let start = self.place_here().unwrap_or_default().to_string();
-        let via = |end: &str, left: u32| {
-            self.map
-                .miles_between(end, &start)
-                .map(|m| (left + m, end.to_string()))
-        };
-        let (miles, from) = match &saved.at {
-            Position::At { place } => via(place, 0).unwrap_or((0, place.clone())),
-            // On a road, the party goes on or turns back, whichever end is nearer the start
-            // (ENG-41); an end with no road to the start never counts as nearer.
-            Position::OnRoad {
-                road,
-                toward,
-                miles_left,
-            } => {
-                let on = via(toward, *miles_left);
-                // A position past the road's length (a map changed since the save) never turns
-                // back for free.
-                let back = self
-                    .map
-                    .road(road)
-                    .and_then(|r| via(r.other_end(toward)?, r.miles.checked_sub(*miles_left)?));
-                match (on, back) {
-                    (Some(on), Some(back)) if back.0 < on.0 => back,
-                    (Some(on), _) => on,
-                    (None, Some(back)) => back,
-                    (None, None) => (*miles_left, toward.clone()),
-                }
-            }
-        };
-        let days = miles.div_ceil(MILES_PER_DAY_BETWEEN);
-        let mut deck = saved.deck;
-        deck.pending = None;
-        deck.offered.clear();
-        deck.road = None;
-        deck.gone_for_contract.clear();
-        let mut discovered = saved.discovered;
+        let (memory, carried) = memory.carried(&self.map, from, &start, start_hour);
+        let mut discovered = memory.discovered;
         discovered.extend(std::mem::take(&mut self.state.discovered));
-        self.state.clock = Clock::at(saved.clock.day + 1 + days, start_hour, 0);
+        self.state.clock = memory.clock;
         self.state.discovered = discovered;
-        self.state.deeds = saved.deeds;
-        self.state.deck = deck;
-        self.state.npcs = saved.npcs;
-        self.state.contract = saved.contract + 1;
-        Carried { from, days }
+        self.state.deeds = memory.deeds;
+        self.state.deck = memory.deck;
+        self.state.npcs = memory.npcs;
+        self.state.contract = memory.contract;
+        carried
     }
 
     /// Remembers a deed done today by `by` in the contract under way. A deed done again
     /// keeps its first record. Returns whether it is new.
     pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
-        if self.state.deeds.contains_key(deed) {
-            return false;
-        }
-        self.state.deeds.insert(
-            deed.to_string(),
-            Deed {
-                by,
-                day: self.state.clock.day,
-                contract: self.state.contract,
-            },
-        );
-        true
+        let state = &mut self.state;
+        remember_in(&mut state.deeds, deed, by, state.clock.day, state.contract)
     }
 
     /// Draws after a leg along `road`. Returns what the draw did: a card on the table, or cards
@@ -792,6 +840,16 @@ impl World {
     }
 }
 
+/// Writes `deed` into `book` as done on `day` in `contract` by `by`, unless the book holds it
+/// already: a deed done again keeps its first record. Returns whether it is new.
+fn remember_in(book: &mut DeedBook, deed: &str, by: Vec<String>, day: u32, contract: u32) -> bool {
+    if book.contains_key(deed) {
+        return false;
+    }
+    book.insert(deed.to_string(), Deed { by, day, contract });
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -862,12 +920,57 @@ mod tests {
         assert_eq!(again.state.clock, Clock::at(3, 9, 0));
     }
 
+    /// A site session's memory (ENG-44): saved with no contract part, never resumed, and taken
+    /// up by the next contract from the place it was left at.
+    #[test]
+    fn a_memory_saved_at_a_site_is_carried_from_where_it_left_the_party() {
+        let mut memory = Memory::new(8);
+        assert!(memory.remember("yard_yielded", vec!["bren".into()]));
+        assert!(!memory.remember("yard_yielded", vec!["maren".into()]));
+        assert_eq!(memory.deeds["yard_yielded"].day, 1);
+        assert_eq!(memory.deeds["yard_yielded"].contract, 1);
+        memory.left_at = Some("inn".into());
+        let saved = SavedWorld {
+            memory,
+            contract: None,
+        };
+        let json = serde_json::to_value(&saved).unwrap();
+        assert!(json.get("contract").is_none());
+        assert_eq!(json["memory"]["left_at"], "inn");
+        let back: SavedWorld = serde_json::from_value(json).unwrap();
+        let memory = back
+            .resume()
+            .expect_err("a memory-only world is never resumed");
+        let mut next = world("maren");
+        let from = Position::At {
+            place: memory.left_at.clone().unwrap(),
+        };
+        // The inn is 12 miles from town: one day's trip, then the day after.
+        let carried = next.carry(&from, *memory, 9);
+        assert_eq!(
+            carried,
+            Carried {
+                from: "inn".into(),
+                days: 1
+            }
+        );
+        assert_eq!(next.state.clock, Clock::at(3, 9, 0));
+        assert_eq!(next.state.contract, 2);
+        assert_eq!(next.state.deeds["yard_yielded"].contract, 1);
+        // A contract saved before ENG-44 still reads and resumes.
+        let w = world("maren");
+        let old = serde_json::to_value(SavedWorld::from(w.state.clone())).unwrap();
+        assert!(old["memory"].get("left_at").is_none());
+        let old: SavedWorld = serde_json::from_value(old).unwrap();
+        assert_eq!(old.resume().unwrap(), w.state);
+    }
+
     #[test]
     fn a_saved_queue_drops_cards_gone_for_the_world() {
         let mut state = world("maren").state;
         state.deck.gone.insert("ghost".into());
         state.deck.soon = vec!["ghost".into(), "beggar".into()];
-        let loaded = WorldState::from(SavedWorld::from(state));
+        let loaded = SavedWorld::from(state).resume().unwrap();
         assert_eq!(loaded.deck.soon, ["beggar"]);
     }
 
@@ -1201,6 +1304,6 @@ mod tests {
         assert_eq!(json["contract"]["scout"], "bren");
         assert!(json["memory"].get("caravan").is_none());
         let back: SavedWorld = serde_json::from_value(json).unwrap();
-        assert_eq!(WorldState::from(back), w.state);
+        assert_eq!(back.resume().unwrap(), w.state);
     }
 }

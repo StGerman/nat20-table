@@ -56,6 +56,7 @@ import { ScriptedJudge } from "../check/judge.ts";
 import { modelJudgeFor, narrationCheck } from "../check/narration.ts";
 import { SUGGESTED_CARDS, wordReport } from "./word.ts";
 import { exitReport, SEAT_JSONL } from "./exit.ts";
+import { m13Report } from "./m13.ts";
 import { BENCH_MD, benchReport } from "./bench-report.ts";
 import { checkout, readLines, RUN_FORMAT, writeRunRecord, type RunRecord } from "./record.ts";
 import { readRoster, replayRoster, ROSTER_NAME, rosterLine, rosterRefusal, saveRoster, type SavedRoster } from "./roster.ts";
@@ -279,7 +280,13 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const started = await (async () => {
     let engine: GameEngine | undefined;
     try {
-      engine = await GameEngine.start({ pack: flags.pack, runDir, seed: flags.seed, ...(loaded ? { roster: loaded.roster } : {}) });
+      engine = await GameEngine.start({
+        pack: flags.pack,
+        runDir,
+        seed: flags.seed,
+        ...(loaded ? { roster: loaded.roster } : {}),
+        ...(pack.adventure.site ? { site: pack.adventure.site } : {}),
+      });
       // A campaign starts at its start place, with the party fresh in it; the loop starts the campaign.
       return { engine, carried: campaign ? undefined : await startAt(engine, flags.pack, plan.first, everyone) };
     } catch (error) {
@@ -547,6 +554,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ...reportSections({ run, failure, transcript: transcript.records, usage: usage.records, endState: end, audit: checked }),
     ...wordReport(runDir, sessionLog),
     ...exitReport(record, sessionLog, transcript.records, usage.records),
+    ...m13Report(runDir, record, sessionLog, flags.pack),
     ...(narration ? ["", ...narration.lines] : []),
     "",
     ...timingLines(record),

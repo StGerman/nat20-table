@@ -97,7 +97,8 @@
                     "y_ft": 35.0,
                     "z_ft": 0.0
                 }
-            }
+            },
+            "npc": "gritch"
         },
         {
             "handle": "goblin_5",
@@ -193,6 +194,14 @@
                 "wolf_5",
                 "rat_1",
                 "rat_2"
+            ],
+            "on_end": [
+                {
+                    "when": {
+                        "kind": "won"
+                    },
+                    "remember": "wenna_saved"
+                }
             ]
         }
     ],

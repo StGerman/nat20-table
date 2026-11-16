@@ -57,10 +57,10 @@
             "market": true
         },
         {
-            "_comment": "What is left of the Nettle Tooth band, herding sheep for food. Barter with the hills.",
+            "_comment": "A hungry hill band's camp, herding sheep for food. Barter with the hills. Its name tells nobody's fate: after the Mill's yard_to_the_end there is no Snitt (MAP-20).",
             "id": "snitts_camp",
-            "name": "Snitt's camp",
-            "name_ru": "лагерь Снитта",
+            "name": "Goblin camp",
+            "name_ru": "лагерь гоблинов",
             "kind": "camp",
             "market": true
         },

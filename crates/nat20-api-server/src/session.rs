@@ -26,7 +26,7 @@ use crate::{
         events::Pending,
         game::{DAYS_FOOD_QUARTER_LB, Game, TriggerCause, Wait},
     },
-    campaign::{Campaign, clock_view},
+    campaign::{Campaign, SiteWorld, clock_view},
     errors::{error, rejected, with_awaiting},
     projection::{self, FullState, Viewer, WorldFull},
     render, scene,
@@ -66,7 +66,7 @@ pub struct Session {
     contract_start: Option<RosterStart>,
     /// The place NPCs placed in the current scene (API-48), written back when it is left.
     npcs_here: Vec<String>,
-    /// A card fight's named NPCs by handle, until they die (ENG-36)
+    /// A card fight's or the scene's named NPCs by handle, until they die (ENG-36, API-57)
     card_npcs: HashMap<String, String>,
     /// Who rolled each logged roll, by roll id (ENG-36)
     rollers: HashMap<String, String>,
@@ -78,6 +78,9 @@ pub struct Session {
     /// decided and any fight it started to be over (ENG-35). Not saved in a roster: a roster
     /// saved with the road card on the table loses the arrival card, never the pay.
     arrival_due: Option<String>,
+    /// The world memory of a session played at a site (ENG-44): a pack with no campaign
+    /// writes its scene deeds here. Never beside a campaign.
+    site: Option<SiteWorld>,
 }
 
 impl Session {
@@ -86,6 +89,7 @@ impl Session {
         protocol_version: &str,
         seed: u32,
         roster: Option<Roster>,
+        site: Option<SiteWorld>,
     ) -> Self {
         let mut session = Self {
             data_dir,
@@ -106,6 +110,7 @@ impl Session {
             rollers: HashMap::new(),
             last_blow: HashMap::new(),
             last_actor: None,
+            site,
         };
         session.push(Pending {
             round: None,
@@ -230,6 +235,15 @@ impl Session {
         // So are creature handles: a card fight's named NPC who lived through it stays behind,
         // and a new creature with the same handle here is not them (ENG-36).
         self.card_npcs.clear();
+        // A scene creature that is a person of the story writes `killed_<npc>` as a card
+        // fight's does (API-57).
+        self.card_npcs.extend(
+            scene
+                .creatures
+                .iter()
+                .chain(scene.spawns.iter().flat_map(|s| s.creatures.iter()))
+                .filter_map(|c| c.npc.clone().map(|npc| (c.handle.0.clone(), npc))),
+        );
         self.last_blow.clear();
         self.last_actor = None;
         self.decided = true;
@@ -389,6 +403,15 @@ impl Session {
             return Err(error(
                 ErrorCode::NotVisible,
                 "start_campaign is the game's setup command; send it as dm.",
+            ));
+        }
+        if let Some(site) = &self.site {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!(
+                    "This session is played at {} on the {} map, with no campaign; save the roster and start the campaign in a new session.",
+                    site.place, site.map
+                ),
             ));
         }
         if self.campaign.is_some() {
@@ -1149,6 +1172,32 @@ impl Session {
                 }
             }
         }
+        // A site session saves its memory with the place it left the party at, and no contract
+        // part, so no contract can be played again from its start (ENG-44).
+        if let Some(site) = &self.site {
+            let mut memory = site.memory.clone();
+            memory.left_at = Some(site.place.clone());
+            let state = world::SavedWorld {
+                memory,
+                contract: None,
+            };
+            return Ok(CommandResult::SaveRoster {
+                roster: Roster {
+                    format: ROSTER_FORMAT,
+                    characters,
+                    world: Some(RosterWorld {
+                        map: site.map.clone(),
+                        state: serde_json::to_value(state).map_err(|e| {
+                            error(
+                                ErrorCode::Internal,
+                                format!("The world memory does not serialize: {e}."),
+                            )
+                        })?,
+                    }),
+                    contract_start: None,
+                },
+            });
+        }
         let world = match &saving {
             Some(campaign) => Some(RosterWorld {
                 map: campaign.map_id.clone(),
@@ -1445,6 +1494,7 @@ impl Session {
             _ => {}
         }
         let death = self.follow_blows(&kind);
+        let deeds = self.scene_deeds(&kind);
         self.log.push(Event {
             seq,
             round: pending.round,
@@ -1456,6 +1506,42 @@ impl Session {
         // A named NPC's death writes its deed right after the death (ENG-36, API-52).
         if let Some((deed, by)) = death {
             self.remember(&deed, by);
+        }
+        // So does a scene check's or a scene fight's, right after its `check_resolved` or
+        // `combat_over` (API-57).
+        for (deed, by) in deeds {
+            self.remember(&deed, by);
+        }
+    }
+
+    /// The deeds a scene writes on the event about to be logged (API-57): a scenario check's
+    /// `remember`s by its roller, and a scene fight's `on_end` deed by the party's side, unless
+    /// the world already remembers a deed of that fight's `on_end` (it keeps the first outcome).
+    fn scene_deeds(&mut self, kind: &EventKind) -> Vec<(String, Vec<String>)> {
+        let Some(game) = self.game.as_mut() else {
+            return Vec::new();
+        };
+        match kind {
+            EventKind::CheckResolved {
+                check_id: Some(check),
+                actor,
+                success,
+                ..
+            } => game
+                .check_deeds(check, *success)
+                .into_iter()
+                .map(|deed| (deed, vec![actor.0.clone()]))
+                .collect(),
+            EventKind::CombatOver { .. } => {
+                let Some(end) = game.take_fight_end() else {
+                    return Vec::new();
+                };
+                if end.named.iter().any(|d| self.remembers(d)) {
+                    return Vec::new();
+                }
+                vec![(end.deed, end.by)]
+            }
+            _ => Vec::new(),
         }
     }
 }

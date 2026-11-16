@@ -57,7 +57,9 @@ function campaignMill(world: Record<string, unknown>, edit: (skeleton: Adventure
       json.anchors.push({ id: "by_the_wagon", name: "by the wagon", position_ft: { x_ft: 0, y_ft: 5, z_ft: 0 } });
       writeFileSync(file, JSON.stringify(json, null, 4));
     }
-    writeFileSync(path.join(pack, "campaign.json"), JSON.stringify({ ...skeleton, day_limit: 3, world }, null, 4));
+    // The Mill's own site (ENG-44) belongs to the pack with no campaign; a campaign names its world instead.
+    const { site: _site, ...campaign } = skeleton;
+    writeFileSync(path.join(pack, "campaign.json"), JSON.stringify({ ...campaign, day_limit: 3, world }, null, 4));
   });
 }
 

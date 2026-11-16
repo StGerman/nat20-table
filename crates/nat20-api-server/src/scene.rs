@@ -9,8 +9,8 @@ use std::{
 };
 
 use nat20_api_contract::{
-    ApiError, Consequence, EndCombatReason, ErrorCode, Placement, PointFt, SceneCreature,
-    SceneFile, SurrenderTrigger,
+    ApiError, Consequence, EndCombatReason, EndWhen, ErrorCode, Placement, PointFt, SceneCreature,
+    SceneFile, Side, SurrenderTrigger,
 };
 
 use crate::{
@@ -212,6 +212,38 @@ pub fn check(scene: &SceneFile) -> Result<(), ApiError> {
                 }
             }
         }
+        // What the fight's end writes (API-57): each deed once, and a surrender rule only where
+        // the fight can end in surrender, counting creatures that can surrender.
+        let mut deeds = HashSet::new();
+        for rule in &encounter.on_end {
+            check_deed(&rule.remember)?;
+            if !deeds.insert(rule.remember.as_str()) {
+                return bad(format!(
+                    "Encounter {id}'s on_end names the deed {} twice.",
+                    rule.remember
+                ));
+            }
+            if let EndWhen::Surrender { yielded } = &rule.when {
+                let Some(surrender) = &encounter.surrender else {
+                    return bad(format!(
+                        "Encounter {id}'s on_end has a surrender rule, but the fight declares no surrender condition."
+                    ));
+                };
+                if yielded.is_empty() {
+                    return bad(format!(
+                        "Encounter {id}'s on_end surrender rule names no creature."
+                    ));
+                }
+                for handle in yielded {
+                    if !surrender.creatures.contains(handle) {
+                        return bad(format!(
+                            "Encounter {id}'s on_end counts {} yielding, which is not one of the creatures that surrender.",
+                            handle.0
+                        ));
+                    }
+                }
+            }
+        }
         let mut reasons = HashSet::new();
         for reason in &encounter.end_reasons {
             if *reason == EndCombatReason::Surrender {
@@ -274,7 +306,40 @@ fn check_creature(creature: &SceneCreature, anchors: &HashSet<String>) -> Result
             format!("{handle} is placed at the unknown anchor {anchor}."),
         ));
     }
+    if let Some(npc) = &creature.npc {
+        if !is_snake_case(npc) {
+            return Err(error(
+                ErrorCode::BadScene,
+                format!("{handle}'s npc {npc:?} must be in snake_case."),
+            ));
+        }
+        if creature.side == Side::Party {
+            return Err(error(
+                ErrorCode::BadScene,
+                format!("{handle} is on the party's side, so it cannot be an npc ({npc})."),
+            ));
+        }
+    }
     Ok(())
+}
+
+/// A deed id a scene writes: snake_case, as a card's `remember` (ENG-33), and never `scouted`,
+/// which holds for one draw only (API-54).
+fn check_deed(deed: &str) -> Result<(), ApiError> {
+    if is_snake_case(deed) && deed != "scouted" {
+        Ok(())
+    } else {
+        Err(error(
+            ErrorCode::BadScene,
+            format!("The deed {deed:?} must be in snake_case, and not scouted."),
+        ))
+    }
+}
+
+fn is_snake_case(s: &str) -> bool {
+    !s.is_empty()
+        && s.chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
 /// A handle is a plain name and not `dm`, whether the scene defines the creature or it is
@@ -312,6 +377,11 @@ fn check_consequence(
             ),
         )),
         Consequence::Damage { .. } => Ok(()),
+        Consequence::Remember { deed } if !may_set_off_hazard => Err(error(
+            ErrorCode::BadScene,
+            format!("A hazard cannot write a deed ({deed}); only a check can."),
+        )),
+        Consequence::Remember { deed } => check_deed(deed),
     }
 }
 
@@ -463,6 +533,20 @@ mod tests {
         check_value(base()).unwrap();
     }
 
+    /// A scene that writes deeds the right way passes (API-57).
+    #[test]
+    fn scene_deeds_are_valid() {
+        let mut scene = base();
+        scene["checks"][0]["on_success"] =
+            serde_json::json!([{"kind": "remember", "deed": "saw_the_snare"}]);
+        scene["creatures"][1]["npc"] = "grak".into();
+        scene["encounters"][0]["on_end"] = serde_json::json!([
+            {"when": {"kind": "surrender", "yielded": ["goblin"]}, "remember": "grak_yielded"},
+            {"when": {"kind": "won"}, "remember": "fought_to_the_end"}
+        ]);
+        check_value(scene).unwrap();
+    }
+
     /// Each broken scene is refused with a sentence naming what is wrong.
     #[test]
     fn broken_references_are_refused() {
@@ -571,6 +655,90 @@ mod tests {
                 "round 0",
             ),
             ("unknown map", |s| s["map"] = "moon".into(), "no map moon"),
+            // Scene deeds (API-57, design §4.2 rule 4).
+            (
+                "deed grammar",
+                |s| {
+                    s["checks"][0]["on_success"] =
+                        serde_json::json!([{"kind": "remember", "deed": "Saw-It"}])
+                },
+                "deed \"Saw-It\" must be in snake_case",
+            ),
+            (
+                "scouted is no deed",
+                |s| {
+                    s["checks"][0]["on_success"] =
+                        serde_json::json!([{"kind": "remember", "deed": "scouted"}])
+                },
+                "and not scouted",
+            ),
+            (
+                "remember on a hazard",
+                |s| {
+                    s["hazards"][0]["on_success"] =
+                        serde_json::json!([{"kind": "remember", "deed": "dodged"}])
+                },
+                "A hazard cannot write a deed",
+            ),
+            (
+                "on_end deed twice",
+                |s| {
+                    s["encounters"][0]["on_end"] = serde_json::json!([
+                        {"when": {"kind": "surrender", "yielded": ["goblin"]}, "remember": "spared"},
+                        {"when": {"kind": "won"}, "remember": "spared"}
+                    ])
+                },
+                "names the deed spared twice",
+            ),
+            (
+                "on_end deed grammar",
+                |s| {
+                    s["encounters"][0]["on_end"] =
+                        serde_json::json!([{"when": {"kind": "won"}, "remember": ""}])
+                },
+                "must be in snake_case",
+            ),
+            (
+                "surrender rule without a condition",
+                |s| {
+                    s["encounters"][0]
+                        .as_object_mut()
+                        .unwrap()
+                        .remove("surrender");
+                    s["encounters"][0]["on_end"] = serde_json::json!([
+                        {"when": {"kind": "surrender", "yielded": ["goblin"]}, "remember": "spared"}
+                    ])
+                },
+                "declares no surrender condition",
+            ),
+            (
+                "yielded not among those who surrender",
+                |s| {
+                    s["encounters"][0]["on_end"] = serde_json::json!([
+                        {"when": {"kind": "surrender", "yielded": ["bren"]}, "remember": "spared"}
+                    ])
+                },
+                "counts bren yielding",
+            ),
+            (
+                "yielded empty",
+                |s| {
+                    s["encounters"][0]["on_end"] = serde_json::json!([
+                        {"when": {"kind": "surrender", "yielded": []}, "remember": "spared"}
+                    ])
+                },
+                "names no creature",
+            ),
+            (
+                "npc grammar",
+                |s| s["creatures"][1]["npc"] = "Grak".into(),
+                "npc \"Grak\" must be in snake_case",
+            ),
+            (
+                "npc on the party",
+                |s| s["creatures"][0]["npc"] = "bren".into(),
+                "cannot be an npc",
+            ),
             (
                 "flag name",
                 |s| {
