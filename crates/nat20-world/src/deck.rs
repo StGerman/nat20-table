@@ -359,6 +359,10 @@ pub enum Effect {
         /// One per creature: a stat block id, or `{"stat", "npc"}` for a creature who is an
         /// NPC of the story (ENG-36): its death writes the deed `killed_<npc>`
         monsters: Vec<Monster>,
+        /// The monsters are surprised (ENG-47): they roll Initiative with Disadvantage
+        /// (SRD 5.2.1, Surprise)
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        surprise: bool,
     },
     /// Everyone in `who` pays `copper` each to the world, as much as their purse holds
     Pay {
@@ -919,7 +923,7 @@ impl Deck {
                     Effect::Check { dc, .. } if !DC_LADDER.contains(dc) => {
                         return bad(format!("card {} has a DC {dc} off the ladder", card.id));
                     }
-                    Effect::Fight { monsters } if monsters.is_empty() => {
+                    Effect::Fight { monsters, .. } if monsters.is_empty() => {
                         return bad(format!("card {} starts a fight with nobody", card.id));
                     }
                     _ => {}
@@ -1071,7 +1075,7 @@ impl Deck {
                 let mut effects = Vec::new();
                 effects_of(&choice.effects, &mut effects);
                 let with_persons = effects.iter().any(
-                    |e| matches!(e, Effect::Fight { monsters } if monsters.iter().any(&is_person)),
+                    |e| matches!(e, Effect::Fight { monsters, .. } if monsters.iter().any(&is_person)),
                 );
                 if with_persons && choice.keeps.is_empty() && choice.breaks.is_empty() {
                     out.push(format!(
@@ -1155,7 +1159,7 @@ impl Deck {
                 Effect::Remember { deed } => {
                     written.insert(deed.clone());
                 }
-                Effect::Fight { monsters } => {
+                Effect::Fight { monsters, .. } => {
                     written.extend(monsters.iter().filter_map(Monster::npc).map(killed_deed));
                 }
                 _ => {}
@@ -1902,6 +1906,7 @@ mod tests {
         d.cards[1].choices[1].effects = vec![
             Effect::Fight {
                 monsters: vec![Monster::Stat("wolf".into())],
+                surprise: false,
             },
             Effect::Delay { minutes: 10 },
         ];
@@ -3012,7 +3017,7 @@ mod tests {
         d.validate(&small_map()).unwrap();
         assert!(d.deeds_written().contains("killed_col"));
         d.check_deeds_written(&BTreeSet::new()).unwrap();
-        let Effect::Fight { monsters } = &d.cards[0].choices[0].effects[0] else {
+        let Effect::Fight { monsters, .. } = &d.cards[0].choices[0].effects[0] else {
             panic!("a fight");
         };
         assert_eq!(
@@ -3020,6 +3025,23 @@ mod tests {
             ("bandit", Some("col"))
         );
         assert_eq!((monsters[1].stat(), monsters[1].npc()), ("bandit", None));
+    }
+
+    #[test]
+    fn a_fight_may_start_with_its_monsters_surprised() {
+        let fight = |json: &str| -> bool {
+            let Effect::Fight { surprise, .. } = serde_json::from_str(json).unwrap() else {
+                panic!("a fight");
+            };
+            surprise
+        };
+        assert!(fight(
+            r#"{"do": "fight", "monsters": ["wolf"], "surprise": true}"#
+        ));
+        assert!(
+            !fight(r#"{"do": "fight", "monsters": ["wolf"]}"#),
+            "not surprised by default"
+        );
     }
 
     fn scout_deck() -> Deck {
@@ -3167,6 +3189,7 @@ mod tests {
             card.zone = route[0].clone();
             card.choices[0].effects.push(Effect::Fight {
                 monsters: vec![Monster::Stat("wolf".into())],
+                surprise: false,
             });
         }
         assert!(two.route_warnings(&map, &route).is_empty());
@@ -3178,6 +3201,7 @@ mod tests {
         assert!(two.untagged_fight_warnings(person).is_empty());
         two.cards[0].choices[0].effects = vec![Effect::Fight {
             monsters: vec![Monster::Stat("goblin_warrior".into())],
+            surprise: false,
         }];
         let untagged = two.untagged_fight_warnings(person);
         assert_eq!(untagged.len(), 1);

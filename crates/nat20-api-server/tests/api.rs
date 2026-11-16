@@ -3302,6 +3302,81 @@ fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A card's fight with `surprise` (ENG-47): its monsters roll Initiative with Disadvantage and
+/// the party does not; the same fight without it rolls every Initiative straight.
+#[test]
+fn a_surprised_card_fight_gives_its_monsters_disadvantage_on_initiative() {
+    for surprise in [true, false] {
+        let dir = std::env::temp_dir().join(format!(
+            "nat20_table_card_surprise_{surprise}_{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+        let deck_path = dir.join("worlds/test_vale/deck/vale.json");
+        let mut deck: Value =
+            serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
+        deck["cards"][1]["choices"][1]["effects"][0]["surprise"] = json!(surprise);
+        std::fs::write(&deck_path, deck.to_string()).unwrap();
+        let mut api = Api::start(
+            Server::with_data_dir(dir.clone()),
+            json!({ "cmd": "new_session", "seed": 1 }),
+        );
+        let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+        ok(&api.call(
+            "dm",
+            json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+        ));
+        ok(&api.call(
+            "dm",
+            json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+        ));
+        let both = |api: &mut Api, choice: &str| -> Value {
+            let mut last = Value::Null;
+            for who in ["bren", "maren"] {
+                last = api.call(
+                    who,
+                    json!({ "cmd": "choose_card", "actor": who, "choice": choice }),
+                );
+                assert_eq!(last["ok"], true, "{last}");
+            }
+            last
+        };
+        ok(&api.call(
+            "bren",
+            json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+        ));
+        both(&mut api, "clear");
+        ok(&api.call(
+            "bren",
+            json!({ "cmd": "rest_night", "actor": "bren", "where": "camp" }),
+        ));
+        let fight = both(&mut api, "drive_off");
+        let initiative: Vec<(String, String)> = fight["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|e| e["kind"] == "roll" && e["roll"]["kind"] == "initiative")
+            .map(|e| {
+                (
+                    e["roll"]["roller"].as_str().unwrap().to_owned(),
+                    e["roll"]["advantage"].as_str().unwrap().to_owned(),
+                )
+            })
+            .collect();
+        assert_eq!(initiative.len(), 3, "{fight}");
+        for (roller, advantage) in &initiative {
+            let expected = if surprise && roller.starts_with("wolf_") {
+                "disadvantage"
+            } else {
+                "normal"
+            };
+            assert_eq!(advantage, expected, "{roller}: {fight}");
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
 /// Cards nobody can speak on are settled at once (ENG-35), and a leg that ends at a place
 /// still meets both: its road card first, on the road, then the place's arrival card.
 #[test]
