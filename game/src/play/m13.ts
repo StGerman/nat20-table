@@ -56,6 +56,9 @@ export interface CarriedCard {
   wrote: string[];
 }
 
+/** The first contract version whose scenes write deeds (API-57). */
+const SCENE_DEEDS_SINCE = 74;
+
 const blades = (run: RunRecord): Handle[] => [...(run.seats.human ? [run.seats.human] : []), ...run.seats.ai];
 
 /** The outcome deeds of the world the run's pack plays on (§4.2 rule 9). */
@@ -71,8 +74,9 @@ export function sceneOutcomesOf(pack: string): Set<string> {
 }
 
 /**
- * The first arrival card that read an outcome deed this run did not write (so an earlier contract
- * wrote it), with its decision and the deeds its choice wrote.
+ * The first arrival card that read one of `outcomes` (a scene's outcomes, as `sceneOutcomesOf`
+ * gives them) that this run did not write, so an earlier contract wrote it, with its decision and
+ * the deeds its choice wrote.
  */
 export function carriedCard(log: Event[], outcomes: Set<string>): CarriedCard | undefined {
   const written = new Set(log.flatMap((e) => (e.kind === "deed_remembered" ? [e.deed] : [])));
@@ -93,9 +97,19 @@ export function carriedCard(log: Event[], outcomes: Set<string>): CarriedCard | 
   return found;
 }
 
-/** The narration lines about a card: from the first said after it was shown to the first said after its decision. */
-export function cardLines(digests: DigestRecord[], card: CarriedCard): DigestRecord[] {
-  const from = digests.findIndex((d) => d.log_head >= card.seq);
+/** The wakes whose narration frames a card. */
+const FRAMING_WAKES = new Set(["pick", "card"]);
+
+/**
+ * The narration lines about a card: from the DM's framing of it (its pick or card wake) to the first
+ * line said after its decision. A card drawn in the request that settled the card before it is
+ * shown before the DM narrates that settling, so the first line after it may be about the other
+ * card: the framing narration, found in the transcript, marks where this card's lines start.
+ */
+export function cardLines(digests: DigestRecord[], card: CarriedCard, transcript: TranscriptRecord[] = []): DigestRecord[] {
+  const framing = transcript.find((r) => r.speaker === "dm" && r.kind === "narration" && r.wake !== undefined && FRAMING_WAKES.has(r.wake) && r.log_head >= card.seq);
+  const framed = framing ? digests.findIndex((d) => d.log_head >= card.seq && d.text === framing.text) : -1;
+  const from = framed >= 0 ? framed : digests.findIndex((d) => d.log_head >= card.seq);
   if (from < 0) return [];
   const end = card.decided ? digests.findIndex((d, i) => i >= from && d.log_head >= card.decided!.seq) : -1;
   return digests.slice(from, end < 0 ? digests.length : end + 1);
@@ -122,6 +136,9 @@ export function questionText(card: CarriedCard, lines: DigestRecord[]): string {
  */
 export function writtenRow(run: RunRecord, log: Event[], outcomes: Set<string>): VerdictRow {
   const title = "Written: the scenes write two deeds or more, one an outcome, and the roster is saved";
+  // A build before scene deeds (contract 1.0.0-dev.74, API-57) writes none: its runs only report.
+  const dev = /^1\.0\.0-dev\.(\d+)$/.exec(run.build.contract)?.[1];
+  if (dev !== undefined && Number(dev) < SCENE_DEEDS_SINCE) return { row: "m13-written", title, status: "reported", detail: `built on contract ${run.build.contract}, before scene deeds (dev.${SCENE_DEEDS_SINCE})` };
   // Only a run that saves a party is run 1 of a pair: any other run of the pack reports its deeds.
   if (!run.roster) {
     const deeds = log.flatMap((e) => (e.kind === "deed_remembered" ? [e.deed] : []));
@@ -151,16 +168,16 @@ export function writtenRow(run: RunRecord, log: Event[], outcomes: Set<string>):
  * the Blades' word, no seat falling back, and its choice wrote a deed; the judge answers yes to
  * the question and no flag on its lines stands.
  */
-export function carriedRow(run: RunRecord, log: Event[], transcript: TranscriptRecord[], outcomes: Set<string>, answer: CarriedAnswer | undefined, flags: Flag[], judged: boolean, brought: { deeds?: DeedRead[]; scene: Set<string> } = { scene: new Set() }): VerdictRow {
+export function carriedRow(run: RunRecord, log: Event[], transcript: TranscriptRecord[], scene: Set<string>, answer: CarriedAnswer | undefined, flags: Flag[], judged: boolean, brought?: DeedRead[]): VerdictRow {
   const title = "Carried: a card reads what the party did at the mill, the Blades decide it, and the DM names it";
-  const card = carriedCard(log, outcomes);
+  const card = carriedCard(log, scene);
   if (run.roster?.party !== "continue") return { row: "m13-carried", title, status: "reported", detail: `not a run on a carried roster${card ? `; ${card.card} read ${card.reads.map((d) => d.deed).join(", ")}` : ""}` };
   if (!card) {
     // Only a roster whose world holds a scene's outcome owes a card for it: run 2 of the pair.
-    const owed = (brought.deeds ?? []).filter((d) => brought.scene.has(d.deed)).map((d) => d.deed);
+    const owed = (brought ?? []).filter((d) => scene.has(d.deed)).map((d) => d.deed);
     return owed.length > 0
       ? { row: "m13-carried", title, status: "fail", detail: `the saved world held ${owed.join(", ")}, and no arrival card read it` }
-      : { row: "m13-carried", title, status: "reported", detail: "no arrival card read an outcome deed of an earlier contract, and the saved world held no scene's outcome" };
+      : { row: "m13-carried", title, status: "reported", detail: "no arrival card read a scene's outcome from an earlier contract, and the saved world held none" };
   }
   const party = blades(run);
   const fellBack = card.decided ? transcript.filter((r) => r.kind === "fallback" && party.includes(r.speaker) && r.log_head >= card.seq && r.log_head < card.decided!.seq).map((r) => r.speaker) : [];
@@ -169,7 +186,7 @@ export function carriedRow(run: RunRecord, log: Event[], transcript: TranscriptR
     ...(!card.decided ? ["not decided"] : !word ? [`decided ${card.decided.how}, not by the Blades' word`] : []),
     ...(fellBack.length > 0 ? [`fallback words from ${fellBack.join(", ")}`] : []),
     ...(card.decided && card.wrote.length === 0 ? ["its choice wrote no deed"] : []),
-    ...(answer?.answer === "no" ? ["the judge answers no"] : []),
+    ...(judged && answer?.answer === "no" ? ["the judge answers no"] : []),
   ];
   const lines = new Set(answer?.lines ?? []);
   // Row 3's flags on the card's lines: the judge's and those Stas added by hand.
@@ -215,7 +232,7 @@ export function firstWorldDeeds(engineLog: Array<{ request?: { cmd?: string; vie
  * The report's Milestone 13 section of a run on a carried roster: the deeds the saved memory
  * brought, the carried card, its choice and deed, its lines, and the answer deed "written, unread".
  */
-export function carriedReport(run: RunRecord, log: Event[], digests: DigestRecord[], outcomes: Set<string>, first: DeedRead[] | undefined): string[] {
+export function carriedReport(run: RunRecord, log: Event[], digests: DigestRecord[], outcomes: Set<string>, first: DeedRead[] | undefined, transcript: TranscriptRecord[] = []): string[] {
   if (run.roster?.party !== "continue") return [];
   const card = carriedCard(log, outcomes);
   const out = ["", "## The world carries the mill", ""];
@@ -229,7 +246,7 @@ export function carriedReport(run: RunRecord, log: Event[], digests: DigestRecor
   // The answer deed: nothing in this run or its world reads it yet.
   const read = new Set(log.flatMap((e) => (e.kind === "card_shown" ? (e.reads ?? []).map((d) => d.deed) : [])));
   for (const d of card.wrote) out.push(`Deed: ${d}, ${read.has(d) ? "written and read in this run" : "written, unread"}`);
-  const lines = cardLines(digests, card);
+  const lines = cardLines(digests, card, transcript);
   out.push("", "Its lines:", ...(lines.length > 0 ? lines.map((d) => `> ${d.line}. ${d.text}`) : ["(the narration digest has not run)"]));
   return out;
 }
@@ -239,5 +256,6 @@ export function m13Report(dir: string, run: RunRecord, log: Event[], pack: strin
   if (run.roster?.party !== "continue") return [];
   const digests = existsSync(path.join(dir, NARRATION_DIGEST)) ? readDigest(dir).digests : [];
   const engineLog = readLines<Parameters<typeof firstWorldDeeds>[0][number]>(path.join(dir, ENGINE_LOG));
-  return carriedReport(run, log, digests, outcomesOf(pack), firstWorldDeeds(engineLog));
+  const transcript = readLines<TranscriptRecord>(path.join(dir, "transcript.jsonl"));
+  return carriedReport(run, log, digests, sceneOutcomesOf(pack), firstWorldDeeds(engineLog), transcript);
 }

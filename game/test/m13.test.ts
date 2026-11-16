@@ -13,7 +13,7 @@ import { ASK_PROMPT, CARRIED_QUESTION, JUDGE_CHOICE, ModelJudge, ScriptedJudge }
 import { narrationCheck } from "../src/check/narration.ts";
 import { SESSION_LOG } from "../src/engine.ts";
 import { deedKinds, effectOutcomes, worldSources } from "../src/play/deeds.ts";
-import { carriedCard, carriedReport, JUDGE_QUESTION, outcomesOf } from "../src/play/m13.ts";
+import { cardLines, carriedCard, carriedReport, JUDGE_QUESTION, outcomesOf, sceneOutcomesOf } from "../src/play/m13.ts";
 import { RUN_FORMAT, writeRunRecord, type RunRecord } from "../src/play/record.ts";
 import { AUDIT_JSON, computeVerdict, CONFIRMATIONS_JSON, NARRATION_CHECK } from "../src/play/verdict.ts";
 
@@ -103,6 +103,10 @@ test("m13-written: run 1 passes on two deeds with their records, one an outcome,
   assert.equal(unsaved.status, "fail");
   assert.match(unsaved.detail, /the roster was not saved \(the run crashed\)/);
   assert.equal(row(folder(runRecord(), MILL_LOG), "m13-written")!.status, "reported");
+  // A run built before scene deeds wrote none, and only reports, roster or not.
+  const old = row(folder(runRecord({ roster: ROSTER as never, build: { ...runRecord().build, contract: "1.0.0-dev.53" } }), []), "m13-written")!;
+  assert.equal(old.status, "reported");
+  assert.match(old.detail, /before scene deeds/);
   // A campaign run has no m13-written row.
   assert.equal(row(folder(runRecord({ settings: { pack: { value: FAIR, from: "flag" } } as never, campaign: { start_day: 4, day_limit: 6 } }), []), "m13-written"), undefined);
 });
@@ -128,7 +132,11 @@ function run2(log = WENDFORD, transcript: Array<Record<string, unknown>> = []): 
 const ANSWER = { question: CARRIED_QUESTION, card: "mill_goblin_taken_alive", lines: [7, 8], answer: "yes", line: 7, quote: "you let the one in the yard live" };
 
 test("m13-carried: the card read an earlier outcome, the Blades decided it, its deed was written, and the judge answers yes", () => {
-  const card = carriedCard(withSeq(WENDFORD) as never, outcomesOf(FAIR))!;
+  const card = carriedCard(withSeq(WENDFORD) as never, sceneOutcomesOf(FAIR))!;
+  // A card's outcome is not a scene's: a toll card on a roster that carries the bridge is no mill card.
+  const toll = WENDFORD.map((e) => (e.kind === "card_shown" ? { ...e, card: "toll_man_stocks", reads: [{ deed: "toll_men_spared", by: ["bren"], day: 1, contract: 1 }] } : e));
+  assert.equal(carriedCard(withSeq(toll) as never, sceneOutcomesOf(FAIR)), undefined);
+  assert.equal(row(run2(toll), "m13-carried")!.status, "reported");
   // `wenna_saved` is a marker: only the outcome counts as carried.
   assert.deepEqual(card.reads.map((d) => d.deed), ["snitt_yielded"]);
   assert.deepEqual(card.wrote, ["named_self_for_the_goblin"]);
@@ -196,7 +204,7 @@ const LINES = [digest(6, 1, "The wagon rolls into Wendford."), digest(7, 3, "Osr
 test("the report: the deeds the saved world brought, the card, its choice, its deed written and unread, and its lines", () => {
   const run = runRecord({ campaign: { start_day: 4, day_limit: 6 }, roster: CONTINUE as never });
   const first = [{ deed: "snitt_yielded", by: ["bren"], day: 1, contract: 1 }];
-  const lines = carriedReport(run, withSeq(WENDFORD) as never, LINES, outcomesOf(FAIR), first).join("\n");
+  const lines = carriedReport(run, withSeq(WENDFORD) as never, LINES, sceneOutcomesOf(FAIR), first).join("\n");
   assert.match(lines, /Deeds the saved world brought \(the DM's first world view\): snitt_yielded \(by bren, day 1, contract 1\)/);
   assert.match(lines, /Card: mill_goblin_taken_alive, reading snitt_yielded/);
   assert.match(lines, /Choice: own_name \(majority\)/);
@@ -205,10 +213,10 @@ test("the report: the deeds the saved world brought, the card, its choice, its d
   assert.match(lines, /> 7\. Osric looks at you[^\n]*\n> 8\. Osric notches the tally\.$/);
   // A yard fought to the end is no goblin taken, never the party's choice.
   const toTheEnd = WENDFORD.map((e) => (e.kind === "card_shown" ? { ...e, card: "mill_yard_to_the_end", reads: [{ deed: "yard_to_the_end", by: ["bren"], day: 1, contract: 1 }] } : e));
-  const end = carriedReport(run, withSeq(toTheEnd) as never, LINES, outcomesOf(FAIR), first).join("\n");
+  const end = carriedReport(run, withSeq(toTheEnd) as never, LINES, sceneOutcomesOf(FAIR), first).join("\n");
   assert.match(end, /At the mill: no goblin was taken\./);
   assert.doesNotMatch(end, /chose/);
-  assert.deepEqual(carriedReport({ ...run, roster: ROSTER as never }, withSeq(WENDFORD) as never, LINES, outcomesOf(FAIR), first), []);
+  assert.deepEqual(carriedReport({ ...run, roster: ROSTER as never }, withSeq(WENDFORD) as never, LINES, sceneOutcomesOf(FAIR), first), []);
 });
 
 test("the narration check asks the judge the carried question on the card's lines, and writes its answer", async () => {
@@ -259,4 +267,24 @@ test("the model judge answers the question in a session of its own with the answ
   assert.deepEqual(opened[0]!.tools.map((t) => t.name), ["answer"]);
   reply = { answer: "yes", line: 99, quote: "elsewhere" };
   assert.deepEqual(await judge.ask("q", [7, 8]), { answer: "no", line: null, quote: "" });
+});
+
+test("a card drawn in the request that settled the card before it starts its lines at its own framing, not that card's settling", () => {
+  const card = carriedCard(withSeq(WENDFORD) as never, sceneOutcomesOf(FAIR))!;
+  // Line 6 narrates the previous card's settling at a log head after this card was shown; line 7 is this card's framing.
+  const transcript = [{ speaker: "dm", kind: "narration", wake: "card", text: LINES[1]!.text, log_head: 3 }] as never;
+  const settled = [digest(6, 2, "The cloaks go on the salt sacks."), ...LINES.slice(1)];
+  assert.deepEqual(cardLines(settled, card, transcript).map((d) => d.line), [7, 8]);
+  // With no framing narration in the transcript, the window starts at the first line after the card.
+  assert.deepEqual(cardLines(settled, card).map((d) => d.line), [6, 7, 8]);
+});
+
+test("a narration check that fails removes the last question's answer with the check", async () => {
+  const dir = run2();
+  writeFileSync(path.join(dir, NARRATION_DIGEST), [JSON.stringify({ kind: "run", party: [], narrations: 4, requests_replayed: 0, diverged: null }), ...LINES.map((d) => JSON.stringify({ kind: "narration", ...d }))].join("\n") + "\n");
+  writeFileSync(path.join(dir, JUDGE_QUESTION), JSON.stringify({ ...ANSWER, answer: "no", line: null, quote: "" }));
+  const broken = { judge: async () => { throw new Error("offline"); } };
+  assert.equal((await narrationCheck(FAIR, dir, broken)).ok, false);
+  assert.equal(existsSync(path.join(dir, JUDGE_QUESTION)), false);
+  assert.equal(row(dir, "m13-carried")!.status, "pending");
 });

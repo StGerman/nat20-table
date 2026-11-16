@@ -13,7 +13,8 @@ import { NARRATION_DIGEST, readDigest, runDigest } from "./digest.ts";
 import { judgeRun, ModelJudge, type CheckLine, type Judge } from "./judge.ts";
 import { CONFIRMATIONS_JSON, NARRATION_CHECK } from "../play/verdict.ts";
 import { readLines as readRecords, readRunRecord, RUN_JSON } from "../play/record.ts";
-import { cardLines, carriedCard, JUDGE_QUESTION, outcomesOf, questionText, type CarriedAnswer } from "../play/m13.ts";
+import { cardLines, carriedCard, JUDGE_QUESTION, questionText, sceneOutcomesOf, type CarriedAnswer } from "../play/m13.ts";
+import type { TranscriptRecord } from "../table/types.ts";
 import { SESSION_LOG } from "../engine.ts";
 import { CARRIED_QUESTION } from "./judge.ts";
 import type { Event } from "@nat20-table/engine-client";
@@ -47,6 +48,9 @@ export async function narrationCheck(pack: string, dir: string, judge: Judge): P
   const previous = path.join(dir, PREVIOUS_CHECK);
   // A previous attempt that failed already moved the last good check aside: keep that one.
   if (existsSync(current)) renameSync(current, previous);
+  // The question's answer goes with the check it came from: a check that fails leaves neither.
+  const question = path.join(dir, JUDGE_QUESTION);
+  rmSync(question, { force: true });
   if (!existsSync(path.join(dir, NARRATION_DIGEST))) {
     // A replay that diverges still writes its digest (and exits 1): the run record below says where.
     const digest = runDigest(pack, dir);
@@ -61,13 +65,11 @@ export async function narrationCheck(pack: string, dir: string, judge: Judge): P
     return { ok: false, lines: [`Narration check: the judge stopped: ${(error as Error).message}. Run it again with npm run audit:narration -- ${dir}`] };
   }
   // The Milestone 13 question (AGT-104): on a carried roster, does the DM name what the party did at the mill?
-  const question = path.join(dir, JUDGE_QUESTION);
-  rmSync(question, { force: true });
   const record = existsSync(path.join(dir, RUN_JSON)) ? readRunRecord(dir) : undefined;
-  const card = record?.roster?.party === "continue" && judge.ask ? carriedCard(readRecords<Event>(path.join(dir, SESSION_LOG)), outcomesOf(pack)) : undefined;
+  const card = record?.roster?.party === "continue" && judge.ask ? carriedCard(readRecords<Event>(path.join(dir, SESSION_LOG)), sceneOutcomesOf(pack)) : undefined;
   let asked: CarriedAnswer | undefined;
   if (card && judge.ask) {
-    const lines = cardLines(run.digests, card);
+    const lines = cardLines(run.digests, card, readRecords<TranscriptRecord>(path.join(dir, "transcript.jsonl")));
     if (lines.length > 0) {
       try {
         const numbers = lines.map((d) => d.line);

@@ -12,7 +12,8 @@ import { percentile, waitedMs, type UsageRecord } from "../usage.ts";
 import { packOfRun, readLines, readRunRecord, RUN_JSON, type RunRecord } from "./record.ts";
 import { TARGET_P95_MS } from "./run.ts";
 import { exitRows, type ReadableAnswer } from "./exit.ts";
-import { carriedCard, carriedRow, firstWorldDeeds, outcomesOf, sceneOutcomesOf, readableRow as carriedReadableRow, readCarriedAnswer, writtenRow, type CarriedReads } from "./m13.ts";
+import { carriedCard, carriedRow, firstWorldDeeds, sceneOutcomesOf, readableRow as carriedReadableRow, readCarriedAnswer, writtenRow, type CarriedReads } from "./m13.ts";
+import { packMap } from "./deeds.ts";
 
 export const VERDICT_JSON = "verdict.json";
 /** The audit stage's output: whether `nat20-audit` passed, and what it printed. */
@@ -447,18 +448,15 @@ export function computeVerdict(dir: string): Verdict {
   const word = run.campaign ? [...wordRows(run, log, narrationFlags, existsSync(path.join(dir, NARRATION_CHECK))), ...exitRows(dir, run, log, transcript, readable as ReadableAnswer | undefined)] : [];
   // The Milestone 13 rows (AGT-104): run 1 is a pack played at a site; run 2 a campaign on its roster.
   const pack = packOfRun(dir);
-  const atSite = !run.campaign && existsSync(path.join(pack, "adventure.json")) && (JSON.parse(readFileSync(path.join(pack, "adventure.json"), "utf8")) as { site?: unknown }).site !== undefined;
-  const carried = run.campaign
-    ? carriedRow(run, log, transcript, outcomesOf(pack), readCarriedAnswer(dir), narrationFlags, existsSync(path.join(dir, NARRATION_CHECK)), {
-        deeds: firstWorldDeeds(readLines(path.join(dir, ENGINE_LOG))),
-        scene: sceneOutcomesOf(pack),
-      })
-    : undefined;
-  const m13 = carried
-    ? [carried, carriedReadableRow(run, carriedReads as CarriedReads | undefined, carriedCard(log, outcomesOf(pack)) !== undefined)]
-    : atSite
-      ? [writtenRow(run, log, outcomesOf(pack))]
-      : [];
+  const m13: VerdictRow[] = [];
+  if (run.campaign) {
+    const scene = sceneOutcomesOf(pack);
+    const judged = existsSync(path.join(dir, NARRATION_CHECK));
+    m13.push(
+      carriedRow(run, log, transcript, scene, readCarriedAnswer(dir), narrationFlags, judged, firstWorldDeeds(readLines(path.join(dir, ENGINE_LOG)))),
+      carriedReadableRow(run, carriedReads as CarriedReads | undefined, carriedCard(log, scene) !== undefined),
+    );
+  } else if (packMap(pack) !== undefined) m13.push(writtenRow(run, log, sceneOutcomesOf(pack)));
   const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...word, ...m13, ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
   const flags = [...narrationFlags, ...retries.flags];
   const not_eligible = [
