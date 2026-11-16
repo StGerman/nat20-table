@@ -26,7 +26,7 @@ Vera test: she met the post once as a text sample (2026-11-14) and read it as a 
 8. Tells: at least two are on the screen with no roll; a rolled tell returns a detail, never the verdict "it is fake". A real road, dearer and longer, is open, or there is no choice.
 9. Dark only as traces (a boarded house, a letter that stopped, a farm under a new seal). No arrest, cell or execution on screen.
 
-Rules 4 and 5 have no record yet. The design PR drafts one decision record for each; the bible line beside each is its own later PR.
+Items 4 and 5 had no record; this PR adds one for each (0087, 0088, Proposed). The bible line beside each is its own later PR.
 
 ## 3. In
 
@@ -81,14 +81,14 @@ Each row names the lowest layer that tests it (0080). The design's §12 holds th
 
 Yan, 2026-11-15, on main 34cbac1 (table #409 and #410 merged; M13's API-57 and ENG-44 are table #411 and #413, open; the Allies design and tender are table #412, open). PRs from design §12. Build priced by size as the Allies tender in table #412 prices it (XS 5, S 11, M 21, L 40 USD; review XS 5 to 10, S 15 to 20, M 25 to 30, L 35 to 45 min). Runs priced on M12's logged all-AI runs (5.70 to 8.57 USD) and M11's two human halves (5.17 and 5.87 USD, 26.5 and 39.1 min). No run of a three-day contract exists, so every run number here is an estimate.
 
-| Field | Plan (§15 item 7 as recommended: both contracts) | M11 baseline |
+| Field | Plan (§15 A7 as recommended: both contracts) | M11 baseline |
 | --- | --- | --- |
 | Size | design §12's 8 PRs: 1 S (scope, design, 0087, 0088; mostly spent), 2 S rows, 3 XS bible lines, 4 M `settle` (Rule 1), 5 S world, 6 L first contract, 7 M second contract, 8 S exit; plus the status PR, XS | 19 rows |
 | PRs for Stas | 9 (the 8 and the status PR); 10 with one fix PR after a failed run | 27 |
 | Build USD | 137: 10, 11, 5, 21, 11, 42 (Zoya's and Vera's reads in), 21, 11, 5 | not counted |
 | Stas's review | about 3.6 h, two of his review evenings at 2.5 h: 40 min PR 1, 15 PR 2, 10 PR 3, 30 PR 4, 20 PR 5, 45 PR 6 (the Russian lines), 30 PR 7, 15 PR 8, 10 status (estimates) | not measured |
 | Card bench, exit row 3 | `names_for_the_book`: 1.4 to 9.5 USD, about 4.75 expected; about 10 min of Stas's. The dawn card: not reachable by the bench as built (below) | n/a |
-| Exit runs | 26 USD if the pair passes first time: the all-AI half, 2 contracts at about 7 (5.70 to 8.57), 14; Stas's half, 2 at about 6 (5.17 to 6.95), 12 | 5 runs, 35.45 USD |
+| Exit runs | 26 USD if the pair passes first time: the all-AI half, 2 contracts at about 7 (5.70 to 8.57), 14; Stas's half, 2 at about 6 (5.17 to 5.87), 12 | 5 runs, 35.45 USD |
 | Stas at the table | 55 to 80 min (25 to 40 a contract), only after the AI half passed; plus about 40 min at the Mac to start the AI half and rule its flags (20 a run, as table #412) | 65.6 min |
 | Days scope→exit | 7 to 13: no PR merges before M13 and Allies pass their exits (design §12); Allies' exit is 11-20 to 11-24 by table #412; this milestone's own work is 3 days best, 5 likely after it | 2.12 |
 
@@ -96,17 +96,17 @@ Totals: best 168 USD (137 build, 4.75 bench, 26 runs) and 5.3 h of Stas's (3.6 r
 
 Target (0065, half the baseline): 13.5 PRs, 17.73 USD of runs, 33 min at the table, 1.06 days. Planned: 9 PRs (0.33); 26 USD of runs (0.73), over by 8.27; 55 to 80 min at the table (0.84 to 1.22), over; 7 to 13 days, over by 6 to 12, set by the order (M13, Allies, then this), not by this milestone's work.
 
-**§15 item 7, Stas's half, priced apart.** The all-AI half (14 USD, both contracts) is the same in each.
+**§15 A7, Stas's half, priced apart.** The all-AI half (14 USD, both contracts) is the same in each.
 
 | Stas plays | Runs USD | At the table | What his half proves |
 | --- | --- | --- | --- |
 | A. Both contracts (the design's recommendation) | 12 | 55 to 80 min | his own answer at the book comes back on the next contract |
 | B. The first contract only | 6 | 25 to 40 min | his answer read back in the same contract (the dawn card); the reads across contracts only by the AI half and the seeded tests (exit row 1) |
-| C. The second only, on the AI half's roster | 6 | 25 to 40 min | somebody else's answer comes back to him (design §15 item 7 argues against it) |
+| C. The second only, on the AI half's roster | 6 | 25 to 40 min | somebody else's answer comes back to him (design §15 A7 argues against it) |
 
 B against A saves 6 USD and 25 to 40 min of the table: the pair is 20 USD (0.56 of the baseline, over the target by 2.27) and 25 to 40 min (0.38 to 0.61). The award is Stas's.
 
-**§15 item 2, the pressure chain, priced apart.**
+**§15 A2, the pressure chain, priced apart.**
 
 - In this milestone: one more content PR, M to L (21 to 42 USD, 25 to 35 min of review), on the chain after PR 6, about half a day more; no extra run; three more cards for the AI half to fail on.
 - Later, as its own content PRs after this exit: 2 PRs (the content, its rows and status), 26 to 53 USD build, 35 to 50 min of review. Its live proof: if the three cards are chained, the bench does not reach them (`docs/design/card-bench.md` §3), so one all-AI contract run, about 7 USD and 20 min at the Mac, 0 at the table; or 0 run USD if it rides on the next milestone's exit run.
@@ -117,7 +117,7 @@ B against A saves 6 USD and 25 to 40 min of the table: the pair is 20 USD (0.56 
 
 Amendment (proposed; rules silent, followed here): a scope's cost prices the Claude Code build per PR by size, as table #412 does; the baseline counts in-game runs only. Why: 137 USD of builds against 26 USD of runs needs its own line.
 
-Added by the thread after Yan priced it: the design's one revision takes his bench row as its own PR (the bench reaches a night card; his S, 11 USD, 15 to 20 min of review), so the plan is 10 PRs and 179 USD at best. He has not re-priced it, and the design says his S may be more than that PR needs.
+Added by the thread after Yan priced it. His PR numbers above are the first draft's: his PR 6, 7 and 8 (first contract, second contract, exit) are PR 7, 8 and 9 in the design's §12 now, and the design's PR 6 is new: the design's one revision takes his bench row as its own PR (the bench reaches a night card; his S, 11 USD, 15 to 20 min of review), so the plan is 10 PRs and 179 USD at best. He has not re-priced it, and the design says his S may be more than that PR needs.
 
 ## 8. Questions for Stas
 
