@@ -1,6 +1,6 @@
 # The post on the flats (working title «Камень A»): system design
 
-Status: Proposed, for Stas's review. Lev Neiman, 2026-11-15, branch `table/kamen-a-scope-design` (off main 4d865d9). Answers `docs/scope/kamen-a-scope.md` (Proposed; its §2 and §8 question 1 are Stas's decisions and are not reopened). Assumes Milestone 13 and Allies in fights are on main as designed. Decisions 0087 and 0088 (Proposed records of two rules Stas accepted on 2026-11-14) come with it. Author's read: no verdict on itself; §14 holds Zoya's board and Vera's reads, filled by the thread. Revised 2026-11-15 after Zoya's board (ten must-fix items; her page stays open), Vera's first read and Yan's cost (scope §7), and 2026-11-16 after the PR's code review (seven findings); neither Zoya nor Vera has read the second revision, so where §14 speaks of a failed roll leaving the family, of two book deeds, of `refused_the_post_wage`, or of "this §13", it describes the text before it. Every name of a person or a pack here is a working name, now Zoya's: people and plot are hers and Stas's (§15 B).
+Status: Proposed, for Stas's review. Lev Neiman, 2026-11-15, branch `table/kamen-a-scope-design` (off main 4d865d9). Answers `docs/scope/kamen-a-scope.md` (Proposed; its §2 and §8 question 1 are Stas's decisions and are not reopened). Assumes Milestone 13 and Allies in fights are on main as designed. Decisions 0087 and 0088 (Proposed records of two rules Stas accepted on 2026-11-14) come with it. Author's read: no verdict on itself; §14 holds Zoya's board and Vera's reads, filled by the thread. Revised 2026-11-15 after Zoya's board (ten must-fix items; her page stays open), Vera's first read and Yan's cost (scope §7), and 2026-11-16 after the PR's code review (seven findings); Zoya's second read and Vera's third, both of the second revision, are in §14 with the nine items still open after them. Every name of a person or a pack here is a working name, now Zoya's: people and plot are hers and Stas's (§15 B).
 
 ## 1. Summary
 
@@ -239,25 +239,25 @@ The lore says the customs house stands empty. The world PR adds one line, Zoya's
 
 ## 14. Zoya's board and Vera's read
 
-Filled by the thread, 2026-11-15. All three reads were made by the repo's own `zoya` and `vera` agents, not the cloud fallback. Vera saw only §13's lines.
+Filled by the thread, 2026-11-15 and 2026-11-16. All five reads were made by the repo's own `zoya` and `vera` agents, not the cloud fallback. Vera saw only §13's lines.
 
 ### Zoya's board (first draft, d76057f)
 
-Her status: "the page stays open. Nine rows are owed or contradicted." Ten must-fix items and a list of questions. The whole page, verbatim, is the project file `engine/kamen-a/zoya-board-2026-11-15.md` (not in the repo). She has not read the revision.
+Her status: "the page stays open. Nine rows are owed or contradicted." Ten must-fix items and a list of questions. The whole page, verbatim, is the project file `engine/kamen-a/zoya-board-2026-11-15.md` (not in the repo). Her second read, of the revision, is below.
 
 | Her finding | What it changed |
 | --- | --- |
 | M1, M2: names clash (Runa reads as «руна» and beside Rufus; Kell beside Dame Kell and Col; Orm is a book name; Dov beside Dunn); the boy has no name | her working names throughout: Hesta, Wilf, Garth, Ansel, Evan, Sefa |
 | M3: the letter cannot reach Bald Hill and bring the neighbours back before the second contract's first evening | the neighbours came down with her and wait at the caravanserai (§3, §6) |
 | M4: after the scribe's death the second contract places him again | the second pack's scene carries no `npc` on him; rule 12 |
-| M5: the offer is in the card's text but its choice is gated; choice 2 writes nothing | the offer is always made; choice 2 writes `refused_the_post_wage` (§6) |
+| M5: the offer is in the card's text but its choice is gated; choice 2 writes nothing | the offer is always made (§6). A deed for choice 2 was added and cut again in the second revision, because nothing read it; her second read keeps M5 open |
 | M6: the trace cards' choices write no deed | "say it to the second family" writes `warned_the_second_family`; "ask the carter" is cut (§6) |
 | M7, M8: «с гор», «Третьего дня», the priest's reason, a neighbour who reads | §13's lines |
 | M9: the sender is never on screen | he hands over the purse at the hire; his pan-house is on the salt road (§3) |
 | M10: no companion named at a hard choice; no `keeps` or `breaks` | a companion in each hard card's `note`; `keeps` and `breaks` on the book and dawn cards, for her to confirm (§4) |
 | The lore says the customs house stands empty | one lore line in PR 5 (§9) |
 | No consequence on the young in the second pack | Wilf carries it; the fact is hers (§6) |
-| `book_taken` and `page_bought` gate in silence; the hard road is answered with silence | not fixed here: §7's count went down, and §15 A3 and B5 ask Stas |
+| `book_taken` and `page_bought` (one deed, `page_gone`, since the second revision) gate in silence; the hard road is answered with silence | not fixed here: §7's count went down, and §15 A3 and B5 ask Stas |
 | Her questions and her bible queue (A1 to A5) | §15 B, and PR 3 |
 
 ### Vera, first read (first draft's §13)
@@ -318,9 +318,85 @@ What it changed: the second scene now opens with what the party did; the boy is 
 > Улыбнуться было нечему, я и не ждала. Зато «Уилф сыт» в письме и «ровной чужой рукой» меня по-настоящему задели. Ради этого места я бы осталась.
 
 Not answered by an edit, and said plainly:
-- She became a passenger at «Вы оставили Хесту и Уилфа на посту». In play that card is in the pile only after the party chose "leave the family" on the dawn card, or failed to talk Hesta round (§4.3, rule 5). The sample did not show her the dawn card, so she read the line as the story deciding for her. The dawn card's lines go to her, in order with the other two, before the first contract's content PR merges (exit row 4).
+- She became a passenger at «Вы оставили Хесту и Уилфа на посту». In play that card is in the pile only after the party chose "leave the family" on the dawn card (§4.3, rule 5); since the second revision no roll can leave her there. The sample did not show her the dawn card, so she read the line as the story deciding for her. The dawn card's lines go to her, in order with the other two, before the first contract's content PR merges (exit row 4).
 - «Гарт» was new to her in the choice. In play he hires the party on screen (§3).
 - Hers and still open for the content PR: «вы здесь» on the flats against "at the customs house" in the text; whose "господская" ground it is at a post that claims to be the Free Host's (it is a tell, and she caught it as a question); two gold with nothing to compare; the scribe shown as kind three times; the priest twice in one sentence.
+
+### Vera, third read (§13 after the second revision)
+
+> **1. Что я поняла**
+> Я провожаю беглых людей с гор через границу. Граница должна быть у Вала, а это ещё три мили дальше. Таможня стоит до Вала, и писарь врёт, что мы уже на месте. Хеста сама сомневается: «у них всё на слове, бумаг они не держат», а он раскрывает книгу. Я бы не стала называть ни себя, ни Гарта и повела бы Хесту дальше, к Валу. Во второй сцене выходит, что Хесту оставили у писаря. Получается, мой выбор ни на что не повлиял, или я его не сделала, и это меня сбивает. Письмо написано «ровной чужой рукой», а внизу только её знак, значит, писала не она. Писарь при этом зовёт меня на ночь к двери, за деньги. Я бы отказалась и сказала Эвану и Сефе, что письму верить нельзя. В третьей сцене возчик рассказывает про похороненную женщину с холмов, «сама», и я понимаю, что это, скорее всего, Хеста. Пересказала бы им его слова. Где сейчас Уилф, я не знаю, и меня это тревожит.
+>
+> **2. Что я бы переспросила вслух**
+> - «День 2 · вечер · путь: Вал, граница», а под ним стрелка, «│ 3 мили», кружок и «подряд кончается». Это карта? «Вы здесь» понятно. А что такое «подряд кончается»? Что заканчивается моя работа? Какой подряд, с кем я его заключала?
+> - «Гарт, который вас послал». Кто он такой? Я его имя вижу здесь впервые.
+> - «Вольница» и «Совет магов». Тут я догадалась по контексту, вопрос снят.
+> - «по два золотых каждому, как за день найма». Два золотых — это много или мало? «Каждому» — это кому, мне и моим спутникам?
+> - Как Хеста и Уилф остались «на посту»? Это я так выбрала? Я не помню, чтобы выбирала.
+> - Слова «пост» и «таможня». Это одно и то же место?
+>
+> **3. Где я стала пассажиром**
+> Между первой и второй сценой. Я ещё не решила, называть ли имя, а мне уже сообщают: «Вы оставили Хесту и Уилфа на посту». Стало похоже, что кнопки ничего не меняют. Ноутбук я не закрыла бы, потому что история меня держит, но дальше читала бы с подозрением, что за меня всё уже решено.
+>
+> **4. Где стало скучно**
+> Скучно не было. Перечитала два места. Первое — «Вал — это у магов на бумаге, а таможня как была наша», чтобы понять, где граница на самом деле. Второе — «ровной чужой рукой», и на втором чтении меня кольнуло. На слух слишком близко стоят «писарь» и «пост» и дважды «вброд» в «русло вброд». Тут, наверное, так и задумано, но я всё равно заметила. «Доброго человека надо знать по имени» звучит гладко и страшно, это хорошая фраза. Улыбнуться было нечему. Холмик без знака сразу после «внизу стоит её знак» я услышала, и мне стало холодно.
+
+The same passenger moment, for the same reason: the sample goes from the book to the next contract and skips the dawn card, where the party decides. Three reads agree, so the lesson is the sample's and the exit's: Vera reads the three cards in order, the dawn card among them, before the first contract's content PR (exit row 4). «Гарт» and «подряд кончается» as before.
+
+### Zoya, second read (0bda523, after both revisions)
+
+> Zoya, second read of `docs/design/kamen-a-system-design.md` at 0bda523, 2026-11-16. I did not run Vera because this thread has no agent tool.
+>
+> **1. M1 to M10**
+> - **M1, names:** closed (throughout).
+> - **M2, the boy's name:** closed (§3, §13).
+> - **M3, timeline:** closed (§3 Days, §13). The neighbours wait at the caravanserai (lore L15), so the letter travels eight miles.
+> - **M4, the dead scribe placed again:** closed for the scene (§6, rule 12). Still open on one card. `the_post_again`, "the scribe at his door, as friendly as before" (§6 table), comes whenever the family was not left at the post. That includes `killed_ansel` followed by the walk to the Dyke. Fix: `unless: killed_ansel`, plus a variant with another man at the door, as the prose already says.
+> - **M5, the opening card:** open (§6 "The opening's choices", §13 second sample). The offer made in every case is closed. Card test 4 still fails: "refuse" and a failed "tell them" both end with no deed and `by_the_cart`. The M6 fix made it worse. A trace card's free speaking choice comes on every path, because one of `carters_word` and `the_post_again` is always the flats arrival. So the opening's Persuasion buys a deed the same day gives for nothing. Fix: cut choice 3 from the opening and keep two choices, take the work or refuse. The warning lives on the trace cards.
+> - **M6, the trace cards:** closed (§6 "The trace cards"). One leftover: when `garths_door` and a flats card both come, the second speaking choice writes a deed already written (test 4). Fix: a `carters_word` variant `if: warned_the_second_family` whose second choice is Maren's words at the fence (B7). It has a cost, and it answers Vera's «подойти к холмику нельзя».
+> - **M7, the carter's card:** the words are closed (§13): «с холмов», «На днях», the priest's reason in the carter's mouth. Still open, and mine: what the carter knows of Wilf (§6 "The young").
+>   - My fact for the note: he saw no boy at the fence; the yard told him the boy "was taken to town"; he knows nothing more, and the DM says nothing more.
+>   - Vera's edits: «без жреца… сказал жрец» → «без молитвы: беглая, сказал жрец»; «За оградой таможни виден» → «У самой ограды виден».
+> - **M8, the reading neighbour:** closed (§13).
+> - **M9, the sender on screen:** closed (§3, §5).
+> - **M10, companions and customs:** the companions are closed (§4.1). I confirm `keeps`/`breaks` on the book card (1 keeps `paper_is_law`, 2 breaks it, 3 none) and on dawn choices 1 to 3 (`debt_paid` against `word_kept`, which is where the party's four views split). Still open: the bribe choice (§4.3 row 4) carries none. It leaves the family and tears a page out of the book, so: keeps `debt_paid`, breaks `word_kept` and `paper_is_law`. The second contract's dawn copies take the same.
+>
+> **2. Rows that changed state**
+> - `salt_on_credit`, four deeds: owed → paid (soft), four DM lines at the hire, if Stas accepts B3.
+> - Hesta's tie to the brothers: Lev accepts the widowed sister (B1). The per-case bridge lines stay owed until Stas rules.
+> - "The customs house stands empty" (lore L27): contradicted → paid by PR 5. My line: "Since the spring there has been smoke from its chimney again." It says nothing of whose post it is.
+> - Council stones (lore L27): paid as `the_yard`'s failure line, not its tell. A Council stone pulled up and lying in the post's yard supports the scribe's lie, so it is a true detail that misleads. The tell itself is still mine to write (B11).
+> - `named_the_sender` → `garths_door`: paid in full. The door is now seen first.
+> - `killed_ansel`: the scene contradiction is fixed; the new one is on `the_post_again` (M4).
+> - Trace card choices: contradicted → paid by `warned_the_second_family`.
+> - The opening's choice 2: still contradicted (M5).
+> - The boy in the second pack: paid on `carters_word`'s note once my fact is in. New row: Wilf's fate, owed to a later contract (the lore's Lord's Larder is a candidate, Stas's call).
+> - `page_gone`: still a silent gate (B5's open-door card would pay it). New: written by `take_the_book` on a path without `named_the_sender`, nothing reads it. Lev must call it a marker or list it as owed.
+> - Unchanged: the two other answers at the book (B4), `walked_to_the_dyke` and the wage (A3, B6), Gwyn's lines, the second family's end, the four carried rows.
+>
+> **3. What the revisions broke**
+> - **M5's deed:** the cut is right. A deed nothing reads makes no difference between choices (Consequence 2), so adding it never closed M5, and cutting it leaves no unpaid setup. M5 stays open on the choices (above).
+> - **My M6 fix** emptied the opening's third choice. That one is mine; the fix is under M5.
+> - **«по два золотых каждому»** (§13), new since Vera's first read, is a sum written into the card. Guardrail 1: take it from the ledger's `gain`, or have a table test hold it equal, as for the miles. Otherwise keep «как за день найма» alone.
+> - **The road always open:** right, and it closes the passenger hole. But a failed Persuasion's `delay`, plus the creeks' wait, can run past `day_limit: 4`. If the day limit then ends the contract, keeping your word loses it, which rule 4 forbids. Fix: a seeded test with both delays at limit 4, or set limit 5.
+> - **The second contract's hire comes before the letter card** (§6), yet Evan and Sefa hire because of the letter. The hire's prose needs one DM line per end deed, saying the cause aloud. It must also hold the offer back for the road card, or the DM makes it twice.
+> - **The dawn letter is written aloud on every `letter_*` variant**, including when Hesta is then taken on. The note must say whether it is sent. If it is, the walked path leaves a lie in Saltmouth, and A3's carter must carry the truth against it.
+>
+> **4. Status:** the page stays open. Lev owes fixes on M4, M5, M10 (the bribe), the day limit and the sum. Stas owes rulings on B1, B3, B4, B5 and A3/B6. I owe the tells, Wilf's fact (given above) and the scribe's detail (B10; proposed: «огрызок карандаша за ухом», a pencil kept beside the pen). Vera has read neither the revised §13 nor the dawn card. That read is owed from the thread before PR 7.
+
+### Open after these reads
+
+Not fixed in this PR, on purpose: the design has been revised twice in one evening, and half of what is left turns on Stas's answers in §15. The next revision, after those answers, owes:
+
+1. `the_post_again` after the scribe's death (Zoya M4): `unless: killed_ansel` and a variant with another man at the door.
+2. The opening card's third choice (M5): cut to two choices, or give it a different outcome.
+3. `keeps` and `breaks` on the bribe choice (M10).
+4. The day limit against two delays on the real road: a seeded test at limit 4, or limit 5.
+5. The sum on the card («по два золотых»): from the ledger, held by a test, or cut.
+6. `page_gone` written with no reader on the path without `named_the_sender`: a marker, or owed.
+7. The second contract's hire before its letter card: one DM line per end deed, and the offer held back for the road card.
+8. Whether the dawn letter is sent when Hesta walks on.
+9. Vera on the dawn card, in order with the other two.
 
 ## 15. Questions for Stas
 
