@@ -2,17 +2,71 @@
     "_comment": "Fair in Wend's own cards (Faces of the Road, MAP-10, ENG-38): they join the world's deck only while this pack's contract runs. Rufus's offer moved here from the lowland deck (MAP-17): Odda must be on the road for its choices to make sense. Our own text, CC-BY-4.0, credit 'nat20-table contributors'.",
     "cards": [
         {
+            "id": "odda_falls",
+            "tells": [
+                "owner"
+            ],
+            "zone": "lowland",
+            "when": "night",
+            "target": "blades",
+            "once": true,
+            "if": "odda_vell_dead",
+            "text": "Odda Vell is dead. She lies by the wheel of her own wagon. Her purse is under her coat, and nobody but you is left to count it. The purse is heavier than the pay still owed to you.",
+            "text_ru": "Одда Велл мертва. Она лежит у колеса собственного фургона. Кошель у неё под плащом, и считать его теперь некому, кроме вас. В кошеле больше, чем вам ещё должны заплатить.",
+            "note": "Odda died in the fight at the wagon. Say it once, plainly, where she lies; describe no wound. The purse is the escort's and the engine counts it: never name a sum, and the stake line is true when the card shows. Bren speaks first: pay is pay. Tam, if he rides with the wagon, is watching the Blades, not the body. Sister Agna, if she came along (agna_came_along), climbs down without a word and stands by the wheel. Torva, if the Blades robbed the cairn or left its stones (robbed_cairn, left_the_cairn_stones), asks what the dead were going to buy. Nobody tells the Blades what they feel, and no companion says which choice is right. Taken, the purse is shared at once and the valley hears of it; carried, it pays them at the end of the road. The oilskin coat stays on the body: nobody searches it.",
+            "choices": [
+                {
+                    "id": "bring_in",
+                    "text": "Take the wagon and the purse on to Saltmouth.",
+                    "text_ru": "Довезти фургон и кошель до Солтмута.",
+                    "keeps": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "brought_oddas_purse_in"
+                        }
+                    ]
+                },
+                {
+                    "id": "share",
+                    "text": "Take the purse now and share it out among yourselves.",
+                    "text_ru": "Взять кошель сейчас и поделить между собой.",
+                    "breaks": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "took_oddas_purse"
+                        },
+                        {
+                            "do": "share_purse"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "id": "the_fair_gate",
-            "cast": ["owner", "warden_brannock"],
+            "cast": [
+                "owner",
+                "warden_brannock"
+            ],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "caravan",
-            "owner_pick": ["odda_word", "old_place", "queue"],
+            "owner_pick": [
+                "odda_word",
+                "old_place",
+                "queue"
+            ],
             "once": "contract",
             "if": "crossed_millbeck",
             "text": "At the Saltmouth gate the fair warden is chalking stall places on a board. The pitches by the well are nearly gone. He looks at Odda's wheat, then at the queue of carts behind her.",
             "text_ru": "У ворот Солтмута смотритель ярмарки мелом расписывает места на доске. Места у колодца почти разобраны. Он смотрит на пшеницу Одды, потом на очередь повозок за ней.",
-            "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. The warden has heard about the Millbeck bridge before the wagon arrives: carters talk at the gate. If there was a fight there (toll_men_fought), he asks the Blades about it before he looks at the wheat; if they paid or were let through, he says the reeve has never had a toll on that bridge. If Odda was told of Rufus's offer (told_odda_of_rufus), say in one clause, after the warden's question about the bridge if he asks one, that she has been waiting all road to say it out loud. If the Blades stand by her, whatever the roll, nobody tells them they were right to warn her: on a success the warden gives Odda her old place by the well, and if Rufus's cart stands there he has it moved; on a failure the warden shrugs, and the wagon joins the queue. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong.",
+            "note": "Odda's arrival at the fair, whatever happened on the road. Market against custom: the warden sells the good pitches, and Odda has always had hers by right of twenty autumns. If Rufus got ahead (rufus_got_ahead), his cart already stands in her old place by the well, and he waves. If Odda beat him to the fair (beat_rufus_to_the_fair), the place is still free and she can simply take it. The warden has heard about the Millbeck bridge before the wagon arrives: carters talk at the gate. If there was a fight there (toll_men_fought), he asks the Blades about it before he looks at the wheat; if they paid or were let through, he says the reeve has never had a toll on that bridge. If Odda was told of Rufus's offer (told_odda_of_rufus), say in one clause, after the warden's question about the bridge if he asks one, that she has been waiting all road to say it out loud. If the Blades stand by her, whatever the roll, nobody tells them they were right to warn her: on a success the warden gives Odda her old place by the well, and if Rufus's cart stands there he has it moved; on a failure the warden shrugs, and the wagon joins the queue. Joke: the warden's chalk board has Odda's name on it from last year, spelled wrong. With Odda dead (odda_vell_dead) the card is never drawn: the pay at the gate is the arrival line's, and the warning about Rufus died with her.",
             "choices": [
                 {
                     "id": "odda_word",
@@ -28,11 +82,20 @@
                             "skill": "persuasion",
                             "dc": 10,
                             "success": [
-                                {"do": "remember", "deed": "took_the_old_place"}
+                                {
+                                    "do": "remember",
+                                    "deed": "took_the_old_place"
+                                }
                             ],
                             "failure": [
-                                {"do": "delay", "minutes": 60},
-                                {"do": "remember", "deed": "waited_at_the_fair_gate"}
+                                {
+                                    "do": "delay",
+                                    "minutes": 60
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "waited_at_the_fair_gate"
+                                }
                             ]
                         }
                     ]
@@ -43,8 +106,15 @@
                     "text_ru": "Дать смотрителю мешок пшеницы за место у колодца.",
                     "asked": true,
                     "effects": [
-                        {"do": "cargo", "good": "wheat", "change": -50},
-                        {"do": "remember", "deed": "bought_a_pitch_by_the_well"}
+                        {
+                            "do": "cargo",
+                            "good": "wheat",
+                            "change": -50
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "bought_a_pitch_by_the_well"
+                        }
                     ]
                 },
                 {
@@ -53,17 +123,29 @@
                     "text_ru": "Рассказать смотрителю, что случилось на мосту через Миллбек.",
                     "if": "toll_men_fought",
                     "effects": [
-                        {"do": "remember", "deed": "told_the_warden_of_the_bridge"}
+                        {
+                            "do": "remember",
+                            "deed": "told_the_warden_of_the_bridge"
+                        }
                     ]
                 },
                 {
                     "id": "queue",
                     "text": "Wait in the queue with the other carts.",
                     "text_ru": "Ждать в очереди с другими повозками.",
-                    "unless": ["beat_rufus_to_the_fair", "told_odda_of_rufus"],
+                    "unless": [
+                        "beat_rufus_to_the_fair",
+                        "told_odda_of_rufus"
+                    ],
                     "effects": [
-                        {"do": "delay", "minutes": 60},
-                        {"do": "remember", "deed": "waited_at_the_fair_gate"}
+                        {
+                            "do": "delay",
+                            "minutes": 60
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "waited_at_the_fair_gate"
+                        }
                     ]
                 },
                 {
@@ -72,21 +154,26 @@
                     "text_ru": "Занять место, где Одда стоит каждый год, пока оно свободно.",
                     "if": "beat_rufus_to_the_fair",
                     "effects": [
-                        {"do": "remember", "deed": "took_the_old_place"}
+                        {
+                            "do": "remember",
+                            "deed": "took_the_old_place"
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "meadow_track",
-            "cast": ["owner"],
+            "cast": [
+                "owner"
+            ],
             "zone": "lowland",
             "target": "caravan",
             "owner_pick": "take",
             "once": "contract",
             "text": "Odda stands up on the wagon's seat and looks across the water meadows. There is a track over them, she says, that would put the wagon at the fair half a day ahead of anyone on the river road.",
             "text_ru": "Одда встаёт на козлы и смотрит через заливные луга. Через них есть тропа, говорит она, по ней фургон будет на ярмарке на полдня раньше любого с речной дороги.",
-            "note": "Odda wants to beat Rufus to the fair, as she did for twenty autumns. The track crosses the valley's common meadow, which everyone may use and nobody may rut; Torva says so. A failure loses the half day and more, and the wagon comes out of the meadows plastered to the axles. Keeping to the road lets Rufus get ahead, and his cards know it.",
+            "note": "Odda wants to beat Rufus to the fair, as she did for twenty autumns. The track crosses the valley's common meadow, which everyone may use and nobody may rut; Torva says so. A failure loses the half day and more, and the wagon comes out of the meadows plastered to the axles. Keeping to the road lets Rufus get ahead, and his cards know it. With Odda dead (odda_vell_dead) the card is never drawn: she is in its cast, and nobody else knows the track. If Odda lost a horse at the wagon (odda_vell_lost_a_horse), she asks for the track all the same, with the one horse left: the Blades may put their own backs in the traces, and they feel it all the next day.",
             "choices": [
                 {
                     "id": "take",
@@ -100,11 +187,56 @@
                             "skill": "survival",
                             "dc": 10,
                             "success": [
-                                {"do": "remember", "deed": "beat_rufus_to_the_fair"}
+                                {
+                                    "do": "remember",
+                                    "deed": "beat_rufus_to_the_fair"
+                                }
                             ],
                             "failure": [
-                                {"do": "delay", "minutes": 240},
-                                {"do": "remember", "deed": "lost_in_the_meadows"}
+                                {
+                                    "do": "delay",
+                                    "minutes": 240
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "lost_in_the_meadows"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "shoulder",
+                    "text": "Put your own shoulders to the traces beside the horse and take the track.",
+                    "text_ru": "Самим впрячься рядом с лошадью и пойти тропой через луга.",
+                    "if": "odda_vell_lost_a_horse",
+                    "effects": [
+                        {
+                            "do": "exhaustion",
+                            "who": "blades",
+                            "levels": 1
+                        },
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "wisdom",
+                            "skill": "survival",
+                            "dc": 10,
+                            "success": [
+                                {
+                                    "do": "remember",
+                                    "deed": "beat_rufus_to_the_fair"
+                                }
+                            ],
+                            "failure": [
+                                {
+                                    "do": "delay",
+                                    "minutes": 240
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "lost_in_the_meadows"
+                                }
                             ]
                         }
                     ]
@@ -114,22 +246,29 @@
                     "text": "Keep to the river road.",
                     "text_ru": "Держаться речной дороги.",
                     "effects": [
-                        {"do": "remember", "deed": "rufus_got_ahead"}
+                        {
+                            "do": "remember",
+                            "deed": "rufus_got_ahead"
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "rufus_offer",
-            "cast": ["rufus"],
-            "tells": ["owner"],
+            "cast": [
+                "rufus"
+            ],
+            "tells": [
+                "owner"
+            ],
             "zone": "lowland",
             "when": "night",
             "target": "blades",
             "once": "contract",
             "text": "After dark a man in a very good coat finds the Blades alone by the horse lines. He is very friendly. Odda's wagon could lose a wheel somewhere quiet tomorrow, he says, and their purses would be heavier for it.",
             "text_ru": "После темноты человек в очень хорошем сюртуке находит наёмников одних у коновязи. Он сама любезность. Завтра где-нибудь в тихом месте фургон Одды может лишиться колеса, говорит он, и их кошельки от этого потяжелеют.",
-            "note": "Rufus. The human votes first, as on every card, and the whole table knows this one matters. A blind choice: taking the coin is what Rufus wants his due names at the fair. If Tam or Tobin is riding with the wagon, the fair has heard before Odda pays. Ilsa asks whose rights a contract protects; Bren asks how heavy. Nothing happens to the wheel unless the DM's fight or a later card says so. Told, Odda says thank you once, sits up by the wheels with a lantern, and at first light has the Blades check every pin and spoke with her: that is the hour lost. She means to say it to the warden at the fair gate.",
+            "note": "Rufus. The human votes first, as on every card, and the whole table knows this one matters. A blind choice: taking the coin is what Rufus wants his due names at the fair. If Tam is riding with the wagon and alive, or Tobin is with it, the fair has heard before Odda pays. Ilsa asks whose rights a contract protects; Bren asks how heavy. Nothing happens to the wheel unless the DM's fight or a later card says so. Told, Odda says thank you once, sits up by the wheels with a lantern, and at first light has the Blades check every pin and spoke with her: that is the hour lost. She means to say it to the warden at the fair gate. If Odda is dead (odda_vell_dead), there is nobody to tell, and Rufus knows it: his offer is for the wheel and the Blades' word together.",
             "choices": [
                 {
                     "id": "tell_odda",
@@ -139,16 +278,26 @@
                         "word_kept"
                     ],
                     "effects": [
-                        {"do": "delay", "minutes": 60},
-                        {"do": "remember", "deed": "told_odda_of_rufus"}
-                    ]
+                        {
+                            "do": "delay",
+                            "minutes": 60
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "told_odda_of_rufus"
+                        }
+                    ],
+                    "unless": "odda_vell_dead"
                 },
                 {
                     "id": "say_nothing",
                     "text": "Refuse him and say nothing.",
                     "text_ru": "Отказать ему и промолчать.",
                     "effects": [
-                        {"do": "remember", "deed": "refused_rufus_quietly"}
+                        {
+                            "do": "remember",
+                            "deed": "refused_rufus_quietly"
+                        }
                     ]
                 },
                 {
@@ -164,7 +313,10 @@
                             "who": "blades",
                             "copper": 50
                         },
-                        {"do": "remember", "deed": "took_rufus_coin"}
+                        {
+                            "do": "remember",
+                            "deed": "took_rufus_coin"
+                        }
                     ]
                 }
             ]

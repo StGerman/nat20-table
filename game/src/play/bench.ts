@@ -46,7 +46,7 @@ interface World {
   route?: string[];
   road_scene: string;
   scenes?: Record<string, string>;
-  escort?: { destination: string };
+  escort?: { destination: string; death_card?: string };
 }
 
 /** A scene file, as far as the bench reads it: the creatures it places and where a carried party stands. */
@@ -140,7 +140,8 @@ export function benchPlan(pack: string, card: string): BenchPlan {
  * Makes the bench's copy of `pack` in the folder `root` (design §3) and returns the copy's folder
  * and the plan it was cut by:
  * - the pack and its world, copied, so the copy plays its own `worlds/<map>`;
- * - every deck file of both with only the plan's kept cards;
+ * - every deck file of both with only the plan's kept cards and the escort's death card, and the
+ *   world's company cut to the entries those cards read the death of (rule A9);
  * - `world.start` and `world.route` cut to the plan's stretch, with the escort's destination at
  *   its end, so a card that never comes ends the bench run after that stretch and not at the
  *   pack's far end;
@@ -162,9 +163,23 @@ export function benchPack(pack: string, card: string, root: string): { dir: stri
   const world = path.join(dir, "worlds", campaign.world.map);
   // A pack that carries its own world was copied with it.
   if (!existsSync(path.join(world, "map.json"))) cpSync(worldOf(source, campaign.world.map), world, { recursive: true });
+  // The escort's death card stays too (ENG-49): it is the reader of the owner's death a wagon fight
+  // needs (rule A9), and it comes only once the owner is dead.
+  const kept = [...plan.kept, ...(campaign.world.escort?.death_card ? [campaign.world.escort.death_card] : [])];
+  const read = new Set<string>();
   for (const deck of [...deckFiles(world), ...deckFiles(dir)]) {
     const content = readJson<{ cards: DeckCard[] }>(deck);
-    writeFileSync(deck, JSON.stringify({ ...content, cards: content.cards.filter((c) => plan.kept.includes(c.id)) }, null, 4) + "\n");
+    const cards = content.cards.filter((c) => kept.includes(c.id));
+    for (const c of cards) for (const d of [c, ...(c.choices as Array<{ if?: string | string[] }>)]) for (const deed of deeds(d.if)) read.add(deed);
+    writeFileSync(deck, JSON.stringify({ ...content, cards }, null, 4) + "\n");
+  }
+  // A company entry rides only when the cards kept read its death, and its wound when it can be
+  // hurt (rule A9): the bench plays the card with the allies its own choices answer for.
+  const companyFile = path.join(world, "company.json");
+  if (existsSync(companyFile)) {
+    const company = readJson<{ company: Array<{ id: string; hurt?: boolean }> }>(companyFile);
+    company.company = company.company.filter((e) => read.has(`${e.id}_dead`) && (!e.hurt || read.has(`${e.id}_hurt`)));
+    writeFileSync(companyFile, JSON.stringify(company, null, 4) + "\n");
   }
   const outside = (name: string) => (path.resolve(source, name).startsWith(source + path.sep) ? name : path.resolve(source, name));
   if (campaign.prose) campaign.prose = campaign.prose.map(outside);

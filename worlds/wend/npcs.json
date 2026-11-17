@@ -36,6 +36,27 @@
                     "company": "Your company spoke up for Col at Wendford.",
                     "you_ru": "Вы сами заступились за Кола в Вендфорде.",
                     "company_ru": "Ваш отряд заступился за Кола в Вендфорде."
+                },
+                {
+                    "deed": "brought_fenns_purse_in",
+                    "you": "You carried Fenn's purse up to the Highsteads.",
+                    "company": "Your company carried Fenn's purse up to the Highsteads.",
+                    "you_ru": "Вы сами довезли кошель Фенна до Хайстедса.",
+                    "company_ru": "Ваш отряд довёз кошель Фенна до Хайстедса."
+                },
+                {
+                    "deed": "took_fenns_purse",
+                    "you": "You took Fenn's purse at his wheel.",
+                    "company": "Your company took Fenn's purse at his wheel.",
+                    "you_ru": "Кошель Фенна вы забрали себе у колеса его фургона.",
+                    "company_ru": "Кошель Фенна ваш отряд забрал себе у колеса его фургона."
+                },
+                {
+                    "deed": "gwyns_dog_dead",
+                    "you": "Her dog went with you and did not come back.",
+                    "company": "Her dog went with your company and did not come back.",
+                    "you_ru": "Её собака ушла с вами и не вернулась.",
+                    "company_ru": "Её собака ушла с вашим отрядом и не вернулась."
                 }
             ],
             "notes": "Keeps the Highsteads' flocks and every rumour off the ridges. Has seen goblin fires on the far ridge three nights running and wants someone to believe her."
@@ -230,6 +251,27 @@
                     "company": "Your company fetched him to the stall, and he took the dealer's word.",
                     "you_ru": "Вы сами позвали его к прилавку, и он поверил торговцу.",
                     "company_ru": "Ваш отряд позвал его к прилавку, и он поверил торговцу."
+                },
+                {
+                    "deed": "brought_oddas_purse_in",
+                    "you": "You carried Odda's purse in to the fair.",
+                    "company": "Your company carried Odda's purse in to the fair.",
+                    "you_ru": "Вы сами довезли кошель Одды до Солтмута.",
+                    "company_ru": "Ваш отряд довёз кошель Одды до Солтмута."
+                },
+                {
+                    "deed": "took_oddas_purse",
+                    "you": "You took Odda's purse at her wheel.",
+                    "company": "Your company took Odda's purse at her wheel.",
+                    "you_ru": "Кошель Одды вы забрали себе у колеса её фургона.",
+                    "company_ru": "Кошель Одды ваш отряд забрал себе у колеса её фургона."
+                },
+                {
+                    "deed": "lied_about_oddas_purse",
+                    "you": "You told him her purse was lost on the road.",
+                    "company": "Your company told him her purse was lost on the road.",
+                    "you_ru": "Вы сказали смотрителю ярмарки, что её кошель пропал в дороге.",
+                    "company_ru": "Ваш отряд сказал смотрителю ярмарки, что её кошель пропал в дороге."
                 }
             ],
             "notes": "Walks the Saltmouth fair ground with a staff in fair week. Tired, fair-minded, short with anyone who draws a blade inside the gate."
@@ -327,6 +369,20 @@
                     "company": "Your company was in the fight where his horse fell.",
                     "you_ru": "Вы сами были в той драке, где у него пала лошадь.",
                     "company_ru": "Ваш отряд был в той драке, где у него пала лошадь."
+                },
+                {
+                    "deed": "brought_oddas_purse_in",
+                    "you": "You carried Odda's purse in to the fair.",
+                    "company": "Your company carried Odda's purse in to the fair.",
+                    "you_ru": "Вы сами довезли кошель Одды до Солтмута.",
+                    "company_ru": "Ваш отряд довёз кошель Одды до Солтмута."
+                },
+                {
+                    "deed": "took_oddas_purse",
+                    "you": "You took Odda's purse at her wheel.",
+                    "company": "Your company took Odda's purse at her wheel.",
+                    "you_ru": "Кошель Одды вы забрали себе у колеса её фургона.",
+                    "company_ru": "Кошель Одды ваш отряд забрал себе у колеса её фургона."
                 }
             ],
             "notes": "The caravan's owner on The Way Back. Knows why salt is dear and never says it; his prose is the pack's prose/npcs/fenn_lusk.md."
@@ -382,6 +438,41 @@
                     "company": "Your company promised her to look after her son.",
                     "you_ru": "Вы сами пообещали ей присмотреть за сыном.",
                     "company_ru": "Ваш отряд пообещал ей присмотреть за сыном."
+                },
+                {
+                    "deed": "gave_tam_back_to_bel",
+                    "you": "You gave her son back to her hurt.",
+                    "company": "Your company gave her son back to her hurt.",
+                    "you_ru": "Сына вы вернули ей раненым.",
+                    "company_ru": "Сына ваш отряд вернул ей раненым."
+                },
+                {
+                    "deed": "tam_dead",
+                    "you": "Her son rode with you and did not come back.",
+                    "company": "Her son rode with your company and did not come back.",
+                    "you_ru": "Её сын ехал с вами и не вернулся.",
+                    "company_ru": "Её сын ехал с вашим отрядом и не вернулся."
+                },
+                {
+                    "deed": "told_bel_of_tam",
+                    "you": "You came to meet her and told her everything yourselves.",
+                    "company": "Your company came to meet her and told her everything.",
+                    "you_ru": "Вы вышли ей навстречу сами и всё рассказали.",
+                    "company_ru": "Ваш отряд вышел ей навстречу и всё рассказал."
+                },
+                {
+                    "deed": "gave_bel_the_satchel",
+                    "you": "You handed her his satchel without a word.",
+                    "company": "Your company handed her his satchel without a word.",
+                    "you_ru": "Котомку сына вы отдали ей молча.",
+                    "company_ru": "Котомку сына ваш отряд отдал ей молча."
+                },
+                {
+                    "deed": "left_bel_at_the_gate",
+                    "you": "You led the wagon away before she reached it.",
+                    "company": "Your company led the wagon away before she reached it.",
+                    "you_ru": "Вы сами увели фургон, пока она до него не дошла.",
+                    "company_ru": "Ваш отряд увёл фургон, пока она до него не дошла."
                 }
             ],
             "notes": "Halfling roadfolk, Tam's mother. Takes no coin for a seat at her fire, because the road is free; tells news as gossip, never as a warning."
@@ -455,6 +546,20 @@
                     "company": "Your company took him back to his mother, as it promised.",
                     "you_ru": "Вы сами отвели его к матери, как обещали.",
                     "company_ru": "Ваш отряд отвёл его к матери, как обещал."
+                },
+                {
+                    "deed": "tam_hurt",
+                    "you": "He was hurt in the fight at the wagon, and you were there.",
+                    "company": "He was hurt in the fight at the wagon, and your company was there.",
+                    "you_ru": "Его ранило в драке у фургона, и вы были рядом.",
+                    "company_ru": "Его ранило в драке у фургона, и ваш отряд был рядом."
+                },
+                {
+                    "deed": "gave_tam_back_to_bel",
+                    "you": "You sent him home in his mother's cart.",
+                    "company": "Your company sent him home in his mother's cart.",
+                    "you_ru": "Вы сами отправили его домой в повозке матери.",
+                    "company_ru": "Ваш отряд отправил его домой в повозке матери."
                 }
             ],
             "notes": "Tam Corrin, Bel's son, about ten. Wants the fair, a sword and the one Blade he has picked; a consequence on the young."

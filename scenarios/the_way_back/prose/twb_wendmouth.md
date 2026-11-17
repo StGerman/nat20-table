@@ -2,6 +2,8 @@
 
 **Read aloud.** The fair is coming down around you: stalls folded, carts loading, a fiddler playing the same tune slower. Odda Vell's stall is empty boards now, and Odda is standing by a wagon that isn't hers, heaped with sacks of salt and bundles of iron bars under an oiled cloth. Beside it a thin man in a mended grey coat is ticking something off on a clipboard. "This is Fenn," Odda says. "He goes up when I come down. I told him you'd do."
 
+**If Odda died on her contract (odda_vell_dead), read this instead.** The fair is coming down around you: stalls folded, carts loading, a fiddler playing the same tune slower. Odda Vell's stall is empty boards. By a wagon heaped with salt and iron bars, the fair warden stands beside a thin man in a mended grey coat who is ticking something off on a clipboard. "This is Fenn," the warden says. "He goes up the valley tomorrow. He's heard about Odda, and he's still asking for you." Odda's lines below are then the warden's, from what the fair has heard; her board comes to the fire that night (`oddas_board`).
+
 **What the characters can notice.**
 - Fenn's wagon is heavier than Odda's was, and iron rattles when it moves.
 - Asking the boatmen or reading the sky up the river (the `read_the_river` check) says rain is coming up the valley tomorrow.

@@ -3,7 +3,10 @@
     "cards": [
         {
             "id": "millbeck_bridge",
-            "tells": ["col", "dunn"],
+            "tells": [
+                "col",
+                "dunn"
+            ],
             "zone": "millbeck",
             "target": "caravan",
             "once": true,
@@ -21,8 +24,14 @@
                             "who": "party",
                             "copper": 20
                         },
-                        {"do": "remember", "deed": "paid_the_toll"},
-                        {"do": "remember", "deed": "crossed_millbeck"}
+                        {
+                            "do": "remember",
+                            "deed": "paid_the_toll"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "crossed_millbeck"
+                        }
                     ]
                 },
                 {
@@ -41,13 +50,29 @@
                             "skill": "persuasion",
                             "dc": 15,
                             "success": [
-                                {"do": "remember", "deed": "toll_men_spared"},
-                                {"do": "remember", "deed": "crossed_millbeck"}
+                                {
+                                    "do": "remember",
+                                    "deed": "toll_men_spared"
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "crossed_millbeck"
+                                }
                             ],
                             "failure": [
-                                {"do": "remember", "deed": "toll_men_fought"},
-                                {"do": "remember", "deed": "crossed_millbeck"},
-                                {"do": "add_card", "card": "peddlers_mark", "soon": true},
+                                {
+                                    "do": "remember",
+                                    "deed": "toll_men_fought"
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "crossed_millbeck"
+                                },
+                                {
+                                    "do": "add_card",
+                                    "card": "peddlers_mark",
+                                    "soon": true
+                                },
                                 {
                                     "do": "fight",
                                     "monsters": [
@@ -59,7 +84,10 @@
                                             "stat": "bandit",
                                             "npc": "dunn"
                                         }
-                                    ]
+                                    ],
+                                    "wagon": true,
+                                    "from": "ahead",
+                                    "owner": false
                                 }
                             ]
                         }
@@ -71,9 +99,18 @@
                     "text_ru": "Сказать им, что староста никого не посылал и что вы знаете, зачем они здесь.",
                     "if": "knew_of_the_toll_men",
                     "effects": [
-                        {"do": "remember", "deed": "toll_men_spared"},
-                        {"do": "remember", "deed": "crossed_millbeck"},
-                        {"do": "remember", "deed": "heard_of_rufus_paper"}
+                        {
+                            "do": "remember",
+                            "deed": "toll_men_spared"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "crossed_millbeck"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "heard_of_rufus_paper"
+                        }
                     ]
                 },
                 {
@@ -82,7 +119,10 @@
                     "text_ru": "Подняться выше по течению и перейти ручей вброд.",
                     "unless": "scouted",
                     "effects": [
-                        {"do": "delay", "minutes": 90},
+                        {
+                            "do": "delay",
+                            "minutes": 90
+                        },
                         {
                             "do": "check",
                             "who": "blades",
@@ -90,11 +130,21 @@
                             "skill": "athletics",
                             "dc": 10,
                             "failure": [
-                                {"do": "cargo", "good": "rations", "change": -2}
+                                {
+                                    "do": "cargo",
+                                    "good": "rations",
+                                    "change": -2
+                                }
                             ]
                         },
-                        {"do": "remember", "deed": "forded_the_millbeck"},
-                        {"do": "remember", "deed": "crossed_millbeck"}
+                        {
+                            "do": "remember",
+                            "deed": "forded_the_millbeck"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "crossed_millbeck"
+                        }
                     ]
                 },
                 {
@@ -106,15 +156,28 @@
                         "bread_shared"
                     ],
                     "effects": [
-                        {"do": "cargo", "good": "rations", "change": -2},
-                        {"do": "remember", "deed": "fed_the_toll_men"},
-                        {"do": "remember", "deed": "toll_men_spared"},
-                        {"do": "remember", "deed": "crossed_millbeck"}
+                        {
+                            "do": "cargo",
+                            "good": "rations",
+                            "change": -2
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "fed_the_toll_men"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "toll_men_spared"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "crossed_millbeck"
+                        }
                     ]
                 }
             ],
             "scout": "perception",
-            "note": "Col and Dunn, brothers from a Highsteads farm. The goblins took their flock this autumn; Rufus bought the farm's debt and set them on the bridge to slow Odda's wagon and pay him out of the toll. Osric, counting the common chest for the steward's yearly visit, had sent them away. Col counts every coin on a tally stick he cut himself, notch by notch, like a reeve. Torva's family lost a farm to debt: give her that line. In a fight the DM tells the brothers reaching for their cudgels; initiative is the engine's, and a brother who drops his cudgel has yielded. A scout who looks first sees the gnawed bones and the empty pot: these men are hungry, not hard."
+            "note": "Col and Dunn, brothers from a Highsteads farm. The goblins took their flock this autumn; Rufus bought the farm's debt and set them on the bridge to slow Odda's wagon and pay him out of the toll. Osric, counting the common chest for the steward's yearly visit, had sent them away. Col counts every coin on a tally stick he cut himself, notch by notch, like a reeve. Torva's family lost a farm to debt: give her that line. In a fight the DM tells the brothers reaching for their cudgels; initiative is the engine's, and a brother who drops his cudgel has yielded. A scout who looks first sees the gnawed bones and the empty pot: these men are hungry, not hard. The Merchant is never in this fight (owner: false), so no death of hers is told here. A fight here starts at the bridge, ahead of the wagon. The Merchant stays back on the bank at the last horse's head and is not in the engine's fight; whoever else rides with the wagon is (a horse of the team, Tam if he rides)."
         }
     ]
 }

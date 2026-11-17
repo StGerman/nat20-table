@@ -20,11 +20,20 @@
                             "skill": "animal_handling",
                             "dc": 10,
                             "success": [
-                                {"do": "delay", "minutes": 15},
-                                {"do": "remember", "deed": "herded_gwyns_sheep"}
+                                {
+                                    "do": "delay",
+                                    "minutes": 15
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "herded_gwyns_sheep"
+                                }
                             ],
                             "failure": [
-                                {"do": "delay", "minutes": 60}
+                                {
+                                    "do": "delay",
+                                    "minutes": 60
+                                }
                             ]
                         }
                     ]
@@ -34,7 +43,10 @@
                     "text": "Sit on the wall and wait for them to move.",
                     "text_ru": "Сесть на ограду и ждать, пока уйдут.",
                     "effects": [
-                        {"do": "delay", "minutes": 45}
+                        {
+                            "do": "delay",
+                            "minutes": 45
+                        }
                     ]
                 }
             ],
@@ -44,8 +56,8 @@
             "id": "washed_out",
             "zone": "slopes",
             "target": "caravan",
-            "text": "Part of the track has slid down the hillside in the night. There is room for the wagon, just, if the horses keep their heads.",
-            "text_ru": "За ночь кусок тропы сполз по склону. Фургон пройдёт, впритык, если лошади не испугаются.",
+            "text": "Part of the track has slid down the hillside in the night. There is room for the wagon, just, if the team keeps its head.",
+            "text_ru": "За ночь кусок тропы сполз по склону. Фургон пройдёт, впритык, если упряжка не испугается.",
             "owner_pick": "lead",
             "choices": [
                 {
@@ -60,18 +72,24 @@
                             "skill": "athletics",
                             "dc": 15,
                             "success": [
-                                {"do": "delay", "minutes": 60}
+                                {
+                                    "do": "delay",
+                                    "minutes": 60
+                                }
                             ],
                             "failure": [
-                                {"do": "delay", "minutes": 150}
+                                {
+                                    "do": "delay",
+                                    "minutes": 150
+                                }
                             ]
                         }
                     ]
                 },
                 {
                     "id": "lead",
-                    "text": "Lead the horses across by the bridle.",
-                    "text_ru": "Перевести лошадей под уздцы.",
+                    "text": "Lead the team across by the bridle.",
+                    "text_ru": "Провести упряжку под уздцы.",
                     "effects": [
                         {
                             "do": "check",
@@ -80,11 +98,21 @@
                             "skill": "animal_handling",
                             "dc": 10,
                             "success": [
-                                {"do": "delay", "minutes": 20}
+                                {
+                                    "do": "delay",
+                                    "minutes": 20
+                                }
                             ],
                             "failure": [
-                                {"do": "delay", "minutes": 90},
-                                {"do": "cargo", "good": "rations", "change": -3}
+                                {
+                                    "do": "delay",
+                                    "minutes": 90
+                                },
+                                {
+                                    "do": "cargo",
+                                    "good": "rations",
+                                    "change": -3
+                                }
                             ]
                         }
                     ]
@@ -120,7 +148,10 @@
                     "text": "Keep moving and keep an eye on them.",
                     "text_ru": "Идти дальше и не спускать с них глаз.",
                     "effects": [
-                        {"do": "add_card", "card": "goblin_ambush"}
+                        {
+                            "do": "add_card",
+                            "card": "goblin_ambush"
+                        }
                     ]
                 }
             ],
@@ -146,7 +177,9 @@
                                 "goblin_warrior",
                                 "goblin_warrior",
                                 "goblin_warrior"
-                            ]
+                            ],
+                            "wagon": true,
+                            "from": "ahead"
                         }
                     ],
                     "keeps": [
@@ -158,18 +191,24 @@
                     "text": "Throw them a sack of food and push on.",
                     "text_ru": "Бросить им мешок еды и идти дальше.",
                     "effects": [
-                        {"do": "cargo", "good": "rations", "change": -4}
+                        {
+                            "do": "cargo",
+                            "good": "rations",
+                            "change": -4
+                        }
                     ],
                     "keeps": [
                         "bread_shared"
                     ]
                 }
             ],
-            "note": "The same band, hungrier. A goblin who drops its spear has yielded, and the valley will hear how the Blades treated it. Food thrown to them is a way of speaking: they take it and go."
+            "note": "The same band, hungrier. A goblin who drops its spear has yielded, and the valley will hear how the Blades treated it. Food thrown to them is a way of speaking: they take it and go. The goblins come down the track from ahead, and whoever rides with the wagon is in the fight: the team but its last horse, the Merchant, Tam and the dog if they ride. Tell a wound only for a creature in the fight's list."
         },
         {
             "id": "peddler",
-            "cast": ["tobin"],
+            "cast": [
+                "tobin"
+            ],
             "zone": "slopes",
             "target": "blades",
             "text": "A peddler pushing a handcart falls in beside the escort, his hands shaking on the shafts. He has news from up and down the road, he says, and he has not eaten since yesterday.",
@@ -183,10 +222,24 @@
                         "bread_shared"
                     ],
                     "effects": [
-                        {"do": "cargo", "good": "rations", "change": -1},
-                        {"do": "remember", "deed": "fed_tobin"},
-                        {"do": "remember", "deed": "knew_of_the_toll_men"},
-                        {"do": "add_card", "card": "old_company", "soon": true}
+                        {
+                            "do": "cargo",
+                            "good": "rations",
+                            "change": -1
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "fed_tobin"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "knew_of_the_toll_men"
+                        },
+                        {
+                            "do": "add_card",
+                            "card": "old_company",
+                            "soon": true
+                        }
                     ]
                 },
                 {
@@ -197,7 +250,10 @@
                         "bread_shared"
                     ],
                     "effects": [
-                        {"do": "remember", "deed": "turned_tobin_away"}
+                        {
+                            "do": "remember",
+                            "deed": "turned_tobin_away"
+                        }
                     ]
                 }
             ],
@@ -205,7 +261,9 @@
         },
         {
             "id": "boy_on_tailboard",
-            "cast": ["tam"],
+            "cast": [
+                "tam"
+            ],
             "zone": "slopes",
             "target": "blades",
             "chained": true,
@@ -219,9 +277,20 @@
                     "text": "Let him ride.",
                     "text_ru": "Пусть едет.",
                     "effects": [
-                        {"do": "cargo", "good": "rations", "change": -1},
-                        {"do": "remember", "deed": "tam_rode"},
-                        {"do": "add_card", "card": "bel_asks", "soon": true}
+                        {
+                            "do": "cargo",
+                            "good": "rations",
+                            "change": -1
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "tam_rode"
+                        },
+                        {
+                            "do": "add_card",
+                            "card": "bel_asks",
+                            "soon": true
+                        }
                     ]
                 },
                 {
@@ -229,8 +298,14 @@
                     "text": "Walk him back to his mother's cart.",
                     "text_ru": "Отвести его назад, к повозке матери.",
                     "effects": [
-                        {"do": "delay", "minutes": 60},
-                        {"do": "remember", "deed": "walked_tam_home"}
+                        {
+                            "do": "delay",
+                            "minutes": 60
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "walked_tam_home"
+                        }
                     ]
                 },
                 {
@@ -245,11 +320,21 @@
                             "skill": "persuasion",
                             "dc": 10,
                             "success": [
-                                {"do": "remember", "deed": "sent_tam_home"}
+                                {
+                                    "do": "remember",
+                                    "deed": "sent_tam_home"
+                                }
                             ],
                             "failure": [
-                                {"do": "remember", "deed": "tam_followed"},
-                                {"do": "add_card", "card": "bel_asks", "soon": true}
+                                {
+                                    "do": "remember",
+                                    "deed": "tam_followed"
+                                },
+                                {
+                                    "do": "add_card",
+                                    "card": "bel_asks",
+                                    "soon": true
+                                }
                             ]
                         }
                     ]
@@ -258,7 +343,9 @@
         },
         {
             "id": "bog_wifes_toll",
-            "cast": ["mother_sedge"],
+            "cast": [
+                "mother_sedge"
+            ],
             "zone": "slopes",
             "target": "blades",
             "text": "An old woman the hill folk call the bog-wife sits on the milestone where the track skirts the moss, a basket of knotted charms on her knees and a crow on her shoulder. She asks each traveller for a crust, a coin or a true word, and pays in charms.",
@@ -273,8 +360,15 @@
                         "bread_shared"
                     ],
                     "effects": [
-                        {"do": "cargo", "good": "rations", "change": -1},
-                        {"do": "remember", "deed": "sedge_charm"}
+                        {
+                            "do": "cargo",
+                            "good": "rations",
+                            "change": -1
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "sedge_charm"
+                        }
                     ]
                 },
                 {
@@ -282,8 +376,14 @@
                     "text": "Tell her something true.",
                     "text_ru": "Сказать ей что-то правдивое.",
                     "effects": [
-                        {"do": "remember", "deed": "sedge_charm"},
-                        {"do": "remember", "deed": "told_sedge_a_true_word"}
+                        {
+                            "do": "remember",
+                            "deed": "sedge_charm"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "told_sedge_a_true_word"
+                        }
                     ]
                 },
                 {
@@ -294,7 +394,10 @@
                         "bread_shared"
                     ],
                     "effects": [
-                        {"do": "remember", "deed": "snubbed_sedge"}
+                        {
+                            "do": "remember",
+                            "deed": "snubbed_sedge"
+                        }
                     ]
                 }
             ]
@@ -304,16 +407,19 @@
             "zone": "slopes",
             "target": "caravan",
             "owner_pick": "rest",
-            "text": "One of the horses comes up lame on the steep bit, holding a forefoot off the stones.",
-            "text_ru": "На крутом месте одна из лошадей захромала и держит переднее копыто над камнями.",
-            "note": "Odda would rather lose an hour than a horse. If the Blades gave the bog-wife something, she is already coming up the track as if she knew, and she wants a favour back. If they walked past her, say first, in one plain sentence, that the old woman on the milestone is the only one in these hills who knows horses.",
+            "text": "A horse comes up lame on the steep bit, holding a forefoot off the stones.",
+            "text_ru": "На крутом месте захромала лошадь: она держит переднее копыто над камнями.",
+            "note": "Odda would rather lose an hour than a horse. If the Blades gave the bog-wife something, she is already coming up the track as if she knew, and she wants a favour back. If they walked past her, say first, in one plain sentence, that the old woman on the milestone is the only one in these hills who knows horses. If the Merchant is dead (odda_vell_dead, fenn_lusk_dead), nobody on the seat would rather lose an hour: the horse is the Blades' to save or spend.",
             "choices": [
                 {
                     "id": "rest",
                     "text": "Rest it and go slow.",
                     "text_ru": "Дать ей отдых и идти медленно.",
                     "effects": [
-                        {"do": "delay", "minutes": 90}
+                        {
+                            "do": "delay",
+                            "minutes": 90
+                        }
                     ]
                 },
                 {
@@ -328,10 +434,16 @@
                             "skill": "animal_handling",
                             "dc": 15,
                             "success": [
-                                {"do": "delay", "minutes": 20}
+                                {
+                                    "do": "delay",
+                                    "minutes": 20
+                                }
                             ],
                             "failure": [
-                                {"do": "delay", "minutes": 120}
+                                {
+                                    "do": "delay",
+                                    "minutes": 120
+                                }
                             ]
                         }
                     ]
@@ -342,8 +454,15 @@
                     "text_ru": "Послать назад по тропе за болотной бабкой.",
                     "if": "sedge_charm",
                     "effects": [
-                        {"do": "remember", "deed": "owes_sedge_a_favour"},
-                        {"do": "add_card", "card": "sedges_jar", "soon": true}
+                        {
+                            "do": "remember",
+                            "deed": "owes_sedge_a_favour"
+                        },
+                        {
+                            "do": "add_card",
+                            "card": "sedges_jar",
+                            "soon": true
+                        }
                     ]
                 },
                 {
@@ -353,7 +472,10 @@
                     "if": "snubbed_sedge",
                     "unless": "sedge_charm",
                     "effects": [
-                        {"do": "delay", "minutes": 60},
+                        {
+                            "do": "delay",
+                            "minutes": 60
+                        },
                         {
                             "do": "check",
                             "who": "blades",
@@ -361,10 +483,16 @@
                             "skill": "persuasion",
                             "dc": 15,
                             "success": [
-                                {"do": "remember", "deed": "sedge_forgave"}
+                                {
+                                    "do": "remember",
+                                    "deed": "sedge_forgave"
+                                }
                             ],
                             "failure": [
-                                {"do": "delay", "minutes": 60}
+                                {
+                                    "do": "delay",
+                                    "minutes": 60
+                                }
                             ]
                         }
                     ]
@@ -373,13 +501,18 @@
         },
         {
             "id": "barefoot_pilgrim",
-            "cast": ["sister_agna"],
+            "cast": [
+                "sister_agna"
+            ],
             "zone": "slopes",
             "target": "caravan",
-            "owner_pick": ["seat", "walk"],
+            "owner_pick": [
+                "seat",
+                "walk"
+            ],
             "text": "A woman in the grey of Embra's pilgrims walks barefoot down the track ahead, a round loaf wrapped under her arm. She bows to the wagon and says nothing at all.",
             "text_ru": "Впереди по тропе босиком идёт женщина в сером, как ходят паломники Эмбры, под мышкой у неё завёрнутый круглый хлеб. Она кланяется фургону и не говорит ни слова.",
-            "note": "Sister Agna, under a vow of silence until she reaches the sea at Saltmouth. Embra's pilgrims walk to the sea this year because the hill shrines have gone cold; she does not explain, and nobody on screen says why. Odda keeps Embra's shrines and wants her on the wagon. She will not ride a wagon that carries grave coins. Joke: she is the only person on this road who asks the Blades for nothing.",
+            "note": "Sister Agna, under a vow of silence until she reaches the sea at Saltmouth. Embra's pilgrims walk to the sea this year because the hill shrines have gone cold; she does not explain, and nobody on screen says why. Odda keeps Embra's shrines and wants her on the wagon. She will not ride a wagon that carries grave coins. Joke: she is the only person on this road who asks the Blades for nothing. If Odda is dead (odda_vell_dead), nobody on the wagon keeps Embra's shrines, and the seat is the Blades' to give.",
             "choices": [
                 {
                     "id": "seat",
@@ -387,9 +520,19 @@
                     "text_ru": "Предложить ей место на фургоне.",
                     "unless": "robbed_cairn",
                     "effects": [
-                        {"do": "remember", "deed": "gave_agna_a_seat"},
-                        {"do": "remember", "deed": "agna_came_along"},
-                        {"do": "add_card", "card": "what_agna_drew", "soon": true}
+                        {
+                            "do": "remember",
+                            "deed": "gave_agna_a_seat"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "agna_came_along"
+                        },
+                        {
+                            "do": "add_card",
+                            "card": "what_agna_drew",
+                            "soon": true
+                        }
                     ]
                 },
                 {
@@ -397,10 +540,23 @@
                     "text": "Walk beside her a while.",
                     "text_ru": "Пройти рядом с ней немного.",
                     "effects": [
-                        {"do": "delay", "minutes": 20},
-                        {"do": "remember", "deed": "walked_with_agna"},
-                        {"do": "remember", "deed": "agna_came_along"},
-                        {"do": "add_card", "card": "what_agna_drew", "soon": true}
+                        {
+                            "do": "delay",
+                            "minutes": 20
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "walked_with_agna"
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "agna_came_along"
+                        },
+                        {
+                            "do": "add_card",
+                            "card": "what_agna_drew",
+                            "soon": true
+                        }
                     ]
                 },
                 {
@@ -408,7 +564,10 @@
                     "text": "Pass her with a nod.",
                     "text_ru": "Кивнуть и обойти её.",
                     "effects": [
-                        {"do": "remember", "deed": "passed_agna_by"}
+                        {
+                            "do": "remember",
+                            "deed": "passed_agna_by"
+                        }
                     ]
                 }
             ]
@@ -417,8 +576,8 @@
             "id": "barrow_lights",
             "zone": "barrows",
             "target": "blades",
-            "text": "Pale lights move between the old barrows, and the horses will not look at them.",
-            "text_ru": "Между старыми курганами ходят бледные огни, и лошади отворачиваются от них.",
+            "text": "Pale lights move between the old barrows, and the team shies from them.",
+            "text_ru": "Между старыми курганами ходят бледные огни, и упряжка шарахается от них.",
             "choices": [
                 {
                     "id": "look",
@@ -446,7 +605,10 @@
                     "text": "Look straight ahead and keep walking.",
                     "text_ru": "Смотреть прямо перед собой и идти дальше.",
                     "effects": [
-                        {"do": "remember", "deed": "passed_the_barrow_lights"}
+                        {
+                            "do": "remember",
+                            "deed": "passed_the_barrow_lights"
+                        }
                     ]
                 },
                 {
@@ -455,7 +617,10 @@
                     "text_ru": "Пойти и посмотреть, зажав в руке оберег болотной бабки.",
                     "if": "sedge_charm",
                     "effects": [
-                        {"do": "remember", "deed": "saw_the_barrow_lights"}
+                        {
+                            "do": "remember",
+                            "deed": "saw_the_barrow_lights"
+                        }
                     ]
                 }
             ],
@@ -479,7 +644,10 @@
                             "who": "party",
                             "copper": 8
                         },
-                        {"do": "remember", "deed": "robbed_cairn"}
+                        {
+                            "do": "remember",
+                            "deed": "robbed_cairn"
+                        }
                     ]
                 },
                 {
@@ -487,7 +655,10 @@
                     "text": "Leave them where they lie.",
                     "text_ru": "Оставить, где лежат.",
                     "effects": [
-                        {"do": "remember", "deed": "left_the_cairn_stones"}
+                        {
+                            "do": "remember",
+                            "deed": "left_the_cairn_stones"
+                        }
                     ]
                 }
             ],

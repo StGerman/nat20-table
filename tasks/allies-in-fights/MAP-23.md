@@ -5,7 +5,7 @@ title: "Tam rides into the wagon's fights: his content"
 pri: P2
 dest: Ours
 size: S
-state: todo
+state: done
 area: "7. Maps and scenario (E7)"
 ---
 
@@ -13,4 +13,4 @@ Tam is a creature in the engine (decision 0070; Stas 2026-11-12 20:42Z «он NP
 
 ## Status
 
-todo. Needs ENG-48's engine PR and MAP-24
+done. Tam is one `company.json` entry (`npc: tam`, `if: tam_rode`, `unless: gave_tam_back_to_bel`, `hurt: true`, at the wagon), so his death writes `tam_dead` and marks the roster. Departure from this row: Tam who follows (`tam_followed`) is not in the fights. The format check refuses a second entry with his id, and a second id would not be Tam; on the table he was never in danger behind the wagon, and `night_wolves`' note says he is out of sight down the road. `bel_asks` and `tams_story` read `tam_dead` through `unless`; with Tam hurt, `bel_asks`' `cover` gives way to «Вернуть ей сына.»; the Saltmouth arrival card `bel_at_the_gate` (Bel in `cast`, Tam in `tells`) reads `tam_dead`, and its note names `promised_bel`, `lied_to_bel` and `covered_for_tam`. `rufus_offer`'s note says "riding and alive". Row 12 (Vera reads a fight where Tam is hurt) waits for a run

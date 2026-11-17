@@ -94,7 +94,9 @@ export class SeatNames {
     if (id.startsWith("market:")) return `рынок, ${this.place(id.slice(7))}`;
     if (id.startsWith("npc:")) return titled(id.slice(4));
     const stem = /^(.*?)(?:_(\d+))?$/.exec(id)!;
-    const kind = ruDictionary().creatures[stem[1]!];
+    // A team animal's handle carries its wagon's number and its own (`draft_horse_1_2`): the kind
+    // is the stem without them, and the seat names it by its own number.
+    const kind = ruDictionary().creatures[stem[1]!] ?? ruDictionary().creatures[stem[1]!.replace(/(_\d+)+$/, "")];
     return kind ? `${kind}${stem[2] ? ` ${stem[2]}` : ""}` : id;
   }
 
