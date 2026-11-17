@@ -661,8 +661,11 @@ impl World {
     }
 
     /// Shares the escort's purse out among the Blades who are `alive` (ENG-49): the shares, in
-    /// party order. Nothing once settled or shared.
+    /// party order. Nothing while the NPC owner lives (rule M3), or once settled or shared.
     pub fn share_purse(&mut self, alive: impl Fn(&str) -> bool) -> Vec<Wage> {
+        if !self.owner_dead() {
+            return Vec::new();
+        }
         self.state
             .escort
             .as_mut()
@@ -687,10 +690,18 @@ impl World {
         }
     }
 
-    /// Checks every card's `cast` and `tells` (API-58): each a roster person's id or `owner`.
+    /// Checks every card's `cast` and `tells` (API-58): each a roster person's id, or `owner`
+    /// when an NPC owns the caravan (a player Merchant is no person of the roster).
     pub fn check_cast(&self) -> Result<(), MapError> {
+        let npc_owner = matches!(self.state.caravan.owner, Owner::Npc(_));
         for card in &self.deck.cards {
             for who in card.cast.iter().chain(&card.tells) {
+                if who == OWNER_CAST && !npc_owner {
+                    return Err(MapError(format!(
+                        "the card {} names owner in its cast or tells, but a player owns the caravan",
+                        card.id
+                    )));
+                }
                 if who != OWNER_CAST && !self.npcs.iter().any(|n| n.id == *who) {
                     return Err(MapError(format!(
                         "the card {} names {who} in its cast or tells, who is not in the roster",
@@ -1628,6 +1639,16 @@ mod tests {
         assert_eq!(w.draw_after_leg("inn_ruin", &mut dice), None);
         w.deck.cards[1].cast = vec!["nobody".into()];
         assert!(w.check_cast().unwrap_err().0.contains("nobody"));
+        // With a player Merchant, `owner` names nobody of the roster.
+        w.deck.cards[1].cast = vec!["ned".into()];
+        let owner = std::mem::replace(&mut w.state.caravan.owner, "bren".parse().unwrap());
+        assert!(
+            w.check_cast()
+                .unwrap_err()
+                .0
+                .contains("a player owns the caravan")
+        );
+        w.state.caravan.owner = owner;
         // Offered while both lived, then Ned dies before the pick: his card is taken off the
         // offer, so neither the DM nor a fallback can pick it.
         w.deck.cards[1].cast = vec!["ned".into()];
@@ -1694,14 +1715,20 @@ mod tests {
         let (mut w, _) = with(r#""if": "tobin_dead", "once": true,"#)
             .with_escort(terms(Some("tobin_falls")), blades())
             .unwrap();
-        // Alive, nothing is put; dead, the card is put once.
+        // Alive, nothing is put and the purse is never shared; dead, the card is put once.
         assert_eq!(w.put_death_card(), None);
+        assert_eq!(w.share_purse(|_| true), Vec::new());
         w.state.npcs.get_mut("tobin").unwrap().alive = false;
         assert!(w.owner_dead());
         assert_eq!(w.put_death_card(), Some("tobin_falls".into()));
         assert!(w.state.deck.waiting());
         w.state.deck.pending = None;
         assert_eq!(w.put_death_card(), None, "never twice");
+        assert_eq!(
+            w.share_purse(|_| true).len(),
+            2,
+            "dead, the purse is shared"
+        );
     }
 
     #[test]
