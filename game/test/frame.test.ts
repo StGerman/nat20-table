@@ -484,3 +484,46 @@ test("Tab opens the card of a name in the story, Tab again the next, Esc closes 
     seat.stop();
   }
 });
+
+test("a death shows on the card once the story tells it, in the narration that brought it or later, never by the human's own words (AGT-107)", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), title: "Fair in Wend" });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  const me = { handle: "bren", name: "Bren", hp: 10, hp_max: 10, temp_hp: 0, conditions: [], life_state: "conscious", effects: [] };
+  const frame = (people: unknown[]) => seat.show({ kind: "situation", situation: { mode: "explore", next: [], me, creatures: [], down: [], people } } as never);
+  const odda = { id: "odda_vell", name: "Odda", forms: ["Odda"], look: "A merchant with a ledger." };
+  const fenn = { id: "fenn", name: "Fenn", forms: ["Fenn"] };
+  const card = async (name: string, has: string) => {
+    for (const ch of `/who ${name}`) stdin.press(ch);
+    stdin.press("\r");
+    await until(`${name}: ${has}`, () => stdout.last.includes(`${name} · Esc closes`) && stdout.last.includes(has), () => stdout.last);
+    stdin.press("\u001b");
+    await until("closed", () => !stdout.last.includes("Esc closes"), () => stdout.last);
+  };
+  try {
+    frame([
+      { ...odda, state: "here", health: "unhurt", inScene: true, remembers: ["You carried her salt."] },
+      { ...fenn, state: "elsewhere", remembers: [], lastSeen: "Highsteads" },
+    ]);
+    seat.show({ kind: "narration", speaker: "dm", text: "The road is quiet." });
+    void seat.ask({ kind: "explore" });
+    await until("the line", () => stdout.last.includes("The road is quiet."), () => stdout.last);
+    // Odda dies in the step the narration tells; Fenn dies off the page.
+    frame([
+      { ...odda, state: "dead", inScene: true, remembers: [] },
+      { ...fenn, state: "dead", remembers: [] },
+    ]);
+    seat.show({ kind: "narration", speaker: "dm", text: "Odda falls under the wheel." });
+    await until("the death line", () => stdout.last.includes("Odda falls under the wheel."), () => stdout.last);
+    await card("Odda", "No longer alive.");
+    // Untold, Fenn's card is still as it was, memories and all.
+    await card("Fenn", "Last seen at Highsteads.");
+    for (const ch of "I ask about Fenn") stdin.press(ch);
+    stdin.press("\r");
+    await card("Fenn", "Not here now.");
+    seat.show({ kind: "narration", speaker: "dm", text: "Word comes that Fenn is dead." });
+    await until("the word", () => stdout.last.includes("Fenn is dead."), () => stdout.last);
+    await card("Fenn", "No longer alive.");
+  } finally {
+    seat.stop();
+  }
+});
