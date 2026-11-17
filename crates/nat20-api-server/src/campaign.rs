@@ -271,6 +271,8 @@ impl Campaign {
             .map_err(|e| bad(format!("The world's deck: {e}.")))?;
         for npc in &self.world.npcs {
             monster::check(&npc.monster).map_err(|e| bad(format!("The NPC {}: {e}", npc.id)))?;
+            crate::adapter::game::check_carries(&carries_wire(&npc.carries))
+                .map_err(|e| bad(format!("The NPC {}'s carries: {e}.", npc.id)))?;
             // Someone who lives on no place stands in a scene only when a mention places them.
             let (Some(place), Some(anchor)) = (&npc.place, &npc.anchor) else {
                 continue;
@@ -296,8 +298,6 @@ impl Campaign {
                     npc.id
                 )));
             }
-            crate::adapter::game::check_carries(&carries_wire(&npc.carries))
-                .map_err(|e| bad(format!("The NPC {}'s carries: {e}.", npc.id)))?;
         }
         Ok(())
     }
