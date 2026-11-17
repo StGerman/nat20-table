@@ -162,14 +162,25 @@ function narrationRow(dir: string, flags: Flag[]): VerdictRow {
   return { row: "3", title, status: confirmed > 0 ? "fail" : open > 0 ? "pending" : "pass", detail };
 }
 
-/** A creature the narration puts in a fight the engine doesn't hold it in (AGT-106): counted, not gated. */
-function notInFightRow(dir: string, flags: Flag[]): VerdictRow {
-  const title = "A creature narrated in a fight it is not in (counted, not gated)";
-  if (!existsSync(path.join(dir, NARRATION_CHECK))) return { row: "allies-fight", title, status: "reported", detail: "the narration check hasn't run" };
-  const mine = flags.filter((f) => f.row === "allies-fight");
+/** The judge's kinds that are counted, not gated ("Allies in fights" §6.4), and the row each counts on. */
+const COUNTED_KINDS: Record<string, string> = { not_in_fight: "allies-fight", unknown_person: "allies-people", invented_on_card: "allies-card" };
+const COUNTED_TITLES: Record<string, string> = {
+  // A creature the narration puts in a fight the engine doesn't hold it in (AGT-106).
+  "allies-fight": "A creature narrated in a fight it is not in (counted, not gated)",
+  // Someone named, present and acting, whom no roster record matches (AGT-109).
+  "allies-people": "A person narrated whom the world has no record of (counted, not gated)",
+  // A card line the describer reworded that says what its authored line doesn't (AGT-109).
+  "allies-card": "A reworded card line that invents what its authored line lacks (counted, not gated)",
+};
+
+/** One counted row: its flags, Stas's answers, and never a fail. */
+function countedRow(dir: string, flags: Flag[], row: string): VerdictRow {
+  const title = COUNTED_TITLES[row]!;
+  if (!existsSync(path.join(dir, NARRATION_CHECK))) return { row, title, status: "reported", detail: "the narration check hasn't run" };
+  const mine = flags.filter((f) => f.row === row);
   const confirmed = mine.filter((f) => f.answer === "confirmed").length;
   const open = mine.filter((f) => !f.answer).length;
-  return { row: "allies-fight", title, status: "reported", detail: `${mine.length} flags: ${confirmed} confirmed, ${mine.length - confirmed - open} dismissed, ${open} to confirm` };
+  return { row, title, status: "reported", detail: `${mine.length} flags: ${confirmed} confirmed, ${mine.length - confirmed - open} dismissed, ${open} to confirm` };
 }
 
 /**
@@ -442,7 +453,7 @@ export function computeVerdict(dir: string): Verdict {
     const answer = answers[f.id]?.answer;
     // The story-space kind is the Milestone 11 row's (AGT-91), and a creature not in the fight is
     // counted on its own row (AGT-106): neither is row 3's.
-    return { id: f.id, row: f.kind === "story_space" ? "m11-story" : f.kind === "not_in_fight" ? "allies-fight" : "3", text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(f.line !== undefined ? { line: f.line } : {}), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
+    return { id: f.id, row: f.kind === "story_space" ? "m11-story" : (COUNTED_KINDS[f.kind ?? ""] ?? "3"), text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(f.line !== undefined ? { line: f.line } : {}), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
   });
   // Lines Stas ruled himself, which the judge missed (M10 P2): flags of row 3 like the judge's.
   const handFlags: Flag[] = (Array.isArray(added) ? (added as HandFlag[]) : []).map((f) => ({
@@ -468,7 +479,7 @@ export function computeVerdict(dir: string): Verdict {
       carriedReadableRow(run, carriedReads as CarriedReads | undefined, carriedCard(log, scene) !== undefined),
     );
   } else if (packMap(pack) !== undefined) m13.push(writtenRow(run, log, sceneOutcomesOf(pack)));
-  const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...word, ...m13, ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), notInFightRow(dir, narrationFlags), retries.row, latencyRow(usage)];
+  const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...word, ...m13, ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), ...Object.keys(COUNTED_TITLES).map((row) => countedRow(dir, narrationFlags, row)), retries.row, latencyRow(usage)];
   const flags = [...narrationFlags, ...retries.flags];
   const not_eligible = [
     ...(run.build.dirty ? ["the checkout had changes"] : []),

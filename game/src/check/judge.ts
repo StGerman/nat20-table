@@ -5,6 +5,7 @@
 // its context never grows; CI runs a scripted judge and never calls a model.
 import { z } from "zod";
 import { AgentSession, reply, seatTool, type ModelChoice, type SessionConfig, type TurnSession } from "../agents/sdk-session.ts";
+import type { TranscriptRecord } from "../table/types.ts";
 import type { DigestRecord, DigestRun, Item } from "./digest.ts";
 
 /** Opus 5.5 at low effort (Stas, D3). */
@@ -14,7 +15,7 @@ export const JUDGE_CHOICE: ModelChoice = { model: "claude-opus-5-5", effort: "lo
 export const BATCH_LINES = 10;
 
 /** What a flag is about. */
-export const FLAG_KINDS = ["hp", "death", "position", "condition", "action", "surrender", "inventory", "identity", "story_space", "not_in_fight"] as const;
+export const FLAG_KINDS = ["hp", "death", "position", "condition", "action", "surrender", "inventory", "identity", "story_space", "not_in_fight", "unknown_person", "invented_on_card"] as const;
 export type FlagKind = (typeof FLAG_KINDS)[number];
 
 /** One contradiction the judge reports. */
@@ -48,9 +49,18 @@ export interface JudgeAnswer {
   quote: string;
 }
 
+/** The judge's word on one card line the describer reworded (AGT-109, `invented_on_card`). */
+export interface CardVerdict {
+  invented: boolean;
+  /** What the shown line adds, in a few words; empty when nothing. */
+  claim: string;
+}
+
 /** Reads one batch of narration lines and reports on it. */
 export interface Judge {
   judge(batch: string, lines: number[]): Promise<JudgeReport>;
+  /** Whether a reworded card line invents what its authored line lacks (AGT-109); a judge without it is never asked. */
+  card?(authored: string, shown: string): Promise<CardVerdict>;
   /** Answers one yes-or-no question about the lines in `text` (AGT-104); a judge without it is never asked. */
   ask?(text: string, lines: number[]): Promise<JudgeAnswer>;
   close?(): Promise<void>;
@@ -70,6 +80,7 @@ Report through the report tool, once per message, with every contradiction you f
 - inventory: only three things. A character uses or holds an item the engine tracks but the character doesn't carry. A consumable (a potion, for one) is used with no engine line for it, or more often than the character carried. Coins or an item change hands that the equipment or the coins don't show;
 - identity: a character is called by the wrong pronouns, the wrong name, or the wrong kind of person for who the party list says they are;
 - not_in_fight: in a fight (the state lists the fight's participants), a creature attacks, is attacked or is hurt when it is not among the participants, a dog that bites or a horse that kicks the fight doesn't hold. A creature that only growls, rears, barks or stands by is not a flag.
+- unknown_person: in a living world (the state lists the world's people), someone named who is present, speaks or acts in the line and matches nobody in the party list, the creatures or the people, under any form of their name. Someone only spoken of, a crowd, a people (the Corrins), a god or a place is not a flag; a person the people list has, dead or far from where the engine has them, is not this kind either.
 
 Do not report:
 - what a line leaves out, mood, weather, smells, sounds, or anything the engine doesn't model;
@@ -99,6 +110,13 @@ export const CARRIED_QUESTION = "Does the DM name what the party did at the mill
 export const ASK_PROMPT = `You read a few lines a Dungeons & Dragons game's Dungeon Master (DM) said aloud at the table, around one road card, and answer one question about them with yes or no. The message gives the question, what the engine's record says the party did earlier (each deed with who did it and the day), the card's own text, and the DM's lines, each with its number.
 
 Answer yes only if one of the DM's lines tells the table, in its own words, what the party did: the deed itself, not only the place or the people. The card's own text does not count, because the DM did not say it. Lines may be in any language; judge what they say. Give the number of the line that answers it and quote its words; with no, give no line and an empty quote. Call answer exactly once, and write nothing else.`;
+
+export const CARD_PROMPT = `You compare two lines that describe one person on a game's character card: the line its writer authored, and the line a model reworded it into, which the player saw instead. Answer whether the shown line invents anything the authored line does not say: a fact, a name, a place, a number, a feeling, a judgement, advice or a plan. The same things in other words, another order or another register are not invented. Lines may be in any language. Call verdict exactly once, and write nothing else.`;
+
+const cardInput = {
+  invented: z.boolean().describe("True when the shown line says something the authored line does not."),
+  claim: z.string().describe("What it adds, in a few words; empty when nothing."),
+};
 
 const answerInput = {
   answer: z.enum(["yes", "no"]),
@@ -149,7 +167,8 @@ export class ModelJudge implements Judge {
       let got: JudgeReport | undefined;
       const report = seatTool("report", "Report the contradictions in the lines given (and the untracked props). Call it exactly once.", reportInput, async (args) => {
         // The story-space kind is asked only of a living-world run (AGT-91).
-        const flags = args.flags.filter((f) => lines.includes(f.line) && (this.storySpace || f.kind !== "story_space"));
+        // invented_on_card is the card check's, never a narration line's (AGT-109).
+        const flags = args.flags.filter((f) => lines.includes(f.line) && (this.storySpace || f.kind !== "story_space") && f.kind !== "invented_on_card");
         got = { flags, untracked: (args.untracked ?? []).filter((u) => lines.includes(u.line)) };
         return reply(`Reported ${flags.length} contradictions.`);
       });
@@ -162,6 +181,24 @@ export class ModelJudge implements Judge {
       if (got) return got;
     }
     throw new Error(`the judge never called report for lines ${lines[0]} to ${lines[lines.length - 1]}`);
+  }
+
+  async card(authored: string, shown: string): Promise<CardVerdict> {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      let got: CardVerdict | undefined;
+      const verdict = seatTool("verdict", "Say whether the shown line invents anything. Call it exactly once.", cardInput, async (args) => {
+        got = { invented: args.invented, claim: args.invented ? args.claim : "" };
+        return reply("Noted.");
+      });
+      const session = this.open({ agent: "judge", role: "judge", choice: this.choice, systemPrompt: CARD_PROMPT, tools: [verdict], turnTimeoutMs: this.turnTimeoutMs });
+      try {
+        await session.turn(`Authored: ${authored}\nShown: ${shown}`, "card check");
+      } finally {
+        await session.close();
+      }
+      if (got) return got;
+    }
+    throw new Error("the judge never gave a verdict on a card line");
   }
 
   async ask(text: string, lines: number[]): Promise<JudgeAnswer> {
@@ -194,9 +231,20 @@ export class ScriptedJudge implements Judge {
   readonly asked: string[] = [];
   private readonly answer: JudgeAnswer;
 
-  constructor(flags: JudgeFlag[] = [], answer: JudgeAnswer = { answer: "no", line: null, quote: "" }) {
+  readonly cards: Array<{ authored: string; shown: string }> = [];
+  private readonly invented: ReadonlyMap<string, string>;
+
+  /** `invented`: shown card lines the scripted judge calls inventions, each with its claim. */
+  constructor(flags: JudgeFlag[] = [], answer: JudgeAnswer = { answer: "no", line: null, quote: "" }, invented: ReadonlyMap<string, string> = new Map()) {
     this.flags = flags;
     this.answer = answer;
+    this.invented = invented;
+  }
+
+  async card(authored: string, shown: string): Promise<CardVerdict> {
+    this.cards.push({ authored, shown });
+    const claim = this.invented.get(shown);
+    return claim === undefined ? { invented: false, claim: "" } : { invented: true, claim };
   }
 
   async judge(batch: string, lines: number[]): Promise<JudgeReport> {
@@ -236,6 +284,12 @@ export function lineBlock(d: DigestRecord, full: boolean, before: DigestRecord |
   if (d.fled.length > 0) out.push(`Fled the scene: ${d.fled.join(", ")}.`);
   const fight = d.fight ?? [];
   if (fight.length > 0) out.push(`In the fight: ${fight.join(", ")}.`);
+  // The world's people, in full on a batch's first line, then only when the list changed (AGT-109).
+  const people = d.people ?? [];
+  if (people.length > 0 && (full || JSON.stringify(people) !== JSON.stringify(before?.people ?? []))) {
+    out.push(full ? "The world's people (every form of each name):" : "The world's people, changed:");
+    for (const p of people) out.push(`- ${p.id}: called ${[p.name, ...p.names.filter((n) => n !== p.name)].join(", ")}; ${p.alive ? "alive" : "dead"}${p.place ? `, lives at ${p.place}` : ""}`);
+  }
   out.push(`Next to each other: ${d.adjacent.length > 0 ? d.adjacent.map((p) => `${p[0]} and ${p[1]}`).join("; ") : "nobody"}.`);
   const foes = Object.entries(d.foes_ft);
   if (foes.length > 0) {
@@ -297,6 +351,22 @@ export async function judgeRun(run: DigestRun, judge: Judge, size = BATCH_LINES)
     }
   } finally {
     await judge.close?.();
+  }
+  return out;
+}
+
+/**
+ * The card check (AGT-109): each line the describer reworded and the seat showed, from the
+ * transcript's `described` records, put to the judge beside its authored line. An invention is a
+ * flag, `c<k>-1` for the k-th pair, which Stas confirms or dismisses; counted, not gated.
+ */
+export async function judgeCards(records: readonly TranscriptRecord[], judge: Judge): Promise<CheckLine[]> {
+  if (!judge.card) return [];
+  const out: CheckLine[] = [];
+  const pairs = records.filter((r) => r.kind === "described" && r.authored !== undefined);
+  for (const [i, r] of pairs.entries()) {
+    const verdict = await judge.card(r.authored!, r.text);
+    if (verdict.invented) out.push({ id: `c${i + 1}-1`, line: i + 1, claim: verdict.claim || "invented", kind: "invented_on_card", evidence_seq: [], text: `${r.text} (authored: ${r.authored})` });
   }
   return out;
 }

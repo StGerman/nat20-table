@@ -183,3 +183,47 @@ fn a_log_cut_short_digests_no_line_said_after_its_end() {
     let reached = last["response"]["log_head"].as_u64().unwrap();
     assert!(run.digests.iter().all(|d| d.log_head <= reached));
 }
+
+/// A living world's digest lists its people (AGT-109): every roster person with each form of the
+/// name, alive or not, and the place the engine has, so the judge can tell a person nobody knows.
+#[test]
+fn a_living_world_digest_lists_the_world_s_people() {
+    let path = repo().join("contract/fixtures/mention.jsonl");
+    let text = fs::read_to_string(&path).unwrap();
+    // The fixture's first session only: the second starts over.
+    let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+    let second = lines
+        .iter()
+        .skip(1)
+        .position(|l| l.contains("\"cmd\":\"new_session\""))
+        .map_or(lines.len(), |i| i + 1);
+    let log = lines[..second]
+        .join("\n")
+        .replace("$CONTRACT_VERSION", nat20_api_contract::CONTRACT_VERSION);
+    let head = log
+        .lines()
+        .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+        .filter_map(|e| e["response"]["log_head"].as_u64())
+        .max()
+        .unwrap();
+    let transcript = read_transcript(&format!(
+        "{{\"speaker\":\"dm\",\"channel\":\"table\",\"kind\":\"narration\",\"text\":\"Osric nods.\",\"rolls\":[],\"log_head\":{head}}}\n"
+    ))
+    .unwrap();
+    let run = digest_run(
+        &nat20_api_server::paths::data_dir(),
+        Vec::new(),
+        &log,
+        &transcript,
+    )
+    .unwrap();
+    assert_eq!(run.diverged, None);
+    let people = &run.digests[0].people;
+    assert!(!people.is_empty(), "the world's people are listed");
+    for person in people {
+        assert!(
+            person["id"].is_string() && person["names"].is_array() && person["alive"].is_boolean(),
+            "{person}"
+        );
+    }
+}

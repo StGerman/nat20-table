@@ -10,7 +10,7 @@
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { NARRATION_DIGEST, readDigest, runDigest } from "./digest.ts";
-import { judgeRun, ModelJudge, type CheckLine, type Judge } from "./judge.ts";
+import { judgeCards, judgeRun, ModelJudge, type CheckLine, type Judge } from "./judge.ts";
 import { CONFIRMATIONS_JSON, NARRATION_CHECK } from "../play/verdict.ts";
 import { readLines as readRecords, readRunRecord, RUN_JSON } from "../play/record.ts";
 import { cardLines, carriedCard, JUDGE_QUESTION, questionText, sceneOutcomesOf, type CarriedAnswer } from "../play/m13.ts";
@@ -61,6 +61,9 @@ export async function narrationCheck(pack: string, dir: string, judge: Judge): P
   let found;
   try {
     found = await judgeRun(run, judge);
+    // The card lines the describer reworded, each beside its authored line (AGT-109).
+    const transcript = path.join(dir, "transcript.jsonl");
+    if (existsSync(transcript)) found.push(...(await judgeCards(readRecords<TranscriptRecord>(transcript), judge)));
   } catch (error) {
     return { ok: false, lines: [`Narration check: the judge stopped: ${(error as Error).message}. Run it again with npm run audit:narration -- ${dir}`] };
   }
@@ -96,7 +99,7 @@ export async function narrationCheck(pack: string, dir: string, judge: Judge): P
     ok: true,
     lines: [
       `Narration check: ${run.digests.length} narration lines, ${flags.length} flags for Stas, ${untracked.length} untracked props.`,
-      ...flags.map((f) => ("claim" in f ? `- ${f.id} (line ${f.line}, ${f.kind}): ${f.claim}; evidence ${f.evidence_seq.join(", ") || "the state"}. "${f.text}"` : "")),
+      ...flags.map((f) => ("claim" in f ? (f.kind === "invented_on_card" ? `- ${f.id} (card line ${f.line}, ${f.kind}): ${f.claim}. "${f.text}"` : `- ${f.id} (line ${f.line}, ${f.kind}): ${f.claim}; evidence ${f.evidence_seq.join(", ") || "the state"}. "${f.text}"`) : "")),
       ...untracked.map((f) => ("item" in f ? `- ${f.id} (line ${f.line}): untracked: ${f.item}` : "")),
       ...(asked ? [`${CARRIED_QUESTION} ${asked.answer} (card ${asked.card}${asked.line !== null ? `, line ${asked.line}: "${asked.quote}"` : ""})`] : []),
     ],

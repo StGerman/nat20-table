@@ -37,6 +37,15 @@ export interface DigestCreature {
   offered_surrender?: boolean;
 }
 
+/** A roster person as the digest lists them (AGT-109). */
+export interface DigestPerson {
+  id: string;
+  name: string;
+  names: string[];
+  alive: boolean;
+  place?: string;
+}
+
 /** What the engine held when the DM said one narration line (`nat20_duel::digest::Digest`). */
 export interface DigestRecord {
   line: number;
@@ -52,6 +61,8 @@ export interface DigestRecord {
   fled: string[];
   /** The running fight's participants, or the last fight's while it has just ended; empty out of a fight (AGT-106). An older digest has none. */
   fight?: string[];
+  /** The world's people with every form of each name, alive or not, and where the engine has them (AGT-109); none outside a living world. */
+  people?: DigestPerson[];
   adjacent: Array<[string, string]>;
   nearest_foe_ft: Array<[string, number]>;
   foes_ft: Record<string, Record<string, number>>;
