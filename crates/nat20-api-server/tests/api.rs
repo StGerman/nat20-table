@@ -3465,3 +3465,39 @@ fn unattended_cards_on_an_arriving_leg_come_road_first_then_arrival() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_mention_in_a_fight_places_nobody_who_would_stand_in_the_scene_outside_one() {
+    // Rule N4 (API-58): the caravan's owner is placed by a mention in exploration, but not in
+    // a fight.
+    let mut api = Api::seeded(1);
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "place_creature", "handle": "wolf", "monster": "wolf", "side": "hostile",
+                "at": { "kind": "point", "point": { "x_ft": -20.0, "y_ft": 0.0, "z_ft": 0.0 } } }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_fight", "participants": ["bren", "maren", "wolf"] }),
+    ));
+    let named = api.call("dm", json!({ "cmd": "mention", "npcs": ["old_tobin"] }));
+    ok(&named);
+    assert_eq!(kinds(&named), vec!["npc_named"], "{named}");
+    let state = api.call("dm", json!({ "cmd": "get_state" }));
+    let handles: Vec<&str> = state["result"]["state"]["creatures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|c| c["handle"].as_str())
+        .collect();
+    assert!(!handles.contains(&"old_tobin"), "{handles:?}");
+}
