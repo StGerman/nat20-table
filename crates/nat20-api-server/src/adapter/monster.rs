@@ -211,8 +211,9 @@ mod tests {
                 assert_eq!(weapon.item().name, attack.name, "{name} {:?}", slot);
                 let mut check = weapon.attack_roll(
                     &systems::helpers::get_component::<AbilityScoreMap>(world, entity),
-                    &systems::helpers::get_component::<WeaponProficiencyMap>(world, entity)
-                        .proficiency(weapon.category()),
+                    systems::helpers::get_component::<WeaponProficiencyMap>(world, entity)
+                        .proficiency(weapon.category())
+                        .as_ref(),
                 );
                 check.merge_from(loadout.attack_roll_template(weapon.kind()));
                 let damage = loadout

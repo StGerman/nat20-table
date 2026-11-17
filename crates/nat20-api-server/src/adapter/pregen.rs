@@ -337,9 +337,7 @@ impl<'a> Answers<'a> {
             }
             LevelUpPrompt::SkillProficiency { source, .. } => {
                 let skills = match source {
-                    ModifierSource::ClassLevel(_) | ModifierSource::ClassFeature(_) => {
-                        &self.file.skills
-                    }
+                    ModifierSource::Class(_) => &self.file.skills,
                     _ => {
                         let asker = source_id(source);
                         let i = self
@@ -584,8 +582,8 @@ mod tests {
             Skill::Intimidation,
         ] {
             assert_eq!(
-                skills.get(&skill).proficiency().level(),
-                &ProficiencyLevel::Proficient,
+                skills.get(&skill).proficiency().map(|p| p.level()),
+                Some(&ProficiencyLevel::Proficient),
                 "{skill:?}"
             );
         }
