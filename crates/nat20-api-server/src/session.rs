@@ -565,6 +565,16 @@ impl Session {
             .map(|c| std::mem::take(&mut c.due))
             .unwrap_or_default();
         self.pay_wages(due, LedgerReason::Wage)?;
+        // A roster saved with the NPC owner dead and the death card never put (a save from
+        // before ENG-49): it comes now, before any travel or rest (rule M1).
+        if self
+            .campaign
+            .as_mut()
+            .and_then(|c| c.world.put_death_card())
+            .is_some()
+        {
+            self.show_card()?;
+        }
         Ok(CommandResult::StartCampaign {
             state: self.state_for(viewer)?,
         })

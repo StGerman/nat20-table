@@ -1428,8 +1428,8 @@ impl Deck {
         let Some(card) = self.card(id) else {
             return false;
         };
+        // The escort checks the death card goes once for the world, so this puts it in `gone`.
         self.put_on_table(card, deeds, state);
-        state.gone.insert(card.id.clone());
         true
     }
 

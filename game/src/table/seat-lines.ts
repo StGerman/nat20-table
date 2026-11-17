@@ -340,7 +340,7 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
     case "escort_settled":
       // A dead merchant pays nobody (ENG-49, rule M4).
       if (event.purse === "carried") return `Обоз прибыл: ${n.place(event.destination)}. Наёмникам отсчитали плату из кошеля, который вы довезли.`;
-      if (event.purse === "shared") return `Обоз прибыл: ${n.place(event.destination)}. Кошель вы уже взяли; платить больше нечем.`;
+      if (event.purse === "shared") return `Обоз прибыл: ${n.place(event.destination)}. Кошель торговца вы уже поделили между собой; платить больше нечем.`;
       return `Обоз прибыл: ${n.place(event.destination)}. Наёмникам заплачено, что положено.`;
   }
 }

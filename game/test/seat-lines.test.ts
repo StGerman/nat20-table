@@ -92,7 +92,7 @@ test("the arrival line says which purse paid, and a wage names nobody as payer (
   assert.equal(line(settled()), "Обоз прибыл: Солтмут. Наёмникам заплачено, что положено.");
   assert.equal(line(settled("owner")), line(settled()));
   assert.match(line(settled("carried")) ?? "", /из кошеля, который вы довезли/);
-  assert.match(line(settled("shared")) ?? "", /Кошель вы уже взяли/);
+  assert.match(line(settled("shared")) ?? "", /Кошель торговца вы уже поделили/);
   const wage = { kind: "ledger", seq: 4, visibility: { scope: "public" }, text: "x", from: "npc:odda_vell", to: "maren", what: { kind: "coins", copper: 200 }, reason: "wage" } as unknown as Event;
   assert.equal(seatLine(wage, { names: new SeatNames(), site: "seat", human: "bren" }), "Maren is paid 2 gold pieces in wages.");
   assert.doesNotMatch(seatLine(wage, { names: ru, site: "seat", human: "bren" }) ?? "", /Одд|odda/i);
