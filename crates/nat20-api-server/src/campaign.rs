@@ -273,7 +273,32 @@ impl Campaign {
             .collect();
         scenes.push(&campaign.road_scene);
         for id in scenes {
-            read_scene(data_dir, id)?;
+            let file = read_scene(data_dir, id)?;
+            // A company animal is placed under its id, so no scene creature may hold it (ENG-48).
+            if let Some(entry) = campaign.world.company.iter().find(|e| {
+                e.monster.is_some()
+                    && file
+                        .creatures
+                        .iter()
+                        .chain(file.spawns.iter().flat_map(|s| s.creatures.iter()))
+                        .any(|c| c.handle.0 == e.id)
+            }) {
+                return Err(bad(format!(
+                    "The company entry {} is already a creature's handle in scene {id}.",
+                    entry.id
+                )));
+            }
+        }
+        if let Some(entry) = campaign
+            .world
+            .company
+            .iter()
+            .find(|e| e.monster.is_some() && campaign.party.iter().any(|h| h.0 == e.id))
+        {
+            return Err(bad(format!(
+                "The company entry {} is already a party member's handle.",
+                entry.id
+            )));
         }
         campaign.check_npcs(data_dir)?;
         Ok(campaign)
@@ -287,6 +312,8 @@ impl Campaign {
             .map_err(|e| bad(format!("The world's deck: {e}.")))?;
         for npc in &self.world.npcs {
             monster::check(&npc.monster).map_err(|e| bad(format!("The NPC {}: {e}", npc.id)))?;
+            crate::adapter::game::check_carries(&carries_wire(&npc.carries))
+                .map_err(|e| bad(format!("The NPC {}'s carries: {e}.", npc.id)))?;
             // Someone who lives on no place stands in a scene only when a mention places them.
             let (Some(place), Some(anchor)) = (&npc.place, &npc.anchor) else {
                 continue;
@@ -312,8 +339,6 @@ impl Campaign {
                     npc.id
                 )));
             }
-            crate::adapter::game::check_carries(&carries_wire(&npc.carries))
-                .map_err(|e| bad(format!("The NPC {}'s carries: {e}.", npc.id)))?;
         }
         Ok(())
     }
