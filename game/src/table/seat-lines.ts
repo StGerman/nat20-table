@@ -56,8 +56,14 @@ export interface CardOnSeat {
  * `campaign.json`. A table with no campaign has none.
  */
 export interface PeopleBook {
+  /** Each person's run-language lines, keyed by `lineKey(person, English line)`. */
   lines: ReadonlyMap<string, string>;
   party: ReadonlyArray<{ handle: string; names: readonly string[]; look?: string; look_ru?: string }>;
+}
+
+/** The key of a person's run-language line in a `PeopleBook`: by person and line (0067), since two people can share an English line. */
+export function lineKey(id: string, en: string): string {
+  return `${id}\u0000${en}`;
 }
 
 export const NO_PEOPLE: PeopleBook = { lines: new Map(), party: [] };

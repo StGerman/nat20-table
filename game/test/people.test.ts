@@ -5,14 +5,16 @@ import test from "node:test";
 import type { State } from "@nat20-table/engine-client";
 import { readLine } from "../src/ui/input.ts";
 import { asTold, nameAt, nameSpans, PEOPLE_WORDS, peopleOf, personCard, whoAnswer, whoLists } from "../src/ui/people.ts";
-import { SeatNames } from "../src/table/seat-lines.ts";
+import { lineKey, SeatNames } from "../src/table/seat-lines.ts";
 
 const book = {
   lines: new Map([
-    ["A shepherd with a name for every sheep.", "Пастушка; у каждой её овцы есть имя."],
-    ["You fed her dog on the river road.", "Вы сами накормили её собаку на речной дороге."],
-    ["They say he buys the harvest on paper.", "Говорят, он скупает урожай на бумаге ещё до ярмарки."],
-    ["The headman of Wendford.", "Староста Вендфорда."],
+    [lineKey("shepherd_gwyn", "A shepherd with a name for every sheep."), "Пастушка; у каждой её овцы есть имя."],
+    [lineKey("shepherd_gwyn", "You fed her dog on the river road."), "Вы сами накормили её собаку на речной дороге."],
+    // The same English line for another person, in another gender, stays theirs.
+    [lineKey("odda_vell", "You fed her dog on the river road."), "Вы сами накормили её пса на речной дороге."],
+    [lineKey("rufus", "They say he buys the harvest on paper."), "Говорят, он скупает урожай на бумаге ещё до ярмарки."],
+    [lineKey("osric_hale", "The headman of Wendford."), "Староста Вендфорда."],
   ]),
   party: [
     { handle: "bren", names: ["Bren", "Брен"] },
@@ -72,6 +74,10 @@ test("the dead show as they were until the story tells the death", () => {
   const people = peopleOf(state(), ru);
   const before = asTold(people, () => false).find((p) => p.id === "odda_vell")!;
   assert.equal(before.state, "elsewhere");
+  // Until then her card keeps what it showed while she lived, so it gives nothing away.
+  const alive = { ...people.find((p) => p.id === "odda_vell")!, state: "elsewhere" as const, remembers: ["Вы сами накормили её пса на речной дороге."], lastSeen: "Хайстедс" };
+  const kept = asTold(people, () => false, (id) => (id === "odda_vell" ? alive : undefined)).find((p) => p.id === "odda_vell")!;
+  assert.deepEqual([kept.remembers, kept.lastSeen], [["Вы сами накормили её пса на речной дороге."], "Хайстедс"]);
   assert.equal(asTold(people, () => true).find((p) => p.id === "odda_vell")!.state, "dead");
 });
 

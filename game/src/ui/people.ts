@@ -5,7 +5,7 @@
 // (rule N8), so every card state is tested without a terminal.
 import type { HealthBand, State } from "@nat20-table/engine-client";
 import type { Language } from "../agents/language.ts";
-import type { PeopleBook, SeatNames } from "../table/seat-lines.ts";
+import { lineKey, type PeopleBook, type SeatNames } from "../table/seat-lines.ts";
 
 /** Where a person stands for the viewer. */
 export type PersonState = "here" | "elsewhere" | "companion" | "heard" | "unconscious" | "dead";
@@ -39,7 +39,8 @@ export interface Person {
 export function peopleOf(state: State, names: SeatNames, book: PeopleBook = names.people): Person[] {
   if (state.view !== "player") return [];
   const ru = names.language === "ru";
-  const line = (en: string) => (ru ? (book.lines.get(en) ?? en) : en);
+  // The run-language line by person and line (0067): two people can share an English line.
+  const line = (id: string, en: string) => (ru ? (book.lines.get(lineKey(id, en)) ?? en) : en);
   const inScene = new Map(state.others.map((c) => [c.handle, c.health]));
   const out: Person[] = [];
   for (const p of book.party) {
@@ -56,16 +57,16 @@ export function peopleOf(state: State, names: SeatNames, book: PeopleBook = name
       name: ru ? names.who(n.id) : (n.names?.[0] ?? n.name),
       forms: n.names ?? [],
       state: state_,
-      ...(n.look ? { look: line(n.look) } : {}),
+      ...(n.look ? { look: line(n.id, n.look) } : {}),
       // None on a dead person's card (rule N6).
-      remembers: n.alive ? (n.remembers ?? []).map(line) : [],
+      remembers: n.alive ? (n.remembers ?? []).map((r) => line(n.id, r)) : [],
       ...(health && n.alive ? { health } : {}),
       ...(health ? { inScene: true } : {}),
-      ...(state_ === "elsewhere" && n.last_seen ? { lastSeen: names.place(n.last_seen, state.world?.places.find((p) => p.id === n.last_seen)?.name) } : {}),
+      ...(state_ !== "here" && state_ !== "unconscious" && n.last_seen ? { lastSeen: names.place(n.last_seen, state.world?.places.find((p) => p.id === n.last_seen)?.name) } : {}),
     });
   }
   for (const n of state.world?.heard ?? []) {
-    out.push({ id: n.id, name: ru ? names.who(n.id) : (n.names?.[0] ?? n.name), forms: n.names ?? [], state: "heard", ...(n.heard ? { heard: line(n.heard) } : {}), remembers: [] });
+    out.push({ id: n.id, name: ru ? names.who(n.id) : (n.names?.[0] ?? n.name), forms: n.names ?? [], state: "heard", ...(n.heard ? { heard: line(n.id, n.heard) } : {}), remembers: [] });
   }
   return out;
 }
@@ -75,8 +76,19 @@ export function peopleOf(state: State, names: SeatNames, book: PeopleBook = name
  * after the death, they show as they were, lying in the scene or not here; «Нет в живых.» comes
  * only after the death's line.
  */
-export function asTold(people: readonly Person[], told: (id: string) => boolean): Person[] {
-  return people.map((p) => (p.state !== "dead" || told(p.id) ? p : p.inScene ? { ...p, state: "unconscious", health: "down" } : { ...p, state: "elsewhere" }));
+export function asTold(people: readonly Person[], told: (id: string) => boolean, alive: (id: string) => Person | undefined = () => undefined): Person[] {
+  return people.map((p) => {
+    if (p.state !== "dead" || told(p.id)) return p;
+    // The engine drops a dead person's memories (rule N6); until the death is told the card keeps
+    // what it showed alive, so it gives nothing away.
+    const was = alive(p.id);
+    const kept = { ...p, remembers: was?.remembers ?? p.remembers, ...(was?.lastSeen && !p.lastSeen ? { lastSeen: was.lastSeen } : {}) };
+    if (p.inScene) {
+      const { lastSeen: _, ...here } = kept;
+      return { ...here, state: "unconscious", health: "down" };
+    }
+    return { ...kept, state: "elsewhere" };
+  });
 }
 
 /** A piece of a story row: plain text, or a listed form of a person, underlined. */
