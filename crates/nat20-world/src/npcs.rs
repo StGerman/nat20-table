@@ -86,11 +86,16 @@ pub struct NpcDef {
 pub struct Remembers {
     /// The deed id
     pub deed: String,
-    /// The line, in English
-    pub line: String,
-    /// The line in a Russian run
+    /// The line for a viewer who did the deed (in the deed's `by`), in English
+    pub you: String,
+    /// The line for a viewer whose company did it without them, in English
+    pub company: String,
+    /// `you` in a Russian run
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub line_ru: Option<String>,
+    pub you_ru: Option<String>,
+    /// `company` in a Russian run
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub company_ru: Option<String>,
 }
 
 /// How an NPC feels about the party. A hostile NPC stands on the hostile side of a fight;
@@ -162,6 +167,13 @@ pub struct NpcState {
     /// Whether the party has been in their place while they were there
     #[serde(default)]
     pub met: bool,
+    /// The characters who have seen them (API-59), each with the place they last did; none
+    /// when it was on the road
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub seen: BTreeMap<String, Option<String>>,
+    /// The characters who have heard of them without seeing them (API-59)
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub heard: BTreeSet<String>,
     /// How they feel about the party
     #[serde(default)]
     pub attitude: Attitude,
@@ -177,6 +189,8 @@ impl NpcState {
             hp: None,
             alive: true,
             met: false,
+            seen: BTreeMap::new(),
+            heard: BTreeSet::new(),
             attitude: def.attitude,
             carries: def.carries.clone(),
         }
@@ -332,7 +346,7 @@ mod tests {
     fn a_person_may_live_on_no_place_but_an_anchor_needs_one() {
         let road = file(
             r#"{"npcs": [{"id": "tam", "name": "Tam", "names": ["Tam", "Тэм", "Тэма"], "monster": "commoner",
-                "look": "A barefoot boy with a bundle.", "remembers": [{"deed": "fed_tam", "line": "You fed him."}]}]}"#,
+                "look": "A barefoot boy with a bundle.", "remembers": [{"deed": "fed_tam", "you": "You fed him.", "company": "Your company fed him."}]}]}"#,
         );
         road.validate(&map()).unwrap();
         assert_eq!(road.npcs[0].place, None);

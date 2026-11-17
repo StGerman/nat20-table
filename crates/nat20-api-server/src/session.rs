@@ -66,6 +66,9 @@ pub struct Session {
     contract_start: Option<RosterStart>,
     /// The place NPCs placed in the current scene (API-48), written back when it is left.
     npcs_here: Vec<String>,
+    /// The roster people on the card whose effects run now (API-59): a deed they write is
+    /// seen by them. None outside a card's resolution
+    card_cast: Option<Vec<String>>,
     /// A card fight's or the scene's named NPCs by handle, until they die (ENG-36, API-57)
     card_npcs: HashMap<String, String>,
     /// Who rolled each logged roll, by roll id (ENG-36)
@@ -105,6 +108,7 @@ impl Session {
             contract_start: roster.as_ref().and_then(|r| r.contract_start.clone()),
             roster,
             npcs_here: Vec::new(),
+            card_cast: None,
             card_npcs: HashMap::new(),
             arrival_due: None,
             rollers: HashMap::new(),
@@ -911,9 +915,16 @@ impl Session {
                     eprintln!("mention: {id} is not placed: {}", e.message);
                     continue;
                 }
-                campaign.met(id);
                 self.npcs_here.push(id.clone());
                 placed.push(Handle(id.clone()));
+            }
+        }
+        // Everyone at the table now knows them (rule N4): seen if they stand here, else heard of.
+        for id in npcs {
+            if game.has_creature(id) {
+                campaign.met(id);
+            } else {
+                campaign.heard_of(id);
             }
         }
         self.push_entries();

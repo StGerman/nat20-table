@@ -255,6 +255,10 @@ pub struct Deed {
     pub day: u32,
     /// The contract it was done in: 1 for the first
     pub contract: u32,
+    /// The roster people who saw it or were shown it later (API-59): a person remembers a
+    /// deed only when they are here
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub saw: Vec<String>,
 }
 
 /// The deeds remembered, by id. A deed done again keeps its first record.
@@ -2734,6 +2738,7 @@ mod tests {
                         by: vec![],
                         day: 1,
                         contract: 1,
+                        saw: vec![],
                     },
                 )
             })

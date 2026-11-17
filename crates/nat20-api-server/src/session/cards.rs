@@ -106,6 +106,17 @@ impl Session {
                 kind: shown,
             });
         }
+        let campaign = self.campaign.as_mut().expect("checked above");
+        if let Some(card) = campaign
+            .world
+            .state
+            .deck
+            .pending
+            .as_ref()
+            .map(|p| p.card.clone())
+        {
+            campaign.card_shown_to_party(&card);
+        }
         let campaign = self.campaign.as_ref().expect("checked above");
         let pending = campaign.world.state.deck.pending.clone();
         let Some(card) = pending
@@ -481,6 +492,20 @@ impl Session {
     /// rolls before the card is decided, and a fall leaves the card to the words left
     /// (decision 0079).
     fn resolve_card(&mut self, resolution: world::Resolution) -> Result<(), ApiError> {
+        // The card's cast is shown the deeds its choice reads, and sees the deeds its effects
+        // write (API-59).
+        if let Some(campaign) = self.campaign.as_mut() {
+            campaign
+                .world
+                .choice_chosen(&resolution.card, &resolution.choice);
+            self.card_cast = Some(campaign.world.cast_of(&resolution.card));
+        }
+        let resolved = self.resolve_card_effects(resolution);
+        self.card_cast = None;
+        resolved
+    }
+
+    fn resolve_card_effects(&mut self, resolution: world::Resolution) -> Result<(), ApiError> {
         if let Some(run) = resolution
             .own_move
             .as_ref()
@@ -785,13 +810,19 @@ impl Session {
     /// done again keeps its first record and logs nothing.
     pub(super) fn remember(&mut self, deed: &str, by: Vec<String>) {
         // A campaign's world, or a site session's memory (ENG-44); with neither, nothing.
+        // Who saw it (API-59): the cast of the card that writes it, else the roster people in
+        // the scene.
+        let saw = self
+            .card_cast
+            .clone()
+            .unwrap_or_else(|| self.npcs_here.clone());
         let record = if let Some(campaign) = self.campaign.as_mut() {
-            if !campaign.world.remember(deed, by) {
+            if !campaign.world.remember(deed, by, saw) {
                 return;
             }
             campaign.world.state.deeds[deed].clone()
         } else if let Some(site) = self.site.as_mut() {
-            if !site.memory.remember(deed, by) {
+            if !site.memory.remember(deed, by, saw) {
                 return;
             }
             site.memory.deeds[deed].clone()

@@ -37,8 +37,10 @@
             "remembers": [
                 {
                     "deed": "chose_join",
-                    "line": "You sang along with him.",
-                    "line_ru": "Вы пели вместе с ним."
+                    "you": "You sang along with him.",
+                    "company": "Your company sang along with him.",
+                    "you_ru": "Вы сами пели вместе с ним.",
+                    "company_ru": "Ваш отряд пел вместе с ним."
                 }
             ],
             "notes": "Owns the test caravan; sings when the road is long."
