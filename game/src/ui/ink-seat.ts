@@ -330,6 +330,8 @@ export class InkSeat implements Seat {
    * to select text: the first one says how, once (design §6.2), and never in the first-time help.
    */
   private button(report: Exclude<MouseReport, { kind: "wheel" }>): void {
+    // Off, the terminal sends none; a report still in flight from before `/mouse` is dropped.
+    if (this.mouseOff) return;
     if (report.kind === "press") {
       this.pressed = { x: report.x, y: report.y };
       return;
@@ -1162,7 +1164,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     };
     // A click on an underlined name in the story opens its card (AGT-108); an overlay covers the story.
     seat.clicked = (x, y) => {
-      if (overlayRows) return;
+      // The tiny frame draws no story; an overlay covers it.
+      if (overlayRows || tiny) return;
       const cell = storyCell(x, y, storyH, width);
       const row = cell ? shown.rows[cell.row] : undefined;
       const id = row && cell ? nameAt(row.text, cell.column, people) : undefined;

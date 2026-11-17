@@ -7,7 +7,7 @@ import { EventEmitter } from "node:events";
 import { test } from "node:test";
 import { endScreen } from "../src/play/driver.ts";
 import { finaleRows, InkSeat, mouseIn } from "../src/ui/ink-seat.ts";
-import { actionRows, freshText, headerText, maxOffset, page, storyRows, storyWindow, type StoryRow } from "../src/ui/frame.ts";
+import { actionRows, freshText, headerText, maxOffset, page, storyCell, storyRows, storyWindow, type StoryRow } from "../src/ui/frame.ts";
 import type { Line } from "../src/ui/lines.ts";
 import { paletteFor } from "../src/ui/palette.ts";
 import { rowText, turnRows } from "../src/ui/panel.ts";
@@ -244,6 +244,8 @@ test("the mouse reports in what the terminal sent, in order: the wheel's turns (
     { kind: "press", x: 3, y: 4 },
     { kind: "release", x: 5, y: 4 },
   ]);
+  // Shift adds 4: still the left button.
+  assert.deepEqual(mouseIn("\u001b[<4;7;2M"), [{ kind: "press", x: 7, y: 2 }]);
   assert.deepEqual(mouseIn("x\u001b[5~"), []);
 });
 
@@ -515,7 +517,10 @@ test("a click on an underlined name opens its card, a drag says once how to sele
     for (const ch of "/mouse") stdin.press(ch);
     stdin.press("\r");
     await until("off", () => stdout.last.includes("Text now selects as usual"), () => stdout.last);
-    stdin.press("\u001b[<0;2;3M\u001b[<0;9;3m");
+    // Off, a click on the name opens nothing.
+    stdin.press(`\u001b[<0;${x + 2};${y}M\u001b[<0;${x + 2};${y}m`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(seat.getView().person, undefined, "no card while the mouse is off");
     for (const ch of "/mouse") stdin.press(ch);
     stdin.press("\r");
     await until("on again", () => stdout.last.includes("A click on an underlined name shows who it is again"), () => stdout.last);
@@ -569,4 +574,12 @@ test("a death shows on the card once the story tells it, in the narration that b
   } finally {
     seat.stop();
   }
+});
+
+test("a click's cell in the story: the header is row 1, the story the next rows, its width the columns (AGT-108)", () => {
+  assert.equal(storyCell(1, 1, 10, 60), undefined, "the header");
+  assert.deepEqual(storyCell(1, 2, 10, 60), { row: 0, column: 0 });
+  assert.deepEqual(storyCell(60, 11, 10, 60), { row: 9, column: 59 });
+  assert.equal(storyCell(1, 12, 10, 60), undefined, "under the story");
+  assert.equal(storyCell(61, 5, 10, 60), undefined, "the rule or the side pane");
 });

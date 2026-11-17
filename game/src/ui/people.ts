@@ -226,7 +226,10 @@ export function whoAnswer(query: string, people: readonly Person[], words: Peopl
   return person ? { person } : { rows: [words.unknown(asked), ...whoLists(people, words)] };
 }
 
-/** Whose underlined name stands at `column` (from 0) of a story row, if any (AGT-108). */
+/**
+ * Whose underlined name stands at `column` (from 0) of a story row, if any (AGT-108). A column is
+ * a code point: the table's Latin and Cyrillic take one cell each, a double-width character would not.
+ */
 export function nameAt(text: string, column: number, people: readonly Person[]): string | undefined {
   let at = 0;
   for (const span of nameSpans(text, people)) {

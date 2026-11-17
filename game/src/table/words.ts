@@ -560,7 +560,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
       pause: "AI players wait until you type /pause again",
       suggest: "turn the three suggested moves out of a fight off or on",
       panel: "fold the situation panel to one line, or open it again",
-      mouse: "select text by dragging; again: click names. Also /мышь",
+      mouse: "select text by dragging instead of clicking names; /мышь too",
       help: "every command and key",
       quit: "end the run (the run folder keeps everything so far)",
     },
