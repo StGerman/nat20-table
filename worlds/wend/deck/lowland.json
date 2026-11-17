@@ -131,6 +131,23 @@
                                 "wolf"
                             ]
                         }
+                    ],
+                    "unless": "fed_gwyns_dog"
+                },
+                {
+                    "id": "stand_with_dog",
+                    "text": "Stand between the wolves and the horses.",
+                    "text_ru": "Встать между волками и лошадьми.",
+                    "if": "fed_gwyns_dog",
+                    "effects": [
+                        {
+                            "do": "fight",
+                            "monsters": [
+                                "wolf",
+                                "wolf"
+                            ],
+                            "surprise": true
+                        }
                     ]
                 },
                 {
@@ -192,7 +209,7 @@
                     ]
                 }
             ],
-            "note": "Wolves are beasts, not persons: they do not yield and nobody hears of it. Gwyn's dog, if it came along, hears them long before the horses do."
+            "note": "Wolves are beasts, not persons: they do not yield and nobody hears of it. Gwyn's dog, if it came along, hears them long before the horses do. If the Blades fed it on an earlier contract, it has found them again, because they fed it: say so in one clause the first time it shows on this contract. In any fight on this card the horses stay roped at the wagon, the Merchant holds their heads, and the dog lies under the wagon; none of them is in the engine's fight, so tell no bite, kick or wound of theirs. If the Blades stand with the dog along, the wolves find them waiting, because the dog heard them first: say that cause in one clause."
         },
         {
             "id": "drovers",
@@ -241,7 +258,7 @@
                     ]
                 }
             ],
-            "note": "Rufus's men, counting Odda's sacks for him. They are friendly because friendly is cheaper. Gwyn's dog, if it came along, does not like them and says so."
+            "note": "Rufus's men, counting the Merchant's sacks for him. They are friendly because friendly is cheaper. Gwyn's dog, if it came along, does not like them and says so. If the Blades fed it on an earlier contract, it has found them again, because they fed it: say so in one clause the first time it shows on this contract."
         },
         {
             "id": "sedges_jar",
