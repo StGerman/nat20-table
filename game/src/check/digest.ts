@@ -50,6 +50,8 @@ export interface DigestRecord {
   combat_over: boolean;
   creatures: DigestCreature[];
   fled: string[];
+  /** The running fight's participants, or the last fight's while it has just ended; empty out of a fight (AGT-106). An older digest has none. */
+  fight?: string[];
   adjacent: Array<[string, string]>;
   nearest_foe_ft: Array<[string, number]>;
   foes_ft: Record<string, Record<string, number>>;

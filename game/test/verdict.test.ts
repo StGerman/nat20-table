@@ -299,6 +299,16 @@ test("the Milestone 11 rows: the deck at work, a thread, story-space flags, and 
   writeFileSync(path.join(flagged, CONFIRMATIONS_JSON), JSON.stringify({ "n4-1": { answer: "confirmed" } }));
   assert.equal(row(flagged, "m11-story").status, "fail");
 
+  // A creature narrated in a fight it is not in is counted on its own row, never row 3's (AGT-106).
+  const outside = folder(run, [], withSeq(WORD_ON_THE_ROAD));
+  writeFileSync(path.join(outside, NARRATION_CHECK), JSON.stringify({ id: "n5-1", line: 5, claim: "the dog bites the wolf", kind: "not_in_fight", evidence_seq: [], text: "The dog bites." }) + "\n");
+  assert.equal(row(outside, "3").status, "pass");
+  assert.equal(row(outside, "allies-fight").status, "reported");
+  assert.match(row(outside, "allies-fight").detail, /1 flags: 0 confirmed, 0 dismissed, 1 to confirm/);
+  writeFileSync(path.join(outside, CONFIRMATIONS_JSON), JSON.stringify({ "n5-1": { answer: "confirmed" } }));
+  assert.equal(row(outside, "allies-fight").status, "reported", "counted, not gated");
+  assert.equal(row(outside, "3").status, "pass");
+
   // The Silent Mill has no living world, so no Milestone 11 rows.
   assert.equal(computeVerdict(folder(runRecord())).rows.some((r) => r.row.startsWith("m11-")), false);
 });
