@@ -3220,7 +3220,8 @@ fn a_pack_brings_its_own_cards_and_keeps_its_contract() {
 }
 
 /// A card fight's named NPC who dies writes `killed_<npc>`, by whoever dealt the last blow
-/// (ENG-36). The deed is DM-only; the saved roster's world shows it.
+/// (ENG-36). The deed is DM-only; the saved roster's world shows it. A roster person killed
+/// so is dead to the world too (API-58).
 #[test]
 fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
     let dir = std::env::temp_dir().join(format!("nat20_table_death_deed_{}", std::process::id()));
@@ -3230,7 +3231,7 @@ fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
     let mut deck: Value =
         serde_json::from_str(&std::fs::read_to_string(&deck_path).unwrap()).unwrap();
     deck["cards"][1]["choices"][1]["effects"][0]["monsters"] =
-        json!([{ "stat": "wolf", "npc": "grey" }]);
+        json!([{ "stat": "wolf", "npc": "old_tobin" }]);
     std::fs::write(&deck_path, deck.to_string()).unwrap();
     let mut api = Api::start(
         Server::with_data_dir(dir.clone()),
@@ -3289,7 +3290,7 @@ fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
     }
     let saved = api.call("dm", json!({ "cmd": "save_roster" }));
     ok(&saved);
-    let deed = &saved["result"]["roster"]["world"]["state"]["memory"]["deeds"]["killed_grey"];
+    let deed = &saved["result"]["roster"]["world"]["state"]["memory"]["deeds"]["killed_old_tobin"];
     let by = deed["by"]
         .as_array()
         .unwrap_or_else(|| panic!("no deed: {saved}"));
@@ -3299,6 +3300,54 @@ fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
         "{deed}"
     );
     assert_eq!(deed["contract"], 1, "{deed}");
+    let tobin = &saved["result"]["roster"]["world"]["state"]["memory"]["npcs"]["old_tobin"];
+    assert_eq!(tobin["alive"], false, "{tobin}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A roster person who lives on no place has their carries checked at campaign load all the
+/// same, not first when a mention places them (API-58).
+#[test]
+fn a_no_place_person_s_carries_are_checked_at_campaign_load() {
+    let dir = std::env::temp_dir().join(format!(
+        "nat20_table_no_place_carries_{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let npcs_path = dir.join("worlds/test_vale/npcs.json");
+    let mut npcs: Value =
+        serde_json::from_str(&std::fs::read_to_string(&npcs_path).unwrap()).unwrap();
+    let tobin = npcs["npcs"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|n| n["id"] == "old_tobin")
+        .unwrap();
+    assert!(tobin.get("place").is_none(), "{tobin}");
+    tobin["carries"]["items"] = json!([{ "item": "no_such_item", "quantity": 1 }]);
+    std::fs::write(&npcs_path, npcs.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let refused = api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    );
+    assert_eq!(refused["ok"], false, "{refused}");
+    assert!(
+        refused["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("old_tobin's carries"),
+        "{refused}"
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
 
