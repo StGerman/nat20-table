@@ -857,6 +857,10 @@ impl Session {
                     campaign.npc_died(&target.0);
                 }
                 if let Some(npc) = self.card_npcs.remove(&target.0) {
+                    // A card's named NPC may be a roster person too.
+                    if let Some(campaign) = self.campaign.as_mut() {
+                        campaign.npc_died(&npc);
+                    }
                     let by = self.last_blow.get(&target.0).cloned().into_iter().collect();
                     return Some((world::killed_deed(&npc), by));
                 }
