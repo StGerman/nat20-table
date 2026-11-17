@@ -3527,6 +3527,18 @@ fn a_card_shows_its_cast_and_tells_and_its_deed_is_remembered_by_whom_it_saw() {
     let npcs_path = dir.join("worlds/test_vale/npcs.json");
     let mut npcs: Value =
         serde_json::from_str(&std::fs::read_to_string(&npcs_path).unwrap()).unwrap();
+    // Old Tobin remembers the song this deck's card writes.
+    let tobin_def = npcs["npcs"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|n| n["id"] == "old_tobin")
+        .unwrap();
+    tobin_def["remembers"] = json!([{
+        "deed": "chose_join",
+        "you": "You sang along with him.", "company": "Your company sang along with him.",
+        "you_ru": "Вы сами пели вместе с ним.", "company_ru": "Ваш отряд пел вместе с ним."
+    }]);
     npcs["npcs"].as_array_mut().unwrap().push(json!({
         "id": "ned", "name": "Ned", "monster": "commoner",
         "heard": "They say Ned drives cattle to the coast.", "look": "A drover."

@@ -36,11 +36,11 @@
             "heard": "They say he has driven the vale road forty years.",
             "remembers": [
                 {
-                    "deed": "chose_join",
-                    "you": "You sang along with him.",
-                    "company": "Your company sang along with him.",
-                    "you_ru": "Вы сами пели вместе с ним.",
-                    "company_ru": "Ваш отряд пел вместе с ним."
+                    "deed": "cleared_the_tree",
+                    "you": "You dragged the fallen tree off the road for his wagon.",
+                    "company": "Your company dragged the fallen tree off the road for his wagon.",
+                    "you_ru": "Вы сами стащили упавшее дерево с дороги, чтобы прошла его телега.",
+                    "company_ru": "Ваш отряд стащил упавшее дерево с дороги, чтобы прошла его телега."
                 }
             ],
             "notes": "Owns the test caravan; sings when the road is long."
