@@ -3309,6 +3309,43 @@ fn a_named_npc_killed_in_a_card_fight_writes_the_death_deed() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A company animal whose id is already a creature's handle in a scene is refused at campaign
+/// load, so a wagon fight never turns that creature into the ally (ENG-48).
+#[test]
+fn a_company_id_that_is_a_scene_handle_is_refused() {
+    let dir =
+        std::env::temp_dir().join(format!("nat20_table_company_handle_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let path = dir.join("worlds/test_vale/company.json");
+    let mut company: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    company["company"][0]["id"] = json!("maren");
+    std::fs::write(&path, company.to_string()).unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let refused = api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    );
+    assert_eq!(refused["ok"], false, "{refused}");
+    assert!(
+        refused["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("company entry maren"),
+        "{refused}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A card's fight with `surprise` (ENG-47): its monsters roll Initiative with Disadvantage and
 /// the party does not; the same fight without it rolls every Initiative straight.
 #[test]
