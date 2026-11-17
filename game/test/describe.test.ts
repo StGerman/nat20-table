@@ -6,7 +6,9 @@ import { test } from "node:test";
 import type { State } from "@nat20-table/engine-client";
 import { Describer, describedLine, describePrompt } from "../src/agents/describe.ts";
 import type { SessionConfig } from "../src/agents/sdk-session.ts";
-import { described } from "../src/table/loop.ts";
+import { described, TableLoop } from "../src/table/loop.ts";
+import { ScriptedDm } from "../src/table/scripted.ts";
+import { testTable } from "./helpers.ts";
 import { SeatNames } from "../src/table/seat-lines.ts";
 import type { Person } from "../src/ui/people.ts";
 import { UsageLimitReached } from "../src/errors.ts";
@@ -33,6 +35,17 @@ test("a rewording shows only if it keeps to rules N9 and N10", () => {
   assert.ok(!ok(`${LOOK} ${LOOK}`));
   assert.ok(!ok("Пастушка.\nОвцы."));
   assert.ok(!ok(LOOK));
+  // A name in any ending, a sentence's first word too (the review's cases).
+  assert.ok(!ok("Пастушка из Хайстедса; у каждой овцы есть имя.", LOOK, ["Хайстедс"]));
+  assert.ok(!ok("Марта, пастушка; у каждой её овцы есть имя."));
+  assert.ok(!ok("Руфус знает: у каждой её овцы есть имя.", LOOK, ["Руфус"]));
+  assert.ok(ok("Пастушка, которая каждую свою овцу знает по имени."));
+  // Advice, verdicts and guesses, in any form.
+  assert.ok(!ok("Пастушка, достойная доверия; у каждой её овцы имя."));
+  assert.ok(!ok("Пастушка, похожая на мою сестру."));
+  assert.ok(!describedLine("A shepherd with a name for every sheep.", "A trustworthy shepherd who names every sheep.", "en"));
+  // Gender in endings, with no pronoun.
+  assert.ok(!ok("Старый пастух; у каждой овцы имя."));
   assert.ok(describedLine("A shepherd with a name for every sheep.", "A shepherd who knows each of her sheep by name.", "en"));
   assert.ok(!describedLine("A shepherd with a name for every sheep.", "I think this shepherd names every sheep.", "en"));
 });
@@ -92,6 +105,43 @@ test("a rewording that fails the check, or a failed call, keeps the authored lin
   limit.shown("tam", "A boy with a painted cart.");
   await limit.settled();
   assert.equal(limited, 1);
+});
+
+test("a session that fails to open, or a describer closed, starts nothing more and throws nothing", async () => {
+  let opened = 0;
+  const broken = new Describer({
+    handle: "bren",
+    card: "card",
+    language: "ru",
+    open: () => {
+      opened++;
+      throw new Error("no session");
+    },
+  });
+  broken.shown("a", LOOK);
+  broken.shown("b", LOOK);
+  await broken.settled();
+  assert.equal(broken.shown("a", LOOK), LOOK);
+  assert.equal(opened, 2, "each line tried once, and the queue goes on");
+  let calls = 0;
+  const d = describer(async () => (calls++, "Пастушка, которая знает по имени каждую свою овцу."));
+  await d.close();
+  d.shown("a", LOOK);
+  await d.settled();
+  assert.equal(calls, 0);
+});
+
+test("the loop writes each rewording shown into the transcript once, as a described record", async () => {
+  const t = await testTable({ seed: 1, human: "bren", players: [] });
+  try {
+    const d = describer(async () => "unused");
+    new TableLoop({ table: t.table, dm: new ScriptedDm({}), players: [], maxSteps: 1, describer: d });
+    d.onShown({ person: "shepherd_gwyn", authored: LOOK, shown: "Пастушка, которая знает по имени каждую свою овцу." });
+    const record = t.table.transcript.records.at(-1)!;
+    assert.deepEqual([record.kind, record.channel, record.person, record.authored, record.text], ["described", "to:bren", "shepherd_gwyn", LOOK, "Пастушка, которая знает по имени каждую свою овцу."]);
+  } finally {
+    await t.close();
+  }
 });
 
 test("the lines are written one at a time, in the order they show", async () => {

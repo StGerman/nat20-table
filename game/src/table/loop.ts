@@ -2398,7 +2398,7 @@ export class TableLoop {
     const a = this.table.awaiting;
     const turn = a.kind === "action" ? a.actor : undefined;
     const situation = seen ? situationOf(seen, turn, turn === this.table.human ? options : undefined, this.table.names) : undefined;
-    if (situation?.people && this.describer && seen) situation.people = described(situation.people, seen, this.table.names, this.describer);
+    if (situation?.people && this.describer && seen) situation.people = described(situation.people, seen, this.table.names, this.describer, this.table.roster.flatMap((r) => r.names));
     this.table.show({ kind: "situation", ...(situation ? { situation } : {}) });
   }
 
@@ -2774,10 +2774,11 @@ function cardLines(card: CardPlayer, owner = false, invite = true, fallen = 0): 
  * The people with each `look` as the describer has it for the human (AGT-127): the checked
  * rewording once ready, else the authored line, and the call started ahead for the next frame.
  * Only `look`: `heard` and `remembers` stay as authored (design §16 item 8). The names the check
- * holds a rewording to are everyone's forms and the places the human knows (rule N10).
+ * holds a rewording to are the roster's and the glossary's, every form, and the places (rule N10).
  */
-export function described(people: Person[], state: State, names: SeatNames | undefined, describer: Describer): Person[] {
-  const places = state.view === "player" ? (state.world?.places ?? []).map((p) => names?.place(p.id, p.name) ?? p.name) : [];
-  const known = [...people.flatMap((p) => p.forms), ...places];
+export function described(people: Person[], state: State, names: SeatNames | undefined, describer: Describer, roster: readonly string[] = []): Person[] {
+  const places = state.view === "player" ? (state.world?.places ?? []).flatMap((p) => [p.name, names?.place(p.id, p.name) ?? p.name]) : [];
+  // The check's list only, never the model's input (Rule 3): the whole roster and glossary, in every form.
+  const known = [...new Set([...people.flatMap((p) => p.forms), ...roster, ...(names?.all ?? []), ...places])];
   return people.map((p) => (p.look ? { ...p, look: describer.shown(p.id, p.look, known) } : p));
 }

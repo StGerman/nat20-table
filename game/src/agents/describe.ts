@@ -4,7 +4,6 @@
 // the scenario (Rule 3), and it never acts (Rule 4). `heard` and `remembers` show as authored. A
 // reworded line shows only if it passes rules N9 and N10; otherwise, and until one is ready, the
 // authored line shows. A slow or failed call shows nothing new: no error, no line.
-import { createHash } from "node:crypto";
 import type { Handle } from "@nat20-table/engine-client";
 import { UsageLimitReached } from "../errors.ts";
 import { hasNumber } from "../table/guards.ts";
@@ -53,25 +52,52 @@ export function describePrompt(handle: Handle, card: string, language: Language 
   ].join("\n");
 }
 
+// Word starts, so every declension and derivation counts: «довер» is «доверять», «достойная доверия».
+const W = (stems: string) => new RegExp(`(?<![\\p{L}])(?:${stems})`, "iu");
+const WORD = (words: string) => new RegExp(`(?<![\\p{L}])(?:${words})(?![\\p{L}])`, "iu");
 const FIRST_PERSON = {
-  en: /\b(?:i|me|my|mine|myself|we|us|our|ours)\b/iu,
-  ru: /(?<![\p{L}])(?:я|меня|мне|мной|мой|моя|моё|мое|мои|моего|моей|моих|моим|мы|нас|нам|нами|наш|наша|наше|наши|нашего|нашей|наших)(?![\p{L}])/iu,
+  en: WORD("i|me|my|mine|myself|we|us|our|ours|ourselves"),
+  ru: WORD("я|меня|мне|мной|мною|мо[йяеёию]\\p{L}*|мы|нас|нам|нами|наш\\p{L}*"),
 };
-/** Advice and verdict words (rule N9): what the viewer should do or think of the person. */
+/** Advice, verdict and guesses (rule N9): what the viewer should do or think of the person. */
 const ADVICE = {
-  en: /\b(?:should|must|ought|better|trust|beware|seems?|probably)\b/iu,
-  ru: /(?<![\p{L}])(?:следует|стоит|надо|нужно|лучше|доверять|остерегаться|кажется|похоже|наверное|видимо)(?![\p{L}])/iu,
+  en: W("should|must|ought|better|trust|beware|seem|probabl|maybe|perhaps|likel|appear|suspic|honest|kind-hearted|cruel|dangerous|reliab"),
+  ru: W("следует|стоит|надо|нужно|можно|должн|лучше|довер|остерег|кажет|похож|наверн|видим|вероятн|возможн|пожалуй|подозр|честн|опасн|надёжн|надежн"),
 };
-const SHE = { en: /\b(?:she|her|hers|herself)\b/iu, ru: /(?<![\p{L}])(?:она|её|ее|ей|неё|нее|ней)(?![\p{L}])/iu };
-const HE = { en: /\b(?:he|him|his|himself)\b/iu, ru: /(?<![\p{L}])(?:он|его|ему|него|нему|ним|нём|нем)(?![\p{L}])/iu };
-const YOU = { en: /\b(?:you|your|yours)\b/iu, ru: /(?<![\p{L}])(?:вы|вас|вам|вами|ваш|ваша|ваше|ваши|вашего|вашей|ваших|вашим|вашими|вашему)(?![\p{L}])/iu };
-const COMPANY = { en: /\bcompany\b/iu, ru: /(?<![\p{L}])отряд/iu };
+const SHE = { en: WORD("she|her|hers|herself"), ru: WORD("она|её|ее|ей|неё|нее|ней|ею") };
+const HE = { en: WORD("he|him|his|himself"), ru: WORD("он|его|ему|него|нему|ним|нём|нем|им") };
+/**
+ * Gender marks in the line itself (Russian marks it in endings more than in pronouns): a pronoun,
+ * «которая» or «который», an adjective's ending, a past tense's.
+ */
+const SHE_MARK = {
+  en: SHE.en,
+  ru: new RegExp(`${SHE.ru.source}|(?<![\\p{L}])котор(?:ая|ую)(?![\\p{L}])|\\p{L}{2,}(?:ая|яя|ла)(?![\\p{L}])`, "iu"),
+};
+const HE_MARK = {
+  en: HE.en,
+  ru: new RegExp(`${HE.ru.source}|(?<![\\p{L}])котор(?:ый|ого|ому)(?![\\p{L}])|\\p{L}{2,}(?:ый|ий)(?![\\p{L}])|\\p{L}{2,}[аеиоуыя]л(?![\\p{L}])`, "iu"),
+};
+const YOU = { en: WORD("you|your|yours"), ru: W("вы|вас|вам|вами|ваш") };
+const COMPANY = { en: W("company"), ru: W("отряд") };
+
+/** A name's stem: the whole name, less a Russian ending, so «Хайстедс» finds «Хайстедса». */
+function stemOf(name: string): string {
+  return [...name].length > 4 ? name.replace(/[аяоеуюыиьйё]+$/u, "") : name;
+}
+
+/** `name` at a word start in `text`, with at most three letters of ending after it. */
+function names(text: string, name: string): boolean {
+  const stem = stemOf(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}])${stem}\\p{L}{0,3}(?![\\p{L}])`, "iu").test(text);
+}
 
 /**
  * Whether a reworded line may show in place of `source` (rules N9 and N10): no first-person word,
- * advice or verdict; no number; no name from `known` and no capitalised word inside a sentence
- * that the source lacks; the person's gender, and «вы» or «ваш отряд», kept; at most 1.5 times as
- * long. Any doubt keeps the authored line.
+ * advice, verdict or guess; no number; no name from `known` the source lacks, in any ending; every
+ * capitalised word, a sentence's first too, one the source has; the person's gendered pronoun
+ * kept where the source has one; «вы» or «ваш отряд» kept; at most 1.5 times as long. Any doubt
+ * keeps the authored line.
  */
 export function describedLine(source: string, line: string, language: Language = "en", known: readonly string[] = []): boolean {
   const out = line.trim();
@@ -79,27 +105,23 @@ export function describedLine(source: string, line: string, language: Language =
   if ([...out].length > DESCRIBE_STRETCH * [...source].length) return false;
   if (FIRST_PERSON[language].test(out) || ADVICE[language].test(out)) return false;
   if (hasNumber(out)) return false;
-  const words = (text: string) => new Set(text.split(/[^\p{L}\p{M}'’-]+/u).filter(Boolean));
-  const own = words(source);
-  for (const name of known) if (name && contains(out, name) && !contains(source, name)) return false;
-  // A capitalised word inside a sentence is a name; the source must have it.
-  for (const sentence of out.split(/(?<=[.!?…])\s+/u)) {
-    const inner = sentence.split(/\s+/u).slice(1).map((w) => w.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, ""));
-    if (inner.some((w) => /^\p{Lu}/u.test(w) && !own.has(w))) return false;
+  for (const name of known) if (name && names(out, name) && !names(source, name)) return false;
+  // A capitalised word is a name unless the source has the word: a sentence's first word too, so
+  // «Марта, пастушка…» is caught; its stem in the source is enough there («Старая» for «старая»).
+  for (const sentence of out.split(/(?<=[.!?…;:])\s+/u)) {
+    const words = sentence.split(/\s+/u).map((w) => w.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, "")).filter(Boolean);
+    for (const [i, w] of words.entries()) {
+      if (!/^\p{Lu}/u.test(w)) continue;
+      if (i === 0 ? !names(source, w) : !new RegExp(`(?<![\\p{L}])${w}(?![\\p{L}])`, "u").test(source)) return false;
+    }
   }
-  for (const [a, b] of [[SHE, HE], [HE, SHE]] as const) if (a[language].test(source) && !b[language].test(source) && b[language].test(out)) return false;
+  // The person's gender, where the source's pronoun gives it: a mark of it in the line, none of the other.
+  for (const [a, b, mark, other] of [[SHE, HE, SHE_MARK, HE_MARK], [HE, SHE, HE_MARK, SHE_MARK]] as const) {
+    if (a[language].test(source) && !b[language].test(source) && (other[language].test(out) || !mark[language].test(out))) return false;
+  }
   if (YOU[language].test(source) && !YOU[language].test(out)) return false;
   if (COMPANY[language].test(source) && !COMPANY[language].test(out)) return false;
   return true;
-}
-
-/** `name` as a whole word or phrase in `text`. */
-function contains(text: string, name: string): boolean {
-  const at = text.indexOf(name);
-  if (at < 0) return false;
-  const before = text[at - 1];
-  const after = text[at + name.length];
-  return !(before && /[\p{L}\p{M}]/u.test(before)) && !(after && /[\p{L}\p{M}]/u.test(after));
 }
 
 /** A line the describer reworded and the seat showed, for the transcript (AGT-109 reads the pairs). */
@@ -136,12 +158,12 @@ export class Describer {
 
   /** The line to show for `person`'s `authored` look: the checked rewording once ready, the authored line until then. */
   shown(person: string, authored: string, known: readonly string[] = []): string {
-    const key = `${person}\u0000${createHash("sha256").update(authored).digest("hex")}`;
+    const key = `${person}\u0000${authored}`;
     if (!this.lines.has(key)) {
       if (!this.pending.has(key) && !this.stopped) {
         // One call at a time on the one session: the lines are written in the order they show.
         const job = this.queue.then(() => this.write(key, authored, known));
-        this.queue = job;
+        this.queue = job.catch(() => undefined);
         this.pending.set(key, job);
       }
       return authored;
@@ -155,9 +177,9 @@ export class Describer {
     return line;
   }
 
-  /** Every call started so far, settled: tests and the run's end wait on it. */
+  /** Every call asked for so far, settled (they run in order, so the queue's end is theirs). */
   async settled(): Promise<void> {
-    await Promise.allSettled([...this.pending.values()]);
+    await this.queue;
   }
 
   private async write(key: string, authored: string, known: readonly string[]): Promise<void> {
@@ -166,9 +188,10 @@ export class Describer {
       this.pending.delete(key);
       return;
     }
-    this.session ??= (this.config.open ?? ((c) => new AgentSession(c)))(this.sessionConfig());
-    const session = this.session;
+    let session: TurnSession | undefined;
     try {
+      this.session ??= (this.config.open ?? ((c) => new AgentSession(c)))(this.sessionConfig());
+      session = this.session;
       const result = await session.turn(authored, "describe");
       const line = result.final.trim();
       this.lines.set(key, describedLine(authored, line, this.config.language, known) ? line : undefined);
@@ -177,14 +200,16 @@ export class Describer {
       // that act, and the card keeps its authored lines. A failed line is not asked again.
       if (error instanceof UsageLimitReached) this.stopped = true;
       this.lines.set(key, undefined);
-      if (this.session === session) this.session = undefined;
-      await session.close().catch(() => undefined);
+      if (session && this.session === session) this.session = undefined;
+      await session?.close().catch(() => undefined);
     } finally {
       this.pending.delete(key);
     }
   }
 
+  /** The run is over: no call starts after this one, and the session goes. */
   async close(): Promise<void> {
+    this.stopped = true;
     const session = this.session;
     this.session = undefined;
     await session?.close();
