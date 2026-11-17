@@ -5,7 +5,7 @@ title: "Mastiff and Draft Horse stat blocks"
 pri: P2
 dest: Fork
 size: S
-state: todo
+state: done
 area: "3. Monsters (E2, E3)"
 ---
 
@@ -13,4 +13,4 @@ Mastiff and Draft Horse stat blocks for ENG-48: SRD 5.2.1 blocks into core's reg
 
 ## Status
 
-todo. Needs nothing. Stacks on the core upstream sync PR if one is open when it starts (none open on StGerman/nat20 on 2026-11-16); the pin PR follows its merge. ENG-48's engine PR needs the pin
+done 2026-11-17: core #85 (on the upstream sync, core #84) and the pin on its head, which merges after table #423; api test `the_mastiff_and_the_draft_horse_stand_in_a_scene`. Was: Stacks on the core upstream sync PR if one is open when it starts (none open on StGerman/nat20 on 2026-11-16); the pin PR follows its merge. ENG-48's engine PR needs the pin
