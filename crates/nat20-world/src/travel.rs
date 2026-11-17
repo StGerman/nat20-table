@@ -661,8 +661,11 @@ impl World {
     }
 
     /// Shares the escort's purse out among the Blades who are `alive` (ENG-49): the shares, in
-    /// party order. Nothing once settled or shared.
+    /// party order. Nothing while the NPC owner lives (rule M3), or once settled or shared.
     pub fn share_purse(&mut self, alive: impl Fn(&str) -> bool) -> Vec<Wage> {
+        if !self.owner_dead() {
+            return Vec::new();
+        }
         self.state
             .escort
             .as_mut()
@@ -1694,14 +1697,20 @@ mod tests {
         let (mut w, _) = with(r#""if": "tobin_dead", "once": true,"#)
             .with_escort(terms(Some("tobin_falls")), blades())
             .unwrap();
-        // Alive, nothing is put; dead, the card is put once.
+        // Alive, nothing is put and the purse is never shared; dead, the card is put once.
         assert_eq!(w.put_death_card(), None);
+        assert_eq!(w.share_purse(|_| true), Vec::new());
         w.state.npcs.get_mut("tobin").unwrap().alive = false;
         assert!(w.owner_dead());
         assert_eq!(w.put_death_card(), Some("tobin_falls".into()));
         assert!(w.state.deck.waiting());
         w.state.deck.pending = None;
         assert_eq!(w.put_death_card(), None, "never twice");
+        assert_eq!(
+            w.share_purse(|_| true).len(),
+            2,
+            "dead, the purse is shared"
+        );
     }
 
     #[test]
