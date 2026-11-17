@@ -232,7 +232,6 @@
                     "id": "lost",
                     "text": "Tell him the purse was lost on the road.",
                     "text_ru": "Сказать, что кошель пропал в дороге.",
-                    "if": "took_oddas_purse",
                     "unless": "brought_oddas_purse_in",
                     "effects": [
                         {
