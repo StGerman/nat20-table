@@ -61,8 +61,9 @@ const FIRST_PERSON = {
 };
 /** Advice, verdict and guesses (rule N9): what the viewer should do or think of the person. */
 const ADVICE = {
-  en: W("should|must|ought|better|trust|beware|seem|probabl|maybe|perhaps|likel|appear|suspic|honest|kind-hearted|cruel|dangerous|reliab"),
-  ru: W("следует|стоит|надо|нужно|можно|должн|лучше|довер|остерег|кажет|похож|наверн|видим|вероятн|возможн|пожалуй|подозр|честн|опасн|надёжн|надежн"),
+  en: new RegExp(`${W("should|must|ought|better|trust|beware|seem|probabl|maybe|perhaps|likel|suspic|honest|kind-hearted|cruel|dangerous|reliab").source}|${WORD("appears?|appeared").source}`, "iu"),
+  // Whole words where a stem is also plain description: «стоит у ворот», «видимый шрам».
+  ru: new RegExp(`${W("следует|надо|нужно|можно|должн|лучше|довер|остерег|кажет|наверн|вероятн|возможн|пожалуй|подозр|честн|опасн|надёжн|надежн").source}|${WORD("стоит того|не стоит|видимо|похоже").source}`, "iu"),
 };
 const SHE = { en: WORD("she|her|hers|herself"), ru: WORD("она|её|ее|ей|неё|нее|ней|ею") };
 const HE = { en: WORD("he|him|his|himself"), ru: WORD("он|его|ему|него|нему|ним|нём|нем|им") };
@@ -78,8 +79,8 @@ const HE_MARK = {
   en: HE.en,
   ru: new RegExp(`${HE.ru.source}|(?<![\\p{L}])котор(?:ый|ого|ому)(?![\\p{L}])|\\p{L}{2,}(?:ый|ий)(?![\\p{L}])|\\p{L}{2,}[аеиоуыя]л(?![\\p{L}])`, "iu"),
 };
-const YOU = { en: WORD("you|your|yours"), ru: W("вы|вас|вам|вами|ваш") };
-const COMPANY = { en: W("company"), ru: W("отряд") };
+const YOU = { en: WORD("you|your|yours"), ru: WORD("вы|вас|вам|вами|ваш\\p{L}*") };
+const COMPANY = { en: WORD("company"), ru: W("отряд") };
 
 /** A name's stem: the whole name, less a Russian ending, so «Хайстедс» finds «Хайстедса». */
 function stemOf(name: string): string {
@@ -112,7 +113,7 @@ export function describedLine(source: string, line: string, language: Language =
     const words = sentence.split(/\s+/u).map((w) => w.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, "")).filter(Boolean);
     for (const [i, w] of words.entries()) {
       if (!/^\p{Lu}/u.test(w)) continue;
-      if (i === 0 ? !names(source, w) : !new RegExp(`(?<![\\p{L}])${w}(?![\\p{L}])`, "u").test(source)) return false;
+      if (i === 0 ? !names(source, w) : !new RegExp(`(?<![\\p{L}])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}])`, "u").test(source)) return false;
     }
   }
   // The person's gender, where the source's pronoun gives it: a mark of it in the line, none of the other.

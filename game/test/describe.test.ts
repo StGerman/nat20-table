@@ -44,6 +44,12 @@ test("a rewording shows only if it keeps to rules N9 and N10", () => {
   assert.ok(!ok("Пастушка, достойная доверия; у каждой её овцы имя."));
   assert.ok(!ok("Пастушка, похожая на мою сестру."));
   assert.ok(!describedLine("A shepherd with a name for every sheep.", "A trustworthy shepherd who names every sheep.", "en"));
+  // «вы» as a word, not a word's start; plain description words that share a stem pass.
+  assert.ok(ok("Пастушка в старом платке, она считает овец.", "Пастушка в выцветшем платке, она считает овец."));
+  assert.ok(!ok("Кузнец у горна, высокий, руки в саже.", "Кузнец у горна, вы видите его руки."));
+  assert.ok(ok("Пастушка стоит; у каждой её овцы имя."));
+  assert.ok(!ok("Пастушка, ей стоит того, чтобы ей доверяли."));
+  assert.equal(describedLine(LOOK, "Пастушка Ha(B и её овцы.", "ru"), false, "a capitalised word with regex signs is read as a word");
   // Gender in endings, with no pronoun.
   assert.ok(!ok("Старый пастух; у каждой овцы имя."));
   assert.ok(describedLine("A shepherd with a name for every sheep.", "A shepherd who knows each of her sheep by name.", "en"));
