@@ -441,6 +441,7 @@ export class TableState {
     this.question = text;
     this.dmToHuman += 1;
     this.show({ kind: "question", text });
+    await this.mention(text);
     return { ok: true, text: "asked; the answer comes with the human's next action" };
   }
 
