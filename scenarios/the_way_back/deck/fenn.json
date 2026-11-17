@@ -111,7 +111,7 @@
             "once": "contract",
             "text": "In the dark two men with a handcart are at the wagon, lifting the iron bars off it one by one, very quietly.",
             "text_ru": "В темноте у фургона двое с ручной тележкой: снимают железные прутья один за другим, очень тихо.",
-            "note": "Two Wendford men with nothing to plough with this spring: the goblins took the oxen and the price of iron went up. Persons, not beasts: they yield the moment they are caught, and a man who drops his bar has yielded. Fights stay a recommendation. Ilsa wants to know whose iron it was before it was Fenn's. If Fenn is dead (fenn_lusk_dead), the two men say the iron is nobody's now, and half believe it. The thieves are at the wagon, so the fight is there, and whoever rides with it is in it: Fenn, woken at his own wagon, the team but its last horse, the dog if it rides. Tell a wound only for a creature in the fight's list.",
+            "note": "Two Wendford men with nothing to plough with this spring: the goblins took the oxen and the price of iron went up. Persons, not beasts: they yield the moment they are caught, and a man who drops his bar has yielded. Fights stay a recommendation. Ilsa wants to know whose iron it was before it was Fenn's. If Fenn is dead (fenn_lusk_dead), the two men say the iron is nobody's now, and half believe it. The thieves are at the wagon, so the fight is there, and whoever rides with it is in it: Fenn, woken at his own wagon, the team but its last horse, Tam and the dog if they ride. Tell a wound only for a creature in the fight's list.",
             "choices": [
                 {
                     "id": "go",
