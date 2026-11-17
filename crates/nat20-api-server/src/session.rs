@@ -847,6 +847,89 @@ impl Session {
         })
     }
 
+    /// `mention`: the DM's narration named people of the roster (API-58). Each one with the
+    /// party who is not yet in the scene stands in it from now on; a fight places nobody.
+    /// Logs `npc_named` (DM only).
+    pub fn mention(&mut self, npcs: &[String], viewer: &Viewer) -> Result<CommandResult, ApiError> {
+        if *viewer != Viewer::Dm {
+            return Err(error(
+                ErrorCode::NotVisible,
+                "mention is the DM's word; send it as dm.",
+            ));
+        }
+        let Some(campaign) = self.campaign.as_ref() else {
+            return Err(error(
+                ErrorCode::NoCampaign,
+                "No campaign is running, so the world has no roster to name.",
+            ));
+        };
+        if npcs.is_empty() {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "A mention names at least one person.",
+            ));
+        }
+        for (i, id) in npcs.iter().enumerate() {
+            if npcs[..i].contains(id) {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{id} is named twice."),
+                ));
+            }
+            if !campaign.knows_npc(id) {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{id} is not a person of the world's roster."),
+                ));
+            }
+        }
+        let mut placed = Vec::new();
+        let (Some(campaign), Some(game)) = (self.campaign.as_mut(), self.game.as_mut()) else {
+            return Err(error(ErrorCode::NoScene, "No scene is loaded."));
+        };
+        if game.mode() != Mode::Combat {
+            let first = game.anchors().first().map(|a| a.id.clone());
+            for id in npcs {
+                if game.has_creature(id) {
+                    continue;
+                }
+                let Some(npc) = first
+                    .as_deref()
+                    .and_then(|first| campaign.mention_placement(id, game.scene_id(), first))
+                else {
+                    continue;
+                };
+                if let Err(e) = game.place_npc(
+                    &npc.id,
+                    &npc.monster,
+                    npc.side,
+                    &npc.anchor,
+                    &npc.name,
+                    &npc.carries,
+                    npc.hp,
+                ) {
+                    eprintln!("mention: {id} is not placed: {}", e.message);
+                    continue;
+                }
+                campaign.met(id);
+                self.npcs_here.push(id.clone());
+                placed.push(Handle(id.clone()));
+            }
+        }
+        self.push_entries();
+        self.push(Pending {
+            round: None,
+            visibility: Visibility::Dm,
+            kind: EventKind::NpcNamed {
+                npcs: npcs.to_vec(),
+                placed,
+            },
+        });
+        Ok(CommandResult::Mention {
+            state: self.state_for(viewer)?,
+        })
+    }
+
     /// Starts a fight among creatures present that no authored encounter fits (API-34).
     pub fn start_fight(
         &mut self,

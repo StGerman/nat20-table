@@ -304,6 +304,19 @@ pub fn text(kind: &EventKind) -> String {
             let ids: Vec<&str> = cards.iter().map(|c| c.id.as_str()).collect();
             format!("The road offers {}; the DM picks one.", ids.join(", "))
         }
+        EventKind::NpcNamed { npcs, placed } => {
+            if placed.is_empty() {
+                format!("The DM names {}.", npcs.join(", "))
+            } else {
+                let placed: Vec<&str> = placed.iter().map(|h| h.0.as_str()).collect();
+                let verb = if placed.len() == 1 { "stands" } else { "stand" };
+                format!(
+                    "The DM names {}; {} now {verb} in the scene.",
+                    npcs.join(", "),
+                    placed.join(", ")
+                )
+            }
+        }
         EventKind::CardPicked { card, came, .. } => match came {
             CardCame::DmPick => format!("The DM picks {card}."),
             CardCame::EnginePick => format!("The DM did not pick; the engine takes {card}."),

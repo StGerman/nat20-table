@@ -196,7 +196,7 @@ export function worldLines(world: WorldPlayer): string[] {
     );
   }
   const met = world.npcs ?? [];
-  if (met.length > 0) lines.push(`People you have met: ${met.map((n) => `${n.name} of ${named(n.place)}${n.alive ? "" : " (dead)"}`).join("; ")}.`);
+  if (met.length > 0) lines.push(`People you have met: ${met.map((n) => `${n.name}${n.place ? ` of ${named(n.place)}` : ""}${n.alive ? "" : " (dead)"}`).join("; ")}.`);
   return lines;
 }
 
@@ -443,7 +443,7 @@ export function dmWorldLines(world: WorldDm): string[] {
   }
   const npcs = world.npcs ?? [];
   if (npcs.length > 0) {
-    lines.push(`Place NPCs: ${npcs.map((n) => `${n.name} (${n.id}, ${n.monster}, ${n.attitude}) of ${named(n.place)}${n.alive ? "" : ", dead"}${n.met ? ", met" : ""}`).join("; ")}.`);
+    lines.push(`Place NPCs: ${npcs.map((n) => `${n.name} (${n.id}, ${n.monster}, ${n.attitude})${n.place ? ` of ${named(n.place)}` : ""}${n.alive ? "" : ", dead"}${n.met ? ", met" : ""}`).join("; ")}.`);
     // Who each one is, from the world file: the DM plays them from these notes.
     for (const n of npcs) if (n.notes) lines.push(`${n.name} (${n.id}): ${n.notes}`);
   }

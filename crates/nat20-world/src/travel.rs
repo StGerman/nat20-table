@@ -18,7 +18,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
-    deck::{Deck, DeckError, DeckState, Deed, DeedBook, Drawn, PickError, ScoutSkill, When},
+    deck::{
+        Deck, DeckError, DeckState, Deed, DeedBook, Drawn, OWNER_CAST, PickError, ScoutSkill, When,
+    },
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
     map::{MapError, Position, WorldMap},
@@ -346,6 +348,7 @@ impl SavedWorld {
                 offered: contract.deck.offered,
                 pending: contract.deck.pending,
                 road: contract.deck.road,
+                cast_dead: BTreeSet::new(),
             },
             npcs: memory.npcs,
             escort: contract.escort,
@@ -545,7 +548,7 @@ impl World {
     ) -> impl Iterator<Item = (&'a NpcDef, &'a NpcState)> + 'a {
         self.npcs
             .iter()
-            .filter(move |d| d.place == place)
+            .filter(move |d| d.place.as_deref() == Some(place))
             .filter_map(|d| {
                 self.state
                     .npcs
@@ -553,6 +556,38 @@ impl World {
                     .filter(|s| s.alive)
                     .map(|s| (d, s))
             })
+    }
+
+    /// Who of a card's cast is dead (API-58, rule A8), for the next draw: every roster person
+    /// the world holds dead, and `owner` when the caravan's NPC owner is one of them.
+    fn mark_cast_dead(&mut self) {
+        let dead: BTreeSet<String> = self
+            .state
+            .npcs
+            .iter()
+            .filter(|(_, s)| !s.alive)
+            .map(|(id, _)| id.clone())
+            .collect();
+        let owner_dead = matches!(&self.state.caravan.owner, Owner::Npc(id) if dead.contains(id));
+        self.state.deck.cast_dead = dead;
+        if owner_dead {
+            self.state.deck.cast_dead.insert(OWNER_CAST.to_owned());
+        }
+    }
+
+    /// Checks every card's `cast` and `tells` (API-58): each a roster person's id or `owner`.
+    pub fn check_cast(&self) -> Result<(), MapError> {
+        for card in &self.deck.cards {
+            for who in card.cast.iter().chain(&card.tells) {
+                if who != OWNER_CAST && !self.npcs.iter().any(|n| n.id == *who) {
+                    return Err(MapError(format!(
+                        "the card {} names {who} in its cast or tells, who is not in the roster",
+                        card.id
+                    )));
+                }
+            }
+        }
+        Ok(())
     }
 
     /// The place the caravan is in, if it is in one.
@@ -617,6 +652,7 @@ impl World {
     /// Draws after a leg along `road`. Returns what the draw did: a card on the table, or cards
     /// offered for the DM's pick (API-53); none when the zone has no card in play.
     pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
+        self.mark_cast_dead();
         let zone = self.map.road(road)?.zone.clone();
         let drawn = self.deck.draw(
             &zone,
@@ -635,6 +671,7 @@ impl World {
     /// Draws an arrival card of `place` when a leg ends there (ENG-35): on the table, or
     /// offered for a pick (API-53).
     pub fn draw_on_arrival(&mut self, place: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
+        self.mark_cast_dead();
         let drawn = self.deck.draw(
             place,
             When::Arrival,
@@ -680,6 +717,7 @@ impl World {
     /// Draws a night card after a night in camp where the caravan is: on the table, or offered
     /// for a pick (API-53).
     pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<Drawn> {
+        self.mark_cast_dead();
         let zone = self.zone_here();
         let drawn = self.deck.draw(
             &zone,
@@ -1281,6 +1319,46 @@ mod tests {
         assert!(w.draw_at_night(&mut dice).is_some());
         assert_eq!(w.state.deck.road, None);
         assert_eq!(w.scout_check(), None);
+    }
+
+    #[test]
+    fn a_card_with_a_dead_person_in_its_cast_is_never_drawn() {
+        let deck: crate::deck::DeckFile = serde_json::from_str(
+            r#"{"cards": [
+              {"id": "tobin_sings", "zone": "hills", "target": "blades", "text": "A song.", "cast": ["owner"],
+               "choices": [{"id": "a", "text": "A.", "effects": [{"do": "remember", "deed": "chose_a"}]}, {"id": "b", "text": "B.", "effects": [{"do": "remember", "deed": "chose_b"}]}]},
+              {"id": "ned_waves", "zone": "hills", "target": "blades", "text": "Ned waves.", "cast": ["ned"], "tells": ["tobin"],
+               "choices": [{"id": "a", "text": "A.", "effects": [{"do": "remember", "deed": "chose_a"}]}, {"id": "b", "text": "B.", "effects": [{"do": "remember", "deed": "chose_b"}]}]}
+            ]}"#,
+        )
+        .unwrap();
+        let npcs: NpcFile = serde_json::from_str(
+            r#"{"npcs": [{"id": "tobin", "name": "Tobin", "monster": "commoner"},
+                         {"id": "ned", "name": "Ned", "monster": "commoner"}]}"#,
+        )
+        .unwrap();
+        let mut w = world("npc:tobin")
+            .with_deck(Deck::from_files([deck]))
+            .unwrap()
+            .with_npcs(npcs)
+            .unwrap();
+        w.check_cast().unwrap();
+        w.state.npcs.get_mut("tobin").unwrap().alive = false;
+        // The owner is dead: only Ned's card, which only names him, is in the pile.
+        let mut dice = crate::dice::ListDice::new([1]);
+        assert_eq!(
+            w.draw_after_leg("inn_ruin", &mut dice),
+            Some(Drawn::Table {
+                card: "ned_waves".into(),
+                soon: false
+            })
+        );
+        w.state.deck.pending = None;
+        w.state.npcs.get_mut("ned").unwrap().alive = false;
+        let mut dice = crate::dice::ListDice::new([1]);
+        assert_eq!(w.draw_after_leg("inn_ruin", &mut dice), None);
+        w.deck.cards[1].cast = vec!["nobody".into()];
+        assert!(w.check_cast().unwrap_err().0.contains("nobody"));
     }
 
     #[test]

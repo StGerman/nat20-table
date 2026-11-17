@@ -268,6 +268,8 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
             .map(|n| NpcKnown {
                 id: n.id,
                 name: n.name,
+                names: n.names,
+                look: n.look,
                 place: n.place,
                 alive: n.alive,
             })
