@@ -80,7 +80,7 @@ Report through the report tool, once per message, with every contradiction you f
 - inventory: only three things. A character uses or holds an item the engine tracks but the character doesn't carry. A consumable (a potion, for one) is used with no engine line for it, or more often than the character carried. Coins or an item change hands that the equipment or the coins don't show;
 - identity: a character is called by the wrong pronouns, the wrong name, or the wrong kind of person for who the party list says they are;
 - not_in_fight: in a fight (the state lists the fight's participants), a creature attacks, is attacked or is hurt when it is not among the participants, a dog that bites or a horse that kicks the fight doesn't hold. A creature that only growls, rears, barks or stands by is not a flag.
-- unknown_person: in a living world (the state lists the world's people), someone named who is present, speaks or acts in the line and matches nobody in the party list, the creatures or the people, under any form of their name. Someone only spoken of, a crowd, a people (the Corrins), a god or a place is not a flag; a person the people list has, dead or far from where the engine has them, is not this kind either.
+- unknown_person: in a living world (the state lists the world's people), someone named who is present, speaks or acts in the line and matches nobody in the party list, the creatures or the people, under any form of their name. Someone only spoken of, a crowd, a people (the Corrins), a god or a place is not a flag; a person the people list has, dead or far from where the engine has them, is not this kind either. A party member called by a wrong name is identity, never this kind.
 
 Do not report:
 - what a line leaves out, mood, weather, smells, sounds, or anything the engine doesn't model;
@@ -167,8 +167,10 @@ export class ModelJudge implements Judge {
       let got: JudgeReport | undefined;
       const report = seatTool("report", "Report the contradictions in the lines given (and the untracked props). Call it exactly once.", reportInput, async (args) => {
         // The story-space kind is asked only of a living-world run (AGT-91).
-        // invented_on_card is the card check's, never a narration line's (AGT-109).
-        const flags = args.flags.filter((f) => lines.includes(f.line) && (this.storySpace || f.kind !== "story_space") && f.kind !== "invented_on_card");
+        // invented_on_card is the card check's, never a narration line's, and unknown_person needs
+        // the world's people in the batch (AGT-109).
+        const people = batch.includes(PEOPLE_FULL);
+        const flags = args.flags.filter((f) => lines.includes(f.line) && (this.storySpace || f.kind !== "story_space") && f.kind !== "invented_on_card" && (people || f.kind !== "unknown_person"));
         got = { flags, untracked: (args.untracked ?? []).filter((u) => lines.includes(u.line)) };
         return reply(`Reported ${flags.length} contradictions.`);
       });
@@ -267,6 +269,9 @@ function partyBlock(run: DigestRun): string {
     .join("\n");
 }
 
+/** The header of the world's people in a batch's first line; a batch without it has no people. */
+const PEOPLE_FULL = "The world's people (every form of each name):";
+
 /**
  * One line and its state, as the judge reads it. Inventory in full when `full`, else only what
  * changed since `before`. `carried` are engine lines shown with earlier lines at the same log head
@@ -287,7 +292,7 @@ export function lineBlock(d: DigestRecord, full: boolean, before: DigestRecord |
   // The world's people, in full on a batch's first line, then only when the list changed (AGT-109).
   const people = d.people ?? [];
   if (people.length > 0 && (full || JSON.stringify(people) !== JSON.stringify(before?.people ?? []))) {
-    out.push(full ? "The world's people (every form of each name):" : "The world's people, changed:");
+    out.push(full ? PEOPLE_FULL : "The world's people (the list changed):");
     for (const p of people) out.push(`- ${p.id}: called ${[p.name, ...p.names.filter((n) => n !== p.name)].join(", ")}; ${p.alive ? "alive" : "dead"}${p.place ? `, lives at ${p.place}` : ""}`);
   }
   out.push(`Next to each other: ${d.adjacent.length > 0 ? d.adjacent.map((p) => `${p[0]} and ${p[1]}`).join("; ") : "nobody"}.`);
@@ -331,7 +336,7 @@ export function batches(run: DigestRun, size = BATCH_LINES): Array<{ lines: numb
 /** One line of `narration-check.jsonl`: a flag Stas confirms or dismisses, or an untracked prop. */
 export type CheckLine = ({ id: string; text: string } & JudgeFlag) | { id: string; line: number; item: string; untracked: true };
 
-/** Runs the judge over every batch and numbers what it found (`n<line>-<k>`, `u<line>-<k>`). */
+/** Runs the judge over every batch and numbers what it found (`n<line>-<k>`, `u<line>-<k>`). The caller closes the judge. */
 export async function judgeRun(run: DigestRun, judge: Judge, size = BATCH_LINES): Promise<CheckLine[]> {
   const out: CheckLine[] = [];
   const counts = new Map<string, number>();
@@ -340,17 +345,13 @@ export async function judgeRun(run: DigestRun, judge: Judge, size = BATCH_LINES)
     counts.set(key, (counts.get(key) ?? 0) + 1);
     return `${key}-${counts.get(key)}`;
   };
-  try {
-    for (const batch of batches(run, size)) {
-      const report = await judge.judge(batch.text, batch.lines);
-      for (const f of report.flags) {
-        const text = run.digests.find((d) => d.line === f.line)?.text ?? "";
-        out.push({ id: id("n", f.line), ...f, text });
-      }
-      for (const u of report.untracked) out.push({ id: id("u", u.line), line: u.line, item: u.item, untracked: true });
+  for (const batch of batches(run, size)) {
+    const report = await judge.judge(batch.text, batch.lines);
+    for (const f of report.flags) {
+      const text = run.digests.find((d) => d.line === f.line)?.text ?? "";
+      out.push({ id: id("n", f.line), ...f, text });
     }
-  } finally {
-    await judge.close?.();
+    for (const u of report.untracked) out.push({ id: id("u", u.line), line: u.line, item: u.item, untracked: true });
   }
   return out;
 }

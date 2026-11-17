@@ -254,6 +254,14 @@ test("a named person nobody has a record of is an unknown_person flag: the batch
     await call(tools, { flags: [stranger, { line: 3, claim: "x", kind: "invented_on_card", evidence_seq: [] }] });
   });
   assert.deepEqual((await new ModelJudge({ open: s.open }).judge(batch.text, [3, 4])).flags, [stranger]);
+  // A batch with no people list (the Silent Mill) drops the kind: a wrong name there is identity.
+  const t = standIn(async (tools) => void (await call(tools, { flags: [stranger] })));
+  assert.deepEqual((await new ModelJudge({ open: t.open }).judge(plain.text, [3])).flags, []);
+  assert.match(JUDGE_PROMPT, /A party member called by a wrong name is identity/);
+  // A death between two lines of one batch prints the list again, with the change.
+  const dead = { ...record, line: 4, people: [{ ...record.people![0], alive: false }, record.people![1]] };
+  const [changed] = batches({ party: [], digests: [record, dead] } as unknown as DigestRun);
+  assert.match(changed.text, /The world's people \(the list changed\):\n- osric_hale: called Osric Hale, Osric, Осрик, Осрика; dead/);
 });
 
 test("each card line the describer reworded goes to the judge beside its authored line, and an invention is an invented_on_card flag (AGT-109)", async () => {

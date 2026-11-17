@@ -44,6 +44,15 @@ export function modelJudgeFor(dir: string): ModelJudge {
  * is moved aside first, and a new one is written only once both stages succeed.
  */
 export async function narrationCheck(pack: string, dir: string, judge: Judge): Promise<NarrationCheck> {
+  // Every pass (the lines, the cards, the carried question) uses the judge; it is closed once, after all of them.
+  try {
+    return await checkWith(pack, dir, judge);
+  } finally {
+    await judge.close?.();
+  }
+}
+
+async function checkWith(pack: string, dir: string, judge: Judge): Promise<NarrationCheck> {
   const current = path.join(dir, NARRATION_CHECK);
   const previous = path.join(dir, PREVIOUS_CHECK);
   // A previous attempt that failed already moved the last good check aside: keep that one.
