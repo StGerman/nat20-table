@@ -174,7 +174,8 @@ export function benchPack(pack: string, card: string, root: string): { dir: stri
   campaign.world.route = plan.route;
   if (campaign.world.escort) {
     campaign.world.escort.destination = plan.route.at(-1)!;
-    // The copy's deck is the one card on the bench, so it holds no death card (ENG-49).
+    // The copy's deck is the one card on the bench, so it names no death card (ENG-49); a death card
+    // benched itself still comes, by the draw, once its `if` deed holds.
     delete campaign.world.escort.death_card;
   }
   writeFileSync(file, JSON.stringify(campaign, null, 4) + "\n");
