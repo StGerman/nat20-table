@@ -99,6 +99,37 @@ mod tests {
 
     use super::*;
 
+    /// A person left down by an earlier fight in the scene does not join the next as an ally
+    /// (ENG-48): a fight refuses a downed participant.
+    #[test]
+    fn a_downed_person_never_joins_a_wagon_fight() {
+        let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+        let scene = scene::read(&data, "vale_town").unwrap();
+        crate::adapter::seed_dice(1);
+        let Ok(mut game) = Game::load(None, &scene, &[], &[]) else {
+            panic!("vale_town loads");
+        };
+        game.place_npc(
+            "hal",
+            "guard",
+            Side::Neutral,
+            "wagon",
+            "Hal",
+            &Carries {
+                coins: Coins::default(),
+                items: Vec::new(),
+            },
+            None,
+        )
+        .unwrap();
+        let entity = game.entity("hal").unwrap();
+        *game.engine.world.get::<&mut LifeState>(entity).unwrap() = LifeState::Stable;
+        let refused = game.make_ally("hal").unwrap_err();
+        assert!(refused.message.contains("is down"), "{}", refused.message);
+        *game.engine.world.get::<&mut LifeState>(entity).unwrap() = LifeState::Normal;
+        game.make_ally("hal").unwrap();
+    }
+
     /// A townsperson the party left hurt comes back as hurt, with the coin they had.
     #[test]
     fn a_place_npc_comes_back_with_the_hit_points_and_coin_they_were_left_with() {
