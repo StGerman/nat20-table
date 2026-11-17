@@ -16,6 +16,8 @@
     "party": [
         {
             "handle": "bren",
+            "look": "A sergeant in chain mail with a longsword and a shield, an old dent in the shield's rim.",
+            "look_ru": "Сержант в кольчуге, с длинным мечом и щитом; на ободе щита старая вмятина.",
             "seat": "human",
             "card": "cards/bren.md",
             "names": [
@@ -31,6 +33,8 @@
         },
         {
             "handle": "torva",
+            "look": "A tall woman with a greataxe and no armour, who hums the company's marching song and gets the second verse wrong.",
+            "look_ru": "Высокая женщина с большим топором и без доспехов; напевает походную песню отряда и путает второй куплет.",
             "seat": "ai",
             "card": "cards/torva.md",
             "pronouns": "she/her",
@@ -47,6 +51,8 @@
         },
         {
             "handle": "maren",
+            "look": "A priest in chain mail with a mace and a shield, a heel of bread always wrapped in a cloth on her.",
+            "look_ru": "Жрица в кольчуге, с булавой и щитом; при ней всегда горбушка хлеба в тряпице.",
             "seat": "ai",
             "card": "cards/maren.md",
             "pronouns": "she/her",
@@ -63,6 +69,8 @@
         },
         {
             "handle": "ilsa",
+            "look": "A red-scaled dragonborn with a small notebook she writes everything in, insults included.",
+            "look_ru": "Драконорождённая с красной чешуёй и маленькой записной книжкой; пишет в неё всё подряд, даже ругань.",
             "seat": "ai",
             "card": "cards/ilsa.md",
             "pronouns": "she/her",
@@ -98,17 +106,7 @@
     ],
     "glossary_ru": {
         "oilskin coat": "промасленный плащ",
-        "Bel Corrin": "Бел Коррин",
-        "Tam": "Тэм",
-        "Mother Sedge": "матушка Седж",
-        "Sister Agna": "сестра Агна",
-        "Tobin": "Тобин",
-        "Rufus": "Руфус",
-        "Col": "Кол",
-        "Dunn": "Данн",
         "Bald Hill": "Лысая гора",
-        "Fenn Lusk": "Фенн Ласк",
-        "Nell Hale": "Нелл Хейл",
         "clipboard": "дощечка для записей",
         "Midwend": "Мидвенд"
     },

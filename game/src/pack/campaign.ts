@@ -52,7 +52,9 @@ export function worldNames(pack: string): string[] {
   if (!world) return [];
   const npcs = path.join(world.dir, "npcs.json");
   const list = existsSync(npcs) ? (JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Array<{ id: string; name_ru?: string }> }).npcs : [];
-  return [...list.flatMap((npc) => (npc.name_ru ? [`${npc.id}: ${npc.name_ru}`] : [])), ...placeNames(world.dir, () => true)];
+  // A roster person the pack also lists (its Merchant, MAP-24) has the pack's name already.
+  const own = new Set(((JSON.parse(readFileSync(path.join(pack, "campaign.json"), "utf8")) as { npcs?: Array<{ id: string }> }).npcs ?? []).map((n) => n.id));
+  return [...list.flatMap((npc) => (npc.name_ru && !own.has(npc.id) ? [`${npc.id}: ${npc.name_ru}`] : [])), ...placeNames(world.dir, () => true)];
 }
 
 /**

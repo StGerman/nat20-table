@@ -5,7 +5,7 @@ title: "The people of Wend in the roster, and cast and tells on every card"
 pri: P2
 dest: Ours
 size: L
-state: todo
+state: done
 area: "7. Maps and scenario (E7)"
 ---
 
@@ -13,4 +13,4 @@ area: "7. Maps and scenario (E7)"
 
 ## Status
 
-todo. Needs API-58 and API-59; its M13 files (MAP-20, ENG-44) are on main. ENG-48's deck half, MAP-23, ENG-49's deck PR and AGT-107 wait on it
+done. 15 people in `worlds/wend/npcs.json` (Wenna joins the 14: two Wend cards name her), `look` on the 4 companions, `cast` and `tells` on all 46 Wend cards, the people out of both packs' `glossary_ru`; rule N2 in `pack check` (`rosterProblems`, and a beast in the roster refused by the engine) and N3 with the deed rule in `crates/nat20-api-server/tests/deeds.rs`. Zoya's page is `/mnt/project-files/engine/allies/map24-zoya-page.md`. Two of her memory lines wait for the company entries that write their deeds: Gwyn's `gwyns_dog_dead` (ENG-48's deck half) and Tam's `tam_hurt` (MAP-23), kept in `/mnt/project-files/engine/allies/map24-held-memories.json`. Her board debts go to ENG-49, AGT-107 and the deck half where they belong

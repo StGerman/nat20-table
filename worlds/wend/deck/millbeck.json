@@ -3,6 +3,7 @@
     "cards": [
         {
             "id": "millbeck_bridge",
+            "tells": ["col", "dunn"],
             "zone": "millbeck",
             "target": "caravan",
             "once": true,

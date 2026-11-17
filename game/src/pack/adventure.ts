@@ -58,6 +58,12 @@ const PartyMember = z
       .min(1)
       .optional()
       .describe("The one Russian form the agents write in a Russian run (AGT-38), such as «Ильза»; it must be among `names`."),
+    look: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("How the others see the character, in one line with no digit (MAP-24, allies design §6.2): a companion's person card shows it beside its names."),
+    look_ru: z.string().min(1).optional().describe("`look` in a Russian run."),
   })
   .describe("One party member.");
 

@@ -3,6 +3,7 @@
     "cards": [
         {
             "id": "tams_story",
+            "cast": ["tam"],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "blades",
@@ -60,6 +61,7 @@
         },
         {
             "id": "rufus_due",
+            "cast": ["warden_brannock"],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "blades",
@@ -149,6 +151,8 @@
         },
         {
             "id": "oddas_mark",
+            "cast": ["rufus", "warden_brannock"],
+            "tells": ["odda_vell", "col", "dunn"],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "caravan",
@@ -233,6 +237,7 @@
         },
         {
             "id": "tobins_hands",
+            "cast": ["tobin"],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "blades",
@@ -270,6 +275,7 @@
         },
         {
             "id": "loaf_at_the_sea",
+            "cast": ["sister_agna"],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "blades",

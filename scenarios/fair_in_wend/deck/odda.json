@@ -3,6 +3,7 @@
     "cards": [
         {
             "id": "the_fair_gate",
+            "cast": ["owner", "warden_brannock"],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "caravan",
@@ -78,6 +79,7 @@
         },
         {
             "id": "meadow_track",
+            "cast": ["owner"],
             "zone": "lowland",
             "target": "caravan",
             "owner_pick": "take",
@@ -119,6 +121,8 @@
         },
         {
             "id": "rufus_offer",
+            "cast": ["rufus"],
+            "tells": ["owner"],
             "zone": "lowland",
             "when": "night",
             "target": "blades",

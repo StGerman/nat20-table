@@ -169,6 +169,7 @@
         },
         {
             "id": "peddler",
+            "cast": ["tobin"],
             "zone": "slopes",
             "target": "blades",
             "text": "A peddler pushing a handcart falls in beside the escort, his hands shaking on the shafts. He has news from up and down the road, he says, and he has not eaten since yesterday.",
@@ -204,6 +205,7 @@
         },
         {
             "id": "boy_on_tailboard",
+            "cast": ["tam"],
             "zone": "slopes",
             "target": "blades",
             "chained": true,
@@ -256,6 +258,7 @@
         },
         {
             "id": "bog_wifes_toll",
+            "cast": ["mother_sedge"],
             "zone": "slopes",
             "target": "blades",
             "text": "An old woman the hill folk call the bog-wife sits on the milestone where the track skirts the moss, a basket of knotted charms on her knees and a crow on her shoulder. She asks each traveller for a crust, a coin or a true word, and pays in charms.",
@@ -370,6 +373,7 @@
         },
         {
             "id": "barefoot_pilgrim",
+            "cast": ["sister_agna"],
             "zone": "slopes",
             "target": "caravan",
             "owner_pick": ["seat", "walk"],
