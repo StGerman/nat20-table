@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.75"
+    "version": "1.0.0-dev.76"
   },
   "$defs": {
     "Ability": {
@@ -779,6 +779,13 @@
       "description": "The road card on the table, as the DM sees it.",
       "type": "object",
       "properties": {
+        "cast": {
+          "description": "Who is there (API-58): roster ids, or `owner` for the caravan's NPC owner. DM only.\nEmpty, and left out, when the card names nobody.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "choices": {
           "description": "The choices, with the customs each keeps or breaks (API-55); the last is `own_move`, in\nthe seat's own words, once the card has one (API-56).",
           "type": "array",
@@ -829,6 +836,13 @@
         "target": {
           "description": "Who decides it.",
           "$ref": "#/$defs/CardTarget"
+        },
+        "tells": {
+          "description": "Who is only named or spoken of (API-58): roster ids, or `owner`. DM only. Empty, and\nleft out, when nobody.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "text": {
           "description": "What the players read.",
@@ -1770,6 +1784,24 @@
             "cmd": {
               "type": "string",
               "const": "pick_card"
+            },
+            "state": {
+              "description": "Projected for the request's `viewer`.",
+              "$ref": "#/$defs/State"
+            }
+          },
+          "required": [
+            "cmd",
+            "state"
+          ]
+        },
+        {
+          "description": "The state after a mention, with anyone it placed in the scene.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "mention"
             },
             "state": {
               "description": "Projected for the request's `viewer`.",
@@ -4096,6 +4128,34 @@
           ]
         },
         {
+          "description": "The DM's narration named people of the roster (API-58; `mention`). DM only. `placed`\nlists those it put in the scene, each at their anchor or the scene's first.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "npc_named"
+            },
+            "npcs": {
+              "description": "The roster ids named, as sent.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "placed": {
+              "description": "The creatures placed in the scene by this mention; empty, and left out, when none.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Handle"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "npcs"
+          ]
+        },
+        {
           "description": "How the next card came to the table (API-53), right before its `card_drawn`. DM only.\nNot logged for a zone's only card, whose draw roll alone shows it.",
           "type": "object",
           "properties": {
@@ -5057,16 +5117,30 @@
       ]
     },
     "NpcDm": {
-      "description": "A place NPC as the DM sees them (API-48).",
+      "description": "A person of the world's roster as the DM sees them (API-48, API-58): a place NPC, someone\non the road, or someone only heard of.",
       "type": "object",
       "properties": {
         "alive": {
           "description": "Whether they are alive.",
           "type": "boolean"
         },
+        "anchor": {
+          "description": "The anchor of their place's scene they stand at; absent with no place (API-58).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "attitude": {
           "description": "How they feel about the party.",
           "$ref": "#/$defs/NpcAttitude"
+        },
+        "heard": {
+          "description": "What the valley says of them aloud (API-58), in English: a rumour, never a fact.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "hp": {
           "description": "Hit Points when the party last left them; absent when at full. While the party is in\ntheir place, their creature in the scene has the live value.",
@@ -5078,8 +5152,15 @@
           "minimum": 0
         },
         "id": {
-          "description": "The id; also their creature handle while the party is in their place.",
+          "description": "The id; also their creature handle while they stand in the scene.",
           "type": "string"
+        },
+        "look": {
+          "description": "What anyone who sees them sees (API-58), in English.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "met": {
           "description": "Whether the party has met them.",
@@ -5093,6 +5174,13 @@
           "description": "The name players read.",
           "type": "string"
         },
+        "names": {
+          "description": "Every listed form of the name, in every language (API-58): a story word is theirs only\nwhen it equals one. Empty, and left out, when none is listed.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "notes": {
           "description": "Who they are, from the world file.",
           "type": [
@@ -5101,14 +5189,23 @@
           ]
         },
         "place": {
-          "description": "The place they live in.",
-          "type": "string"
+          "description": "The place they live in; absent for someone who lives on no map place (API-58).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "remembers": {
+          "description": "What they remember of the party (API-58): one line per deed, in English, every line\nthe roster holds whether its deed is remembered or not. Empty, and left out, when none.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NpcRemembers"
+          }
         }
       },
       "required": [
         "id",
         "name",
-        "place",
         "monster",
         "attitude",
         "alive",
@@ -5116,7 +5213,7 @@
       ]
     },
     "NpcKnown": {
-      "description": "A place NPC the party has met, as a player sees them: never Hit Points, attitude or notes.",
+      "description": "A person the party has met, as a player sees them: never Hit Points, attitude or notes.",
       "type": "object",
       "properties": {
         "alive": {
@@ -5124,29 +5221,70 @@
           "type": "boolean"
         },
         "id": {
-          "description": "The id; also their creature handle while the party is in their place.",
+          "description": "The id; also their creature handle while they stand in the scene.",
           "type": "string"
+        },
+        "look": {
+          "description": "What anyone who sees them sees (API-58), in English; the table reads the run\nlanguage's line from the world file.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "name": {
           "description": "The name.",
           "type": "string"
         },
+        "names": {
+          "description": "Every listed form of the name (API-58), for the table's matcher. Empty, and left out,\nwhen none is listed.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "place": {
-          "description": "The place they live in.",
-          "type": "string"
+          "description": "The place they live in; absent for someone who lives on no map place (API-58).",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
         "id",
         "name",
-        "place",
         "alive"
+      ]
+    },
+    "NpcRemembers": {
+      "description": "One line of what a person remembers of the party (API-58). DM only here.",
+      "type": "object",
+      "properties": {
+        "deed": {
+          "description": "The deed it answers.",
+          "type": "string"
+        },
+        "line": {
+          "description": "The line, in English; the table finds the run language's line in the world file by\nthe person's id and this line (decision 0067).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "deed",
+        "line"
       ]
     },
     "OfferedCard": {
       "description": "A road card a draw offered for the DM's pick (API-53). DM only.",
       "type": "object",
       "properties": {
+        "cast": {
+          "description": "Who is there (API-58): roster ids, or `owner` for the caravan's NPC owner. DM only.\nEmpty, and left out, when the card names nobody.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "choices": {
           "description": "The choices it would offer, with the customs each keeps or breaks (API-55).",
           "type": "array",
@@ -5186,6 +5324,13 @@
         "target": {
           "description": "Who would decide it.",
           "$ref": "#/$defs/CardTarget"
+        },
+        "tells": {
+          "description": "Who is only named or spoken of (API-58): roster ids, or `owner`. DM only. Empty, and\nleft out, when nobody.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "text": {
           "description": "What the players would read.",
@@ -6712,6 +6857,27 @@
             "cmd",
             "card",
             "reason"
+          ]
+        },
+        {
+          "description": "The DM's narration named people of the world's roster (API-58; protocol §4.15). DM\nonly. A person who is with the party (who lives in the place the party is in, owns the\ncaravan, or is in the cast of the card on the table) and is not yet in the scene stands\nin it from now on; during a fight a mention places nobody.",
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "const": "mention"
+            },
+            "npcs": {
+              "description": "Roster ids, each once.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "cmd",
+            "npcs"
           ]
         },
         {
@@ -8874,7 +9040,7 @@
           ]
         },
         "npcs": {
-          "description": "Every place NPC, alive or dead, met or not, in the world file's order (API-48).",
+          "description": "Every person of the roster, alive or dead, met or not, in the world file's order\n(API-48, API-58).",
           "type": "array",
           "items": {
             "$ref": "#/$defs/NpcDm"

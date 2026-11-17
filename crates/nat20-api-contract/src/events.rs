@@ -462,6 +462,15 @@ pub enum EventKind {
         /// The check succeeded: the party meets the card forewarned.
         saw: bool,
     },
+    /// The DM's narration named people of the roster (API-58; `mention`). DM only. `placed`
+    /// lists those it put in the scene, each at their anchor or the scene's first.
+    NpcNamed {
+        /// The roster ids named, as sent.
+        npcs: Vec<String>,
+        /// The creatures placed in the scene by this mention; empty, and left out, when none.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        placed: Vec<Handle>,
+    },
     /// How the next card came to the table (API-53), right before its `card_drawn`. DM only.
     /// Not logged for a zone's only card, whose draw roll alone shows it.
     CardPicked {

@@ -848,6 +848,12 @@ impl Session {
                 target,
                 state: LifeState::Dead,
             } => {
+                // A roster person who dies in the scene is dead to the world at once (API-58).
+                if self.npcs_here.contains(&target.0)
+                    && let Some(campaign) = self.campaign.as_mut()
+                {
+                    campaign.npc_died(&target.0);
+                }
                 if let Some(npc) = self.card_npcs.remove(&target.0) {
                     let by = self.last_blow.get(&target.0).cloned().into_iter().collect();
                     return Some((world::killed_deed(&npc), by));

@@ -212,6 +212,7 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
     case "card_shown":
     case "deed_remembered":
     case "own_move_set":
+    case "npc_named":
       return null;
     case "combat_started":
       return `Бой! Порядок ходов: ${n.list(event.participants)}.`;
