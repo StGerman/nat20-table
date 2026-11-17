@@ -1010,6 +1010,10 @@ impl Session {
         self.wagon_fight = wagon.then_some(WagonFight { blades, allies });
         let surprised = surprise.then_some(Side::Hostile);
         let result = self.game_mut()?.start_fight_surprised(&fighters, surprised);
+        // A fight that never started has no end to write its wounds at.
+        if result.is_err() {
+            self.wagon_fight = None;
+        }
         self.after_decision(result)
     }
 
@@ -1026,20 +1030,22 @@ impl Session {
             .map(|c| c.wagon_allies(owner))
             .unwrap_or_default();
         let mut allies = BTreeMap::new();
-        let mut seen = Vec::new();
+        let mut taken: Vec<String> = Vec::new();
         for ally in plan {
             let game = self.game.as_mut().ok_or_else(no_scene)?;
             let first = game.anchor_or_first(None).unwrap_or_default();
             let (handle, of, placed) = match ally {
                 campaign::WagonAlly::Animal { wagon, animal } => {
+                    // The first handle of this wagon's kind not taken in this fight and not a
+                    // dead one's: a horse that lived through an earlier fight here joins as it
+                    // stands, a new one is placed.
                     let base = format!("{animal}_{wagon}");
-                    let k = 1 + seen.iter().filter(|b| **b == base).count();
-                    seen.push(base.clone());
-                    let handle = Handle(format!("{base}_{k}"));
+                    let handle = (1..)
+                        .map(|n| Handle(format!("{base}_{n}")))
+                        .find(|h| !taken.contains(&h.0) && !game.is_dead(&h.0))
+                        .expect("some handle is free");
+                    taken.push(handle.0.clone());
                     let placed = if game.has_creature(&handle.0) {
-                        if game.is_dead(&handle.0) {
-                            continue;
-                        }
                         game.make_ally(&handle.0)
                     } else {
                         game.place_ally(&handle, &animal, &first, None)
