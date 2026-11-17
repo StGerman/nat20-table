@@ -552,6 +552,11 @@ pub enum EventKind {
     EscortSettled {
         /// The destination, a place id.
         destination: String,
+        /// Whose purse the pay came out of (ENG-49): the owner's, or the purse the Blades
+        /// carried in for a dead owner, or none, the Blades having shared it out. Absent in a
+        /// log written before 1.0.0-dev.79, where it is the owner's.
+        #[serde(default)]
+        purse: ArrivalPurse,
     },
     /// A night passed (`rest_night`), after its `ledger`, saving throw and `rest` entries.
     /// Public.
@@ -745,6 +750,19 @@ pub enum LedgerGoods {
         /// How many.
         quantity: u32,
     },
+}
+
+/// Whose purse paid the Blades at the destination (ENG-49, protocol §4.17).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ArrivalPurse {
+    /// The caravan's owner paid them, alive.
+    #[default]
+    Owner,
+    /// The owner is dead, and the Blades carried the purse in: they were paid from it.
+    Carried,
+    /// The owner is dead, and the Blades shared the purse out on the road: nothing was paid.
+    Shared,
 }
 
 /// Why something moved in the ledger. A closed set.

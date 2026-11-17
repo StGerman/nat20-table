@@ -2,9 +2,9 @@
 //! text can never carry a number the view type left out (CLAUDE.md Rule 3).
 
 use nat20_api_contract::{
-    AgainstKind, CardCame, CombatOverReason, ConcentrationEndReason, DamageType, DiceRolled,
-    EventKind, Handle, LedgerGoods, LedgerReason, LifeState, Lodging, Mode, RollKind, RollOutcome,
-    RollView, Side,
+    AgainstKind, ArrivalPurse, CardCame, CombatOverReason, ConcentrationEndReason, DamageType,
+    DiceRolled, EventKind, Handle, LedgerGoods, LedgerReason, LifeState, Lodging, Mode, RollKind,
+    RollOutcome, RollView, Side,
 };
 
 /// The sentence for one event.
@@ -353,9 +353,19 @@ pub fn text(kind: &EventKind) -> String {
                 format!("The world remembers {deed}, by {}.", by.join(", "))
             }
         }
-        EventKind::EscortSettled { destination } => {
-            format!("The caravan reaches {destination}; the Blades are paid what they are owed.")
-        }
+        EventKind::EscortSettled { destination, purse } => match purse {
+            ArrivalPurse::Owner => {
+                format!(
+                    "The caravan reaches {destination}; the Blades are paid what they are owed."
+                )
+            }
+            ArrivalPurse::Carried => format!(
+                "The caravan reaches {destination}; the Blades are paid from the purse they carried in."
+            ),
+            ArrivalPurse::Shared => format!(
+                "The caravan reaches {destination}; the purse was shared out, and nothing more is paid."
+            ),
+        },
         EventKind::XpAwarded {
             actor,
             xp,

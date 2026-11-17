@@ -85,6 +85,19 @@ test("a card payment is never called a toll, for any payer, in either language (
   }
 });
 
+test("the arrival line says which purse paid, and a wage names nobody as payer (ENG-49)", () => {
+  const settled = (purse?: string) => ({ kind: "escort_settled", seq: 3, visibility: { scope: "public" }, text: "The caravan reaches Saltmouth.", destination: "wendmouth", ...(purse ? { purse } : {}) }) as unknown as Event;
+  const ru = new SeatNames("ru", new Map([["wendmouth", "Солтмут"], ["maren", "Марен"]]));
+  const line = (e: Event) => seatLine(e, { names: ru, site: "seat" });
+  assert.equal(line(settled()), "Обоз прибыл: Солтмут. Наёмникам заплачено, что положено.");
+  assert.equal(line(settled("owner")), line(settled()));
+  assert.match(line(settled("carried")) ?? "", /из кошеля, который вы довезли/);
+  assert.match(line(settled("shared")) ?? "", /Кошель вы уже взяли/);
+  const wage = { kind: "ledger", seq: 4, visibility: { scope: "public" }, text: "x", from: "npc:odda_vell", to: "maren", what: { kind: "coins", copper: 200 }, reason: "wage" } as unknown as Event;
+  assert.equal(seatLine(wage, { names: new SeatNames(), site: "seat", human: "bren" }), "Maren is paid 2 gold pieces in wages.");
+  assert.doesNotMatch(seatLine(wage, { names: ru, site: "seat", human: "bren" }) ?? "", /Одд|odda/i);
+});
+
 test("the Russian dictionary names every option the fixtures offer", () => {
   const ids = new Set<string>();
   for (const f of readdirSync(FIXTURES)) {

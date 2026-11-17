@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.78"
+    "version": "1.0.0-dev.79"
   },
   "$defs": {
     "Ability": {
@@ -509,6 +509,26 @@
           "description": "A line.",
           "type": "string",
           "const": "line"
+        }
+      ]
+    },
+    "ArrivalPurse": {
+      "description": "Whose purse paid the Blades at the destination (ENG-49, protocol §4.17).",
+      "oneOf": [
+        {
+          "description": "The caravan's owner paid them, alive.",
+          "type": "string",
+          "const": "owner"
+        },
+        {
+          "description": "The owner is dead, and the Blades carried the purse in: they were paid from it.",
+          "type": "string",
+          "const": "carried"
+        },
+        {
+          "description": "The owner is dead, and the Blades shared the purse out on the road: nothing was paid.",
+          "type": "string",
+          "const": "shared"
         }
       ]
     },
@@ -4362,6 +4382,11 @@
             "kind": {
               "type": "string",
               "const": "escort_settled"
+            },
+            "purse": {
+              "description": "Whose purse the pay came out of (ENG-49): the owner's, or the purse the Blades\ncarried in for a dead owner, or none, the Blades having shared it out. Absent in a\nlog written before 1.0.0-dev.79, where it is the owner's.",
+              "$ref": "#/$defs/ArrivalPurse",
+              "default": "owner"
             }
           },
           "required": [

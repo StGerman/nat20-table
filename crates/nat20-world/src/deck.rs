@@ -448,6 +448,10 @@ pub enum Effect {
         /// The deed id, in snake_case
         deed: String,
     },
+    /// The escort's purse is shared out among the living Blades, evenly, an odd copper by
+    /// party order, as `loot`; nothing more is paid at the destination (ENG-49, design §5).
+    /// Only a card whose caravan's NPC owner is dead offers it
+    SharePurse,
 }
 
 /// One creature of a card's fight.
@@ -690,6 +694,9 @@ pub struct Table {
     pub blades: Vec<String>,
     /// The seat that breaks a tied Blade vote: the human's, when one plays
     pub tie_breaker: Option<String>,
+    /// The caravan's NPC owner is dead (ENG-49, rule M2): a caravan card is decided as a
+    /// Blade card, with no owner to insist and the human seat breaking a tie
+    pub owner_dead: bool,
 }
 
 /// How a card was decided.
@@ -1189,6 +1196,23 @@ impl Deck {
         self
     }
 
+    /// Whether a fight of this deck can kill the caravan's NPC owner: a wagon fight that does
+    /// not leave the owner out (ENG-49, rule A9 for the owner).
+    pub fn owner_may_fall(&self) -> bool {
+        self.cards.iter().any(|card| {
+            Self::effects(card).iter().any(|e| {
+                matches!(
+                    e,
+                    Effect::Fight {
+                        wagon: true,
+                        owner: true,
+                        ..
+                    }
+                )
+            })
+        })
+    }
+
     /// Every deed a card or a choice reads in its `if` (ENG-48, rule A9): a reader that speaks.
     pub fn read_in_if(&self) -> BTreeSet<String> {
         self.cards
@@ -1398,6 +1422,17 @@ impl Deck {
         });
     }
 
+    /// A card the engine puts on the table itself, not drawn and taking no pile's place
+    /// (ENG-49, rule M1), with the choices its deeds offer; it is gone for the world after.
+    pub fn put_card(&self, id: &str, deeds: &DeedBook, state: &mut DeckState) -> bool {
+        let Some(card) = self.card(id) else {
+            return false;
+        };
+        self.put_on_table(card, deeds, state);
+        state.gone.insert(card.id.clone());
+        true
+    }
+
     /// A chained card joins the deck; a `soon` one also joins the queue the next draw in its
     /// zone takes first, unless it is gone for the world (ENG-40): it can never be drawn.
     pub fn add(&self, state: &mut DeckState, card: &str, soon: bool) {
@@ -1496,7 +1531,7 @@ impl Deck {
         let offered = pending.offered(card);
         let pick = offered
             .iter()
-            .find(|c| c.owner_insists)
+            .find(|c| c.owner_insists && !table.owner_dead)
             .or_else(|| {
                 card.owner_pick
                     .as_ref()?
@@ -1786,7 +1821,7 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
             .cloned()
             .collect()
     };
-    if card.target == Target::Caravan {
+    if card.target == Target::Caravan && !table.owner_dead {
         if matches!(table.owner, Owner::Player(_)) {
             return None;
         }
@@ -1827,7 +1862,9 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
         .tie_breaker
         .as_ref()
         .and_then(|h| pending.said.get(h))
-        .filter(|c| card.target == Target::Blades && tied.contains(&c.as_str()));
+        .filter(|c| {
+            (card.target == Target::Blades || table.owner_dead) && tied.contains(&c.as_str())
+        });
     let pick = card
         .owner_pick
         .as_ref()
@@ -1936,6 +1973,7 @@ mod tests {
             owner: Owner::Npc("tobin".into()),
             blades: vec!["bren".into(), "maren".into()],
             tie_breaker: Some("bren".into()),
+            owner_dead: false,
         }
     }
 
@@ -2250,12 +2288,62 @@ mod tests {
     }
 
     #[test]
+    fn with_the_owner_dead_nobody_insists_and_the_human_breaks_a_caravan_tie() {
+        let d = deck();
+        let table = Table {
+            owner_dead: true,
+            ..npc_table()
+        };
+        let pending = || DeckState {
+            pending: Some(PendingCard {
+                card: "mud".into(),
+                choices: Vec::new(),
+                said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
+            }),
+            ..DeckState::default()
+        };
+        let mut state = pending();
+        d.speak(&mut state, &table, "bren", "push").unwrap();
+        let done = d
+            .speak(&mut state, &table, "maren", "push")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            ("push", Decided::Majority)
+        );
+
+        // The owner's pick would take `push`; the human's `unload` breaks the tie instead.
+        let mut state = pending();
+        d.speak(&mut state, &table, "bren", "unload").unwrap();
+        let done = d
+            .speak(&mut state, &table, "maren", "push")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            ("unload", Decided::Tie)
+        );
+
+        let mut state = pending();
+        let quiet = Table {
+            blades: Vec::new(),
+            ..table.clone()
+        };
+        let done = d.settle_unattended(&mut state, &quiet).unwrap();
+        assert_ne!(done.decided, Decided::OwnerInsists);
+    }
+
+    #[test]
     fn a_player_owner_decides_after_every_blade_advises() {
         let d = deck();
         let table = Table {
             owner: Owner::Player("ilsa".into()),
             blades: vec!["bren".into(), "maren".into()],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = DeckState {
             pending: Some(PendingCard {
@@ -2318,6 +2406,7 @@ mod tests {
             owner: Owner::Npc("tobin".into()),
             blades: vec![],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = DeckState {
             pending: Some(PendingCard {
@@ -2517,6 +2606,7 @@ mod tests {
             owner: Owner::Npc("tobin".into()),
             blades: vec!["bren".into(), "maren".into(), "torva".into()],
             tie_breaker: Some("bren".into()),
+            owner_dead: false,
         };
         let mut state = pending("beggar");
         d.own_move(&mut state, &three, own_alone("bren", "give"))
@@ -2551,6 +2641,7 @@ mod tests {
             owner: Owner::Player("ilsa".into()),
             blades: vec!["bren".into(), "maren".into()],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = pending("mud");
         d.own_move(&mut state, &table, own_alone("bren", "push"))
@@ -2703,6 +2794,7 @@ mod tests {
             owner: Owner::Player("ilsa".into()),
             blades: vec!["bren".into(), "maren".into()],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = pending("mud");
         d.speak(&mut state, &table, "bren", "push").unwrap();
@@ -2728,6 +2820,7 @@ mod tests {
             owner: Owner::Npc("tobin".into()),
             blades: vec![],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = pending("mud");
         state.pending.as_mut().unwrap().own_move = Some(own("bren", "push", "unload"));

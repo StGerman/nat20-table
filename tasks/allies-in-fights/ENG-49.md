@@ -5,7 +5,7 @@ title: "The Merchant can die in a wagon fight, and the Blades decide on the purs
 pri: P2
 dest: Ours
 size: L
-state: todo
+state: partial
 area: "2. Engine correctness (core)"
 ---
 
@@ -19,4 +19,4 @@ Check: design §11 rows 3 and 4 (test, no model). Cost: 21 + 21 USD build, Stas 
 
 ## Status
 
-todo. Engine needs API-58 and ENG-48's engine PR; deck needs MAP-24 and the engine PR. The Merchant is not placed at `millbeck_bridge` (§16 item 7, Stas 2026-11-16)
+partial. Engine done (design PR 13): rules M1 to M4, `escort.death_card` checked to go once and read `<owner>_dead`, owner rule A9, the `share_purse` effect, `escort_settled.purse` (`owner`, `carried`, `shared`; contract 1.0.0-dev.79: the arrival line needs to know which purse paid, so the field is on the wire after all), fixture `merchant_death.jsonl` with both choices. Deck (design PR 14) is next. The Merchant is not placed at `millbeck_bridge` (§16 item 7, Stas 2026-11-16)

@@ -96,7 +96,7 @@ impl Session {
 
     /// Logs the card on the table (`card_drawn`, public), after the scout's look ahead when
     /// the card has something to find (API-54). A card nobody can speak on is settled at once.
-    fn show_card(&mut self) -> Result<(), ApiError> {
+    pub(super) fn show_card(&mut self) -> Result<(), ApiError> {
         self.scout_look()?;
         let Some(campaign) = self.campaign.as_ref() else {
             return Ok(());
@@ -130,7 +130,7 @@ impl Session {
         self.push(Pending::public(
             None,
             EventKind::CardDrawn {
-                target: campaign::target(card.target),
+                target: campaign.target_now(&card),
                 card_text: card.text.clone(),
                 choices: campaign::choices(&card, pending.as_ref()),
             },
@@ -749,6 +749,18 @@ impl Session {
                     self.push_entries();
                 }
                 Ok(())
+            }
+            world::Effect::SharePurse => {
+                // The purse goes to the Blades still standing, as loot (ENG-49).
+                let game = self.game.as_ref();
+                let alive = |b: &str| game.is_some_and(|g| g.has_creature(b) && !g.is_dead(b));
+                let shares = self
+                    .campaign
+                    .as_mut()
+                    .expect("a card needs a campaign")
+                    .world
+                    .share_purse(alive);
+                self.pay_wages(shares, LedgerReason::Loot)
             }
             world::Effect::Gain { who, copper } => {
                 for taker in self.who(*who, false) {

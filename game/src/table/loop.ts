@@ -907,14 +907,25 @@ export class TableLoop {
           this.settledLater = event;
           return;
         }
-        await this.wakeDm(
-          "road",
-          undefined,
-          `The caravan reached ${event.destination}, and the merchant paid the Blades what they are owed: ${event.text}`,
-          this.arrivalOpened
-            ? "Your last narration opened the arrival: don't tell it again. Narrate the pay alone as a scene, once, in two to four sentences: the merchant's words, the coin changing hands. Name an amount only as the engine's lines give it, never a sum of your own."
-            : "Narrate the arrival and the pay as a scene, in two to four sentences: the merchant's words, the coin changing hands. Name an amount only as the engine's lines give it, never a sum of your own.",
-        );
+        {
+          // Whose purse paid (ENG-49, rule M4): a dead merchant pays nobody and says nothing.
+          const purse = event.purse ?? "owner";
+          const what =
+            purse === "owner"
+              ? `The caravan reached ${event.destination}, and the merchant paid the Blades what they are owed: ${event.text}`
+              : purse === "carried"
+                ? `The caravan reached ${event.destination}; the merchant is dead, and the Blades were paid from the purse they carried in: ${event.text}`
+                : `The caravan reached ${event.destination}; the merchant is dead, and the Blades shared the purse out on the road, so nobody pays them here: ${event.text}`;
+          const scene = purse === "owner" ? "the merchant's words, the coin changing hands" : purse === "carried" ? "who counts the coin out of the dead merchant's purse, and who takes the wagon" : "the gate, the wagon with no merchant, and no one to pay";
+          await this.wakeDm(
+            "road",
+            undefined,
+            what,
+            this.arrivalOpened
+              ? `Your last narration opened the arrival: don't tell it again. Narrate the pay alone as a scene, once, in two to four sentences: ${scene}. Name an amount only as the engine's lines give it, never a sum of your own.`
+              : `Narrate the arrival and the pay as a scene, in two to four sentences: ${scene}. Name an amount only as the engine's lines give it, never a sum of your own.`,
+          );
+        }
         this.arrivalOpened = false;
         await this.settle();
         // The human has one last turn at the destination before the closing (B7); a table with
