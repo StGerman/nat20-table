@@ -297,7 +297,8 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
 
 /// What person `n` remembers of `handle`'s doings (rule N6): a line only for a deed the world
 /// remembers and `n` saw; the "you" form when `handle` did it, else "your company"; newest
-/// first, at most three; none for the dead.
+/// first by contract and day (deeds of one day keep the world file's order), at most three;
+/// none for the dead.
 fn remembered(n: &NpcDm, handle: &str, deeds: &[DeedDm]) -> Vec<String> {
     if !n.alive {
         return Vec::new();
