@@ -211,6 +211,13 @@ impl Campaign {
         } else {
             world::NpcFile::default()
         };
+        // A kind is not a name (MAP-24, rule N2): the roster holds people, never an animal.
+        if let Some(beast) = npcs.npcs.iter().find(|n| !monster::is_person(&n.monster)) {
+            return Err(bad(format!(
+                "The world {}'s roster lists {} with the stat block {}, a beast: an animal rides in company.json, never in the roster.",
+                setup.map, beast.id, beast.monster
+            )));
+        }
         // Who may ride with the wagon (ENG-48), checked against the roster.
         let company_file = dir.join("company.json");
         let company: world::CompanyFile = if company_file.exists() {
