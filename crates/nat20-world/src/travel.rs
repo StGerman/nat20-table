@@ -708,6 +708,24 @@ impl World {
         self.deck.forewarn(&self.state.deeds, &mut self.state.deck)
     }
 
+    /// Takes off the offered cards each one whose `cast` holds someone who died since the
+    /// draw offered it (rule A8, API-58), so neither the DM nor a fallback can pick it.
+    pub fn drop_dead_offers(&mut self) {
+        self.mark_cast_dead();
+        let (deck, state) = (&self.deck, &mut self.state.deck);
+        let dead = &state.cast_dead;
+        let keep: Vec<String> = state
+            .offered
+            .iter()
+            .filter(|id| {
+                deck.card(id)
+                    .is_none_or(|c| !c.cast.iter().any(|p| dead.contains(p)))
+            })
+            .cloned()
+            .collect();
+        state.offered = keep;
+    }
+
     /// The DM picks one of the offered cards (API-53): it goes on the table.
     pub fn pick_card(&mut self, card: &str) -> Result<(), PickError> {
         self.deck
@@ -1359,6 +1377,18 @@ mod tests {
         assert_eq!(w.draw_after_leg("inn_ruin", &mut dice), None);
         w.deck.cards[1].cast = vec!["nobody".into()];
         assert!(w.check_cast().unwrap_err().0.contains("nobody"));
+        // Offered while both lived, then Ned dies before the pick: his card is taken off the
+        // offer, so neither the DM nor a fallback can pick it.
+        w.deck.cards[1].cast = vec!["ned".into()];
+        w.state.npcs.get_mut("tobin").unwrap().alive = true;
+        w.state.deck.offered = vec!["ned_waves".into(), "tobin_sings".into()];
+        w.drop_dead_offers();
+        assert_eq!(w.state.deck.offered, vec!["tobin_sings".to_string()]);
+        assert!(matches!(
+            w.pick_card("ned_waves"),
+            Err(PickError::NotOffered(_))
+        ));
+        w.pick_card("tobin_sings").unwrap();
     }
 
     #[test]

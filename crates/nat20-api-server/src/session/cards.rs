@@ -247,6 +247,8 @@ impl Session {
                 "No campaign is running; the game starts one with start_campaign.",
             ));
         };
+        // A card about someone who died since the draw is never picked (rule A8).
+        campaign.world.drop_dead_offers();
         // The loop's fallback takes the first card rolled; any other card is the DM's pick,
         // never the engine's (ENG-42).
         if fallback

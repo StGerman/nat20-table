@@ -350,11 +350,7 @@ impl Campaign {
             .pending
             .as_ref()
             .and_then(|p| self.world.deck.card(&p.card))
-            .is_some_and(|c| {
-                c.cast
-                    .iter()
-                    .any(|who| who == id || (who == world::OWNER_CAST && owner))
-            });
+            .is_some_and(|c| c.cast.iter().any(|who| who == id));
         let anchor = match &def.anchor {
             Some(anchor) if here => anchor.clone(),
             _ if owner || on_card => first_anchor.to_owned(),
