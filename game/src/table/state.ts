@@ -9,6 +9,7 @@ import { eventLine, noDeaths, tellable, yourLine } from "../view.ts";
 import type { Address } from "./floor.ts";
 import { type CardOnSeat, rollOf, SeatNames, seatLine } from "./seat-lines.ts";
 import { Transcript } from "./transcript.ts";
+import { namedIn, type RosterNames } from "./mentions.ts";
 import type { DmWake, FallbackCause, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
 
@@ -73,6 +74,8 @@ export class TableState {
   readonly notes = new Map<Handle, Array<{ kind: NoteKind; text: string }>>();
   /** What the DM established in fiction (spec §3.6). Only the DM reads it. */
   readonly dmMemory: string[] = [];
+  /** The world's roster with every form of each name, once a campaign starts: a DM line naming one is sent as a `mention` (API-58). */
+  roster: RosterNames[] = [];
   /** Deaths and scene loads read so far, so a dead creature's later empty turns are told to nobody. */
   readonly deaths = noDeaths();
   /**
@@ -415,7 +418,16 @@ export class TableState {
       this.dmToHuman += 1;
       this.show({ kind: "narration", speaker: "dm", text, ...(to ? { to } : {}) });
     }
+    await this.mention(text);
     return { ok: true, text: "said" };
+  }
+
+  /** Sends the roster people a said line names as a `mention` (rule N4); a refusal is logged and the line stands. */
+  private async mention(text: string): Promise<void> {
+    const npcs = namedIn(text, this.roster);
+    if (npcs.length === 0) return;
+    const r = await this.engine.request("dm", { cmd: "mention", npcs });
+    if (!r.ok) this.log("system", `mention of ${npcs.join(", ")} refused: ${r.error?.message ?? "?"}`);
   }
 
   /** A DM question to the human, guarded like narration. The human's next input answers it. */

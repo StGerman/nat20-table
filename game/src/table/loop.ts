@@ -484,7 +484,9 @@ export class TableLoop {
         if (!started.ok) throw new Error(`the campaign didn't start: ${started.text}`);
         // The contract's first day on the world clock: later than the pack's on a next contract.
         // `day_limit` is the pack's last day on its own clock, so it moves by as many days.
-        this.firstDay = (await this.dmWorld())?.clock.day ?? this.campaign.startDay ?? 1;
+        const world = await this.dmWorld();
+        this.firstDay = world?.clock.day ?? this.campaign.startDay ?? 1;
+        this.table.roster = (world?.npcs ?? []).map((n) => ({ id: n.id, names: n.names?.length ? n.names : [n.name] }));
         if (this.campaign.dayLimit !== undefined) this.lastDay = this.campaign.dayLimit + this.firstDay - (this.campaign.startDay ?? 1);
         this.table.log("system", `campaign started: ${this.campaign.party.join(", ")} with the caravan${this.lastDay ? `, until the end of day ${this.lastDay}` : ""}`);
         if (human) this.startXp = (await this.humanSheet())?.xp?.points;
