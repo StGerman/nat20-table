@@ -174,7 +174,8 @@ export function benchPack(pack: string, card: string, root: string): { dir: stri
     writeFileSync(deck, JSON.stringify({ ...content, cards }, null, 4) + "\n");
   }
   // A company entry rides only when the cards kept read its death, and its wound when it can be
-  // hurt (rule A9): the bench plays the card with the allies its own choices answer for.
+  // hurt (rule A9): the bench plays the card with the allies its own choices answer for. A card
+  // whose choices only ask whether an ally rides (`rides:`) reads no death, so it is benched alone.
   const companyFile = path.join(world, "company.json");
   if (existsSync(companyFile)) {
     const company = readJson<{ company: Array<{ id: string; hurt?: boolean }> }>(companyFile);

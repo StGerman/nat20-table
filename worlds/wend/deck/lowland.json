@@ -84,7 +84,7 @@
                 }
             ],
             "note": "Gwyn's sheepdog from the Highsteads, gone after her strays; Gwyn wants it back. It answers to a whistle nobody at the table knows.",
-            "unless": "gwyns_dog_dead"
+            "unless": ["gwyns_dog_dead", "fed_gwyns_dog"]
         },
         {
             "id": "river_mist",

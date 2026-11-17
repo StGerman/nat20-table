@@ -72,7 +72,7 @@
                     ]
                 }
             ],
-            "unless": "tam_dead"
+            "unless": ["tam_dead", "gave_tam_back_to_bel"]
         },
         {
             "id": "bel_at_the_gate",
@@ -91,7 +91,7 @@
             ],
             "once": true,
             "text": "Bel's painted cart already stands by the fair gate. She walks the length of the wagon, looking for her boy.",
-            "text_ru": "Расписная повозка корринов уже стоит у ярмарочных ворот. Бел идёт вдоль фургона и ищет глазами сына.",
+            "text_ru": "Расписная повозка Бел уже стоит у ярмарочных ворот. Бел идёт вдоль фургона и ищет глазами сына.",
             "note": "Tam rode with the wagon and died in a fight at it (tam_dead); Bel came on to the fair, as roadfolk do, and does not know. Say the cause aloud in one clause, whichever holds: if the Blades promised to look after him (promised_bel), she says the promise back to them once, in her own words; if they lied to her about him (lied_to_bel), or covered for him (covered_for_tam), she learns now that he was with them all along. If none holds, she only knew he was gone. Bel does not curse and nobody makes a joke; Maren speaks first, or nobody does. Describe no wound. The fair goes on around her: the warden comes to ask whether the wagon wants its pitch, and goes away again.",
             "choices": [
                 {
