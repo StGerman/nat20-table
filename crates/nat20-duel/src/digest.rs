@@ -232,8 +232,12 @@ impl Replay {
     ) -> Digest {
         let events = self.ask(json!({"cmd": "events", "since": self.read_to}));
         let mut engine_lines = Vec::new();
+        // A fight that ended since the last line: an `end_combat` (a surrender) leaves no
+        // `combat_over` prompt, so the event says it (AGT-106).
+        let mut ended = false;
         for event in events["result"]["events"].as_array().into_iter().flatten() {
             match event["kind"].as_str() {
+                Some("combat_over") => ended = true,
                 Some("surrendered") => self.surrendered.extend(handles(&event["handles"])),
                 Some("fled") => self.fled.extend(handles(&event["handles"])),
                 Some("combat_started") => self.fight = handles(&event["participants"]).collect(),
@@ -349,7 +353,7 @@ impl Replay {
             combat_over: awaiting["kind"] == "combat_over",
             creatures,
             fled: self.fled.iter().cloned().collect(),
-            fight: if state["mode"] == "combat" || awaiting["kind"] == "combat_over" {
+            fight: if state["mode"] == "combat" || awaiting["kind"] == "combat_over" || ended {
                 self.fight.clone()
             } else {
                 Vec::new()
