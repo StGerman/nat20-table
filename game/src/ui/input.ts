@@ -12,10 +12,10 @@ export type CommandName = (typeof COMMANDS)[number];
  * What each command does: the one registry `/help` and the slash-command picker read (AGT-82). Its
  * order is theirs: /options and /sheet first, the two a first-time player needs (scope §6.6).
  */
-export const COMMAND_HELP: Record<CommandName | "help" | "panel", string> = UI_WORDS.en.commandHelp;
+export const COMMAND_HELP: Record<CommandName | "help" | "panel" | "who", string> = UI_WORDS.en.commandHelp;
 
 /** A typed line as the seat reads it: an intent for the loop, help for the screen, or a mistake. */
-export type Typed = { kind: "intent"; intent: PlayerIntent } | { kind: "help" } | { kind: "panel" } | { kind: "error"; text: string } | { kind: "empty" };
+export type Typed = { kind: "intent"; intent: PlayerIntent } | { kind: "help" } | { kind: "panel" } | { kind: "who"; name: string } | { kind: "error"; text: string } | { kind: "empty" };
 
 /**
  * Reads one typed line for a prompt (undefined: the table isn't waiting on the human). A number is
@@ -29,6 +29,8 @@ export function readLine(line: string, prompt: HumanPrompt | undefined, ui: UiWo
     const name = text.slice(1).split(/\s+/)[0].toLowerCase();
     if (name === "help" || name === "?") return { kind: "help" };
     if (name === "panel") return { kind: "panel" };
+    // The person card and the lists (AGT-107): the seat answers it, with no model call (rule N8).
+    if (name === "who" || name === "кто") return { kind: "who", name: text.slice(1 + name.length).trim() };
     if ((COMMANDS as readonly string[]).includes(name)) return { kind: "intent", intent: { kind: "command", name: name as CommandName } };
     return { kind: "error", text: ui.noCommand(name, Object.keys(COMMAND_HELP).map((c) => `/${c}`).join(" ")) };
   }

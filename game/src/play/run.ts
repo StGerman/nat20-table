@@ -8,7 +8,8 @@ import type { Language } from "../agents/language.ts";
 import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
-import { knownPlaceNames, shortRu, worldSeatNames } from "../pack/campaign.ts";
+import { knownPlaceNames, peopleBook, shortRu, worldSeatNames } from "../pack/campaign.ts";
+import type { PeopleBook } from "../table/seat-lines.ts";
 import { titled } from "../view.ts";
 import { skeletonFile } from "../pack/read.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
@@ -49,6 +50,8 @@ export interface PackParty {
    * (`good:<id>`) and anchors (`anchor:<id>`). The seat reads it only for what an event it sees names.
    */
   seatRu: Map<string, string>;
+  /** The seat's people book (AGT-107): the person card's lines in the run's language, and the party's forms and looks. */
+  people: PeopleBook;
 }
 
 /**
@@ -143,7 +146,7 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
   for (const p of ai) if (!classes.has(p.handle)) throw new Error(`${pack}: party ${p.handle} has an AI seat and no pregen in the first scene, so no class`);
   const humanEntry = adventure.party.find((p) => p.handle === human);
   const humanCard = humanEntry?.card ? readFileSync(path.resolve(pack, humanEntry.card), "utf8") : undefined;
-  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: [...russianNames(adventure, { npcs: false }), ...knownPlaceNames(pack)], glyphs: adventure.glyphs, seatRu: seatRuNames(pack, adventure) };
+  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: [...russianNames(adventure, { npcs: false }), ...knownPlaceNames(pack)], glyphs: adventure.glyphs, seatRu: seatRuNames(pack, adventure), people: peopleBook(pack, adventure.party) };
 }
 
 /** One line of the pick list (AGT-35): a party member as a player picking a pregen sees it. */

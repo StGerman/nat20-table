@@ -452,3 +452,35 @@ test("on a terminal, ↓ lights an option and Enter plays it, and Esc on an empt
     seat.stop();
   }
 });
+
+test("Tab opens the card of a name in the story, Tab again the next, Esc closes it, and /who lists everyone (AGT-107)", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), title: "Fair in Wend" });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    const people = [
+      { id: "shepherd_gwyn", name: "Gwyn", forms: ["Gwyn"], state: "elsewhere", look: "A shepherd with a name for every sheep.", remembers: [] },
+      { id: "osric_hale", name: "Osric", forms: ["Osric"], state: "here", health: "unhurt", remembers: [], inScene: true },
+    ];
+    const situation = { mode: "explore", next: [], me: { handle: "bren", name: "Bren", hp: 10, hp_max: 10, temp_hp: 0, conditions: [], life_state: "conscious", effects: [] }, creatures: [], down: [], people };
+    seat.show({ kind: "situation", situation } as never);
+    seat.show({ kind: "status", text: "Gwyn waves; Osric nods." });
+    void seat.ask({ kind: "explore" });
+    await until("the line", () => stdout.last.includes("Gwyn waves; Osric nods."), () => stdout.last);
+    stdin.press("\t");
+    await until("the newest name's card", () => stdout.last.includes("Osric · Esc closes") && stdout.last.includes("Here with you now."), () => stdout.last);
+    stdin.press("\t");
+    await until("the next name's card", () => stdout.last.includes("Gwyn · Esc closes") && stdout.last.includes("A shepherd with a name for every sheep."), () => stdout.last);
+    stdin.press("\u001b");
+    await until("closed", () => !stdout.last.includes("Esc closes"), () => stdout.last);
+    for (const ch of "/who") stdin.press(ch);
+    stdin.press("\r");
+    await until("the lists", () => stdout.last.includes("You have met: Gwyn, Osric."), () => stdout.last);
+    stdin.press("\u001b");
+    await until("the lists closed", () => !stdout.last.includes("You have met"), () => stdout.last);
+    for (const ch of "/who osric") stdin.press(ch);
+    stdin.press("\r");
+    await until("his card", () => stdout.last.includes("Osric · Esc closes"), () => stdout.last);
+  } finally {
+    seat.stop();
+  }
+});
