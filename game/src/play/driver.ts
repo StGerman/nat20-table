@@ -26,7 +26,8 @@
 // party's last journey again from where it began, the start screen's third answer for a run nobody
 // sits at),
 // --rosters DIR, --suggest-model (AGT-49: the model that suggests the human's moves out of a fight
-// at the terminal, Haiku by default), --no-suggest (no suggestions; `/suggest` toggles them in play).
+// at the terminal, Haiku by default), --no-suggest (no suggestions; `/suggest` toggles them in play),
+// --describe-model, --no-describe (AGT-127: the person card's look in the hero's words, Haiku by default).
 import { UI_WORDS } from "../table/words.ts";
 import { spawn, type ChildProcess } from "node:child_process";
 import { appendFileSync, writeFileSync } from "node:fs";
@@ -36,6 +37,7 @@ import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { ModelDm, type CraftMode, type Voice } from "../agents/dm.ts";
 import type { Language } from "../agents/language.ts";
 import { ModelPlayer } from "../agents/player.ts";
+import { Describer } from "../agents/describe.ts";
 import { Suggester } from "../agents/suggest.ts";
 import { sessionOptions } from "../agents/sdk-session.ts";
 import { GameEngine, REPO, SESSION_LOG } from "../engine.ts";
@@ -437,6 +439,10 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
             usage,
           }),
         }
+      : {}),
+    // The person card's look in the hero's words (AGT-127), on the same terms as the suggestions.
+    ...(ink && party.human && !flags["no-describe"] && flags.players === "model"
+      ? { describer: new Describer({ handle: party.human, card: party.humanCard ?? "", language, choice: { model: flags["describe-model"], effort: "low" }, usage }) }
       : {}),
     ...(campaign
       ? {

@@ -38,6 +38,8 @@ export const SETTINGS = {
   "player-model": { kind: "string", default: "claude-sonnet-5-5", model: true },
   /** The model that suggests the human's moves out of a fight (AGT-49), at low effort. */
   "suggest-model": { kind: "string", default: "claude-haiku-5-5", model: true },
+  /** The model that rewords a person's look in the hero's words (AGT-127), at low effort. */
+  "describe-model": { kind: "string", default: "claude-haiku-5-5", model: true },
   "dm-effort": { kind: "string", default: "medium", allowed: EFFORTS },
   effort: { kind: "string", default: "low", allowed: EFFORTS },
   craft: { kind: "string", default: "prompt", allowed: ["prompt", "skills"] },
@@ -66,6 +68,8 @@ export const SETTINGS = {
   "no-preview": { kind: "bool", default: false },
   /** Don't suggest the human's moves out of a fight (AGT-49, S3: on by default at the terminal; `/suggest` toggles it in play). */
   "no-suggest": { kind: "bool", default: false },
+  /** Show every person's look as authored, with no describer (AGT-127). */
+  "no-describe": { kind: "bool", default: false },
   "no-audit": { kind: "bool", default: false },
   /** Minutes from the first scene's load until the run stops as a fail (`time_limit`); 0 for none. */
   "time-limit-min": { kind: "int", default: 0 },

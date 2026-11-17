@@ -11,7 +11,7 @@ import { REPO } from "./paths.ts";
 import type { UsageRecord } from "./usage.ts";
 
 /** Who a session is: the closed set a trace name carries. The seat's own name is a value, never a key. */
-export type Role = "dm" | "player" | "judge" | "suggest";
+export type Role = "dm" | "player" | "judge" | "suggest" | "describe";
 
 /** One API call of a traced turn. Times are epoch milliseconds. */
 export interface TracedCall {
