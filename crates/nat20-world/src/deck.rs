@@ -261,6 +261,14 @@ pub struct Deed {
     pub saw: Vec<String>,
 }
 
+fn yes() -> bool {
+    true
+}
+
+fn is_yes(b: &bool) -> bool {
+    *b
+}
+
 /// The deeds remembered, by id. A deed done again keeps its first record.
 pub type DeedBook = BTreeMap<String, Deed>;
 
@@ -379,6 +387,18 @@ pub enum Effect {
         /// (SRD 5.2.1, Surprise)
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         surprise: bool,
+        /// The fight is at the wagon (ENG-48, rule A1): whoever rides with it joins as an
+        /// ally: the team's animals but each wagon's last, the company that rides now, and
+        /// the NPC owner unless `owner` is false
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        wagon: bool,
+        /// The anchor the monsters arrive at (rule A3); the scene's first when absent or
+        /// missing
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        from: Option<String>,
+        /// With `wagon`, whether the NPC owner stands in the fight (rule A2)
+        #[serde(default = "yes", skip_serializing_if = "is_yes")]
+        owner: bool,
     },
     /// Everyone in `who` pays `copper` each to the world, as much as their purse holds
     Pay {
@@ -1169,6 +1189,20 @@ impl Deck {
         self
     }
 
+    /// Every deed a card or a choice reads in its `if` (ENG-48, rule A9): a reader that speaks.
+    pub fn read_in_if(&self) -> BTreeSet<String> {
+        self.cards
+            .iter()
+            .flat_map(|card| {
+                card.if_deeds
+                    .iter()
+                    .chain(card.choices.iter().flat_map(|c| c.if_deeds.iter()))
+            })
+            .flat_map(Deeds::ids)
+            .cloned()
+            .collect()
+    }
+
     /// Every deed some choice of the deck can write: its `remember`s, `killed_<npc>` for
     /// each NPC a card's fight names, and `own_move_<card>` for every card (API-56).
     pub fn deeds_written(&self) -> BTreeSet<String> {
@@ -1949,6 +1983,9 @@ mod tests {
             Effect::Fight {
                 monsters: vec![Monster::Stat("wolf".into())],
                 surprise: false,
+                wagon: false,
+                from: None,
+                owner: true,
             },
             Effect::Delay { minutes: 10 },
         ];
@@ -3233,6 +3270,9 @@ mod tests {
             card.choices[0].effects.push(Effect::Fight {
                 monsters: vec![Monster::Stat("wolf".into())],
                 surprise: false,
+                wagon: false,
+                from: None,
+                owner: true,
             });
         }
         assert!(two.route_warnings(&map, &route).is_empty());
@@ -3245,6 +3285,9 @@ mod tests {
         two.cards[0].choices[0].effects = vec![Effect::Fight {
             monsters: vec![Monster::Stat("goblin_warrior".into())],
             surprise: false,
+            wagon: false,
+            from: None,
+            owner: true,
         }];
         let untagged = two.untagged_fight_warnings(person);
         assert_eq!(untagged.len(), 1);

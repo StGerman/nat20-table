@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
+    company::{CompanyEntry, CompanyFile, RIDES_PREFIX},
     deck::{
         Card, Deck, DeckError, DeckState, Deed, DeedBook, Deeds, Drawn, OWNER_CAST, PickError,
         ScoutSkill, When,
@@ -394,6 +395,8 @@ pub struct World {
     pub npcs: Vec<NpcDef>,
     /// The escort contract's terms; none until [`World::with_escort`]
     pub escort: Option<EscortTerms>,
+    /// Who may ride with the wagon (ENG-48); none until [`World::with_company`]
+    pub company: Vec<CompanyEntry>,
     /// What changes
     pub state: WorldState,
 }
@@ -508,6 +511,7 @@ impl World {
             deck: Deck::default(),
             npcs: Vec::new(),
             escort: None,
+            company: Vec::new(),
         })
     }
 
@@ -525,6 +529,47 @@ impl World {
         npcs::settle(&file.npcs, &mut self.state.npcs);
         self.npcs = file.npcs;
         Ok(self)
+    }
+
+    /// The world with who may ride with the wagon (ENG-48), checked against the roster and
+    /// the deck (rule A9): so after [`World::with_deck`] and [`World::with_npcs`].
+    pub fn with_company(mut self, file: CompanyFile) -> Result<Self, MapError> {
+        file.validate(&self.npcs)?;
+        file.check_readers(&self.deck)?;
+        self.company = file.company;
+        Ok(self)
+    }
+
+    /// The company entries that ride on the contract under way (rule A2), in file order.
+    pub fn riding(&self) -> Vec<&CompanyEntry> {
+        self.company
+            .iter()
+            .filter(|e| {
+                let alive = e
+                    .npc
+                    .as_ref()
+                    .is_none_or(|n| self.state.npcs.get(n).is_some_and(|s| s.alive));
+                e.rides(&self.state.deeds, self.state.contract, alive)
+            })
+            .collect()
+    }
+
+    /// The deeds a card is offered against: the deeds remembered, and `rides:<id>` for each
+    /// company entry that rides now (ENG-48).
+    pub fn deeds_now(&self) -> DeedBook {
+        let mut deeds = self.state.deeds.clone();
+        for entry in self.riding() {
+            deeds.insert(
+                format!("{RIDES_PREFIX}{}", entry.id),
+                Deed {
+                    by: Vec::new(),
+                    day: self.state.clock.day,
+                    contract: self.state.contract,
+                    saw: Vec::new(),
+                },
+            );
+        }
+        deeds
     }
 
     /// The world with an escort contract, checked against the map. `blades` are the Hired
@@ -778,11 +823,12 @@ impl World {
     pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
         self.mark_cast_dead();
         let zone = self.map.road(road)?.zone.clone();
+        let deeds = self.deeds_now();
         let drawn = self.deck.draw(
             &zone,
             When::Road,
             &self.state.discovered,
-            &self.state.deeds,
+            &deeds,
             &mut self.state.deck,
             dice,
         );
@@ -796,11 +842,12 @@ impl World {
     /// offered for a pick (API-53).
     pub fn draw_on_arrival(&mut self, place: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
         self.mark_cast_dead();
+        let deeds = self.deeds_now();
         let drawn = self.deck.draw(
             place,
             When::Arrival,
             &self.state.discovered,
-            &self.state.deeds,
+            &deeds,
             &mut self.state.deck,
             dice,
         );
@@ -829,7 +876,8 @@ impl World {
     /// The scout's check succeeded (API-54): the card on the table opens its forewarned
     /// choice. Returns whether the choices changed.
     pub fn forewarn(&mut self) -> bool {
-        self.deck.forewarn(&self.state.deeds, &mut self.state.deck)
+        let deeds = self.deeds_now();
+        self.deck.forewarn(&deeds, &mut self.state.deck)
     }
 
     /// Takes off the offered cards each one whose `cast` holds someone who died since the
@@ -852,8 +900,8 @@ impl World {
 
     /// The DM picks one of the offered cards (API-53): it goes on the table.
     pub fn pick_card(&mut self, card: &str) -> Result<(), PickError> {
-        self.deck
-            .pick(card, &self.state.deeds, &mut self.state.deck)
+        let deeds = self.deeds_now();
+        self.deck.pick(card, &deeds, &mut self.state.deck)
     }
 
     /// Draws a night card after a night in camp where the caravan is: on the table, or offered
@@ -861,11 +909,12 @@ impl World {
     pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<Drawn> {
         self.mark_cast_dead();
         let zone = self.zone_here();
+        let deeds = self.deeds_now();
         let drawn = self.deck.draw(
             &zone,
             When::Night,
             &self.state.discovered,
-            &self.state.deeds,
+            &deeds,
             &mut self.state.deck,
             dice,
         );

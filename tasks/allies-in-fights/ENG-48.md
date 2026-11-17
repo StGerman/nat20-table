@@ -5,7 +5,7 @@ title: "Allies in a card's wagon fight: the engine half and the deck half"
 pri: P2
 dest: Ours
 size: L
-state: todo
+state: partial
 area: "2. Engine correctness (core)"
 ---
 
@@ -19,4 +19,4 @@ Check: design §11 rows 1, 2, 4 (test, no model). Cost: engine 40 USD build, Sta
 
 ## Status
 
-todo. Engine needs ENG-47 and the MON-12 pin; deck needs MAP-22, the engine PR and MAP-24. Its M13 files are on main (Milestone 13 closed 2026-11-16). Tam's engine half is here; MAP-23 is his content. §16 answered by Stas 2026-11-16 (table #419). MAP-22 wrote no going-home deed (its Status says why): a choice can read only deeds today, so the engine half adds a choice condition "this company entry rides on this contract" (true when rule A2 would place it), and the deck half drops the "found them again" note clause on `night_wolves` and `drovers` and gates each dog pair on it, which also covers a dead dog with no extra twins. Design §3 item 4 and §13 row 4 still name a going-home deed and are out of date
+partial. The engine half is done (design PR 8): `wagon`, `from` and `owner` on a deck fight, `worlds/<id>/company.json` with rule A9 checked at `start_campaign`, the `rides:<id>` choice condition (MAP-22's ask, in place of a going-home deed), policy `hold`, rules A5 and A6, the death and wound deeds by the Blades (A7), a dead team animal leaving `team`, rule A10 (a person a mention placed joins as they stand). Fixture `allies.jsonl` on the test world: an ally kills the grey wolf (`killed_grey` by the dog), the owner and a horse die, the dog comes out hurt; then the last Blade falls with every ally standing. `npm run play:wagon-table` prints design §15's table with no model and every creature, the Blades too, on the engine's script; the 200-seed table of 2026-11-17 is `/mnt/project-files/engine/allies/wagon-table-2026-11-17.md` (scripted Blades rush the monsters, so live seats may lose allies more often). Left: the deck half (design PR 11), which needs MAP-24 for the Merchants in the roster and MAP-23 for Tam. Design §3 item 4 and §13 row 4 still name a going-home deed and are out of date

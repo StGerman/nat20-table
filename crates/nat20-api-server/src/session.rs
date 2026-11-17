@@ -71,6 +71,8 @@ pub struct Session {
     card_cast: Option<Vec<String>>,
     /// A card fight's or the scene's named NPCs by handle, until they die (ENG-36, API-57)
     card_npcs: HashMap<String, String>,
+    /// The card's wagon fight under way (ENG-48): its Blades and its allies
+    wagon_fight: Option<cards::WagonFight>,
     /// Who rolled each logged roll, by roll id (ENG-36)
     rollers: HashMap<String, String>,
     /// Who dealt the last damage to each creature, by handle (ENG-36)
@@ -110,6 +112,7 @@ impl Session {
             npcs_here: Vec::new(),
             card_cast: None,
             card_npcs: HashMap::new(),
+            wagon_fight: None,
             arrival_due: None,
             rollers: HashMap::new(),
             last_blow: HashMap::new(),
@@ -239,6 +242,7 @@ impl Session {
         // So are creature handles: a card fight's named NPC who lived through it stays behind,
         // and a new creature with the same handle here is not them (ENG-36).
         self.card_npcs.clear();
+        self.wagon_fight = None;
         // A scene creature that is a person of the story writes `killed_<npc>` as a card
         // fight's does (API-57).
         self.card_npcs.extend(
@@ -1588,7 +1592,8 @@ impl Session {
             _ => {}
         }
         let death = self.follow_blows(&kind);
-        let deeds = self.scene_deeds(&kind);
+        let mut deeds = self.scene_deeds(&kind);
+        deeds.extend(self.wagon_deeds(&kind));
         self.log.push(Event {
             seq,
             round: pending.round,
@@ -1598,7 +1603,7 @@ impl Session {
             kind,
         });
         // A named NPC's death writes its deed right after the death (ENG-36, API-52).
-        if let Some((deed, by)) = death {
+        for (deed, by) in death {
             self.remember(&deed, by);
         }
         // So does a scene check's or a scene fight's, right after its `check_resolved` or

@@ -2,7 +2,8 @@
 //! §4.2 rule 8, API-57): for each world, a deed that a card or a choice of the world's deck joined
 //! with its packs' decks reads is written by a deck effect, a card fight's `npc`, or a scene of a
 //! pack on that world (a check's `remember`, an encounter's `on_end`, a creature's `npc`). A pack
-//! is on a world by `campaign.json`'s `world.map` or `adventure.json`'s `site.map`.
+//! is on a world by `campaign.json`'s `world.map` or `adventure.json`'s `site.map`. The engine's
+//! own deeds count as written too: a company entry's, `rides:<id>`, and the NPC owner's (ENG-48).
 //!
 //! The test lives here, not in the world crate, because only the server reads both the deck and
 //! the scene formats.
@@ -13,7 +14,7 @@ use std::{
 };
 
 use nat20_api_contract::{Consequence, SceneFile};
-use nat20_world::{Deck, DeckFile, killed_deed};
+use nat20_world::{CompanyFile, Deck, DeckFile, killed_deed, lost_a_horse_deed, owner_dead_deed};
 use serde_json::Value;
 
 fn repo() -> PathBuf {
@@ -108,12 +109,27 @@ fn every_deed_a_card_reads_is_written_on_its_world() {
         let id = world.file_name().unwrap().to_str().unwrap().to_owned();
         let mut all = deck(&world);
         let mut by_scenes = BTreeSet::new();
+        // The engine writes a company entry's deeds and `rides:<id>`, and the NPC owner's (ENG-48).
+        let company = world.join("company.json");
+        if company.exists() {
+            by_scenes.extend(read::<CompanyFile>(&company).written());
+        }
         for pack in packs()
             .iter()
             .filter(|p| pack_map(p).as_deref() == Some(&id))
         {
             all = all.join(deck(pack));
             by_scenes.extend(scene_deeds(pack));
+            let campaign = pack.join("campaign.json");
+            if let Some(owner) = campaign
+                .exists()
+                .then(|| read::<Value>(&campaign))
+                .and_then(|c| c["world"]["caravan"]["owner"].as_str().map(str::to_owned))
+                .and_then(|o| o.strip_prefix("npc:").map(str::to_owned))
+            {
+                by_scenes.insert(owner_dead_deed(&owner));
+                by_scenes.insert(lost_a_horse_deed(&owner));
+            }
         }
         all.check_deeds_written(&by_scenes)
             .unwrap_or_else(|e| panic!("{} and its packs: {e}", world.display()));
