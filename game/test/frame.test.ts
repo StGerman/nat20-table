@@ -511,14 +511,14 @@ test("a click on an underlined name opens its card, a drag says once how to sele
     stdin.press("\u001b");
     await until("closed", () => !stdout.last.includes("Esc closes"), () => stdout.last);
     stdin.press(`\u001b[<0;2;3M\u001b[<0;9;3m`);
-    await until("the drag hint", () => stdout.last.includes("To select text, hold Fn as you drag"), () => stdout.last);
+    await until("the drag hint", () => stdout.last.includes("To select text, hold the Fn key"), () => stdout.last);
     for (const ch of "/mouse") stdin.press(ch);
     stdin.press("\r");
-    await until("off", () => stdout.last.includes("Mouse off: drag to select text"), () => stdout.last);
+    await until("off", () => stdout.last.includes("Text now selects as usual"), () => stdout.last);
     stdin.press("\u001b[<0;2;3M\u001b[<0;9;3m");
     for (const ch of "/mouse") stdin.press(ch);
     stdin.press("\r");
-    await until("on again", () => stdout.last.includes("Mouse on: click an underlined name"), () => stdout.last);
+    await until("on again", () => stdout.last.includes("A click on an underlined name shows who it is again"), () => stdout.last);
     stdin.press("\u001b[<0;2;3M\u001b[<0;9;3m");
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.ok(!stdout.last.includes("To select text"), "the drag hint is said once");
