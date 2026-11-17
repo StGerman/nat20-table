@@ -690,18 +690,12 @@ impl World {
         }
     }
 
-    /// Checks every card's `cast` and `tells` (API-58): each a roster person's id, or `owner`
-    /// when an NPC owns the caravan (a player Merchant is no person of the roster).
+    /// Checks every card's `cast` and `tells` (API-58): each a roster person's id or `owner`.
+    /// `owner` is allowed whoever owns the caravan: a world's deck serves campaigns with an NPC
+    /// owner and with a player one, and with a player owner `owner` names nobody to place or mark.
     pub fn check_cast(&self) -> Result<(), MapError> {
-        let npc_owner = matches!(self.state.caravan.owner, Owner::Npc(_));
         for card in &self.deck.cards {
             for who in card.cast.iter().chain(&card.tells) {
-                if who == OWNER_CAST && !npc_owner {
-                    return Err(MapError(format!(
-                        "the card {} names owner in its cast or tells, but a player owns the caravan",
-                        card.id
-                    )));
-                }
                 if who != OWNER_CAST && !self.npcs.iter().any(|n| n.id == *who) {
                     return Err(MapError(format!(
                         "the card {} names {who} in its cast or tells, who is not in the roster",
@@ -1639,15 +1633,10 @@ mod tests {
         assert_eq!(w.draw_after_leg("inn_ruin", &mut dice), None);
         w.deck.cards[1].cast = vec!["nobody".into()];
         assert!(w.check_cast().unwrap_err().0.contains("nobody"));
-        // With a player Merchant, `owner` names nobody of the roster.
-        w.deck.cards[1].cast = vec!["ned".into()];
+        // A world's deck serves a player Merchant too: `owner` is accepted with either owner.
+        w.deck.cards[1].cast = vec![OWNER_CAST.into()];
         let owner = std::mem::replace(&mut w.state.caravan.owner, "bren".parse().unwrap());
-        assert!(
-            w.check_cast()
-                .unwrap_err()
-                .0
-                .contains("a player owns the caravan")
-        );
+        assert!(w.check_cast().is_ok());
         w.state.caravan.owner = owner;
         // Offered while both lived, then Ned dies before the pick: his card is taken off the
         // offer, so neither the DM nor a fallback can pick it.
