@@ -68,6 +68,8 @@ test("each state's card, in the run's language", () => {
   // An English seat reads the engine's own lines.
   const en = personCard(peopleOf(state(), new SeatNames("en", new Map(), book)).find((p) => p.id === "shepherd_gwyn")!, PEOPLE_WORDS.en);
   assert.deepEqual(en, ["Gwyn", "Not here now.", "Last seen at Highsteads.", "A shepherd with a name for every sheep.", "Remembers: you fed her dog on the river road.", "Esc closes"]);
+  // A companion on an English seat is named as the pack names them, not by handle.
+  assert.equal(personCard(peopleOf(state(), new SeatNames("en", new Map(), book)).find((p) => p.id === "torva")!, PEOPLE_WORDS.en)[0], "Torva");
 });
 
 test("the dead show as they were until the story tells the death", () => {

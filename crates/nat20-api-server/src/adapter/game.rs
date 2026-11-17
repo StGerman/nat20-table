@@ -2500,6 +2500,13 @@ impl Game {
     /// on the party side from now on, playing `hold`.
     pub fn make_ally(&mut self, handle: &str) -> Result<(), ApiError> {
         let entity = self.entity(handle)?;
+        // One left down by an earlier fight here sits this one out, as a downed Blade would.
+        if life_state_name(&self.engine, entity) != "normal" {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!("{handle} is down, so they sit this fight out."),
+            ));
+        }
         let Some(index) = self.scene.creatures.iter().position(|c| c.entity == entity) else {
             return Err(error(
                 ErrorCode::BadRequest,
