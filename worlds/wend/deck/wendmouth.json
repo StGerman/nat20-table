@@ -3,7 +3,9 @@
     "cards": [
         {
             "id": "tams_story",
-            "cast": ["tam"],
+            "cast": [
+                "tam"
+            ],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "blades",
@@ -23,7 +25,10 @@
                             "who": "blades",
                             "copper": 5
                         },
-                        {"do": "remember", "deed": "tams_legend_grew"}
+                        {
+                            "do": "remember",
+                            "deed": "tams_legend_grew"
+                        }
                     ]
                 },
                 {
@@ -31,7 +36,10 @@
                     "text": "Correct him kindly.",
                     "text_ru": "Мягко его поправить.",
                     "effects": [
-                        {"do": "remember", "deed": "corrected_tam"}
+                        {
+                            "do": "remember",
+                            "deed": "corrected_tam"
+                        }
                     ]
                 },
                 {
@@ -41,7 +49,10 @@
                     "text_ru": "Пойти с ним искать мать.",
                     "unless": "promised_bel",
                     "effects": [
-                        {"do": "remember", "deed": "took_tam_to_bel"}
+                        {
+                            "do": "remember",
+                            "deed": "took_tam_to_bel"
+                        }
                     ]
                 },
                 {
@@ -54,14 +65,19 @@
                         "word_kept"
                     ],
                     "effects": [
-                        {"do": "remember", "deed": "kept_the_promise_to_bel"}
+                        {
+                            "do": "remember",
+                            "deed": "kept_the_promise_to_bel"
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "rufus_due",
-            "cast": ["warden_brannock"],
+            "cast": [
+                "warden_brannock"
+            ],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "blades",
@@ -84,7 +100,10 @@
                             "who": "blades",
                             "copper": 50
                         },
-                        {"do": "remember", "deed": "gave_rufus_back_his_coin"}
+                        {
+                            "do": "remember",
+                            "deed": "gave_rufus_back_his_coin"
+                        }
                     ]
                 },
                 {
@@ -98,7 +117,10 @@
                         "debt_paid"
                     ],
                     "effects": [
-                        {"do": "remember", "deed": "refused_rufus_his_due"},
+                        {
+                            "do": "remember",
+                            "deed": "refused_rufus_his_due"
+                        },
                         {
                             "do": "fight",
                             "monsters": [
@@ -124,7 +146,10 @@
                             "skill": "persuasion",
                             "dc": 15,
                             "success": [
-                                {"do": "remember", "deed": "warden_threw_out_the_bruisers"}
+                                {
+                                    "do": "remember",
+                                    "deed": "warden_threw_out_the_bruisers"
+                                }
                             ],
                             "failure": [
                                 {
@@ -144,15 +169,25 @@
                     "text_ru": "Сказать смотрителю, чьи люди стояли на мосту через Миллбек.",
                     "if": "knew_who_set_the_toll",
                     "effects": [
-                        {"do": "remember", "deed": "named_rufus_at_the_gate"}
+                        {
+                            "do": "remember",
+                            "deed": "named_rufus_at_the_gate"
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "oddas_mark",
-            "cast": ["rufus", "warden_brannock"],
-            "tells": ["odda_vell", "col", "dunn"],
+            "cast": [
+                "rufus",
+                "warden_brannock"
+            ],
+            "tells": [
+                "odda_vell",
+                "col",
+                "dunn"
+            ],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "caravan",
@@ -161,7 +196,7 @@
             "owner_pick": "warden",
             "text": "On a grain dealer's stall by the fair gate, under his own sacks, two sacks carry Odda's tally mark.",
             "text_ru": "На прилавке хлеботорговца у ярмарочных ворот, под его собственными мешками, лежат два мешка с меткой Одды.",
-            "note": "Before the choices, say in one plain sentence what happened on the road: the Blades tracked Odda's missing sack to the drovers' camp. The stall is Rufus's. Market against custom: a factor's paper against a farmer's mark, and the warden keeps the peace for the old salt house. If the Blades read the pilgrim's drawing, one question about Col and Dunn's debt turns Rufus pale in front of his customers. Odda's line if left to her: \"Twenty autumns. He'll learn.\"",
+            "note": "Before the choices, say in one plain sentence what happened on the road: the Blades tracked Odda's missing sack to the drovers' camp. The stall is Rufus's. Market against custom: a factor's paper against a farmer's mark, and the warden keeps the peace for the old salt house. If the Blades read the pilgrim's drawing, one question about Col and Dunn's debt turns Rufus pale in front of his customers. Odda's line if left to her: \"Twenty autumns. He'll learn.\" If Odda is dead (odda_vell_dead), her mark is all of her that came to the fair: Rufus says so first, kindly, and the warden waits to see who speaks for her sacks.",
             "choices": [
                 {
                     "id": "warden",
@@ -176,10 +211,17 @@
                             "skill": "persuasion",
                             "dc": 10,
                             "success": [
-                                {"do": "cargo", "good": "wheat", "change": 50}
+                                {
+                                    "do": "cargo",
+                                    "good": "wheat",
+                                    "change": 50
+                                }
                             ],
                             "failure": [
-                                {"do": "remember", "deed": "the_warden_took_the_factors_word"}
+                                {
+                                    "do": "remember",
+                                    "deed": "the_warden_took_the_factors_word"
+                                }
                             ]
                         }
                     ]
@@ -190,8 +232,15 @@
                     "text_ru": "Спросить торговца, сколько Кол и Данн ему ещё должны.",
                     "if": "knew_who_set_the_toll",
                     "effects": [
-                        {"do": "cargo", "good": "wheat", "change": 50},
-                        {"do": "remember", "deed": "shamed_rufus_on_his_stall"}
+                        {
+                            "do": "cargo",
+                            "good": "wheat",
+                            "change": 50
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "shamed_rufus_on_his_stall"
+                        }
                     ]
                 },
                 {
@@ -210,8 +259,15 @@
                             "skill": "intimidation",
                             "dc": 15,
                             "success": [
-                                {"do": "cargo", "good": "wheat", "change": 50},
-                                {"do": "remember", "deed": "faced_rufus_down"}
+                                {
+                                    "do": "cargo",
+                                    "good": "wheat",
+                                    "change": 50
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "faced_rufus_down"
+                                }
                             ],
                             "failure": [
                                 {
@@ -230,14 +286,20 @@
                     "text": "Let Odda settle it.",
                     "text_ru": "Пусть Одда разберётся сама.",
                     "effects": [
-                        {"do": "remember", "deed": "odda_settled_it"}
-                    ]
+                        {
+                            "do": "remember",
+                            "deed": "odda_settled_it"
+                        }
+                    ],
+                    "unless": "odda_vell_dead"
                 }
             ]
         },
         {
             "id": "tobins_hands",
-            "cast": ["tobin"],
+            "cast": [
+                "tobin"
+            ],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "blades",
@@ -252,7 +314,10 @@
                     "text": "Ask nothing in return.",
                     "text_ru": "Ничего не просить взамен.",
                     "effects": [
-                        {"do": "remember", "deed": "healed_tobins_hands"}
+                        {
+                            "do": "remember",
+                            "deed": "healed_tobins_hands"
+                        }
                     ]
                 },
                 {
@@ -260,7 +325,10 @@
                     "text": "Ask what he knows.",
                     "text_ru": "Спросить, что он знает.",
                     "effects": [
-                        {"do": "remember", "deed": "heard_of_the_hollow_king"}
+                        {
+                            "do": "remember",
+                            "deed": "heard_of_the_hollow_king"
+                        }
                     ]
                 },
                 {
@@ -268,14 +336,19 @@
                     "text": "Ask him to come with you.",
                     "text_ru": "Позвать его с собой.",
                     "effects": [
-                        {"do": "remember", "deed": "tobin_follows"}
+                        {
+                            "do": "remember",
+                            "deed": "tobin_follows"
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "loaf_at_the_sea",
-            "cast": ["sister_agna"],
+            "cast": [
+                "sister_agna"
+            ],
             "zone": "wendmouth",
             "when": "arrival",
             "target": "blades",
@@ -283,14 +356,17 @@
             "once": true,
             "text": "Where the river meets the salt water, the silent pilgrim walks into the shallows and breaks her loaf for the gulls. Then she speaks for the first time since the hills, and her first words are the Blades' names.",
             "text_ru": "Там, где река встречается с солёной водой, молчаливая паломница заходит на мелководье и крошит свой хлеб чайкам. Потом она впервые после холмов нарушает молчание и произносит имена наёмников.",
-            "note": "Sister Agna, at the end of her vow. Plain, no sermon: she says their names, thanks them, and nothing more. What she does is hearsay that Odda and Brannock repeat, and Gwyn has heard it by the next contract. Given coin, she gives it to the first beggar she passes, in plain sight. Maren cries and pretends it is the wind.",
+            "note": "Sister Agna, at the end of her vow. Plain, no sermon: she says their names, thanks them, and nothing more. What she does is hearsay that Odda and Brannock repeat, and Gwyn has heard it by the next contract. Given coin, she gives it to the first beggar she passes, in plain sight. Maren cries and pretends it is the wind. If Odda is dead (odda_vell_dead), Brannock repeats it alone.",
             "choices": [
                 {
                     "id": "stand",
                     "text": "Stand with her in the water.",
                     "text_ru": "Встать рядом с ней в воде.",
                     "effects": [
-                        {"do": "remember", "deed": "stood_with_agna"}
+                        {
+                            "do": "remember",
+                            "deed": "stood_with_agna"
+                        }
                     ]
                 },
                 {
@@ -303,7 +379,10 @@
                             "who": "party",
                             "copper": 10
                         },
-                        {"do": "remember", "deed": "gave_agna_coin"}
+                        {
+                            "do": "remember",
+                            "deed": "gave_agna_coin"
+                        }
                     ]
                 }
             ]

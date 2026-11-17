@@ -297,7 +297,8 @@
             "_comment": "2 GP a day per Blade, one day paid ahead at the Highsteads, the rest on arrival at the fair, from Odda's purse of 40 GP.",
             "destination": "wendmouth",
             "advance_days": 1,
-            "purse_cp": 4000
+            "purse_cp": 4000,
+            "death_card": "odda_falls"
         }
     }
 }

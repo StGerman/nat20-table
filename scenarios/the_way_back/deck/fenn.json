@@ -2,6 +2,53 @@
     "_comment": "The Way Back's own cards (MAP-10, MAP-12, ENG-38): Fenn Lusk's three, The fair price, and The bridge again (MAP-14). They join the world's deck only while this pack's contract runs. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Fights use the SRD 5.2.1 Bandit.",
     "cards": [
         {
+            "id": "fenn_falls",
+            "tells": [
+                "owner"
+            ],
+            "zone": "lowland",
+            "when": "night",
+            "target": "blades",
+            "once": true,
+            "if": "fenn_lusk_dead",
+            "text": "Fenn Lusk is dead. He lies by the wheel of his own wagon. His purse is under his coat, and nobody but you is left to count it. The purse is heavier than the pay still owed to you.",
+            "text_ru": "Фенн Ласк мёртв. Он лежит у колеса собственного фургона. Кошель у него под сюртуком, и считать его теперь некому, кроме вас. В кошеле больше, чем вам ещё должны заплатить.",
+            "note": "Fenn died in the fight at the wagon. Say it once, plainly, where he lies; describe no wound. The purse is the escort's and the engine counts it: never name a sum, and the stake line is true when the card shows. Bren speaks first: pay is pay. Tam, if he rides with the wagon, is watching the Blades, not the body. Sister Agna, if she came along (agna_came_along), climbs down without a word and stands by the wheel. Torva, if the Blades robbed the cairn or left its stones (robbed_cairn, left_the_cairn_stones), asks what the dead were going to buy. Nobody tells the Blades what they feel, and no companion says which choice is right. Taken, the purse is shared at once and the valley hears of it; carried, it pays them at the end of the road. The clipboard stays on the body: nobody searches it.",
+            "choices": [
+                {
+                    "id": "bring_in",
+                    "text": "Take the wagon and the purse on to the Highsteads.",
+                    "text_ru": "Довезти фургон и кошель до Хайстедса.",
+                    "keeps": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "brought_fenns_purse_in"
+                        }
+                    ]
+                },
+                {
+                    "id": "share",
+                    "text": "Take the purse now and share it out among yourselves.",
+                    "text_ru": "Взять кошель сейчас и поделить между собой.",
+                    "breaks": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "took_fenns_purse"
+                        },
+                        {
+                            "do": "share_purse"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "id": "wet_salt",
             "zone": "lowland",
             "target": "caravan",
@@ -9,7 +56,7 @@
             "once": "contract",
             "text": "Rain comes up the river in a grey wall, and the salt sacks on the wagon start to darken at the seams.",
             "text_ru": "По реке серой стеной идёт дождь, и мешки с солью на фургоне начинают темнеть по швам.",
-            "note": "Failure as content: whatever they choose, the contract goes on. Fenn ticks the sacks on his clipboard with the rain running off his nose. Salt melts; a wet Blade only shivers. Bren says salt is Fenn's problem; Maren gives up her cloak first.",
+            "note": "Failure as content: whatever they choose, the contract goes on. Fenn ticks the sacks on his clipboard with the rain running off his nose. Salt melts; a wet Blade only shivers. Bren says salt is Fenn's problem; Maren gives up her cloak first. If Fenn is dead (fenn_lusk_dead), nobody ticks the sacks; Bren says salt is nobody's problem now, and Maren gives up her cloak anyway.",
             "choices": [
                 {
                     "id": "cloaks",
@@ -21,7 +68,10 @@
                             "who": "blades",
                             "levels": 1
                         },
-                        {"do": "remember", "deed": "gave_their_cloaks_to_the_salt"}
+                        {
+                            "do": "remember",
+                            "deed": "gave_their_cloaks_to_the_salt"
+                        }
                     ]
                 },
                 {
@@ -29,7 +79,10 @@
                     "text": "Pull in under the willows and wait.",
                     "text_ru": "Встать под ивами и переждать.",
                     "effects": [
-                        {"do": "delay", "minutes": 240}
+                        {
+                            "do": "delay",
+                            "minutes": 240
+                        }
                     ]
                 },
                 {
@@ -37,8 +90,15 @@
                     "text": "Push on through the rain.",
                     "text_ru": "Идти дальше сквозь дождь.",
                     "effects": [
-                        {"do": "cargo", "good": "salt", "change": -100},
-                        {"do": "remember", "deed": "lost_salt_to_the_rain"}
+                        {
+                            "do": "cargo",
+                            "good": "salt",
+                            "change": -100
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "lost_salt_to_the_rain"
+                        }
                     ]
                 }
             ]
@@ -51,7 +111,7 @@
             "once": "contract",
             "text": "In the dark two men with a handcart are at the wagon, lifting the iron bars off it one by one, very quietly.",
             "text_ru": "В темноте у фургона двое с ручной тележкой: снимают железные прутья один за другим, очень тихо.",
-            "note": "Two Wendford men with nothing to plough with this spring: the goblins took the oxen and the price of iron went up. Persons, not beasts: they yield the moment they are caught, and a man who drops his bar has yielded. Fights stay a recommendation. Ilsa wants to know whose iron it was before it was Fenn's.",
+            "note": "Two Wendford men with nothing to plough with this spring: the goblins took the oxen and the price of iron went up. Persons, not beasts: they yield the moment they are caught, and a man who drops his bar has yielded. Fights stay a recommendation. Ilsa wants to know whose iron it was before it was Fenn's. If Fenn is dead (fenn_lusk_dead), the two men say the iron is nobody's now, and half believe it.",
             "choices": [
                 {
                     "id": "go",
@@ -82,10 +142,17 @@
                             "skill": "intimidation",
                             "dc": 10,
                             "success": [
-                                {"do": "remember", "deed": "scared_off_the_iron_thieves"}
+                                {
+                                    "do": "remember",
+                                    "deed": "scared_off_the_iron_thieves"
+                                }
                             ],
                             "failure": [
-                                {"do": "cargo", "good": "iron", "change": -40}
+                                {
+                                    "do": "cargo",
+                                    "good": "iron",
+                                    "change": -40
+                                }
                             ]
                         }
                     ]
@@ -95,7 +162,11 @@
                     "text": "Let them go and track them at first light.",
                     "text_ru": "Дать им уйти и пойти по следу на рассвете.",
                     "effects": [
-                        {"do": "cargo", "good": "iron", "change": -40},
+                        {
+                            "do": "cargo",
+                            "good": "iron",
+                            "change": -40
+                        },
                         {
                             "do": "check",
                             "who": "blades",
@@ -103,7 +174,10 @@
                             "skill": "survival",
                             "dc": 15,
                             "success": [
-                                {"do": "remember", "deed": "tracked_the_iron"}
+                                {
+                                    "do": "remember",
+                                    "deed": "tracked_the_iron"
+                                }
                             ]
                         }
                     ]
@@ -111,9 +185,94 @@
             ]
         },
         {
+            "id": "oddas_board",
+            "cast": [
+                "warden_brannock",
+                "owner"
+            ],
+            "tells": [
+                "odda_vell"
+            ],
+            "zone": "wendmouth",
+            "when": "night",
+            "target": "blades",
+            "once": true,
+            "if": "odda_vell_dead",
+            "text": "After dark the fair warden comes to the Blades' fire with a lantern and Odda's old tally board under his arm. Her last line on it is still empty, and he wants to know what to write.",
+            "text_ru": "После темноты к костру наёмников приходит смотритель ярмарки с фонарём и старой учётной доской Одды под мышкой. Последняя строка на ней пуста, и он хочет знать, что туда написать.",
+            "note": "Brannock, who handed the company on to Fenn because Odda could not (odda_vell_dead). He keeps the board for her kin downriver, and the fair will read it. Say the cause aloud in one clause: the Blades carried her purse in to the fair (brought_oddas_purse_in), or took it at her wheel (took_oddas_purse). Fenn listens from his wagon with his clipboard and writes nothing yet; what he hears tonight is how he meets them tomorrow. Bren is for the plain truth either way; Ilsa offers to write it, and her hand is better than the warden's. Joke: the board's first line, twenty autumns down, is the warden's own name, spelled wrong.",
+            "choices": [
+                {
+                    "id": "purse_came",
+                    "text": "Tell him her purse came in with the wagon.",
+                    "text_ru": "Сказать, что её кошель приехал вместе с фургоном.",
+                    "if": "brought_oddas_purse_in",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "brannock_wrote_the_purse_in"
+                        }
+                    ]
+                },
+                {
+                    "id": "own_up",
+                    "text": "Tell him you took her purse.",
+                    "text_ru": "Сказать, что её кошель взяли вы.",
+                    "if": "took_oddas_purse",
+                    "unless": "brought_oddas_purse_in",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "owned_up_to_oddas_purse"
+                        }
+                    ]
+                },
+                {
+                    "id": "lost",
+                    "text": "Tell him the purse was lost on the road.",
+                    "text_ru": "Сказать, что кошель пропал в дороге.",
+                    "if": "took_oddas_purse",
+                    "unless": "brought_oddas_purse_in",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "lied_about_oddas_purse"
+                        }
+                    ]
+                },
+                {
+                    "id": "her_name",
+                    "text": "Ask him to write only her name.",
+                    "text_ru": "Попросить его написать только её имя.",
+                    "unless": "took_oddas_purse",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "brannock_wrote_her_name"
+                        }
+                    ]
+                },
+                {
+                    "id": "fenn_writes",
+                    "text": "Hand the board to Fenn and let him write it.",
+                    "text_ru": "Отдать доску Фенну: пусть пишет он.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "fenn_wrote_oddas_line"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "id": "the_fair_price",
-            "cast": ["nell_hale"],
-            "tells": ["owner"],
+            "cast": [
+                "nell_hale"
+            ],
+            "tells": [
+                "owner"
+            ],
             "zone": "wendford",
             "when": "arrival",
             "target": "caravan",
@@ -121,7 +280,7 @@
             "once": "contract",
             "text": "A crowd stands in front of Fenn's wagon on the Wendford green. A woman with a basket says what they all think: salt is dear this year, dearer than anyone remembers, and they want Fenn's salt here, at their price, before it goes up the hill.",
             "text_ru": "Перед фургоном Фенна на лугу Вендфорда стоит толпа. Женщина с корзиной говорит то, что думают все: соль в этом году дорогая, дороже, чем кто-либо помнит, и они хотят соль Фенна здесь и по своей цене, пока её не увезли наверх, в холмы.",
-            "note": "Price is the signal of change, and its cause is in the lore (*Salt and Saltmouth's treasury*), and nobody from the valley on the green knows it (Fenn does and never says it): they know only that salt is dear. Market against custom: Fenn has sold at his price for years, the valley thinks a fair price is the one it always paid, and neither is right. It is Fenn's salt, so Fenn decides with the Blades' advice; he says \"Decide it between you\" and means it. Nell Hale, the reeve's niece, about eight, sits on the rim of the well with a slate and does the crowd's sums for them, out loud and wrong on purpose. Nobody is hurt: making way means pushing through people, never the wagon over them. If the Blades paid the company's toll at the bridge (paid_the_company), they carry its paper: two silver a head on salt that used to cross for nothing is the part of the price the crowd can see, with its seal; the duty behind the rest stays unsaid.",
+            "note": "Price is the signal of change, and its cause is in the lore (*Salt and Saltmouth's treasury*), and nobody from the valley on the green knows it (Fenn does and never says it): they know only that salt is dear. Market against custom: Fenn has sold at his price for years, the valley thinks a fair price is the one it always paid, and neither is right. It is Fenn's salt, so Fenn decides with the Blades' advice; he says \"Decide it between you\" and means it. Nell Hale, the reeve's niece, about eight, sits on the rim of the well with a slate and does the crowd's sums for them, out loud and wrong on purpose. Nobody is hurt: making way means pushing through people, never the wagon over them. If the Blades paid the company's toll at the bridge (paid_the_company), they carry its paper: two silver a head on salt that used to cross for nothing is the part of the price the crowd can see, with its seal; the duty behind the rest stays unsaid. If Fenn is dead (fenn_lusk_dead), the green knows it before the wagon stops: the card is the Blades' to decide, and the woman with the basket says so first. After they brought his purse in (brought_fenns_purse_in), salt sold off the wagon is their word to the dead man; after they took it (took_fenns_purse), the crowd asks why the salt should be dearer than the purse.",
             "choices": [
                 {
                     "id": "sell",
@@ -131,8 +290,15 @@
                         "bread_shared"
                     ],
                     "effects": [
-                        {"do": "cargo", "good": "salt", "change": -100},
-                        {"do": "remember", "deed": "sold_salt_at_their_price"}
+                        {
+                            "do": "cargo",
+                            "good": "salt",
+                            "change": -100
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "sold_salt_at_their_price"
+                        }
                     ]
                 },
                 {
@@ -148,11 +314,21 @@
                             "skill": "persuasion",
                             "dc": 10,
                             "success": [
-                                {"do": "remember", "deed": "showed_wendford_the_toll"}
+                                {
+                                    "do": "remember",
+                                    "deed": "showed_wendford_the_toll"
+                                }
                             ],
                             "failure": [
-                                {"do": "cargo", "good": "salt", "change": -50},
-                                {"do": "remember", "deed": "sold_salt_at_their_price"}
+                                {
+                                    "do": "cargo",
+                                    "good": "salt",
+                                    "change": -50
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "sold_salt_at_their_price"
+                                }
                             ]
                         }
                     ]
@@ -170,11 +346,20 @@
                             "skill": "intimidation",
                             "dc": 10,
                             "success": [
-                                {"do": "remember", "deed": "made_way_through_wendford"}
+                                {
+                                    "do": "remember",
+                                    "deed": "made_way_through_wendford"
+                                }
                             ],
                             "failure": [
-                                {"do": "delay", "minutes": 60},
-                                {"do": "remember", "deed": "wendford_turned_cold"}
+                                {
+                                    "do": "delay",
+                                    "minutes": 60
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "wendford_turned_cold"
+                                }
                             ]
                         }
                     ]
@@ -191,11 +376,21 @@
                             "skill": "persuasion",
                             "dc": 15,
                             "success": [
-                                {"do": "remember", "deed": "talked_wendford_down"}
+                                {
+                                    "do": "remember",
+                                    "deed": "talked_wendford_down"
+                                }
                             ],
                             "failure": [
-                                {"do": "cargo", "good": "salt", "change": -50},
-                                {"do": "remember", "deed": "sold_salt_at_their_price"}
+                                {
+                                    "do": "cargo",
+                                    "good": "salt",
+                                    "change": -50
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "sold_salt_at_their_price"
+                                }
                             ]
                         }
                     ]
@@ -204,14 +399,16 @@
         },
         {
             "id": "salt_on_credit",
-            "tells": ["owner"],
+            "tells": [
+                "owner"
+            ],
             "zone": "slopes",
             "target": "caravan",
             "owner_pick": "walk",
             "once": "contract",
             "text": "On the slope track, well below the Highsteads and out of her neighbours' sight, a woman in a man's coat from the farm on Bald Hill stops the wagon. She wants a winter's salt for the farm, and she cannot pay for it until spring. A boy in a bobble hat holds her hand and looks at the horses, not at the salt.",
             "text_ru": "На склоновой тропе, много ниже Хайстедса и подальше от глаз соседей, фургон останавливает женщина в мужском кафтане с фермы на Лысой горе. Ей нужна соль на зиму для фермы, а заплатить она сможет только весной. Мальчик в шапке с помпоном держит её за руку и смотрит на лошадей, а не на соль.",
-            "note": "The farm on Bald Hill, Col and Dunn's. The goblins took the flock, so there is no wool in spring to pay with, and Fenn won't give credit to a farm with no sheep. If the brothers died at the bridge (killed_col, killed_dunn), she is in black and Fenn knows why; say it plainly, once; the jokes stay on Fenn and the boy, never on her. A blind choice and a consequence on the young: what the Blades do here, Gwyn hears by the next contract. Maren speaks first. The boy's look is told as perception, in its frame (\"as if\", \"by his face\"), never as a threat. Joke: the boy looks the horses over like a buyer at the fair and, by his face, has already chosen one; Fenn finds her farm on his clipboard and reads its line out loud, the way he ticks every sack at every stop: \"Col and Dunn's, on Bald Hill. Pays in wool, in spring.\" Then, in front of her, he crosses out \"wool\".",
+            "note": "The farm on Bald Hill, Col and Dunn's. The goblins took the flock, so there is no wool in spring to pay with, and Fenn won't give credit to a farm with no sheep. If the brothers died at the bridge (killed_col, killed_dunn), she is in black and Fenn knows why; say it plainly, once; the jokes stay on Fenn and the boy, never on her. A blind choice and a consequence on the young: what the Blades do here, Gwyn hears by the next contract. Maren speaks first. The boy's look is told as perception, in its frame (\"as if\", \"by his face\"), never as a threat. Joke: the boy looks the horses over like a buyer at the fair and, by his face, has already chosen one; Fenn finds her farm on his clipboard and reads its line out loud, the way he ticks every sack at every stop: \"Col and Dunn's, on Bald Hill. Pays in wool, in spring.\" Then, in front of her, he crosses out \"wool\". If Fenn is dead (fenn_lusk_dead), she has heard, and asks the Blades: the salt is on the wagon and nobody is counting it. After the Blades brought his purse in (brought_fenns_purse_in), salt off the wagon breaks their word to a dead man, and Bren says so; after they took it (took_fenns_purse), it is only salt.",
             "choices": [
                 {
                     "id": "pay",
@@ -226,7 +423,10 @@
                             "who": "party",
                             "copper": 40
                         },
-                        {"do": "remember", "deed": "paid_for_the_ridge_salt"}
+                        {
+                            "do": "remember",
+                            "deed": "paid_for_the_ridge_salt"
+                        }
                     ]
                 },
                 {
@@ -241,12 +441,70 @@
                             "skill": "persuasion",
                             "dc": 15,
                             "success": [
-                                {"do": "cargo", "good": "salt", "change": -30},
-                                {"do": "remember", "deed": "fenn_gave_credit"}
+                                {
+                                    "do": "cargo",
+                                    "good": "salt",
+                                    "change": -30
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "fenn_gave_credit"
+                                }
                             ],
                             "failure": [
-                                {"do": "remember", "deed": "fenn_said_no"}
+                                {
+                                    "do": "remember",
+                                    "deed": "fenn_said_no"
+                                }
                             ]
+                        }
+                    ],
+                    "unless": "fenn_lusk_dead"
+                },
+                {
+                    "id": "salt_off",
+                    "text": "Give her the salt off the wagon.",
+                    "text_ru": "Отдать ей соль с фургона.",
+                    "if": "fenn_lusk_dead",
+                    "unless": "brought_fenns_purse_in",
+                    "keeps": [
+                        "bread_shared"
+                    ],
+                    "effects": [
+                        {
+                            "do": "cargo",
+                            "good": "salt",
+                            "change": -30
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "gave_fenns_salt_to_bald_hill"
+                        }
+                    ]
+                },
+                {
+                    "id": "salt_off_word",
+                    "text": "Give her the salt off the wagon.",
+                    "text_ru": "Отдать ей соль с фургона.",
+                    "if": [
+                        "fenn_lusk_dead",
+                        "brought_fenns_purse_in"
+                    ],
+                    "keeps": [
+                        "bread_shared"
+                    ],
+                    "breaks": [
+                        "word_kept"
+                    ],
+                    "effects": [
+                        {
+                            "do": "cargo",
+                            "good": "salt",
+                            "change": -30
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "gave_fenns_salt_to_bald_hill"
                         }
                     ]
                 },
@@ -255,7 +513,10 @@
                     "text": "Walk on.",
                     "text_ru": "Идти дальше.",
                     "effects": [
-                        {"do": "remember", "deed": "passed_the_ridge_farm"}
+                        {
+                            "do": "remember",
+                            "deed": "passed_the_ridge_farm"
+                        }
                     ]
                 }
             ]

@@ -46,7 +46,7 @@ interface World {
   route?: string[];
   road_scene: string;
   scenes?: Record<string, string>;
-  escort?: { destination: string };
+  escort?: { destination: string; death_card?: string };
 }
 
 /** A scene file, as far as the bench reads it: the creatures it places and where a carried party stands. */
@@ -172,7 +172,11 @@ export function benchPack(pack: string, card: string, root: string): { dir: stri
   if (campaign.world.start !== plan.start) startScene(dir, campaign.world, plan.start);
   campaign.world.start = plan.start;
   campaign.world.route = plan.route;
-  if (campaign.world.escort) campaign.world.escort.destination = plan.route.at(-1)!;
+  if (campaign.world.escort) {
+    campaign.world.escort.destination = plan.route.at(-1)!;
+    // The copy's deck is the one card on the bench, so it holds no death card (ENG-49).
+    delete campaign.world.escort.death_card;
+  }
   writeFileSync(file, JSON.stringify(campaign, null, 4) + "\n");
   return { dir, plan };
 }
