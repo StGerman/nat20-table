@@ -2524,12 +2524,6 @@ impl Game {
         Ok(())
     }
 
-    /// Whether `handle` is an ally of a wagon fight in this scene (ENG-48).
-    pub fn is_ally(&self, handle: &str) -> bool {
-        self.entity(handle)
-            .is_ok_and(|e| self.scene.allies.contains(&e))
-    }
-
     /// The scene's anchor `id`, or its first when it has none by that id (rule A3); none for a
     /// scene with no anchor.
     pub fn anchor_or_first(&self, id: Option<&str>) -> Option<String> {

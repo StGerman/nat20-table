@@ -699,7 +699,7 @@ impl Campaign {
             choices: choices_dm(card, Some(&offers)),
             note: card.note.clone(),
             scout: card.scout.map(scout_skill),
-            reads: reads(card, Some(&offers), &self.world.deeds_now()),
+            reads: reads(card, Some(&offers), &self.world.state.deeds),
             cast: card.cast.clone(),
             tells: card.tells.clone(),
         })
@@ -729,7 +729,7 @@ impl Campaign {
                 world::When::Night => CardWhen::Night,
                 world::When::Arrival => CardWhen::Arrival,
             },
-            reads: reads(card, Some(pending), &self.world.deeds_now()),
+            reads: reads(card, Some(pending), &self.world.state.deeds),
             forewarned,
         })
     }
