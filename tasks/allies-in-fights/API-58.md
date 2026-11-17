@@ -5,7 +5,7 @@ title: "Roster people: names, cast, tells and the DM's mention"
 pri: P2
 dest: Ours
 size: L
-state: todo
+state: done
 area: "1. API contract and server (E1 follow-ups)"
 ---
 
@@ -13,4 +13,4 @@ Roster entries gain `names`, `look`, `heard`, `remembers`, `monster`, optional `
 
 ## Status
 
-todo. Needs this rows PR; its M13 files (ENG-44) are on main. API-59, MAP-24 and ENG-49's engine PR wait on it
+done 2026-11-17: contract 1.0.0-dev.76, fixture `mention.jsonl` (a mention, then a fight), the loop's matcher `game/src/table/mentions.ts`. Rule A10's test lands with ENG-48, which merges second. API-59, MAP-24 and ENG-49's engine PR wait on it
