@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { State } from "@nat20-table/engine-client";
 import { readLine } from "../src/ui/input.ts";
-import { asTold, nameSpans, PEOPLE_WORDS, peopleOf, personCard, whoAnswer, whoLists } from "../src/ui/people.ts";
+import { asTold, nameAt, nameSpans, PEOPLE_WORDS, peopleOf, personCard, whoAnswer, whoLists } from "../src/ui/people.ts";
 import { SeatNames } from "../src/table/seat-lines.ts";
 
 const book = {
@@ -93,6 +93,7 @@ test("/кто: a name opens its card, an unknown one says so, none lists everyon
   const w = PEOPLE_WORDS.ru;
   assert.deepEqual(readLine("/кто Осрика", undefined), { kind: "who", name: "Осрика" });
   assert.deepEqual(readLine("/who", undefined), { kind: "who", name: "" });
+  assert.deepEqual(readLine("/мышь", undefined), { kind: "mouse" });
   const found = whoAnswer("осрика", people, w);
   assert.ok("person" in found && found.person.id === "osric_hale");
   assert.deepEqual(whoLists(people, w), ["С вами идут: Торва.", "Вы встречали: Гвин, Осрик Хейл, Тэм.", "Нет в живых: Одда.", "Только слышали: Руфус."]);
@@ -100,4 +101,14 @@ test("/кто: a name opens its card, an unknown one says so, none lists everyon
   assert.ok("rows" in unknown);
   assert.equal(unknown.rows[0], "Имя «Гаррик» в рассказе пока не звучало. Вот кого вы знаете.");
   assert.deepEqual(whoAnswer("", [], w), { rows: ["Пока вы никого не знаете по имени."] });
+});
+
+test("a click finds the name under it, by column (AGT-108)", () => {
+  const people = peopleOf(state(), ru);
+  const row = "Гвин кивает Осрику Хейлу; Осрик молчит.";
+  assert.equal(nameAt(row, 0, people), "shepherd_gwyn");
+  assert.equal(nameAt(row, 3, people), "shepherd_gwyn");
+  assert.equal(nameAt(row, 4, people), undefined);
+  assert.equal(nameAt(row, row.indexOf("Осрик молчит"), people), "osric_hale");
+  assert.equal(nameAt(row, 200, people), undefined);
 });

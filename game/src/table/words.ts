@@ -445,7 +445,12 @@ export interface UiWords {
   runOver: string;
   sceneOf(number: number, of: number): string;
   minutes(count: number): string;
-  commandHelp: Record<"options" | "sheet" | "where" | "map" | "who" | "log" | "usage" | "pause" | "suggest" | "panel" | "help" | "quit", string>;
+  commandHelp: Record<"options" | "sheet" | "where" | "map" | "who" | "log" | "usage" | "pause" | "suggest" | "panel" | "mouse" | "help" | "quit", string>;
+  /** The first drag with the mouse on (AGT-108), said once: how to select text. */
+  dragHint: string;
+  /** What `/mouse` says when it turns the mouse off, and on again. */
+  mouseOff: string;
+  mouseOn: string;
   noCommand(name: string, commands: string): string;
   busy: string;
   pausedTyped: string;
@@ -555,6 +560,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
       pause: "AI players wait until you type /pause again",
       suggest: "turn the three suggested moves out of a fight off or on",
       panel: "fold the situation panel to one line, or open it again",
+      mouse: "mouse off, to select text by dragging; again: on. Also /мышь",
       help: "every command and key",
       quit: "end the run (the run folder keeps everything so far)",
     },
@@ -597,6 +603,9 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Ctrl+C     stop after this decision; twice, at once",
       ].join("\n"),
     answeredLater: "answered at your next prompt",
+    dragHint: "To select text, hold Fn as you drag (Option in iTerm2), or turn the mouse off: /mouse.",
+    mouseOff: "Mouse off: drag to select text, and Shift+↑/↓ scroll the story. /mouse turns it back on.",
+    mouseOn: "Mouse on: click an underlined name to see who it is; two fingers scroll the story.",
     stopping: "Stopping after the current decision; Ctrl+C again stops at once.",
     wait: (who, seconds) => (seconds === undefined ? `waiting... ${who ?? "The table is playing"} (/help for commands)` : `${who ?? "The table is playing"}${seconds >= 1 ? ` · ${seconds}s` : ""} (/help for commands)`),
     dmThinking: "The DM is thinking",
@@ -676,6 +685,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
       pause: "игроки за столом ждут, пока вы снова не наберёте /pause",
       suggest: "выключить или включить три подсказки вне боя",
       panel: "свернуть боковую панель в одну строку или раскрыть её",
+      mouse: "выключить мышь, чтобы выделять текст; ещё раз: включить",
       help: "все команды и клавиши",
       quit: "закончить игру (всё сыгранное сохранится в папке игры)",
     },
@@ -718,6 +728,9 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Ctrl+C     остановить после этого решения; дважды — сразу",
       ].join("\n"),
     answeredLater: "сработает, когда придёт ваша очередь",
+    dragHint: "Чтобы выделить текст, ведите мышью, удерживая Fn (в iTerm2: Option), или выключите мышь: /мышь.",
+    mouseOff: "Мышь выключена: текст выделяется простым перетаскиванием, историю листают Shift+↑/↓. /мышь включит её снова.",
+    mouseOn: "Мышь включена: щелчок по подчёркнутому имени покажет, кто это; два пальца листают историю.",
     stopping: "Остановка после текущего решения; ещё раз Ctrl+C — сразу.",
     wait: (who, seconds) => (seconds === undefined ? `ждём... ${who ?? "Стол играет"} (/help — команды)` : `${who ?? "Стол играет"}${seconds >= 1 ? ` · ${seconds} с` : ""} (/help — команды)`),
     dmThinking: "Рассказчик думает",
