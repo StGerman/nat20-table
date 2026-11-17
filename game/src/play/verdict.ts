@@ -162,6 +162,16 @@ function narrationRow(dir: string, flags: Flag[]): VerdictRow {
   return { row: "3", title, status: confirmed > 0 ? "fail" : open > 0 ? "pending" : "pass", detail };
 }
 
+/** A creature the narration puts in a fight the engine doesn't hold it in (AGT-106): counted, not gated. */
+function notInFightRow(dir: string, flags: Flag[]): VerdictRow {
+  const title = "A creature narrated in a fight it is not in (counted, not gated)";
+  if (!existsSync(path.join(dir, NARRATION_CHECK))) return { row: "allies-fight", title, status: "reported", detail: "the narration check hasn't run" };
+  const mine = flags.filter((f) => f.row === "allies-fight");
+  const confirmed = mine.filter((f) => f.answer === "confirmed").length;
+  const open = mine.filter((f) => !f.answer).length;
+  return { row: "allies-fight", title, status: "reported", detail: `${mine.length} flags: ${confirmed} confirmed, ${mine.length - confirmed - open} dismissed, ${open} to confirm` };
+}
+
 /**
  * Row 5: no AI player or DM fallback after its retries ran out, and no human decision refused more
  * than twice that Stas confirms as the table's fault. The human is never cut off, so those are flags.
@@ -430,8 +440,9 @@ export function computeVerdict(dir: string): Verdict {
   // An untracked prop is listed, not flagged (spec §4.3): Stas has nothing to answer for it.
   const narrationFlags: Flag[] = readLines<{ id: string; line?: number; claim?: string; kind?: string; untracked?: boolean }>(path.join(dir, NARRATION_CHECK)).filter((f) => !f.untracked).map((f) => {
     const answer = answers[f.id]?.answer;
-    // The story-space kind is the Milestone 11 row's (AGT-91), not row 3's.
-    return { id: f.id, row: f.kind === "story_space" ? "m11-story" : "3", text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(f.line !== undefined ? { line: f.line } : {}), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
+    // The story-space kind is the Milestone 11 row's (AGT-91), and a creature not in the fight is
+    // counted on its own row (AGT-106): neither is row 3's.
+    return { id: f.id, row: f.kind === "story_space" ? "m11-story" : f.kind === "not_in_fight" ? "allies-fight" : "3", text: `${f.kind ?? "flag"}: ${f.claim ?? ""}`.trim(), ...(f.line !== undefined ? { line: f.line } : {}), ...(answer === "confirmed" || answer === "dismissed" ? { answer } : {}) };
   });
   // Lines Stas ruled himself, which the judge missed (M10 P2): flags of row 3 like the judge's.
   const handFlags: Flag[] = (Array.isArray(added) ? (added as HandFlag[]) : []).map((f) => ({
@@ -457,7 +468,7 @@ export function computeVerdict(dir: string): Verdict {
       carriedReadableRow(run, carriedReads as CarriedReads | undefined, carriedCard(log, scene) !== undefined),
     );
   } else if (packMap(pack) !== undefined) m13.push(writtenRow(run, log, sceneOutcomesOf(pack)));
-  const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...word, ...m13, ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), retries.row, latencyRow(usage)];
+  const rows = [progress[0], partyRow(run, log), ...progress.slice(1), ...word, ...m13, ...auditRows(readJson(path.join(dir, AUDIT_JSON))), narrationRow(dir, narrationFlags), notInFightRow(dir, narrationFlags), retries.row, latencyRow(usage)];
   const flags = [...narrationFlags, ...retries.flags];
   const not_eligible = [
     ...(run.build.dirty ? ["the checkout had changes"] : []),

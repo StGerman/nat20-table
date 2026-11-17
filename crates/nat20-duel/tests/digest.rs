@@ -95,6 +95,25 @@ fn the_planted_fixture_replays_and_its_digest_shows_both_contradictions() {
         "{archer} attacks after the line"
     );
 
+    // A line said in the fight lists its participants, the goblin and Bren among them; a line out
+    // of a fight lists none (AGT-106).
+    assert!(
+        adjacent.fight.contains(&"bren".to_owned()),
+        "{:?}",
+        adjacent.fight
+    );
+    assert!(
+        adjacent.fight.contains(&goblin.to_owned()),
+        "{:?}",
+        adjacent.fight
+    );
+    assert!(
+        run.digests
+            .iter()
+            .filter(|d| d.mode.as_deref() != Some("combat") && !d.combat_over)
+            .all(|d| d.fight.is_empty())
+    );
+
     // Every digest carries the party's sheets once the party is in the scene.
     assert!(run.digests.iter().all(|d| d.inventory.len() == 4));
     assert!(
