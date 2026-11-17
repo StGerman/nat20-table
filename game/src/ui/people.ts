@@ -47,7 +47,7 @@ export function peopleOf(state: State, names: SeatNames, book: PeopleBook = name
     if (p.handle === state.me.handle) continue;
     const look = ru ? (p.look_ru ?? p.look) : p.look;
     const health = inScene.get(p.handle);
-    out.push({ id: p.handle, name: names.who(p.handle), forms: [...p.names], state: "companion", ...(look ? { look } : {}), remembers: [], ...(health ? { health, inScene: true } : {}) });
+    out.push({ id: p.handle, name: ru ? names.who(p.handle) : (p.names[0] ?? names.person(p.handle)), forms: [...p.names], state: "companion", ...(look ? { look } : {}), remembers: [], ...(health ? { health, inScene: true } : {}) });
   }
   for (const n of state.world?.npcs ?? []) {
     const health = inScene.get(n.id);
