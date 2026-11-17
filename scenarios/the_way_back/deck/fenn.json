@@ -111,7 +111,7 @@
             "once": "contract",
             "text": "In the dark two men with a handcart are at the wagon, lifting the iron bars off it one by one, very quietly.",
             "text_ru": "В темноте у фургона двое с ручной тележкой: снимают железные прутья один за другим, очень тихо.",
-            "note": "Two Wendford men with nothing to plough with this spring: the goblins took the oxen and the price of iron went up. Persons, not beasts: they yield the moment they are caught, and a man who drops his bar has yielded. Fights stay a recommendation. Ilsa wants to know whose iron it was before it was Fenn's. If Fenn is dead (fenn_lusk_dead), the two men say the iron is nobody's now, and half believe it.",
+            "note": "Two Wendford men with nothing to plough with this spring: the goblins took the oxen and the price of iron went up. Persons, not beasts: they yield the moment they are caught, and a man who drops his bar has yielded. Fights stay a recommendation. Ilsa wants to know whose iron it was before it was Fenn's. If Fenn is dead (fenn_lusk_dead), the two men say the iron is nobody's now, and half believe it. The thieves are at the wagon, so the fight is there, and whoever rides with it is in it: Fenn, woken at his own wagon, the team but its last horse, the dog if it rides. Tell a wound only for a creature in the fight's list.",
             "choices": [
                 {
                     "id": "go",
@@ -126,7 +126,8 @@
                             "monsters": [
                                 "bandit",
                                 "bandit"
-                            ]
+                            ],
+                            "wagon": true
                         }
                     ]
                 },
@@ -406,9 +407,9 @@
             "target": "caravan",
             "owner_pick": "walk",
             "once": "contract",
-            "text": "On the slope track, well below the Highsteads and out of her neighbours' sight, a woman in a man's coat from the farm on Bald Hill stops the wagon. She wants a winter's salt for the farm, and she cannot pay for it until spring. A boy in a bobble hat holds her hand and looks at the horses, not at the salt.",
-            "text_ru": "На склоновой тропе, много ниже Хайстедса и подальше от глаз соседей, фургон останавливает женщина в мужском кафтане с фермы на Лысой горе. Ей нужна соль на зиму для фермы, а заплатить она сможет только весной. Мальчик в шапке с помпоном держит её за руку и смотрит на лошадей, а не на соль.",
-            "note": "The farm on Bald Hill, Col and Dunn's. The goblins took the flock, so there is no wool in spring to pay with, and Fenn won't give credit to a farm with no sheep. If the brothers died at the bridge (killed_col, killed_dunn), she is in black and Fenn knows why; say it plainly, once; the jokes stay on Fenn and the boy, never on her. A blind choice and a consequence on the young: what the Blades do here, Gwyn hears by the next contract. Maren speaks first. The boy's look is told as perception, in its frame (\"as if\", \"by his face\"), never as a threat. Joke: the boy looks the horses over like a buyer at the fair and, by his face, has already chosen one; Fenn finds her farm on his clipboard and reads its line out loud, the way he ticks every sack at every stop: \"Col and Dunn's, on Bald Hill. Pays in wool, in spring.\" Then, in front of her, he crosses out \"wool\". If Fenn is dead (fenn_lusk_dead), she has heard, and asks the Blades: the salt is on the wagon and nobody is counting it. After the Blades brought his purse in (brought_fenns_purse_in), salt off the wagon breaks their word to a dead man, and Bren says so; after they took it (took_fenns_purse), it is only salt.",
+            "text": "On the slope track, well below the Highsteads and out of her neighbours' sight, a woman in a man's coat from the farm on Bald Hill stops the wagon. She wants a winter's salt for the farm, and she cannot pay for it until spring. A boy in a bobble hat holds her hand and looks at the team, not at the salt.",
+            "text_ru": "На тропе по склону, много ниже Хайстедса и подальше от глаз соседей, фургон останавливает женщина с фермы на Лысой горе, в мужском кафтане. Ей нужна соль на зиму для фермы, а заплатить она сможет только весной. Мальчик в шапке с помпоном держит её за руку и смотрит на упряжку, а не на соль.",
+            "note": "The farm on Bald Hill, Col and Dunn's. The goblins took the flock, so there is no wool in spring to pay with, and Fenn won't give credit to a farm with no sheep. If the brothers died at the bridge (killed_col, killed_dunn), she is in black and Fenn knows why; say it plainly, once; the jokes stay on Fenn and the boy, never on her. A blind choice and a consequence on the young: what the Blades do here, Gwyn hears by the next contract. Maren speaks first. The boy's look is told as perception, in its frame (\"as if\", \"by his face\"), never as a threat. Joke: the boy looks the team over like a buyer at the fair and, by his face, has already made up his mind; Fenn finds her farm on his clipboard and reads its line out loud, the way he ticks every sack at every stop: \"Col and Dunn's, on Bald Hill. Pays in wool, in spring.\" Then, in front of her, he crosses out \"wool\". If Fenn is dead (fenn_lusk_dead), she has heard, and asks the Blades: the salt is on the wagon and nobody is counting it. After the Blades brought his purse in (brought_fenns_purse_in), salt off the wagon breaks their word to a dead man, and Bren says so; after they took it (took_fenns_purse), it is only salt. If Fenn lost a horse at the wagon (fenn_lusk_lost_a_horse), he has already worked out on his clipboard what the one horse left can pull up the slope, and a Blade may turn his own sum against him.",
             "choices": [
                 {
                     "id": "pay",
@@ -459,7 +460,43 @@
                             ]
                         }
                     ],
-                    "unless": "fenn_lusk_dead"
+                    "unless": [
+                        "fenn_lusk_dead",
+                        "fenn_lusk_lost_a_horse"
+                    ]
+                },
+                {
+                    "id": "lighten",
+                    "text": "Tell Fenn that if he gives her the salt now, the one horse has less to pull.",
+                    "text_ru": "Сказать Фенну, что если отдать ей соль сейчас, лошади станет легче тянуть фургон.",
+                    "if": "fenn_lusk_lost_a_horse",
+                    "unless": "fenn_lusk_dead",
+                    "effects": [
+                        {
+                            "do": "check",
+                            "who": "blades",
+                            "ability": "charisma",
+                            "skill": "persuasion",
+                            "dc": 15,
+                            "success": [
+                                {
+                                    "do": "cargo",
+                                    "good": "salt",
+                                    "change": -30
+                                },
+                                {
+                                    "do": "remember",
+                                    "deed": "fenn_gave_credit"
+                                }
+                            ],
+                            "failure": [
+                                {
+                                    "do": "remember",
+                                    "deed": "fenn_said_no"
+                                }
+                            ]
+                        }
+                    ]
                 },
                 {
                     "id": "salt_off",
@@ -531,7 +568,7 @@
             "owner_pick": "pay",
             "text": "At the Millbeck bridge a painted board hangs on a new post, with a wax seal at the bottom. A man in a clean coat sits under it with a ledger. The toll belongs to a Saltmouth company now, he says: the same two silver a head, written down this time.",
             "text_ru": "У моста через Миллбек на новом столбе висит крашеная доска с восковой печатью внизу. Под ней сидит человек в чистом сюртуке с учётной книгой. Пошлина теперь принадлежит солтмутскому товариществу, говорит он: те же два серебряных с головы, только теперь под запись.",
-            "note": "Before the choices, say in one plain sentence what happened here last time: who held the bridge and what the Blades did about it. Something learned goes out of date: the brothers' false toll is now a true one, on paper, and the paper is Rufus's company's. The clerk is not a villain; he is paid by the day, like the Blades. If the brothers were spared, he has never heard of them. Bren respects a seal; Ilsa asks who gave the company the bridge.",
+            "note": "Before the choices, say in one plain sentence what happened here last time: who held the bridge and what the Blades did about it. If the `by` of killed_col or killed_dunn names no Blade, the last blow was an ally's (a horse of the team, Tam, or the dog), not a Blade's hand: say whose, once, plainly, and never as a joke. Something learned goes out of date: the brothers' false toll is now a true one, on paper, and the paper is Rufus's company's. The clerk is not a villain; he is paid by the day, like the Blades. If the brothers were spared, he has never heard of them. Bren respects a seal; Ilsa asks who gave the company the bridge.",
             "choices": [
                 {
                     "id": "pay",

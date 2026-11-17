@@ -56,8 +56,8 @@
             "id": "washed_out",
             "zone": "slopes",
             "target": "caravan",
-            "text": "Part of the track has slid down the hillside in the night. There is room for the wagon, just, if the horses keep their heads.",
-            "text_ru": "За ночь кусок тропы сполз по склону. Фургон пройдёт, впритык, если лошади не испугаются.",
+            "text": "Part of the track has slid down the hillside in the night. There is room for the wagon, just, if the team keeps its head.",
+            "text_ru": "За ночь кусок тропы сполз по склону. Фургон пройдёт, впритык, если упряжка не испугается.",
             "owner_pick": "lead",
             "choices": [
                 {
@@ -88,8 +88,8 @@
                 },
                 {
                     "id": "lead",
-                    "text": "Lead the horses across by the bridle.",
-                    "text_ru": "Перевести лошадей под уздцы.",
+                    "text": "Lead the team across by the bridle.",
+                    "text_ru": "Провести упряжку под уздцы.",
                     "effects": [
                         {
                             "do": "check",
@@ -177,7 +177,9 @@
                                 "goblin_warrior",
                                 "goblin_warrior",
                                 "goblin_warrior"
-                            ]
+                            ],
+                            "wagon": true,
+                            "from": "ahead"
                         }
                     ],
                     "keeps": [
@@ -200,7 +202,7 @@
                     ]
                 }
             ],
-            "note": "The same band, hungrier. A goblin who drops its spear has yielded, and the valley will hear how the Blades treated it. Food thrown to them is a way of speaking: they take it and go."
+            "note": "The same band, hungrier. A goblin who drops its spear has yielded, and the valley will hear how the Blades treated it. Food thrown to them is a way of speaking: they take it and go. The goblins come down the track from ahead, and whoever rides with the wagon is in the fight: the team but its last horse, the Merchant, Tam and the dog if they ride. Tell a wound only for a creature in the fight's list."
         },
         {
             "id": "peddler",
@@ -405,8 +407,8 @@
             "zone": "slopes",
             "target": "caravan",
             "owner_pick": "rest",
-            "text": "One of the horses comes up lame on the steep bit, holding a forefoot off the stones.",
-            "text_ru": "На крутом месте одна из лошадей захромала и держит переднее копыто над камнями.",
+            "text": "A horse comes up lame on the steep bit, holding a forefoot off the stones.",
+            "text_ru": "На крутом месте захромала лошадь: она держит переднее копыто над камнями.",
             "note": "Odda would rather lose an hour than a horse. If the Blades gave the bog-wife something, she is already coming up the track as if she knew, and she wants a favour back. If they walked past her, say first, in one plain sentence, that the old woman on the milestone is the only one in these hills who knows horses. If the Merchant is dead (odda_vell_dead, fenn_lusk_dead), nobody on the seat would rather lose an hour: the horse is the Blades' to save or spend.",
             "choices": [
                 {
@@ -574,8 +576,8 @@
             "id": "barrow_lights",
             "zone": "barrows",
             "target": "blades",
-            "text": "Pale lights move between the old barrows, and the horses will not look at them.",
-            "text_ru": "Между старыми курганами ходят бледные огни, и лошади отворачиваются от них.",
+            "text": "Pale lights move between the old barrows, and the team shies from them.",
+            "text_ru": "Между старыми курганами ходят бледные огни, и упряжка шарахается от них.",
             "choices": [
                 {
                     "id": "look",

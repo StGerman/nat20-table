@@ -3,7 +3,10 @@
     "cards": [
         {
             "id": "toll_man_stocks",
-            "cast": ["osric_hale", "col"],
+            "cast": [
+                "osric_hale",
+                "col"
+            ],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -28,10 +31,16 @@
                             "skill": "persuasion",
                             "dc": 15,
                             "success": [
-                                {"do": "remember", "deed": "col_owes_blades"}
+                                {
+                                    "do": "remember",
+                                    "deed": "col_owes_blades"
+                                }
                             ],
                             "failure": [
-                                {"do": "remember", "deed": "offended_osric"}
+                                {
+                                    "do": "remember",
+                                    "deed": "offended_osric"
+                                }
                             ]
                         }
                     ]
@@ -49,7 +58,10 @@
                             "who": "party",
                             "copper": 10
                         },
-                        {"do": "remember", "deed": "paid_cols_fine"}
+                        {
+                            "do": "remember",
+                            "deed": "paid_cols_fine"
+                        }
                     ]
                 },
                 {
@@ -57,14 +69,19 @@
                     "text": "Leave him to the reeve.",
                     "text_ru": "Оставить его старосте.",
                     "effects": [
-                        {"do": "remember", "deed": "left_col_in_the_stocks"}
+                        {
+                            "do": "remember",
+                            "deed": "left_col_in_the_stocks"
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "osric_hears",
-            "cast": ["osric_hale"],
+            "cast": [
+                "osric_hale"
+            ],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -72,7 +89,7 @@
             "once": true,
             "text": "The reeve meets the wagon at the ford with the common chest's tally sticks under his arm. He has heard about the Millbeck bridge, and he wants to hear it again from the Blades.",
             "text_ru": "Староста встречает фургон у брода, под мышкой у него бирки общинной казны. Он слышал про мост через Миллбек и хочет услышать ещё раз, от наёмников.",
-            "note": "Before the choices, say in one plain sentence what happened last time: the toll men at the Millbeck bridge fought the Blades, and how it ended. Shown Tobin's marked account, Osric goes grey and tells them who the men were: Col and Dunn from the Highsteads, Rufus's debt, and that he sent them away from the chest himself. Custom bent by tribute: he was saving the chest for the steward's visit. No choice blames the Blades and no pay is withheld; the weight is Osric's. Bren speaks: they swung first.",
+            "note": "Before the choices, say in one plain sentence what happened last time: the toll men at the Millbeck bridge fought the Blades, and how it ended. Shown Tobin's marked account, Osric goes grey and tells them who the men were: Col and Dunn from the Highsteads, Rufus's debt, and that he sent them away from the chest himself. Custom bent by tribute: he was saving the chest for the steward's visit. No choice blames the Blades and no pay is withheld; the weight is Osric's. Bren speaks: they swung first. If the `by` of killed_col or killed_dunn names no Blade, the last blow was an ally's (a horse of the team, Tam, or the dog), not a Blade's hand: say whose, once, plainly, and never as a joke.",
             "choices": [
                 {
                     "id": "show_mark",
@@ -80,7 +97,10 @@
                     "text_ru": "Показать ему знак коробейника.",
                     "if": "peddler_testified",
                     "effects": [
-                        {"do": "remember", "deed": "showed_osric_the_paper"}
+                        {
+                            "do": "remember",
+                            "deed": "showed_osric_the_paper"
+                        }
                     ]
                 },
                 {
@@ -96,10 +116,16 @@
                             "skill": "persuasion",
                             "dc": 15,
                             "success": [
-                                {"do": "remember", "deed": "told_osric"}
+                                {
+                                    "do": "remember",
+                                    "deed": "told_osric"
+                                }
                             ],
                             "failure": [
-                                {"do": "remember", "deed": "osric_kept_his_counsel"}
+                                {
+                                    "do": "remember",
+                                    "deed": "osric_kept_his_counsel"
+                                }
                             ]
                         }
                     ]
@@ -110,7 +136,10 @@
                     "text_ru": "Спросить его, кто были эти люди.",
                     "unless": "peddler_testified",
                     "effects": [
-                        {"do": "remember", "deed": "asked_osric_who_they_were"}
+                        {
+                            "do": "remember",
+                            "deed": "asked_osric_who_they_were"
+                        }
                     ]
                 },
                 {
@@ -118,14 +147,19 @@
                     "text": "Say nothing.",
                     "text_ru": "Промолчать.",
                     "effects": [
-                        {"do": "remember", "deed": "kept_the_bridge_from_osric"}
+                        {
+                            "do": "remember",
+                            "deed": "kept_the_bridge_from_osric"
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "toll_paid_word",
-            "cast": ["osric_hale"],
+            "cast": [
+                "osric_hale"
+            ],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -141,7 +175,10 @@
                     "text": "Tell him who took it.",
                     "text_ru": "Рассказать ему, кто её взял.",
                     "effects": [
-                        {"do": "remember", "deed": "told_osric_of_the_toll"}
+                        {
+                            "do": "remember",
+                            "deed": "told_osric_of_the_toll"
+                        }
                     ]
                 },
                 {
@@ -149,14 +186,19 @@
                     "text": "Tell him you paid to keep the peace.",
                     "text_ru": "Сказать, что заплатили, чтобы обошлось без драки.",
                     "effects": [
-                        {"do": "remember", "deed": "kept_the_peace_at_the_bridge"}
+                        {
+                            "do": "remember",
+                            "deed": "kept_the_peace_at_the_bridge"
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "ford_mud",
-            "cast": ["osric_hale"],
+            "cast": [
+                "osric_hale"
+            ],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -171,8 +213,14 @@
                     "text": "Help him mend the ford.",
                     "text_ru": "Помочь ему поправить брод.",
                     "effects": [
-                        {"do": "delay", "minutes": 60},
-                        {"do": "remember", "deed": "mended_the_ford"}
+                        {
+                            "do": "delay",
+                            "minutes": 60
+                        },
+                        {
+                            "do": "remember",
+                            "deed": "mended_the_ford"
+                        }
                     ]
                 },
                 {
@@ -183,7 +231,10 @@
                         "word_kept"
                     ],
                     "effects": [
-                        {"do": "remember", "deed": "owned_up_to_the_ford"}
+                        {
+                            "do": "remember",
+                            "deed": "owned_up_to_the_ford"
+                        }
                     ]
                 },
                 {
@@ -191,14 +242,20 @@
                     "text": "Wish him luck and walk on.",
                     "text_ru": "Пожелать ему удачи и идти дальше.",
                     "effects": [
-                        {"do": "remember", "deed": "left_osric_in_the_mud"}
+                        {
+                            "do": "remember",
+                            "deed": "left_osric_in_the_mud"
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "mill_goblin_taken_alive",
-            "cast": ["osric_hale", "wenna_thorne"],
+            "cast": [
+                "osric_hale",
+                "wenna_thorne"
+            ],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -254,7 +311,10 @@
         },
         {
             "id": "mill_yard_to_the_end",
-            "cast": ["osric_hale", "wenna_thorne"],
+            "cast": [
+                "osric_hale",
+                "wenna_thorne"
+            ],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",

@@ -13,7 +13,7 @@
             "once": true,
             "text": "By the time the wagon is unhitched, the roadfolk boy is standing on a barrel at the fair gate, telling a crowd how the Blades beat everything the road threw at them. The wolves are bigger each time he tells it.",
             "text_ru": "Пока фургон распрягают, мальчишка корринов уже стоит на бочке у ярмарочных ворот и рассказывает толпе, как наёмники одолели всё, что подкинула им дорога. Волки с каждым разом всё больше.",
-            "note": "Tam Corrin. Humour that mocks the company: the human's character hears herself turned into a legend, and the legend is wrong in every detail that flatters. If the Blades promised Bel, the promise is due now. Rufus's men are in the crowd and grow careful. Brannock likes anyone who keeps a boy honest.",
+            "note": "Tam Corrin. Humour that mocks the company: the human's character hears herself turned into a legend, and the legend is wrong in every detail that flatters. If the Blades promised Bel, the promise is due now. Rufus's men are in the crowd and grow careful. Brannock likes anyone who keeps a boy honest. If Tam was hurt at the wagon (tam_hurt), the wound is the best part of the story and has grown faster than the wolves; the bandage is real, and he shows it. If the Blades gave him back to Bel (gave_tam_back_to_bel), he has slipped away from her cart to tell it.",
             "choices": [
                 {
                     "id": "grow",
@@ -68,6 +68,62 @@
                         {
                             "do": "remember",
                             "deed": "kept_the_promise_to_bel"
+                        }
+                    ]
+                }
+            ],
+            "unless": "tam_dead"
+        },
+        {
+            "id": "bel_at_the_gate",
+            "cast": [
+                "bel_corrin"
+            ],
+            "tells": [
+                "tam"
+            ],
+            "zone": "wendmouth",
+            "when": "arrival",
+            "target": "blades",
+            "if": [
+                "tam_rode",
+                "tam_dead"
+            ],
+            "once": true,
+            "text": "Bel's painted cart already stands by the fair gate. She walks the length of the wagon, looking for her boy.",
+            "text_ru": "Расписная повозка корринов уже стоит у ярмарочных ворот. Бел идёт вдоль фургона и ищет глазами сына.",
+            "note": "Tam rode with the wagon and died in a fight at it (tam_dead); Bel came on to the fair, as roadfolk do, and does not know. Say the cause aloud in one clause, whichever holds: if the Blades promised to look after him (promised_bel), she says the promise back to them once, in her own words; if they lied to her about him (lied_to_bel), or covered for him (covered_for_tam), she learns now that he was with them all along. If none holds, she only knew he was gone. Bel does not curse and nobody makes a joke; Maren speaks first, or nobody does. Describe no wound. The fair goes on around her: the warden comes to ask whether the wagon wants its pitch, and goes away again.",
+            "choices": [
+                {
+                    "id": "tell",
+                    "text": "Go to meet her and tell her everything yourselves.",
+                    "text_ru": "Выйти ей навстречу и самим всё рассказать.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "told_bel_of_tam"
+                        }
+                    ]
+                },
+                {
+                    "id": "satchel",
+                    "text": "Hand her his satchel without a word.",
+                    "text_ru": "Молча отдать ей его котомку.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "gave_bel_the_satchel"
+                        }
+                    ]
+                },
+                {
+                    "id": "stalls",
+                    "text": "Lead the wagon on to the stalls before she reaches it.",
+                    "text_ru": "Увести фургон к рядам, пока она до него не дошла.",
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "left_bel_at_the_gate"
                         }
                     ]
                 }
