@@ -19,8 +19,8 @@ use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
     deck::{
-        Card, Deck, DeckError, DeckState, Deed, DeedBook, Drawn, OWNER_CAST, PickError, ScoutSkill,
-        When,
+        Card, Deck, DeckError, DeckState, Deed, DeedBook, Deeds, Drawn, OWNER_CAST, PickError,
+        ScoutSkill, When,
     },
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
@@ -750,30 +750,26 @@ impl World {
         for id in self.tells_of(card) {
             self.heard_by(&id, party);
         }
-        let read: Vec<String> = self
-            .deck
-            .card(card)
-            .and_then(|c| c.if_deeds.as_ref())
-            .map(|d| d.ids().iter().map(|id| id.to_string()).collect())
-            .unwrap_or_default();
-        for deed in read {
-            self.shown_deed(&deed, &cast);
-        }
+        let read = self.deck.card(card).and_then(|c| c.if_deeds.clone());
+        self.shown_if(read.as_ref(), &cast);
     }
 
     /// Choice `choice` of card `card` is chosen (API-59): the card's cast is shown every deed
     /// the choice's `if` reads.
     pub fn choice_chosen(&mut self, card: &str, choice: &str) {
         let cast = self.cast_of(card);
-        let read: Vec<String> = self
+        let read = self
             .deck
             .card(card)
             .and_then(|c| c.choices.iter().find(|ch| ch.id == choice))
-            .and_then(|ch| ch.if_deeds.as_ref())
-            .map(|d| d.ids().iter().map(|id| id.to_string()).collect())
-            .unwrap_or_default();
-        for deed in read {
-            self.shown_deed(&deed, &cast);
+            .and_then(|ch| ch.if_deeds.clone());
+        self.shown_if(read.as_ref(), &cast);
+    }
+
+    /// Shows `cast` every deed an `if` reads.
+    fn shown_if(&mut self, read: Option<&Deeds>, cast: &[String]) {
+        for deed in read.map(Deeds::ids).unwrap_or_default() {
+            self.shown_deed(deed, cast);
         }
     }
 
@@ -1038,6 +1034,7 @@ fn remember_in(
         return false;
     }
     let mut saw = saw;
+    saw.sort();
     saw.dedup();
     book.insert(
         deed.to_string(),

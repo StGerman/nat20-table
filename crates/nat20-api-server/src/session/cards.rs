@@ -559,6 +559,7 @@ impl Session {
                 .expect("a card needs a campaign")
                 .world;
             world.deck.own_move_won(&mut world.state.deck);
+            world.choice_chosen(&resolution.card, &run.mv.success);
             self.push(Pending::public(
                 None,
                 EventKind::CardResolved {
@@ -609,6 +610,10 @@ impl Session {
         } else {
             (mv.failure.as_deref(), &run.failure)
         };
+        // The choice the roll brought is the one chosen (API-59): its cast sees what it reads.
+        if let (Some(choice), Some(campaign)) = (choice, self.campaign.as_mut()) {
+            campaign.world.choice_chosen(card, choice);
+        }
         self.push_own_move_ran(card, choice, roll);
         self.run_effects(effects, by)
     }
