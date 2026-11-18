@@ -7,17 +7,19 @@ import { EngineStopped, type CardDm, type CardPlayer, type ErrorCode, type Event
 import { ConnectionLost, LoginExpired, ModelOffline, TurnTimeout, UsageLimitReached } from "../errors.ts";
 import { coinPhrase, eventLine, formatOptions, formatSheet, formatState, mapLines, offeredLine, reactingTo, tellable, type LegalActionsResult } from "../view.ts";
 import { buildChoices, cardChoices, choiceLines, levelUpChoices, OWN_MOVE, roadChoices, takesMove, type Choice, type ChoiceAct, type SeatTalk } from "./choices.ts";
-import { coinsRu } from "./seat-lines.ts";
+import { coinsRu, type SeatNames } from "./seat-lines.ts";
 import { mapLinesRu, sheetRu, stateRu } from "./seat-views.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
+import type { Person } from "../ui/people.ts";
 import { AI_FALLS_MAX, BarkTools, cardDrawnLine, DmTools, HandTools, movedText, OWN_MOVE_RULE, PlayerTools, ReactionFloor, send } from "./tools.ts";
 import { usageBlock, type UsageLog } from "../usage.ts";
 import type { Language } from "../agents/language.ts";
 import { refusedRu, SEAT_WORDS, UI_WORDS, type SeatWords } from "./words.ts";
+import type { Describer } from "../agents/describe.ts";
 import type { Suggester } from "../agents/suggest.ts";
 import type { DmAgent, DmWake, FallbackCause, HumanPrompt, PlayerAgent, PlayerIntent, PlayerWake, StopKind, TableEvent, ToolOutcome } from "./types.ts";
 
@@ -80,6 +82,11 @@ export interface LoopOptions {
    * picker. Only for a seat that shows them; `/suggest` turns them off and on. None by default.
    */
   suggester?: Suggester;
+  /**
+   * The person card's `look` in the hero's words (AGT-127): for the human's seat only, the checked
+   * rewording once it is ready, the authored line until then. None by default.
+   */
+  describer?: Describer;
 }
 
 /** The prompts the suggester answers (S1: out of combat only, words: explore, the DM's question, a surrender). */
@@ -432,6 +439,7 @@ export class TableLoop {
   /** The human's open level-up choice, from the engine's last answer (AGT-80). */
   private levelChoice: LevelUpChoice | undefined;
   private readonly suggester: Suggester | undefined;
+  private readonly describer: Describer | undefined;
   /** `/suggest` toggles it (S3: on by default). */
   private suggestOn = true;
   private readonly suggestions: SuggestionCounts = { shown: 0, unchanged: 0, edited: 0, own: 0 };
@@ -469,6 +477,12 @@ export class TableLoop {
     this.usage = options.usage;
     this.campaign = options.campaign;
     this.suggester = options.suggester;
+    this.describer = options.describer;
+    if (this.describer) {
+      const human = this.table.human;
+      this.describer.onShown = (pair) =>
+        this.table.transcript.add({ speaker: "describe", channel: `to:${human}`, kind: "described", text: pair.shown, person: pair.person, authored: pair.authored });
+    }
   }
 
   /** Plays from `firstScene` until the adventure ends, the human quits, or the run is stopped. */
@@ -530,7 +544,7 @@ export class TableLoop {
     // When the engine is gone, the run has its transcript and the engine's request log, not the
     // session log, so the audit can't run on it (spec §6: no resume).
     await writing(() => this.table.engine.writeLog());
-    await Promise.allSettled([this.dm.close?.(), ...[...this.agents.values()].map((a) => a.close?.()), this.suggester?.close()]);
+    await Promise.allSettled([this.dm.close?.(), ...[...this.agents.values()].map((a) => a.close?.()), this.suggester?.close(), this.describer?.close()]);
     if (failure) throw failure;
     if (unwritten) throw unwritten;
     return {
@@ -2384,6 +2398,7 @@ export class TableLoop {
     const a = this.table.awaiting;
     const turn = a.kind === "action" ? a.actor : undefined;
     const situation = seen ? situationOf(seen, turn, turn === this.table.human ? options : undefined, this.table.names) : undefined;
+    if (situation?.people && this.describer && seen) situation.people = described(situation.people, seen, this.table.names, this.describer, this.table.roster.flatMap((r) => r.names));
     this.table.show({ kind: "situation", ...(situation ? { situation } : {}) });
   }
 
@@ -2753,4 +2768,17 @@ function cardLines(card: CardPlayer, owner = false, invite = true, fallen = 0): 
     // The invite is for a card no own move was tried on yet (decision 0081, rule 5).
     ...(move || fallen > 0 || !invite ? [] : [OWN_MOVE_INVITE]),
   ];
+}
+
+/**
+ * The people with each `look` as the describer has it for the human (AGT-127): the checked
+ * rewording once ready, else the authored line, and the call started ahead for the next frame.
+ * Only `look`: `heard` and `remembers` stay as authored (design §16 item 8). The names the check
+ * holds a rewording to are the roster's and the glossary's, every form, and the places (rule N10).
+ */
+export function described(people: Person[], state: State, names: SeatNames | undefined, describer: Describer, roster: readonly string[] = []): Person[] {
+  const places = state.view === "player" ? (state.world?.places ?? []).flatMap((p) => [p.name, names?.place(p.id, p.name) ?? p.name]) : [];
+  // The check's list only, never the model's input (Rule 3): the whole roster and glossary, in every form.
+  const known = [...new Set([...people.flatMap((p) => p.forms), ...roster, ...(names?.all ?? []), ...places])];
+  return people.map((p) => (p.look ? { ...p, look: describer.shown(p.id, p.look, known) } : p));
 }

@@ -244,8 +244,11 @@ export interface TranscriptRecord {
   /** `dm`, a character handle, `engine` or `table` (the orchestrator). */
   speaker: string;
   channel: Channel;
-  kind: "narration" | "speech" | "question" | "engine" | "intent" | "note" | "memory" | "retry" | "fallback" | "error" | "system" | "hand";
+  kind: "narration" | "speech" | "question" | "engine" | "intent" | "note" | "memory" | "retry" | "fallback" | "error" | "system" | "hand" | "described";
   text: string;
+  /** For `described` (AGT-127): whose card line the describer reworded, and the authored line `text` replaced. */
+  person?: string;
+  authored?: string;
   /** Roll ids the text cites, `rN`. */
   rolls: string[];
   /** The engine log's length when the line was written. */

@@ -87,6 +87,11 @@ export class SeatNames {
     if (this.language === "ru") this.ru.set(handle, name);
   }
 
+  /** Every name the seat holds in the run's language: the glossary's people and places (the describer's check, AGT-127). */
+  get all(): string[] {
+    return [...this.ru.values()];
+  }
+
   /**
    * A creature or a ledger holder: the party's names, an NPC's, a monster's kind and number
    * («волк 2»). English names a character as the engine does, by handle, and an NPC by its name.
