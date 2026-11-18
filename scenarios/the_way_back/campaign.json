@@ -290,7 +290,8 @@
             "_comment": "2 GP a day per Blade, one day paid ahead at Saltmouth, the rest on arrival at the Highsteads, from Fenn's purse of 40 GP.",
             "destination": "highsteads",
             "advance_days": 1,
-            "purse_cp": 4000
+            "purse_cp": 4000,
+            "death_card": "fenn_falls"
         }
     }
 }

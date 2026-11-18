@@ -8,7 +8,7 @@ Fenn Lusk, a salt dealer from Saltmouth, takes salt and iron up to the hill farm
 
 ## The truth (DM only)
 
-- Fenn is honest, anxious and exact. The contract is what he said, and he pays it in full at the Highsteads. A Blade who falls on the road is paid for the days served.
+- Fenn is honest, anxious and exact. The contract is what he said, and he pays it in full at the Highsteads. If he dies on the road, his purse pays at the Highsteads only if the Blades carried it up; the engine's arrival line says which. A Blade who falls on the road is paid for the days served.
 - This autumn the goblins took the flocks off the ridges (the Hungry hills). Fenn is afraid half the farms he sells to can't pay in spring, and he is right. He sells on credit where Rufus buys debts: the Blades see the other side of the same trouble.
 - Salt is dear this year and nobody up the valley knows why: the cause, and who may tell it, are in the lore (*Salt and Saltmouth's treasury*). Fenn knows and never says (his sheet). What the table sees is the price, and, if the party paid the company's toll at the bridge, the toll paper: that toll is a small part of the price anyone can see, not the cause.
 - The road has the party's own past on it: the Millbeck bridge, Wendford, Col and Dunn's people from Bald Hill, Gwyn at the fold gate. The cards that read what the party did open each payoff with one plain sentence of what happened last time; say it.
@@ -16,11 +16,11 @@ Fenn Lusk, a salt dealer from Saltmouth, takes salt and iron up to the hill farm
 ## Running this pack
 
 - The road is the engine's: the clock, the miles, the cards, the nights and the pay. You narrate it and never move it on yourself: the Blades call the next stretch and the night, and give their word on each card.
-- Fenn Lusk is not a creature in the engine. He drives the wagon, keeps the purse and his clipboard, and talks; nothing in a fight can hurt him, and no narration says it did. On a caravan card he asks the Blades what they think and nearly always does what most of them say; when he won't, say why in his voice.
-- Odda stays at Saltmouth. In the opening scene she hands the Blades on; what she says about them comes from what they did on her contract (get_state lists the deeds). If this pack is played alone, on a new party, she says only that they come recommended.
+- Fenn Lusk is a creature in the engine only in a fight at the wagon, where he stands from the Commoner block and can be hurt or killed; only the engine says so. Otherwise he drives the wagon, keeps the purse and his clipboard, and talks. If he dies, the card `fenn_falls` is on the table before anything else, and the Blades decide what his purse and their word are worth; from then on a caravan card is theirs to decide. On a caravan card he asks the Blades what they think and nearly always does what most of them say; when he won't, say why in his voice.
+- Odda stays at Saltmouth. In the opening scene she hands the Blades on; what she says about them comes from what they did on her contract (get_state lists the deeds). If this pack is played alone, on a new party, she says only that they come recommended. If Odda died on her contract (odda_vell_dead), the fair warden, Brannock, hands them on instead (`twb_wendmouth`), and his card `oddas_board` comes that night.
 - The people of each place (the world's place NPCs) stand by the wagon when the party arrives. get_state lists them with their notes.
 - No haggling and no trade in this pack, except what a card puts on the table. The pay is the reward. Name no sum yourself; the engine's lines show the coin.
-- When the wagon reaches the Highsteads and the Blades are paid, the contract is done and the run ends: close it as a scene, with Fenn's last tick on the clipboard and the hills going dark.
+- When the wagon reaches the Highsteads and the Blades are paid, the contract is done and the run ends: close it as a scene, with Fenn's last tick on the clipboard and the hills going dark; if he died on the road, with the hill folk asking who holds his clipboard now.
 
 ## Tone
 
