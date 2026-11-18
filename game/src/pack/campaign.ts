@@ -4,6 +4,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { REPO } from "../paths.ts";
+import { namedIn, type RosterNames } from "../table/mentions.ts";
 
 /** A living-world pack as the run needs it. */
 export interface CampaignPack {
@@ -17,7 +18,9 @@ export interface CampaignPack {
 
 interface CampaignFile {
   day_limit?: number;
-  world: { map: string; start: string; road_scene: string; day?: number; scenes?: Record<string, string> };
+  world: { map: string; start: string; road_scene: string; day?: number; scenes?: Record<string, string>; caravan?: { owner?: string } };
+  party?: Array<{ handle: string; names?: string[] }>;
+  glossary_ru?: Record<string, string>;
 }
 
 interface MapFile {
@@ -49,7 +52,9 @@ export function worldNames(pack: string): string[] {
   if (!world) return [];
   const npcs = path.join(world.dir, "npcs.json");
   const list = existsSync(npcs) ? (JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Array<{ id: string; name_ru?: string }> }).npcs : [];
-  return [...list.flatMap((npc) => (npc.name_ru ? [`${npc.id}: ${npc.name_ru}`] : [])), ...placeNames(world.dir, () => true)];
+  // A roster person the pack also lists (its Merchant, MAP-24) has the pack's name already.
+  const own = new Set(((JSON.parse(readFileSync(path.join(pack, "campaign.json"), "utf8")) as { npcs?: Array<{ id: string }> }).npcs ?? []).map((n) => n.id));
+  return [...list.flatMap((npc) => (npc.name_ru && !own.has(npc.id) ? [`${npc.id}: ${npc.name_ru}`] : [])), ...placeNames(world.dir, () => true)];
 }
 
 /**
@@ -154,4 +159,54 @@ export function worldSeatNames(pack: string): Map<string, string> {
     }
   }
   return names;
+}
+
+/** A deck card as rule N2 reads it: its player text and who it names. */
+interface NamedCard {
+  id: string;
+  text?: string;
+  text_ru?: string;
+  cast?: string[];
+  tells?: string[];
+  choices: Array<{ id: string; text?: string; text_ru?: string }>;
+}
+
+/**
+ * Rule N2 of the allies-in-fights design (§6.1, MAP-24) on a campaign pack: no form of a name is
+ * shared by two people (the roster's and the party's), every roster person a card's player text
+ * names is in its `cast` or `tells` (`owner` is the caravan's NPC owner), and no person of the
+ * roster is in `glossary_ru`. None for a pack without a campaign.
+ */
+export function rosterProblems(pack: string): string[] {
+  const file = path.join(pack, "campaign.json");
+  if (!existsSync(file)) return [];
+  const campaign = JSON.parse(readFileSync(file, "utf8")) as CampaignFile;
+  const dir = worldDir(pack, campaign.world.map);
+  const npcsFile = path.join(dir, "npcs.json");
+  const people: Array<RosterNames & { name?: string; name_ru?: string }> = existsSync(npcsFile)
+    ? (JSON.parse(readFileSync(npcsFile, "utf8")) as { npcs: Array<{ id: string; name?: string; name_ru?: string; names?: string[] }> }).npcs.map((n) => ({ ...n, names: n.names ?? [] }))
+    : [];
+  const problems: string[] = [];
+  const owners = new Map<string, Set<string>>();
+  for (const who of [...people, ...(campaign.party ?? []).map((p) => ({ id: p.handle, names: p.names ?? [] }))]) {
+    for (const form of who.names) owners.set(form, (owners.get(form) ?? new Set()).add(who.id));
+  }
+  for (const [form, ids] of owners) if (ids.size > 1) problems.push(`name form ${form} is shared by ${[...ids].join(" and ")}`);
+  const owner = campaign.world.caravan?.owner?.replace(/^npc:/, "");
+  for (const deckDir of [path.join(dir, "deck"), path.join(pack, "deck")]) {
+    if (!existsSync(deckDir)) continue;
+    for (const name of readdirSync(deckDir).filter((f) => f.endsWith(".json")).sort()) {
+      const deck = JSON.parse(readFileSync(path.join(deckDir, name), "utf8")) as { cards: NamedCard[] };
+      for (const card of deck.cards) {
+        const text = [card.text, card.text_ru, ...card.choices.flatMap((c) => [c.text, c.text_ru])].filter(Boolean).join("\n");
+        const allowed = new Set([...(card.cast ?? []), ...(card.tells ?? [])].map((who) => (who === "owner" ? owner : who)));
+        for (const id of namedIn(text, people)) if (!allowed.has(id)) problems.push(`card ${card.id} names ${id}, who is in neither its cast nor its tells`);
+      }
+    }
+  }
+  for (const [key, value] of Object.entries(campaign.glossary_ru ?? {})) {
+    const named = namedIn(`${key}\n${value}`, people.map((p) => ({ id: p.id, names: [...p.names, ...(p.name ? [p.name] : [])] })));
+    for (const id of named) problems.push(`glossary_ru ${key} is ${id}, a person of the roster: the roster holds their names`);
+  }
+  return problems;
 }

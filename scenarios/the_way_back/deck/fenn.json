@@ -112,6 +112,8 @@
         },
         {
             "id": "the_fair_price",
+            "cast": ["nell_hale"],
+            "tells": ["owner"],
             "zone": "wendford",
             "when": "arrival",
             "target": "caravan",
@@ -202,6 +204,7 @@
         },
         {
             "id": "salt_on_credit",
+            "tells": ["owner"],
             "zone": "slopes",
             "target": "caravan",
             "owner_pick": "walk",

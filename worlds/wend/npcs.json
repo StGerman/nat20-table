@@ -1,38 +1,911 @@
 {
-    "_comment": "The Wend valley's place NPCs (API-48, MAP-7): people who live in one place and are there, as the party left them, when it comes back. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Each stands at the `by_the_wagon` anchor, which every pack's scene for their place must have. Stat blocks from SRD 5.2.1.",
+    "_comment": "The Wend valley's people (API-48, MAP-7, MAP-24): everyone a Wend card names, with every form of their name the table may use, how they look, what the valley says of them, and what they remember of the Blades. A person with a `place` lives there and is there, as the party left them, when it comes back, at the `by_the_wagon` anchor, which every pack's scene for their place must have; the others come only with a card that lists them in its `cast`. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Stat blocks from SRD 5.2.1.",
     "npcs": [
         {
             "id": "shepherd_gwyn",
             "name": "Gwyn the shepherd",
             "name_ru": "пастушка Гвин",
+            "names": [
+                "Gwyn",
+                "Гвин"
+            ],
             "monster": "commoner",
             "place": "highsteads",
             "anchor": "by_the_wagon",
             "attitude": "friendly",
-            "carries": {"coins": {"cp": 14}},
+            "carries": {
+                "coins": {
+                    "cp": 14
+                }
+            },
+            "look": "A weather-worn shepherd who has a name for every one of her sheep.",
+            "look_ru": "Обветренная пастушка; у каждой её овцы есть имя.",
+            "heard": "They say she knows every flock on the ridges, and every rumour with it.",
+            "heard_ru": "Говорят, она знает на склонах каждую отару, а заодно и каждый слух.",
+            "remembers": [
+                {
+                    "deed": "fed_gwyns_dog",
+                    "you": "You fed her dog on the river road.",
+                    "company": "Your company fed her dog on the river road.",
+                    "you_ru": "Вы сами накормили её собаку на речной дороге.",
+                    "company_ru": "Ваш отряд накормил её собаку на речной дороге."
+                },
+                {
+                    "deed": "col_owes_blades",
+                    "you": "You spoke up for Col at Wendford.",
+                    "company": "Your company spoke up for Col at Wendford.",
+                    "you_ru": "Вы сами заступились за Кола в Вендфорде.",
+                    "company_ru": "Ваш отряд заступился за Кола в Вендфорде."
+                }
+            ],
             "notes": "Keeps the Highsteads' flocks and every rumour off the ridges. Has seen goblin fires on the far ridge three nights running and wants someone to believe her."
         },
         {
             "id": "osric_hale",
             "name": "Osric Hale, the reeve",
             "name_ru": "староста Осрик Хейл",
+            "names": [
+                "Osric",
+                "Osric Hale",
+                "Осрик",
+                "Осрика",
+                "Осрику",
+                "Осриком",
+                "Осрике",
+                "Осрик Хейл"
+            ],
             "monster": "commoner",
             "place": "wendford",
             "anchor": "by_the_wagon",
             "attitude": "indifferent",
-            "carries": {"coins": {"sp": 8, "gp": 2}},
+            "carries": {
+                "coins": {
+                    "sp": 8,
+                    "gp": 2
+                }
+            },
+            "look": "A reeve in a neatly patched coat, the common chest's tally sticks always under his arm.",
+            "look_ru": "Староста в аккуратно залатанной куртке; под мышкой у него вечно бирки общинной казны.",
+            "heard": "They say he counts the common chest twice and still does not trust it.",
+            "heard_ru": "Говорят, он пересчитывает общинную казну дважды и всё равно ей не верит.",
+            "remembers": [
+                {
+                    "deed": "offended_osric",
+                    "you": "You stood up for the man he had put in the stocks.",
+                    "company": "Your company stood up for the man he had put in the stocks.",
+                    "you_ru": "Вы сами заступились перед ним за человека в колодках.",
+                    "company_ru": "Ваш отряд заступился перед ним за человека в колодках."
+                },
+                {
+                    "deed": "paid_cols_fine",
+                    "you": "You paid the fine for the man in his stocks.",
+                    "company": "Your company paid the fine for the man in his stocks.",
+                    "you_ru": "Вы сами заплатили штраф за человека в его колодках.",
+                    "company_ru": "Ваш отряд заплатил штраф за человека в его колодках."
+                },
+                {
+                    "deed": "left_col_in_the_stocks",
+                    "you": "You left the man in the stocks to him.",
+                    "company": "Your company left the man in the stocks to him.",
+                    "you_ru": "Вы сами оставили ему человека в колодках.",
+                    "company_ru": "Ваш отряд оставил ему человека в колодках."
+                },
+                {
+                    "deed": "showed_osric_the_paper",
+                    "you": "You showed him the peddler's mark.",
+                    "company": "Your company showed him the peddler's mark.",
+                    "you_ru": "Вы сами показали ему знак коробейника.",
+                    "company_ru": "Ваш отряд показал ему знак коробейника."
+                },
+                {
+                    "deed": "kept_the_bridge_from_osric",
+                    "you": "You said nothing when he asked about the bridge.",
+                    "company": "Your company said nothing when he asked about the bridge.",
+                    "you_ru": "Вы сами промолчали, когда он спросил про мост.",
+                    "company_ru": "Ваш отряд промолчал, когда он спросил про мост."
+                },
+                {
+                    "deed": "told_osric_of_the_toll",
+                    "you": "You told him who took the toll at the bridge.",
+                    "company": "Your company told him who took the toll at the bridge.",
+                    "you_ru": "Вы сами рассказали ему, кто брал пошлину на мосту.",
+                    "company_ru": "Ваш отряд рассказал ему, кто брал пошлину на мосту."
+                },
+                {
+                    "deed": "kept_the_peace_at_the_bridge",
+                    "you": "You told him you paid at the bridge to keep the peace.",
+                    "company": "Your company told him it paid at the bridge to keep the peace.",
+                    "you_ru": "Вы сами сказали ему, что заплатили на мосту, чтобы обошлось без драки.",
+                    "company_ru": "Ваш отряд сказал ему, что заплатил на мосту, чтобы обошлось без драки."
+                },
+                {
+                    "deed": "left_osric_in_the_mud",
+                    "you": "You wished him luck and left him alone at the broken ford.",
+                    "company": "Your company wished him luck and left him alone at the broken ford.",
+                    "you_ru": "Вы сами пожелали ему удачи и оставили его одного у разбитого брода.",
+                    "company_ru": "Ваш отряд пожелал ему удачи и оставил его одного у разбитого брода."
+                },
+                {
+                    "deed": "owned_up_to_the_ford",
+                    "you": "You told him the ford was churned by your wagon.",
+                    "company": "Your company told him the ford was churned by its wagon.",
+                    "you_ru": "Вы сами признались ему, что брод разбил ваш фургон.",
+                    "company_ru": "Ваш отряд признался ему, что брод разбил ваш фургон."
+                },
+                {
+                    "deed": "mended_the_ford",
+                    "you": "You helped him mend the ford.",
+                    "company": "Your company helped him mend the ford.",
+                    "you_ru": "Вы сами помогли ему поправить брод.",
+                    "company_ru": "Ваш отряд помог ему поправить брод."
+                },
+                {
+                    "deed": "snitt_yielded",
+                    "you": "You let a goblin live in the mill yard.",
+                    "company": "Your company let a goblin live in the mill yard.",
+                    "you_ru": "Вы сами оставили в живых гоблина во дворе мельницы.",
+                    "company_ru": "Ваш отряд оставил в живых гоблина во дворе мельницы."
+                },
+                {
+                    "deed": "named_self_for_the_goblin",
+                    "you": "You gave him your own name for his tally.",
+                    "company": "Your company gave him a name for his tally.",
+                    "you_ru": "Вы сами назвали ему своё имя для бирки.",
+                    "company_ru": "Ваш отряд назвал ему имя для бирки."
+                },
+                {
+                    "deed": "said_the_goblin_should_have_died",
+                    "you": "You told him the goblin should have died in the yard.",
+                    "company": "Your company told him the goblin should have died in the yard.",
+                    "you_ru": "Вы сами сказали ему, что гоблину надо было умереть во дворе.",
+                    "company_ru": "Ваш отряд сказал ему, что гоблину надо было умереть во дворе."
+                },
+                {
+                    "deed": "sent_the_hill_kin_to_the_blades",
+                    "you": "You told him to send the goblins' kin to you.",
+                    "company": "Your company told him to send the goblins' kin to you.",
+                    "you_ru": "Вы сами велели ему отправлять родню гоблинов к вам.",
+                    "company_ru": "Ваш отряд велел ему отправлять родню гоблинов к вам."
+                }
+            ],
             "notes": "Wendford's reeve: careful, proud, worried about money. Sent nobody to take a toll at the Millbeck bridge and is angry that someone does."
         },
         {
             "id": "warden_brannock",
             "name": "Brannock, the fair warden",
             "name_ru": "смотритель ярмарки Браннок",
+            "names": [
+                "Brannock",
+                "Браннок",
+                "Браннока",
+                "Бранноку",
+                "Бранноком",
+                "Бранноке"
+            ],
             "monster": "guard",
             "place": "wendmouth",
             "anchor": "by_the_wagon",
             "attitude": "indifferent",
-            "carries": {"coins": {"sp": 5}},
+            "carries": {
+                "coins": {
+                    "sp": 5
+                }
+            },
+            "look": "A tired warden with a staff and a stub of chalk behind his ear.",
+            "look_ru": "Усталый смотритель с посохом и огрызком мела за ухом.",
+            "heard": "They say that in fair week he puts anyone who draws a blade outside the gate.",
+            "heard_ru": "Говорят, в ярмарочную неделю он выставляет за ворота любого, кто достанет клинок.",
+            "remembers": [
+                {
+                    "deed": "bought_a_pitch_by_the_well",
+                    "you": "You gave him a sack of wheat for a pitch by the well.",
+                    "company": "Your company gave him a sack of wheat for a pitch by the well.",
+                    "you_ru": "Вы сами дали ему мешок пшеницы за место у колодца.",
+                    "company_ru": "Ваш отряд дал ему мешок пшеницы за место у колодца."
+                },
+                {
+                    "deed": "told_the_warden_of_the_bridge",
+                    "you": "You told him what happened at the Millbeck bridge.",
+                    "company": "Your company told him what happened at the Millbeck bridge.",
+                    "you_ru": "Вы сами рассказали ему, что случилось на мосту через Миллбек.",
+                    "company_ru": "Ваш отряд рассказал ему, что случилось на мосту через Миллбек."
+                },
+                {
+                    "deed": "named_rufus_at_the_gate",
+                    "you": "You told him whose men stood on the Millbeck bridge.",
+                    "company": "Your company told him whose men stood on the Millbeck bridge.",
+                    "you_ru": "Вы сами сказали ему, чьи люди стояли на мосту через Миллбек.",
+                    "company_ru": "Ваш отряд сказал ему, чьи люди стояли на мосту через Миллбек."
+                },
+                {
+                    "deed": "warden_threw_out_the_bruisers",
+                    "you": "You brought him your quarrel, and he put two big men outside the gate.",
+                    "company": "Your company brought him its quarrel, and he put two big men outside the gate.",
+                    "you_ru": "Вы сами пришли к нему, и он выставил двоих здоровяков за ворота.",
+                    "company_ru": "Ваш отряд пришёл к нему, и он выставил двоих здоровяков за ворота."
+                },
+                {
+                    "deed": "the_warden_took_the_factors_word",
+                    "you": "You fetched him to the stall, and he took the dealer's word.",
+                    "company": "Your company fetched him to the stall, and he took the dealer's word.",
+                    "you_ru": "Вы сами позвали его к прилавку, и он поверил торговцу.",
+                    "company_ru": "Ваш отряд позвал его к прилавку, и он поверил торговцу."
+                }
+            ],
             "notes": "Walks the Saltmouth fair ground with a staff in fair week. Tired, fair-minded, short with anyone who draws a blade inside the gate."
+        },
+        {
+            "id": "odda_vell",
+            "name": "Odda Vell, the grain factor",
+            "name_ru": "торговка зерном Одда Велл",
+            "names": [
+                "Odda",
+                "Odda Vell",
+                "Одда",
+                "Одды",
+                "Одде",
+                "Одду",
+                "Оддой",
+                "Одда Велл"
+            ],
+            "monster": "commoner",
+            "attitude": "friendly",
+            "look": "A broad, weathered woman in a man's oilskin coat, who talks to her horses more than to people.",
+            "look_ru": "Крепкая женщина в мужском промасленном плаще; с лошадьми она говорит охотнее, чем с людьми.",
+            "heard": "They say she has brought the hill wheat to the fair first for twenty autumns running.",
+            "heard_ru": "Говорят, она двадцать осеней подряд первой привозит на ярмарку пшеницу с холмов.",
+            "remembers": [
+                {
+                    "deed": "told_odda_of_rufus",
+                    "you": "You told her about the bribe.",
+                    "company": "Your company told her about the bribe.",
+                    "you_ru": "Вы сами рассказали ей про взятку.",
+                    "company_ru": "Ваш отряд рассказал ей про взятку."
+                },
+                {
+                    "deed": "bought_a_pitch_by_the_well",
+                    "you": "You gave the warden a sack of her wheat.",
+                    "company": "Your company gave the warden a sack of her wheat.",
+                    "you_ru": "Вы сами отдали смотрителю мешок её пшеницы.",
+                    "company_ru": "Ваш отряд отдал смотрителю мешок её пшеницы."
+                },
+                {
+                    "deed": "took_the_old_place",
+                    "you": "You got her the old pitch by the well.",
+                    "company": "Your company got her the old pitch by the well.",
+                    "you_ru": "Вы сами заняли для неё старое место у колодца.",
+                    "company_ru": "Ваш отряд занял для неё старое место у колодца."
+                },
+                {
+                    "deed": "lost_in_the_meadows",
+                    "you": "You led her wagon into the water meadows.",
+                    "company": "Your company led her wagon into the water meadows.",
+                    "you_ru": "Вы сами завели её фургон в заливные луга.",
+                    "company_ru": "Ваш отряд завёл её фургон в заливные луга."
+                },
+                {
+                    "deed": "rufus_got_ahead",
+                    "you": "You chose the river road, and she was passed.",
+                    "company": "Your company chose the river road, and she was passed.",
+                    "you_ru": "Вы сами выбрали речную дорогу, и её обогнали.",
+                    "company_ru": "Ваш отряд выбрал речную дорогу, и её обогнали."
+                },
+                {
+                    "deed": "odda_vell_lost_a_horse",
+                    "you": "You were in the fight where her horse fell.",
+                    "company": "Your company was in the fight where her horse fell.",
+                    "you_ru": "Вы сами были в той драке, где у неё пала лошадь.",
+                    "company_ru": "Ваш отряд был в той драке, где у неё пала лошадь."
+                }
+            ],
+            "notes": "The caravan's owner on Fair in Wend; on The Way Back she hands the company to Fenn at Saltmouth. Her prose is the pack's prose/npcs/odda_vell.md."
+        },
+        {
+            "id": "fenn_lusk",
+            "name": "Fenn Lusk, the salt dealer",
+            "name_ru": "торговец солью Фенн Ласк",
+            "names": [
+                "Fenn",
+                "Fenn Lusk",
+                "Фенн",
+                "Фенна",
+                "Фенну",
+                "Фенном",
+                "Фенне",
+                "Фенн Ласк"
+            ],
+            "monster": "commoner",
+            "attitude": "friendly",
+            "look": "A thin, careful man in a grey coat mended at the elbows, with a clipboard and a pencil on a string.",
+            "look_ru": "Худой аккуратный человек в сером сюртуке, заштопанном на локтях, с дощечкой для записей и карандашом на верёвочке.",
+            "heard": "They say every sack and every debt in the valley is written on his clipboard.",
+            "heard_ru": "Говорят, у него на дощечке записан каждый мешок и каждый долг в долине.",
+            "remembers": [
+                {
+                    "deed": "fenn_lusk_lost_a_horse",
+                    "you": "You were in the fight where his horse fell.",
+                    "company": "Your company was in the fight where his horse fell.",
+                    "you_ru": "Вы сами были в той драке, где у него пала лошадь.",
+                    "company_ru": "Ваш отряд был в той драке, где у него пала лошадь."
+                }
+            ],
+            "notes": "The caravan's owner on The Way Back. Knows why salt is dear and never says it; his prose is the pack's prose/npcs/fenn_lusk.md."
+        },
+        {
+            "id": "bel_corrin",
+            "name": "Bel Corrin",
+            "name_ru": "Бел Коррин",
+            "names": [
+                "Bel",
+                "Bel Corrin",
+                "Бел",
+                "Бел Коррин"
+            ],
+            "monster": "commoner",
+            "attitude": "friendly",
+            "look": "A small roadfolk woman who mends pots by the fire of a painted cart.",
+            "look_ru": "Маленькая женщина из корринов; латает котлы у костра расписной повозки.",
+            "heard": "They say a seat at her fire costs no coin, only a story.",
+            "heard_ru": "Говорят, место у её костра стоит не монету, а историю.",
+            "remembers": [
+                {
+                    "deed": "joined_the_roadfolk_fire",
+                    "you": "You sat down at her fire.",
+                    "company": "Your company sat down at her fire.",
+                    "you_ru": "Вы сами сели к её костру.",
+                    "company_ru": "Ваш отряд сел к её костру."
+                },
+                {
+                    "deed": "kept_from_the_roadfolk",
+                    "you": "You kept to your own fire.",
+                    "company": "Your company kept to its own fire.",
+                    "you_ru": "Вы сами держались своего костра.",
+                    "company_ru": "Ваш отряд держался своего костра."
+                },
+                {
+                    "deed": "told_bel_the_truth",
+                    "you": "You told her the truth about her son.",
+                    "company": "Your company told her the truth about her son.",
+                    "you_ru": "Вы сами сказали ей правду о сыне.",
+                    "company_ru": "Ваш отряд сказал ей правду о сыне."
+                },
+                {
+                    "deed": "lied_to_bel",
+                    "you": "You lied to her about her son.",
+                    "company": "Your company lied to her about her son.",
+                    "you_ru": "Вы сами солгали ей о сыне.",
+                    "company_ru": "Ваш отряд солгал ей о сыне."
+                },
+                {
+                    "deed": "promised_bel",
+                    "you": "You promised her to look after her son.",
+                    "company": "Your company promised her to look after her son.",
+                    "you_ru": "Вы сами пообещали ей присмотреть за сыном.",
+                    "company_ru": "Ваш отряд пообещал ей присмотреть за сыном."
+                }
+            ],
+            "notes": "Halfling roadfolk, Tam's mother. Takes no coin for a seat at her fire, because the road is free; tells news as gossip, never as a warning."
+        },
+        {
+            "id": "tam",
+            "name": "Tam",
+            "name_ru": "Тэм",
+            "names": [
+                "Tam",
+                "Tam Corrin",
+                "Тэм",
+                "Тэма",
+                "Тэму",
+                "Тэмом",
+                "Тэме",
+                "Тэм Коррин"
+            ],
+            "monster": "commoner",
+            "attitude": "friendly",
+            "look": "A barefoot boy with a satchel, who cannot take his eyes off other people's swords.",
+            "look_ru": "Босой мальчишка с котомкой; глаз не сводит с чужих мечей.",
+            "heard": "They say the roadfolk boy talks of nothing but swords.",
+            "heard_ru": "Говорят, мальчишка корринов только и говорит, что о мечах.",
+            "remembers": [
+                {
+                    "deed": "tam_rode",
+                    "you": "You let him ride on the wagon.",
+                    "company": "Your company let him ride on the wagon.",
+                    "you_ru": "Вы сами разрешили ему ехать на фургоне.",
+                    "company_ru": "Ваш отряд разрешил ему ехать на фургоне."
+                },
+                {
+                    "deed": "walked_tam_home",
+                    "you": "You walked him back to his mother.",
+                    "company": "Your company walked him back to his mother.",
+                    "you_ru": "Вы сами отвели его назад к матери.",
+                    "company_ru": "Ваш отряд отвёл его назад к матери."
+                },
+                {
+                    "deed": "sent_tam_home",
+                    "you": "You told him to go home.",
+                    "company": "Your company told him to go home.",
+                    "you_ru": "Вы сами велели ему идти домой.",
+                    "company_ru": "Ваш отряд велел ему идти домой."
+                },
+                {
+                    "deed": "covered_for_tam",
+                    "you": "You covered for him with his mother.",
+                    "company": "Your company covered for him with his mother.",
+                    "you_ru": "Вы сами прикрыли его перед матерью.",
+                    "company_ru": "Ваш отряд прикрыл его перед матерью."
+                },
+                {
+                    "deed": "tams_legend_grew",
+                    "you": "You let his story about you grow.",
+                    "company": "Your company let his story about it grow.",
+                    "you_ru": "Вы сами не стали поправлять его байку про вас.",
+                    "company_ru": "Ваш отряд не стал поправлять его байку о вас."
+                },
+                {
+                    "deed": "corrected_tam",
+                    "you": "You corrected him kindly, in front of everyone.",
+                    "company": "Your company corrected him kindly, in front of everyone.",
+                    "you_ru": "Вы сами мягко поправили его при всех.",
+                    "company_ru": "Ваш отряд мягко поправил его при всех."
+                },
+                {
+                    "deed": "kept_the_promise_to_bel",
+                    "you": "You took him back to his mother, as you promised.",
+                    "company": "Your company took him back to his mother, as it promised.",
+                    "you_ru": "Вы сами отвели его к матери, как обещали.",
+                    "company_ru": "Ваш отряд отвёл его к матери, как обещал."
+                }
+            ],
+            "notes": "Tam Corrin, Bel's son, about ten. Wants the fair, a sword and the one Blade he has picked; a consequence on the young."
+        },
+        {
+            "id": "mother_sedge",
+            "name": "Mother Sedge, the bog-wife",
+            "name_ru": "матушка Седж",
+            "names": [
+                "Sedge",
+                "Mother Sedge",
+                "Седж",
+                "матушка Седж"
+            ],
+            "monster": "commoner",
+            "attitude": "indifferent",
+            "look": "An old woman with a crow on her shoulder and a basket of knotted charms.",
+            "look_ru": "Старуха с вороной на плече и корзиной узелковых оберегов.",
+            "heard": "They say nobody in the hills knows horses better.",
+            "heard_ru": "Говорят, в холмах никто не понимает в лошадях лучше неё.",
+            "remembers": [
+                {
+                    "deed": "sedge_charm",
+                    "you": "You took one of her charms.",
+                    "company": "Your company took one of her charms.",
+                    "you_ru": "Вы сами взяли у неё оберег.",
+                    "company_ru": "Ваш отряд взял у неё оберег."
+                },
+                {
+                    "deed": "told_sedge_a_true_word",
+                    "you": "You told her something true.",
+                    "company": "Your company told her something true.",
+                    "you_ru": "Вы сами сказали ей правдивое слово.",
+                    "company_ru": "Ваш отряд сказал ей правдивое слово."
+                },
+                {
+                    "deed": "snubbed_sedge",
+                    "you": "You walked past her.",
+                    "company": "Your company walked past her.",
+                    "you_ru": "Вы сами прошли мимо неё.",
+                    "company_ru": "Ваш отряд прошёл мимо неё."
+                },
+                {
+                    "deed": "carrying_sedges_jar",
+                    "you": "You took her jar to carry to the fair.",
+                    "company": "Your company took her jar to carry to the fair.",
+                    "you_ru": "Вы сами взялись донести её кувшинчик до ярмарки.",
+                    "company_ru": "Ваш отряд взялся донести её кувшинчик до ярмарки."
+                },
+                {
+                    "deed": "opened_sedges_jar",
+                    "you": "You opened her jar.",
+                    "company": "Your company opened her jar.",
+                    "you_ru": "Вы сами открыли её кувшинчик.",
+                    "company_ru": "Ваш отряд открыл её кувшинчик."
+                },
+                {
+                    "deed": "refused_sedges_jar",
+                    "you": "You gave her jar back to her.",
+                    "company": "Your company gave her jar back to her.",
+                    "you_ru": "Вы сами вернули ей кувшинчик.",
+                    "company_ru": "Ваш отряд вернул ей кувшинчик."
+                }
+            ],
+            "notes": "The bog-wife of the hill moss. Talks only to Gwyn, so what the Blades do in front of her reaches the Highsteads and nobody else."
+        },
+        {
+            "id": "sister_agna",
+            "name": "Sister Agna",
+            "name_ru": "сестра Агна",
+            "names": [
+                "Agna",
+                "Sister Agna",
+                "Агна",
+                "Агны",
+                "Агне",
+                "Агну",
+                "Агной",
+                "сестра Агна"
+            ],
+            "monster": "commoner",
+            "attitude": "friendly",
+            "look": "A barefoot pilgrim in grey, a round loaf wrapped under her arm.",
+            "look_ru": "Босая паломница в сером, под мышкой завёрнутый круглый хлеб.",
+            "heard": "They say the pilgrim has vowed not to speak until she reaches the sea.",
+            "heard_ru": "Говорят, эта паломница дала обет молчать до самого моря.",
+            "remembers": [
+                {
+                    "deed": "gave_agna_a_seat",
+                    "you": "You offered her a seat on the wagon.",
+                    "company": "Your company offered her a seat on the wagon.",
+                    "you_ru": "Вы сами предложили ей место на фургоне.",
+                    "company_ru": "Ваш отряд предложил ей место на фургоне."
+                },
+                {
+                    "deed": "walked_with_agna",
+                    "you": "You walked beside her a while.",
+                    "company": "Your company walked beside her a while.",
+                    "you_ru": "Вы сами прошли рядом с ней часть дороги.",
+                    "company_ru": "Ваш отряд прошёл рядом с ней часть дороги."
+                },
+                {
+                    "deed": "passed_agna_by",
+                    "you": "You passed her with a nod.",
+                    "company": "Your company passed her with a nod.",
+                    "you_ru": "Вы сами кивнули ей и прошли мимо.",
+                    "company_ru": "Ваш отряд кивнул ей и прошёл мимо."
+                },
+                {
+                    "deed": "knew_who_set_the_toll",
+                    "you": "You puzzled out her drawing in the mud.",
+                    "company": "Your company puzzled out her drawing in the mud.",
+                    "you_ru": "Вы сами разобрались в её рисунке на грязи.",
+                    "company_ru": "Ваш отряд разобрался в её рисунке на грязи."
+                },
+                {
+                    "deed": "stood_with_agna",
+                    "you": "You stood with her in the water.",
+                    "company": "Your company stood with her in the water.",
+                    "you_ru": "Вы сами стояли рядом с ней в воде.",
+                    "company_ru": "Ваш отряд стоял рядом с ней в воде."
+                },
+                {
+                    "deed": "gave_agna_coin",
+                    "you": "You gave her coin for the road home.",
+                    "company": "Your company gave her coin for the road home.",
+                    "you_ru": "Вы сами дали ей денег на дорогу домой.",
+                    "company_ru": "Ваш отряд дал ей денег на дорогу домой."
+                }
+            ],
+            "notes": "One of Embra's pilgrims, under a vow of silence until the sea at Saltmouth. Will not ride a wagon that carries grave coins."
+        },
+        {
+            "id": "tobin",
+            "name": "Tobin, the peddler",
+            "name_ru": "коробейник Тобин",
+            "names": [
+                "Tobin",
+                "Тобин",
+                "Тобина",
+                "Тобину",
+                "Тобином",
+                "Тобине"
+            ],
+            "monster": "commoner",
+            "attitude": "friendly",
+            "look": "A peddler with a handcart and a charm against goblins for sale.",
+            "look_ru": "Коробейник с ручной тележкой и оберегом от гоблинов на продажу.",
+            "heard": "They say whatever is done in front of him, the whole valley knows by fair day.",
+            "heard_ru": "Говорят, что при нём ни сделай, к ярмарке об этом знает вся долина.",
+            "remembers": [
+                {
+                    "deed": "fed_tobin",
+                    "you": "You shared your food with him.",
+                    "company": "Your company shared its food with him.",
+                    "you_ru": "Вы сами поделились с ним едой.",
+                    "company_ru": "Ваш отряд поделился с ним едой."
+                },
+                {
+                    "deed": "turned_tobin_away",
+                    "you": "You sent him on his way hungry.",
+                    "company": "Your company sent him on his way hungry.",
+                    "you_ru": "Вы сами отправили его дальше голодным.",
+                    "company_ru": "Ваш отряд отправил его дальше голодным."
+                },
+                {
+                    "deed": "told_tobin_of_the_dead",
+                    "you": "You told him about the company and its dead.",
+                    "company": "Your company told him about itself and its dead.",
+                    "you_ru": "Вы сами рассказали ему о старом отряде и его мёртвых.",
+                    "company_ru": "Ваш отряд рассказал ему о старом отряде и его мёртвых."
+                },
+                {
+                    "deed": "knew_tobins_breach",
+                    "you": "You asked him what happened to his hands.",
+                    "company": "Your company asked him what happened to his hands.",
+                    "you_ru": "Вы сами спросили его, что с его руками.",
+                    "company_ru": "Ваш отряд спросил его, что с его руками."
+                },
+                {
+                    "deed": "kept_the_war_from_tobin",
+                    "you": "You changed the subject when he asked about the company.",
+                    "company": "Your company changed the subject when he asked about it.",
+                    "you_ru": "Вы сами заговорили о другом, когда он спросил об отряде.",
+                    "company_ru": "Ваш отряд заговорил о другом, когда он спросил об отряде."
+                },
+                {
+                    "deed": "peddler_testified",
+                    "you": "You asked him to put his mark on a written account.",
+                    "company": "Your company asked him to put his mark on a written account.",
+                    "you_ru": "Вы сами попросили его поставить знак под записанным рассказом.",
+                    "company_ru": "Ваш отряд попросил его поставить знак под записанным рассказом."
+                },
+                {
+                    "deed": "tobin_told_the_warden",
+                    "you": "You asked him to tell the warden what he saw.",
+                    "company": "Your company asked him to tell the warden what he saw.",
+                    "you_ru": "Вы сами попросили его рассказать смотрителю, что он видел.",
+                    "company_ru": "Ваш отряд попросил его рассказать смотрителю, что он видел."
+                },
+                {
+                    "deed": "healed_tobins_hands",
+                    "you": "You asked nothing of him in return.",
+                    "company": "Your company asked nothing of him in return.",
+                    "you_ru": "Вы сами ничего не попросили у него взамен.",
+                    "company_ru": "Ваш отряд ничего не попросил у него взамен."
+                },
+                {
+                    "deed": "tobin_follows",
+                    "you": "You asked him to come with you.",
+                    "company": "Your company asked him to come with it.",
+                    "you_ru": "Вы сами позвали его с собой.",
+                    "company_ru": "Ваш отряд позвал его с собой."
+                }
+            ],
+            "notes": "Once a battle-mage's assistant in the lord's border war, the war the Grey Lanterns fought in; his spells mostly fizzle. The valley's loudest carrier: what is done in front of him reaches the fair."
+        },
+        {
+            "id": "rufus",
+            "name": "Rufus, the Saltmouth factor",
+            "name_ru": "Руфус, солтмутский скупщик",
+            "names": [
+                "Rufus",
+                "Руфус",
+                "Руфуса",
+                "Руфусу",
+                "Руфусом",
+                "Руфусе"
+            ],
+            "monster": "commoner",
+            "attitude": "indifferent",
+            "look": "A young man in a very good coat, who hands out printed calling cards.",
+            "look_ru": "Молодой человек в очень хорошем сюртуке; раздаёт печатные визитные карточки.",
+            "heard": "They say he buys the harvest on paper before it reaches the fair.",
+            "heard_ru": "Говорят, он скупает урожай на бумаге ещё до ярмарки.",
+            "remembers": [
+                {
+                    "deed": "let_the_yellow_wagon_pass",
+                    "you": "You let his wagon pass.",
+                    "company": "Your company let his wagon pass.",
+                    "you_ru": "Вы сами пропустили его фургон.",
+                    "company_ru": "Ваш отряд пропустил его фургон."
+                },
+                {
+                    "deed": "held_the_road_against_rufus",
+                    "you": "You kept to the middle of the road in front of him.",
+                    "company": "Your company kept to the middle of the road in front of him.",
+                    "you_ru": "Вы сами не уступили ему середину дороги.",
+                    "company_ru": "Ваш отряд не уступил ему середину дороги."
+                },
+                {
+                    "deed": "sold_rufus_the_road",
+                    "you": "You made him pay for the way.",
+                    "company": "Your company made him pay for the way.",
+                    "you_ru": "Вы сами взяли с него плату за дорогу.",
+                    "company_ru": "Ваш отряд взял с него плату за дорогу."
+                },
+                {
+                    "deed": "took_rufus_coin",
+                    "you": "You took his coin.",
+                    "company": "Your company took his coin.",
+                    "you_ru": "Вы сами взяли его монету.",
+                    "company_ru": "Ваш отряд взял его монету."
+                },
+                {
+                    "deed": "refused_rufus_quietly",
+                    "you": "You turned him down and told no one.",
+                    "company": "Your company turned him down and told no one.",
+                    "you_ru": "Вы сами отказали ему и никому не сказали.",
+                    "company_ru": "Ваш отряд отказал ему и никому не сказал."
+                },
+                {
+                    "deed": "told_odda_of_rufus",
+                    "you": "You turned him down and told Odda.",
+                    "company": "Your company turned him down and told Odda.",
+                    "you_ru": "Вы сами отказали ему и рассказали Одде.",
+                    "company_ru": "Ваш отряд отказал ему и рассказал Одде."
+                },
+                {
+                    "deed": "shamed_rufus_on_his_stall",
+                    "you": "You asked him about another man's debt in front of his customers.",
+                    "company": "Your company asked him about another man's debt in front of his customers.",
+                    "you_ru": "Вы сами спросили его про чужой долг при покупателях.",
+                    "company_ru": "Ваш отряд спросил его про чужой долг при покупателях."
+                },
+                {
+                    "deed": "faced_rufus_down",
+                    "you": "You faced him down at his own stall.",
+                    "company": "Your company faced him down at his own stall.",
+                    "you_ru": "Вы сами поставили его на место у его же прилавка.",
+                    "company_ru": "Ваш отряд поставил его на место у его же прилавка."
+                }
+            ],
+            "notes": "Buys hill farmers' debts and the harvest on paper. Set Col and Dunn on the Millbeck bridge to slow Odda's wagon; never says so."
+        },
+        {
+            "id": "col",
+            "name": "Col",
+            "name_ru": "Кол",
+            "names": [
+                "Col",
+                "Кол",
+                "Кола",
+                "Колу",
+                "Колом",
+                "Коле"
+            ],
+            "monster": "bandit",
+            "attitude": "indifferent",
+            "look": "A man in a torn sheepskin coat and a helmet too big for him, with a notched tally stick.",
+            "look_ru": "Мужчина в рваном тулупе и шлеме не по размеру, в руке бирка с зарубками.",
+            "heard": "They say the goblins took the whole flock from the brothers on Bald Hill this autumn.",
+            "heard_ru": "Говорят, этой осенью гоблины угнали у братьев с Лысой горы всю отару.",
+            "remembers": [
+                {
+                    "deed": "toll_men_spared",
+                    "you": "You let him off the bridge in peace.",
+                    "company": "Your company let him off the bridge in peace.",
+                    "you_ru": "Вы сами отпустили его с моста с миром.",
+                    "company_ru": "Ваш отряд отпустил его с моста с миром."
+                },
+                {
+                    "deed": "col_owes_blades",
+                    "you": "You spoke up for him to the reeve.",
+                    "company": "Your company spoke up for him to the reeve.",
+                    "you_ru": "Вы сами заступились за него перед старостой.",
+                    "company_ru": "Ваш отряд заступился за него перед старостой."
+                },
+                {
+                    "deed": "paid_cols_fine",
+                    "you": "You paid his fine.",
+                    "company": "Your company paid his fine.",
+                    "you_ru": "Вы сами заплатили за него штраф.",
+                    "company_ru": "Ваш отряд заплатил за него штраф."
+                },
+                {
+                    "deed": "left_col_in_the_stocks",
+                    "you": "You left him in the stocks.",
+                    "company": "Your company left him in the stocks.",
+                    "you_ru": "Вы сами оставили его в колодках.",
+                    "company_ru": "Ваш отряд оставил его в колодках."
+                }
+            ],
+            "notes": "Of the two brothers from the farm on Bald Hill, the one who holds out the cap; counts every coin on a tally stick he cut himself. Sat on the bridge to pay Rufus a farm debt."
+        },
+        {
+            "id": "dunn",
+            "name": "Dunn",
+            "name_ru": "Данн",
+            "names": [
+                "Dunn",
+                "Данн",
+                "Данна",
+                "Данну",
+                "Данном",
+                "Данне"
+            ],
+            "monster": "bandit",
+            "attitude": "indifferent",
+            "look": "A big man with a cudgel, who leaves the talking to his brother.",
+            "look_ru": "Здоровяк с дубиной; разговоры он оставляет брату.",
+            "heard": "They say wherever his brother goes, he goes.",
+            "heard_ru": "Говорят, куда брат, туда и он.",
+            "remembers": [],
+            "notes": "Col's brother, from the farm on Bald Hill. Goes home to the farm when the toll men are talked off the bridge."
+        },
+        {
+            "id": "nell_hale",
+            "name": "Nell Hale",
+            "name_ru": "Нелл Хейл",
+            "names": [
+                "Nell",
+                "Nell Hale",
+                "Нелл",
+                "Нелл Хейл"
+            ],
+            "monster": "commoner",
+            "attitude": "friendly",
+            "look": "A small girl with a slate, who does sums out loud.",
+            "look_ru": "Девочка с грифельной доской; считает вслух.",
+            "heard": "They say the reeve's niece does sums faster than anyone on the green, when she wants to.",
+            "heard_ru": "Говорят, племянница старосты считает быстрее всех на лугу, когда захочет.",
+            "remembers": [
+                {
+                    "deed": "sold_salt_at_their_price",
+                    "you": "You sold the salt at the price the crowd named.",
+                    "company": "Your company sold the salt at the price the crowd named.",
+                    "you_ru": "Вы сами продали соль по цене, которую назвала толпа.",
+                    "company_ru": "Ваш отряд продал соль по цене, которую назвала толпа."
+                },
+                {
+                    "deed": "made_way_through_wendford",
+                    "you": "You pushed the wagon's way through the crowd.",
+                    "company": "Your company pushed the wagon's way through the crowd.",
+                    "you_ru": "Вы сами проложили фургону путь через толпу.",
+                    "company_ru": "Ваш отряд проложил фургону путь через толпу."
+                },
+                {
+                    "deed": "talked_wendford_down",
+                    "you": "You talked the crowd down.",
+                    "company": "Your company talked the crowd down.",
+                    "you_ru": "Вы сами уговорили толпу успокоиться.",
+                    "company_ru": "Ваш отряд уговорил толпу успокоиться."
+                },
+                {
+                    "deed": "showed_wendford_the_toll",
+                    "you": "You showed the crowd the receipt for the bridge toll.",
+                    "company": "Your company showed the crowd the receipt for the bridge toll.",
+                    "you_ru": "Вы сами показали толпе расписку за пошлину на мосту.",
+                    "company_ru": "Ваш отряд показал толпе расписку за пошлину на мосту."
+                }
+            ],
+            "notes": "Osric's niece, about eight. Does the crowd's sums out loud and wrong on purpose; a year on she is the one who moves to the web-kneelers (compass, Nell's road)."
+        },
+        {
+            "id": "wenna_thorne",
+            "name": "Wenna Thorne, the apprentice",
+            "name_ru": "подмастерье Венна Торн",
+            "names": [
+                "Wenna",
+                "Wenna Thorne",
+                "Венна",
+                "Венны",
+                "Венне",
+                "Венну",
+                "Венной",
+                "Венна Торн"
+            ],
+            "monster": "commoner",
+            "attitude": "friendly",
+            "look": "A quick-tongued girl, floured to the elbows.",
+            "look_ru": "Бойкая девушка, по локоть в муке.",
+            "heard": "They say it was she who dropped the sluice gate and stopped the mill wheel.",
+            "heard_ru": "Говорят, это она опустила затвор и остановила мельничное колесо.",
+            "remembers": [
+                {
+                    "deed": "wenna_saved",
+                    "you": "You brought her up out of the mill cellar.",
+                    "company": "Your company brought her up out of the mill cellar.",
+                    "you_ru": "Вы сами вывели её из мельничного подвала.",
+                    "company_ru": "Ваш отряд вывел её из мельничного подвала."
+                },
+                {
+                    "deed": "gave_osric_no_name",
+                    "you": "You said nothing while the green would not believe her.",
+                    "company": "Your company said nothing while the green would not believe her.",
+                    "you_ru": "Вы сами промолчали, когда на лугу ей не верили.",
+                    "company_ru": "Ваш отряд промолчал, когда на лугу ей не верили."
+                }
+            ],
+            "notes": "Bertil Pell's niece and apprentice from The Silent Mill (same id there). Lives at Wendford but has no place here: she stands only on the two mill cards, so a world where the Mill was never played never spawns her."
         }
     ]
 }

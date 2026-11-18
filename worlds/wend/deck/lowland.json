@@ -262,6 +262,7 @@
         },
         {
             "id": "sedges_jar",
+            "cast": ["mother_sedge"],
             "zone": "lowland",
             "target": "blades",
             "chained": true,
@@ -317,6 +318,8 @@
         },
         {
             "id": "yellow_wagon",
+            "cast": ["rufus"],
+            "tells": ["odda_vell"],
             "zone": "lowland",
             "target": "caravan",
             "owner_pick": "hold",
@@ -378,6 +381,7 @@
         },
         {
             "id": "missing_sack",
+            "tells": ["odda_vell", "bel_corrin"],
             "zone": "lowland",
             "target": "caravan",
             "chained": true,
@@ -456,6 +460,7 @@
         },
         {
             "id": "bel_asks",
+            "cast": ["bel_corrin", "tam"],
             "zone": "lowland",
             "when": "night",
             "target": "blades",
@@ -508,6 +513,7 @@
         },
         {
             "id": "old_company",
+            "cast": ["tobin"],
             "zone": "lowland",
             "when": "night",
             "target": "blades",
@@ -557,6 +563,7 @@
         },
         {
             "id": "what_agna_drew",
+            "cast": ["sister_agna"],
             "zone": "lowland",
             "target": "blades",
             "chained": true,
@@ -597,6 +604,7 @@
         },
         {
             "id": "peddlers_mark",
+            "cast": ["tobin"],
             "zone": "lowland",
             "target": "blades",
             "chained": true,

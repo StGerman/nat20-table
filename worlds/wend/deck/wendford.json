@@ -3,6 +3,7 @@
     "cards": [
         {
             "id": "toll_man_stocks",
+            "cast": ["osric_hale", "col"],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -63,6 +64,7 @@
         },
         {
             "id": "osric_hears",
+            "cast": ["osric_hale"],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -123,6 +125,7 @@
         },
         {
             "id": "toll_paid_word",
+            "cast": ["osric_hale"],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -153,6 +156,7 @@
         },
         {
             "id": "ford_mud",
+            "cast": ["osric_hale"],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -194,6 +198,7 @@
         },
         {
             "id": "mill_goblin_taken_alive",
+            "cast": ["osric_hale", "wenna_thorne"],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",
@@ -249,6 +254,7 @@
         },
         {
             "id": "mill_yard_to_the_end",
+            "cast": ["osric_hale", "wenna_thorne"],
             "zone": "wendford",
             "when": "arrival",
             "target": "blades",

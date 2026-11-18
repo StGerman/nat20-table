@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { GameEngine, REPO } from "../engine.ts";
 import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS, STAT_BLOCKS_SINCE } from "./adventure.ts";
-import { goodsWithoutRu, readCampaign, seatCards, worldDir } from "./campaign.ts";
+import { goodsWithoutRu, readCampaign, rosterProblems, seatCards, worldDir } from "./campaign.ts";
 import { skeletonFile } from "./read.ts";
 
 /** Every pack in the repository: each folder of `scenarios/`. */
@@ -185,6 +185,12 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
       problem(`a deck file can't be read: ${error instanceof Error ? error.message : String(error)}`);
     }
     for (const id of goodsWithoutRu(dir)) problem(`good ${id}: no name_ru`);
+    // Names you can click (MAP-24, rule N2): one person per form, a card names only its cast and tells.
+    try {
+      for (const text of rosterProblems(dir)) problem(text);
+    } catch (error) {
+      problem(`the roster or a deck can't be read: ${error instanceof Error ? error.message : String(error)}`);
+    }
     if (!ru(adventure.title_ru)) problem("no title_ru");
     for (const scene of adventure.scenes) if (!ru(scene.title_ru)) problem(`scene ${scene.id}: no title_ru`);
   }
