@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
 import { endScreen } from "../src/play/driver.ts";
-import { finaleRows, InkSeat, SPINNER, wheelsIn } from "../src/ui/ink-seat.ts";
-import { actionRows, freshText, headerText, maxOffset, page, storyRows, storyWindow, type StoryRow } from "../src/ui/frame.ts";
+import { finaleRows, InkSeat, mouseIn, SPINNER } from "../src/ui/ink-seat.ts";
+import { actionRows, freshText, headerText, maxOffset, page, storyCell, storyRows, storyWindow, type StoryRow } from "../src/ui/frame.ts";
 import type { Line } from "../src/ui/lines.ts";
 import { paletteFor } from "../src/ui/palette.ts";
 import { rowText, turnRows } from "../src/ui/panel.ts";
@@ -237,10 +237,16 @@ test("the run's record skips an options list equal to the one already pinned (AG
   }
 });
 
-test("the wheel's turns in what the terminal sent, in order; a click, a release or a move is none (AGT-94)", () => {
-  assert.deepEqual(wheelsIn("\u001b[<64;1;1M\u001b[<65;80;24M\u001b[<68;1;1M"), [-1, 1, -1]);
-  assert.deepEqual(wheelsIn("\u001b[<0;1;1M\u001b[<0;1;1m\u001b[<35;1;1M"), []);
-  assert.deepEqual(wheelsIn("x\u001b[5~"), []);
+test("the mouse reports in what the terminal sent, in order: the wheel's turns (AGT-94) and the left button's press and release (AGT-108); a move or another button is none", () => {
+  const turns = (chunk: string) => mouseIn(chunk).flatMap((r) => (r.kind === "wheel" ? [r.turn] : []));
+  assert.deepEqual(turns("\u001b[<64;1;1M\u001b[<65;80;24M\u001b[<68;1;1M"), [-1, 1, -1]);
+  assert.deepEqual(mouseIn("\u001b[<0;3;4M\u001b[<0;5;4m\u001b[<35;1;1M\u001b[<2;1;1M"), [
+    { kind: "press", x: 3, y: 4 },
+    { kind: "release", x: 5, y: 4 },
+  ]);
+  // Shift adds 4: still the left button.
+  assert.deepEqual(mouseIn("\u001b[<4;7;2M"), [{ kind: "press", x: 7, y: 2 }]);
+  assert.deepEqual(mouseIn("x\u001b[5~"), []);
 });
 
 test("a scene start puts a divider in the story and its number in the header, and the run's own line goes into the story", async () => {
@@ -488,6 +494,48 @@ test("Tab opens the card of a name in the story, Tab again the next, Esc closes 
   }
 });
 
+test("a click on an underlined name opens its card, a drag says once how to select text, and /mouse turns the mouse off and on (AGT-108)", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), title: "Fair in Wend" });
+  const { stdin, stdout } = startAt(seat, 80, 24);
+  try {
+    const people = [{ id: "osric_hale", name: "Osric", forms: ["Osric"], state: "here", health: "unhurt", remembers: [], inScene: true }];
+    const situation = { mode: "explore", next: [], me: { handle: "bren", name: "Bren", hp: 10, hp_max: 10, temp_hp: 0, conditions: [], life_state: "conscious", effects: [] }, creatures: [], down: [], people };
+    seat.show({ kind: "situation", situation } as never);
+    seat.show({ kind: "status", text: "The road is wet; Osric nods." });
+    void seat.ask({ kind: "explore" });
+    await until("the line", () => stdout.last.includes("Osric nods."), () => stdout.last);
+    const screen = stdout.last.split("\n");
+    const y = screen.findIndex((row) => row.includes("Osric nods.")) + 1;
+    const x = screen[y - 1]!.indexOf("Osric") + 1;
+    // A click beside the name opens nothing.
+    stdin.press(`\u001b[<0;${x - 3};${y}M\u001b[<0;${x - 3};${y}m`);
+    stdin.press(`\u001b[<0;${x + 2};${y}M`);
+    stdin.press(`\u001b[<0;${x + 2};${y}m`);
+    await until("his card", () => stdout.last.includes("Osric · Esc closes"), () => stdout.last);
+    assert.equal(seat.getView().person, "osric_hale");
+    stdin.press("\u001b");
+    await until("closed", () => !stdout.last.includes("Esc closes"), () => stdout.last);
+    stdin.press(`\u001b[<0;2;3M\u001b[<0;9;3m`);
+    await until("the drag hint", () => stdout.last.includes("To select text, hold the Fn key"), () => stdout.last);
+    for (const ch of "/mouse") stdin.press(ch);
+    stdin.press("\r");
+    await until("off", () => stdout.last.includes("Text now selects as usual"), () => stdout.last);
+    // Off, a click on the name opens nothing.
+    stdin.press(`\u001b[<0;${x + 2};${y}M\u001b[<0;${x + 2};${y}m`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(seat.getView().person, undefined, "no card while the mouse is off");
+    for (const ch of "/mouse") stdin.press(ch);
+    stdin.press("\r");
+    await until("on again", () => stdout.last.includes("A click on an underlined name shows who it is again"), () => stdout.last);
+    stdin.press("\u001b[<0;2;3M\u001b[<0;9;3m");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.ok(!stdout.last.includes("To select text"), "the drag hint is said once");
+    assert.equal(seat.getView().draft, "");
+  } finally {
+    seat.stop();
+  }
+});
+
 test("a death shows on the card once the story tells it, in the narration that brought it or later, never by the human's own words (AGT-107)", async () => {
   const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), title: "Fair in Wend" });
   const { stdin, stdout } = startAt(seat, 80, 24);
@@ -529,4 +577,12 @@ test("a death shows on the card once the story tells it, in the narration that b
   } finally {
     seat.stop();
   }
+});
+
+test("a click's cell in the story: the header is row 1, the story the next rows, its width the columns (AGT-108)", () => {
+  assert.equal(storyCell(1, 1, 10, 60), undefined, "the header");
+  assert.deepEqual(storyCell(1, 2, 10, 60), { row: 0, column: 0 });
+  assert.deepEqual(storyCell(60, 11, 10, 60), { row: 9, column: 59 });
+  assert.equal(storyCell(1, 12, 10, 60), undefined, "under the story");
+  assert.equal(storyCell(61, 5, 10, 60), undefined, "the rule or the side pane");
 });

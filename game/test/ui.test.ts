@@ -74,7 +74,7 @@ test("typed lines become intents by what the table waits for", () => {
   assert.deepEqual(readLine("/Sheet", turn), { kind: "intent", intent: { kind: "command", name: "sheet" } });
   assert.deepEqual(readLine("/help", turn), { kind: "help" });
   assert.deepEqual(readLine("/usage", turn), { kind: "intent", intent: { kind: "command", name: "usage" } });
-  assert.match((readLine("/dance", turn) as { text: string }).text, /^There is no \/dance\. Commands: \/options \/sheet \/where \/map \/who \/log \/usage \/pause \/suggest \/panel \/help \/quit$/);
+  assert.match((readLine("/dance", turn) as { text: string }).text, /^There is no \/dance\. Commands: \/options \/sheet \/where \/map \/who \/log \/usage \/pause \/suggest \/panel \/mouse \/help \/quit$/);
   assert.deepEqual(readLine("/map", turn), { kind: "intent", intent: { kind: "command", name: "map" } });
   assert.deepEqual(readLine("   ", turn), { kind: "empty" });
   // A reaction: y or n, or a reaction's number; words don't answer it.

@@ -24,14 +24,14 @@ import type { HumanPrompt, PlayerIntent, Seat, SuggestUpdate, TableEvent } from 
 import { edit, editFor, EMPTY, type Edit } from "./editor.ts";
 import { COMMAND_HELP, promptHint, readLine, type Typed } from "./input.ts";
 import { commandMatches, PICKER_ROWS, pickerRows, type CommandEntry } from "./commands.ts";
-import { actionRows, frameLayout, freshText, headerText, maxOffset, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, scrollRows, stepWithin, storyRows, storyWindow, WHEEL_ROWS, type Scroll } from "./frame.ts";
+import { actionRows, frameLayout, freshText, headerText, maxOffset, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, scrollRows, stepWithin, storyCell, storyRows, storyWindow, WHEEL_ROWS, type Scroll } from "./frame.ts";
 import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
 import { paletteFor, type Palette, type Style } from "./palette.ts";
 import { cardRows, endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
 import { cardText, costText } from "../table/guide.ts";
 import type { Language } from "../agents/language.ts";
 import { SeatNames } from "../table/seat-lines.ts";
-import { asTold, nameSpans, PEOPLE_WORDS, personCard, whoAnswer, type Person, type PeopleWords } from "./people.ts";
+import { asTold, nameAt, nameSpans, PEOPLE_WORDS, personCard, whoAnswer, type Person, type PeopleWords } from "./people.ts";
 import { SEAT_WORDS, UI_WORDS, type UiWords } from "../table/words.ts";
 
 /** The suggestions picker's rows and cursor (AGT-49): `cursor` is a row index, `rows.length` for "Your own…". */
@@ -316,9 +316,34 @@ export class InkSeat implements Seat {
    * clock, and the seat does not guess at it.
    */
   private readonly read = (chunk: Buffer | string): void => {
-    const turns = wheelsIn(String(chunk));
+    const reports = mouseIn(String(chunk));
+    const turns = reports.flatMap((r) => (r.kind === "wheel" ? [r.turn] : []));
     if (turns.length > 0) this.wheelTurns(turns);
+    for (const report of reports) if (report.kind !== "wheel") this.button(report);
   };
+  /** What the frame does with a click at the terminal's `x`, `y` (AGT-108); the frame sets it on every draw. */
+  clicked: (x: number, y: number) => void = () => {};
+  private pressed: { x: number; y: number } | undefined;
+  private dragTold = false;
+  /**
+   * A press and its release on one cell is a click; anywhere else, a drag, which is someone trying
+   * to select text: the first one says how, once (design §6.2), and never in the first-time help.
+   */
+  private button(report: Exclude<MouseReport, { kind: "wheel" }>): void {
+    // Off, the terminal sends none; a report still in flight from before `/mouse` is dropped.
+    if (this.mouseOff) return;
+    if (report.kind === "press") {
+      this.pressed = { x: report.x, y: report.y };
+      return;
+    }
+    const from = this.pressed;
+    this.pressed = undefined;
+    if (!from) return;
+    if (from.x === report.x && from.y === report.y) return this.clicked(report.x, report.y);
+    if (this.dragTold) return;
+    this.dragTold = true;
+    this.update({ notice: { text: this.ui.dragHint, error: false } });
+  }
   private listen(stdin: NodeJS.ReadableStream): void {
     this.stdin?.off("data", this.read);
     this.stdin = stdin;
@@ -340,7 +365,17 @@ export class InkSeat implements Seat {
   private guardCrash(): void {
     process.on("uncaughtException", this.crash);
     process.on("unhandledRejection", this.crash);
-    this.wheel(true);
+    this.fullScreen = true;
+    this.wheel(!this.mouseOff);
+  }
+  private fullScreen = false;
+  /** `/mouse` turned the mouse off for the run (AGT-108): a plain drag selects text again. */
+  private mouseOff = false;
+  private toggleMouse(): void {
+    this.mouseOff = !this.mouseOff;
+    if (this.fullScreen) this.wheel(!this.mouseOff);
+    this.pressed = undefined;
+    this.update({ notice: { text: this.mouseOff ? this.ui.mouseOff : this.ui.mouseOn, error: false } });
   }
 
   /**
@@ -377,6 +412,7 @@ export class InkSeat implements Seat {
   stop(): void {
     process.off("uncaughtException", this.crash);
     process.off("unhandledRejection", this.crash);
+    this.fullScreen = false;
     this.wheel(false);
     this.stdin?.off("data", this.read);
     this.stdin = undefined;
@@ -624,13 +660,13 @@ export class InkSeat implements Seat {
       case "panel":
         this.update({ folded: !this.view.folded, overlay: undefined });
         return;
+      case "mouse":
+        this.toggleMouse();
+        return;
       case "who": {
         // No model call (rule N8): the card or the lists, from what the seat already holds.
         const answer = whoAnswer(typed.name, this.people, this.peopleWords);
-        if ("person" in answer) {
-          this.update({ person: answer.person.id, overlay: undefined });
-          return;
-        }
+        if ("person" in answer) return this.openPerson(answer.person.id);
         const text = answer.rows.join("\n");
         this.drawn("command", [{ tone: "info", text }]);
         this.update({ person: undefined, overlay: { title: this.names.language === "ru" ? "/кто" : "/who", text, at: this.view.lines.length } });
@@ -831,8 +867,13 @@ export class InkSeat implements Seat {
   nextName(shown: readonly string[]): boolean {
     if (shown.length === 0) return false;
     const at = this.view.person ? shown.indexOf(this.view.person) : -1;
-    this.update({ person: shown[(at + 1) % shown.length], overlay: undefined });
+    this.openPerson(shown[(at + 1) % shown.length]!);
     return true;
+  }
+
+  /** Opens a person's card: Tab, `/who`, or a click on the name (AGT-108). */
+  openPerson(id: string): void {
+    this.update({ person: id, overlay: undefined });
   }
 
   /** Esc: closes the person card; false when none was drawn (one whose person has left the list closes unseen). */
@@ -994,20 +1035,23 @@ const WHEEL_OFF = "\x1b[?1006l\x1b[?1000l";
 /** The signals that end the run without an "exit" event, after which the shell would get mouse reports. */
 const HANGUPS: NodeJS.Signals[] = ["SIGTERM", "SIGHUP", "SIGQUIT"];
 
+/** A mouse report the seat reads (AGT-94, AGT-108): a wheel turn (`-1` up, `1` down), or the left button's press or release at the terminal's `x`, `y` (from 1). */
+export type MouseReport = { kind: "wheel"; turn: -1 | 1 } | { kind: "press" | "release"; x: number; y: number };
+
 /**
- * The wheel turns in a chunk of what the terminal sent (AGT-94), in order: `-1` up, `1` down.
- * Other mouse reports (a click, a release, a move) give nothing. Ink drops every mouse report
- * before `useInput`, so the seat reads them off stdin itself.
+ * The mouse reports in a chunk of what the terminal sent, in order. Other buttons and moves give
+ * nothing. Ink drops every mouse report before `useInput`, so the seat reads them off stdin itself.
  */
-export function wheelsIn(chunk: string): (-1 | 1)[] {
-  const turns: (-1 | 1)[] = [];
-  for (const report of chunk.matchAll(/\u001b\[<(\d+);\d+;\d+[Mm]/g)) {
-    // The low two bits name the button; 64 marks the wheel; Shift, Alt and Ctrl add 4, 8 and 16.
+export function mouseIn(chunk: string): MouseReport[] {
+  const reports: MouseReport[] = [];
+  for (const report of chunk.matchAll(/\u001b\[<(\d+);(\d+);(\d+)([Mm])/g)) {
+    // The low two bits name the button; 64 marks the wheel, 32 a move; Shift, Alt and Ctrl add 4, 8 and 16.
     const button = Number(report[1]) & ~0b11100;
-    if (button === 64) turns.push(-1);
-    if (button === 65) turns.push(1);
+    if (button === 64) reports.push({ kind: "wheel", turn: -1 });
+    else if (button === 65) reports.push({ kind: "wheel", turn: 1 });
+    else if (button === 0) reports.push({ kind: report[4] === "M" ? "press" : "release", x: Number(report[2]), y: Number(report[3]) });
   }
-  return turns;
+  return reports;
 }
 
 /** What the tiny frame says instead of the table (under 40 columns or 16 rows). */
@@ -1130,8 +1174,18 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
       if (overlayRows) return setOverlayTop((top) => turns.reduce((at, d) => stepWithin(at, d * WHEEL_ROWS, overlayMax), Math.min(top, overlayMax)));
       setScroll((at) => turns.reduce((to, d) => scrollRows(to, d, WHEEL_ROWS, story, storyH, view.lines.length), at));
     };
+    // A click on an underlined name in the story opens its card (AGT-108); an overlay covers the story.
+    seat.clicked = (x, y) => {
+      // The tiny frame draws no story; an overlay covers it.
+      if (overlayRows || tiny) return;
+      const cell = storyCell(x, y, storyH, width);
+      const row = cell ? shown.rows[cell.row] : undefined;
+      const id = row && cell ? nameAt(row.text, cell.column, people) : undefined;
+      if (id) seat.openPerson(id);
+    };
     return () => {
       seat.wheelTurns = () => {};
+      seat.clicked = () => {};
     };
   });
 
