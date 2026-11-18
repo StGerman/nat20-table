@@ -28,5 +28,5 @@ In design §13 merge order: ENG-47, MAP-22, MON-12 (core PR and pin), API-58, EN
 
 # Status
 
-open, no number yet. Design and estimate accepted by Stas (table #412); his goal 2026-11-16 21:37Z: the full scope, every PR 🟢, done = ready for exit runs. Estimate (design §14): 21 PRs, 351 to 362 USD build, 10.5 to 19.5 USD runs, Stas 7.9 to 8.5 h, 3 to 6 days. Milestone 13 closed 2026-11-16, so no M13 file waits.
+open, no number yet. Design and estimate accepted by Stas (table #412); his goal 2026-11-16 21:37Z: the full scope, every PR 🟢, done = ready for exit runs. Estimate (design §14): 21 PRs, 351 to 362 USD build, 10.5 to 19.5 USD runs, Stas 7.9 to 8.5 h (before the describer's re-price to S: build 341 to 352 USD, Stas 5 to 10 min less), 3 to 6 days. Milestone 13 closed 2026-11-16, so no M13 file waits.
 §16 answered by Stas 2026-11-16 (table #419): no target for ally deaths, the describer rewords `look` only, the rest as recommended.

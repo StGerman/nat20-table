@@ -5,7 +5,7 @@ title: "Where Gwyn's dog, the Merchant and the horses are during night_wolves"
 pri: P2
 dest: Ours
 size: XS
-state: todo
+state: done
 area: "7. Maps and scenario (E7)"
 ---
 
@@ -13,4 +13,4 @@ Where Gwyn's dog, the Merchant and the horses are during `night_wolves` (`worlds
 
 ## Status
 
-todo. Design PR 4 (§13); moved from the backlog 2026-11-16. Needs ENG-47; MAP-18 (table #352) and MAP-19 (table #355) are merged. ENG-48's deck half rewrites this card's "none is in the fight" note line (design §4.2). Cost: XS, 5 USD build, Stas about 10 min review (§14)
+done 2026-11-17: `stand_with_dog` starts the fight with the wolves surprised; the `night_wolves` note says where the dog, the Merchant and the horses are, and both notes name "the Merchant". No going-home deed: a deed is never forgotten and a card condition has no "or", so every plain choice would need a third twin, and no card reliably writes it; instead each note says a dog fed on an earlier contract has found the Blades again, and ENG-48 replaces that clause with a "this company entry rides now" choice condition (Zoya, 2026-11-17). Was: design PR 4 (§13); moved from the backlog 2026-11-16. Needs ENG-47; MAP-18 (table #352) and MAP-19 (table #355) are merged. ENG-48's deck half rewrites this card's "none is in the fight" note line (design §4.2). Cost: XS, 5 USD build, Stas about 10 min review (§14)

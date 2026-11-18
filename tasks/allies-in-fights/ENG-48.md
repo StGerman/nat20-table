@@ -19,4 +19,4 @@ Check: design §11 rows 1, 2, 4 (test, no model). Cost: engine 40 USD build, Sta
 
 ## Status
 
-todo. Engine needs ENG-47 and the MON-12 pin; deck needs MAP-22, the engine PR and MAP-24. Its M13 files are on main (Milestone 13 closed 2026-11-16). Tam's engine half is here; MAP-23 is his content. §16 answered by Stas 2026-11-16 (table #419)
+todo. Engine needs ENG-47 and the MON-12 pin; deck needs MAP-22, the engine PR and MAP-24. Its M13 files are on main (Milestone 13 closed 2026-11-16). Tam's engine half is here; MAP-23 is his content. §16 answered by Stas 2026-11-16 (table #419). MAP-22 wrote no going-home deed (its Status says why): a choice can read only deeds today, so the engine half adds a choice condition "this company entry rides on this contract" (true when rule A2 would place it), and the deck half drops the "found them again" note clause on `night_wolves` and `drovers` and gates each dog pair on it, which also covers a dead dog with no extra twins. Design §3 item 4 and §13 row 4 still name a going-home deed and are out of date
