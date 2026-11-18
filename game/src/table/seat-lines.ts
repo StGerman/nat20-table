@@ -164,7 +164,8 @@ function enLine(event: Event, ctx: SeatContext): string | null {
       // The DM's opening says where (design §4); `/log` keeps the line.
       return ctx.site === "seat" ? null : eventLine(event);
     case "ledger":
-      if (event.reason === "wage" && event.what.kind === "coins") return `${n.person(event.from)} pays ${n.person(event.to)} ${coinPhrase(event.what.copper)} in wages.`;
+      // The payer is left unsaid: a dead merchant's purse pays too, and no line says the dead pay (ENG-49, rule M4).
+      if (event.reason === "wage" && event.what.kind === "coins") return `${n.person(event.to)} is paid ${coinPhrase(event.what.copper)} in wages.`;
       // Every card payment reaches the wire as a toll, a salt purchase too: the seat does not name it (the DM's narration says what it was for; AGT-114).
       if (event.reason === "toll") return event.what.kind === "coins" ? `${n.person(event.from)} pays ${coinPhrase(event.what.copper)}.` : event.text.replace(/ in toll\.$/, ".");
       break;
@@ -337,6 +338,9 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
     case "scout_looked":
       return event.saw ? `${who(event.actor)} замечает, что ждёт впереди.` : `${who(event.actor)} смотрит вперёд, но ничего не замечает.`;
     case "escort_settled":
+      // A dead merchant pays nobody (ENG-49, rule M4).
+      if (event.purse === "carried") return `Обоз прибыл: ${n.place(event.destination)}. Наёмникам отсчитали плату из кошеля, который вы довезли.`;
+      if (event.purse === "shared") return `Обоз прибыл: ${n.place(event.destination)}. Кошель торговца вы уже поделили между собой; платить больше нечем.`;
       return `Обоз прибыл: ${n.place(event.destination)}. Наёмникам заплачено, что положено.`;
   }
 }
@@ -459,7 +463,7 @@ function ledgerRu(event: Extract<Event, { kind: "ledger" }>, n: SeatNames, human
   }
   switch (event.reason) {
     case "wage":
-      return `${to} получает жалованье: ${goods}. Платит ${n.who(event.from)}.`;
+      return `${to} получает жалованье: ${goods}.`;
     case "toll":
       return `${from} платит: ${goods}.`;
     case "inn":

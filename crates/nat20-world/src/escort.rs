@@ -37,6 +37,11 @@ pub struct EscortTerms {
     pub advance_days: u32,
     /// What the merchant's purse holds when the contract starts, in copper pieces
     pub purse_cp: u64,
+    /// The card put on the table when a fight ends with the caravan's NPC owner dead (ENG-49,
+    /// rule M1): a card of the deck that goes `once` and reads the owner's death deed in its
+    /// `if`, so no draw takes it before or after
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub death_card: Option<String>,
 }
 
 fn skilled_wage() -> u32 {
@@ -60,6 +65,9 @@ pub struct EscortState {
     /// Whether the caravan reached the destination and the pay was settled
     #[serde(default)]
     pub done: bool,
+    /// Whether the Blades shared the purse out (ENG-49): nothing more is paid on arrival
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub purse_shared: bool,
 }
 
 /// One wage payment: who gets how much copper.
@@ -93,6 +101,7 @@ impl EscortState {
             blades,
             purse_cp: terms.purse_cp,
             done: false,
+            purse_shared: false,
         }
     }
 
@@ -144,6 +153,36 @@ impl EscortState {
             .collect()
     }
 
+    /// The Blades share the purse out (ENG-49): all of it, evenly among the Blades still
+    /// standing (`alive`), an odd copper to each in party order until none is left. The purse
+    /// is empty after, so the destination pays nothing. Once, and not after the settling.
+    pub fn share(&mut self, alive: impl Fn(&str) -> bool) -> Vec<Wage> {
+        if self.done || self.purse_shared {
+            return Vec::new();
+        }
+        let living: Vec<String> = self.blades.iter().filter(|b| alive(b)).cloned().collect();
+        if living.is_empty() {
+            return Vec::new();
+        }
+        self.purse_shared = true;
+        let n = living.len() as u64;
+        let (each, odd) = (self.purse_cp / n, self.purse_cp % n);
+        self.purse_cp = 0;
+        let mut shares = Vec::new();
+        for (i, blade) in living.iter().enumerate() {
+            let mut left = each + u64::from((i as u64) < odd);
+            while left > 0 {
+                let part = left.min(u64::from(u32::MAX));
+                left -= part;
+                shares.push(Wage {
+                    blade: blade.clone(),
+                    copper: u32::try_from(part).expect("at most u32::MAX"),
+                });
+            }
+        }
+        shares
+    }
+
     /// Days `blade` has served.
     pub fn served(&self, blade: &str) -> u32 {
         self.served.get(blade).copied().unwrap_or(0)
@@ -184,6 +223,7 @@ mod tests {
             wage_cp: SKILLED_WAGE_CP,
             advance_days,
             purse_cp,
+            death_card: None,
         }
     }
 
@@ -199,6 +239,7 @@ mod tests {
             paid_cp: BTreeMap::new(),
             purse_cp: u64::from(u32::MAX) * 2 + 5,
             done: false,
+            purse_shared: false,
         };
         let wages = escort.pay("bren", u64::from(u32::MAX) + 7);
         assert_eq!(
@@ -285,5 +326,38 @@ mod tests {
         assert_eq!(s.purse_cp, 0);
         assert!(s.arrive(&t, "inn", |_| true).is_empty());
         assert_eq!(s.paid("maren"), 100);
+    }
+
+    #[test]
+    fn the_purse_shared_out_goes_evenly_to_the_living_odd_copper_by_party_order() {
+        let t = terms(1, 1000);
+        let mut s = EscortState::new(&t, vec!["bren".into(), "maren".into(), "ilsa".into()]);
+        s.advance(&t);
+        assert_eq!(s.purse_cp, 400);
+        // Ilsa is down: 400 among two.
+        let shares = s.share(|b| b != "ilsa");
+        assert_eq!(
+            shares,
+            [
+                Wage {
+                    blade: "bren".into(),
+                    copper: 200
+                },
+                Wage {
+                    blade: "maren".into(),
+                    copper: 200
+                }
+            ]
+        );
+        assert_eq!(s.purse_cp, 0);
+        assert!(s.share(|_| true).is_empty(), "once");
+        assert!(
+            s.arrive(&t, "inn", |_| true).is_empty(),
+            "nothing at the gate"
+        );
+        assert!(s.done);
+        let mut odd = EscortState::new(&terms(0, 7), blades());
+        let shares = odd.share(|_| true);
+        assert_eq!(shares.iter().map(|w| w.copper).collect::<Vec<_>>(), [4, 3]);
     }
 }

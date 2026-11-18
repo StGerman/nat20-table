@@ -208,6 +208,7 @@ mod tests {
             wage_cp: 200,
             advance_days: 0,
             purse_cp: 10_000,
+            death_card: None,
         });
         world
     }

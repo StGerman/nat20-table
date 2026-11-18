@@ -709,6 +709,17 @@ impl Campaign {
             owner,
             blades,
             tie_breaker: self.human.clone(),
+            owner_dead: self.world.owner_dead(),
+        }
+    }
+
+    /// Whom a card is put to now: a caravan card is a Blade card once the NPC owner is dead
+    /// (ENG-49, rule M2).
+    pub fn target_now(&self, card: &world::Card) -> CardTarget {
+        if card.target == world::Target::Caravan && self.world.owner_dead() {
+            CardTarget::Blades
+        } else {
+            target(card.target)
         }
     }
 
@@ -726,7 +737,7 @@ impl Campaign {
         Some(OfferedCard {
             id: card.id.clone(),
             zone: card.zone.clone(),
-            target: target(card.target),
+            target: self.target_now(card),
             text: card.text.clone(),
             choices: choices_dm(card, Some(&offers)),
             note: card.note.clone(),
@@ -773,7 +784,7 @@ impl Campaign {
         Some(CardDm {
             id: card.id.clone(),
             zone: card.zone.clone(),
-            target: target(card.target),
+            target: self.target_now(card),
             text: card.text.clone(),
             choices: choices_dm(card, Some(pending)),
             said: pending

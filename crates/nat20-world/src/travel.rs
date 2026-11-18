@@ -18,10 +18,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
-    company::{CompanyEntry, CompanyFile, RIDES_PREFIX},
+    company::{CompanyEntry, CompanyFile, RIDES_PREFIX, owner_dead_deed},
     deck::{
-        Card, Deck, DeckError, DeckState, Deed, DeedBook, Deeds, Drawn, OWNER_CAST, PickError,
-        ScoutSkill, When,
+        Card, Deck, DeckError, DeckState, Deed, DeedBook, Deeds, Drawn, OWNER_CAST, Once,
+        PickError, ScoutSkill, When,
     },
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
@@ -581,6 +581,31 @@ impl World {
         blades: Vec<String>,
     ) -> Result<(Self, Vec<Wage>), MapError> {
         terms.validate(&self.map)?;
+        // The death card (ENG-49, rule M1) reads the owner's death in its own `if` and goes
+        // once, so no draw can take it before the engine puts it on the table, or after.
+        if let (Some(card), Owner::Npc(owner)) = (&terms.death_card, &self.state.caravan.owner) {
+            let deed = owner_dead_deed(owner);
+            let fits = self.deck.card(card).is_some_and(|c| {
+                c.once == Once::WORLD
+                    && c.if_deeds.as_ref().is_some_and(|d| d.ids().contains(&deed))
+            });
+            if !fits {
+                return Err(MapError(format!(
+                    "the escort's death_card {card} is not a card of the deck that goes once and reads {deed} in its if"
+                )));
+            }
+        }
+        // Rule A9 for the owner (ENG-49): a wagon fight can kill the NPC owner, so the death
+        // needs a reader that speaks: a card or choice with it in `if`, the death card among them.
+        if let Owner::Npc(owner) = &self.state.caravan.owner
+            && self.deck.owner_may_fall()
+            && !self.deck.read_in_if().contains(&owner_dead_deed(owner))
+        {
+            return Err(MapError(format!(
+                "a wagon fight can kill {owner}, and no card or choice reads {} in its if",
+                owner_dead_deed(owner)
+            )));
+        }
         let advance = match &self.state.escort {
             Some(_) => Vec::new(),
             None => {
@@ -611,6 +636,43 @@ impl World {
             })
     }
 
+    /// Whether the caravan's NPC owner is dead (ENG-49).
+    pub fn owner_dead(&self) -> bool {
+        matches!(&self.state.caravan.owner, Owner::Npc(id) if self.state.npcs.get(id).is_some_and(|s| !s.alive))
+    }
+
+    /// Puts the escort's death card on the table when it is due (ENG-49, rule M1): the NPC
+    /// owner is dead, the contract is under way, nothing waits on the table, and the card has
+    /// not been put before. Returns the card put.
+    pub fn put_death_card(&mut self) -> Option<String> {
+        let card = self.escort.as_ref()?.death_card.clone()?;
+        let under_way = self.state.escort.as_ref().is_some_and(|e| !e.done);
+        if !under_way
+            || !self.owner_dead()
+            || self.state.deck.waiting()
+            || self.state.deck.gone.contains(&card)
+        {
+            return None;
+        }
+        let deeds = self.deeds_now();
+        self.deck
+            .put_card(&card, &deeds, &mut self.state.deck)
+            .then_some(card)
+    }
+
+    /// Shares the escort's purse out among the Blades who are `alive` (ENG-49): the shares, in
+    /// party order. Nothing while the NPC owner lives (rule M3), or once settled or shared.
+    pub fn share_purse(&mut self, alive: impl Fn(&str) -> bool) -> Vec<Wage> {
+        if !self.owner_dead() {
+            return Vec::new();
+        }
+        self.state
+            .escort
+            .as_mut()
+            .map(|e| e.share(alive))
+            .unwrap_or_default()
+    }
+
     /// Who of a card's cast is dead (API-58, rule A8), for the next draw: every roster person
     /// the world holds dead, and `owner` when the caravan's NPC owner is one of them.
     fn mark_cast_dead(&mut self) {
@@ -621,7 +683,7 @@ impl World {
             .filter(|(_, s)| !s.alive)
             .map(|(id, _)| id.clone())
             .collect();
-        let owner_dead = matches!(&self.state.caravan.owner, Owner::Npc(id) if dead.contains(id));
+        let owner_dead = self.owner_dead();
         self.state.deck.cast_dead = dead;
         if owner_dead {
             self.state.deck.cast_dead.insert(OWNER_CAST.to_owned());
@@ -1588,6 +1650,74 @@ mod tests {
             Err(PickError::NotOffered(_))
         ));
         w.pick_card("tobin_sings").unwrap();
+    }
+
+    /// ENG-49: a wagon fight that can kill the NPC owner needs a reader of the death (rule
+    /// A9), the escort's death card must go once and read it, and the engine puts that card
+    /// on the table once the owner is dead, and only once.
+    #[test]
+    fn the_owner_s_death_needs_a_reader_and_the_death_card_comes_once() {
+        let deck = |reader: &str| -> Deck {
+            let file: crate::deck::DeckFile = serde_json::from_str(&format!(
+                r#"{{"cards": [
+                  {{"id": "wolves", "zone": "hills", "target": "blades", "text": "Wolves.",
+                   "choices": [{{"id": "a", "text": "A.", "effects": [{{"do": "fight", "monsters": ["wolf"], "wagon": true}}]}},
+                               {{"id": "b", "text": "B.", "effects": [{{"do": "remember", "deed": "chose_b"}}]}}]}},
+                  {{"id": "tobin_falls", "zone": "hills", "target": "blades", "text": "Tobin is dead.", {reader}
+                   "choices": [{{"id": "a", "text": "A.", "effects": [{{"do": "remember", "deed": "chose_a"}}]}},
+                               {{"id": "b", "text": "B.", "effects": [{{"do": "share_purse"}}]}}]}}
+                ]}}"#
+            ))
+            .unwrap();
+            Deck::from_files([file])
+        };
+        let npcs = || -> NpcFile {
+            serde_json::from_str(
+                r#"{"npcs": [{"id": "tobin", "name": "Tobin", "monster": "commoner"}]}"#,
+            )
+            .unwrap()
+        };
+        let terms = |card: Option<&str>| EscortTerms {
+            comment: None,
+            destination: "inn".into(),
+            wage_cp: crate::escort::SKILLED_WAGE_CP,
+            advance_days: 0,
+            purse_cp: 1000,
+            death_card: card.map(String::from),
+        };
+        let blades = || vec!["bren".to_string(), "maren".to_string()];
+        let with = |reader: &str| {
+            world("npc:tobin")
+                .with_deck(deck(reader))
+                .unwrap()
+                .with_npcs(npcs())
+                .unwrap()
+        };
+        // No reader of tobin_dead: rule A9 refuses the contract.
+        let err = with("").with_escort(terms(None), blades()).unwrap_err();
+        assert!(err.0.contains("a wagon fight can kill tobin"), "{}", err.0);
+        // A reader that may come back is no death card.
+        let err = with(r#""if": "tobin_dead","#)
+            .with_escort(terms(Some("tobin_falls")), blades())
+            .unwrap_err();
+        assert!(err.0.contains("death_card tobin_falls"), "{}", err.0);
+        let (mut w, _) = with(r#""if": "tobin_dead", "once": true,"#)
+            .with_escort(terms(Some("tobin_falls")), blades())
+            .unwrap();
+        // Alive, nothing is put and the purse is never shared; dead, the card is put once.
+        assert_eq!(w.put_death_card(), None);
+        assert_eq!(w.share_purse(|_| true), Vec::new());
+        w.state.npcs.get_mut("tobin").unwrap().alive = false;
+        assert!(w.owner_dead());
+        assert_eq!(w.put_death_card(), Some("tobin_falls".into()));
+        assert!(w.state.deck.waiting());
+        w.state.deck.pending = None;
+        assert_eq!(w.put_death_card(), None, "never twice");
+        assert_eq!(
+            w.share_purse(|_| true).len(),
+            2,
+            "dead, the purse is shared"
+        );
     }
 
     #[test]

@@ -11,11 +11,11 @@ use nat20_world as world;
 use nat20_ledger::{Asset, Entry, Holder, Holdings, Journal, Reason};
 
 use nat20_api_contract::{
-    Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
-    ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
-    Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId, ROSTER_FORMAT, ReactionTrigger,
-    RejectReason, RollId, RollView, Roster, RosterStart, RosterWorld, SceneFile, State, TimeSpan,
-    Visibility,
+    Aim, ApiError, ArrivalPurse, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult,
+    EndCombatReason, ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend,
+    LedgerGoods, LedgerReason, Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId,
+    ROSTER_FORMAT, ReactionTrigger, RejectReason, RollId, RollView, Roster, RosterStart,
+    RosterWorld, SceneFile, State, TimeSpan, Visibility,
 };
 
 mod cards;
@@ -267,7 +267,11 @@ impl Session {
 
     /// Pays the escort's wages from the merchant's purse (API-47): one `wage` ledger entry per
     /// Blade, each logged before the next. The world has already taken the coin from the purse.
-    fn pay_wages(&mut self, wages: Vec<nat20_world::Wage>) -> Result<(), ApiError> {
+    pub(super) fn pay_wages(
+        &mut self,
+        wages: Vec<nat20_world::Wage>,
+        reason: LedgerReason,
+    ) -> Result<(), ApiError> {
         let Some((merchant, purse_now)) = self.campaign.as_ref().and_then(|c| c.merchant_purse())
         else {
             return Ok(());
@@ -288,7 +292,7 @@ impl Session {
         }
         for wage in wages {
             self.game_mut()?
-                .receive(&merchant, &wage.blade, wage.copper, LedgerReason::Wage)?;
+                .receive(&merchant, &wage.blade, wage.copper, reason)?;
             self.push_entries();
         }
         self.check_merchant();
@@ -302,6 +306,19 @@ impl Session {
     pub(super) fn settle_if_arrived(&mut self) -> Result<bool, ApiError> {
         if !self.card_free() {
             return Ok(false);
+        }
+        // A fight ended with the caravan's NPC owner dead: the death card comes before any
+        // travel, rest or pay (ENG-49, rule M1).
+        if self
+            .campaign
+            .as_mut()
+            .and_then(|c| c.world.put_death_card())
+            .is_some()
+        {
+            self.show_card()?;
+            if !self.card_free() {
+                return Ok(false);
+            }
         }
         if let Some(place) = self.arrival_due.take() {
             self.draw_card(|world, dice| world.draw_on_arrival(&place, dice))?;
@@ -345,12 +362,27 @@ impl Session {
         let game = self.game.as_ref();
         let wages = campaign.escort_arrive(place, |b| game.is_some_and(|g| g.is_dead(b)));
         let settled = campaign.world.state.escort.as_ref().is_some_and(|e| e.done);
-        self.pay_wages(wages)?;
+        // Whose purse paid (ENG-49, rule M4): the owner's, a dead owner's carried in, or none.
+        let purse = if !campaign.world.owner_dead() {
+            ArrivalPurse::Owner
+        } else if campaign
+            .world
+            .state
+            .escort
+            .as_ref()
+            .is_some_and(|e| e.purse_shared)
+        {
+            ArrivalPurse::Shared
+        } else {
+            ArrivalPurse::Carried
+        };
+        self.pay_wages(wages, LedgerReason::Wage)?;
         if settled && !settled_before {
             self.push(Pending::public(
                 None,
                 EventKind::EscortSettled {
                     destination: place.to_owned(),
+                    purse,
                 },
             ));
         }
@@ -532,7 +564,17 @@ impl Session {
             .as_mut()
             .map(|c| std::mem::take(&mut c.due))
             .unwrap_or_default();
-        self.pay_wages(due)?;
+        self.pay_wages(due, LedgerReason::Wage)?;
+        // A roster saved with the NPC owner dead and the death card never put (a save from
+        // before ENG-49): it comes now, before any travel or rest (rule M1).
+        if self
+            .campaign
+            .as_mut()
+            .and_then(|c| c.world.put_death_card())
+            .is_some()
+        {
+            self.show_card()?;
+        }
         Ok(CommandResult::StartCampaign {
             state: self.state_for(viewer)?,
         })

@@ -92,6 +92,10 @@ function copyFor(entry: WagonCard, from: string | undefined, company: Json[], ro
   if (end < 0) throw new Error(`${entry.pack}: no leg ends on the road`);
   const start = route[0]!;
   const legs = route.slice(1, end + 1);
+  const owner = ((w.caravan as Json).owner as string).replace(/^npc:/, "");
+  // The copy's deck holds no death card (ENG-49), so the escort names none.
+  for (const holder of [campaign, w]) delete ((holder.escort as Json | undefined) ?? {}).death_card;
+  writeFileSync(path.join(dir, "campaign.json"), JSON.stringify(campaign));
   const map = read(path.join(world, "map.json"));
   const road = (map.roads as Json[]).find((r) => (r.from === route[end - 1] && r.to === route[end]) || (r.from === route[end] && r.to === route[end - 1]));
   if (!road) throw new Error(`${entry.pack}: no road from ${route[end - 1]} to ${route[end]}`);
@@ -112,7 +116,7 @@ function copyFor(entry: WagonCard, from: string | undefined, company: Json[], ro
           { id: "fight", text: "Fight.", text_ru: "Бой.", effects: [{ do: "remember", deed: "table_rides" }, wagon] },
           { id: "pass", text: "Pass.", text_ru: "Мимо.", effects: [{ do: "delay", minutes: 10 }] },
           // Readers that speak, so the copy's company passes rule A9.
-          { id: "read_dead", if: ["dog_dead", "tam_dead"], text: "Read.", text_ru: "Читать.", effects: [{ do: "delay", minutes: 20 }] },
+          { id: "read_dead", if: ["dog_dead", "tam_dead", `${owner}_dead`], text: "Read.", text_ru: "Читать.", effects: [{ do: "delay", minutes: 20 }] },
           { id: "read_hurt", if: ["dog_hurt", "tam_hurt"], unless: "dog_dead", text: "Read.", text_ru: "Читать.", effects: [{ do: "delay", minutes: 30 }] },
         ],
       },
@@ -124,7 +128,6 @@ function copyFor(entry: WagonCard, from: string | undefined, company: Json[], ro
   writeFileSync(path.join(world, "company.json"), JSON.stringify({ company }));
   // The Merchant fights as a roster person from the Commoner block (design §5); until MAP-24 puts
   // the Merchants in the world's roster, the copy does.
-  const owner = ((w.caravan as Json).owner as string).replace(/^npc:/, "");
   const npcsFile = path.join(world, "npcs.json");
   const npcs = read(npcsFile);
   const roster = npcs.npcs as Json[];
