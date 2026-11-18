@@ -3654,3 +3654,22 @@ fn a_card_shows_its_cast_and_tells_and_its_deed_is_remembered_by_whom_it_saw() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_mastiff_and_the_draft_horse_stand_in_a_scene() {
+    // MON-12: the pinned core has both SRD 5.2.1 stat blocks the allies need.
+    let mut api = Api::seeded(1);
+    let loaded = api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    );
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    for (handle, monster, x_ft) in [("dog", "mastiff", 10.0), ("horse", "draft_horse", -10.0)] {
+        let placed = api.call(
+            "dm",
+            json!({ "cmd": "place_creature", "handle": handle, "monster": monster, "side": "party",
+                    "at": { "kind": "point", "point": { "x_ft": x_ft, "y_ft": 10.0, "z_ft": 0.0 } } }),
+        );
+        assert_eq!(placed["ok"], true, "{placed}");
+    }
+}
