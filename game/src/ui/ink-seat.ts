@@ -805,15 +805,19 @@ function lastText(lines: Line[]): string | undefined {
 
 const CHECK_MARK: Record<CheckState, string> = { waiting: " ", running: "…", done: "✓", failed: "✗" };
 
-/** The end screen's rows (screens 12 and 13): no verdict and no report, which are the DM's view (Rule 3). */
-export function finaleRows(finale: Finale, width: number, told = false): Row[] {
+/**
+ * The end screen's rows (screens 12 and 13): no verdict and no report, which are the DM's view (Rule 3).
+ * `frame`: a running check turns the table's spinner; without it (no animation) it shows "…".
+ */
+export function finaleRows(finale: Finale, width: number, told = false, frame?: number): Row[] {
+  const mark = (state: CheckState) => (state === "running" && frame !== undefined ? SPINNER[frame % SPINNER.length]! : CHECK_MARK[state]);
   const said = (text: string, style: Style): Row[] => wrapText(text, width, 0).split("\n").map((row) => [{ text: row, style }]);
   return [
     // Said once: when the story's last line already ends the run in these words, the zone doesn't repeat it.
     ...(told ? [] : said(finale.text, { accent: "rust", bold: true })),
     ...(finale.todo ? said(finale.todo, {}) : []),
     [],
-    ...finale.checks.map((c): Row => [{ text: `${CHECK_MARK[c.state]} ${c.name}`, style: c.state === "failed" ? { accent: "rust" } : c.state === "done" ? {} : { accent: "hint" } }]),
+    ...finale.checks.map((c): Row => [{ text: `${mark(c.state)} ${c.name}`, style: c.state === "failed" ? { accent: "rust" } : c.state === "done" ? {} : { accent: "hint" } }]),
   ];
 }
 
@@ -952,6 +956,14 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     const timer = setInterval(() => tick((n) => n + 1), 15_000);
     return () => clearInterval(timer);
   }, [seat]);
+  // A post-run check that is running turns the spinner, as every other wait does.
+  const checking = view.finale?.checks.some((c) => c.state === "running") ?? false;
+  const [spin, setSpin] = useState(0);
+  useEffect(() => {
+    if (!seat.animate || !checking) return;
+    const timer = setInterval(() => setSpin((n) => n + 1), 80);
+    return () => clearInterval(timer);
+  }, [seat, checking]);
   const palette = seat.palette;
   const layout = frameLayout(size);
   // The picker is drawn on every frame but the tiny one; where it isn't drawn it takes no keys.
@@ -997,7 +1009,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     ...(paused ? said(seat.ui.pausedBlock, { accent: "hint" }) : []),
     ...(view.options ? turnRows(view.options.lines, view.options.budget, view.options.title, picked?.number, seat.ui) : []),
     ...(view.suggestions && view.prompt && !view.options ? suggestionRows(view.suggestions, suggestQuestion(view.prompt, seat.handle, seat.ui, seat.named(seat.handle)), seat.ui) : []),
-    ...(view.finale ? finaleRows(view.finale, width, lastText(view.lines) === view.finale.text) : []),
+    ...(view.finale ? finaleRows(view.finale, width, lastText(view.lines) === view.finale.text, seat.animate ? spin : undefined) : []),
   ];
   const actionRoom = Math.min(Math.floor(size.rows / 2), size.rows - below - MIN_STORY_ROWS - 2);
   const action = actionRows(block, width, actionRoom, picked?.number);
