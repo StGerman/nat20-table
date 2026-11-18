@@ -95,6 +95,41 @@ fn the_planted_fixture_replays_and_its_digest_shows_both_contradictions() {
         "{archer} attacks after the line"
     );
 
+    // A line said in the fight lists its participants, the goblin and Bren among them; a line out
+    // of a fight lists none (AGT-106).
+    assert!(
+        adjacent.fight.contains(&"bren".to_owned()),
+        "{:?}",
+        adjacent.fight
+    );
+    assert!(
+        adjacent.fight.contains(&goblin.to_owned()),
+        "{:?}",
+        adjacent.fight
+    );
+    // Out of a fight only the first line after the fight's end lists it: the surrender's
+    // `end_combat` leaves no `combat_over` prompt, so the event says the fight is over.
+    let after: Vec<_> = run
+        .digests
+        .iter()
+        .filter(|d| d.mode.as_deref() != Some("combat") && !d.combat_over && !d.fight.is_empty())
+        .collect();
+    assert_eq!(
+        after.len(),
+        1,
+        "{:?}",
+        after.iter().map(|d| d.line).collect::<Vec<_>>()
+    );
+    assert!(after[0].fight.contains(&goblin.to_owned()));
+    assert!(
+        after[0]
+            .engine_lines
+            .iter()
+            .any(|l| l.contains("surrender")),
+        "{:?}",
+        after[0].engine_lines
+    );
+
     // Every digest carries the party's sheets once the party is in the scene.
     assert!(run.digests.iter().all(|d| d.inventory.len() == 4));
     assert!(

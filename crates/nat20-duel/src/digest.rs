@@ -58,6 +58,10 @@ pub struct Digest {
     pub creatures: Vec<Value>,
     /// Creatures that fled the fight and left the scene, this run.
     pub fled: Vec<String>,
+    /// The running fight's participants, from its `combat_started`, or the last fight's while it
+    /// has just ended; empty out of a fight (AGT-106). A creature that strikes or is struck in
+    /// the line but is not among them is not in the fight.
+    pub fight: Vec<String>,
     /// Pairs of creatures next to each other, each pair in handle order.
     pub adjacent: Vec<[String; 2]>,
     /// Each party member's distance to the nearest hostile creature still standing, in feet.
@@ -204,6 +208,8 @@ struct Replay {
     read_to: u64,
     surrendered: BTreeSet<String>,
     fled: BTreeSet<String>,
+    /// The last fight's participants, until a scene loads (AGT-106).
+    fight: Vec<String>,
 }
 
 impl Replay {
@@ -226,10 +232,16 @@ impl Replay {
     ) -> Digest {
         let events = self.ask(json!({"cmd": "events", "since": self.read_to}));
         let mut engine_lines = Vec::new();
+        // A fight that ended since the last line: an `end_combat` (a surrender) leaves no
+        // `combat_over` prompt, so the event says it (AGT-106).
+        let mut ended = false;
         for event in events["result"]["events"].as_array().into_iter().flatten() {
             match event["kind"].as_str() {
+                Some("combat_over") => ended = true,
                 Some("surrendered") => self.surrendered.extend(handles(&event["handles"])),
                 Some("fled") => self.fled.extend(handles(&event["handles"])),
+                Some("combat_started") => self.fight = handles(&event["participants"]).collect(),
+                Some("scene_loaded") => self.fight.clear(),
                 _ => {}
             }
             engine_lines.push(format!(
@@ -341,6 +353,11 @@ impl Replay {
             combat_over: awaiting["kind"] == "combat_over",
             creatures,
             fled: self.fled.iter().cloned().collect(),
+            fight: if state["mode"] == "combat" || awaiting["kind"] == "combat_over" || ended {
+                self.fight.clone()
+            } else {
+                Vec::new()
+            },
             adjacent,
             nearest_foe_ft,
             foes_ft,
@@ -386,6 +403,7 @@ pub fn digest_run(
         read_to: 0,
         surrendered: BTreeSet::new(),
         fled: BTreeSet::new(),
+        fight: Vec::new(),
     };
     let said = narrations(transcript);
     let mut next = 0;

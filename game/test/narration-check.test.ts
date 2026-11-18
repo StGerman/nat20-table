@@ -212,3 +212,22 @@ test("a living-world run's judge is also asked the story-space question about th
   writeFileSync(path.join(dir, RUN_JSON), JSON.stringify({ run_format: RUN_FORMAT, seats: { human: "bren", ai: [] }, campaign: { start_day: 1, day_limit: 3 } }));
   assert.match(modelJudgeFor(dir).systemPrompt, /bren in the party list/);
 });
+
+test("a dog that bites in a fight that holds no dog is a not_in_fight flag: the batch shows who is in the fight (AGT-106)", async () => {
+  const wolf = { handle: "wolf_1", name: "Wolf", side: "hostile", hp: 4, hp_max: 11, life_state: "alive" };
+  const record: DigestRecord = {
+    line: 7, text: "The stray dog leaps at the wolf and tears its flank.", channel: "table", log_head: 12, scene: "yard", mode: "combat", round: 2, turn: "bren", combat_over: false,
+    creatures: [wolf], fled: [], fight: ["bren", "wolf_1"], adjacent: [], nearest_foe_ft: [], foes_ft: {}, engine_lines: ["11: bren hits wolf_1"], inventory: [],
+  };
+  const [batch] = batches({ party: [], digests: [record] } as unknown as DigestRun);
+  assert.match(batch.text, /In the fight: bren, wolf_1\./);
+  assert.match(JUDGE_PROMPT, /not_in_fight: in a fight/);
+  // Out of a fight there is no list, and an older digest without the field reads the same.
+  const [calm] = batches({ party: [], digests: [{ ...record, mode: "explore", fight: [] }, { ...record, line: 8, fight: undefined }] } as unknown as DigestRun);
+  assert.doesNotMatch(calm.text, /In the fight/);
+  const bite: JudgeFlag = { line: 7, claim: "the dog bites the wolf", kind: "not_in_fight", evidence_seq: [] };
+  const s = standIn(async (tools) => {
+    await call(tools, { flags: [bite] });
+  });
+  assert.deepEqual((await new ModelJudge({ open: s.open }).judge(batch.text, [7])).flags, [bite]);
+});

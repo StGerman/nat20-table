@@ -14,7 +14,7 @@ export const JUDGE_CHOICE: ModelChoice = { model: "claude-opus-5-5", effort: "lo
 export const BATCH_LINES = 10;
 
 /** What a flag is about. */
-export const FLAG_KINDS = ["hp", "death", "position", "condition", "action", "surrender", "inventory", "identity", "story_space"] as const;
+export const FLAG_KINDS = ["hp", "death", "position", "condition", "action", "surrender", "inventory", "identity", "story_space", "not_in_fight"] as const;
 export type FlagKind = (typeof FLAG_KINDS)[number];
 
 /** One contradiction the judge reports. */
@@ -68,7 +68,8 @@ Report through the report tool, once per message, with every contradiction you f
 - action: a creature did something the engine lines don't show, or the opposite of what they show (a hit that missed, a spell nobody cast);
 - surrender: a creature surrendered, begged for mercy, threw down its weapon or fled when the engine shows no surrender or flight for it, or one the engine shows surrendered is still fighting;
 - inventory: only three things. A character uses or holds an item the engine tracks but the character doesn't carry. A consumable (a potion, for one) is used with no engine line for it, or more often than the character carried. Coins or an item change hands that the equipment or the coins don't show;
-- identity: a character is called by the wrong pronouns, the wrong name, or the wrong kind of person for who the party list says they are.
+- identity: a character is called by the wrong pronouns, the wrong name, or the wrong kind of person for who the party list says they are;
+- not_in_fight: in a fight (the state lists the fight's participants), a creature attacks, is attacked or is hurt when it is not among the participants, a dog that bites or a horse that kicks the fight doesn't hold. A creature that only growls, rears, barks or stands by is not a flag.
 
 Do not report:
 - what a line leaves out, mood, weather, smells, sounds, or anything the engine doesn't model;
@@ -233,6 +234,8 @@ export function lineBlock(d: DigestRecord, full: boolean, before: DigestRecord |
     out.push(`- ${c.handle} (${c.name}, ${c.side}): ${c.hp}/${c.hp_max} HP${c.temp_hp ? ` +${c.temp_hp} temp` : ""}, ${c.life_state}${marks.length > 0 ? `, ${marks.join(", ")}` : ""}`);
   }
   if (d.fled.length > 0) out.push(`Fled the scene: ${d.fled.join(", ")}.`);
+  const fight = d.fight ?? [];
+  if (fight.length > 0) out.push(`In the fight: ${fight.join(", ")}.`);
   out.push(`Next to each other: ${d.adjacent.length > 0 ? d.adjacent.map((p) => `${p[0]} and ${p[1]}`).join("; ") : "nobody"}.`);
   const foes = Object.entries(d.foes_ft);
   if (foes.length > 0) {
