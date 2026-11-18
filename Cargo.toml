@@ -45,7 +45,7 @@ nat20-world = { path = "crates/nat20-world" }
 # 3220a7f = the head of core's `core/m9-api-48-restore-hit-points` stack, now in `demo`.
 # 1b3c9fb = demo aa636b0 plus core #81 (every Move ends on the last free spot along its path,
 # ENG-21), core #81's head until it merges.
-nat20_core = { git = "https://github.com/StGerman/nat20", rev = "1b3c9fbf7f9f906ac8be70f27b072e666a509eae" }
+nat20_core = { git = "https://github.com/StGerman/nat20", rev = "560a3ab4a0d25b1eb75e885a531813a1ae171648" }
 schemars = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
