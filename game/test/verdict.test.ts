@@ -309,6 +309,22 @@ test("the Milestone 11 rows: the deck at work, a thread, story-space flags, and 
   assert.equal(row(outside, "allies-fight").status, "reported", "counted, not gated");
   assert.equal(row(outside, "3").status, "pass");
 
+  // A person nobody has a record of, and a card line that invents, each on its own counted row (AGT-109).
+  const people = folder(run, [], withSeq(WORD_ON_THE_ROAD));
+  writeFileSync(
+    path.join(people, NARRATION_CHECK),
+    [
+      { id: "n6-1", line: 6, claim: "Garrick waves", kind: "unknown_person", evidence_seq: [], text: "Garrick waves." },
+      { id: "c1-1", line: 1, claim: "a debt", kind: "invented_on_card", evidence_seq: [], text: "Owes money. (authored: The headman.)" },
+    ].map((f) => JSON.stringify(f) + "\n").join(""),
+  );
+  writeFileSync(path.join(people, CONFIRMATIONS_JSON), JSON.stringify({ "n6-1": { answer: "confirmed" }, "c1-1": { answer: "confirmed" } }));
+  for (const counted of ["allies-people", "allies-card"]) {
+    assert.equal(row(people, counted).status, "reported", "counted, not gated");
+    assert.match(row(people, counted).detail, /1 flags: 1 confirmed, 0 dismissed, 0 to confirm/);
+  }
+  assert.equal(row(people, "3").status, "pass");
+
   // The Silent Mill has no living world, so no Milestone 11 rows.
   assert.equal(computeVerdict(folder(runRecord())).rows.some((r) => r.row.startsWith("m11-")), false);
 });

@@ -231,3 +231,60 @@ test("a dog that bites in a fight that holds no dog is a not_in_fight flag: the 
   });
   assert.deepEqual((await new ModelJudge({ open: s.open }).judge(batch.text, [7])).flags, [bite]);
 });
+
+test("a named person nobody has a record of is an unknown_person flag: the batch lists the world's people, every form (AGT-109)", async () => {
+  const record: DigestRecord = {
+    line: 3, text: "Garrick the miller waves you over.", channel: "table", log_head: 5, scene: "wendford", mode: "explore", round: null, turn: null, combat_over: false,
+    creatures: [], fled: [], adjacent: [], nearest_foe_ft: [], foes_ft: {}, engine_lines: [], inventory: [],
+    people: [
+      { id: "osric_hale", name: "Osric Hale", names: ["Osric", "Осрик", "Осрика"], alive: true, place: "wendford" },
+      { id: "odda_vell", name: "Odda Vell", names: ["Odda"], alive: false },
+    ],
+  };
+  const [batch] = batches({ party: [], digests: [record, { ...record, line: 4 }] } as unknown as DigestRun);
+  assert.match(batch.text, /The world's people \(every form of each name\):\n- osric_hale: called Osric Hale, Osric, Осрик, Осрика; alive, lives at wendford\n- odda_vell: called Odda Vell, Odda; dead/);
+  assert.equal(batch.text.match(/The world's people/g)!.length, 1, "an unchanged list is not repeated in the batch");
+  assert.match(JUDGE_PROMPT, /unknown_person: in a living world/);
+  // Outside a living world there is no list.
+  const [plain] = batches({ party: [], digests: [{ ...record, people: undefined }] } as unknown as DigestRun);
+  assert.doesNotMatch(plain.text, /The world's people/);
+  const stranger: JudgeFlag = { line: 3, claim: "Garrick waves the party over", kind: "unknown_person", evidence_seq: [] };
+  const s = standIn(async (tools) => {
+    // The card check's kind is never a narration line's.
+    await call(tools, { flags: [stranger, { line: 3, claim: "x", kind: "invented_on_card", evidence_seq: [] }] });
+  });
+  assert.deepEqual((await new ModelJudge({ open: s.open }).judge(batch.text, [3, 4])).flags, [stranger]);
+  // A batch with no people list (the Silent Mill) drops the kind: a wrong name there is identity.
+  const t = standIn(async (tools) => void (await call(tools, { flags: [stranger] })));
+  assert.deepEqual((await new ModelJudge({ open: t.open }).judge(plain.text, [3])).flags, []);
+  assert.match(JUDGE_PROMPT, /A party member called by a wrong name is identity/);
+  // A death between two lines of one batch prints the list again, with the change.
+  const dead = { ...record, line: 4, people: [{ ...record.people![0], alive: false }, record.people![1]] };
+  const [changed] = batches({ party: [], digests: [record, dead] } as unknown as DigestRun);
+  assert.match(changed.text, /The world's people \(the list changed\):\n- osric_hale: called Osric Hale, Osric, Осрик, Осрика; dead/);
+});
+
+test("each card line the describer reworded goes to the judge beside its authored line, and an invention is an invented_on_card flag (AGT-109)", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "cards-"));
+  const line = { line: 1, text: "The road is quiet.", channel: "table", log_head: 1, scene: "road", mode: "explore", round: null, turn: null, combat_over: false, creatures: [], fled: [], adjacent: [], nearest_foe_ft: [], foes_ft: {}, engine_lines: [], inventory: [] };
+  writeFileSync(path.join(dir, NARRATION_DIGEST), [JSON.stringify({ kind: "run", party: [], narrations: 1, requests_replayed: 0, diverged: null }), JSON.stringify({ kind: "narration", ...line })].join("\n") + "\n");
+  const described = (authored: string, shown: string) => JSON.stringify({ at: "t", speaker: "describe", channel: "to:bren", kind: "described", text: shown, rolls: [], log_head: 1, person: "shepherd_gwyn", authored });
+  writeFileSync(
+    path.join(dir, "transcript.jsonl"),
+    [described("A shepherd with a name for every sheep.", "A shepherd who knows each of her sheep by name."), described("The headman of Wendford.", "Wendford's headman, who owes the miller money.")].join("\n") + "\n",
+  );
+  const judge = new ScriptedJudge([], undefined, new Map([["Wendford's headman, who owes the miller money.", "a debt to the miller"]]));
+  const check = await narrationCheck(REPO, dir, judge);
+  assert.ok(check.ok, check.lines.join("\n"));
+  assert.equal(judge.cards.length, 2, "every pair is put to the judge");
+  const flags = readFileSync(path.join(dir, NARRATION_CHECK), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+  assert.deepEqual(flags, [{ id: "c2-1", line: 2, claim: "a debt to the miller", kind: "invented_on_card", evidence_seq: [], text: "Wendford's headman, who owes the miller money. (authored: The headman of Wendford.)" }]);
+  assert.ok(check.lines.some((l) => l.startsWith("- c2-1 (card line 2, invented_on_card): a debt to the miller.")));
+  // The model judge: a session of its own with the verdict tool alone.
+  const s = standIn(async (tools, message) => {
+    assert.match(message, /^Authored: The headman of Wendford\.\nShown: /);
+    await tools.find((t) => t.name === "verdict")!.handler({ invented: true, claim: "a debt" }, {});
+  });
+  assert.deepEqual(await new ModelJudge({ open: s.open }).card("The headman of Wendford.", "Wendford's headman, who owes money."), { invented: true, claim: "a debt" });
+  assert.deepEqual(s.opened.map((c) => c.tools.map((t) => t.name)), [["verdict"]]);
+});

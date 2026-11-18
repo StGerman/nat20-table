@@ -62,6 +62,11 @@ pub struct Digest {
     /// has just ended; empty out of a fight (AGT-106). A creature that strikes or is struck in
     /// the line but is not among them is not in the fight.
     pub fight: Vec<String>,
+    /// The world's people (AGT-109): each roster person's `id`, `name`, every listed form in
+    /// `names`, `alive`, and `place` where the engine has one, so a named person who matches
+    /// none is an `unknown_person`. Empty, and left out, outside a living world.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub people: Vec<Value>,
     /// Pairs of creatures next to each other, each pair in handle order.
     pub adjacent: Vec<[String; 2]>,
     /// Each party member's distance to the nearest hostile creature still standing, in feet.
@@ -358,6 +363,18 @@ impl Replay {
             } else {
                 Vec::new()
             },
+            people: state["world"]["npcs"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|n| {
+                    let mut person = json!({"id": n["id"], "name": n["name"], "names": n.get("names").cloned().unwrap_or(json!([])), "alive": n["alive"]});
+                    if let Some(place) = n["place"].as_str() {
+                        person["place"] = json!(place);
+                    }
+                    person
+                })
+                .collect(),
             adjacent,
             nearest_foe_ft,
             foes_ft,
