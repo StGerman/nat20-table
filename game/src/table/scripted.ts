@@ -614,10 +614,13 @@ export interface BenchSeatLog {
 /**
  * The card bench's human seat (AGT-123, `docs/design/card-bench.md` §4): it moves the caravan on
  * until a card waits for its word, then types `lines` at the card's prompt, one for each time the
- * card asks. It never picks a number: when the lines run out with the card waiting it leaves the
- * table, and it leaves at the first prompt after the card is settled. `log` keeps what it did.
+ * card asks. A line that is a bare number is the number a person types for a choice (AGT-131); the
+ * seat never picks one of its own: when the lines run out with the card waiting it leaves the
+ * table, and it leaves at the first prompt after the card is settled. With `fight`, a fight the
+ * settled card started is played first, by rule, and the seat leaves at the first prompt after it
+ * (AGT-131). `log` keeps what it did.
  */
-export function benchSeat(lines: readonly string[], log: BenchSeatLog): SeatPolicy {
+export function benchSeat(lines: readonly string[], log: BenchSeatLog, options: { fight?: boolean } = {}): SeatPolicy {
   const walk = caravanSeat();
   const leave = (why: NonNullable<BenchSeatLog["left"]>): PlayerIntent => {
     log.left ??= why;
@@ -629,12 +632,17 @@ export function benchSeat(lines: readonly string[], log: BenchSeatLog): SeatPoli
       const line = lines[log.typed.length];
       if (line === undefined) return leave("lines_out");
       log.typed.push(line);
-      return { kind: "text", text: line };
+      return /^\d+$/.test(line) ? { kind: "option", number: Number(line) } : { kind: "text", text: line };
     }
+    // A fight's prompts after the card, when the bench plays the fight: by rule, as on the walk.
+    if (log.reached && options.fight && FIGHT_PROMPTS.has(prompt.kind)) return walk(prompt, seat);
     // Any other prompt after the card: the card no longer waits for the seat's word.
     return log.reached ? leave("settled") : walk(prompt, seat);
   };
 }
+
+/** The prompts a fight asks the human's seat (AGT-131). */
+const FIGHT_PROMPTS: ReadonlySet<HumanPrompt["kind"]> = new Set(["combat_turn", "pick", "reaction", "surrender"]);
 
 /**
  * A scripted player's word on a card at the card bench (AGT-123): for the own move when one is
