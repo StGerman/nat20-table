@@ -72,7 +72,7 @@ export interface RunRecord {
    * copy's cut route, the lines file, the lines it marks left out, and how many of its lines the
    * bench runs before this one typed (AGT-124). Absent for every other command.
    */
-  bench?: { card: string; pack: string; route: string[]; lines_file: string | null; left_out: string[]; lines_before?: number };
+  bench?: { card: string; pack: string; route: string[]; lines_file: string | null; left_out: string[]; lines_before?: number; /** The fight a settled card started was played (AGT-131). */ fight?: boolean; /** Company entries put at the wagon (AGT-131). */ rides?: string[] };
 }
 
 /** The checkout a run comes from: its commit, and whether tracked files had changes. */

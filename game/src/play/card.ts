@@ -5,7 +5,9 @@
 // alone (`bench.ts`); a line that settles the card ends the bench run, and the lines left start a
 // fresh one. When the lines run out with the card waiting, the bench stops: it never picks a number.
 // `--roster NAME` plays a copy of a saved party, for a card that reads deeds; `--seat ink` lets a
-// person type instead of the file. Every other setting is a play command's (`settings.ts`).
+// person type instead of the file. `--fight` plays a fight the settled card starts, and `--rides
+// ID[,ID]` puts those company entries at the wagon (AGT-131). Every other setting is a play
+// command's (`settings.ts`).
 // The live DM runs on Stas's Mac under his Claude login (decision 0036); `--dm scripted` plays the
 // same walk with no model, in English. The run itself is in driver.ts.
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -18,7 +20,7 @@ import { BenchError, benchLines, benchPack, benchPlan, benchRoster, packsReachin
 import { npmCommand, playRun } from "./driver.ts";
 import { resolveSettings, SettingError, SETTINGS } from "./settings.ts";
 
-const USAGE = "npm run play:card -- --card ID --pack PACK --lines FILE [--roster NAME] [--seat ink]";
+const USAGE = "npm run play:card -- --card ID --pack PACK --lines FILE [--roster NAME] [--seat ink] [--fight] [--rides ID[,ID]]";
 
 /** Prints why the bench can't start and exits 2, before anything is copied or started. */
 function refuse(message: string): never {
@@ -28,13 +30,15 @@ function refuse(message: string): never {
 
 // The bench's own flags come off the line first; the rest are play settings.
 const argv = process.argv.slice(2);
-let own: { card?: string; lines?: string };
+let own: { card?: string; lines?: string; fight: boolean; rides: string[] };
 let rest: string[];
 try {
-  const options = { ...Object.fromEntries(Object.entries(SETTINGS).map(([name, spec]) => [name, { type: spec.kind === "bool" ? "boolean" : "string" } as const])), card: { type: "string" }, lines: { type: "string" } } as const;
+  const options = { ...Object.fromEntries(Object.entries(SETTINGS).map(([name, spec]) => [name, { type: spec.kind === "bool" ? "boolean" : "string" } as const])), card: { type: "string" }, lines: { type: "string" }, fight: { type: "boolean" }, rides: { type: "string" } } as const;
   const parsed = parseArgs({ args: argv, options, strict: true, allowPositionals: false, tokens: true });
-  own = { card: parsed.values.card as string | undefined, lines: parsed.values.lines as string | undefined };
-  const dropped = new Set(parsed.tokens.flatMap((t) => (t.kind === "option" && (t.name === "card" || t.name === "lines") ? (t.inlineValue ? [t.index] : [t.index, t.index + 1]) : [])));
+  const rides = parsed.values.rides as string | undefined;
+  own = { card: parsed.values.card as string | undefined, lines: parsed.values.lines as string | undefined, fight: parsed.values.fight === true, rides: rides === undefined ? [] : rides.split(",").map((id) => id.trim()).filter((id) => id !== "") };
+  const OWN = new Set(["card", "lines", "fight", "rides"]);
+  const dropped = new Set(parsed.tokens.flatMap((t) => (t.kind === "option" && OWN.has(t.name) ? (t.inlineValue || t.value === undefined ? [t.index] : [t.index, t.index + 1]) : [])));
   rest = argv.filter((_, i) => !dropped.has(i));
 } catch (error) {
   refuse(`${error instanceof Error ? error.message : String(error)}\n${USAGE}`);
@@ -112,7 +116,7 @@ for (;;) {
   try {
     let copy: ReturnType<typeof benchPack>;
     try {
-      copy = benchPack(flags.pack, card, root);
+      copy = benchPack(flags.pack, card, root, own.rides);
       if (flags.roster !== undefined) benchRoster(flags.rosters, flags.roster, path.join(root, "rosters"));
     } catch (error) {
       if (!(error instanceof BenchError)) throw error;
@@ -129,7 +133,7 @@ for (;;) {
         defaults,
         // A campaign goes where its road takes it: the plan is the pack's scenes, as in play:full.
         allScenes: true,
-        bench: { seat: benchSeat(read.lines.slice(typed), log), card: votesOwnMove, record: { card, pack: recordedPack, route: plan.route, lines_file: own.lines ?? null, left_out: read.leftOut, lines_before: typed } },
+        bench: { seat: benchSeat(read.lines.slice(typed), log, { fight: own.fight }), card: votesOwnMove, record: { card, pack: recordedPack, route: plan.route, lines_file: own.lines ?? null, left_out: read.leftOut, lines_before: typed, ...(own.fight ? { fight: true } : {}), ...(own.rides.length > 0 ? { rides: own.rides } : {}) } },
       },
       [...rest, "--pack", copy.dir, ...(flags.roster !== undefined ? ["--rosters", path.join(root, "rosters")] : [])],
     );

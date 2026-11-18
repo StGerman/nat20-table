@@ -60,14 +60,14 @@ function movingDm(): ScriptedDm {
 }
 
 /** One bench run with no model: the copy of `pack` for `card`, the bench's seats, a scripted DM. */
-async function benchRun(pack: string, card: string, lines: string[], options: { dm?: ScriptedDm; roster?: Roster } = {}) {
+async function benchRun(pack: string, card: string, lines: string[], options: { dm?: ScriptedDm; roster?: Roster; fight?: boolean; rides?: string[]; seed?: number } = {}) {
   const root = mkdtempSync(path.join(tmpdir(), "card-bench-test-"));
   try {
-    const { dir, plan } = benchPack(pack, card, root);
+    const { dir, plan } = benchPack(pack, card, root, options.rides);
     const cast = castParty(dir);
     const human = cast.human!;
     const log: BenchSeatLog = { reached: false, typed: [] };
-    const t = await testTable({ seed: 3, pack: dir, human, players: cast.ai, seat: new ScriptedSeat(human, [], benchSeat(lines, log)), ...(options.roster ? { roster: options.roster } : {}) });
+    const t = await testTable({ seed: options.seed ?? 3, pack: dir, human, players: cast.ai, seat: new ScriptedSeat(human, [], benchSeat(lines, log, { fight: options.fight })), ...(options.roster ? { roster: options.roster } : {}) });
     try {
       const campaign = readCampaign(dir)!;
       const loop = new TableLoop({
@@ -101,6 +101,8 @@ test("the bench plans the shortest stretch to a card: from the last place with a
   // The bridge has no scene of its own, so a lowland card starts at Wendford and crosses the bridge road first.
   assert.deepEqual(stretch(FAIR, "rutted_road"), ["road", "wendford", "wendford > millbeck_bridge > midwend"]);
   assert.deepEqual(stretch(FAIR, "toll_paid_word"), ["arrival", "highsteads", "highsteads > wendford"]);
+  // A night card's stretch runs on through the zone's legs in a row, so the day's travel runs out on one of them (AGT-131).
+  assert.deepEqual(stretch(FAIR, "night_wolves"), ["night", "wendford", "wendford > millbeck_bridge > midwend > wendmouth"]);
   assert.deepEqual(stretch(WAY_BACK, "salt_on_credit"), ["road", "wendford", "wendford > highsteads"]);
   assert.deepEqual(stretch(WAY_BACK, "the_fair_price"), ["arrival", "wendmouth", "wendmouth > midwend > millbeck_bridge > wendford"]);
   // The deeds a card reads, and the chained cards its choices add, which the copy keeps.
@@ -120,7 +122,8 @@ test("the bench plans the shortest stretch to a card: from the last place with a
   };
   assert.match(refused(FAIR, "no_such_card"), /has no card no_such_card/);
   assert.match(refused(FAIR, "goblin_ambush"), /is a chained card/);
-  assert.match(refused(FAIR, "river_mist"), /is a night card/);
+  // A night card of a place is refused: the bench's seat camps where the day's travel runs out, on the road.
+  assert.match(refused(FAIR, "roadfolk_fire"), /is a night card of the place highsteads/);
   assert.match(refused(FAIR, "barrow_lights"), /road card of the zone barrows, which .* never crosses: its route highsteads > wendford > millbeck_bridge > midwend > wendmouth/);
   // Fair in Wend starts at the Highsteads and never arrives there.
   assert.match(refused(FAIR, "gwyn_news"), /arrival card of highsteads, where .* never arrives/);
@@ -180,6 +183,28 @@ for (const pack of CAMPAIGNS) {
     }
   });
 }
+
+test("a night card comes on the night the day's travel runs out on its road; --rides puts Tam at the wagon, a number line picks a choice, and --fight plays the fight before the seat leaves (AGT-131)", async () => {
+  const run = await benchRun(FAIR, "night_wolves", ["1"], { fight: true, rides: ["tam"] });
+  assert.deepEqual(shown(run.events).slice(0, 1), ["night_wolves"], run.report.ended);
+  const human = castParty(FAIR).human!;
+  const pick = run.requests.find((r) => r.cmd === "choose_card" && r.actor === human);
+  assert.equal(pick?.choice, "stand", "the line 1 is the human's number for the first choice");
+  assert.ok(run.events.some((e) => e.kind === "deed_remembered" && e.deed === "tam_rode"), "the chosen choice remembers what makes Tam ride, first");
+  assert.ok(run.events.some((e) => e.kind === "creature_placed" && e.handle === "tam"), "Tam stands at the wagon");
+  assert.ok(run.events.some((e) => e.kind === "combat_over"), "the fight is played to its end");
+  assert.deepEqual([run.log.typed, run.log.left], [["1"], "settled"]);
+  // Without --fight the seat leaves at the fight's first prompt, as before.
+  const told = await benchRun(FAIR, "night_wolves", ["1"], { rides: ["tam"] });
+  assert.ok(!told.events.some((e) => e.kind === "combat_over"), "the fight is told and not played");
+  // A company entry the world doesn't have is refused before anything is played.
+  const root = mkdtempSync(path.join(tmpdir(), "card-bench-test-"));
+  try {
+    assert.throws(() => benchPack(FAIR, "night_wolves", root, ["nobody"]), /--rides nobody: the world wend has no such company entry; it has gwyns_dog, tam/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("a card that reads a deed comes on a roster a scripted contract saved; a line that becomes an own move settles it and ends the bench run", async () => {
   // Fair in Wend, scripted, crosses the Millbeck: every choice of its bridge card writes crossed_millbeck.
