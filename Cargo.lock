@@ -1317,7 +1317,7 @@ dependencies = [
 [[package]]
 name = "nat20_core"
 version = "0.1.0"
-source = "git+https://github.com/StGerman/nat20?rev=1b3c9fbf7f9f906ac8be70f27b072e666a509eae#1b3c9fbf7f9f906ac8be70f27b072e666a509eae"
+source = "git+https://github.com/StGerman/nat20?rev=560a3ab4a0d25b1eb75e885a531813a1ae171648#560a3ab4a0d25b1eb75e885a531813a1ae171648"
 dependencies = [
  "enum-iterator",
  "enum_dispatch",
