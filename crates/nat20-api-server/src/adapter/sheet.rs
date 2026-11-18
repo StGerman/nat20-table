@@ -103,7 +103,7 @@ pub fn sheet(
                 score: scores.get(&ability).total().clamp(0, 30) as u8,
                 modifier: scores.ability_modifier(&ability).total() as i8,
                 save_bonus: bonus(engine, entity, save),
-                save_proficient: *save.proficiency().level() != ProficiencyLevel::None,
+                save_proficient: save.proficiency().is_some(),
             }
         })
         .collect();
@@ -117,7 +117,7 @@ pub fn sheet(
             SkillLine {
                 skill: wire,
                 bonus: bonus(engine, entity, check),
-                proficiency: wire_proficiency(check.proficiency().level()),
+                proficiency: wire_proficiency(check.proficiency().map(|p| p.level())),
             }
         })
         .collect::<Vec<_>>();
@@ -268,8 +268,8 @@ fn resources(
             ResourceBudgetKind::Tiered(tiers) if id.id() == "resource.spell_slot" => {
                 slots.extend(tiers.iter().map(|(level, budget)| SpellSlots {
                     level: *level,
-                    remaining: budget.current_uses.into(),
-                    max: budget.max_uses.into(),
+                    remaining: budget.current_uses().into(),
+                    max: budget.max_uses_total().into(),
                 }));
             }
             ResourceBudgetKind::Flat(budget) => {
@@ -280,8 +280,8 @@ fn resources(
                     ResourcePool {
                         id: word,
                         name,
-                        remaining: budget.current_uses.into(),
-                        max: budget.max_uses.into(),
+                        remaining: budget.current_uses().into(),
+                        max: budget.max_uses_total().into(),
                         recharge: match recharge {
                             Some(RechargeRule::Rest(RestKind::Short)) => Recharge::ShortRest,
                             Some(RechargeRule::Rest(RestKind::Long) | RechargeRule::Daily) => {
@@ -461,9 +461,8 @@ fn features(engine: &EngineState, entity: Entity, owners: &[&str]) -> Vec<Featur
         .filter(|e| {
             matches!(
                 e.source,
-                ModifierSource::ClassFeature(_)
-                    | ModifierSource::ClassLevel(_)
-                    | ModifierSource::SubclassFeature(_)
+                ModifierSource::Class(_)
+                    | ModifierSource::Subclass(_)
                     | ModifierSource::Species(_)
                     | ModifierSource::Subspecies(_)
                     | ModifierSource::Background(_)
@@ -643,10 +642,10 @@ const SLOTS: [EquipmentSlot; 12] = [
     EquipmentSlot::Ring2,
 ];
 
-fn wire_proficiency(level: &ProficiencyLevel) -> WireProficiency {
+fn wire_proficiency(level: Option<&ProficiencyLevel>) -> WireProficiency {
     match level {
-        ProficiencyLevel::None => WireProficiency::None,
-        ProficiencyLevel::Expertise => WireProficiency::Expertise,
+        None => WireProficiency::None,
+        Some(ProficiencyLevel::Expertise) => WireProficiency::Expertise,
         // Half proficiency (Jack of All Trades) has no wire value; it adds half the bonus.
         _ => WireProficiency::Proficient,
     }
