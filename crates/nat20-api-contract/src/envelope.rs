@@ -346,6 +346,14 @@ pub enum Command {
         #[serde(default)]
         fallback: bool,
     },
+    /// The DM's narration named people of the world's roster (API-58; protocol §4.15). DM
+    /// only. A person who is with the party (who lives in the place the party is in, owns the
+    /// caravan, or is in the cast of the card on the table) and is not yet in the scene stands
+    /// in it from now on; during a fight a mention places nobody.
+    Mention {
+        /// Roster ids, each once.
+        npcs: Vec<String>,
+    },
     /// Puts a seat's own move on the road card on the table (API-56; protocol §4.13): the seat
     /// said something else than the card's choices, and the DM turns the words into a ladder
     /// check and names the card's offered choice a success brings and, where one plainly
@@ -713,6 +721,11 @@ pub enum CommandResult {
     /// The state with the picked card on the table, or already decided when nobody could
     /// speak on it.
     PickCard {
+        /// Projected for the request's `viewer`.
+        state: State,
+    },
+    /// The state after a mention, with anyone it placed in the scene.
+    Mention {
         /// Projected for the request's `viewer`.
         state: State,
     },

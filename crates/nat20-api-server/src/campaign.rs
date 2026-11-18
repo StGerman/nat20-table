@@ -10,9 +10,9 @@ use std::path::{Path, PathBuf};
 use nat20_api_contract::{
     Ability, CaravanView, CardChoiceDm, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget,
     CardWhen, CargoView, CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade,
-    EscortDm, EscortView, EventKind, Handle, LegView, MilesToday, NpcAttitude, NpcDm, OfferedCard,
-    OwnMoveDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain,
-    TripLegView, TripView, WagonView, Watch, WorldDm, WorldPosition,
+    EscortDm, EscortView, EventKind, Handle, LegView, MilesToday, NpcAttitude, NpcDm, NpcRemembers,
+    OfferedCard, OwnMoveDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld, Side,
+    Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -265,15 +265,25 @@ impl Campaign {
     /// Checks each place NPC against the scene their place loads: their anchor is in it, no
     /// creature or spawn of it has their id as a handle, and their stat block exists.
     fn check_npcs(&self, data_dir: &Path) -> Result<(), nat20_api_contract::ApiError> {
+        self.world
+            .check_cast()
+            .map_err(|e| bad(format!("The world's deck: {e}.")))?;
         for npc in &self.world.npcs {
+            monster::check(&npc.monster).map_err(|e| bad(format!("The NPC {}: {e}", npc.id)))?;
+            crate::adapter::game::check_carries(&carries_wire(&npc.carries))
+                .map_err(|e| bad(format!("The NPC {}'s carries: {e}.", npc.id)))?;
+            // Someone who lives on no place stands in a scene only when a mention places them.
+            let (Some(place), Some(anchor)) = (&npc.place, &npc.anchor) else {
+                continue;
+            };
             let scene_id = self.scene_at(&world::Position::At {
-                place: npc.place.clone(),
+                place: place.clone(),
             });
             let file = read_scene(data_dir, &scene_id)?;
-            if !file.anchors.iter().any(|a| a.id == npc.anchor) {
+            if !file.anchors.iter().any(|a| a.id == *anchor) {
                 return Err(bad(format!(
-                    "The NPC {} stands at anchor {}, which scene {scene_id} doesn't have.",
-                    npc.id, npc.anchor
+                    "The NPC {} stands at anchor {anchor}, which scene {scene_id} doesn't have.",
+                    npc.id
                 )));
             }
             let taken = file.creatures.iter().any(|c| c.handle.0 == npc.id)
@@ -287,9 +297,6 @@ impl Campaign {
                     npc.id
                 )));
             }
-            monster::check(&npc.monster).map_err(|e| bad(format!("The NPC {}: {e}", npc.id)))?;
-            crate::adapter::game::check_carries(&carries_wire(&npc.carries))
-                .map_err(|e| bad(format!("The NPC {}'s carries: {e}.", npc.id)))?;
         }
         Ok(())
     }
@@ -312,12 +319,68 @@ impl Campaign {
                     world::Attitude::Hostile => Side::Hostile,
                     world::Attitude::Friendly | world::Attitude::Indifferent => Side::Neutral,
                 },
-                anchor: def.anchor.clone(),
+                anchor: def.anchor.clone().expect("a place NPC has an anchor"),
                 name: def.name.clone(),
                 carries: carries_wire(&state.carries),
                 hp: state.hp,
             })
             .collect()
+    }
+
+    /// Where a person a mention names stands in scene `scene_id` (API-58, design rule N4):
+    /// their own anchor when they live in the place the party is in and this is its scene, the
+    /// scene's `first_anchor` when they own the caravan or stand in the cast of the card on the
+    /// table. None for someone dead, unknown, or not with the party.
+    pub fn mention_placement(
+        &self,
+        id: &str,
+        scene_id: &str,
+        first_anchor: &str,
+    ) -> Option<NpcPlacement> {
+        let def = self.world.npcs.iter().find(|d| d.id == id)?;
+        let state = self.world.state.npcs.get(id).filter(|s| s.alive)?;
+        let here = self.world.place_here().is_some_and(|p| {
+            def.place.as_deref() == Some(p) && self.scene_at(&self.world.state.at) == scene_id
+        });
+        let owner = matches!(&self.world.state.caravan.owner, world::Owner::Npc(o) if o == id);
+        let on_card = self
+            .world
+            .state
+            .deck
+            .pending
+            .as_ref()
+            .and_then(|p| self.world.deck.card(&p.card))
+            .is_some_and(|c| c.cast.iter().any(|who| who == id));
+        let anchor = match &def.anchor {
+            Some(anchor) if here => anchor.clone(),
+            _ if owner || on_card => first_anchor.to_owned(),
+            _ => return None,
+        };
+        Some(NpcPlacement {
+            id: def.id.clone(),
+            monster: def.monster.clone(),
+            side: match state.attitude {
+                world::Attitude::Hostile => Side::Hostile,
+                world::Attitude::Friendly | world::Attitude::Indifferent => Side::Neutral,
+            },
+            anchor,
+            name: def.name.clone(),
+            carries: carries_wire(&state.carries),
+            hp: state.hp,
+        })
+    }
+
+    /// Whether `id` is a person of the world's roster.
+    pub fn knows_npc(&self, id: &str) -> bool {
+        self.world.npcs.iter().any(|d| d.id == id)
+    }
+
+    /// A person of the roster died in the scene (API-58): the world holds them dead at once,
+    /// so a card whose cast holds them is never drawn (rule A8).
+    pub fn npc_died(&mut self, id: &str) {
+        if let Some(state) = self.world.state.npcs.get_mut(id) {
+            state.alive = false;
+        }
     }
 
     /// The escort contract as the party knows it.
@@ -511,6 +574,8 @@ impl Campaign {
             note: card.note.clone(),
             scout: card.scout.map(scout_skill),
             reads: reads(card, Some(&offers), &self.world.state.deeds),
+            cast: card.cast.clone(),
+            tells: card.tells.clone(),
         })
     }
 
@@ -581,6 +646,8 @@ impl Campaign {
                     failure: mv.failure.clone(),
                 }
             }),
+            cast: card.cast.clone(),
+            tells: card.tells.clone(),
         })
     }
 
@@ -730,7 +797,19 @@ impl Campaign {
                     Some(NpcDm {
                         id: d.id.clone(),
                         name: d.name.clone(),
+                        names: d.names.clone(),
+                        look: d.look.clone(),
+                        heard: d.heard.clone(),
+                        remembers: d
+                            .remembers
+                            .iter()
+                            .map(|r| NpcRemembers {
+                                deed: r.deed.clone(),
+                                line: r.line.clone(),
+                            })
+                            .collect(),
                         place: d.place.clone(),
+                        anchor: d.anchor.clone(),
                         monster: d.monster.clone(),
                         attitude: match s.attitude {
                             world::Attitude::Friendly => NpcAttitude::Friendly,

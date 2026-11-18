@@ -1,5 +1,5 @@
 {
-    "_comment": "The test world's one place NPC (API-48): the innkeeper of the Crossing Inn, by the wagon whenever the party is at the inn. The inn has no scene of its own, so she stands in the road scene, but only while the caravan is at the inn. Not shipped content.",
+    "_comment": "The test world's roster (API-48, API-58): the innkeeper of the Crossing Inn, by the wagon whenever the party is at the inn. The inn has no scene of its own, so she stands in the road scene, but only while the caravan is at the inn. Not shipped content. Old Tobin owns the caravan and lives on no place: a mention places him wherever the party is (API-58).",
     "npcs": [
         {
             "id": "innkeeper_wren",
@@ -8,8 +8,40 @@
             "place": "crossing_inn",
             "anchor": "by_the_wagon",
             "attitude": "friendly",
-            "carries": {"coins": {"gp": 4}},
-            "notes": "Keeps the Crossing Inn; hears every rumour from the hills before anyone in town."
+            "carries": {
+                "coins": {
+                    "gp": 4
+                }
+            },
+            "notes": "Keeps the Crossing Inn; hears every rumour from the hills before anyone in town.",
+            "names": [
+                "Wren",
+                "Рен"
+            ],
+            "look": "A broad woman in a flour-white apron.",
+            "heard": "They say she hears every rumour from the hills first."
+        },
+        {
+            "id": "old_tobin",
+            "name": "Old Tobin",
+            "names": [
+                "Tobin",
+                "Тобин",
+                "Тобина",
+                "Тобину"
+            ],
+            "monster": "commoner",
+            "attitude": "friendly",
+            "look": "An old carter with a pipe he never lights.",
+            "heard": "They say he has driven the vale road forty years.",
+            "remembers": [
+                {
+                    "deed": "chose_join",
+                    "line": "You sang along with him.",
+                    "line_ru": "Вы пели вместе с ним."
+                }
+            ],
+            "notes": "Owns the test caravan; sings when the road is long."
         }
     ]
 }

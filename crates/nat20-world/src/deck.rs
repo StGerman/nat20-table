@@ -138,7 +138,19 @@ pub struct Card {
     /// with something to find ahead; none for a card with nothing to find
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scout: Option<ScoutSkill>,
+    /// Who is there (API-58): roster ids, or `owner` for the caravan's NPC owner. A card whose
+    /// cast holds someone dead is never offered or drawn (design rule A8)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cast: Vec<String>,
+    /// Who is only named or spoken of (API-58): roster ids, or `owner`. A death never takes
+    /// the card off the table; a choice that is the dead person's own act reads their death
+    /// through `unless`
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tells: Vec<String>,
 }
+
+/// The cast word for the caravan's NPC owner (API-58).
+pub const OWNER_CAST: &str = "owner";
 
 /// What the scout looks for (API-54), from the SRD 5.2.1 Search table: Wisdom (Perception)
 /// finds a concealed creature or object, Wisdom (Survival) finds tracks.
@@ -521,6 +533,11 @@ pub struct DeckState {
     /// the scout's DC; none after a night or an arrival draw
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub road: Option<String>,
+    /// Who of a card's cast is dead (API-58, rule A8): roster ids, and `owner` when the
+    /// caravan's NPC owner is. Worked out by the world before each draw from its people;
+    /// never saved
+    #[serde(skip)]
+    pub cast_dead: BTreeSet<String>,
 }
 
 impl DeckState {
@@ -1183,6 +1200,7 @@ impl Deck {
             && !state.gone.contains(&card.id)
             && !state.gone_for_contract.contains(&card.id)
             && card.holds(deeds)
+            && !card.cast.iter().any(|p| state.cast_dead.contains(p))
     }
 
     /// The pile of a zone: the cards in play and not in the discard, in file order. A card
@@ -1849,6 +1867,26 @@ mod tests {
                 "choice give names custom bread_shared twice, or both keeps and breaks it"
             )
         );
+    }
+
+    #[test]
+    fn a_card_whose_cast_holds_someone_dead_is_never_in_the_pile() {
+        let mut d = deck();
+        d.cards[1].cast = vec!["beggar_ned".into()];
+        d.cards[0].tells = vec![OWNER_CAST.into()];
+        let mut state = DeckState::default();
+        let ids = |state: &DeckState| -> Vec<String> {
+            d.pile("fields", When::Road, &known(), &DeedBook::new(), state)
+                .iter()
+                .map(|c| c.id.clone())
+                .collect()
+        };
+        assert_eq!(ids(&state), ["mud", "beggar"]);
+        state.cast_dead = BTreeSet::from(["beggar_ned".to_string(), OWNER_CAST.to_string()]);
+        // The beggar stands on his card; the owner is only named on the mud card.
+        assert_eq!(ids(&state), ["mud"]);
+        let json = serde_json::to_value(&state).unwrap();
+        assert!(json.get("cast_dead").is_none(), "never saved");
     }
 
     fn known() -> BTreeSet<String> {
