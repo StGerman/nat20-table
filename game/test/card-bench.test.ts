@@ -148,7 +148,7 @@ test("the bench's copy leaves the pack as it was, holds the one card, and still 
     const left = [path.join(dir, "worlds/wend/deck"), path.join(dir, "deck")].flatMap((deck) =>
       readdirSync(deck).flatMap((f) => (JSON.parse(readFileSync(path.join(deck, f), "utf8")) as { cards: Card[] }).cards.map((c) => c.id)),
     );
-    assert.deepEqual(left.sort(), ["millbeck_bridge", "peddlers_mark"]);
+    assert.deepEqual(left.sort(), ["millbeck_bridge", "odda_falls", "peddlers_mark"]);
     // The DM's pack text: the lore outside the pack still reads from the copy.
     assert.match(readPack(dir).text, /## Lore\n\n\S/);
     // A second copy into the same folder is refused: every bench run takes a fresh one.

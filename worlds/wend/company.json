@@ -1,0 +1,18 @@
+{
+    "_comment": "Who rides with the wagon in Wend besides its team and its NPC owner (ENG-48, MAP-23): Gwyn's sheepdog on the contract the Blades fed it, and Tam on the contract he rode, until he is given back to his mother. Each stands at the wagon in a card's wagon fight. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. The Mastiff is SRD 5.2.1; Tam fights as his roster Commoner.",
+    "company": [
+        {
+            "id": "gwyns_dog",
+            "monster": "mastiff",
+            "name": "the sheepdog",
+            "if": "fed_gwyns_dog"
+        },
+        {
+            "id": "tam",
+            "npc": "tam",
+            "if": "tam_rode",
+            "unless": "gave_tam_back_to_bel",
+            "hurt": true
+        }
+    ]
+}

@@ -5,7 +5,7 @@ title: "Allies in a card's wagon fight: the engine half and the deck half"
 pri: P2
 dest: Ours
 size: L
-state: partial
+state: done
 area: "2. Engine correctness (core)"
 ---
 
@@ -19,4 +19,4 @@ Check: design §11 rows 1, 2, 4 (test, no model). Cost: engine 40 USD build, Sta
 
 ## Status
 
-partial. The engine half is done (design PR 8): `wagon`, `from` and `owner` on a deck fight, `worlds/<id>/company.json` with rule A9 checked at `start_campaign`, the `rides:<id>` choice condition (MAP-22's ask, in place of a going-home deed), policy `hold`, rules A5 and A6, the death and wound deeds by the Blades (A7), a dead team animal leaving `team`, rule A10 (a person a mention placed joins as they stand). Fixture `allies.jsonl` on the test world: an ally kills the grey wolf (`killed_grey` by the dog), the owner and a horse die, the dog comes out hurt; then the last Blade falls with every ally standing. `npm run play:wagon-table` prints design §15's table with no model and every creature, the Blades too, on the engine's script; the 200-seed table of 2026-11-17 is `/mnt/project-files/engine/allies/wagon-table-2026-11-17.md` (scripted Blades rush the monsters, so live seats may lose allies more often). Left: the deck half (design PR 11), which needs MAP-24 for the Merchants in the roster and MAP-23 for Tam. Design §3 item 4 and §13 row 4 still name a going-home deed and are out of date
+done. Engine (design PR 8): `wagon`, `from` and `owner` on a deck fight, `worlds/<id>/company.json` with rule A9 checked at `start_campaign`, the `rides:<id>` choice condition (MAP-22's ask, in place of a going-home deed), policy `hold`, rules A5 to A7 and A10; `npm run play:wagon-table` prints design §15's table (`/mnt/project-files/engine/allies/wagon-table-2026-11-17.md`). Deck (design PR 11): `night_wolves` and `men_at_the_iron` at the wagon, `goblin_ambush` and `millbeck_bridge` (`owner: false`) `ahead`; the dog `gwyns_dog` in `company.json` (no `hurt`: an animal starts every fight unhurt; no `unless`); the dog choices read `rides:gwyns_dog`, and «Сказать Гвин про её собаку.» needs both `fed_gwyns_dog` and `gwyns_dog_dead`; six horse texts reworded for one horse («упряжка»); `shoulder` and `lighten` for a lost horse; the ally's-blow clause on `osric_hears`, `bridge_again`, `gwyn_news` (not `toll_man_stocks`: no fight writes what it reads). The card bench keeps the escort's death card and only the company entries whose death the kept cards read. Design §3 item 4 and §13 row 4 still name a going-home deed and are out of date

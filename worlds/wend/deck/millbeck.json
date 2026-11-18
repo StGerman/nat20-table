@@ -84,7 +84,10 @@
                                             "stat": "bandit",
                                             "npc": "dunn"
                                         }
-                                    ]
+                                    ],
+                                    "wagon": true,
+                                    "from": "ahead",
+                                    "owner": false
                                 }
                             ]
                         }
@@ -174,7 +177,7 @@
                 }
             ],
             "scout": "perception",
-            "note": "Col and Dunn, brothers from a Highsteads farm. The goblins took their flock this autumn; Rufus bought the farm's debt and set them on the bridge to slow Odda's wagon and pay him out of the toll. Osric, counting the common chest for the steward's yearly visit, had sent them away. Col counts every coin on a tally stick he cut himself, notch by notch, like a reeve. Torva's family lost a farm to debt: give her that line. In a fight the DM tells the brothers reaching for their cudgels; initiative is the engine's, and a brother who drops his cudgel has yielded. A scout who looks first sees the gnawed bones and the empty pot: these men are hungry, not hard. The Merchant is never in this fight (owner: false), so no death of hers is told here."
+            "note": "Col and Dunn, brothers from a Highsteads farm. The goblins took their flock this autumn; Rufus bought the farm's debt and set them on the bridge to slow Odda's wagon and pay him out of the toll. Osric, counting the common chest for the steward's yearly visit, had sent them away. Col counts every coin on a tally stick he cut himself, notch by notch, like a reeve. Torva's family lost a farm to debt: give her that line. In a fight the DM tells the brothers reaching for their cudgels; initiative is the engine's, and a brother who drops his cudgel has yielded. A scout who looks first sees the gnawed bones and the empty pot: these men are hungry, not hard. The Merchant is never in this fight (owner: false), so no death of hers is told here. A fight here starts at the bridge, ahead of the wagon. The Merchant stays back on the bank at the last horse's head and is not in the engine's fight; whoever else rides with the wagon is (a horse of the team, Tam and Gwyn's dog if they ride)."
         }
     ]
 }

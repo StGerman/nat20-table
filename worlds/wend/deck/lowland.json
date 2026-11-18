@@ -5,8 +5,8 @@
             "id": "rutted_road",
             "zone": "lowland",
             "target": "caravan",
-            "text": "Last week's rain has turned the river road to soup. The wagon lurches, a wheel sinks to the hub, and the near horse refuses to pull.",
-            "text_ru": "После дождей прошлой недели речная дорога превратилась в кашу. Фургон кренится, колесо уходит в грязь по ступицу, и ближняя лошадь упирается.",
+            "text": "Last week's rain has turned the river road to soup. The wagon lurches, a wheel sinks to the hub, and the team will not pull.",
+            "text_ru": "После дождей прошлой недели речная дорога превратилась в кашу. Фургон кренится, колесо уходит в грязь по ступицу, и упряжка встаёт.",
             "owner_pick": "unload",
             "choices": [
                 {
@@ -83,7 +83,8 @@
                     ]
                 }
             ],
-            "note": "Gwyn's sheepdog from the Highsteads, gone after her strays; Gwyn wants it back. It answers to a whistle nobody at the table knows."
+            "note": "Gwyn's sheepdog from the Highsteads, gone after her strays; Gwyn wants it back. It answers to a whistle nobody at the table knows.",
+            "unless": ["gwyns_dog_dead", "fed_gwyns_dog"]
         },
         {
             "id": "river_mist",
@@ -146,29 +147,13 @@
             "zone": "lowland",
             "when": "night",
             "target": "blades",
-            "text": "Wolves howl out on the water meadows, closer each time, and the horses stamp and pull at their ropes.",
-            "text_ru": "На заливных лугах воют волки, всякий раз ближе, и лошади бьют копытами и рвутся с привязи.",
+            "text": "Wolves howl out on the water meadows, closer and closer, and on the horse lines there is no end of snorting and stamping.",
+            "text_ru": "На заливных лугах воют волки, всё ближе, и у коновязи не стихает храп и стук копыт.",
             "choices": [
                 {
                     "id": "stand",
-                    "text": "Stand between the wolves and the horses.",
-                    "text_ru": "Встать между волками и лошадьми.",
-                    "effects": [
-                        {
-                            "do": "fight",
-                            "monsters": [
-                                "wolf",
-                                "wolf"
-                            ]
-                        }
-                    ],
-                    "unless": "fed_gwyns_dog"
-                },
-                {
-                    "id": "stand_with_dog",
-                    "text": "Stand between the wolves and the horses.",
-                    "text_ru": "Встать между волками и лошадьми.",
-                    "if": "fed_gwyns_dog",
+                    "text": "Stand between the wolves and the horse lines.",
+                    "text_ru": "Встать между волками и коновязью.",
                     "effects": [
                         {
                             "do": "fight",
@@ -176,7 +161,25 @@
                                 "wolf",
                                 "wolf"
                             ],
-                            "surprise": true
+                            "wagon": true
+                        }
+                    ],
+                    "unless": "rides:gwyns_dog"
+                },
+                {
+                    "id": "stand_with_dog",
+                    "text": "Stand between the wolves and the horse lines.",
+                    "text_ru": "Встать между волками и коновязью.",
+                    "if": "rides:gwyns_dog",
+                    "effects": [
+                        {
+                            "do": "fight",
+                            "monsters": [
+                                "wolf",
+                                "wolf"
+                            ],
+                            "surprise": true,
+                            "wagon": true
                         }
                     ]
                 },
@@ -197,19 +200,20 @@
                                     "do": "fight",
                                     "monsters": [
                                         "wolf"
-                                    ]
+                                    ],
+                                    "wagon": true
                                 }
                             ]
                         }
                     ],
-                    "unless": "fed_gwyns_dog"
+                    "unless": "rides:gwyns_dog"
                 },
                 {
                     "id": "build_fire_with_dog",
                     "asked": true,
                     "text": "Build the fire high and wait for dawn.",
                     "text_ru": "Развести костёр повыше и ждать рассвета.",
-                    "if": "fed_gwyns_dog",
+                    "if": "rides:gwyns_dog",
                     "effects": [
                         {
                             "do": "check",
@@ -222,7 +226,8 @@
                                     "do": "fight",
                                     "monsters": [
                                         "wolf"
-                                    ]
+                                    ],
+                                    "wagon": true
                                 }
                             ]
                         }
@@ -233,7 +238,7 @@
                     "text": "Hang the bog-wife's charm on the horse lines.",
                     "text_ru": "Повесить оберег болотной бабки у коновязи.",
                     "if": "sedge_charm",
-                    "unless": "fed_gwyns_dog",
+                    "unless": "rides:gwyns_dog",
                     "effects": [
                         {
                             "do": "remember",
@@ -242,7 +247,7 @@
                     ]
                 }
             ],
-            "note": "Wolves are beasts, not persons: they do not yield and nobody hears of it. Gwyn's dog, if it came along, hears them long before the horses do. If the Blades fed it on an earlier contract, it has found them again, because they fed it: say so in one clause the first time it shows on this contract. In any fight on this card the horses stay roped at the wagon, the Merchant holds their heads, and the dog lies under the wagon; none of them is in the engine's fight, so tell no bite, kick or wound of theirs. If the Blades stand with the dog along, the wolves find them waiting, because the dog heard them first: say that cause in one clause."
+            "note": "Wolves are beasts, not persons: they do not yield and nobody hears of it. Gwyn's dog, if it rides with the wagon on this contract, hears them long before the horses do. The wolves come for the horse lines, so every fight on this card is at the wagon, and whoever rides with it is in the engine's fight: the team but its last horse, which stays roped and is never in it; the Merchant at the horses' heads; the dog and Tam, if they ride. Tell a bite, kick or wound only for a creature in the fight's list. Tam who follows at a distance (tam_followed) is out of sight back down the road and in no fight. If the dog died at the wagon (gwyns_dog_dead), it is not under the wagon, and nothing hears the wolves first. If the Blades stand with the dog along, the wolves find them waiting, because the dog heard them first: say that cause in one clause. If one who rides with the wagon dies, say it once, plainly, where it fell, and describe no wound."
         },
         {
             "id": "drovers",
@@ -277,14 +282,14 @@
                             ]
                         }
                     ],
-                    "unless": "fed_gwyns_dog"
+                    "unless": "rides:gwyns_dog"
                 },
                 {
                     "id": "welcome_with_dog",
                     "asked": true,
                     "text": "Make room for them at the fire.",
                     "text_ru": "Подвинуться и пустить их к костру.",
-                    "if": "fed_gwyns_dog",
+                    "if": "rides:gwyns_dog",
                     "effects": [
                         {
                             "do": "remember",
@@ -304,7 +309,7 @@
                     ]
                 }
             ],
-            "note": "Rufus's men, counting the Merchant's sacks for him. They are friendly because friendly is cheaper. Gwyn's dog, if it came along, does not like them and says so. If the Blades fed it on an earlier contract, it has found them again, because they fed it: say so in one clause the first time it shows on this contract. If the Merchant is dead (odda_vell_dead, fenn_lusk_dead), the drovers have heard, and count the sacks more openly."
+            "note": "Rufus's men, counting the Merchant's sacks for him. They are friendly because friendly is cheaper. Gwyn's dog, if it rides with the wagon on this contract, does not like them and says so. If the dog died at the wagon (gwyns_dog_dead), it is not at the fire, because it died in the fight: that is why nothing growls. If the Merchant is dead (odda_vell_dead, fenn_lusk_dead), the drovers have heard, and count the sacks more openly."
         },
         {
             "id": "sedges_jar",
@@ -584,7 +589,7 @@
             "once": true,
             "text": "After dark the painted roadfolk cart rattles up to the fire. Bel, the woman from the Highsteads fire, does not sit down. She asks whether anyone has seen her boy.",
             "text_ru": "После темноты к костру с грохотом подъезжает расписная повозка корринов. Бел, женщина от костра в Хайстедсе, не садится. Она спрашивает, не видел ли кто её мальчика.",
-            "note": "Bel Corrin, and Tam, who is either on the wagon or hiding behind it. A word is kept: letting Tam answer means Bel lets him go to the fair if the human's character promises to look after him, and that promise is a deed later cards test. Covered for and found out, Bel tells every roadfolk fire in the valley. Maren is for the truth; Ilsa says the boy has rights too.",
+            "note": "Bel Corrin, and Tam, who is either on the wagon or hiding behind it. A word is kept: letting Tam answer means Bel lets him go to the fair if the human's character promises to look after him, and that promise is a deed later cards test. Covered for and found out, Bel tells every roadfolk fire in the valley. Maren is for the truth; Ilsa says the boy has rights too. If Tam was hurt in a fight at the wagon (tam_hurt), he is on the wagon with the wound bound, and Bel sees it before anyone speaks: nobody can cover for him now. Given back to her, he goes home in her cart and rides with the wagon no more.",
             "choices": [
                 {
                     "id": "truth",
@@ -621,7 +626,8 @@
                                 }
                             ]
                         }
-                    ]
+                    ],
+                    "unless": "tam_hurt"
                 },
                 {
                     "id": "let_tam",
@@ -636,8 +642,24 @@
                             "deed": "promised_bel"
                         }
                     ]
+                },
+                {
+                    "id": "give_back",
+                    "text": "Give him back to her.",
+                    "text_ru": "Вернуть ей сына.",
+                    "if": "tam_hurt",
+                    "keeps": [
+                        "kin_before_strangers"
+                    ],
+                    "effects": [
+                        {
+                            "do": "remember",
+                            "deed": "gave_tam_back_to_bel"
+                        }
+                    ]
                 }
-            ]
+            ],
+            "unless": "tam_dead"
         },
         {
             "id": "old_company",

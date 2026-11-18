@@ -1151,6 +1151,10 @@ test("an arrival card at the destination is decided before the human's last turn
   const odda = path.join(pack, "deck/odda.json");
   const oddaDeck = JSON.parse(readFileSync(odda, "utf8")) as { cards: { id: string }[] };
   writeFileSync(odda, JSON.stringify({ ...oddaDeck, cards: oddaDeck.cards.filter((c) => c.id !== "the_fair_gate") }));
+  // So does the world's Saltmouth card a deed of the road can bring (`oddas_mark`, after the tracks).
+  const port = path.join(pack, "worlds/wend/deck/wendmouth.json");
+  const portDeck = JSON.parse(readFileSync(port, "utf8")) as { cards: { id: string }[] };
+  writeFileSync(port, JSON.stringify({ ...portDeck, cards: portDeck.cards.filter((c) => c.id !== "oddas_mark") }));
   writeFileSync(
     path.join(pack, "worlds/wend/deck/arrival.json"),
     JSON.stringify({

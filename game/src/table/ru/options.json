@@ -51,7 +51,11 @@
     "barbarian/reckless_attack/greataxe": "Безрассудный удар секирой",
     "barbarian/reckless_attack_reaction": "Безрассудный удар",
     "dragonborn/breath_weapon/red/cone": "Огненное дыхание конусом",
-    "dragonborn/breath_weapon/red/line": "Огненное дыхание полосой"
+    "dragonborn/breath_weapon/red/line": "Огненное дыхание полосой",
+    "melee_attack/club": "Удар дубинкой",
+    "melee_attack/draft_horse_hooves": "Удар копытами",
+    "melee_attack/mastiff_bite": "Укус собаки",
+    "opportunity_attack/club": "Удар вдогонку дубинкой"
   },
   "variants": {
     "divine_spark/heal": "лечить",
@@ -184,6 +188,9 @@
     "guard": "стражник",
     "fair_guard": "стражник",
     "commoner": "горожанин",
-    "townsfolk": "горожанин"
+    "townsfolk": "горожанин",
+    "draft_horse": "лошадь",
+    "mastiff": "собака",
+    "gwyns_dog": "пастушья собака"
   }
 }
