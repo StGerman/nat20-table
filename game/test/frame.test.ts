@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
 import { endScreen } from "../src/play/driver.ts";
-import { finaleRows, InkSeat, mouseIn } from "../src/ui/ink-seat.ts";
+import { finaleRows, InkSeat, mouseIn, SPINNER } from "../src/ui/ink-seat.ts";
 import { actionRows, freshText, headerText, maxOffset, page, storyCell, storyRows, storyWindow, type StoryRow } from "../src/ui/frame.ts";
 import type { Line } from "../src/ui/lines.ts";
 import { paletteFor } from "../src/ui/palette.ts";
@@ -405,6 +405,9 @@ test("the end screen says how the run ended, and a stop what to do, with the che
   assert.match(endScreen("Claude is out of reach", "offline").todo!, /network/);
   const rows = finaleRows({ ...crash, checks: [{ name: "Audit", state: "done" }, { name: "Narration check", state: "running" }, { name: "Upload", state: "waiting" }] }, 72).map(rowText);
   assert.deepEqual(rows.slice(-4), ["", "✓ Audit", "… Narration check", "  Upload"]);
+  // Animated, the running check turns the table's spinner instead of "…".
+  const turning = (frame: number) => finaleRows({ ...crash, checks: [{ name: "Narration check", state: "running" }] }, 72, false, frame).map(rowText).at(-1);
+  assert.deepEqual([turning(0), turning(1)], [`${SPINNER[0]} Narration check`, `${SPINNER[1]} Narration check`]);
 });
 
 test("at the end the table stays with the checks ticking in the action zone, and any key leaves", async () => {
