@@ -38,6 +38,16 @@ pub const HIDDEN_KEYS: &[&str] = &[
     // The deeds a card reads and the forewarned choice the scout opened (AGT-91): DM data.
     "reads",
     "forewarned",
+    // Who is on a card and who it names (API-58), and who saw whom and which deed (API-59,
+    // decision 0077): a player reads a person's lines, never the deed, `by`, day or contract.
+    // A deed's `saw` sits under `deeds`; `saw` alone is the scout's look (API-54).
+    "cast",
+    "tells",
+    "seen",
+    "heard_by",
+    "deeds",
+    "deed",
+    "by",
 ];
 
 /// Keys a player view carries only for the viewer's own creature.

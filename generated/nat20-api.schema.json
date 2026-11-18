@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.76"
+    "version": "1.0.0-dev.77"
   },
   "$defs": {
     "Ability": {
@@ -2441,6 +2441,13 @@
         "deed": {
           "description": "The deed id.",
           "type": "string"
+        },
+        "saw": {
+          "description": "The roster people who saw it, or were on a card that read it later (API-59): a person\nremembers a deed only when they are here. Empty, and left out, when nobody.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -5142,6 +5149,13 @@
             "null"
           ]
         },
+        "heard_by": {
+          "description": "The characters who have only heard of them (API-59). Empty, and left out, when nobody.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Handle"
+          }
+        },
         "hp": {
           "description": "Hit Points when the party last left them; absent when at full. While the party is in\ntheir place, their creature in the scene has the live value.",
           "type": [
@@ -5201,6 +5215,13 @@
           "items": {
             "$ref": "#/$defs/NpcRemembers"
           }
+        },
+        "seen": {
+          "description": "The characters who have seen them, each with where they last did (API-59). Empty, and\nleft out, when nobody has.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NpcSeen"
+          }
         }
       },
       "required": [
@@ -5210,6 +5231,38 @@
         "attitude",
         "alive",
         "met"
+      ]
+    },
+    "NpcHeard": {
+      "description": "A person a character has only heard of (API-59, rule N5): a name and what is said of\nthem, never how they look, where they live, whether they live, or what they remember.",
+      "type": "object",
+      "properties": {
+        "heard": {
+          "description": "What the valley says of them, in English; the table reads the run language's line\nfrom the world file. Absent when the world file says nothing.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "description": "The id.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name.",
+          "type": "string"
+        },
+        "names": {
+          "description": "Every listed form of the name, for the table's matcher. Empty, and left out, when none\nis listed.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name"
       ]
     },
     "NpcKnown": {
@@ -5223,6 +5276,13 @@
         "id": {
           "description": "The id; also their creature handle while they stand in the scene.",
           "type": "string"
+        },
+        "last_seen": {
+          "description": "The place this character last saw them at (API-59); absent when it was on the road.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "look": {
           "description": "What anyone who sees them sees (API-58), in English; the table reads the run\nlanguage's line from the world file.",
@@ -5248,6 +5308,13 @@
             "string",
             "null"
           ]
+        },
+        "remembers": {
+          "description": "What they remember of this character's doings, newest first, at most three (API-59,\nrule N6), in English; the table reads the run language's line from the world file.\nNone for the dead. Empty, and left out, when none.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -5257,21 +5324,46 @@
       ]
     },
     "NpcRemembers": {
-      "description": "One line of what a person remembers of the party (API-58). DM only here.",
+      "description": "One line of what a person remembers of the party (API-58, API-59), in its two forms. DM\nonly here.",
       "type": "object",
       "properties": {
+        "company": {
+          "description": "The line for a viewer whose company did it without them, in English.",
+          "type": "string"
+        },
         "deed": {
           "description": "The deed it answers.",
           "type": "string"
         },
-        "line": {
-          "description": "The line, in English; the table finds the run language's line in the world file by\nthe person's id and this line (decision 0067).",
+        "you": {
+          "description": "The line for a viewer who did the deed, in English; the table finds the run\nlanguage's line in the world file by the person's id and this line (decision 0067).",
           "type": "string"
         }
       },
       "required": [
         "deed",
-        "line"
+        "you",
+        "company"
+      ]
+    },
+    "NpcSeen": {
+      "description": "A character who has seen a person (API-59). DM only.",
+      "type": "object",
+      "properties": {
+        "by": {
+          "description": "The character.",
+          "$ref": "#/$defs/Handle"
+        },
+        "place": {
+          "description": "The place they last saw them at; absent when it was on the road.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "by"
       ]
     },
     "OfferedCard": {
@@ -9142,8 +9234,15 @@
             }
           ]
         },
+        "heard": {
+          "description": "The people this character has only heard of, in the world file's order (API-59).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NpcHeard"
+          }
+        },
         "npcs": {
-          "description": "The place NPCs the party has met, in the world file's order (API-48).",
+          "description": "The people this character has seen, in the world file's order (API-48, API-59).",
           "type": "array",
           "items": {
             "$ref": "#/$defs/NpcKnown"

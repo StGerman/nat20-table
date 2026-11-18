@@ -3,6 +3,11 @@
 Every change to `crates/nat20-api-contract` gets a line here with the new `CONTRACT_VERSION` (CLAUDE.md Rule 1, Rule 2).
 Within major 1, changes are additive only. Nothing is released yet, so versions carry a `-dev.N` suffix until v1 is complete (CON-2).
 
+## 1.0.0-dev.77 (2026-11-17)
+- Additive (API-59, protocol §4.16 and §5, design `docs/design/allies-in-fights-system-design.md` §2, rules N4 to N7): who has seen whom. `DeedDm` gains `saw`; `NpcDm` gains `seen` (`NpcSeen{by, place}`) and `heard_by`; `NpcKnown` gains `last_seen` and `remembers` (lines by rule N6); `WorldPlayer` gains `heard` (`NpcHeard{id, name, names, heard}`). A player's `world.npcs` now holds the people that character has seen, not every person the party met: the same set in every shipped run, since an arrival is seen by the whole party.
+- Breaking within dev (no shipped world file uses it): `NpcRemembers` is `{deed, you, company}`, not `{deed, line}`, and the world file's `remembers` entries are `{deed, you, company, you_ru, company_ru}`.
+- The test world's Old Tobin remembers `chose_join` in both forms. Fixtures change by version and by the new fields where they show `world.npcs` or a saved roster.
+
 ## 1.0.0-dev.76 (2026-11-17)
 - Additive (API-58, protocol §4.16 and §5, design `docs/design/allies-in-fights-system-design.md` §6): the roster of people. New DM-only command `mention{npcs}` (result `State`) and event `npc_named{npcs, placed}`: a named person with the party who is not yet in the scene stands in it from then on (rule N4); a fight places nobody. `NpcDm` gains `names`, `look`, `heard`, `remembers` (`NpcRemembers{deed, line}`) and `anchor`; `NpcKnown` gains `names` and `look`. `CardDm` and `OfferedCard` gain `cast` and `tells` (DM only). World files: an `npcs.json` entry takes `names`, `look`/`look_ru`, `heard`/`heard_ru`, `remembers`, and `place`/`anchor` become optional together; a deck card takes `cast` and `tells`, checked against the roster at `start_campaign`. Meaning: a card whose `cast` holds someone dead is never offered or drawn (rule A8).
 - Narrowing for a client (the one line `check-breaking` lists): `NpcDm.place` and `NpcKnown.place` are optional, absent for someone who lives on no map place. Every shipped place NPC still has one.

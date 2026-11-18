@@ -179,6 +179,7 @@ fn wendford_meets_the_party_with_the_card_its_yard_wrote() {
                     by: vec!["bren".into()],
                     day: 1,
                     contract: 1,
+                    saw: vec![],
                 };
                 (d.to_string(), deed)
             })

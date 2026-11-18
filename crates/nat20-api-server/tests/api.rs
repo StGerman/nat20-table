@@ -3550,3 +3550,107 @@ fn a_mention_in_a_fight_places_nobody_who_would_stand_in_the_scene_outside_one()
         .collect();
     assert!(!handles.contains(&"old_tobin"), "{handles:?}");
 }
+
+#[test]
+fn a_card_shows_its_cast_and_tells_and_its_deed_is_remembered_by_whom_it_saw() {
+    // API-59: a card's cast is seen, its `tells` only heard of; the deed its choice writes is
+    // seen by its cast, and the person remembers it in the "you" form for those who did it.
+    let dir = std::env::temp_dir().join(format!("nat20_table_seen_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("data"), &dir);
+    let world_deck = dir.join("worlds/test_vale/deck/vale.json");
+    let mut deck: Value =
+        serde_json::from_str(&std::fs::read_to_string(&world_deck).unwrap()).unwrap();
+    deck["cards"].as_array_mut().unwrap().remove(0);
+    std::fs::write(&world_deck, deck.to_string()).unwrap();
+    // A drover nobody has met, known only from the song.
+    let npcs_path = dir.join("worlds/test_vale/npcs.json");
+    let mut npcs: Value =
+        serde_json::from_str(&std::fs::read_to_string(&npcs_path).unwrap()).unwrap();
+    npcs["npcs"].as_array_mut().unwrap().push(json!({
+        "id": "ned", "name": "Ned", "monster": "commoner",
+        "heard": "They say Ned drives cattle to the coast.", "look": "A drover."
+    }));
+    std::fs::write(&npcs_path, npcs.to_string()).unwrap();
+    std::fs::create_dir_all(dir.join("deck")).unwrap();
+    std::fs::write(
+        dir.join("deck/merchant.json"),
+        json!({ "cards": [{
+            "id": "tobin_sings", "zone": "vale_fields", "target": "blades",
+            "text": "Old Tobin starts a song about Ned the drover.",
+            "cast": ["owner"], "tells": ["ned"],
+            "choices": [
+                { "id": "join", "text": "Sing along.", "effects": [{ "do": "remember", "deed": "chose_join" }] },
+                { "id": "hush", "text": "Ask him to hush.", "effects": [{ "do": "delay", "minutes": 10 }] }
+            ]
+        }] })
+        .to_string(),
+    )
+    .unwrap();
+    let mut api = Api::start(
+        Server::with_data_dir(dir.clone()),
+        json!({ "cmd": "new_session", "seed": 1 }),
+    );
+    let ok = |r: &Value| assert_eq!(r["ok"], true, "{r}");
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "load_scene", "scene_id": "vale_town" }),
+    ));
+    ok(&api.call(
+        "dm",
+        json!({ "cmd": "start_campaign", "party": ["bren", "maren"] }),
+    ));
+    let world = |api: &mut Api, who: &str| {
+        let state = api.call(who, json!({ "cmd": "get_state" }));
+        state["result"]["state"]["world"].clone()
+    };
+    assert_eq!(world(&mut api, "bren")["heard"], Value::Null);
+    ok(&api.call(
+        "bren",
+        json!({ "cmd": "travel", "actor": "bren", "to": "crossing_inn", "pace": "fast" }),
+    ));
+    let bren = world(&mut api, "bren");
+    let tobin = |w: &Value| {
+        w["npcs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|n| n["id"] == "old_tobin")
+            .cloned()
+            .unwrap_or_else(|| panic!("Tobin is not seen: {w}"))
+    };
+    // Tobin, on the card, is seen where the card came; Ned is only heard of: a name and a
+    // rumour, never a look.
+    assert_eq!(tobin(&bren)["last_seen"], "crossing_inn", "{bren}");
+    assert_eq!(tobin(&bren).get("remembers"), None, "{bren}");
+    assert_eq!(bren["heard"].as_array().map(Vec::len), Some(1), "{bren}");
+    assert_eq!(bren["heard"][0]["id"], "ned", "{bren}");
+    assert_eq!(bren["heard"][0].get("look"), None, "{bren}");
+    for who in ["bren", "maren"] {
+        ok(&api.call(
+            who,
+            json!({ "cmd": "choose_card", "actor": who, "choice": "join" }),
+        ));
+    }
+    let dm = world(&mut api, "dm");
+    let deed = dm["deeds"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["deed"] == "chose_join")
+        .unwrap_or_else(|| panic!("no deed: {dm}"));
+    assert_eq!(deed["saw"], json!(["old_tobin"]));
+    let bren = world(&mut api, "bren");
+    assert_eq!(
+        tobin(&bren)["remembers"],
+        json!(["You sang along with him."]),
+        "{bren}"
+    );
+    // No player view holds a deed id, `by`, day or contract (decision 0077).
+    let text = bren.to_string();
+    assert!(
+        !text.contains("chose_join") && !text.contains("\"by\""),
+        "{text}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

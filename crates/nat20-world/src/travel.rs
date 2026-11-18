@@ -19,7 +19,8 @@ use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
     deck::{
-        Deck, DeckError, DeckState, Deed, DeedBook, Drawn, OWNER_CAST, PickError, ScoutSkill, When,
+        Card, Deck, DeckError, DeckState, Deed, DeedBook, Deeds, Drawn, OWNER_CAST, PickError,
+        ScoutSkill, When,
     },
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
@@ -200,8 +201,15 @@ impl Memory {
 
     /// Remembers a deed done today by `by` in the contract under way, as [`World::remember`]
     /// does. Returns whether it is new.
-    pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
-        remember_in(&mut self.deeds, deed, by, self.clock.day, self.contract)
+    pub fn remember(&mut self, deed: &str, by: Vec<String>, saw: Vec<String>) -> bool {
+        remember_in(
+            &mut self.deeds,
+            deed,
+            by,
+            saw,
+            self.clock.day,
+            self.contract,
+        )
     }
 
     /// This memory taken up at `start` by the next contract or site (ENG-37, ENG-44): the
@@ -644,11 +652,127 @@ impl World {
         carried
     }
 
-    /// Remembers a deed done today by `by` in the contract under way. A deed done again
-    /// keeps its first record. Returns whether it is new.
-    pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
+    /// Remembers a deed done today by `by` in the contract under way, seen by the roster
+    /// people in `saw` (API-59). A deed done again keeps its first record. Returns whether it
+    /// is new.
+    pub fn remember(&mut self, deed: &str, by: Vec<String>, saw: Vec<String>) -> bool {
         let state = &mut self.state;
-        remember_in(&mut state.deeds, deed, by, state.clock.day, state.contract)
+        remember_in(
+            &mut state.deeds,
+            deed,
+            by,
+            saw,
+            state.clock.day,
+            state.contract,
+        )
+    }
+
+    /// The roster ids a card's `cast` names: `owner` is the caravan's NPC owner, if an NPC
+    /// owns it (API-59).
+    pub fn cast_of(&self, card: &str) -> Vec<String> {
+        self.people_of(card, |c| &c.cast)
+    }
+
+    /// The roster ids a card's `tells` names, `owner` resolved as in [`World::cast_of`].
+    pub fn tells_of(&self, card: &str) -> Vec<String> {
+        self.people_of(card, |c| &c.tells)
+    }
+
+    fn people_of(&self, card: &str, list: impl Fn(&Card) -> &Vec<String>) -> Vec<String> {
+        let Some(card) = self.deck.card(card) else {
+            return Vec::new();
+        };
+        list(card)
+            .iter()
+            .filter_map(|who| match (who.as_str(), &self.state.caravan.owner) {
+                (OWNER_CAST, Owner::Npc(id)) => Some(id.clone()),
+                (OWNER_CAST, _) => None,
+                (id, _) => Some(id.to_owned()),
+            })
+            .collect()
+    }
+
+    /// Everyone in `party` sees roster person `id` here (API-59): at the place the caravan is
+    /// at, or on the road. A sight also makes them more than a name heard.
+    pub fn seen_by(&mut self, id: &str, party: &[String]) {
+        let here = self.place_here().map(str::to_owned);
+        if let Some(state) = self.state.npcs.get_mut(id) {
+            for who in party {
+                state.seen.insert(who.clone(), here.clone());
+                state.heard.remove(who);
+            }
+        }
+    }
+
+    /// A roster saved before API-59 (rule N7): a person it holds met reads as seen by the
+    /// whole of `party`, at the place they live.
+    pub fn seen_from_met(&mut self, party: &[String]) {
+        for def in &self.npcs {
+            if let Some(state) = self.state.npcs.get_mut(&def.id)
+                && state.met
+                && state.seen.is_empty()
+            {
+                for who in party {
+                    state.seen.insert(who.clone(), def.place.clone());
+                }
+            }
+        }
+    }
+
+    /// Everyone in `party` who has not seen roster person `id` hears of them (API-59).
+    pub fn heard_by(&mut self, id: &str, party: &[String]) {
+        if let Some(state) = self.state.npcs.get_mut(id) {
+            for who in party {
+                if !state.seen.contains_key(who) {
+                    state.heard.insert(who.clone());
+                }
+            }
+        }
+    }
+
+    /// Roster people `saw` are shown deed `deed` (API-59): a card read it while they were on
+    /// it. A deed not remembered takes nobody.
+    pub fn shown_deed(&mut self, deed: &str, saw: &[String]) {
+        if let Some(record) = self.state.deeds.get_mut(deed) {
+            for who in saw {
+                if !record.saw.contains(who) {
+                    record.saw.push(who.clone());
+                }
+            }
+        }
+    }
+
+    /// The card `card` is shown (API-59): its cast sees the party, its `tells` are heard of,
+    /// and the cast is shown every deed the card's own `if` reads.
+    pub fn card_shown(&mut self, card: &str, party: &[String]) {
+        let cast = self.cast_of(card);
+        for id in &cast {
+            self.seen_by(id, party);
+        }
+        for id in self.tells_of(card) {
+            self.heard_by(&id, party);
+        }
+        let read = self.deck.card(card).and_then(|c| c.if_deeds.clone());
+        self.shown_if(read.as_ref(), &cast);
+    }
+
+    /// Choice `choice` of card `card` is chosen (API-59): the card's cast is shown every deed
+    /// the choice's `if` reads.
+    pub fn choice_chosen(&mut self, card: &str, choice: &str) {
+        let cast = self.cast_of(card);
+        let read = self
+            .deck
+            .card(card)
+            .and_then(|c| c.choices.iter().find(|ch| ch.id == choice))
+            .and_then(|ch| ch.if_deeds.clone());
+        self.shown_if(read.as_ref(), &cast);
+    }
+
+    /// Shows `cast` every deed an `if` reads.
+    fn shown_if(&mut self, read: Option<&Deeds>, cast: &[String]) {
+        for deed in read.map(Deeds::ids).unwrap_or_default() {
+            self.shown_deed(deed, cast);
+        }
     }
 
     /// Draws after a leg along `road`. Returns what the draw did: a card on the table, or cards
@@ -900,11 +1024,29 @@ impl World {
 
 /// Writes `deed` into `book` as done on `day` in `contract` by `by`, unless the book holds it
 /// already: a deed done again keeps its first record. Returns whether it is new.
-fn remember_in(book: &mut DeedBook, deed: &str, by: Vec<String>, day: u32, contract: u32) -> bool {
+fn remember_in(
+    book: &mut DeedBook,
+    deed: &str,
+    by: Vec<String>,
+    saw: Vec<String>,
+    day: u32,
+    contract: u32,
+) -> bool {
     if book.contains_key(deed) {
         return false;
     }
-    book.insert(deed.to_string(), Deed { by, day, contract });
+    let mut saw = saw;
+    saw.sort();
+    saw.dedup();
+    book.insert(
+        deed.to_string(),
+        Deed {
+            by,
+            day,
+            contract,
+            saw,
+        },
+    );
     true
 }
 
@@ -928,7 +1070,7 @@ mod tests {
     #[test]
     fn the_next_contract_keeps_the_memory_and_starts_after_the_saved_day() {
         let mut done = world("maren");
-        done.remember("helped_farmer", vec!["bren".into()]);
+        done.remember("helped_farmer", vec!["bren".into()], vec![]);
         done.state.deck.gone.insert("ghost".into());
         done.state
             .deck
@@ -966,7 +1108,7 @@ mod tests {
         assert!(next.state.deck.discard.contains("mud"));
         assert!(next.state.discovered.contains("ruin"));
         // A deed written now records the second contract.
-        next.remember("paid_toll", vec![]);
+        next.remember("paid_toll", vec![], vec![]);
         assert_eq!(next.state.deeds["paid_toll"].contract, 2);
         // From the start place itself, no trip: the day after.
         let mut again = world("maren");
@@ -983,8 +1125,8 @@ mod tests {
     #[test]
     fn a_memory_saved_at_a_site_is_carried_from_where_it_left_the_party() {
         let mut memory = Memory::new(8);
-        assert!(memory.remember("yard_yielded", vec!["bren".into()]));
-        assert!(!memory.remember("yard_yielded", vec!["maren".into()]));
+        assert!(memory.remember("yard_yielded", vec!["bren".into()], vec![]));
+        assert!(!memory.remember("yard_yielded", vec!["maren".into()], vec![]));
         assert_eq!(memory.deeds["yard_yielded"].day, 1);
         assert_eq!(memory.deeds["yard_yielded"].contract, 1);
         memory.left_at = Some("inn".into());
@@ -1069,15 +1211,16 @@ mod tests {
     #[test]
     fn a_deed_keeps_its_first_record() {
         let mut world = world("maren");
-        assert!(world.remember("paid_toll", vec!["bren".into()]));
+        assert!(world.remember("paid_toll", vec!["bren".into()], vec![]));
         world.delay(24 * 60);
-        assert!(!world.remember("paid_toll", vec!["maren".into()]));
+        assert!(!world.remember("paid_toll", vec!["maren".into()], vec![]));
         assert_eq!(
             world.state.deeds["paid_toll"],
             Deed {
                 by: vec!["bren".into()],
                 day: 1,
                 contract: 1,
+                saw: vec![],
             }
         );
         // A roster saved before deeds reads as the first contract with none.
@@ -1399,9 +1542,38 @@ mod tests {
     }
 
     #[test]
+    fn a_person_is_seen_or_heard_of_and_an_old_roster_s_met_reads_as_seen() {
+        let npcs: NpcFile = serde_json::from_str(
+            r#"{"npcs": [{"id": "tobin", "name": "Tobin", "monster": "commoner"},
+                         {"id": "ned", "name": "Ned", "monster": "commoner"}]}"#,
+        )
+        .unwrap();
+        let mut w = world("npc:tobin").with_npcs(npcs).unwrap();
+        let party = ["bren".to_string(), "maren".to_string()];
+        w.heard_by("ned", &party[..1]);
+        w.seen_by("ned", &party);
+        // A sight replaces a name heard; a name heard after a sight changes nothing.
+        w.heard_by("ned", &party);
+        let ned = &w.state.npcs["ned"];
+        assert!(ned.heard.is_empty());
+        assert_eq!(ned.seen.len(), 2);
+        // A deed keeps who saw it, and a later card shows it to more.
+        assert!(w.remember("paid", vec!["bren".into()], vec!["ned".into()]));
+        w.shown_deed("paid", &["tobin".into(), "ned".into()]);
+        assert_eq!(w.state.deeds["paid"].saw, ["ned", "tobin"]);
+        // Rule N7: a roster saved before API-59 held Tobin met and nobody seen.
+        w.state.npcs.get_mut("tobin").unwrap().met = true;
+        w.seen_from_met(&party);
+        assert_eq!(
+            w.state.npcs["tobin"].seen.keys().collect::<Vec<_>>(),
+            ["bren", "maren"]
+        );
+    }
+
+    #[test]
     fn a_saved_world_keeps_memory_and_contract_apart_and_reads_back_whole() {
         let mut w = world("npc:tobin");
-        w.remember("paid", vec!["bren".into()]);
+        w.remember("paid", vec!["bren".into()], vec![]);
         w.state.scout = Some("bren".into());
         w.state.deck.discard.insert("mud".into());
         w.state.deck.gone_for_contract.insert("toll".into());

@@ -11,8 +11,8 @@ use nat20_api_contract::{
     Ability, CaravanView, CardChoiceDm, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget,
     CardWhen, CargoView, CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade,
     EscortDm, EscortView, EventKind, Handle, LegView, MilesToday, NpcAttitude, NpcDm, NpcRemembers,
-    OfferedCard, OwnMoveDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld, Side,
-    Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm, WorldPosition,
+    NpcSeen, OfferedCard, OwnMoveDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld,
+    Side, Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -211,9 +211,10 @@ impl Campaign {
         } else {
             world::NpcFile::default()
         };
-        let built = built
+        let mut built = built
             .with_npcs(npcs)
             .map_err(|e| bad(format!("The world {}'s NPCs: {e}.", setup.map)))?;
+        built.seen_from_met(&party.iter().map(|h| h.0.clone()).collect::<Vec<_>>());
         // A player merchant drives the caravan, so they must travel with it.
         if let world::Owner::Player(owner) = &built.state.caravan.owner
             && !party.iter().any(|h| h.0 == *owner)
@@ -428,11 +429,31 @@ impl Campaign {
         state.arrive(terms, place, |b| !dead(b))
     }
 
-    /// Marks an NPC met: the party is in their place with them.
+    /// Marks a person met: they stand in the scene with the party, and every party character
+    /// has seen them here (API-59).
     pub fn met(&mut self, id: &str) {
         if let Some(state) = self.world.state.npcs.get_mut(id) {
             state.met = true;
         }
+        let party = self.party_ids();
+        self.world.seen_by(id, &party);
+    }
+
+    /// Every party character who has not seen person `id` hears of them (API-59).
+    pub fn heard_of(&mut self, id: &str) {
+        let party = self.party_ids();
+        self.world.heard_by(id, &party);
+    }
+
+    /// The card `card` is shown to the party (API-59): its cast is seen, its `tells` heard
+    /// of, and its cast shown the deeds the card reads.
+    pub fn card_shown_to_party(&mut self, card: &str) {
+        let party = self.party_ids();
+        self.world.card_shown(card, &party);
+    }
+
+    fn party_ids(&self) -> Vec<String> {
+        self.party.iter().map(|h| h.0.clone()).collect()
     }
 
     /// The ids of every place NPC.
@@ -783,6 +804,7 @@ impl Campaign {
                     by: d.by.iter().cloned().map(Handle).collect(),
                     day: d.day,
                     contract: d.contract,
+                    saw: d.saw.clone(),
                 })
                 .collect(),
             escort: self.escort_view().map(|contract| EscortDm {
@@ -805,7 +827,8 @@ impl Campaign {
                             .iter()
                             .map(|r| NpcRemembers {
                                 deed: r.deed.clone(),
-                                line: r.line.clone(),
+                                you: r.you.clone(),
+                                company: r.company.clone(),
                             })
                             .collect(),
                         place: d.place.clone(),
@@ -820,6 +843,15 @@ impl Campaign {
                         met: s.met,
                         hp: s.hp,
                         notes: d.notes.clone(),
+                        seen: s
+                            .seen
+                            .iter()
+                            .map(|(by, place)| NpcSeen {
+                                by: Handle(by.clone()),
+                                place: place.clone(),
+                            })
+                            .collect(),
+                        heard_by: s.heard.iter().cloned().map(Handle).collect(),
                     })
                 })
                 .collect(),
@@ -1061,6 +1093,7 @@ pub fn reads(
                 by: d.by.iter().cloned().map(Handle).collect(),
                 day: d.day,
                 contract: d.contract,
+                saw: d.saw.clone(),
             });
         }
     }
