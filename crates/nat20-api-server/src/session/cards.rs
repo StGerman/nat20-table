@@ -697,7 +697,7 @@ impl Session {
                 let group = !rollers.is_empty() && passed * 2 >= rollers.len();
                 self.run_effects(if group { success } else { failure }, &rollers)
             }
-            world::Effect::Fight { monsters } => self.card_fight(monsters),
+            world::Effect::Fight { monsters, surprise } => self.card_fight(monsters, *surprise),
             world::Effect::Pay { who, copper } => {
                 for payer in self.who(*who, false) {
                     let game = self.game_mut()?;
@@ -859,8 +859,9 @@ impl Session {
     }
 
     /// A card's fight: each stat block placed hostile at the scene's first anchor under a
-    /// fresh handle, then a fight between them and the party members who are up.
-    fn card_fight(&mut self, monsters: &[world::Monster]) -> Result<(), ApiError> {
+    /// fresh handle, then a fight between them and the party members who are up. With
+    /// `surprise`, the monsters roll Initiative with Disadvantage (ENG-47).
+    fn card_fight(&mut self, monsters: &[world::Monster], surprise: bool) -> Result<(), ApiError> {
         let mut fighters: Vec<Handle> = self
             .who(world::Who::Party, true)
             .into_iter()
@@ -896,7 +897,8 @@ impl Session {
             fighters.push(handle);
         }
         self.card_npcs.extend(named);
-        let result = self.game_mut()?.start_fight(&fighters);
+        let surprised = surprise.then_some(Side::Hostile);
+        let result = self.game_mut()?.start_fight_surprised(&fighters, surprised);
         self.after_decision(result)
     }
 }
