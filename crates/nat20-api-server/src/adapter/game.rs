@@ -46,9 +46,8 @@ use nat20_core::{
         action_prompt::{ActionData, ActionPromptKind},
         encounter::EncounterId,
         engine_state::EngineState,
-        event::{Event as EngineEvent, EventKind as EngineKind},
-        geometry::{WorldGeometry, WorldPath},
-        prompt::PromptScopeId,
+        event::{EventKind as EngineKind, EventScope},
+        geometry::{WorldGeometry, WorldGeometrySource, WorldPath},
     },
     registry::registry::ItemsRegistry,
     systems::{
@@ -299,7 +298,6 @@ pub struct Game {
     hp: HpTracker,
     keys: RollKeys,
     global_seen: usize,
-    encounter_seen: usize,
     /// Set when combat ended by itself: the side left standing, if any.
     winner: Option<Option<Side>>,
     scripted_turn: Option<(usize, Entity, usize)>,
@@ -543,7 +541,7 @@ impl Game {
         if let Some(id) = game.encounter.take()
             && game.engine.encounter(&id).is_some()
         {
-            game.engine.end_encounter(&id);
+            systems::combat::end_encounter(&mut game.engine, &id);
         }
         game.stand_up();
         // Ten minutes pass between scenes (decision D9): a round of turns for every 6 seconds,
@@ -636,7 +634,6 @@ impl Game {
             pregens,
         };
         game.scene_encounter = None;
-        game.encounter_seen = 0;
         game.winner = None;
         game.scripted_turn = None;
         game.spawn_round = 0;
@@ -670,7 +667,6 @@ impl Game {
             hp: HpTracker::new(),
             keys: RollKeys::default(),
             global_seen: 0,
-            encounter_seen: 0,
             winner: None,
             scripted_turn: None,
             flags: BTreeSet::new(),
@@ -2003,13 +1999,14 @@ impl Game {
             .copied()
             .filter(|e| surprised_side.is_some() && self.side_of(*e) == surprised_side)
             .collect();
-        let encounter = self
-            .engine
-            .start_surprised_encounter(entities.into_iter().collect(), surprised);
+        let encounter = systems::combat::start_surprised_encounter(
+            &mut self.engine,
+            entities.into_iter().collect(),
+            surprised,
+        );
         self.encounter = Some(encounter);
         self.scene_encounter = Some(encounter_id.to_owned());
         self.scene.fought.insert(encounter_id.to_owned());
-        self.encounter_seen = 0;
         self.winner = None;
         self.scripted_turn = None;
         self.drain();
@@ -2324,7 +2321,7 @@ impl Game {
     fn join_running_fight(&mut self, entities: &[Entity]) {
         if let Some(encounter) = self.running_encounter() {
             for entity in entities {
-                self.engine.join_encounter(&encounter, *entity);
+                systems::combat::join_encounter(&mut self.engine, &encounter, *entity);
             }
             self.log_joined_initiative(entities);
         }
@@ -2676,7 +2673,7 @@ impl Game {
             self.pending
                 .push(Pending::public(round, EventKind::Fled { handles }));
         }
-        self.engine.end_encounter(&core_id);
+        systems::combat::end_encounter(&mut self.engine, &core_id);
         self.drain();
         // The creatures that ran have left the scene (Milestone 5 spec D11).
         for entity in &fleeing {
@@ -2835,9 +2832,9 @@ impl Game {
                     continue;
                 };
                 match id.id() {
-                    "resource.action" => budget.action = uses.current_uses,
-                    "resource.bonus_action" => budget.bonus_action = uses.current_uses,
-                    "resource.reaction" => budget.reaction = uses.current_uses,
+                    "resource.action" => budget.action = uses.current_uses(),
+                    "resource.bonus_action" => budget.bonus_action = uses.current_uses(),
+                    "resource.reaction" => budget.reaction = uses.current_uses(),
                     _ => {}
                 }
             }
@@ -3252,7 +3249,7 @@ impl Game {
     pub fn end_turn(&mut self, actor: &str) -> Result<(), ApiError> {
         let entity = self.entity(actor)?;
         self.require_action_prompt(entity)?;
-        self.engine.end_turn(entity);
+        systems::combat::end_turn(&mut self.engine, entity);
         self.settle();
         self.drain();
         self.advance();
@@ -3491,7 +3488,7 @@ impl Game {
                         action: action_id.to_string(),
                         name,
                         summary: names::option_summary(action_id, context),
-                        cost: action_cost(&cost.map),
+                        cost: action_cost(cost),
                         targeting,
                         max_targets,
                         range_ft: match &area {
@@ -3734,7 +3731,7 @@ impl Game {
     /// rolled (TASKS CHK-6).
     fn decline_explore_reactions(&mut self) {
         for _ in 0..MAX_SCRIPTED_STEPS {
-            let Some(prompt) = self.engine.next_prompt(PromptScopeId::Global) else {
+            let Some(prompt) = self.engine.next_prompt(EventScope::Global) else {
                 return;
             };
             let ActionPromptKind::Reactions { options, .. } = &prompt.kind else {
@@ -3820,13 +3817,13 @@ impl Game {
             // A reaction window out of combat (Tactical Mind after a failed check) holds the
             // action that opened it until someone declines it.
             let reaction = engine
-                .next_prompt(PromptScopeId::Global)
+                .next_prompt(EventScope::Global)
                 .is_some_and(|p| matches!(p.kind, ActionPromptKind::Reactions { .. }));
             return all_idle || reaction;
         };
-        let scope = engine.prompts.scope(&PromptScopeId::Encounter(encounter));
+        let scope = engine.prompts.scope(&EventScope::Encounter(encounter));
         let waiting_on_reaction = engine
-            .next_prompt(PromptScopeId::Encounter(encounter))
+            .next_prompt(EventScope::Encounter(encounter))
             .is_some_and(|p| matches!(p.kind, ActionPromptKind::Reactions { .. }));
         let no_pending = scope.is_none_or(|s| s.pending_events().is_empty());
         // A reaction prompt holds everyone it doesn't wait on, even a creature still mid-move or
@@ -3927,7 +3924,7 @@ impl Game {
             self.scripted_turn = Some((round, actor, taken + 1));
             return;
         }
-        self.engine.end_turn(actor);
+        systems::combat::end_turn(&mut self.engine, actor);
     }
 
     /// The hostile creature a Bloodied `actor` should get away from with Nimble Escape: the
@@ -4159,7 +4156,7 @@ impl Game {
         let round = Some(running.round() as u32);
         self.drain();
         let xp = self.award_xp(&participants, winner);
-        self.engine.end_encounter(&encounter);
+        systems::combat::end_encounter(&mut self.engine, &encounter);
         self.drain();
         self.stand_up();
         self.fight_end = self.end_deeds(winner, &[]);
@@ -4208,7 +4205,7 @@ impl Game {
         let Some(encounter) = self.encounter else {
             return Awaiting::Nothing;
         };
-        let scope_id = PromptScopeId::Encounter(encounter);
+        let scope_id = EventScope::Encounter(encounter);
         let Some(prompt) = self.engine.next_prompt(scope_id) else {
             return Awaiting::Nothing;
         };
@@ -4305,18 +4302,10 @@ impl Game {
             rule_dc: false,
         };
 
-        // The engine splits events between the encounter log and the global log; core's `seq`
-        // puts the two back in the order they were logged.
-        let mut new_events: Vec<&EngineEvent> = Vec::new();
-        if let Some(encounter) = encounter {
-            let events = &encounter.event_log().events;
-            new_events.extend(events.iter().skip(self.encounter_seen));
-            self.encounter_seen = events.len();
-        }
+        // One engine log holds the encounter's events and the rest, in the order they happened.
         let events = &engine.event_log.events;
-        new_events.extend(events.iter().skip(self.global_seen));
+        let new_events = &events[self.global_seen.min(events.len())..];
         self.global_seen = events.len();
-        new_events.sort_by_key(|event| event.seq);
         let mut entries = Vec::new();
         for event in new_events {
             entries.extend(writer.entries(event));
@@ -4574,10 +4563,12 @@ impl Game {
 
 pub(super) fn load_geometry(map: Option<&str>) -> WorldGeometry {
     let terrain = scene::map_path(map);
-    WorldGeometry::from_obj_path(
-        terrain.to_str().expect("utf-8 path"),
-        &rerecast::ConfigBuilder::default().build(),
-    )
+    WorldGeometry::try_from(WorldGeometrySource::Obj {
+        file_path: terrain,
+        config: rerecast::ConfigBuilder::default().build(),
+        try_cache: false,
+    })
+    .expect("scene map loads")
 }
 
 /// Sides decide who wins; faction attitudes decide who may attack whom. The party and hostile
@@ -5004,7 +4995,7 @@ mod tests {
         game.help("ana", &stabilize).unwrap();
         assert_eq!(life_state_name(&game.engine, bren), "unconscious");
         assert_eq!(game.stalls, 0);
-        assert!(game.engine.next_prompt(PromptScopeId::Global).is_none());
+        assert!(game.engine.next_prompt(EventScope::Global).is_none());
     }
 
     /// A creature whose Speed is 0 can't stand up (SRD 5.2.1, Prone), so it stays Prone when the
