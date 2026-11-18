@@ -250,7 +250,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // shows its loading indicator too.
   let quit: () => void = () => process.exit(130);
   // One way of naming things for the seat and the table's lines (AGT-98).
-  const seatNames = new SeatNames(language, party.seatRu);
+  const seatNames = new SeatNames(language, party.seatRu, party.people);
   const runDir = runFolder(flags.out, play.folder);
   // What the seat drew, as the screen showed it (AGT-103): Vera reads /options and /sheet from it (AGT-13).
   const seatFile = path.join(runDir, SEAT_JSONL);

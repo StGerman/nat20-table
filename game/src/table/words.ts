@@ -445,7 +445,7 @@ export interface UiWords {
   runOver: string;
   sceneOf(number: number, of: number): string;
   minutes(count: number): string;
-  commandHelp: Record<"options" | "sheet" | "where" | "map" | "log" | "usage" | "pause" | "suggest" | "panel" | "help" | "quit", string>;
+  commandHelp: Record<"options" | "sheet" | "where" | "map" | "who" | "log" | "usage" | "pause" | "suggest" | "panel" | "help" | "quit", string>;
   noCommand(name: string, commands: string): string;
   busy: string;
   pausedTyped: string;
@@ -549,6 +549,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
       sheet: "your character sheet",
       where: "places and the creatures you can see, with distances",
       map: "the places you know, the roads, and where the caravan is",
+      who: "who this is: /who Name; with no name, everyone. Also /кто",
       log: "the last engine lines, with their roll ids",
       usage: "tokens and API-equivalent cost so far, per agent",
       pause: "AI players wait until you type /pause again",
@@ -585,6 +586,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Enter      send the line",
         "  /          on an empty line, the commands to choose from; type to narrow",
         "  Tab        complete a /command, or put the next suggestion in the line",
+        "  Tab        with nothing typed: the card of the newest underlined name; Tab again: the one before it. While you type: Shift+Tab",
         "  ↑/↓        light a command, an option or a suggestion; Enter runs it",
         "  Esc        close this, go back from a sub-list, or clear the line",
         "  Shift+↑/↓  scroll the story, or this; PgUp/PgDn too",
@@ -668,6 +670,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
       sheet: "лист вашего персонажа",
       where: "места и все, кого вы видите, и до них сколько шагов",
       map: "знакомые места, дороги и где сейчас обоз",
+      who: "кто это: /кто Имя; без имени: все, кого вы знаете",
       log: "последние события стола с номерами бросков",
       usage: "сколько уже потрачено на модели, по каждому за столом",
       pause: "игроки за столом ждут, пока вы снова не наберёте /pause",
@@ -704,6 +707,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Enter      отправить строку",
         "  /          в пустой строке: список команд; печатайте, чтобы сузить",
         "  Tab        дописать /команду или взять следующую подсказку в строку",
+        "  Tab        когда в строке ничего не набрано: карточка последнего подчёркнутого имени; ещё раз Tab: имя перед ним. Пока набираете текст: Shift+Tab",
         "  ↑/↓        выбрать команду, вариант или подсказку; Enter выполняет",
         "  Esc        закрыть, вернуться из подсписка или очистить строку",
         "  Shift+↑/↓  листать историю или это окно; PgUp/PgDn тоже",

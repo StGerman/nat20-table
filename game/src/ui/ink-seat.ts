@@ -31,6 +31,7 @@ import { cardRows, endsTurn, foldedRows, situationRows, turnRows, type PanelSize
 import { cardText, costText } from "../table/guide.ts";
 import type { Language } from "../agents/language.ts";
 import { SeatNames } from "../table/seat-lines.ts";
+import { asTold, nameSpans, PEOPLE_WORDS, personCard, whoAnswer, type Person, type PeopleWords } from "./people.ts";
 import { SEAT_WORDS, UI_WORDS, type UiWords } from "../table/words.ts";
 
 /** The suggestions picker's rows and cursor (AGT-49): `cursor` is a row index, `rows.length` for "Your own…". */
@@ -104,6 +105,11 @@ export interface SeatView {
   scene?: { number: number; of: number };
   /** When the first scene started (ms), for the header's minutes. */
   started?: number;
+  /**
+   * The person card open (AGT-107): whose, by id. It takes the action card's slot in the wide
+   * frame and lies over the story in the narrow one, until Esc.
+   */
+  person?: string;
 }
 
 export interface InkSeatOptions {
@@ -146,6 +152,13 @@ export class InkSeat implements Seat {
   /** The seat's own words, in the run's language (AGT-98). */
   readonly ui: UiWords;
   private readonly names: SeatNames;
+  /** The dead whose death the story has told (§6.2), the dead it has not told yet, and each person as last seen alive. */
+  private readonly told = new Set<string>();
+  private readonly untold = new Set<string>();
+  private readonly alive = new Map<string, Person>();
+  /** How many story lines there were at the last panel frame. */
+  private looked = 0;
+  private sawPeople = false;
   private readonly options: InkSeatOptions;
   private view: SeatView = { lines: [], prompt: undefined, draft: "", cursor: 0 };
   /** Lines entered so far, oldest first, for Ctrl+P and Ctrl+N; `recalled` is the one on the row. */
@@ -473,7 +486,23 @@ export class InkSeat implements Seat {
   }
 
   private situation(event: Extract<TableEvent, { kind: "situation" }>): void {
+    // The frame is held behind the narration of the step before it, so the lines drawn since the
+    // last frame (the death's own among them) can tell a death this frame shows first.
+    const since = this.view.lines.slice(this.looked);
+    this.looked = this.view.lines.length;
     const situation = event.situation ?? this.view.situation;
+    // Someone dead before the seat's first look (a saved party's world) was told of in an earlier session.
+    const first = !this.sawPeople && (event.situation?.people?.length ?? 0) > 0;
+    if (first) this.sawPeople = true;
+    for (const p of event.situation?.people ?? []) {
+      if (p.state !== "dead") {
+        this.alive.set(p.id, p);
+        continue;
+      }
+      if (this.told.has(p.id)) continue;
+      if (first || tells(since, p)) this.told.add(p.id);
+      else this.untold.add(p.id);
+    }
     const options = this.view.options?.budget && event.situation && endsTurn(event.situation, this.handle) ? undefined : this.view.options;
     this.update({ situation, stale: !event.situation, options });
   }
@@ -595,6 +624,18 @@ export class InkSeat implements Seat {
       case "panel":
         this.update({ folded: !this.view.folded, overlay: undefined });
         return;
+      case "who": {
+        // No model call (rule N8): the card or the lists, from what the seat already holds.
+        const answer = whoAnswer(typed.name, this.people, this.peopleWords);
+        if ("person" in answer) {
+          this.update({ person: answer.person.id, overlay: undefined });
+          return;
+        }
+        const text = answer.rows.join("\n");
+        this.drawn("command", [{ tone: "info", text }]);
+        this.update({ person: undefined, overlay: { title: this.names.language === "ru" ? "/кто" : "/who", text, at: this.view.lines.length } });
+        return;
+      }
       case "help":
         this.drawn("command", [{ tone: "info", text: helpText(this.ui) }]);
         this.update({ overlay: { title: this.ui.help, text: helpText(this.ui), at: this.view.lines.length } });
@@ -766,6 +807,40 @@ export class InkSeat implements Seat {
     if (lines.length === 0) return;
     const blank = gap && this.view.lines.length > 0 && this.view.lines.at(-1)!.text !== "" ? [{ tone: "status" as const, text: "" }] : [];
     this.update({ lines: [...this.view.lines, ...[...blank, ...lines].map((line) => ({ ...line, id: this.nextId++ }))] });
+    // A story line that names a dead person after the death tells it: their card says so from now on.
+    for (const id of this.untold) {
+      const p = this.view.situation?.people?.find((q) => q.id === id);
+      if (p && tells(lines, p)) {
+        this.told.add(id);
+        this.untold.delete(id);
+      }
+    }
+  }
+
+  /** The person card's words in the seat's language. */
+  get peopleWords(): PeopleWords {
+    return PEOPLE_WORDS[this.names.language];
+  }
+
+  /** Everyone the character knows, the dead as the story has told them. */
+  get people(): Person[] {
+    return asTold(this.view.situation?.people ?? [], (id) => this.told.has(id), (id) => this.alive.get(id));
+  }
+
+  /** Tab or Shift+Tab: the card of the next underlined name in `shown` (newest first), after the one open. */
+  nextName(shown: readonly string[]): boolean {
+    if (shown.length === 0) return false;
+    const at = this.view.person ? shown.indexOf(this.view.person) : -1;
+    this.update({ person: shown[(at + 1) % shown.length], overlay: undefined });
+    return true;
+  }
+
+  /** Esc: closes the person card; false when none was drawn (one whose person has left the list closes unseen). */
+  closePerson(): boolean {
+    if (!this.view.person) return false;
+    const drawn = this.people.some((p) => p.id === this.view.person);
+    this.update({ person: undefined });
+    return drawn;
   }
 
   private update(change: Partial<SeatView>): void {
@@ -907,6 +982,12 @@ export function suggestionRows(suggestions: Suggestions, question: string, ui: U
   ];
 }
 
+/** The story's own lines (narration, speech, the engine's and the table's), not the human's echo, name `p` (§6.2). */
+const TELLING: ReadonlySet<Line["tone"]> = new Set(["dm", "speech", "engine", "status", "end"]);
+function tells(lines: readonly Line[], p: Person): boolean {
+  return lines.some((line) => TELLING.has(line.tone) && nameSpans(line.text, [p]).some((span) => span.person));
+}
+
 /** Mouse reporting on and off: button events (`?1000`) in SGR form (`?1006`). */
 const WHEEL_ON = "\x1b[?1000h\x1b[?1006h";
 const WHEEL_OFF = "\x1b[?1006l\x1b[?1000l";
@@ -947,7 +1028,7 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   if (scroll && !scrolled) setScrolled(true);
   // How far down the open overlay is read, from its top; a new overlay starts at its top.
   const [overlayRead, setOverlayTop] = useState(0);
-  useEffect(() => setOverlayTop(0), [view.overlay, view.folded]);
+  useEffect(() => setOverlayTop(0), [view.overlay, view.folded, view.person]);
   const [cache] = useState(() => new Map<number, { width: number; rows: string[] }>());
   // The header's minutes move on their own while nothing else draws.
   const [, tick] = useState(0);
@@ -1016,8 +1097,19 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const storyH = Math.max(1, size.rows - below - action.length - (action.length > 0 ? 2 : 1));
   const story = [...storyRows(view.lines, width, cache), ...(view.preview && !view.prompt && !scroll ? previewRows(view.preview, width) : [])];
   const shown = storyWindow(story, storyH, view.lines.length, scroll);
+  // The names in the story's rows on screen (AGT-107, rule N1), and whose they are, newest first for Tab.
+  const people = seat.people;
+  const spansOf = (text: string) => nameSpans(text, people);
+  // Scrolled, the last row is the «new lines» marker, not the row under it.
+  const namesShown = [...new Set((scroll ? shown.rows.slice(0, -1) : shown.rows).flatMap((row) => (row ? spansOf(row.text).flatMap((span) => (span.person ? [span.person] : [])) : [])).reverse())];
+  const person = view.person ? people.find((p) => p.id === view.person) : undefined;
+  const personRows: Row[] | undefined = person
+    ? personCard(person, seat.peopleWords).map((text, i, all): Row => [{ text, style: i === 0 ? { bold: true } : i === all.length - 1 ? { accent: "hint" } : {} }])
+    : undefined;
   // An overlay over the story: its name row, then its text read from the top (AGT-69, screen 11).
-  const overlayRows: Row[] | undefined = view.overlay
+  const overlayRows: Row[] | undefined = personRows && layout.mode === "narrow"
+    ? personRows.slice(1, -1).flatMap((row) => wrapText(row[0]!.text, width, 0).split("\n").map((text): Row => [{ text, style: row[0]!.style ?? {} }]))
+    : view.overlay
     ? view.overlay.text
         .split("\n")
         // A row that fits keeps its spacing (the sheet's and /help's columns); a longer one wraps.
@@ -1055,7 +1147,12 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     if (overlayRows && pageDown) return setOverlayTop(stepWithin(overlayTop, Math.max(1, overlayRoom - 1), overlayMax));
     if (pageUp) return setScroll(page(scroll, -1, story, storyH, view.lines.length));
     if (pageDown) return setScroll(page(scroll, 1, story, storyH, view.lines.length));
+    if (key.escape && seat.closePerson()) return;
     if (key.escape && seat.closeCommands()) return;
+    // Tab on an empty line, Shift+Tab always: the card of the next underlined name (AGT-107). Tab
+    // still takes a suggestion while the three stand.
+    const suggesting = view.prompt && !view.options && view.suggestions;
+    if (key.tab && (key.shift || (!view.draft && !suggesting)) && seat.nextName(namesShown)) return;
     if (key.escape && seat.closeOverlay(layout.mode === "narrow")) return;
     if (key.escape && seat.closeSuggestions()) return;
     if (key.escape && seat.back()) return;
@@ -1114,7 +1211,8 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
 
   // The overlay in the story's rows: a dim name row with its keys, and the text from `overlayTop`.
   function overlayLines() {
-    const name = view.overlay?.title ?? seat.ui.panelTitle;
+    // The narrow frame's person card names the person on its key row, as /sheet names the sheet.
+    const name = person && layout.mode === "narrow" ? person.name : (view.overlay?.title ?? seat.ui.panelTitle);
     const fresh = view.overlay ? new Set(view.lines.slice(view.overlay.at).filter((l) => l.text.trim() !== "").map((l) => l.id)).size : 0;
     const nameRow = h(Text, { key: "oname", wrap: "truncate-end", ...textProps({ accent: "hint", bold: true }, palette) }, seat.ui.overlayKeys(name, overlayMax > 0, fresh));
     const rows = overlayRows!.slice(overlayTop, overlayTop + overlayRoom);
@@ -1138,7 +1236,10 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
     : shown.rows.map((row, i) => {
         const key = `s${i}`;
         if (scroll && i === shown.rows.length - 1) return h(Text, { key, wrap: "truncate-end", ...textProps({ accent: "hint" }, palette) }, freshText(shown.fresh, seat.ui));
-        return row ? h(Text, { key, wrap: "truncate-end", ...textProps(row.style, palette) }, row.text || " ") : blank(key);
+        if (!row) return blank(key);
+        const spans = spansOf(row.text);
+        if (spans.length === 1 && !spans[0]!.person) return h(Text, { key, wrap: "truncate-end", ...textProps(row.style, palette) }, row.text || " ");
+        return h(Text, { key, wrap: "truncate-end", ...textProps(row.style, palette) }, ...spans.map((span, j) => (span.person ? h(Text, { key: j, underline: true }, span.text) : span.text)));
       });
   const left = [
     ...storyLines,
@@ -1159,7 +1260,9 @@ export function TableScreen({ seat }: { seat: InkSeat }) {
   const roster = view.situation ? situationRows(view.situation, { columns: layout.side!, rows: body }, { folded: view.folded, stale, glyphs: seat.glyphs, pane: true, lit, ui: seat.ui }) : [];
   // The action card stands under the roster, past a blank row, cut to the rows left.
   const cardRoom = body - roster.length - (roster.length > 0 ? 1 : 0);
-  const cardShown = card && cardRoom > 1 ? cardRows(card.label, card.cost, card.text, layout.side!).slice(0, cardRoom) : [];
+  const cardShown = personRows && cardRoom > 1
+    ? personRows.flatMap((row) => wrapText(row[0]!.text, layout.side!, 0).split("\n").map((text): Row => [{ text, style: row[0]!.style ?? {} }])).slice(0, cardRoom)
+    : card && cardRoom > 1 ? cardRows(card.label, card.cost, card.text, layout.side!).slice(0, cardRoom) : [];
   const side = cardShown.length > 0 ? [...roster, ...(roster.length > 0 ? [[] as Row] : []), ...cardShown] : roster;
   return h(
     Box,

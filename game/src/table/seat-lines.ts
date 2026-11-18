@@ -50,14 +50,36 @@ export interface CardOnSeat {
 }
 
 /** How the seat names things in one run: Russian names by id from the pack and the world. */
+/**
+ * What the seat knows of people beyond the engine's view: the Russian of each line the engine
+ * sends in English (`look`, `heard`, `remembers`), and the party's own forms and looks from
+ * `campaign.json`. A table with no campaign has none.
+ */
+export interface PeopleBook {
+  /** Each person's run-language lines, keyed by `lineKey(person, English line)`. */
+  lines: ReadonlyMap<string, string>;
+  party: ReadonlyArray<{ handle: string; names: readonly string[]; look?: string; look_ru?: string }>;
+}
+
+/** The key of a person's run-language line in a `PeopleBook`: by person and line (0067), since two people can share an English line. */
+export function lineKey(id: string, en: string): string {
+  return `${id}\u0000${en}`;
+}
+
+export const NO_PEOPLE: PeopleBook = { lines: new Map(), party: [] };
+
 export class SeatNames {
   readonly language: Language;
   /** Russian names by id: party handles, `npc:<id>`, places, goods and anchors (`anchor:<id>`). */
   private readonly ru: Map<string, string>;
 
-  constructor(language: Language = "en", ru: ReadonlyMap<string, string> = new Map()) {
+  /** The people book (AGT-107): the person card's lines in the run's language, and the party's forms. */
+  readonly people: PeopleBook;
+
+  constructor(language: Language = "en", ru: ReadonlyMap<string, string> = new Map(), people: PeopleBook = NO_PEOPLE) {
     this.language = language;
     this.ru = new Map(ru);
+    this.people = people;
   }
 
   /** A creature the DM brought in with a name in the run's language: a Russian seat calls it so from now on. */

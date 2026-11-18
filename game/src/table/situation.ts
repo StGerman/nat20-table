@@ -7,6 +7,7 @@ import { caravanAt, dayLine, mapLines, titled, type LegalActionsResult } from ".
 import { plural } from "./plural.ts";
 import { type SeatNames, WATCH_RU } from "./seat-lines.ts";
 import { mapLinesRu } from "./seat-views.ts";
+import { peopleOf, type Person } from "../ui/people.ts";
 
 /** Another creature as the panel lists it. */
 export interface SituationCreature {
@@ -53,6 +54,8 @@ export interface Situation {
   road?: { where: string; day: string; map: string[]; scout?: string };
   /** At a Russian seat (AGT-98): each creature's name as the panel shows it, by handle («волк 1»). */
   shown?: Record<Handle, string>;
+  /** Everyone the character knows by name (AGT-107), for the underlined names, the person card and `/кто`. */
+  people?: Person[];
   /** At a Russian seat: the concentration spell's name. */
   concentrationName?: string;
 }
@@ -111,6 +114,8 @@ export function situationOf(state: State, turn: Handle | undefined, options?: Le
     down,
     ...(state.world ? { road: roadOf(state.world, me, creatures) } : {}),
   };
+  const people = names ? peopleOf(state, names) : [];
+  if (people.length > 0) situation.people = people;
   return names?.language === "ru" ? russian(situation, state, names) : situation;
 }
 

@@ -18,6 +18,8 @@ export interface Style {
   bold?: boolean;
   italic?: boolean;
   dim?: boolean;
+  /** A name you can open (AGT-107, rule N1). */
+  underline?: boolean;
 }
 
 /** The token file's shape. */

@@ -5,6 +5,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { REPO } from "../paths.ts";
 import { namedIn, type RosterNames } from "../table/mentions.ts";
+import { lineKey, type PeopleBook } from "../table/seat-lines.ts";
 
 /** A living-world pack as the run needs it. */
 export interface CampaignPack {
@@ -159,6 +160,33 @@ export function worldSeatNames(pack: string): Map<string, string> {
     }
   }
   return names;
+}
+
+/**
+ * The seat's people book (AGT-107): the Russian of every roster line the engine sends in English
+ * (`look`, `heard`, both forms of each `remembers`), keyed by the English line, and the party's
+ * forms and looks. The engine already sends only what the viewer may see (Rule 3); the book only
+ * says those lines in the run's language.
+ */
+export function peopleBook(pack: string, party: ReadonlyArray<{ handle: string; names?: string[]; look?: string; look_ru?: string }>): PeopleBook {
+  const lines = new Map<string, string>();
+  const world = campaignWorld(pack);
+  const npcs = world ? path.join(world.dir, "npcs.json") : undefined;
+  if (npcs && existsSync(npcs)) {
+    type Line = { id: string; look?: string; look_ru?: string; heard?: string; heard_ru?: string; remembers?: Array<{ you?: string; you_ru?: string; company?: string; company_ru?: string }> };
+    for (const n of (JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Line[] }).npcs) {
+      const pair = (en?: string, ru?: string) => {
+        if (en && ru) lines.set(lineKey(n.id, en), ru);
+      };
+      pair(n.look, n.look_ru);
+      pair(n.heard, n.heard_ru);
+      for (const r of n.remembers ?? []) {
+        pair(r.you, r.you_ru);
+        pair(r.company, r.company_ru);
+      }
+    }
+  }
+  return { lines, party: party.map((p) => ({ handle: p.handle, names: p.names ?? [], ...(p.look ? { look: p.look } : {}), ...(p.look_ru ? { look_ru: p.look_ru } : {}) })) };
 }
 
 /** A deck card as rule N2 reads it: its player text and who it names. */
