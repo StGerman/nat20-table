@@ -151,6 +151,9 @@ struct Scene {
     placed: BTreeSet<String>,
     /// Pregen files of the spawns' characters, read with the scene.
     pregens: HashMap<String, PregenFile>,
+    /// The allies a card's wagon fight took (ENG-48, rule A1): party creatures that play the
+    /// `hold` policy and never count as a conscious party creature. Gone with the scene.
+    allies: HashSet<Entity>,
 }
 
 /// What `request_check` returns: the roll's local key, its total and whether it succeeded.
@@ -632,6 +635,7 @@ impl Game {
             spawns: scene.spawns.clone(),
             placed: BTreeSet::new(),
             pregens,
+            allies: HashSet::new(),
         };
         game.scene_encounter = None;
         game.winner = None;
@@ -660,6 +664,7 @@ impl Game {
                 spawns: Vec::new(),
                 placed: BTreeSet::new(),
                 pregens: HashMap::new(),
+                allies: HashSet::new(),
             },
             encounter: None,
             scene_encounter: None,
@@ -1977,10 +1982,13 @@ impl Game {
                 .filter(|surprise| self.flags.contains(&surprise.when_flag))
                 .map(|surprise| surprise.surprised)
         });
+        // An ally never counts as a conscious party creature (rule A5).
         let standing = |side: Side| {
             arriving_sides.contains(&side)
                 || entities.iter().any(|e| {
-                    self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
+                    self.side_of(*e) == Some(side)
+                        && !self.scene.allies.contains(e)
+                        && life_state_name(&self.engine, *e) == "normal"
                 })
         };
         if !standing(Side::Party) || !standing(Side::Hostile) {
@@ -2075,9 +2083,15 @@ impl Game {
         }
         // A neutral in the fight is the one attacked, or the one attacking (API-60): it turns
         // hostile, so it counts as hostile here.
+        // An ally is on no side here (rule A5): the party side needs a Blade.
         let sides: Vec<Option<Side>> = participants
             .iter()
-            .map(|h| self.entity(&h.0).ok().and_then(|e| self.side_of(e)))
+            .map(|h| {
+                self.entity(&h.0)
+                    .ok()
+                    .filter(|e| !self.scene.allies.contains(e))
+                    .and_then(|e| self.side_of(e))
+            })
             .map(|side| match side {
                 Some(Side::Neutral) => Some(Side::Hostile),
                 other => other,
@@ -2458,6 +2472,71 @@ impl Game {
         });
         self.join_running_fight(&placed);
         Ok(())
+    }
+
+    /// Places an ally for a card's wagon fight (ENG-48, rules A1 and A3): on the party side at
+    /// `anchor`, playing `hold`.
+    pub fn place_ally(
+        &mut self,
+        handle: &Handle,
+        monster: &str,
+        anchor: &str,
+        name: Option<&str>,
+    ) -> Result<(), ApiError> {
+        self.place_creature(
+            handle,
+            monster,
+            Side::Party,
+            &Placement::Anchor {
+                anchor: anchor.to_owned(),
+            },
+            name,
+            None,
+        )?;
+        self.make_ally(&handle.0)
+    }
+
+    /// A creature already in the scene joins a wagon fight as an ally (rule A10): one creature,
+    /// on the party side from now on, playing `hold`.
+    pub fn make_ally(&mut self, handle: &str) -> Result<(), ApiError> {
+        let entity = self.entity(handle)?;
+        // One left down by an earlier fight here sits this one out, as a downed Blade would.
+        if life_state_name(&self.engine, entity) != "normal" {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!("{handle} is down, so they sit this fight out."),
+            ));
+        }
+        let Some(index) = self.scene.creatures.iter().position(|c| c.entity == entity) else {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!("{handle} is not here."),
+            ));
+        };
+        if self.scene.creatures[index].side != Side::Party {
+            self.scene.creatures[index].side = Side::Party;
+            let ally = self.scene.creatures[index].clone();
+            let others: Vec<SceneCreature> = self
+                .scene
+                .creatures
+                .iter()
+                .filter(|c| c.entity != entity)
+                .cloned()
+                .collect();
+            for other in &others {
+                self.align_attitudes(&ally, other);
+            }
+        }
+        self.scene.allies.insert(entity);
+        Ok(())
+    }
+
+    /// The scene's anchor `id`, or its first when it has none by that id (rule A3); none for a
+    /// scene with no anchor.
+    pub fn anchor_or_first(&self, id: Option<&str>) -> Option<String> {
+        id.and_then(|id| self.scene.anchors.iter().find(|a| a.id == id))
+            .or_else(|| self.scene.anchors.first())
+            .map(|a| a.id.clone())
     }
 
     /// Places the round spawns due since the last look, unless their `unless` holds then.
@@ -3884,6 +3963,10 @@ impl Game {
     /// beside; a ranged attack avoids Prone targets. Ties go to the nearer target, then by
     /// handle, so a seed replays the same fight. End the turn when no attack is possible.
     fn scripted_action(&mut self, actor: Entity) {
+        if self.scene.allies.contains(&actor) {
+            self.hold_action(actor);
+            return;
+        }
         let round = self
             .encounter
             .and_then(|id| self.engine.encounter(&id))
@@ -3917,6 +4000,62 @@ impl Game {
             None
         };
         if let Some((action_id, context, target)) = choice
+            && self
+                .submit_entity(actor, &action_id, None, context, &[target], None)
+                .is_ok()
+        {
+            self.scripted_turn = Some((round, actor, taken + 1));
+            return;
+        }
+        systems::combat::end_turn(&mut self.engine, actor);
+    }
+
+    /// The ally policy `hold` (ENG-48, rule A4): an ally never moves. It attacks the nearest
+    /// hostile creature already within its melee reach (ties by handle) that has not yielded,
+    /// with its stat block's melee attack, and otherwise ends its turn.
+    fn hold_action(&mut self, actor: Entity) {
+        let round = self.round().map_or(0, |r| r as usize);
+        let taken = match self.scripted_turn {
+            Some((r, e, n)) if r == round && e == actor => n,
+            _ => 0,
+        };
+        let targets: Vec<Entity> = self
+            .hostiles_of(actor)
+            .into_iter()
+            .filter(|t| !self.yielded.contains(&t.entity))
+            .map(|t| t.entity)
+            .collect();
+        let melee: Option<ActionId> = "nat20_core::action.melee_attack".parse().ok();
+        let attack = melee
+            .filter(|_| taken < MAX_SCRIPTED_ACTIONS_PER_TURN)
+            .and_then(|melee| {
+                let engine = &mut self.engine;
+                let contexts = match ActionBuilder::available(engine, actor).state() {
+                    Ok(ActionBuilderState::Action { actions }) => actions.get(&melee)?.len(),
+                    _ => return None,
+                };
+                for target in &targets {
+                    for context in 0..contexts {
+                        let mut probe = ActionBuilder::available(engine, actor);
+                        probe.action(engine, &melee);
+                        if !pick_context(&mut probe, &engine.world, context) {
+                            continue;
+                        }
+                        probe.target_entity(engine, *target);
+                        if matches!(
+                            probe.state(),
+                            Ok(ActionBuilderState::Targets {
+                                path_to_target: Some(TargetPathFindingResult::AlreadyInRange(_)),
+                                ..
+                            })
+                        ) {
+                            return Some((melee.clone(), context, *target));
+                        }
+                    }
+                }
+                None
+            });
+        if let Some((action_id, context, target)) = attack
             && self
                 .submit_entity(actor, &action_id, None, context, &[target], None)
                 .is_ok()
@@ -4137,9 +4276,12 @@ impl Game {
             .iter()
             .map(|(entity, _)| *entity)
             .collect();
+        // A fight is lost when the last Blade is down, whichever allies stand (rule A5).
         let standing = |side: Side| {
             participants.iter().any(|e| {
-                self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
+                self.side_of(*e) == Some(side)
+                    && !self.scene.allies.contains(e)
+                    && life_state_name(&self.engine, *e) == "normal"
             })
         };
         let (party, hostile) = (standing(Side::Party), standing(Side::Hostile));

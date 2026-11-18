@@ -24,6 +24,7 @@
     "play:ai-party": "node --experimental-strip-types --no-warnings game/src/play/ai-party.ts",
     "play:scene": "node --experimental-strip-types --no-warnings game/src/play/scene.ts",
     "play:card": "node --experimental-strip-types --no-warnings game/src/play/card.ts",
+    "play:wagon-table": "node --experimental-strip-types --no-warnings game/src/play/wagon-table.ts",
     "play:exit": "node --experimental-strip-types --no-warnings game/src/play/scene.ts --scenes s1_village_green,s3_mill_yard --seat ink",
     "play:full": "node --experimental-strip-types --no-warnings game/src/play/full.ts",
     "play:cheap": "node --experimental-strip-types --no-warnings game/src/play/full.ts --profile cheap",

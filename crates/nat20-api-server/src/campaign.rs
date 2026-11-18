@@ -211,9 +211,18 @@ impl Campaign {
         } else {
             world::NpcFile::default()
         };
+        // Who may ride with the wagon (ENG-48), checked against the roster.
+        let company_file = dir.join("company.json");
+        let company: world::CompanyFile = if company_file.exists() {
+            read_json(&company_file, "company file")?
+        } else {
+            world::CompanyFile::default()
+        };
         let mut built = built
             .with_npcs(npcs)
-            .map_err(|e| bad(format!("The world {}'s NPCs: {e}.", setup.map)))?;
+            .map_err(|e| bad(format!("The world {}'s NPCs: {e}.", setup.map)))?
+            .with_company(company)
+            .map_err(|e| bad(format!("The world {}'s company: {e}.", setup.map)))?;
         built.seen_from_met(&party.iter().map(|h| h.0.clone()).collect::<Vec<_>>());
         // A player merchant drives the caravan, so they must travel with it.
         if let world::Owner::Player(owner) = &built.state.caravan.owner
@@ -257,7 +266,32 @@ impl Campaign {
             .collect();
         scenes.push(&campaign.road_scene);
         for id in scenes {
-            read_scene(data_dir, id)?;
+            let file = read_scene(data_dir, id)?;
+            // A company animal is placed under its id, so no scene creature may hold it (ENG-48).
+            if let Some(entry) = campaign.world.company.iter().find(|e| {
+                e.monster.is_some()
+                    && file
+                        .creatures
+                        .iter()
+                        .chain(file.spawns.iter().flat_map(|s| s.creatures.iter()))
+                        .any(|c| c.handle.0 == e.id)
+            }) {
+                return Err(bad(format!(
+                    "The company entry {} is already a creature's handle in scene {id}.",
+                    entry.id
+                )));
+            }
+        }
+        if let Some(entry) = campaign
+            .world
+            .company
+            .iter()
+            .find(|e| e.monster.is_some() && campaign.party.iter().any(|h| h.0 == e.id))
+        {
+            return Err(bad(format!(
+                "The company entry {} is already a party member's handle.",
+                entry.id
+            )));
         }
         campaign.check_npcs(data_dir)?;
         Ok(campaign)
@@ -369,6 +403,102 @@ impl Campaign {
             carries: carries_wire(&state.carries),
             hp: state.hp,
         })
+    }
+
+    /// Who joins a card's wagon fight (ENG-48, rule A2), in this order: each wagon's team but
+    /// its last animal, the company entries that ride on the contract under way, and the NPC
+    /// owner if alive and `owner`.
+    pub fn wagon_allies(&self, owner: bool) -> Vec<WagonAlly> {
+        let state = &self.world.state;
+        let mut allies: Vec<WagonAlly> = state
+            .caravan
+            .wagons
+            .iter()
+            .flat_map(|w| {
+                let placed = w.team.len().saturating_sub(1);
+                w.team[..placed].iter().map(|a| WagonAlly::Animal {
+                    wagon: w.n,
+                    animal: a.animal.clone(),
+                })
+            })
+            .collect();
+        for entry in self.world.riding() {
+            let at = entry.at.clone();
+            match (&entry.monster, &entry.npc) {
+                (Some(monster), _) => allies.push(WagonAlly::Beast {
+                    id: entry.id.clone(),
+                    monster: monster.clone(),
+                    name: entry.name.clone(),
+                    at,
+                    hurt: entry.hurt,
+                }),
+                (None, Some(npc)) => {
+                    if let Some(person) = self.ally_placement(npc) {
+                        allies.push(WagonAlly::Person {
+                            person,
+                            at,
+                            hurt: entry.hurt,
+                            owner: false,
+                        });
+                    }
+                }
+                (None, None) => {}
+            }
+        }
+        if owner
+            && let world::Owner::Npc(id) = &state.caravan.owner
+            && !allies
+                .iter()
+                .any(|a| matches!(a, WagonAlly::Person { person, .. } if person.id == *id))
+            && let Some(person) = self.ally_placement(id)
+        {
+            allies.push(WagonAlly::Person {
+                person,
+                at: None,
+                hurt: false,
+                owner: true,
+            });
+        }
+        allies
+    }
+
+    /// A living roster person as a wagon fight places them: their stat block, name, carries
+    /// and Hit Points, friendly; the anchor is left to the caller.
+    fn ally_placement(&self, id: &str) -> Option<NpcPlacement> {
+        let def = self.world.npcs.iter().find(|d| d.id == id)?;
+        let state = self.world.state.npcs.get(id).filter(|s| s.alive)?;
+        Some(NpcPlacement {
+            id: def.id.clone(),
+            monster: def.monster.clone(),
+            side: Side::Neutral,
+            anchor: String::new(),
+            name: def.name.clone(),
+            carries: carries_wire(&state.carries),
+            hp: state.hp,
+        })
+    }
+
+    /// A team animal of wagon `n` died in a fight (ENG-48): one `animal` leaves its team.
+    pub fn animal_died(&mut self, n: u32, animal: &str) {
+        if let Some(wagon) = self
+            .world
+            .state
+            .caravan
+            .wagons
+            .iter_mut()
+            .find(|w| w.n == n)
+            && let Some(i) = wagon.team.iter().position(|a| a.animal == animal)
+        {
+            wagon.team.remove(i);
+        }
+    }
+
+    /// The caravan's NPC owner, if an NPC owns it.
+    pub fn npc_owner(&self) -> Option<&str> {
+        match &self.world.state.caravan.owner {
+            world::Owner::Npc(id) => Some(id),
+            world::Owner::Player(_) => None,
+        }
     }
 
     /// Whether `id` is a person of the world's roster.
@@ -581,7 +711,7 @@ impl Campaign {
         let card = self.world.deck.card(id)?;
         let offers = world::PendingCard {
             card: card.id.clone(),
-            choices: world::Deck::offer_ids(card, &self.world.state.deeds),
+            choices: world::Deck::offer_ids(card, &self.world.deeds_now()),
             said: Default::default(),
             own_move: None,
             fell: Vec::new(),
@@ -902,6 +1032,28 @@ pub struct NpcPlacement {
     pub carries: Carries,
     /// Hit Points the party left them with; none is full
     pub hp: Option<u32>,
+}
+
+/// One who joins a card's wagon fight (ENG-48, rule A2).
+#[derive(Debug, Clone)]
+pub enum WagonAlly {
+    /// A team animal of wagon `wagon`; its stat block is `animal`
+    Animal { wagon: u32, animal: String },
+    /// A company entry that is an animal, under its entry id
+    Beast {
+        id: String,
+        monster: String,
+        name: Option<String>,
+        at: Option<String>,
+        hurt: bool,
+    },
+    /// A roster person: a company entry, or the NPC owner (`owner`)
+    Person {
+        person: NpcPlacement,
+        at: Option<String>,
+        hurt: bool,
+        owner: bool,
+    },
 }
 
 /// Reads a scene a journey can load; any reason it can't be read is the campaign's `bad_scene`.

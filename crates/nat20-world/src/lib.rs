@@ -14,6 +14,7 @@
 pub mod campaign;
 pub mod caravan;
 pub mod clock;
+pub mod company;
 pub mod customs;
 pub mod deck;
 pub mod dice;
@@ -26,6 +27,7 @@ pub mod travel;
 pub use campaign::{CampaignFile, CampaignWorld};
 pub use caravan::{Caravan, CaravanError, Good, Goods, Owner, Wagon};
 pub use clock::{Clock, Watch};
+pub use company::{CompanyEntry, CompanyFile, RIDES_PREFIX, lost_a_horse_deed, owner_dead_deed};
 pub use customs::{Custom, CustomsError, CustomsFile};
 pub use deck::{
     Card, CardError, Choice, DC_LADDER, DRAW_DIE, Decided, Deck, DeckError, DeckFile, DeckState,

@@ -1,5 +1,5 @@
 {
-    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. The last two cards, arrival cards at the Crossing Inn, read how the yard fight of the test scene deeds_yard ended (ENG-44, design m13 §4.2 rule 7), so only a party that fought there meets one. Dragging the tree aside remembers a deed (API-52), and the night card's fire choice reads it (AGT-91). The tower trail holds four cards that come only while the tree was not cleared (`unless`), so only the draw_three fixture meets them, and the DM picks among those a draw offers (API-53). Not shipped content; the Wend deck is MAP-6.",
+    "_comment": "The test world's deck (API-43) for the conformance fixtures: one road card on the Vale road and one night card at the Crossing Inn, so every draw is known. The last two cards, arrival cards at the Crossing Inn, read how the yard fight of the test scene deeds_yard ended (ENG-44, design m13 §4.2 rule 7), so only a party that fought there meets one. Dragging the tree aside remembers a deed (API-52), and the night card's fire choice reads it (AGT-91). The fire, kept once, brings a stray dog to the wagon for the contract (ENG-48, `company.json`): the night card then offers a wagon fight with it, against a pack led by the grey wolf, and the road card reads the dog hurt or dead (rule A9). The tower trail holds four cards that come only while the tree was not cleared (`unless`), so only the draw_three fixture meets them, and the DM picks among those a draw offers (API-53). Not shipped content; the Wend deck is MAP-6.",
     "cards": [
         {
             "id": "fallen_tree",
@@ -27,6 +27,19 @@
                         {"do": "pay", "who": "party", "copper": 10},
                         {"do": "delay", "minutes": 20}
                     ]
+                },
+                {
+                    "id": "rest_the_dog",
+                    "if": "dog_hurt",
+                    "unless": "dog_dead",
+                    "text": "Let the limping dog ride on the wagon while you walk round the tree.",
+                    "effects": [{"do": "delay", "minutes": 20}]
+                },
+                {
+                    "id": "bury_the_dog",
+                    "if": "dog_dead",
+                    "text": "Bury the stray dog under the fallen tree.",
+                    "effects": [{"do": "delay", "minutes": 30}]
                 }
             ]
         },
@@ -55,8 +68,15 @@
                 {
                     "id": "tree_fire",
                     "if": "cleared_the_tree",
+                    "unless": ["kept_the_fire", "rides:dog"],
                     "text": "Burn the branches of the tree you dragged aside, all night.",
                     "effects": [{"do": "remember", "deed": "kept_the_fire"}]
+                },
+                {
+                    "id": "stand_with_the_dog",
+                    "if": "rides:dog",
+                    "text": "Stand at the wagon with the stray dog.",
+                    "effects": [{"do": "fight", "monsters": [{"stat": "wolf", "npc": "grey"}, "wolf", "wolf"], "wagon": true}]
                 }
             ]
         },
