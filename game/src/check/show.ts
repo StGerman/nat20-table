@@ -48,7 +48,8 @@ const signed = (n: number) => (n < 0 ? `${n}` : `+${n}`);
 
 /** The roll as arithmetic: dice, kept die, each modifier, total, target and outcome. */
 export function arithmetic(roll: Roll): string {
-  const dice = roll.dice.map((d) => `${d.dice} [${d.results.join(", ")}${d.results.length > 1 ? `, kept ${d.kept}` : ""}]`).join(" + ");
+  // `kept` is the die advantage or disadvantage kept, or else the dice's sum (`4d6`): named only for the first.
+  const dice = roll.dice.map((d) => `${d.dice} [${d.results.join(", ")}${d.results.length > 1 && d.results.includes(d.kept) ? `, kept ${d.kept}` : ""}]`).join(" + ");
   const mods = roll.modifiers.map((m) => `${signed(m.value)} ${m.source.replace(/ Modifier$/, "").replace(/^Proficiency: Proficient$/, "proficiency")}`).join(" ");
   const against = roll.against ? ` vs ${roll.against.kind} ${roll.against.value}` : "";
   const outcome = roll.outcome === "value" ? "" : ` → ${roll.outcome.replace(/_/g, " ")}`;
@@ -90,7 +91,9 @@ export function auditPage(dir: string, options: { roll?: string; kind?: string; 
     const where = [`log seq ${event.seq}`, event.round !== undefined ? `round ${event.round}` : "", event.scene ?? ""].filter(Boolean).join(", ");
     out.push(`${id}  ${roll.roller}${roll.target ? ` → ${roll.target}` : ""}: ${roll.label.replace(/ vs \S+$/, "")}   (${where})`);
     out.push(`  engine     ${arithmetic(roll)}${roll.advantage && roll.advantage !== "normal" ? `, ${roll.advantage}` : ""}`);
-    for (const line of transcript.filter((l) => l.kind === "engine" && l.rolls?.includes(id))) {
+    const heard = transcript.filter((l) => l.kind === "engine" && l.rolls?.includes(id));
+    if (!heard.some((l) => l.channel === "dm")) out.push(`  ${"DM heard".padEnd(10)} no line on the DM's channel  ✗`);
+    for (const line of heard) {
       const who = line.channel === "dm" ? "DM heard" : line.channel.startsWith("to:") ? `${line.channel.slice(3)} heard` : `${line.channel} heard`;
       const same = line.channel === "dm" ? (line.text === `[${id}] ${event.text}` ? "  ✓ the engine's words" : "  ✗ not the engine's words") : "";
       out.push(`  ${who.padEnd(10)} ${clip(line.text, 110)}${same}`);

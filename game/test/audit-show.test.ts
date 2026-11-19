@@ -52,6 +52,10 @@ test("a roll the log doesn't have, or a DM line that isn't the engine's words, i
     const block = page.slice(page.findIndex((l) => l.startsWith(`${id}  `)));
     assert.ok(block.find((l) => l.startsWith("  DM heard"))!.endsWith("✗ not the engine's words"));
     assert.equal(auditPage(dir, { roll: id }).filter((l) => /^r\d+ {2}/.test(l)).length, 1);
+    // A roll still cited elsewhere whose DM line is gone says so.
+    const gone = lines.filter(Boolean).filter((l, i) => i !== at);
+    writeFileSync(file, gone.join("\n") + "\n");
+    assert.ok(auditPage(dir, { roll: id }).includes("  DM heard   no line on the DM's channel  ✗"));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -60,5 +64,6 @@ test("a roll the log doesn't have, or a DM line that isn't the engine's words, i
 test("the arithmetic reads dice, the kept die, each modifier, the target and the outcome", () => {
   const roll = { id: "r1", label: "an attack roll vs torva", roller: "wolf_1", target: "torva", dice: [{ dice: "2d20", results: [20, 6], kept: 20 }], modifiers: [{ source: "Strength Modifier", value: 2 }, { source: "Proficiency: Proficient", value: 2 }], total: 24, against: { kind: "AC", value: 13 }, outcome: "critical_hit" };
   assert.equal(arithmetic(roll), "2d20 [20, 6, kept 20] +2 Strength +2 proficiency = 24 vs AC 13 → critical hit");
+  assert.equal(arithmetic({ ...roll, dice: [{ dice: "4d6", results: [2, 5, 3, 6], kept: 16 }], modifiers: [], total: 16, against: undefined, outcome: "value" }), "4d6 [2, 5, 3, 6] = 16", "a sum is not a kept die");
   assert.equal(arithmetic({ ...roll, dice: [{ dice: "1d100", results: [99], kept: 99 }], modifiers: [], total: 99, against: undefined, outcome: "value" }), "1d100 [99] = 99");
 });
