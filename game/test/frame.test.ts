@@ -579,6 +579,33 @@ test("a death shows on the card once the story tells it, in the narration that b
   }
 });
 
+test("with people listed, the blank line between two speakers, and before a road card, still takes its row (AGT-107)", async () => {
+  const seat = new InkSeat("bren", { palette: paletteFor({ NO_COLOR: "1" }), title: "Fair in Wend" });
+  const { stdout } = startAt(seat, 80, 24);
+  const me = { handle: "bren", name: "Bren", hp: 10, hp_max: 10, temp_hp: 0, conditions: [], life_state: "conscious", effects: [] };
+  try {
+    seat.show({ kind: "situation", situation: { mode: "explore", next: [], me, creatures: [], down: [], people: [{ id: "odda_vell", name: "Odda", forms: ["Odda"], state: "here", inScene: true, remembers: [] }] } } as never);
+    seat.show({ kind: "narration", speaker: "dm", text: "Odda looks at the ridge." });
+    seat.show({ kind: "speech", speaker: "ilsa", to: "odda_vell", text: "Did you know?" });
+    void seat.ask({ kind: "explore" });
+    await until("both lines", () => stdout.last.includes("Did you know?"), () => stdout.last);
+    const rows = stdout.last.split("\n");
+    const dm = rows.findIndex((row) => row.includes("Odda looks at the ridge."));
+    assert.equal(rows[dm + 1]!.trim(), "", stdout.last);
+    assert.match(rows[dm + 2]!, /Did you know\?/);
+    assert.equal(rows.length, 24, "the frame still fills the window");
+    // A road card after a line stands past a blank row too.
+    seat.show({ kind: "info", title: "On the road", text: "After dark a man in a fine coat finds the blades." });
+    await until("the card", () => stdout.last.includes("fine coat"), () => stdout.last);
+    const after = stdout.last.split("\n");
+    const card = after.findIndex((row) => row.startsWith("On the road:"));
+    assert.equal(after[card - 1]!.trim(), "", stdout.last);
+    assert.match(after[card - 2]!, /Did you know\?/);
+  } finally {
+    seat.stop();
+  }
+});
+
 test("a click's cell in the story: the header is row 1, the story the next rows, its width the columns (AGT-108)", () => {
   assert.equal(storyCell(1, 1, 10, 60), undefined, "the header");
   assert.deepEqual(storyCell(1, 2, 10, 60), { row: 0, column: 0 });

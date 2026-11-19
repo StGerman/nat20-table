@@ -101,7 +101,8 @@ const LETTER = /[\p{L}\p{M}]/u;
 
 /**
  * A row cut into spans where a word equals a listed form of someone the viewer knows (rule N1):
- * whole words only, the longest form first, case kept as listed.
+ * whole words only, the longest form first, case kept as listed. Always one span at least: an
+ * empty row is one empty span, so the blank line between speakers still takes its row.
  */
 export function nameSpans(text: string, people: readonly Person[]): NameSpan[] {
   const forms = people.flatMap((p) => p.forms.filter((f) => f.length > 0).map((form) => ({ form, id: p.id }))).sort((a, b) => b.form.length - a.form.length);
@@ -124,7 +125,7 @@ export function nameSpans(text: string, people: readonly Person[]): NameSpan[] {
       at += 1;
     }
   }
-  if (plain) spans.push({ text: plain });
+  if (plain || spans.length === 0) spans.push({ text: plain });
   return spans;
 }
 

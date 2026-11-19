@@ -94,6 +94,8 @@ test("only a listed form is underlined, as a whole word (rule N1)", () => {
     { text: " кивает." },
   ]);
   assert.deepEqual(nameSpans("Никого.", []), [{ text: "Никого." }]);
+  // A blank row is one empty span, so it still takes its row on screen.
+  assert.deepEqual(nameSpans("", people), [{ text: "" }]);
 });
 
 test("/кто: a name opens its card, an unknown one says so, none lists everyone", () => {
