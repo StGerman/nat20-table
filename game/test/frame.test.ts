@@ -403,6 +403,7 @@ test("the end screen says how the run ended, and a stop what to do, with the che
   assert.equal(crash.text, "Stopped: the run failed: boom");
   assert.match(crash.todo!, /engine-stderr\.log/);
   assert.match(endScreen("Claude is out of reach", "offline").todo!, /network/);
+  assert.match(endScreen("Claude's login has expired", "login").todo!, /\/login/);
   const rows = finaleRows({ ...crash, checks: [{ name: "Audit", state: "done" }, { name: "Narration check", state: "running" }, { name: "Upload", state: "waiting" }] }, 72).map(rowText);
   assert.deepEqual(rows.slice(-4), ["", "✓ Audit", "… Narration check", "  Upload"]);
   // Animated, the running check turns the table's spinner instead of "…".
@@ -422,6 +423,7 @@ test("at a Russian seat the end screen, its checks and the opening note are Russ
     assert.ok(!latin.test(screen.text), `${stop}: ${screen.text}`);
     assert.ok(!latin.test((screen.todo ?? "").replace(/engine-stderr\.log|report\.md|Claude/g, "")), `${stop}: ${screen.todo}`);
     assert.ok(!/тред|на сейчас/.test(screen.todo ?? ""), `${stop}: ${screen.todo}`);
+    if (["crash", "stalled", "usage_limit", "offline", "login"].includes(stop)) assert.ok(screen.todo, `${stop} says what to do`);
   }
   for (const name of Object.values(CHECK_NAMES.ru)) assert.ok(!latin.test(name), name);
   assert.deepEqual(Object.keys(CHECK_NAMES.ru), Object.keys(CHECK_NAMES.en));

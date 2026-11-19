@@ -630,6 +630,8 @@ export function endScreen(ended: string, stop: StopKind | null | undefined, lang
       return { text: `Stopped: ${ended}`, todo: "The Claude subscription's limit is spent: run again after it resets." };
     case "offline":
       return { text: `Stopped: ${ended}`, todo: "Claude couldn't be reached: check the network and run again." };
+    case "login":
+      return { text: `Stopped: ${ended}`, todo: "Claude's sign-in has expired: run claude, then /login, and run again." };
     default:
       return { text: `The run is over: ${ended}` };
   }
@@ -672,6 +674,8 @@ function endScreenRu(ended: string, stop: StopKind | null | undefined): { text: 
       return { text: `Игра остановлена: ${why}`, todo: "Всё сыгранное сохранено. Запустите игру снова, когда лимит обновится." };
     case "offline":
       return { text: `Игра остановлена: ${why}`, todo: "Всё сыгранное сохранено. Проверьте интернет и запустите игру снова." };
+    case "login":
+      return { text: `Игра остановлена: ${why}`, todo: "Всё сыгранное сохранено. Войдите в Claude снова и запустите игру." };
     default:
       return { text: `${UI_WORDS.ru.runOver}: ${why}` };
   }
