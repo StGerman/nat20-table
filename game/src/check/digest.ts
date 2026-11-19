@@ -3,7 +3,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { REPO } from "../paths.ts";
+import { checkBinary, engineEnv, REPO } from "../paths.ts";
 
 /** The digest's file in the run folder. */
 export const NARRATION_DIGEST = "narration-digest.jsonl";
@@ -92,14 +92,14 @@ export function readDigest(dir: string): DigestRun {
 
 /**
  * Runs `nat20-digest` over a run folder; it writes the digest, and fails (still writing it) on a
- * replay divergence. `$NAT20_DIGEST` names a built binary (CI's ts job has no Rust toolchain);
- * otherwise cargo builds and runs it.
+ * replay divergence. `$NAT20_DIGEST` names a built binary (CI's ts job has no Rust toolchain), else
+ * a fetched engine's (CON-19); otherwise cargo builds and runs it.
  */
 export function runDigest(pack: string, dir: string): { ok: boolean; output: string } {
   const args = ["--pack", pack, dir];
-  const binary = process.env.NAT20_DIGEST;
+  const binary = process.env.NAT20_DIGEST || checkBinary("nat20-digest");
   const run = binary
-    ? spawnSync(binary, args, { cwd: REPO, encoding: "utf8" })
+    ? spawnSync(binary, args, { cwd: REPO, encoding: "utf8", env: { ...process.env, ...engineEnv() } })
     : spawnSync("cargo", ["run", "--quiet", "-p", "nat20-duel", "--bin", "nat20-digest", "--", ...args], { cwd: REPO, encoding: "utf8" });
   if (run.error) return { ok: false, output: `nat20-digest didn't run: ${run.error.message}` };
   return { ok: run.status === 0 && existsSync(path.join(dir, NARRATION_DIGEST)), output: `${run.stdout}${run.stderr}`.trim() };

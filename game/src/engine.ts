@@ -5,7 +5,7 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { EngineClient, type Command, type Event, type Response, type Roster, type Site, type Viewer } from "@nat20-table/engine-client";
-import { engineBinary } from "./paths.ts";
+import { engineBinary, engineEnv } from "./paths.ts";
 
 export { engineBinary, REPO } from "./paths.ts";
 
@@ -51,7 +51,7 @@ export class GameEngine {
 
   /** Starts the engine on a pack and opens a session. */
   static async start(start: EngineStart): Promise<GameEngine> {
-    const env: Record<string, string> = { NAT20_DATA_DIR: path.resolve(start.pack) };
+    const env: Record<string, string> = { ...engineEnv(), NAT20_DATA_DIR: path.resolve(start.pack) };
     if (start.pregens) env.NAT20_PREGENS_DIR = path.resolve(start.pregens);
     const client = await EngineClient.start(start.binary ?? engineBinary(), {
       env,
