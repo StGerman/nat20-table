@@ -21,6 +21,7 @@ const coreRoot = path.resolve(path.dirname(core.manifest_path), '..');
 const coreRev = /#([0-9a-f]{40})/.exec(core.id)?.[1] ?? /#([0-9a-f]{40})/.exec(core.source ?? '')?.[1] ?? 'unknown';
 const contract = /CONTRACT_VERSION: &str = "([^"]+)"/.exec(readFileSync(path.join(REPO, 'crates/nat20-api-contract/src/lib.rs'), 'utf8'))?.[1] ?? 'unknown';
 
+mkdirSync(path.dirname(out), { recursive: true });
 const stage = mkdtempSync(path.join(tmpdir(), 'nat20-engine-'));
 mkdirSync(path.join(stage, 'bin'));
 for (const bin of ['nat20-api-server', 'nat20-audit', 'nat20-digest']) cpSync(path.join(REPO, 'target/release', bin), path.join(stage, 'bin', bin));
