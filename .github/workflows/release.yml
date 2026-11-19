@@ -12,8 +12,13 @@ on:
     paths:
       - .github/workflows/release.yml
       - tools/release/**
+      - package.json
       - game/src/paths.ts
+      - game/src/engine.ts
       - game/src/play/engine-fetch.ts
+      - game/src/play/preflight.ts
+      - game/src/play/run.ts
+      - game/src/check/digest.ts
   workflow_dispatch:
 
 permissions:
@@ -28,8 +33,6 @@ jobs:
     name: engine (darwin-arm64)
     runs-on: macos-15
     timeout-minutes: 45
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Rust release pinned in rust-toolchain.toml
@@ -54,12 +57,32 @@ jobs:
           npm run engine:fetch -- --file "$RUNNER_TEMP/dist/$ASSET"
           npm run play:scene -- --dm scripted --players scripted --no-upload
           node -e 'const fs=require("fs");const d=fs.readdirSync("runs").map(n=>"runs/"+n)[0];const a=JSON.parse(fs.readFileSync(d+"/audit.json","utf8"));console.log(a.output);if(!a.passed)process.exit(1)'
-      - name: Publish the release
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: startsWith(github.ref, 'refs/tags/play-')
+        with:
+          name: engine
+          path: ${{ runner.temp }}/dist/
+          retention-days: 1
+
+  # Only this job can write, and it runs no code from the checkout: it uploads what the engine job built and proved.
+  publish:
+    name: publish
+    needs: engine
+    if: startsWith(github.ref, 'refs/tags/play-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: engine
+          path: dist
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG" "$RUNNER_TEMP/dist/$ASSET" "$RUNNER_TEMP/dist/$ASSET.sha256" \
+          gh release create "$TAG" "dist/$ASSET" "dist/$ASSET.sha256" --repo "$GITHUB_REPOSITORY" \
             --verify-tag --title "$TAG" \
             --notes "Engine binaries for Apple Silicon Macs, built from $GITHUB_SHA. Check out this tag, then: npm ci && npm run engine:fetch. See the README, Play it."

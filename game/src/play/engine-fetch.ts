@@ -50,7 +50,8 @@ if (values.file) {
   tarball = readFileSync(values.file);
   from = values.file;
   const sums = `${values.file}.sha256`;
-  if (existsSync(sums) && createHash("sha256").update(tarball).digest("hex") !== expectedSha(readFileSync(sums, "utf8"))) fail(`${values.file} doesn't match ${sums}.`);
+  if (!existsSync(sums)) fail(`${sums} is missing: the archive is unpacked only beside its checksum.`);
+  if (createHash("sha256").update(tarball).digest("hex") !== expectedSha(readFileSync(sums, "utf8"))) fail(`${values.file} doesn't match ${sums}.`);
 } else {
   if (process.platform !== "darwin" || process.arch !== "arm64") fail(`The released engine is built for Apple Silicon Macs; this is ${process.platform}-${process.arch}. Build it with cargo instead: cargo build --release -p nat20-api-server.`);
   const tag = await releaseTag(values.tag);
@@ -73,18 +74,24 @@ if (tar.status !== 0) {
   rmSync(work, { recursive: true, force: true });
   fail(`Couldn't unpack the engine: ${tar.stderr.trim()}`);
 }
-if (!existsSync(path.join(work, "bin/nat20-api-server"))) {
+// Everything is checked in the new folder before the old engine goes.
+let made: { table_commit: string; core_rev: string } | undefined;
+try {
+  made = JSON.parse(readFileSync(path.join(work, "engine.json"), "utf8")) as { table_commit: string; core_rev: string };
+} catch {
+  // Reported below.
+}
+if (!existsSync(path.join(work, "bin/nat20-api-server")) || typeof made?.table_commit !== "string" || typeof made.core_rev !== "string") {
   rmSync(work, { recursive: true, force: true });
-  fail(`The archive has no bin/nat20-api-server.`);
+  fail("The archive is not a released engine: it needs bin/nat20-api-server and engine.json. The engine already here is untouched.");
 }
 rmSync(PREBUILT_DIR, { recursive: true, force: true });
 renameSync(work, PREBUILT_DIR);
 
-const made = JSON.parse(readFileSync(path.join(PREBUILT_DIR, "engine.json"), "utf8")) as { table_commit: string; core_rev: string };
-console.log(`The engine from ${from} is in ${path.relative(REPO, PREBUILT_DIR)}/: built from ${made.table_commit.slice(0, 7)}, core ${made.core_rev.slice(0, 7)}.`);
+console.log(`The engine from ${from} is in ${path.relative(REPO, PREBUILT_DIR)}/: built from ${made!.table_commit.slice(0, 7)}, core ${made!.core_rev.slice(0, 7)}.`);
 const head = git("rev-parse", "HEAD");
-if (head && head !== made.table_commit) {
-  console.log(`This checkout is at ${head.slice(0, 7)}, not ${made.table_commit.slice(0, 7)}. If the engine refuses to start, check out the release's commit: git checkout ${made.table_commit.slice(0, 7)}.`);
+if (head && head !== made!.table_commit) {
+  console.log(`This checkout is at ${head.slice(0, 7)}, not ${made!.table_commit.slice(0, 7)}. If the engine refuses to start, check out the release's commit: git checkout ${made!.table_commit.slice(0, 7)}.`);
 }
 if (existsSync(path.join(REPO, "target/release/nat20-api-server")) || existsSync(path.join(REPO, "target/debug/nat20-api-server"))) {
   console.log("This checkout also has a cargo build, which the runs prefer; NAT20_ENGINE_BUILD=prebuilt runs the fetched engine instead.");

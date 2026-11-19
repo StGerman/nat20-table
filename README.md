@@ -13,7 +13,7 @@ An AI-run D&D 5e table (2024 rules, SRD 5.2.1): an AI DM and AI players, plus on
 
 On an Apple Silicon Mac, with no Rust toolchain:
 
-1. Install Node 22 (`brew install node@22`) and Claude Code (`npm install -g @anthropic-ai/claude-code`), then run `claude` and sign in with your own Claude plan. The agents run on that login, never on an API key: a run refuses to start while `ANTHROPIC_API_KEY` is set.
+1. Install Node 22.6 or later (`brew install node`, or the installer from nodejs.org) and Claude Code (`npm install -g @anthropic-ai/claude-code`), then run `claude` and sign in with your own Claude plan. The agents run on that login, never on an API key: a run refuses to start while `ANTHROPIC_API_KEY` is set.
 2. Clone and fetch the engine from the latest release:
    ```bash
    git clone https://github.com/StGerman/nat20-table && cd nat20-table
