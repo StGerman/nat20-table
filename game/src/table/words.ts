@@ -349,7 +349,7 @@ function endedRu(reason: string, stop: StopKind | undefined): string {
       return "сбой программы; всё сыгранное сохранено";
     case undefined:
       if (/escort contract is done/.test(reason)) return "подряд выполнен, обоз дошёл";
-      if (/adventure is over/.test(reason)) return "приключение окончено";
+      if (/adventure is over/.test(reason)) return "история подошла к концу";
       if (/day limit/.test(reason)) return "последний день игры прошёл";
       if (/stops before/.test(reason)) return "игра кончается перед следующей сценой";
       return "игра окончена";

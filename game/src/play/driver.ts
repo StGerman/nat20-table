@@ -28,7 +28,8 @@
 // --rosters DIR, --suggest-model (AGT-49: the model that suggests the human's moves out of a fight
 // at the terminal, Haiku by default), --no-suggest (no suggestions; `/suggest` toggles them in play),
 // --describe-model, --no-describe (AGT-127: the person card's look in the hero's words, Haiku by default).
-import { UI_WORDS } from "../table/words.ts";
+import { plural } from "../table/plural.ts";
+import { SEAT_WORDS, UI_WORDS } from "../table/words.ts";
 import { spawn, type ChildProcess } from "node:child_process";
 import { appendFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -470,7 +471,9 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const who = (kind: string | undefined, choice: { model: string; effort: string }) => (kind === "scripted" ? "scripted" : `${choice.model} (${choice.effort})`);
   const playing = (text: string) => (ink ? ink.note(text) : console.log(text));
   playing(
-    `Playing ${played.join(", ")} of ${pack.adventure.title} (seed ${engine.seed}${settings.profile ? `, profile ${settings.profile.name}` : ""}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human ? `${party.human} ${ink ? "played by you" : "scripted"}` : "no human"}. Run folder ${path.relative(process.cwd(), runDir)}/.`,
+    language === "ru"
+      ? playingRu({ title: pack.adventure.title_ru ?? pack.adventure.title, scenes: played.length, ai: party.ai.map((h) => seatNames.who(h)), human: party.human ? { name: seatNames.who(party.human), you: Boolean(ink) } : undefined, dmModel: flags.dm !== "scripted", playersModel: flags.players !== "scripted" })
+      : `Playing ${played.join(", ")} of ${pack.adventure.title} (seed ${engine.seed}${settings.profile ? `, profile ${settings.profile.name}` : ""}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human ? `${party.human} ${ink ? "played by you" : "scripted"}` : "no human"}. Run folder ${path.relative(process.cwd(), runDir)}/.`,
   );
   ink?.busy(undefined);
   let run: RunReport | undefined;
@@ -492,8 +495,9 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const endedText = run?.ended ?? (failure instanceof Error ? `the run failed: ${failure.message}` : String(failure));
   // The end screen (AGT-69 step 4): the table stays up while the post-run checks run, until they
   // finish or a key is pressed; the run's output then prints on the normal screen as before.
-  const checks = [...(flags["no-audit"] ? [] : [CHECK_AUDIT, CHECK_NARRATION]), CHECK_REPORT, ...(flags["no-upload"] && !flags.zip ? [] : [CHECK_UPLOAD])];
-  ink?.finish(endScreen(endedText, stop), checks);
+  const named = CHECK_NAMES[language];
+  const checks = [...(flags["no-audit"] ? [] : [named.audit, named.narration]), named.report, ...(flags["no-upload"] && !flags.zip ? [] : [named.upload])];
+  ink?.finish(endScreen(endedText, stop, language), checks);
   void ink?.left.then(() => ink.stop());
   // A breath for the screen to draw a step before work that blocks the event loop (the audit, the report, the upload).
   const breath = () => (ink ? new Promise((resolve) => setTimeout(resolve, 30)) : Promise.resolve());
@@ -533,12 +537,12 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   if (run?.suggestedCards) writeFileSync(path.join(runDir, SUGGESTED_CARDS), JSON.stringify(run.suggestedCards, null, 2) + "\n");
 
   // The post-run stages (design §3.3): each reads the folder and writes its own file.
-  const checked = flags["no-audit"] ? undefined : await checking(CHECK_AUDIT, () => audit(flags.pack, runDir));
-  if (checked && !checked.passed) ink?.check(CHECK_AUDIT, "failed");
+  const checked = flags["no-audit"] ? undefined : await checking(named.audit, () => audit(flags.pack, runDir));
+  if (checked && !checked.passed) ink?.check(named.audit, "failed");
   if (checked) writeFileSync(path.join(runDir, AUDIT_JSON), JSON.stringify(checked, null, 2) + "\n");
   // The narration check (AGT-9): a run with a scripted DM has nothing a model judge should read.
-  const narration = flags["no-audit"] ? undefined : await checking(CHECK_NARRATION, () => narrationCheck(flags.pack, runDir, flags.dm === "model" ? modelJudgeFor(runDir) : new ScriptedJudge()));
-  ink?.check(CHECK_REPORT, "running");
+  const narration = flags["no-audit"] ? undefined : await checking(named.narration, () => narrationCheck(flags.pack, runDir, flags.dm === "model" ? modelJudgeFor(runDir) : new ScriptedJudge()));
+  ink?.check(named.report, "running");
   await breath();
   // The judge's turns; at most 10 s if Langfuse does not answer.
   await tracer?.flush();
@@ -576,9 +580,9 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const name = path.basename(runDir);
   const written = `Written to ${folder}/. Send ${record.bench ? BENCH_MD : "report.md"} back to the thread, or the whole folder zipped: (cd ${JSON.stringify(path.dirname(folder))} && zip -qr ${name}.zip ${name})`;
   const verdictLine = `Verdict: ${verdict.verdict}: ${verdict.why}`;
-  ink?.check(CHECK_REPORT, "done");
+  ink?.check(named.report, "done");
   // Last, so a slow or failed push never holds back the record or the verdict.
-  const uploaded = flags["no-upload"] && !flags.zip ? [] : await checking(CHECK_UPLOAD, () => uploadStage(runDir, flags));
+  const uploaded = flags["no-upload"] && !flags.zip ? [] : await checking(named.upload, () => uploadStage(runDir, flags));
   if (ink) {
     ink.stop();
     console.log(usageLines);
@@ -604,17 +608,19 @@ export function rosterReport(r: NonNullable<RunRecord["roster"]>): string {
   return `Roster: ${started}; ${ended}`;
 }
 
-const CHECK_AUDIT = "Audit: every roll against the engine log";
-const CHECK_NARRATION = "Narration check";
-const CHECK_REPORT = "Report and verdict";
-const CHECK_UPLOAD = "Upload";
+/** The post-run checks as the end screen names them, in the seat's language (AGT-136). */
+export const CHECK_NAMES: Record<Language, { audit: string; narration: string; report: string; upload: string }> = {
+  en: { audit: "Audit: every roll against the engine log", narration: "Narration check", report: "Report and verdict", upload: "Upload" },
+  ru: { audit: "Проверяем, что все броски кубиков сделала программа", narration: "Проверяем, что рассказчик не отступил от правил игры", report: "Готовим отчёт для автора игры", upload: "Отправляем запись игры" },
+};
 
 /**
  * How the end screen says the run ended (screens 12 and 13): the end of the adventure, a quit and
  * the time limit read as an end; a crash, a stall, the subscription's limit and going offline as
  * a stop, with one line on what to do.
  */
-export function endScreen(ended: string, stop: StopKind | null | undefined): { text: string; todo?: string } {
+export function endScreen(ended: string, stop: StopKind | null | undefined, language: Language = "en"): { text: string; todo?: string } {
+  if (language === "ru") return endScreenRu(ended, stop);
   switch (stop) {
     case "crash":
       return { text: `Stopped: ${ended}`, todo: "The run folder keeps everything so far: send engine-stderr.log and report.md back to the thread." };
@@ -626,6 +632,48 @@ export function endScreen(ended: string, stop: StopKind | null | undefined): { t
       return { text: `Stopped: ${ended}`, todo: "Claude couldn't be reached: check the network and run again." };
     default:
       return { text: `The run is over: ${ended}` };
+  }
+}
+
+/**
+ * The note a Russian seat opens with (AGT-136): what is played and who plays it, in a player's words.
+ * The seed, the models and the run folder stay in `run.json` and the report (Vera, 2026-11-19).
+ */
+export function playingRu(p: { title: string; scenes: number; ai: string[]; human?: { name: string; you: boolean }; dmModel: boolean; playersModel: boolean }): string {
+  const scenes = plural(p.scenes, "сцена", "сцены", "сцен");
+  const claude = [...(p.dmModel ? ["Рассказчика"] : []), ...(p.playersModel ? p.ai.map(accusative) : [])];
+  const you = p.human?.you ? ` Вы — ${p.human.name}.` : "";
+  return `Играем «${p.title}», ${scenes}.${you}${claude.length ? ` За ${joinedRu(claude)} играет Claude.` : ""}`;
+}
+
+/** «Торва, Марен и Ильза». */
+function joinedRu(names: string[]): string {
+  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} и ${names.at(-1)}`;
+}
+
+/** A party name after «за»: the feminine «-а» names take «-у» (Торва → Торву); the rest stay. */
+function accusative(name: string): string {
+  return /[^ео]а$/.test(name) ? `${name.slice(0, -1)}у` : name;
+}
+
+/**
+ * The end screen at a Russian seat (AGT-136): the end in the words the story's last line already
+ * used (`SEAT_WORDS.ru.ended`), so it is said once; a stop with what to do, in Russian.
+ */
+function endScreenRu(ended: string, stop: StopKind | null | undefined): { text: string; todo?: string } {
+  const why = SEAT_WORDS.ru.ended(ended, stop ?? undefined);
+  const send = (files: string) => `Если хотите помочь, отправьте автору игры ${files} из папки этой игры.`;
+  switch (stop) {
+    case "crash":
+      return { text: `Игра остановлена: ${why}`, todo: send("файлы engine-stderr.log и report.md") };
+    case "stalled":
+      return { text: `Игра остановлена: ${why}`, todo: `Всё сыгранное сохранено. ${send("файл report.md")}` };
+    case "usage_limit":
+      return { text: `Игра остановлена: ${why}`, todo: "Всё сыгранное сохранено. Запустите игру снова, когда лимит обновится." };
+    case "offline":
+      return { text: `Игра остановлена: ${why}`, todo: "Всё сыгранное сохранено. Проверьте интернет и запустите игру снова." };
+    default:
+      return { text: `${UI_WORDS.ru.runOver}: ${why}` };
   }
 }
 

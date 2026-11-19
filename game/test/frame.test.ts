@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
-import { endScreen } from "../src/play/driver.ts";
+import { CHECK_NAMES, endScreen, playingRu } from "../src/play/driver.ts";
 import { finaleRows, InkSeat, mouseIn, SPINNER } from "../src/ui/ink-seat.ts";
 import { actionRows, freshText, headerText, maxOffset, page, storyCell, storyRows, storyWindow, type StoryRow } from "../src/ui/frame.ts";
 import type { Line } from "../src/ui/lines.ts";
@@ -408,6 +408,28 @@ test("the end screen says how the run ended, and a stop what to do, with the che
   // Animated, the running check turns the table's spinner instead of "…".
   const turning = (frame: number) => finaleRows({ ...crash, checks: [{ name: "Narration check", state: "running" }] }, 72, false, frame).map(rowText).at(-1);
   assert.deepEqual([turning(0), turning(1)], [`${SPINNER[0]} Narration check`, `${SPINNER[1]} Narration check`]);
+});
+
+test("at a Russian seat the end screen, its checks and the opening note are Russian, and the end is said once (AGT-136)", () => {
+  const latin = /[A-Za-z]{3,}/;
+  // The story's last line at a Russian seat (lines.ts) is the same words, so finaleRows says it once.
+  const over = endScreen("the adventure is over", undefined, "ru");
+  assert.deepEqual(over, { text: "Игра окончена: история подошла к концу" });
+  assert.deepEqual(endScreen("the escort contract is done", undefined, "ru"), { text: "Игра окончена: подряд выполнен, обоз дошёл" });
+  assert.equal(finaleRows({ ...over, checks: [] }, 72, true).filter((r) => rowText(r).includes("к концу")).length, 0);
+  for (const stop of ["crash", "stalled", "usage_limit", "offline", "operator", "time_limit", "login"] as const) {
+    const screen = endScreen("the loop failed: boom", stop, "ru");
+    assert.ok(!latin.test(screen.text), `${stop}: ${screen.text}`);
+    assert.ok(!latin.test((screen.todo ?? "").replace(/engine-stderr\.log|report\.md|Claude/g, "")), `${stop}: ${screen.todo}`);
+    assert.ok(!/тред|на сейчас/.test(screen.todo ?? ""), `${stop}: ${screen.todo}`);
+  }
+  for (const name of Object.values(CHECK_NAMES.ru)) assert.ok(!latin.test(name), name);
+  assert.deepEqual(Object.keys(CHECK_NAMES.ru), Object.keys(CHECK_NAMES.en));
+  // English stays as it was.
+  assert.deepEqual(endScreen("the human quit", "operator", "en"), endScreen("the human quit", "operator"));
+  const note = playingRu({ title: "Тихая мельница", scenes: 6, ai: ["Торва", "Марен"], human: { name: "Брен", you: true }, dmModel: true, playersModel: true });
+  assert.equal(note, "Играем «Тихая мельница», 6 сцен. Вы — Брен. За Рассказчика, Торву и Марен играет Claude.");
+  assert.equal(playingRu({ title: "Т", scenes: 1, ai: ["Торва"], dmModel: false, playersModel: false }), "Играем «Т», 1 сцена.");
 });
 
 test("at the end the table stays with the checks ticking in the action zone, and any key leaves", async () => {
