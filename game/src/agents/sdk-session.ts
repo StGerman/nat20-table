@@ -121,6 +121,8 @@ export function sessionOptions(config: SessionConfig, cwd: string): Options {
     // `skills` filter below limits it to those.
     tools: skills.length > 0 ? ["Skill"] : [],
     mcpServers: { [TOOL_SERVER]: server },
+    // Only the seat's own server: no project, user or plugin MCP config (AGT-134).
+    strictMcpConfig: true,
     allowedTools: [
       ...config.tools.map((tool) => `mcp__${TOOL_SERVER}__${tool.name}`),
       ...(skills.length > 0 ? ["Skill"] : []),
