@@ -10,10 +10,16 @@
  */
 const INHERITED_ENV = /^(PATH|HOME|USER|LOGNAME|SHELL|TERM|TMPDIR|LANG|LC_[A-Z]+|TZ|HTTPS?_PROXY|https?_proxy|NO_PROXY|no_proxy|NODE_EXTRA_CA_CERTS|SSL_CERT_FILE|SSL_CERT_DIR)$/;
 
-/** The environment for an agent's process: the allow-list above, plus the client name. */
+/**
+ * The environment for an agent's process: the allow-list above, plus the client name, and the
+ * owner's claude.ai connectors (Gmail, Calendar, ...) switched off. Under a subscription login the
+ * process fetches them after its first call and adds their tools mid-session: about 55k tokens
+ * written to the cache on a fresh session's second call, for tools no seat may use (AGT-134).
+ */
 export function agentEnv(parent: NodeJS.ProcessEnv): Record<string, string | undefined> {
   const env: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(parent)) if (INHERITED_ENV.test(key)) env[key] = value;
   env.CLAUDE_AGENT_SDK_CLIENT_APP = "nat20-table/0.1.0";
+  env.ENABLE_CLAUDEAI_MCP_SERVERS = "false";
   return env;
 }
