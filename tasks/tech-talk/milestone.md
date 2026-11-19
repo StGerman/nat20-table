@@ -14,7 +14,7 @@ Each row with its lowest layer (decision 0080):
 3. A `--lang ru` run shows no English line on its end screen: test, no model (AGT-136); Vera reads the new lines: a person (fallback)
 4. AGT-119 is fixed or found not to happen on main by a scripted walk through a night: test, no model
 5. AGT-134 holds on Stas's Mac: in one traced `play:card` and one `play:unattended` run, no fresh session's second call writes more than 20k tokens to the cache: a live run, then a person
-6. Three rehearsals of the stage segment (`play:card --card night_wolves --fight --rides tam --seat ink`) and one recorded full run, on the stage SHA: a person
+6. Three rehearsals of the stage segment (`play:card --card night_wolves --pack scenarios/fair_in_wend --roster allies --fight --rides tam --seat ink --lang ru`) and one recorded full run, on the stage SHA: a person
 7. A dress rehearsal on 2026-12-01 on the stage machine and screen, with the recording ready offline: a person
 
 # Tasks
