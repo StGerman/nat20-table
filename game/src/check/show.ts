@@ -114,5 +114,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
     console.error("usage: npm run audit:show -- <run-dir> [--roll rN] [--kind K] [--limit N]   (a run folder with transcript.jsonl and session-log.jsonl)");
     process.exit(2);
   }
-  console.log(auditPage(dir, { roll: values.roll, kind: values.kind, limit: Number(values.limit) }).join("\n"));
+  const limit = Number(values.limit);
+  if (!Number.isInteger(limit) || limit < 0) {
+    console.error(`--limit takes a whole number of rolls, 0 for all; not ${values.limit}.`);
+    process.exit(2);
+  }
+  console.log(auditPage(dir, { roll: values.roll, kind: values.kind, limit }).join("\n"));
 }
