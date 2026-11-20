@@ -5,7 +5,7 @@ title: "Play without Rust: engine binaries in a GitHub Release"
 pri: P1
 dest: Ours
 size: S
-state: partial
+state: done
 area: "11. Repo split and contract pipeline (system design, 2026-10-16)"
 ---
 
@@ -13,4 +13,4 @@ An engineer who clones the public repo cannot play without the pinned Rust toolc
 
 ## Status
 
-partial. The code, the `release` workflow and the README section are in the PR that sets this state; a clean clone with no Rust played a scripted scene to its end on a packed engine, audit included (in a Linux session, with the build checkout and the cargo cache moved away, 2026-11-19; the workflow repeats it on macOS arm64). Left: the first `play-*` tag on the stage SHA, which Stas pushes, and `npm run engine:fetch` from that release on a Mac. T0 of the build options (Stas, 2026-11-19 21:39Z): for engineers at the talk; a DMG comes later.
+done 2026-11-20. Code, the `release` workflow and the README section: table #450. Stas tagged `play-2026-12-02` on c249b2e and the workflow published the release (the macOS proof green, both assets up). The same day, on Stas's Mac, a fresh clone at that tag with no build ran `npm ci`, `npm run engine:fetch` from the release and a scripted `play:scene` to its end screen: build c249b2e, engine a17ac1f, darwin arm64, 114 rolls cited and logged, 0 problems, 0 leaks. T0 of the build options (Stas, 2026-11-19 21:39Z): for engineers at the talk; a DMG comes later.
