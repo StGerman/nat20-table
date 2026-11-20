@@ -85,6 +85,9 @@ test("the DM's prompt holds the rules, the craft guidance and the whole pack; it
   // the millstone", and the engine never moved him (TASKS.md AGT-53).
   assert.match(dm.systemPrompt, /No creature backs away, flees, ducks behind something or closes in unless the engine shows it moving: a hit alone moves nobody\./);
   assert.match(dm.systemPrompt, /in a fight only bren moves, on bren's turn/);
+  // Run full-2026-11-19T22-00-58-292Z: 79 of 160 DM calls were a closing summary after narrate
+  // ("Я рассказал, как..."), heard by nobody (AGT-137).
+  assert.match(dm.systemPrompt, /once your last tool call is done, stop: no closing words, no summary of what you narrated\./);
   for (const skill of craftSkills()) assert.ok(dm.systemPrompt.includes(skill.body), `the ${skill.name} craft text is in the prompt`);
   const options = sessionOptions({ agent: "dm", choice: CHOICE, systemPrompt: dm.systemPrompt, tools: dm.seatTools }, "/empty");
   assert.deepEqual(options.tools, []);
