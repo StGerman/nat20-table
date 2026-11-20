@@ -3,7 +3,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { REPO } from "../paths.ts";
+import { checkBinary, engineEnv, REPO } from "../paths.ts";
 
 /** The digest's file in the run folder. */
 export const NARRATION_DIGEST = "narration-digest.jsonl";
@@ -37,6 +37,15 @@ export interface DigestCreature {
   offered_surrender?: boolean;
 }
 
+/** A roster person as the digest lists them (AGT-109). */
+export interface DigestPerson {
+  id: string;
+  name: string;
+  names: string[];
+  alive: boolean;
+  place?: string;
+}
+
 /** What the engine held when the DM said one narration line (`nat20_duel::digest::Digest`). */
 export interface DigestRecord {
   line: number;
@@ -50,6 +59,10 @@ export interface DigestRecord {
   combat_over: boolean;
   creatures: DigestCreature[];
   fled: string[];
+  /** The running fight's participants, or the last fight's while it has just ended; empty out of a fight (AGT-106). An older digest has none. */
+  fight?: string[];
+  /** The world's people with every form of each name, alive or not, and where the engine has them (AGT-109); none outside a living world. */
+  people?: DigestPerson[];
   adjacent: Array<[string, string]>;
   nearest_foe_ft: Array<[string, number]>;
   foes_ft: Record<string, Record<string, number>>;
@@ -79,14 +92,14 @@ export function readDigest(dir: string): DigestRun {
 
 /**
  * Runs `nat20-digest` over a run folder; it writes the digest, and fails (still writing it) on a
- * replay divergence. `$NAT20_DIGEST` names a built binary (CI's ts job has no Rust toolchain);
- * otherwise cargo builds and runs it.
+ * replay divergence. `$NAT20_DIGEST` names a built binary (CI's ts job has no Rust toolchain), else
+ * a fetched engine's (CON-19); otherwise cargo builds and runs it.
  */
 export function runDigest(pack: string, dir: string): { ok: boolean; output: string } {
   const args = ["--pack", pack, dir];
-  const binary = process.env.NAT20_DIGEST;
+  const binary = process.env.NAT20_DIGEST || checkBinary("nat20-digest");
   const run = binary
-    ? spawnSync(binary, args, { cwd: REPO, encoding: "utf8" })
+    ? spawnSync(binary, args, { cwd: REPO, encoding: "utf8", env: { ...process.env, ...engineEnv() } })
     : spawnSync("cargo", ["run", "--quiet", "-p", "nat20-duel", "--bin", "nat20-digest", "--", ...args], { cwd: REPO, encoding: "utf8" });
   if (run.error) return { ok: false, output: `nat20-digest didn't run: ${run.error.message}` };
   return { ok: run.status === 0 && existsSync(path.join(dir, NARRATION_DIGEST)), output: `${run.stdout}${run.stderr}`.trim() };

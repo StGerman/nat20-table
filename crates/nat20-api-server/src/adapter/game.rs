@@ -46,9 +46,8 @@ use nat20_core::{
         action_prompt::{ActionData, ActionPromptKind},
         encounter::EncounterId,
         engine_state::EngineState,
-        event::{Event as EngineEvent, EventKind as EngineKind},
-        geometry::{WorldGeometry, WorldPath},
-        prompt::PromptScopeId,
+        event::{EventKind as EngineKind, EventScope},
+        geometry::{WorldGeometry, WorldGeometrySource, WorldPath},
     },
     registry::registry::ItemsRegistry,
     systems::{
@@ -152,6 +151,9 @@ struct Scene {
     placed: BTreeSet<String>,
     /// Pregen files of the spawns' characters, read with the scene.
     pregens: HashMap<String, PregenFile>,
+    /// The allies a card's wagon fight took (ENG-48, rule A1): party creatures that play the
+    /// `hold` policy and never count as a conscious party creature. Gone with the scene.
+    allies: HashSet<Entity>,
 }
 
 /// What `request_check` returns: the roll's local key, its total and whether it succeeded.
@@ -299,7 +301,6 @@ pub struct Game {
     hp: HpTracker,
     keys: RollKeys,
     global_seen: usize,
-    encounter_seen: usize,
     /// Set when combat ended by itself: the side left standing, if any.
     winner: Option<Option<Side>>,
     scripted_turn: Option<(usize, Entity, usize)>,
@@ -543,7 +544,7 @@ impl Game {
         if let Some(id) = game.encounter.take()
             && game.engine.encounter(&id).is_some()
         {
-            game.engine.end_encounter(&id);
+            systems::combat::end_encounter(&mut game.engine, &id);
         }
         game.stand_up();
         // Ten minutes pass between scenes (decision D9): a round of turns for every 6 seconds,
@@ -634,9 +635,9 @@ impl Game {
             spawns: scene.spawns.clone(),
             placed: BTreeSet::new(),
             pregens,
+            allies: HashSet::new(),
         };
         game.scene_encounter = None;
-        game.encounter_seen = 0;
         game.winner = None;
         game.scripted_turn = None;
         game.spawn_round = 0;
@@ -663,6 +664,7 @@ impl Game {
                 spawns: Vec::new(),
                 placed: BTreeSet::new(),
                 pregens: HashMap::new(),
+                allies: HashSet::new(),
             },
             encounter: None,
             scene_encounter: None,
@@ -670,7 +672,6 @@ impl Game {
             hp: HpTracker::new(),
             keys: RollKeys::default(),
             global_seen: 0,
-            encounter_seen: 0,
             winner: None,
             scripted_turn: None,
             flags: BTreeSet::new(),
@@ -1923,6 +1924,16 @@ impl Game {
     /// surprised side with Disadvantage, and runs scripted turns until a client decides.
     /// Participants not in the scene are left out.
     pub fn start_combat(&mut self, encounter_id: &str) -> Result<(), ApiError> {
+        self.start_combat_surprised(encounter_id, None)
+    }
+
+    /// `start_combat`, with `surprised` rolling Initiative with Disadvantage whatever the
+    /// scene's own surprise says (a card's surprised fight, ENG-47).
+    fn start_combat_surprised(
+        &mut self,
+        encounter_id: &str,
+        surprised: Option<Side>,
+    ) -> Result<(), ApiError> {
         if self.running_encounter().is_some() {
             return Err(error(ErrorCode::WrongMode, "Combat is already running."));
         }
@@ -1964,15 +1975,20 @@ impl Game {
             .collect();
         // The surprised side rolls initiative with Disadvantage once the scene's flag is set
         // (decision D4, SRD 5.2.1 Surprise).
-        let surprised_side: Option<Side> = found
-            .surprise
-            .as_ref()
-            .filter(|surprise| self.flags.contains(&surprise.when_flag))
-            .map(|surprise| surprise.surprised);
+        let surprised_side: Option<Side> = surprised.or_else(|| {
+            found
+                .surprise
+                .as_ref()
+                .filter(|surprise| self.flags.contains(&surprise.when_flag))
+                .map(|surprise| surprise.surprised)
+        });
+        // An ally never counts as a conscious party creature (rule A5).
         let standing = |side: Side| {
             arriving_sides.contains(&side)
                 || entities.iter().any(|e| {
-                    self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
+                    self.side_of(*e) == Some(side)
+                        && !self.scene.allies.contains(e)
+                        && life_state_name(&self.engine, *e) == "normal"
                 })
         };
         if !standing(Side::Party) || !standing(Side::Hostile) {
@@ -1991,13 +2007,14 @@ impl Game {
             .copied()
             .filter(|e| surprised_side.is_some() && self.side_of(*e) == surprised_side)
             .collect();
-        let encounter = self
-            .engine
-            .start_surprised_encounter(entities.into_iter().collect(), surprised);
+        let encounter = systems::combat::start_surprised_encounter(
+            &mut self.engine,
+            entities.into_iter().collect(),
+            surprised,
+        );
         self.encounter = Some(encounter);
         self.scene_encounter = Some(encounter_id.to_owned());
         self.scene.fought.insert(encounter_id.to_owned());
-        self.encounter_seen = 0;
         self.winner = None;
         self.scripted_turn = None;
         self.drain();
@@ -2011,6 +2028,17 @@ impl Game {
     /// early end, added to the scene's encounters so the DM's view and `end_combat` treat it
     /// like any other.
     pub fn start_fight(&mut self, participants: &[Handle]) -> Result<(), ApiError> {
+        self.start_fight_surprised(participants, None)
+    }
+
+    /// `start_fight` with the `surprised` side rolling Initiative with Disadvantage (SRD 5.2.1,
+    /// Surprise): a card's fight whose monsters are caught unready (ENG-47). Only the server
+    /// starts one; the wire's `start_fight` has no surprise.
+    pub fn start_fight_surprised(
+        &mut self,
+        participants: &[Handle],
+        surprised: Option<Side>,
+    ) -> Result<(), ApiError> {
         if self.running_encounter().is_some() {
             return Err(error(ErrorCode::WrongMode, "Combat is already running."));
         }
@@ -2055,9 +2083,15 @@ impl Game {
         }
         // A neutral in the fight is the one attacked, or the one attacking (API-60): it turns
         // hostile, so it counts as hostile here.
+        // An ally is on no side here (rule A5): the party side needs a Blade.
         let sides: Vec<Option<Side>> = participants
             .iter()
-            .map(|h| self.entity(&h.0).ok().and_then(|e| self.side_of(e)))
+            .map(|h| {
+                self.entity(&h.0)
+                    .ok()
+                    .filter(|e| !self.scene.allies.contains(e))
+                    .and_then(|e| self.side_of(e))
+            })
             .map(|side| match side {
                 Some(Side::Neutral) => Some(Side::Hostile),
                 other => other,
@@ -2085,7 +2119,7 @@ impl Game {
             end_reasons: Vec::new(),
             on_end: Vec::new(),
         });
-        let started = self.start_combat(&id);
+        let started = self.start_combat_surprised(&id, surprised);
         if started.is_err() {
             self.scene.encounters.pop();
         }
@@ -2301,7 +2335,7 @@ impl Game {
     fn join_running_fight(&mut self, entities: &[Entity]) {
         if let Some(encounter) = self.running_encounter() {
             for entity in entities {
-                self.engine.join_encounter(&encounter, *entity);
+                systems::combat::join_encounter(&mut self.engine, &encounter, *entity);
             }
             self.log_joined_initiative(entities);
         }
@@ -2438,6 +2472,71 @@ impl Game {
         });
         self.join_running_fight(&placed);
         Ok(())
+    }
+
+    /// Places an ally for a card's wagon fight (ENG-48, rules A1 and A3): on the party side at
+    /// `anchor`, playing `hold`.
+    pub fn place_ally(
+        &mut self,
+        handle: &Handle,
+        monster: &str,
+        anchor: &str,
+        name: Option<&str>,
+    ) -> Result<(), ApiError> {
+        self.place_creature(
+            handle,
+            monster,
+            Side::Party,
+            &Placement::Anchor {
+                anchor: anchor.to_owned(),
+            },
+            name,
+            None,
+        )?;
+        self.make_ally(&handle.0)
+    }
+
+    /// A creature already in the scene joins a wagon fight as an ally (rule A10): one creature,
+    /// on the party side from now on, playing `hold`.
+    pub fn make_ally(&mut self, handle: &str) -> Result<(), ApiError> {
+        let entity = self.entity(handle)?;
+        // One left down by an earlier fight here sits this one out, as a downed Blade would.
+        if life_state_name(&self.engine, entity) != "normal" {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!("{handle} is down, so they sit this fight out."),
+            ));
+        }
+        let Some(index) = self.scene.creatures.iter().position(|c| c.entity == entity) else {
+            return Err(error(
+                ErrorCode::BadRequest,
+                format!("{handle} is not here."),
+            ));
+        };
+        if self.scene.creatures[index].side != Side::Party {
+            self.scene.creatures[index].side = Side::Party;
+            let ally = self.scene.creatures[index].clone();
+            let others: Vec<SceneCreature> = self
+                .scene
+                .creatures
+                .iter()
+                .filter(|c| c.entity != entity)
+                .cloned()
+                .collect();
+            for other in &others {
+                self.align_attitudes(&ally, other);
+            }
+        }
+        self.scene.allies.insert(entity);
+        Ok(())
+    }
+
+    /// The scene's anchor `id`, or its first when it has none by that id (rule A3); none for a
+    /// scene with no anchor.
+    pub fn anchor_or_first(&self, id: Option<&str>) -> Option<String> {
+        id.and_then(|id| self.scene.anchors.iter().find(|a| a.id == id))
+            .or_else(|| self.scene.anchors.first())
+            .map(|a| a.id.clone())
     }
 
     /// Places the round spawns due since the last look, unless their `unless` holds then.
@@ -2653,7 +2752,7 @@ impl Game {
             self.pending
                 .push(Pending::public(round, EventKind::Fled { handles }));
         }
-        self.engine.end_encounter(&core_id);
+        systems::combat::end_encounter(&mut self.engine, &core_id);
         self.drain();
         // The creatures that ran have left the scene (Milestone 5 spec D11).
         for entity in &fleeing {
@@ -2812,9 +2911,9 @@ impl Game {
                     continue;
                 };
                 match id.id() {
-                    "resource.action" => budget.action = uses.current_uses,
-                    "resource.bonus_action" => budget.bonus_action = uses.current_uses,
-                    "resource.reaction" => budget.reaction = uses.current_uses,
+                    "resource.action" => budget.action = uses.current_uses(),
+                    "resource.bonus_action" => budget.bonus_action = uses.current_uses(),
+                    "resource.reaction" => budget.reaction = uses.current_uses(),
                     _ => {}
                 }
             }
@@ -3229,7 +3328,7 @@ impl Game {
     pub fn end_turn(&mut self, actor: &str) -> Result<(), ApiError> {
         let entity = self.entity(actor)?;
         self.require_action_prompt(entity)?;
-        self.engine.end_turn(entity);
+        systems::combat::end_turn(&mut self.engine, entity);
         self.settle();
         self.drain();
         self.advance();
@@ -3468,7 +3567,7 @@ impl Game {
                         action: action_id.to_string(),
                         name,
                         summary: names::option_summary(action_id, context),
-                        cost: action_cost(&cost.map),
+                        cost: action_cost(cost),
                         targeting,
                         max_targets,
                         range_ft: match &area {
@@ -3711,7 +3810,7 @@ impl Game {
     /// rolled (TASKS CHK-6).
     fn decline_explore_reactions(&mut self) {
         for _ in 0..MAX_SCRIPTED_STEPS {
-            let Some(prompt) = self.engine.next_prompt(PromptScopeId::Global) else {
+            let Some(prompt) = self.engine.next_prompt(EventScope::Global) else {
                 return;
             };
             let ActionPromptKind::Reactions { options, .. } = &prompt.kind else {
@@ -3797,13 +3896,13 @@ impl Game {
             // A reaction window out of combat (Tactical Mind after a failed check) holds the
             // action that opened it until someone declines it.
             let reaction = engine
-                .next_prompt(PromptScopeId::Global)
+                .next_prompt(EventScope::Global)
                 .is_some_and(|p| matches!(p.kind, ActionPromptKind::Reactions { .. }));
             return all_idle || reaction;
         };
-        let scope = engine.prompts.scope(&PromptScopeId::Encounter(encounter));
+        let scope = engine.prompts.scope(&EventScope::Encounter(encounter));
         let waiting_on_reaction = engine
-            .next_prompt(PromptScopeId::Encounter(encounter))
+            .next_prompt(EventScope::Encounter(encounter))
             .is_some_and(|p| matches!(p.kind, ActionPromptKind::Reactions { .. }));
         let no_pending = scope.is_none_or(|s| s.pending_events().is_empty());
         // A reaction prompt holds everyone it doesn't wait on, even a creature still mid-move or
@@ -3864,6 +3963,10 @@ impl Game {
     /// beside; a ranged attack avoids Prone targets. Ties go to the nearer target, then by
     /// handle, so a seed replays the same fight. End the turn when no attack is possible.
     fn scripted_action(&mut self, actor: Entity) {
+        if self.scene.allies.contains(&actor) {
+            self.hold_action(actor);
+            return;
+        }
         let round = self
             .encounter
             .and_then(|id| self.engine.encounter(&id))
@@ -3904,7 +4007,63 @@ impl Game {
             self.scripted_turn = Some((round, actor, taken + 1));
             return;
         }
-        self.engine.end_turn(actor);
+        systems::combat::end_turn(&mut self.engine, actor);
+    }
+
+    /// The ally policy `hold` (ENG-48, rule A4): an ally never moves. It attacks the nearest
+    /// hostile creature already within its melee reach (ties by handle) that has not yielded,
+    /// with its stat block's melee attack, and otherwise ends its turn.
+    fn hold_action(&mut self, actor: Entity) {
+        let round = self.round().map_or(0, |r| r as usize);
+        let taken = match self.scripted_turn {
+            Some((r, e, n)) if r == round && e == actor => n,
+            _ => 0,
+        };
+        let targets: Vec<Entity> = self
+            .hostiles_of(actor)
+            .into_iter()
+            .filter(|t| !self.yielded.contains(&t.entity))
+            .map(|t| t.entity)
+            .collect();
+        let melee: Option<ActionId> = "nat20_core::action.melee_attack".parse().ok();
+        let attack = melee
+            .filter(|_| taken < MAX_SCRIPTED_ACTIONS_PER_TURN)
+            .and_then(|melee| {
+                let engine = &mut self.engine;
+                let contexts = match ActionBuilder::available(engine, actor).state() {
+                    Ok(ActionBuilderState::Action { actions }) => actions.get(&melee)?.len(),
+                    _ => return None,
+                };
+                for target in &targets {
+                    for context in 0..contexts {
+                        let mut probe = ActionBuilder::available(engine, actor);
+                        probe.action(engine, &melee);
+                        if !pick_context(&mut probe, &engine.world, context) {
+                            continue;
+                        }
+                        probe.target_entity(engine, *target);
+                        if matches!(
+                            probe.state(),
+                            Ok(ActionBuilderState::Targets {
+                                path_to_target: Some(TargetPathFindingResult::AlreadyInRange(_)),
+                                ..
+                            })
+                        ) {
+                            return Some((melee.clone(), context, *target));
+                        }
+                    }
+                }
+                None
+            });
+        if let Some((action_id, context, target)) = attack
+            && self
+                .submit_entity(actor, &action_id, None, context, &[target], None)
+                .is_ok()
+        {
+            self.scripted_turn = Some((round, actor, taken + 1));
+            return;
+        }
+        systems::combat::end_turn(&mut self.engine, actor);
     }
 
     /// The hostile creature a Bloodied `actor` should get away from with Nimble Escape: the
@@ -4117,9 +4276,12 @@ impl Game {
             .iter()
             .map(|(entity, _)| *entity)
             .collect();
+        // A fight is lost when the last Blade is down, whichever allies stand (rule A5).
         let standing = |side: Side| {
             participants.iter().any(|e| {
-                self.side_of(*e) == Some(side) && life_state_name(&self.engine, *e) == "normal"
+                self.side_of(*e) == Some(side)
+                    && !self.scene.allies.contains(e)
+                    && life_state_name(&self.engine, *e) == "normal"
             })
         };
         let (party, hostile) = (standing(Side::Party), standing(Side::Hostile));
@@ -4136,7 +4298,7 @@ impl Game {
         let round = Some(running.round() as u32);
         self.drain();
         let xp = self.award_xp(&participants, winner);
-        self.engine.end_encounter(&encounter);
+        systems::combat::end_encounter(&mut self.engine, &encounter);
         self.drain();
         self.stand_up();
         self.fight_end = self.end_deeds(winner, &[]);
@@ -4185,7 +4347,7 @@ impl Game {
         let Some(encounter) = self.encounter else {
             return Awaiting::Nothing;
         };
-        let scope_id = PromptScopeId::Encounter(encounter);
+        let scope_id = EventScope::Encounter(encounter);
         let Some(prompt) = self.engine.next_prompt(scope_id) else {
             return Awaiting::Nothing;
         };
@@ -4282,18 +4444,10 @@ impl Game {
             rule_dc: false,
         };
 
-        // The engine splits events between the encounter log and the global log; core's `seq`
-        // puts the two back in the order they were logged.
-        let mut new_events: Vec<&EngineEvent> = Vec::new();
-        if let Some(encounter) = encounter {
-            let events = &encounter.event_log().events;
-            new_events.extend(events.iter().skip(self.encounter_seen));
-            self.encounter_seen = events.len();
-        }
+        // One engine log holds the encounter's events and the rest, in the order they happened.
         let events = &engine.event_log.events;
-        new_events.extend(events.iter().skip(self.global_seen));
+        let new_events = &events[self.global_seen.min(events.len())..];
         self.global_seen = events.len();
-        new_events.sort_by_key(|event| event.seq);
         let mut entries = Vec::new();
         for event in new_events {
             entries.extend(writer.entries(event));
@@ -4551,10 +4705,12 @@ impl Game {
 
 pub(super) fn load_geometry(map: Option<&str>) -> WorldGeometry {
     let terrain = scene::map_path(map);
-    WorldGeometry::from_obj_path(
-        terrain.to_str().expect("utf-8 path"),
-        &rerecast::ConfigBuilder::default().build(),
-    )
+    WorldGeometry::try_from(WorldGeometrySource::Obj {
+        file_path: terrain,
+        config: rerecast::ConfigBuilder::default().build(),
+        try_cache: false,
+    })
+    .expect("scene map loads")
 }
 
 /// Sides decide who wins; faction attitudes decide who may attack whom. The party and hostile
@@ -4981,7 +5137,7 @@ mod tests {
         game.help("ana", &stabilize).unwrap();
         assert_eq!(life_state_name(&game.engine, bren), "unconscious");
         assert_eq!(game.stalls, 0);
-        assert!(game.engine.next_prompt(PromptScopeId::Global).is_none());
+        assert!(game.engine.next_prompt(EventScope::Global).is_none());
     }
 
     /// A creature whose Speed is 0 can't stand up (SRD 5.2.1, Prone), so it stays Prone when the

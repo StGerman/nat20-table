@@ -487,7 +487,7 @@ test("on the road the DM has no load_scene or end_adventure, and the scenes rule
   assert.ok(!mill.includes("pass_time"));
   // The DM's pick (AGT-88): the road's DM picks among offered cards by the rule; a pack played in order has no deck.
   assert.ok(names.includes("pick_card"), names.join(", "));
-  assert.match(dm.systemPrompt, /- "Pick a road card": .*continues what the party did.*clearest problem.*can come to a fight\. Never pick a card to spare the party a fight\. Say why in one line, then narrate the card.s opening: narrate before the pick is refused\./);
+  assert.match(dm.systemPrompt, /- "Pick a road card": .*in order: a card that can come to a fight; failing that, the card that continues what the party did.*; failing that, .*clearest problem.*Between two that can come to a fight, the one that continues what the party did\. Never pick a card to spare the party a fight\. Say why in one line, then narrate the card.s opening: narrate before the pick is refused\./);
   assert.match(dm.systemPrompt, /- "A road card is on the table": a card came with no pick\. Open it in two to four sentences/);
   assert.match(dm.systemPrompt, /before you narrate; narrate last\./);
   assert.ok(!mill.includes("pick_card"));

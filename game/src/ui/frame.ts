@@ -124,6 +124,17 @@ export function stepWithin(top: number, step: number, max: number): number {
   return Math.max(0, Math.min(max, top + step));
 }
 
+/**
+ * Where a click landed in the story (AGT-108): the row of the story window and the column, both
+ * from 0, or undefined off the story. `x` and `y` are the terminal's, from 1; the header is row 1.
+ */
+export function storyCell(x: number, y: number, storyHeight: number, width: number): { row: number; column: number } | undefined {
+  const row = y - 2;
+  const column = x - 1;
+  if (row < 0 || row >= storyHeight || column < 0 || column >= width) return undefined;
+  return { row, column };
+}
+
 /** The mouse wheel's step (AGT-94): three rows, as a terminal scrolls its own scrollback. */
 export const WHEEL_ROWS = 3;
 

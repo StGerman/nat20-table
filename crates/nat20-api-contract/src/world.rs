@@ -143,6 +143,14 @@ pub struct CardDm {
     /// (decision 0081). Absent while the card has none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub own_move: Option<OwnMoveDm>,
+    /// Who is there (API-58): roster ids, or `owner` for the caravan's NPC owner. DM only.
+    /// Empty, and left out, when the card names nobody.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cast: Vec<String>,
+    /// Who is only named or spoken of (API-58): roster ids, or `owner`. DM only. Empty, and
+    /// left out, when nobody.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tells: Vec<String>,
 }
 
 /// A seat's own move on the card on the table, as the DM sees it (API-56; protocol §4.13).
@@ -201,6 +209,14 @@ pub struct OfferedCard {
     /// Empty, and left out, when it reads none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reads: Vec<DeedDm>,
+    /// Who is there (API-58): roster ids, or `owner` for the caravan's NPC owner. DM only.
+    /// Empty, and left out, when the card names nobody.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cast: Vec<String>,
+    /// Who is only named or spoken of (API-58): roster ids, or `owner`. DM only. Empty, and
+    /// left out, when nobody.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tells: Vec<String>,
 }
 
 /// When a road card is drawn (AGT-91), as the deck file's `when` says.
@@ -565,7 +581,8 @@ pub struct WorldDm {
     /// `travel`, `rest_night`, `pass_time` and `choose_card` wait for the pick.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub offered: Vec<OfferedCard>,
-    /// Every place NPC, alive or dead, met or not, in the world file's order (API-48).
+    /// Every person of the roster, alive or dead, met or not, in the world file's order
+    /// (API-48, API-58).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub npcs: Vec<NpcDm>,
     /// The escort contract, when the party is hired on one (API-47).
@@ -591,6 +608,10 @@ pub struct DeedDm {
     pub day: u32,
     /// The contract it was done in: 1 for a party's first.
     pub contract: u32,
+    /// The roster people who saw it, or were on a card that read it later (API-59): a person
+    /// remembers a deed only when they are here. Empty, and left out, when nobody.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub saw: Vec<String>,
 }
 
 /// The escort contract as the DM sees it.
@@ -642,15 +663,34 @@ pub enum NpcAttitude {
     Hostile,
 }
 
-/// A place NPC as the DM sees them (API-48).
+/// A person of the world's roster as the DM sees them (API-48, API-58): a place NPC, someone
+/// on the road, or someone only heard of.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct NpcDm {
-    /// The id; also their creature handle while the party is in their place.
+    /// The id; also their creature handle while they stand in the scene.
     pub id: String,
     /// The name players read.
     pub name: String,
-    /// The place they live in.
-    pub place: String,
+    /// Every listed form of the name, in every language (API-58): a story word is theirs only
+    /// when it equals one. Empty, and left out, when none is listed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub names: Vec<String>,
+    /// What anyone who sees them sees (API-58), in English.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub look: Option<String>,
+    /// What the valley says of them aloud (API-58), in English: a rumour, never a fact.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub heard: Option<String>,
+    /// What they remember of the party (API-58): one line per deed, in English, every line
+    /// the roster holds whether its deed is remembered or not. Empty, and left out, when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub remembers: Vec<NpcRemembers>,
+    /// The place they live in; absent for someone who lives on no map place (API-58).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub place: Option<String>,
+    /// The anchor of their place's scene they stand at; absent with no place (API-58).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anchor: Option<String>,
     /// The stat block they fight as.
     pub monster: String,
     /// How they feel about the party.
@@ -666,20 +706,85 @@ pub struct NpcDm {
     /// Who they are, from the world file.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+    /// The characters who have seen them, each with where they last did (API-59). Empty, and
+    /// left out, when nobody has.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub seen: Vec<NpcSeen>,
+    /// The characters who have only heard of them (API-59). Empty, and left out, when nobody.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub heard_by: Vec<Handle>,
 }
 
-/// A place NPC the party has met, as a player sees them: never Hit Points, attitude or notes.
+/// One line of what a person remembers of the party (API-58, API-59), in its two forms. DM
+/// only here.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct NpcKnown {
-    /// The id; also their creature handle while the party is in their place.
+pub struct NpcRemembers {
+    /// The deed it answers.
+    pub deed: String,
+    /// The line for a viewer who did the deed, in English; the table finds the run
+    /// language's line in the world file by the person's id and this line (decision 0067).
+    pub you: String,
+    /// The line for a viewer whose company did it without them, in English.
+    pub company: String,
+}
+
+/// A character who has seen a person (API-59). DM only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct NpcSeen {
+    /// The character.
+    pub by: Handle,
+    /// The place they last saw them at; absent when it was on the road.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub place: Option<String>,
+}
+
+/// A person a character has only heard of (API-59, rule N5): a name and what is said of
+/// them, never how they look, where they live, whether they live, or what they remember.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct NpcHeard {
+    /// The id.
     pub id: String,
     /// The name.
     pub name: String,
-    /// The place they live in.
-    pub place: String,
+    /// Every listed form of the name, for the table's matcher. Empty, and left out, when none
+    /// is listed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub names: Vec<String>,
+    /// What the valley says of them, in English; the table reads the run language's line
+    /// from the world file. Absent when the world file says nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub heard: Option<String>,
+}
+
+/// A person the party has met, as a player sees them: never Hit Points, attitude or notes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct NpcKnown {
+    /// The id; also their creature handle while they stand in the scene.
+    pub id: String,
+    /// The name.
+    pub name: String,
+    /// Every listed form of the name (API-58), for the table's matcher. Empty, and left out,
+    /// when none is listed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub names: Vec<String>,
+    /// What anyone who sees them sees (API-58), in English; the table reads the run
+    /// language's line from the world file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub look: Option<String>,
+    /// The place they live in; absent for someone who lives on no map place (API-58).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub place: Option<String>,
     /// Whether they are alive, as far as the party knows: the party met them, so a death the
     /// party saw is known.
     pub alive: bool,
+    /// The place this character last saw them at (API-59); absent when it was on the road.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_seen: Option<String>,
+    /// What they remember of this character's doings, newest first, at most three (API-59,
+    /// rule N6), in English; the table reads the run language's line from the world file.
+    /// None for the dead. Empty, and left out, when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub remembers: Vec<String>,
 }
 
 /// The world as one player sees it.
@@ -705,9 +810,12 @@ pub struct WorldPlayer {
     /// The road card waiting for its decision.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card: Option<CardPlayer>,
-    /// The place NPCs the party has met, in the world file's order (API-48).
+    /// The people this character has seen, in the world file's order (API-48, API-59).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub npcs: Vec<NpcKnown>,
+    /// The people this character has only heard of, in the world file's order (API-59).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub heard: Vec<NpcHeard>,
     /// The escort contract, when the party is hired on one (API-47).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub escort: Option<EscortView>,

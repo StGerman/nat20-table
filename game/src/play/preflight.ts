@@ -8,7 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 // Node built-ins and our own dependency-free modules only: the preflight must run before `npm ci`.
 import { agentEnv } from "../agents/env.ts";
-import { engineBinary, REPO } from "../paths.ts";
+import { engineBinary, prebuiltEngine, REPO } from "../paths.ts";
 
 interface Check {
   /** "note" is shown and never fails the preflight. */
@@ -41,6 +41,8 @@ function packages(): Check {
 }
 
 function rust(): Check {
+  const fetched = prebuiltEngine();
+  if (fetched) return { ok: "note", what: "Rust", detail: `not needed: the runs use the engine fetched into ${rel(fetched)} (npm run engine:fetch)` };
   const pinned = /channel\s*=\s*"([^"]+)"/.exec(readFileSync(path.join(REPO, "rust-toolchain.toml"), "utf8"))?.[1] ?? "?";
   const r = sh("cargo", ["--version"]);
   const version = r.error || r.status !== 0 ? undefined : r.stdout.trim();
@@ -48,13 +50,24 @@ function rust(): Check {
     ok: version?.includes(pinned) ?? false,
     what: `Rust ${pinned} (rust-toolchain.toml)`,
     detail: version ?? "cargo not found",
-    fix: version ? "rustup installs the pinned release on the first cargo call in the repo: rustup show" : "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
+    fix: version ? "rustup installs the pinned release on the first cargo call in the repo: rustup show" : "npm run engine:fetch plays on a released engine with no Rust; to build it yourself: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
   };
 }
 
 /** Builds the binary the runs start (the release build if there is one, else the debug build). */
 function engine(): Check {
   const binary = engineBinary();
+  const fetched = prebuiltEngine();
+  if (fetched) {
+    let built = "";
+    try {
+      const made = JSON.parse(readFileSync(path.join(fetched, "engine.json"), "utf8")) as { table_commit?: string };
+      built = made.table_commit ? `, built from ${made.table_commit.slice(0, 7)}` : "";
+    } catch {
+      // An engine fetched before engine.json existed: the binary alone.
+    }
+    return { ok: existsSync(binary), what: "Engine fetched from a release", detail: `${rel(binary)}${built}`, fix: "npm run engine:fetch" };
+  }
   if (process.env.NAT20_API_SERVER) {
     return { ok: existsSync(binary), what: "Engine", detail: `NAT20_API_SERVER=${binary}`, fix: "point NAT20_API_SERVER at a built nat20-api-server, or unset it" };
   }

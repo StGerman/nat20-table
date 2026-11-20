@@ -138,7 +138,19 @@ pub struct Card {
     /// with something to find ahead; none for a card with nothing to find
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scout: Option<ScoutSkill>,
+    /// Who is there (API-58): roster ids, or `owner` for the caravan's NPC owner. A card whose
+    /// cast holds someone dead is never offered or drawn (design rule A8)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cast: Vec<String>,
+    /// Who is only named or spoken of (API-58): roster ids, or `owner`. A death never takes
+    /// the card off the table; a choice that is the dead person's own act reads their death
+    /// through `unless`
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tells: Vec<String>,
 }
+
+/// The cast word for the caravan's NPC owner (API-58).
+pub const OWNER_CAST: &str = "owner";
 
 /// What the scout looks for (API-54), from the SRD 5.2.1 Search table: Wisdom (Perception)
 /// finds a concealed creature or object, Wisdom (Survival) finds tracks.
@@ -243,6 +255,18 @@ pub struct Deed {
     pub day: u32,
     /// The contract it was done in: 1 for the first
     pub contract: u32,
+    /// The roster people who saw it or were shown it later (API-59): a person remembers a
+    /// deed only when they are here
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub saw: Vec<String>,
+}
+
+fn yes() -> bool {
+    true
+}
+
+fn is_yes(b: &bool) -> bool {
+    *b
 }
 
 /// The deeds remembered, by id. A deed done again keeps its first record.
@@ -359,6 +383,22 @@ pub enum Effect {
         /// One per creature: a stat block id, or `{"stat", "npc"}` for a creature who is an
         /// NPC of the story (ENG-36): its death writes the deed `killed_<npc>`
         monsters: Vec<Monster>,
+        /// The monsters are surprised (ENG-47): they roll Initiative with Disadvantage
+        /// (SRD 5.2.1, Surprise)
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        surprise: bool,
+        /// The fight is at the wagon (ENG-48, rule A1): whoever rides with it joins as an
+        /// ally: the team's animals but each wagon's last, the company that rides now, and
+        /// the NPC owner unless `owner` is false
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        wagon: bool,
+        /// The anchor the monsters arrive at (rule A3); the scene's first when absent or
+        /// missing
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        from: Option<String>,
+        /// With `wagon`, whether the NPC owner stands in the fight (rule A2)
+        #[serde(default = "yes", skip_serializing_if = "is_yes")]
+        owner: bool,
     },
     /// Everyone in `who` pays `copper` each to the world, as much as their purse holds
     Pay {
@@ -408,6 +448,10 @@ pub enum Effect {
         /// The deed id, in snake_case
         deed: String,
     },
+    /// The escort's purse is shared out among the living Blades, evenly, an odd copper by
+    /// party order, as `loot`; nothing more is paid at the destination (ENG-49, design §5).
+    /// Only a card whose caravan's NPC owner is dead offers it
+    SharePurse,
 }
 
 /// One creature of a card's fight.
@@ -517,6 +561,11 @@ pub struct DeckState {
     /// the scout's DC; none after a night or an arrival draw
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub road: Option<String>,
+    /// Who of a card's cast is dead (API-58, rule A8): roster ids, and `owner` when the
+    /// caravan's NPC owner is. Worked out by the world before each draw from its people;
+    /// never saved
+    #[serde(skip)]
+    pub cast_dead: BTreeSet<String>,
 }
 
 impl DeckState {
@@ -645,6 +694,9 @@ pub struct Table {
     pub blades: Vec<String>,
     /// The seat that breaks a tied Blade vote: the human's, when one plays
     pub tie_breaker: Option<String>,
+    /// The caravan's NPC owner is dead (ENG-49, rule M2): a caravan card is decided as a
+    /// Blade card, with no owner to insist and the human seat breaking a tie
+    pub owner_dead: bool,
 }
 
 /// How a card was decided.
@@ -919,7 +971,7 @@ impl Deck {
                     Effect::Check { dc, .. } if !DC_LADDER.contains(dc) => {
                         return bad(format!("card {} has a DC {dc} off the ladder", card.id));
                     }
-                    Effect::Fight { monsters } if monsters.is_empty() => {
+                    Effect::Fight { monsters, .. } if monsters.is_empty() => {
                         return bad(format!("card {} starts a fight with nobody", card.id));
                     }
                     _ => {}
@@ -1071,7 +1123,7 @@ impl Deck {
                 let mut effects = Vec::new();
                 effects_of(&choice.effects, &mut effects);
                 let with_persons = effects.iter().any(
-                    |e| matches!(e, Effect::Fight { monsters } if monsters.iter().any(&is_person)),
+                    |e| matches!(e, Effect::Fight { monsters, .. } if monsters.iter().any(&is_person)),
                 );
                 if with_persons && choice.keeps.is_empty() && choice.breaks.is_empty() {
                     out.push(format!(
@@ -1144,6 +1196,37 @@ impl Deck {
         self
     }
 
+    /// Whether a fight of this deck can kill the caravan's NPC owner: a wagon fight that does
+    /// not leave the owner out (ENG-49, rule A9 for the owner).
+    pub fn owner_may_fall(&self) -> bool {
+        self.cards.iter().any(|card| {
+            Self::effects(card).iter().any(|e| {
+                matches!(
+                    e,
+                    Effect::Fight {
+                        wagon: true,
+                        owner: true,
+                        ..
+                    }
+                )
+            })
+        })
+    }
+
+    /// Every deed a card or a choice reads in its `if` (ENG-48, rule A9): a reader that speaks.
+    pub fn read_in_if(&self) -> BTreeSet<String> {
+        self.cards
+            .iter()
+            .flat_map(|card| {
+                card.if_deeds
+                    .iter()
+                    .chain(card.choices.iter().flat_map(|c| c.if_deeds.iter()))
+            })
+            .flat_map(Deeds::ids)
+            .cloned()
+            .collect()
+    }
+
     /// Every deed some choice of the deck can write: its `remember`s, `killed_<npc>` for
     /// each NPC a card's fight names, and `own_move_<card>` for every card (API-56).
     pub fn deeds_written(&self) -> BTreeSet<String> {
@@ -1155,7 +1238,7 @@ impl Deck {
                 Effect::Remember { deed } => {
                     written.insert(deed.clone());
                 }
-                Effect::Fight { monsters } => {
+                Effect::Fight { monsters, .. } => {
                     written.extend(monsters.iter().filter_map(Monster::npc).map(killed_deed));
                 }
                 _ => {}
@@ -1179,6 +1262,7 @@ impl Deck {
             && !state.gone.contains(&card.id)
             && !state.gone_for_contract.contains(&card.id)
             && card.holds(deeds)
+            && !card.cast.iter().any(|p| state.cast_dead.contains(p))
     }
 
     /// The pile of a zone: the cards in play and not in the discard, in file order. A card
@@ -1338,6 +1422,17 @@ impl Deck {
         });
     }
 
+    /// A card the engine puts on the table itself, not drawn and taking no pile's place
+    /// (ENG-49, rule M1), with the choices its deeds offer; it is gone for the world after.
+    pub fn put_card(&self, id: &str, deeds: &DeedBook, state: &mut DeckState) -> bool {
+        let Some(card) = self.card(id) else {
+            return false;
+        };
+        // The escort checks the death card goes once for the world, so this puts it in `gone`.
+        self.put_on_table(card, deeds, state);
+        true
+    }
+
     /// A chained card joins the deck; a `soon` one also joins the queue the next draw in its
     /// zone takes first, unless it is gone for the world (ENG-40): it can never be drawn.
     pub fn add(&self, state: &mut DeckState, card: &str, soon: bool) {
@@ -1436,7 +1531,7 @@ impl Deck {
         let offered = pending.offered(card);
         let pick = offered
             .iter()
-            .find(|c| c.owner_insists)
+            .find(|c| c.owner_insists && !table.owner_dead)
             .or_else(|| {
                 card.owner_pick
                     .as_ref()?
@@ -1726,7 +1821,7 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
             .cloned()
             .collect()
     };
-    if card.target == Target::Caravan {
+    if card.target == Target::Caravan && !table.owner_dead {
         if matches!(table.owner, Owner::Player(_)) {
             return None;
         }
@@ -1767,7 +1862,9 @@ fn settle(card: &Card, pending: &PendingCard, table: &Table) -> Option<Resolutio
         .tie_breaker
         .as_ref()
         .and_then(|h| pending.said.get(h))
-        .filter(|c| card.target == Target::Blades && tied.contains(&c.as_str()));
+        .filter(|c| {
+            (card.target == Target::Blades || table.owner_dead) && tied.contains(&c.as_str())
+        });
     let pick = card
         .owner_pick
         .as_ref()
@@ -1847,6 +1944,26 @@ mod tests {
         );
     }
 
+    #[test]
+    fn a_card_whose_cast_holds_someone_dead_is_never_in_the_pile() {
+        let mut d = deck();
+        d.cards[1].cast = vec!["beggar_ned".into()];
+        d.cards[0].tells = vec![OWNER_CAST.into()];
+        let mut state = DeckState::default();
+        let ids = |state: &DeckState| -> Vec<String> {
+            d.pile("fields", When::Road, &known(), &DeedBook::new(), state)
+                .iter()
+                .map(|c| c.id.clone())
+                .collect()
+        };
+        assert_eq!(ids(&state), ["mud", "beggar"]);
+        state.cast_dead = BTreeSet::from(["beggar_ned".to_string(), OWNER_CAST.to_string()]);
+        // The beggar stands on his card; the owner is only named on the mud card.
+        assert_eq!(ids(&state), ["mud"]);
+        let json = serde_json::to_value(&state).unwrap();
+        assert!(json.get("cast_dead").is_none(), "never saved");
+    }
+
     fn known() -> BTreeSet<String> {
         BTreeSet::from(["town".to_string(), "inn".to_string()])
     }
@@ -1856,6 +1973,7 @@ mod tests {
             owner: Owner::Npc("tobin".into()),
             blades: vec!["bren".into(), "maren".into()],
             tie_breaker: Some("bren".into()),
+            owner_dead: false,
         }
     }
 
@@ -1902,6 +2020,10 @@ mod tests {
         d.cards[1].choices[1].effects = vec![
             Effect::Fight {
                 monsters: vec![Monster::Stat("wolf".into())],
+                surprise: false,
+                wagon: false,
+                from: None,
+                owner: true,
             },
             Effect::Delay { minutes: 10 },
         ];
@@ -2166,12 +2288,62 @@ mod tests {
     }
 
     #[test]
+    fn with_the_owner_dead_nobody_insists_and_the_human_breaks_a_caravan_tie() {
+        let d = deck();
+        let table = Table {
+            owner_dead: true,
+            ..npc_table()
+        };
+        let pending = || DeckState {
+            pending: Some(PendingCard {
+                card: "mud".into(),
+                choices: Vec::new(),
+                said: BTreeMap::new(),
+                own_move: None,
+                fell: Vec::new(),
+            }),
+            ..DeckState::default()
+        };
+        let mut state = pending();
+        d.speak(&mut state, &table, "bren", "push").unwrap();
+        let done = d
+            .speak(&mut state, &table, "maren", "push")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            ("push", Decided::Majority)
+        );
+
+        // The owner's pick would take `push`; the human's `unload` breaks the tie instead.
+        let mut state = pending();
+        d.speak(&mut state, &table, "bren", "unload").unwrap();
+        let done = d
+            .speak(&mut state, &table, "maren", "push")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.choice.as_str(), done.decided),
+            ("unload", Decided::Tie)
+        );
+
+        let mut state = pending();
+        let quiet = Table {
+            blades: Vec::new(),
+            ..table.clone()
+        };
+        let done = d.settle_unattended(&mut state, &quiet).unwrap();
+        assert_ne!(done.decided, Decided::OwnerInsists);
+    }
+
+    #[test]
     fn a_player_owner_decides_after_every_blade_advises() {
         let d = deck();
         let table = Table {
             owner: Owner::Player("ilsa".into()),
             blades: vec!["bren".into(), "maren".into()],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = DeckState {
             pending: Some(PendingCard {
@@ -2234,6 +2406,7 @@ mod tests {
             owner: Owner::Npc("tobin".into()),
             blades: vec![],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = DeckState {
             pending: Some(PendingCard {
@@ -2433,6 +2606,7 @@ mod tests {
             owner: Owner::Npc("tobin".into()),
             blades: vec!["bren".into(), "maren".into(), "torva".into()],
             tie_breaker: Some("bren".into()),
+            owner_dead: false,
         };
         let mut state = pending("beggar");
         d.own_move(&mut state, &three, own_alone("bren", "give"))
@@ -2467,6 +2641,7 @@ mod tests {
             owner: Owner::Player("ilsa".into()),
             blades: vec!["bren".into(), "maren".into()],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = pending("mud");
         d.own_move(&mut state, &table, own_alone("bren", "push"))
@@ -2619,6 +2794,7 @@ mod tests {
             owner: Owner::Player("ilsa".into()),
             blades: vec!["bren".into(), "maren".into()],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = pending("mud");
         d.speak(&mut state, &table, "bren", "push").unwrap();
@@ -2644,6 +2820,7 @@ mod tests {
             owner: Owner::Npc("tobin".into()),
             blades: vec![],
             tie_breaker: None,
+            owner_dead: false,
         };
         let mut state = pending("mud");
         state.pending.as_mut().unwrap().own_move = Some(own("bren", "push", "unload"));
@@ -2691,6 +2868,7 @@ mod tests {
                         by: vec![],
                         day: 1,
                         contract: 1,
+                        saw: vec![],
                     },
                 )
             })
@@ -3012,7 +3190,7 @@ mod tests {
         d.validate(&small_map()).unwrap();
         assert!(d.deeds_written().contains("killed_col"));
         d.check_deeds_written(&BTreeSet::new()).unwrap();
-        let Effect::Fight { monsters } = &d.cards[0].choices[0].effects[0] else {
+        let Effect::Fight { monsters, .. } = &d.cards[0].choices[0].effects[0] else {
             panic!("a fight");
         };
         assert_eq!(
@@ -3020,6 +3198,23 @@ mod tests {
             ("bandit", Some("col"))
         );
         assert_eq!((monsters[1].stat(), monsters[1].npc()), ("bandit", None));
+    }
+
+    #[test]
+    fn a_fight_may_start_with_its_monsters_surprised() {
+        let fight = |json: &str| -> bool {
+            let Effect::Fight { surprise, .. } = serde_json::from_str(json).unwrap() else {
+                panic!("a fight");
+            };
+            surprise
+        };
+        assert!(fight(
+            r#"{"do": "fight", "monsters": ["wolf"], "surprise": true}"#
+        ));
+        assert!(
+            !fight(r#"{"do": "fight", "monsters": ["wolf"]}"#),
+            "not surprised by default"
+        );
     }
 
     fn scout_deck() -> Deck {
@@ -3167,6 +3362,10 @@ mod tests {
             card.zone = route[0].clone();
             card.choices[0].effects.push(Effect::Fight {
                 monsters: vec![Monster::Stat("wolf".into())],
+                surprise: false,
+                wagon: false,
+                from: None,
+                owner: true,
             });
         }
         assert!(two.route_warnings(&map, &route).is_empty());
@@ -3178,6 +3377,10 @@ mod tests {
         assert!(two.untagged_fight_warnings(person).is_empty());
         two.cards[0].choices[0].effects = vec![Effect::Fight {
             monsters: vec![Monster::Stat("goblin_warrior".into())],
+            surprise: false,
+            wagon: false,
+            from: None,
+            owner: true,
         }];
         let untagged = two.untagged_fight_warnings(person);
         assert_eq!(untagged.len(), 1);

@@ -50,19 +50,46 @@ export interface CardOnSeat {
 }
 
 /** How the seat names things in one run: Russian names by id from the pack and the world. */
+/**
+ * What the seat knows of people beyond the engine's view: the Russian of each line the engine
+ * sends in English (`look`, `heard`, `remembers`), and the party's own forms and looks from
+ * `campaign.json`. A table with no campaign has none.
+ */
+export interface PeopleBook {
+  /** Each person's run-language lines, keyed by `lineKey(person, English line)`. */
+  lines: ReadonlyMap<string, string>;
+  party: ReadonlyArray<{ handle: string; names: readonly string[]; look?: string; look_ru?: string }>;
+}
+
+/** The key of a person's run-language line in a `PeopleBook`: by person and line (0067), since two people can share an English line. */
+export function lineKey(id: string, en: string): string {
+  return `${id}\u0000${en}`;
+}
+
+export const NO_PEOPLE: PeopleBook = { lines: new Map(), party: [] };
+
 export class SeatNames {
   readonly language: Language;
   /** Russian names by id: party handles, `npc:<id>`, places, goods and anchors (`anchor:<id>`). */
   private readonly ru: Map<string, string>;
 
-  constructor(language: Language = "en", ru: ReadonlyMap<string, string> = new Map()) {
+  /** The people book (AGT-107): the person card's lines in the run's language, and the party's forms. */
+  readonly people: PeopleBook;
+
+  constructor(language: Language = "en", ru: ReadonlyMap<string, string> = new Map(), people: PeopleBook = NO_PEOPLE) {
     this.language = language;
     this.ru = new Map(ru);
+    this.people = people;
   }
 
   /** A creature the DM brought in with a name in the run's language: a Russian seat calls it so from now on. */
   learn(handle: string, name: string): void {
     if (this.language === "ru") this.ru.set(handle, name);
+  }
+
+  /** Every name the seat holds in the run's language: the glossary's people and places (the describer's check, AGT-127). */
+  get all(): string[] {
+    return [...this.ru.values()];
   }
 
   /**
@@ -78,7 +105,9 @@ export class SeatNames {
     if (id.startsWith("market:")) return `рынок, ${this.place(id.slice(7))}`;
     if (id.startsWith("npc:")) return titled(id.slice(4));
     const stem = /^(.*?)(?:_(\d+))?$/.exec(id)!;
-    const kind = ruDictionary().creatures[stem[1]!];
+    // A team animal's handle carries its wagon's number and its own (`draft_horse_1_2`): the kind
+    // is the stem without them, and the seat names it by its own number.
+    const kind = ruDictionary().creatures[stem[1]!] ?? ruDictionary().creatures[stem[1]!.replace(/(_\d+)+$/, "")];
     return kind ? `${kind}${stem[2] ? ` ${stem[2]}` : ""}` : id;
   }
 
@@ -164,7 +193,8 @@ function enLine(event: Event, ctx: SeatContext): string | null {
       // The DM's opening says where (design §4); `/log` keeps the line.
       return ctx.site === "seat" ? null : eventLine(event);
     case "ledger":
-      if (event.reason === "wage" && event.what.kind === "coins") return `${n.person(event.from)} pays ${n.person(event.to)} ${coinPhrase(event.what.copper)} in wages.`;
+      // The payer is left unsaid: a dead merchant's purse pays too, and no line says the dead pay (ENG-49, rule M4).
+      if (event.reason === "wage" && event.what.kind === "coins") return `${n.person(event.to)} is paid ${coinPhrase(event.what.copper)} in wages.`;
       // Every card payment reaches the wire as a toll, a salt purchase too: the seat does not name it (the DM's narration says what it was for; AGT-114).
       if (event.reason === "toll") return event.what.kind === "coins" ? `${n.person(event.from)} pays ${coinPhrase(event.what.copper)}.` : event.text.replace(/ in toll\.$/, ".");
       break;
@@ -212,6 +242,7 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
     case "card_shown":
     case "deed_remembered":
     case "own_move_set":
+    case "npc_named":
       return null;
     case "combat_started":
       return `Бой! Порядок ходов: ${n.list(event.participants)}.`;
@@ -336,6 +367,9 @@ function ruLine(event: Event, ctx: SeatContext): string | null {
     case "scout_looked":
       return event.saw ? `${who(event.actor)} замечает, что ждёт впереди.` : `${who(event.actor)} смотрит вперёд, но ничего не замечает.`;
     case "escort_settled":
+      // A dead merchant pays nobody (ENG-49, rule M4).
+      if (event.purse === "carried") return `Обоз прибыл: ${n.place(event.destination)}. Наёмникам отсчитали плату из кошеля, который вы довезли.`;
+      if (event.purse === "shared") return `Обоз прибыл: ${n.place(event.destination)}. Кошель торговца вы уже поделили между собой; платить больше нечем.`;
       return `Обоз прибыл: ${n.place(event.destination)}. Наёмникам заплачено, что положено.`;
   }
 }
@@ -458,7 +492,7 @@ function ledgerRu(event: Extract<Event, { kind: "ledger" }>, n: SeatNames, human
   }
   switch (event.reason) {
     case "wage":
-      return `${to} получает жалованье: ${goods}. Платит ${n.who(event.from)}.`;
+      return `${to} получает жалованье: ${goods}.`;
     case "toll":
       return `${from} платит: ${goods}.`;
     case "inn":

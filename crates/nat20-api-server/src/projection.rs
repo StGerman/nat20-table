@@ -7,9 +7,9 @@
 
 use nat20_api_contract::{
     Anchor, AnchorObserved, AnchorView, CardChoiceView, CardPlayer, CheckView, Condition,
-    CreatureFull, CreatureObserved, EncounterView, Event, EventKind, Handle, Mode, NpcKnown,
-    OwnMovePlayer, PlaceKnown, PointFt, ReachView, RoadKnown, RoadUnexplored, RollView, Sheet,
-    SpawnView, State, TripView, Visibility, WorldDm, WorldPlayer,
+    CreatureFull, CreatureObserved, DeedDm, EncounterView, Event, EventKind, Handle, Mode, NpcDm,
+    NpcHeard, NpcKnown, OwnMovePlayer, PlaceKnown, PointFt, ReachView, RoadKnown, RoadUnexplored,
+    RollView, Sheet, SpawnView, State, TripView, Visibility, WorldDm, WorldPlayer,
 };
 
 use crate::render;
@@ -259,20 +259,74 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
         escort: view.escort.map(|e| e.contract),
         trip,
         scout: view.scout,
-        // Met NPCs only, and only what the party can see (API-48): never Hit Points, attitude
-        // or notes.
+        // The people this character has seen, and only what the party can see (API-48,
+        // API-59): never Hit Points, attitude, notes, a deed id, `by`, day or contract.
         npcs: view
             .npcs
-            .into_iter()
-            .filter(|n| n.met)
-            .map(|n| NpcKnown {
-                id: n.id,
-                name: n.name,
-                place: n.place,
-                alive: n.alive,
+            .iter()
+            .filter_map(|n| {
+                let seen = n.seen.iter().find(|s| s.by.0 == handle)?;
+                Some(NpcKnown {
+                    id: n.id.clone(),
+                    name: n.name.clone(),
+                    names: n.names.clone(),
+                    look: n.look.clone(),
+                    place: n.place.clone(),
+                    alive: n.alive,
+                    last_seen: seen.place.clone(),
+                    remembers: remembered(n, handle, &view.deeds),
+                })
+            })
+            .collect(),
+        // People this character has only heard of (rule N5): a name and a rumour.
+        heard: view
+            .npcs
+            .iter()
+            .filter(|n| {
+                n.heard_by.iter().any(|h| h.0 == handle) && !n.seen.iter().any(|s| s.by.0 == handle)
+            })
+            .map(|n| NpcHeard {
+                id: n.id.clone(),
+                name: n.name.clone(),
+                names: n.names.clone(),
+                heard: n.heard.clone(),
             })
             .collect(),
     }
+}
+
+/// What person `n` remembers of `handle`'s doings (rule N6): a line only for a deed the world
+/// remembers and `n` saw; the "you" form when `handle` did it, else "your company"; newest
+/// first by contract and day (deeds of one day keep the world file's order), at most three;
+/// none for the dead.
+fn remembered(n: &NpcDm, handle: &str, deeds: &[DeedDm]) -> Vec<String> {
+    if !n.alive {
+        return Vec::new();
+    }
+    let mut lines: Vec<(&DeedDm, &str)> = n
+        .remembers
+        .iter()
+        .filter_map(|r| {
+            let deed = deeds
+                .iter()
+                .find(|d| d.deed == r.deed && d.saw.contains(&n.id))?;
+            let you = deed.by.iter().any(|b| b.0 == handle);
+            Some((
+                deed,
+                if you {
+                    r.you.as_str()
+                } else {
+                    r.company.as_str()
+                },
+            ))
+        })
+        .collect();
+    lines.sort_by_key(|(a, _)| std::cmp::Reverse((a.contract, a.day)));
+    lines
+        .into_iter()
+        .take(3)
+        .map(|(_, line)| line.to_owned())
+        .collect()
 }
 
 /// A sheet goes only to its owner and the DM (Rule 3): `None` for anyone else.
@@ -406,5 +460,72 @@ mod turned_back_tests {
                 miles_left: 5,
             }
         );
+    }
+}
+
+#[cfg(test)]
+mod remembered_tests {
+    use super::*;
+    use nat20_api_contract::{NpcAttitude, NpcRemembers};
+
+    fn line(deed: &str) -> NpcRemembers {
+        NpcRemembers {
+            deed: deed.into(),
+            you: format!("you {deed}"),
+            company: format!("company {deed}"),
+        }
+    }
+
+    fn deed(id: &str, by: &str, contract: u32, day: u32, saw: &[&str]) -> DeedDm {
+        DeedDm {
+            deed: id.into(),
+            by: vec![Handle(by.into())],
+            day,
+            contract,
+            saw: saw.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn a_person_remembers_only_what_they_saw_newest_first_three_at_most_and_nothing_once_dead() {
+        let mut gwyn = NpcDm {
+            id: "gwyn".into(),
+            name: "Gwyn".into(),
+            names: vec![],
+            look: None,
+            heard: None,
+            remembers: ["fed", "shooed", "paid", "sang", "unseen"]
+                .map(line)
+                .to_vec(),
+            place: None,
+            anchor: None,
+            monster: "commoner".into(),
+            attitude: NpcAttitude::Friendly,
+            alive: true,
+            met: true,
+            hp: None,
+            notes: None,
+            seen: vec![],
+            heard_by: vec![],
+        };
+        let deeds = [
+            deed("fed", "bren", 1, 2, &["gwyn"]),
+            deed("shooed", "maren", 1, 5, &["gwyn"]),
+            deed("paid", "bren", 2, 1, &["gwyn", "tam"]),
+            deed("sang", "bren", 1, 1, &["gwyn"]),
+            // Done, but Gwyn wasn't there: she can't remember it.
+            deed("unseen", "bren", 3, 1, &["tam"]),
+        ];
+        // Newest first by contract, then day; "you" for what bren did, "company" for maren's.
+        assert_eq!(
+            remembered(&gwyn, "bren", &deeds),
+            ["you paid", "company shooed", "you fed"]
+        );
+        assert_eq!(
+            remembered(&gwyn, "maren", &deeds),
+            ["company paid", "you shooed", "company fed"]
+        );
+        gwyn.alive = false;
+        assert!(remembered(&gwyn, "bren", &deeds).is_empty());
     }
 }

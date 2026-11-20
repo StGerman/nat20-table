@@ -7,8 +7,10 @@ import type { Handle, State } from "@nat20-table/engine-client";
 import type { Language } from "../agents/language.ts";
 import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
+import { checkBinary, engineEnv } from "../paths.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
-import { knownPlaceNames, shortRu, worldSeatNames } from "../pack/campaign.ts";
+import { knownPlaceNames, peopleBook, shortRu, worldSeatNames } from "../pack/campaign.ts";
+import type { PeopleBook } from "../table/seat-lines.ts";
 import { titled } from "../view.ts";
 import { skeletonFile } from "../pack/read.ts";
 import { narrationGuard, packIds, speechGuard } from "../table/guards.ts";
@@ -49,6 +51,8 @@ export interface PackParty {
    * (`good:<id>`) and anchors (`anchor:<id>`). The seat reads it only for what an event it sees names.
    */
   seatRu: Map<string, string>;
+  /** The seat's people book (AGT-107): the person card's lines in the run's language, and the party's forms and looks. */
+  people: PeopleBook;
 }
 
 /**
@@ -143,7 +147,7 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
   for (const p of ai) if (!classes.has(p.handle)) throw new Error(`${pack}: party ${p.handle} has an AI seat and no pregen in the first scene, so no class`);
   const humanEntry = adventure.party.find((p) => p.handle === human);
   const humanCard = humanEntry?.card ? readFileSync(path.resolve(pack, humanEntry.card), "utf8") : undefined;
-  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: [...russianNames(adventure, { npcs: false }), ...knownPlaceNames(pack)], glyphs: adventure.glyphs, seatRu: seatRuNames(pack, adventure) };
+  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: [...russianNames(adventure, { npcs: false }), ...knownPlaceNames(pack)], glyphs: adventure.glyphs, seatRu: seatRuNames(pack, adventure), people: peopleBook(pack, adventure.party) };
 }
 
 /** One line of the pick list (AGT-35): a party member as a player picking a pregen sees it. */
@@ -250,10 +254,12 @@ export function refuseApiKey(): void {
 
 /** The audit and the leak scan over a run folder (`nat20-audit`, decision 0033). */
 export function audit(scenes: string, runDir: string): { passed: boolean; output: string } {
-  const run = spawnSync("cargo", ["run", "--quiet", "-p", "nat20-duel", "--bin", "nat20-audit", "--", "--pack", scenes, runDir], {
-    cwd: REPO,
-    encoding: "utf8",
-  });
+  // A fetched engine brings its own nat20-audit (CON-19); a checkout with Rust builds it with cargo.
+  const args = ["--pack", scenes, runDir];
+  const binary = checkBinary("nat20-audit");
+  const run = binary
+    ? spawnSync(binary, args, { cwd: REPO, encoding: "utf8", env: { ...process.env, ...engineEnv() } })
+    : spawnSync("cargo", ["run", "--quiet", "-p", "nat20-duel", "--bin", "nat20-audit", "--", ...args], { cwd: REPO, encoding: "utf8" });
   if (run.error) return { passed: false, output: `nat20-audit didn't run: ${run.error.message}` };
   return { passed: run.status === 0, output: `${run.stdout}${run.stderr}`.trim() };
 }

@@ -155,7 +155,7 @@ No contract change, no engine change, no new player-facing text, so Rule 1 does 
 
 - A pass or fail from the bench, a judge on the DM's text, samples and thresholds: after the trial, if it is kept.
 - A model that writes the lines (a plan fuzz): not before the hand-written lines have shown the bench finds anything.
-- Night cards; words said between cards (run 16:05's failure, which belongs to no card).
+- Night cards of a place, and words said between cards (run 16:05's failure, which belongs to no card). Night cards of a road and the fight a card starts came in later: §10.
 - The stake before the roll (`docs/design/stake-before-the-roll.md`, Proposed, a milestone after Milestone 13): the report's own-move fields would carry the stake. The way the card reaches the table does not change.
 - Any change to the exit pair (decisions 0043, 0065, 0066, 0074).
 
@@ -176,6 +176,23 @@ No contract change, no engine change, no new player-facing text, so Rule 1 does 
 3. Lines for the new cards: the thread drafts five a card and you edit them, or you write them? Recommended: the thread drafts, you edit.
 4. A cap for the trial: 12 USD and 20 minutes of yours? Recommended: yes; past the cap the trial stops and is read as it stands.
 5. Beside Milestone 13, outside its exit and PR count, two PRs? Recommended: yes.
+
+## 10. Night cards, riders and the fight (AGT-131, 2026-11-18)
+
+Added for exit row 12 of `allies-in-fights-system-design.md` §11, which benches `night_wolves` with Tam at the wagon and has Vera read the fight. No contract or engine change; nothing a player reads is new.
+
+- **A night card of a road's zone.** The engine draws a night card from the zone where the caravan camps: a road's zone on the road, a place's id in a place (`crates/nat20-world/src/travel.rs`, `zone_here`). The seat camps where the day's travel runs out, so the stretch for a night card runs on from the first leg in its zone through every leg of that zone in a row: `night_wolves` in *Fair in Wend* is benched on `wendford > millbeck_bridge > midwend > wendmouth`, and the second night falls on the river road. A night card of a place is still refused.
+- **`--rides ID[,ID]`.** A company entry rides only on a deed written on the contract under way, and a bench run starts one fresh. So the copy keeps the named entries, drops their `unless`, and has every choice of the benched card remember their `if` deeds first. Rule A9 holds: the cards that read their death and wound stay in the copy, with a card that adds a chained one (`bel_asks` brings Tam's ride card, in a zone the cut route never crosses).
+- **`--fight`.** The seat plays a fight the settled card starts, by rule, as on the walk, and leaves at the first prompt after it. Without it, the fight is told and not played, as in §4.
+- **A number in the lines file.** A row that is a bare number is typed as a person types a choice's number. The bench still never picks a number of its own.
+
+Row 12's command, with the seed a scripted walk gave:
+
+```bash
+npm run play:card -- --card night_wolves --pack scenarios/fair_in_wend --lines lines.txt --rides tam --fight --seed N
+```
+
+The seed is found with `--dm scripted`. A live DM takes the same walk unless it calls a check of its own on the way, so the seed is a start, not a promise: the report shows whether Tam was hurt.
 
 ## Sources
 

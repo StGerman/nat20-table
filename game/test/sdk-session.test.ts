@@ -23,6 +23,7 @@ test("a seat gets no built-in tool, no setting source and only its own MCP tools
   assert.deepEqual(options.skills, []);
   assert.deepEqual(options.plugins, []);
   assert.equal(options.permissionMode, "dontAsk");
+  assert.equal(options.strictMcpConfig, true);
   assert.equal(options.persistSession, false);
   assert.equal(options.systemPrompt, "p");
   assert.equal(options.cwd, "/empty");
@@ -45,7 +46,7 @@ test("only a seat with skills of its own gets the Skill tool", () => {
   assert.deepEqual(options.skills, ["dm-craft:narration"]);
 });
 
-test("an agent's process inherits no Claude or Anthropic variable", () => {
+test("an agent's process inherits no Claude or Anthropic variable and loads no claude.ai connector", () => {
   const env = agentEnv({
     PATH: "/bin",
     HOME: "/Users/stas",
@@ -60,6 +61,7 @@ test("an agent's process inherits no Claude or Anthropic variable", () => {
     HOME: "/Users/stas",
     HTTPS_PROXY: "http://proxy",
     CLAUDE_AGENT_SDK_CLIENT_APP: "nat20-table/0.1.0",
+    ENABLE_CLAUDEAI_MCP_SERVERS: "false",
   });
 });
 

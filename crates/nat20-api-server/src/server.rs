@@ -315,6 +315,7 @@ impl Server {
             Command::Loot { actor, from } => session.loot(&actor.0, &from.0),
             Command::PlaceCreature { .. } => session.place_creature(command, viewer),
             Command::StartFight { participants } => session.start_fight(participants, viewer),
+            Command::Mention { npcs } => session.mention(npcs, viewer),
             Command::StartCampaign { party, human } => {
                 session.start_campaign(party, human.as_ref(), viewer)
             }

@@ -1,18 +1,34 @@
 ---
 type: Milestone
 title: "Allies in fights («Свои в бою»)"
-description: "Gwyn's dog, the horses, Tam and the Merchant in card fights under the engine's script, and the judge's absent-creature check"
-state: open
+description: "Whoever rides with the wagon is in its fights under the engine's script, the Merchant can die, and names the story has said open a person card; closed 2026-11-20 with rows 10 and 11 not passed"
+state: closed
 ---
 
 # Exit criterion
 
-CI seeds, each ally dead and hurt at least once, deeds read; one all-AI run; AGT-106 counted, not gated (`docs/roadmap.md`).
+Design §11 (`docs/design/allies-in-fights-system-design.md`), each row with its lowest layer (decision 0080):
+
+1. Seeded case per `wagon` fight, each ally dead in one seed and hurt in another, each deed and reader checked: test, no model
+2. Rules A5 and A6 (`allies.jsonl`): test, no model
+3. Seeded Merchant death, both choices, pay and trial balance: test, no model
+4. `pack check` rules N2 and A9 on the shipped packs: test, no model
+5. Visibility scan with N3 and N6: test, no model
+6. `fed_gwyns_dog` with Gwyn absent, «Помнит» only after the `dog` choice: test, no model
+7. Rule N1, a unit case per card state, the mention-then-fight fixture: test, no model
+8. Describer cache, timeout, fallback; a scripted judge case per kind: test, no model
+9. One all-AI *Fair in Wend* on the exit build passes audit, leak scan and judge; `not_in_fight` and `unknown_person` counted, Stas rules each: a full run
+10. Vera reads ten model-written cards beside their authored lines: a live run smaller than the exit run, then a person
+11. Stas at his Mac, about 10 min: click a name, Option select, slash on a Russian layout, Ctrl+C twice, mouse off after exit: a person
+12. Vera reads a `play:card` `night_wolves` fight where Tam is the ally hurt: a live run smaller than the exit run, then a person
 
 # Tasks
 
-MON-12, ENG-48, ENG-49, MAP-23, AGT-106. Scope `docs/scope/allies-in-fights-scope.md` (table #365); decisions 0070, 0076.
+In design §13 merge order: ENG-47, MAP-22, MON-12 (core PR and pin), API-58, ENG-48 (engine), API-59, MAP-24, ENG-48 (deck), MAP-23, ENG-49 (engine, deck), AGT-106, AGT-107, AGT-108, AGT-109, AGT-127 (the describer; the scope's AGT-112). Scope `docs/scope/allies-in-fights-scope.md` (table #365), design table #412; decisions 0070, 0076, 0077, 0086.
 
 # Status
 
-open: no number yet; after the Dramaturg mechanism (Stas 2026-11-12 21:22Z).
+closed 2026-11-20 by Stas, with rows 10 and 11 not passed («А свои в бою закрываем сейчас», in the tech talk thread). Rows 1 to 8: the stack's tests in CI. Row 9: `full-2026-11-18T20-29-10-067Z` on 1d79d30, audit, leak scan and judge pass, one fight, no ally hurt. Row 10 failed in Stas's session `full-2026-11-18T20-57-38-635Z` (the describer showed none of its 12 lines) and moved to AGT-133 (Stas, 2026-11-18 21:42Z: rows 9 and 12 stand). Row 11 was not played: Stas closed the milestone without it. Row 12: `play:card` `night_wolves` on 1d79d30 with Vera's read (`/mnt/project-files/engine/allies/runs/row12-2026-11-18/`); Tam died in one seed, and Tam hurt is not reachable by seed with scripted seats. The later run `full-2026-11-20T11-57-47-274Z` failed its contract on a night at Wendford, which is MAP-30's and not this milestone's.
+
+Earlier: no number yet. Design and estimate accepted by Stas (table #412); his goal 2026-11-16 21:37Z: the full scope, every PR 🟢, done = ready for exit runs. Estimate (design §14): 21 PRs, 351 to 362 USD build, 10.5 to 19.5 USD runs, Stas 7.9 to 8.5 h (before the describer's re-price to S: build 341 to 352 USD, Stas 5 to 10 min less), 3 to 6 days. Milestone 13 closed 2026-11-16, so no M13 file waits.
+§16 answered by Stas 2026-11-16 (table #419): no target for ally deaths, the describer rewords `look` only, the rest as recommended.

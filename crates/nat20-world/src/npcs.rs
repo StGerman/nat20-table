@@ -39,12 +39,35 @@ pub struct NpcDef {
     /// What a Russian run calls them (AGT-38), such as «староста Осрик Хейл»
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name_ru: Option<String>,
+    /// Every form of the name a story line may hold, in every language the world is told in:
+    /// the matcher underlines a word only when it equals one (API-58, design rule N1)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub names: Vec<String>,
+    /// What anyone who has seen them sees: one line, no number
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub look: Option<String>,
+    /// `look` in a Russian run (decision 0067): the table reads it from the world file
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub look_ru: Option<String>,
+    /// What the valley says of them aloud to anyone: one line, a rumour, never a fact
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub heard: Option<String>,
+    /// `heard` in a Russian run
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub heard_ru: Option<String>,
+    /// What they remember of the party: one line per deed, shown only by the rules of
+    /// decision 0077
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub remembers: Vec<Remembers>,
     /// The engine stat block they fight as (`guard`, `commoner`)
     pub monster: String,
-    /// The place they live in, a place id
-    pub place: String,
-    /// The anchor of the place's scene they stand at
-    pub anchor: String,
+    /// The place they live in, a place id; none for someone who lives on no map place (a
+    /// merchant on the road, someone only heard of)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub place: Option<String>,
+    /// The anchor of the place's scene they stand at; with `place` only
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anchor: Option<String>,
     /// How they feel about the party at first
     #[serde(default)]
     pub attitude: Attitude,
@@ -54,6 +77,25 @@ pub struct NpcDef {
     /// Who they are, for the DM only
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+}
+
+/// One thing a person remembers of the party (API-58): the line shows once the deed is
+/// remembered, by the rules of decision 0077.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Remembers {
+    /// The deed id
+    pub deed: String,
+    /// The line for a viewer who did the deed (in the deed's `by`), in English
+    pub you: String,
+    /// The line for a viewer whose company did it without them, in English
+    pub company: String,
+    /// `you` in a Russian run
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub you_ru: Option<String>,
+    /// `company` in a Russian run
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub company_ru: Option<String>,
 }
 
 /// How an NPC feels about the party. A hostile NPC stands on the hostile side of a fight;
@@ -125,6 +167,13 @@ pub struct NpcState {
     /// Whether the party has been in their place while they were there
     #[serde(default)]
     pub met: bool,
+    /// The characters who have seen them (API-59), each with the place they last did; none
+    /// when it was on the road
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub seen: BTreeMap<String, Option<String>>,
+    /// The characters who have heard of them without seeing them (API-59)
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub heard: BTreeSet<String>,
     /// How they feel about the party
     #[serde(default)]
     pub attitude: Attitude,
@@ -140,6 +189,8 @@ impl NpcState {
             hp: None,
             alive: true,
             met: false,
+            seen: BTreeMap::new(),
+            heard: BTreeSet::new(),
             attitude: def.attitude,
             carries: def.carries.clone(),
         }
@@ -178,10 +229,31 @@ impl NpcFile {
             if !ids.insert(npc.id.as_str()) {
                 return Err(MapError(format!("the NPC {} is named twice", npc.id)));
             }
-            if map.place(&npc.place).is_none() {
+            match (&npc.place, &npc.anchor) {
+                (Some(place), Some(_)) if map.place(place).is_none() => {
+                    return Err(MapError(format!(
+                        "the NPC {} lives in unknown place {place}",
+                        npc.id
+                    )));
+                }
+                (Some(_), Some(_)) | (None, None) => {}
+                (Some(_), None) => {
+                    return Err(MapError(format!(
+                        "the NPC {} lives in a place but stands at no anchor",
+                        npc.id
+                    )));
+                }
+                (None, Some(_)) => {
+                    return Err(MapError(format!(
+                        "the NPC {} has an anchor but lives in no place",
+                        npc.id
+                    )));
+                }
+            }
+            if npc.names.iter().any(|n| n.trim().is_empty()) {
                 return Err(MapError(format!(
-                    "the NPC {} lives in unknown place {}",
-                    npc.id, npc.place
+                    "the NPC {} lists an empty name form",
+                    npc.id
                 )));
             }
             if npc.name.trim().is_empty()
@@ -268,6 +340,25 @@ mod tests {
         let mut two_lines = npcs.clone();
         two_lines.npcs[0].name = "Reeve\rof the town".into();
         assert!(two_lines.validate(&map()).is_err());
+    }
+
+    #[test]
+    fn a_person_may_live_on_no_place_but_an_anchor_needs_one() {
+        let road = file(
+            r#"{"npcs": [{"id": "tam", "name": "Tam", "names": ["Tam", "Тэм", "Тэма"], "monster": "commoner",
+                "look": "A barefoot boy with a bundle.", "remembers": [{"deed": "fed_tam", "you": "You fed him.", "company": "Your company fed him."}]}]}"#,
+        );
+        road.validate(&map()).unwrap();
+        assert_eq!(road.npcs[0].place, None);
+        assert_eq!(road.npcs[0].names.len(), 3);
+        let anchor_only = file(
+            r#"{"npcs": [{"id": "tam", "name": "Tam", "monster": "commoner", "anchor": "square"}]}"#,
+        );
+        assert!(anchor_only.validate(&map()).is_err());
+        let place_only = file(
+            r#"{"npcs": [{"id": "tam", "name": "Tam", "monster": "commoner", "place": "town"}]}"#,
+        );
+        assert!(place_only.validate(&map()).is_err());
     }
 
     #[test]

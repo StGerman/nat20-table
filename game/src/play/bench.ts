@@ -15,8 +15,8 @@ export interface BenchPlan {
   card: string;
   /** The pack it is benched in, as given. */
   pack: string;
-  when: "road" | "arrival";
-  /** The card's zone: a road's zone for a road card, a place for an arrival card. */
+  when: "road" | "night" | "arrival";
+  /** The card's zone: a road's zone for a road or night card, a place for an arrival card. */
   zone: string;
   /** The copy's start: the last place on the pack's route with a scene of its own before the card. */
   start: string;
@@ -46,7 +46,7 @@ interface World {
   route?: string[];
   road_scene: string;
   scenes?: Record<string, string>;
-  escort?: { destination: string };
+  escort?: { destination: string; death_card?: string };
 }
 
 /** A scene file, as far as the bench reads it: the creatures it places and where a carried party stands. */
@@ -90,11 +90,26 @@ function added(effects: unknown): string[] {
 
 const deeds = (d: string | string[] | undefined): string[] => (d === undefined ? [] : typeof d === "string" ? [d] : d);
 
+/** `ids` and the chained cards their choices add, and what those add: the deck's own check wants every `add_card` to name a card. */
+function withAdded(cards: DeckCard[], ids: string[]): string[] {
+  const kept = [...ids];
+  for (let i = 0; i < kept.length; i++) {
+    const c = cards.find((x) => x.id === kept[i]);
+    for (const next of added(c?.choices)) if (!kept.includes(next)) kept.push(next);
+  }
+  return kept;
+}
+
+/** Whether a card reads `deed` in its own `if` or a choice's. */
+const reads = (card: DeckCard, deed: string): boolean => [card, ...(card.choices as Array<{ if?: string | string[] }>)].some((d) => deeds(d.if).includes(deed));
+
 /**
  * How the bench reaches `card` in `pack` (design §3): the leg of the pack's route where the card is
  * drawn, and the last place with a scene of its own before it. Refuses a pack with no campaign, a
- * card the pack doesn't have, a night or chained card (out of this version), and a card whose zone
- * the route never crosses or never arrives at.
+ * card the pack doesn't have, a chained card (out of this version), a night card of a place (the
+ * bench's seat camps where the day's travel runs out, on the road), and a card whose zone the route
+ * never crosses or never arrives at. A night card's stretch runs on to the end of the last leg in
+ * its zone that follows the first, so that a night falls on a road of that zone (AGT-131).
  */
 export function benchPlan(pack: string, card: string): BenchPlan {
   const file = path.join(pack, "campaign.json");
@@ -107,32 +122,27 @@ export function benchPlan(pack: string, card: string): BenchPlan {
   if (!found) throw new BenchError(`${pack} has no card ${card}: neither its own deck nor the deck of its world ${world.map} holds it.`);
   if (found.chained) throw new BenchError(`${card} is a chained card: it is in play only once another card's choice adds it, and the card bench does not reach those yet.`);
   const when = found.when ?? "road";
-  if (when === "night") throw new BenchError(`${card} is a night card: the card bench does not reach those yet.`);
+  if (when === "night" && !map.roads.some((r) => r.zone === found.zone)) throw new BenchError(`${card} is a night card of the place ${found.zone}: the card bench camps where the day's travel runs out, on the road, so it reaches only a night card of a road's zone.`);
   const route = world.route ?? [];
+  // Whether the leg into route[i] is a road of the card's zone.
+  const inZone = (i: number) => i > 0 && map.roads.some((r) => r.zone === found.zone && ((r.from === route[i - 1] && r.to === route[i]) || (r.to === route[i - 1] && r.from === route[i])));
   // Where the card's leg ends: the place the caravan arrives at, or the far end of the first leg in the card's zone.
   let end = -1;
   if (when === "arrival") end = route.findIndex((place, i) => i > 0 && place === found.zone);
-  else {
-    end = route.findIndex((place, i) => {
-      const from = route[i - 1];
-      return i > 0 && map.roads.some((r) => r.zone === found.zone && ((r.from === from && r.to === place) || (r.to === from && r.from === place)));
-    });
-  }
+  else end = route.findIndex((_, i) => inZone(i));
+  // A night card: on to the end of the zone's legs in a row, so the day's travel runs out on one of them.
+  if (when === "night" && end > 0) while (inZone(end + 1)) end += 1;
   if (end < 1) {
     const way = route.length > 0 ? `its route ${route.join(" > ")}` : "it has no route";
-    throw new BenchError(when === "arrival" ? `${card} is an arrival card of ${found.zone}, where ${pack} never arrives: ${way}.` : `${card} is a road card of the zone ${found.zone}, which ${pack} never crosses: ${way}.`);
+    throw new BenchError(when === "arrival" ? `${card} is an arrival card of ${found.zone}, where ${pack} never arrives: ${way}.` : `${card} is a ${when} card of the zone ${found.zone}, which ${pack} never crosses: ${way}.`);
   }
   // The last place before the card's leg ends that has a scene of its own; the route's first place when none has.
   // The road scene is loaded again on the way, so a place that plays it is no start.
   const scened = (place: string) => ![undefined, null, world.road_scene].includes(world.scenes?.[place] ?? map.places.find((p) => p.id === place)?.scene);
   let start = end - 1;
   while (start > 0 && !scened(route[start]!)) start -= 1;
-  // The chained cards the card's choices add stay, and what those add: the deck's own check wants every `add_card` to name a card.
-  const kept = [card];
-  for (let i = 0; i < kept.length; i++) {
-    const c = cards.find((x) => x.id === kept[i]);
-    for (const next of added(c?.choices)) if (!kept.includes(next)) kept.push(next);
-  }
+  // The chained cards the card's choices add stay, and what those add.
+  const kept = withAdded(cards, [card]);
   return { card, pack, when, zone: found.zone, start: route[start]!, route: route.slice(start, end + 1), needs: deeds(found.if), barred: deeds(found.unless), kept };
 }
 
@@ -140,17 +150,22 @@ export function benchPlan(pack: string, card: string): BenchPlan {
  * Makes the bench's copy of `pack` in the folder `root` (design §3) and returns the copy's folder
  * and the plan it was cut by:
  * - the pack and its world, copied, so the copy plays its own `worlds/<map>`;
- * - every deck file of both with only the plan's kept cards;
+ * - every deck file of both with only the plan's kept cards and the escort's death card, and the
+ *   world's company cut to the entries those cards read the death of (rule A9);
  * - `world.start` and `world.route` cut to the plan's stretch, with the escort's destination at
  *   its end, so a card that never comes ends the bench run after that stretch and not at the
  *   pack's far end;
  * - the party of the pack's own first scene placed in the copy's first scene, at that scene's
  *   `party_start` anchors as a carried party would stand: the engine starts a contract only in a
  *   scene that places its party;
- * - prose and lore paths that leave the pack made absolute, so the DM's pack text still reads.
+ * - prose and lore paths that leave the pack made absolute, so the DM's pack text still reads;
+ * - each company entry named in `rides` kept, its `unless` taken off, and the deeds of its `if`
+ *   remembered first by every choice of the benched card (AGT-131): those deeds count only when
+ *   written on the contract under way, which a bench run starts fresh, so `--rides tam` is how a
+ *   wagon fight is benched with Tam at the wagon.
  * Every bench run takes a fresh copy: a card decided in one run (`once`) would be gone from the next.
  */
-export function benchPack(pack: string, card: string, root: string): { dir: string; plan: BenchPlan } {
+export function benchPack(pack: string, card: string, root: string, rides: readonly string[] = []): { dir: string; plan: BenchPlan } {
   const plan = benchPlan(pack, card);
   const source = path.resolve(pack);
   const dir = path.join(root, path.basename(source));
@@ -162,9 +177,57 @@ export function benchPack(pack: string, card: string, root: string): { dir: stri
   const world = path.join(dir, "worlds", campaign.world.map);
   // A pack that carries its own world was copied with it.
   if (!existsSync(path.join(world, "map.json"))) cpSync(worldOf(source, campaign.world.map), world, { recursive: true });
+  const companyFile = path.join(world, "company.json");
+  const company = existsSync(companyFile) ? readJson<{ company: Array<{ id: string; hurt?: boolean; if: string | string[]; unless?: unknown }> }>(companyFile) : { company: [] };
+  const riding = company.company.filter((e) => rides.includes(e.id));
+  const unknown = rides.filter((id) => !riding.some((e) => e.id === id));
+  if (unknown.length > 0) {
+    const ids = company.company.map((e) => e.id);
+    throw new BenchError(`--rides ${unknown.join(",")}: the world ${campaign.world.map} has no such company entry${ids.length > 0 ? `; it has ${ids.join(", ")}` : ", and no company at all"}.`);
+  }
+  // The escort's death card stays too (ENG-49): it is the reader of the owner's death a wagon fight
+  // needs (rule A9), and it comes only once the owner is dead. A riding entry brings the cards that
+  // read its death and its wound, by the same rule, and what their choices add.
+  const all = cardsOf(source, worldOf(source, campaign.world.map));
+  const readers = riding.flatMap((e) => all.filter((c) => reads(c, `${e.id}_dead`) || (e.hurt === true && reads(c, `${e.id}_hurt`))).map((c) => c.id));
+  const kept = withAdded(all, [...plan.kept, ...(campaign.world.escort?.death_card ? [campaign.world.escort.death_card] : []), ...readers]);
+  // A chained reader needs a card that adds it, or the deck's check refuses the copy: the first one stays, with what it adds.
+  for (let i = 0; i < kept.length; i++) {
+    const c = all.find((x) => x.id === kept[i]);
+    if (!c?.chained || kept.some((k) => added(all.find((x) => x.id === k)?.choices).includes(c.id))) continue;
+    const adder = all.find((x) => added(x.choices).includes(c.id));
+    if (adder) for (const id of withAdded(all, [adder.id])) if (!kept.includes(id)) kept.push(id);
+  }
+  const read = new Set<string>();
   for (const deck of [...deckFiles(world), ...deckFiles(dir)]) {
     const content = readJson<{ cards: DeckCard[] }>(deck);
-    writeFileSync(deck, JSON.stringify({ ...content, cards: content.cards.filter((c) => plan.kept.includes(c.id)) }, null, 4) + "\n");
+    const cards = content.cards.filter((c) => kept.includes(c.id));
+    for (const c of cards) for (const d of [c, ...(c.choices as Array<{ if?: string | string[] }>)]) for (const deed of deeds(d.if)) read.add(deed);
+    writeFileSync(deck, JSON.stringify({ ...content, cards }, null, 4) + "\n");
+  }
+  // A company entry rides only when the cards kept read its death, and its wound when it can be
+  // hurt (rule A9): the bench plays the card with the allies its own choices answer for. A card
+  // whose choices only ask whether an ally rides (`rides:`) reads no death, so it is benched alone.
+  if (existsSync(companyFile)) {
+    company.company = company.company.flatMap((e) => {
+      if (rides.includes(e.id)) {
+        const { unless: _unless, ...always } = e;
+        return [always];
+      }
+      return read.has(`${e.id}_dead`) && (!e.hurt || read.has(`${e.id}_hurt`)) ? [e] : [];
+    });
+    writeFileSync(companyFile, JSON.stringify(company, null, 4) + "\n");
+  }
+  // What makes a riding entry ride is written on the contract under way: each choice of the benched card remembers it first.
+  const written = riding.flatMap((e) => deeds(e.if));
+  if (written.length > 0) {
+    for (const deck of [...deckFiles(world), ...deckFiles(dir)]) {
+      const content = readJson<{ cards: Array<DeckCard & { choices: Array<{ effects?: unknown[] }> }> }>(deck);
+      const found = content.cards.find((c) => c.id === card);
+      if (!found) continue;
+      for (const choice of found.choices) choice.effects = [...written.map((deed) => ({ do: "remember", deed })), ...(choice.effects ?? [])];
+      writeFileSync(deck, JSON.stringify(content, null, 4) + "\n");
+    }
   }
   const outside = (name: string) => (path.resolve(source, name).startsWith(source + path.sep) ? name : path.resolve(source, name));
   if (campaign.prose) campaign.prose = campaign.prose.map(outside);

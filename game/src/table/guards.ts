@@ -105,6 +105,11 @@ function isNumber(word: string): boolean {
   return (/\d/.test(word) && !DIE.test(word) && !CITED.test(word)) || isNumberWord(word);
 }
 
+/** Whether any word of `text` is a number, in digits or in words (rule N10's check, AGT-127). */
+export function hasNumber(text: string): boolean {
+  return text.split(/\s+/).map(bareWord).filter(Boolean).some(isNumber);
+}
+
 /** A signed number: +4, -1, −1. */
 function isSigned(word: string): boolean {
   return /^[+−-]\d/.test(word);

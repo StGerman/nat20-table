@@ -1130,7 +1130,8 @@ export class DmTools {
     const r = await this.table.engine.request("dm", { cmd: "get_state" });
     const state = r.result?.cmd === "get_state" ? r.result.state : undefined;
     if (state?.view !== "dm") return false;
-    const party = state.creatures.filter((c) => c.side === "party");
+    // The characters at the table: a wagon fight's allies stand on the party's side too (ENG-48).
+    const party = state.creatures.filter((c) => c.side === "party" && this.table.party.includes(c.handle));
     return party.length > 0 && party.every((c) => c.hp === 0);
   }
 

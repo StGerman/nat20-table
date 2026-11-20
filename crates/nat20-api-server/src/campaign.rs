@@ -10,9 +10,9 @@ use std::path::{Path, PathBuf};
 use nat20_api_contract::{
     Ability, CaravanView, CardChoiceDm, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget,
     CardWhen, CargoView, CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade,
-    EscortDm, EscortView, EventKind, Handle, LegView, MilesToday, NpcAttitude, NpcDm, OfferedCard,
-    OwnMoveDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld, Side, Skill, Terrain,
-    TripLegView, TripView, WagonView, Watch, WorldDm, WorldPosition,
+    EscortDm, EscortView, EventKind, Handle, LegView, MilesToday, NpcAttitude, NpcDm, NpcRemembers,
+    NpcSeen, OfferedCard, OwnMoveDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld,
+    Side, Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm, WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -211,9 +211,26 @@ impl Campaign {
         } else {
             world::NpcFile::default()
         };
-        let built = built
+        // A kind is not a name (MAP-24, rule N2): the roster holds people, never an animal.
+        if let Some(beast) = npcs.npcs.iter().find(|n| !monster::is_person(&n.monster)) {
+            return Err(bad(format!(
+                "The world {}'s roster lists {} with the stat block {}, a beast: an animal rides in company.json, never in the roster.",
+                setup.map, beast.id, beast.monster
+            )));
+        }
+        // Who may ride with the wagon (ENG-48), checked against the roster.
+        let company_file = dir.join("company.json");
+        let company: world::CompanyFile = if company_file.exists() {
+            read_json(&company_file, "company file")?
+        } else {
+            world::CompanyFile::default()
+        };
+        let mut built = built
             .with_npcs(npcs)
-            .map_err(|e| bad(format!("The world {}'s NPCs: {e}.", setup.map)))?;
+            .map_err(|e| bad(format!("The world {}'s NPCs: {e}.", setup.map)))?
+            .with_company(company)
+            .map_err(|e| bad(format!("The world {}'s company: {e}.", setup.map)))?;
+        built.seen_from_met(&party.iter().map(|h| h.0.clone()).collect::<Vec<_>>());
         // A player merchant drives the caravan, so they must travel with it.
         if let world::Owner::Player(owner) = &built.state.caravan.owner
             && !party.iter().any(|h| h.0 == *owner)
@@ -256,7 +273,32 @@ impl Campaign {
             .collect();
         scenes.push(&campaign.road_scene);
         for id in scenes {
-            read_scene(data_dir, id)?;
+            let file = read_scene(data_dir, id)?;
+            // A company animal is placed under its id, so no scene creature may hold it (ENG-48).
+            if let Some(entry) = campaign.world.company.iter().find(|e| {
+                e.monster.is_some()
+                    && file
+                        .creatures
+                        .iter()
+                        .chain(file.spawns.iter().flat_map(|s| s.creatures.iter()))
+                        .any(|c| c.handle.0 == e.id)
+            }) {
+                return Err(bad(format!(
+                    "The company entry {} is already a creature's handle in scene {id}.",
+                    entry.id
+                )));
+            }
+        }
+        if let Some(entry) = campaign
+            .world
+            .company
+            .iter()
+            .find(|e| e.monster.is_some() && campaign.party.iter().any(|h| h.0 == e.id))
+        {
+            return Err(bad(format!(
+                "The company entry {} is already a party member's handle.",
+                entry.id
+            )));
         }
         campaign.check_npcs(data_dir)?;
         Ok(campaign)
@@ -265,15 +307,25 @@ impl Campaign {
     /// Checks each place NPC against the scene their place loads: their anchor is in it, no
     /// creature or spawn of it has their id as a handle, and their stat block exists.
     fn check_npcs(&self, data_dir: &Path) -> Result<(), nat20_api_contract::ApiError> {
+        self.world
+            .check_cast()
+            .map_err(|e| bad(format!("The world's deck: {e}.")))?;
         for npc in &self.world.npcs {
+            monster::check(&npc.monster).map_err(|e| bad(format!("The NPC {}: {e}", npc.id)))?;
+            crate::adapter::game::check_carries(&carries_wire(&npc.carries))
+                .map_err(|e| bad(format!("The NPC {}'s carries: {e}.", npc.id)))?;
+            // Someone who lives on no place stands in a scene only when a mention places them.
+            let (Some(place), Some(anchor)) = (&npc.place, &npc.anchor) else {
+                continue;
+            };
             let scene_id = self.scene_at(&world::Position::At {
-                place: npc.place.clone(),
+                place: place.clone(),
             });
             let file = read_scene(data_dir, &scene_id)?;
-            if !file.anchors.iter().any(|a| a.id == npc.anchor) {
+            if !file.anchors.iter().any(|a| a.id == *anchor) {
                 return Err(bad(format!(
-                    "The NPC {} stands at anchor {}, which scene {scene_id} doesn't have.",
-                    npc.id, npc.anchor
+                    "The NPC {} stands at anchor {anchor}, which scene {scene_id} doesn't have.",
+                    npc.id
                 )));
             }
             let taken = file.creatures.iter().any(|c| c.handle.0 == npc.id)
@@ -287,9 +339,6 @@ impl Campaign {
                     npc.id
                 )));
             }
-            monster::check(&npc.monster).map_err(|e| bad(format!("The NPC {}: {e}", npc.id)))?;
-            crate::adapter::game::check_carries(&carries_wire(&npc.carries))
-                .map_err(|e| bad(format!("The NPC {}'s carries: {e}.", npc.id)))?;
         }
         Ok(())
     }
@@ -312,12 +361,164 @@ impl Campaign {
                     world::Attitude::Hostile => Side::Hostile,
                     world::Attitude::Friendly | world::Attitude::Indifferent => Side::Neutral,
                 },
-                anchor: def.anchor.clone(),
+                anchor: def.anchor.clone().expect("a place NPC has an anchor"),
                 name: def.name.clone(),
                 carries: carries_wire(&state.carries),
                 hp: state.hp,
             })
             .collect()
+    }
+
+    /// Where a person a mention names stands in scene `scene_id` (API-58, design rule N4):
+    /// their own anchor when they live in the place the party is in and this is its scene, the
+    /// scene's `first_anchor` when they own the caravan or stand in the cast of the card on the
+    /// table. None for someone dead, unknown, or not with the party.
+    pub fn mention_placement(
+        &self,
+        id: &str,
+        scene_id: &str,
+        first_anchor: &str,
+    ) -> Option<NpcPlacement> {
+        let def = self.world.npcs.iter().find(|d| d.id == id)?;
+        let state = self.world.state.npcs.get(id).filter(|s| s.alive)?;
+        let here = self.world.place_here().is_some_and(|p| {
+            def.place.as_deref() == Some(p) && self.scene_at(&self.world.state.at) == scene_id
+        });
+        let owner = matches!(&self.world.state.caravan.owner, world::Owner::Npc(o) if o == id);
+        let on_card = self
+            .world
+            .state
+            .deck
+            .pending
+            .as_ref()
+            .and_then(|p| self.world.deck.card(&p.card))
+            .is_some_and(|c| c.cast.iter().any(|who| who == id));
+        let anchor = match &def.anchor {
+            Some(anchor) if here => anchor.clone(),
+            _ if owner || on_card => first_anchor.to_owned(),
+            _ => return None,
+        };
+        Some(NpcPlacement {
+            id: def.id.clone(),
+            monster: def.monster.clone(),
+            side: match state.attitude {
+                world::Attitude::Hostile => Side::Hostile,
+                world::Attitude::Friendly | world::Attitude::Indifferent => Side::Neutral,
+            },
+            anchor,
+            name: def.name.clone(),
+            carries: carries_wire(&state.carries),
+            hp: state.hp,
+        })
+    }
+
+    /// Who joins a card's wagon fight (ENG-48, rule A2), in this order: each wagon's team but
+    /// its last animal, the company entries that ride on the contract under way, and the NPC
+    /// owner if alive and `owner`.
+    pub fn wagon_allies(&self, owner: bool) -> Vec<WagonAlly> {
+        let state = &self.world.state;
+        let mut allies: Vec<WagonAlly> = state
+            .caravan
+            .wagons
+            .iter()
+            .flat_map(|w| {
+                let placed = w.team.len().saturating_sub(1);
+                w.team[..placed].iter().map(|a| WagonAlly::Animal {
+                    wagon: w.n,
+                    animal: a.animal.clone(),
+                })
+            })
+            .collect();
+        for entry in self.world.riding() {
+            let at = entry.at.clone();
+            match (&entry.monster, &entry.npc) {
+                (Some(monster), _) => allies.push(WagonAlly::Beast {
+                    id: entry.id.clone(),
+                    monster: monster.clone(),
+                    name: entry.name.clone(),
+                    at,
+                    hurt: entry.hurt,
+                }),
+                (None, Some(npc)) => {
+                    if let Some(person) = self.ally_placement(npc) {
+                        allies.push(WagonAlly::Person {
+                            person,
+                            at,
+                            hurt: entry.hurt,
+                            owner: false,
+                        });
+                    }
+                }
+                (None, None) => {}
+            }
+        }
+        if owner
+            && let world::Owner::Npc(id) = &state.caravan.owner
+            && !allies
+                .iter()
+                .any(|a| matches!(a, WagonAlly::Person { person, .. } if person.id == *id))
+            && let Some(person) = self.ally_placement(id)
+        {
+            allies.push(WagonAlly::Person {
+                person,
+                at: None,
+                hurt: false,
+                owner: true,
+            });
+        }
+        allies
+    }
+
+    /// A living roster person as a wagon fight places them: their stat block, name, carries
+    /// and Hit Points, friendly; the anchor is left to the caller.
+    fn ally_placement(&self, id: &str) -> Option<NpcPlacement> {
+        let def = self.world.npcs.iter().find(|d| d.id == id)?;
+        let state = self.world.state.npcs.get(id).filter(|s| s.alive)?;
+        Some(NpcPlacement {
+            id: def.id.clone(),
+            monster: def.monster.clone(),
+            side: Side::Neutral,
+            anchor: String::new(),
+            name: def.name.clone(),
+            carries: carries_wire(&state.carries),
+            hp: state.hp,
+        })
+    }
+
+    /// A team animal of wagon `n` died in a fight (ENG-48): one `animal` leaves its team.
+    pub fn animal_died(&mut self, n: u32, animal: &str) {
+        if let Some(wagon) = self
+            .world
+            .state
+            .caravan
+            .wagons
+            .iter_mut()
+            .find(|w| w.n == n)
+            && let Some(i) = wagon.team.iter().position(|a| a.animal == animal)
+        {
+            wagon.team.remove(i);
+        }
+    }
+
+    /// The caravan's NPC owner, if an NPC owns it.
+    pub fn npc_owner(&self) -> Option<&str> {
+        match &self.world.state.caravan.owner {
+            world::Owner::Npc(id) => Some(id),
+            world::Owner::Player(_) => None,
+        }
+    }
+
+    /// Whether `id` is a person of the world's roster.
+    pub fn knows_npc(&self, id: &str) -> bool {
+        self.world.npcs.iter().any(|d| d.id == id)
+    }
+
+    /// A person of the roster died in the scene (API-58): the world holds them dead at once,
+    /// so a card whose cast holds them is never drawn (rule A8).
+    pub fn npc_died(&mut self, id: &str) {
+        if let Some(state) = self.world.state.npcs.get_mut(id) {
+            state.alive = false;
+        }
     }
 
     /// The escort contract as the party knows it.
@@ -365,11 +566,31 @@ impl Campaign {
         state.arrive(terms, place, |b| !dead(b))
     }
 
-    /// Marks an NPC met: the party is in their place with them.
+    /// Marks a person met: they stand in the scene with the party, and every party character
+    /// has seen them here (API-59).
     pub fn met(&mut self, id: &str) {
         if let Some(state) = self.world.state.npcs.get_mut(id) {
             state.met = true;
         }
+        let party = self.party_ids();
+        self.world.seen_by(id, &party);
+    }
+
+    /// Every party character who has not seen person `id` hears of them (API-59).
+    pub fn heard_of(&mut self, id: &str) {
+        let party = self.party_ids();
+        self.world.heard_by(id, &party);
+    }
+
+    /// The card `card` is shown to the party (API-59): its cast is seen, its `tells` heard
+    /// of, and its cast shown the deeds the card reads.
+    pub fn card_shown_to_party(&mut self, card: &str) {
+        let party = self.party_ids();
+        self.world.card_shown(card, &party);
+    }
+
+    fn party_ids(&self) -> Vec<String> {
+        self.party.iter().map(|h| h.0.clone()).collect()
     }
 
     /// The ids of every place NPC.
@@ -488,6 +709,17 @@ impl Campaign {
             owner,
             blades,
             tie_breaker: self.human.clone(),
+            owner_dead: self.world.owner_dead(),
+        }
+    }
+
+    /// Whom a card is put to now: a caravan card is a Blade card once the NPC owner is dead
+    /// (ENG-49, rule M2).
+    pub fn target_now(&self, card: &world::Card) -> CardTarget {
+        if card.target == world::Target::Caravan && self.world.owner_dead() {
+            CardTarget::Blades
+        } else {
+            target(card.target)
         }
     }
 
@@ -497,7 +729,7 @@ impl Campaign {
         let card = self.world.deck.card(id)?;
         let offers = world::PendingCard {
             card: card.id.clone(),
-            choices: world::Deck::offer_ids(card, &self.world.state.deeds),
+            choices: world::Deck::offer_ids(card, &self.world.deeds_now()),
             said: Default::default(),
             own_move: None,
             fell: Vec::new(),
@@ -505,12 +737,14 @@ impl Campaign {
         Some(OfferedCard {
             id: card.id.clone(),
             zone: card.zone.clone(),
-            target: target(card.target),
+            target: self.target_now(card),
             text: card.text.clone(),
             choices: choices_dm(card, Some(&offers)),
             note: card.note.clone(),
             scout: card.scout.map(scout_skill),
             reads: reads(card, Some(&offers), &self.world.state.deeds),
+            cast: card.cast.clone(),
+            tells: card.tells.clone(),
         })
     }
 
@@ -550,7 +784,7 @@ impl Campaign {
         Some(CardDm {
             id: card.id.clone(),
             zone: card.zone.clone(),
-            target: target(card.target),
+            target: self.target_now(card),
             text: card.text.clone(),
             choices: choices_dm(card, Some(pending)),
             said: pending
@@ -581,6 +815,8 @@ impl Campaign {
                     failure: mv.failure.clone(),
                 }
             }),
+            cast: card.cast.clone(),
+            tells: card.tells.clone(),
         })
     }
 
@@ -716,6 +952,7 @@ impl Campaign {
                     by: d.by.iter().cloned().map(Handle).collect(),
                     day: d.day,
                     contract: d.contract,
+                    saw: d.saw.clone(),
                 })
                 .collect(),
             escort: self.escort_view().map(|contract| EscortDm {
@@ -730,7 +967,20 @@ impl Campaign {
                     Some(NpcDm {
                         id: d.id.clone(),
                         name: d.name.clone(),
+                        names: d.names.clone(),
+                        look: d.look.clone(),
+                        heard: d.heard.clone(),
+                        remembers: d
+                            .remembers
+                            .iter()
+                            .map(|r| NpcRemembers {
+                                deed: r.deed.clone(),
+                                you: r.you.clone(),
+                                company: r.company.clone(),
+                            })
+                            .collect(),
                         place: d.place.clone(),
+                        anchor: d.anchor.clone(),
                         monster: d.monster.clone(),
                         attitude: match s.attitude {
                             world::Attitude::Friendly => NpcAttitude::Friendly,
@@ -741,6 +991,15 @@ impl Campaign {
                         met: s.met,
                         hp: s.hp,
                         notes: d.notes.clone(),
+                        seen: s
+                            .seen
+                            .iter()
+                            .map(|(by, place)| NpcSeen {
+                                by: Handle(by.clone()),
+                                place: place.clone(),
+                            })
+                            .collect(),
+                        heard_by: s.heard.iter().cloned().map(Handle).collect(),
                     })
                 })
                 .collect(),
@@ -791,6 +1050,28 @@ pub struct NpcPlacement {
     pub carries: Carries,
     /// Hit Points the party left them with; none is full
     pub hp: Option<u32>,
+}
+
+/// One who joins a card's wagon fight (ENG-48, rule A2).
+#[derive(Debug, Clone)]
+pub enum WagonAlly {
+    /// A team animal of wagon `wagon`; its stat block is `animal`
+    Animal { wagon: u32, animal: String },
+    /// A company entry that is an animal, under its entry id
+    Beast {
+        id: String,
+        monster: String,
+        name: Option<String>,
+        at: Option<String>,
+        hurt: bool,
+    },
+    /// A roster person: a company entry, or the NPC owner (`owner`)
+    Person {
+        person: NpcPlacement,
+        at: Option<String>,
+        hurt: bool,
+        owner: bool,
+    },
 }
 
 /// Reads a scene a journey can load; any reason it can't be read is the campaign's `bad_scene`.
@@ -869,7 +1150,7 @@ fn check_effects(
                     Some(_) => Some(format!("{skill} is not a {ability} check")),
                     None => Some(format!("{ability} / {skill} is not an ability and a skill")),
                 },
-                world::Effect::Fight { monsters } => monsters
+                world::Effect::Fight { monsters, .. } => monsters
                     .iter()
                     .find_map(|m| crate::adapter::monster::check(m.stat()).err()),
                 world::Effect::Cargo { good, .. } if goods.get(good).is_none() => {
@@ -982,6 +1263,7 @@ pub fn reads(
                 by: d.by.iter().cloned().map(Handle).collect(),
                 day: d.day,
                 contract: d.contract,
+                saw: d.saw.clone(),
             });
         }
     }

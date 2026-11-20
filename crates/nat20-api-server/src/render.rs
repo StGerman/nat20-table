@@ -2,9 +2,9 @@
 //! text can never carry a number the view type left out (CLAUDE.md Rule 3).
 
 use nat20_api_contract::{
-    AgainstKind, CardCame, CombatOverReason, ConcentrationEndReason, DamageType, DiceRolled,
-    EventKind, Handle, LedgerGoods, LedgerReason, LifeState, Lodging, Mode, RollKind, RollOutcome,
-    RollView, Side,
+    AgainstKind, ArrivalPurse, CardCame, CombatOverReason, ConcentrationEndReason, DamageType,
+    DiceRolled, EventKind, Handle, LedgerGoods, LedgerReason, LifeState, Lodging, Mode, RollKind,
+    RollOutcome, RollView, Side,
 };
 
 /// The sentence for one event.
@@ -304,6 +304,19 @@ pub fn text(kind: &EventKind) -> String {
             let ids: Vec<&str> = cards.iter().map(|c| c.id.as_str()).collect();
             format!("The road offers {}; the DM picks one.", ids.join(", "))
         }
+        EventKind::NpcNamed { npcs, placed } => {
+            if placed.is_empty() {
+                format!("The DM names {}.", npcs.join(", "))
+            } else {
+                let placed: Vec<&str> = placed.iter().map(|h| h.0.as_str()).collect();
+                let verb = if placed.len() == 1 { "stands" } else { "stand" };
+                format!(
+                    "The DM names {}; {} now {verb} in the scene.",
+                    npcs.join(", "),
+                    placed.join(", ")
+                )
+            }
+        }
         EventKind::CardPicked { card, came, .. } => match came {
             CardCame::DmPick => format!("The DM picks {card}."),
             CardCame::EnginePick => format!("The DM did not pick; the engine takes {card}."),
@@ -340,9 +353,19 @@ pub fn text(kind: &EventKind) -> String {
                 format!("The world remembers {deed}, by {}.", by.join(", "))
             }
         }
-        EventKind::EscortSettled { destination } => {
-            format!("The caravan reaches {destination}; the Blades are paid what they are owed.")
-        }
+        EventKind::EscortSettled { destination, purse } => match purse {
+            ArrivalPurse::Owner => {
+                format!(
+                    "The caravan reaches {destination}; the Blades are paid what they are owed."
+                )
+            }
+            ArrivalPurse::Carried => format!(
+                "The caravan reaches {destination}; the Blades are paid from the purse they carried in."
+            ),
+            ArrivalPurse::Shared => format!(
+                "The caravan reaches {destination}; the purse was shared out, and nothing more is paid."
+            ),
+        },
         EventKind::XpAwarded {
             actor,
             xp,

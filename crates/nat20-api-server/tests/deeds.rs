@@ -2,7 +2,8 @@
 //! §4.2 rule 8, API-57): for each world, a deed that a card or a choice of the world's deck joined
 //! with its packs' decks reads is written by a deck effect, a card fight's `npc`, or a scene of a
 //! pack on that world (a check's `remember`, an encounter's `on_end`, a creature's `npc`). A pack
-//! is on a world by `campaign.json`'s `world.map` or `adventure.json`'s `site.map`.
+//! is on a world by `campaign.json`'s `world.map` or `adventure.json`'s `site.map`. The engine's
+//! own deeds count as written too: a company entry's, `rides:<id>`, and the NPC owner's (ENG-48).
 //!
 //! The test lives here, not in the world crate, because only the server reads both the deck and
 //! the scene formats.
@@ -13,7 +14,7 @@ use std::{
 };
 
 use nat20_api_contract::{Consequence, SceneFile};
-use nat20_world::{Deck, DeckFile, killed_deed};
+use nat20_world::{CompanyFile, Deck, DeckFile, killed_deed, lost_a_horse_deed, owner_dead_deed};
 use serde_json::Value;
 
 fn repo() -> PathBuf {
@@ -99,24 +100,95 @@ fn scene_deeds(pack: &Path) -> BTreeSet<String> {
     written
 }
 
-#[test]
-fn every_deed_a_card_reads_is_written_on_its_world() {
+/// Every world: the shipped ones and the server's test world.
+fn worlds() -> Vec<PathBuf> {
     let mut worlds = dirs(&repo().join("worlds"));
     worlds.extend(dirs(&repo().join("crates/nat20-api-server/data/worlds")));
     assert!(worlds.iter().any(|w| w.ends_with("wend")));
-    for world in worlds {
-        let id = world.file_name().unwrap().to_str().unwrap().to_owned();
-        let mut all = deck(&world);
-        let mut by_scenes = BTreeSet::new();
-        for pack in packs()
-            .iter()
-            .filter(|p| pack_map(p).as_deref() == Some(&id))
+    worlds
+}
+
+/// A world's deck joined with its packs' decks, and the deeds written outside a deck: by the
+/// packs' scenes, and by the engine for a company entry (`rides:<id>` too) and the NPC owner
+/// (ENG-48).
+fn on_world(world: &Path) -> (Deck, BTreeSet<String>) {
+    let id = world.file_name().unwrap().to_str().unwrap().to_owned();
+    let mut all = deck(world);
+    let mut elsewhere = BTreeSet::new();
+    let company = world.join("company.json");
+    if company.exists() {
+        elsewhere.extend(read::<CompanyFile>(&company).written());
+    }
+    for pack in packs()
+        .iter()
+        .filter(|p| pack_map(p).as_deref() == Some(&id))
+    {
+        all = all.join(deck(pack));
+        elsewhere.extend(scene_deeds(pack));
+        let campaign = pack.join("campaign.json");
+        if let Some(owner) = campaign
+            .exists()
+            .then(|| read::<Value>(&campaign))
+            .and_then(|c| c["world"]["caravan"]["owner"].as_str().map(str::to_owned))
+            .and_then(|o| o.strip_prefix("npc:").map(str::to_owned))
         {
-            all = all.join(deck(pack));
-            by_scenes.extend(scene_deeds(pack));
+            elsewhere.insert(owner_dead_deed(&owner));
+            elsewhere.insert(lost_a_horse_deed(&owner));
         }
-        all.check_deeds_written(&by_scenes)
+    }
+    (all, elsewhere)
+}
+
+#[test]
+fn every_deed_a_card_reads_is_written_on_its_world() {
+    for world in worlds() {
+        let (all, elsewhere) = on_world(&world);
+        all.check_deeds_written(&elsewhere)
             .unwrap_or_else(|e| panic!("{} and its packs: {e}", world.display()));
+    }
+}
+
+/// Rules N2 and N3 of the allies-in-fights design (§6.1, MAP-24) on every roster: a `remembers`
+/// line reads a deed something on its world writes, and no `look`, `heard` or `remembers` line
+/// holds a digit.
+#[test]
+fn every_roster_line_reads_a_written_deed_and_holds_no_digit() {
+    for world in worlds() {
+        let file = world.join("npcs.json");
+        if !file.exists() {
+            continue;
+        }
+        let (all, elsewhere) = on_world(&world);
+        let mut written = all.deeds_written();
+        written.extend(elsewhere);
+        let roster: Value = read(&file);
+        for person in roster["npcs"].as_array().unwrap() {
+            let id = person["id"].as_str().unwrap();
+            let mut lines: Vec<&str> = ["look", "look_ru", "heard", "heard_ru"]
+                .iter()
+                .filter_map(|k| person[*k].as_str())
+                .collect();
+            for line in person["remembers"].as_array().into_iter().flatten() {
+                let deed = line["deed"].as_str().unwrap();
+                assert!(
+                    written.contains(deed),
+                    "{}: {id} remembers {deed}, which nothing writes",
+                    world.display()
+                );
+                lines.extend(
+                    ["you", "company", "you_ru", "company_ru"]
+                        .iter()
+                        .filter_map(|k| line[*k].as_str()),
+                );
+            }
+            for line in lines {
+                assert!(
+                    !line.chars().any(|c| c.is_ascii_digit()),
+                    "{}: {id}'s line holds a digit: {line}",
+                    world.display()
+                );
+            }
+        }
     }
 }
 
@@ -179,6 +251,7 @@ fn wendford_meets_the_party_with_the_card_its_yard_wrote() {
                     by: vec!["bren".into()],
                     day: 1,
                     contract: 1,
+                    saw: vec![],
                 };
                 (d.to_string(), deed)
             })

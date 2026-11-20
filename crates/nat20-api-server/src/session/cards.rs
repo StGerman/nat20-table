@@ -7,6 +7,8 @@ use nat20_api_contract::{
     EventKind, Handle, LedgerReason, LifeState, Mode, Placement, RejectReason, RollId, RollKind,
     RollOutcome, RollView, Side, Skill, Visibility,
 };
+use std::collections::BTreeMap;
+
 use nat20_world as world;
 
 use super::Session;
@@ -94,7 +96,7 @@ impl Session {
 
     /// Logs the card on the table (`card_drawn`, public), after the scout's look ahead when
     /// the card has something to find (API-54). A card nobody can speak on is settled at once.
-    fn show_card(&mut self) -> Result<(), ApiError> {
+    pub(super) fn show_card(&mut self) -> Result<(), ApiError> {
         self.scout_look()?;
         let Some(campaign) = self.campaign.as_ref() else {
             return Ok(());
@@ -105,6 +107,17 @@ impl Session {
                 visibility: Visibility::Dm,
                 kind: shown,
             });
+        }
+        let campaign = self.campaign.as_mut().expect("checked above");
+        if let Some(card) = campaign
+            .world
+            .state
+            .deck
+            .pending
+            .as_ref()
+            .map(|p| p.card.clone())
+        {
+            campaign.card_shown_to_party(&card);
         }
         let campaign = self.campaign.as_ref().expect("checked above");
         let pending = campaign.world.state.deck.pending.clone();
@@ -117,7 +130,7 @@ impl Session {
         self.push(Pending::public(
             None,
             EventKind::CardDrawn {
-                target: campaign::target(card.target),
+                target: campaign.target_now(&card),
                 card_text: card.text.clone(),
                 choices: campaign::choices(&card, pending.as_ref()),
             },
@@ -247,6 +260,8 @@ impl Session {
                 "No campaign is running; the game starts one with start_campaign.",
             ));
         };
+        // A card about someone who died since the draw is never picked (rule A8).
+        campaign.world.drop_dead_offers();
         // The loop's fallback takes the first card rolled; any other card is the DM's pick,
         // never the engine's (ENG-42).
         if fallback
@@ -479,6 +494,20 @@ impl Session {
     /// rolls before the card is decided, and a fall leaves the card to the words left
     /// (decision 0079).
     fn resolve_card(&mut self, resolution: world::Resolution) -> Result<(), ApiError> {
+        // The card's cast is shown the deeds its choice reads, and sees the deeds its effects
+        // write (API-59).
+        if let Some(campaign) = self.campaign.as_mut() {
+            campaign
+                .world
+                .choice_chosen(&resolution.card, &resolution.choice);
+            self.card_cast = Some(campaign.world.cast_of(&resolution.card));
+        }
+        let resolved = self.resolve_card_effects(resolution);
+        self.card_cast = None;
+        resolved
+    }
+
+    fn resolve_card_effects(&mut self, resolution: world::Resolution) -> Result<(), ApiError> {
         if let Some(run) = resolution
             .own_move
             .as_ref()
@@ -532,6 +561,7 @@ impl Session {
                 .expect("a card needs a campaign")
                 .world;
             world.deck.own_move_won(&mut world.state.deck);
+            world.choice_chosen(&resolution.card, &run.mv.success);
             self.push(Pending::public(
                 None,
                 EventKind::CardResolved {
@@ -582,6 +612,10 @@ impl Session {
         } else {
             (mv.failure.as_deref(), &run.failure)
         };
+        // The choice the roll brought is the one chosen (API-59): its cast sees what it reads.
+        if let (Some(choice), Some(campaign)) = (choice, self.campaign.as_mut()) {
+            campaign.world.choice_chosen(card, choice);
+        }
         self.push_own_move_ran(card, choice, roll);
         self.run_effects(effects, by)
     }
@@ -697,7 +731,13 @@ impl Session {
                 let group = !rollers.is_empty() && passed * 2 >= rollers.len();
                 self.run_effects(if group { success } else { failure }, &rollers)
             }
-            world::Effect::Fight { monsters } => self.card_fight(monsters),
+            world::Effect::Fight {
+                monsters,
+                surprise,
+                wagon,
+                from,
+                owner,
+            } => self.card_fight(monsters, *surprise, *wagon, from.as_deref(), *owner),
             world::Effect::Pay { who, copper } => {
                 for payer in self.who(*who, false) {
                     let game = self.game_mut()?;
@@ -709,6 +749,18 @@ impl Session {
                     self.push_entries();
                 }
                 Ok(())
+            }
+            world::Effect::SharePurse => {
+                // The purse goes to the Blades still standing, as loot (ENG-49).
+                let game = self.game.as_ref();
+                let alive = |b: &str| game.is_some_and(|g| g.has_creature(b) && !g.is_dead(b));
+                let shares = self
+                    .campaign
+                    .as_mut()
+                    .expect("a card needs a campaign")
+                    .world
+                    .share_purse(alive);
+                self.pay_wages(shares, LedgerReason::Loot)
             }
             world::Effect::Gain { who, copper } => {
                 for taker in self.who(*who, false) {
@@ -783,13 +835,19 @@ impl Session {
     /// done again keeps its first record and logs nothing.
     pub(super) fn remember(&mut self, deed: &str, by: Vec<String>) {
         // A campaign's world, or a site session's memory (ENG-44); with neither, nothing.
+        // Who saw it (API-59): the cast of the card that writes it, else the roster people in
+        // the scene.
+        let saw = self
+            .card_cast
+            .clone()
+            .unwrap_or_else(|| self.npcs_here.clone());
         let record = if let Some(campaign) = self.campaign.as_mut() {
-            if !campaign.world.remember(deed, by) {
+            if !campaign.world.remember(deed, by, saw) {
                 return;
             }
             campaign.world.state.deeds[deed].clone()
         } else if let Some(site) = self.site.as_mut() {
-            if !site.memory.remember(deed, by) {
+            if !site.memory.remember(deed, by, saw) {
                 return;
             }
             site.memory.deeds[deed].clone()
@@ -819,11 +877,13 @@ impl Session {
                 .is_some_and(|s| s.memory.deeds.contains_key(deed))
     }
 
-    /// Follows the blows of a fight for the death deed (ENG-36): who rolled each roll, who dealt
-    /// the last damage to each creature, and, when a card fight's named NPC dies, the deed
-    /// `killed_<npc>` by the one who dealt the last blow: returned, for the caller to remember
-    /// once the death itself is logged.
-    pub(super) fn follow_blows(&mut self, kind: &EventKind) -> Option<(String, Vec<String>)> {
+    /// Follows the blows of a fight for the death deeds (ENG-36, ENG-48): who rolled each roll,
+    /// who dealt the last damage to each creature, and, when a card fight's named NPC dies, the
+    /// deed `killed_<npc>` by the one who dealt the last blow; when an ally of a wagon fight
+    /// dies, its death deed by the fight's Blades (rule A7). Returned, for the caller to
+    /// remember once the death itself is logged.
+    pub(super) fn follow_blows(&mut self, kind: &EventKind) -> Vec<(String, Vec<String>)> {
+        let mut deeds = Vec::new();
         match kind {
             EventKind::Action { actor, .. } => self.last_actor = Some(actor.0.clone()),
             EventKind::Roll {
@@ -848,38 +908,105 @@ impl Session {
                 target,
                 state: LifeState::Dead,
             } => {
+                // A roster person who dies in the scene is dead to the world at once (API-58).
+                if self.npcs_here.contains(&target.0)
+                    && let Some(campaign) = self.campaign.as_mut()
+                {
+                    campaign.npc_died(&target.0);
+                }
                 if let Some(npc) = self.card_npcs.remove(&target.0) {
+                    // A card's named NPC may be a roster person too.
+                    if let Some(campaign) = self.campaign.as_mut() {
+                        campaign.npc_died(&npc);
+                    }
                     let by = self.last_blow.get(&target.0).cloned().into_iter().collect();
-                    return Some((world::killed_deed(&npc), by));
+                    deeds.push((world::killed_deed(&npc), by));
+                }
+                if let Some(deed) = self.ally_died(&target.0) {
+                    deeds.push(deed);
                 }
             }
             _ => {}
         }
-        None
+        deeds
     }
 
-    /// A card's fight: each stat block placed hostile at the scene's first anchor under a
-    /// fresh handle, then a fight between them and the party members who are up.
-    fn card_fight(&mut self, monsters: &[world::Monster]) -> Result<(), ApiError> {
+    /// An ally of the wagon fight under way died (ENG-48): a team animal leaves its team and
+    /// writes `<owner>_lost_a_horse`; a company entry writes `<id>_dead`, and the NPC owner
+    /// `<owner>_dead`. `by` is the fight's Blades (rule A7).
+    fn ally_died(&mut self, handle: &str) -> Option<(String, Vec<String>)> {
+        let fight = self.wagon_fight.as_mut()?;
+        let ally = fight.allies.remove(handle)?;
+        let by = fight.blades.clone();
+        let campaign = self.campaign.as_mut()?;
+        let deed = match ally {
+            WagonAllyOf::Animal { wagon, animal } => {
+                campaign.animal_died(wagon, &animal);
+                world::lost_a_horse_deed(campaign.npc_owner()?)
+            }
+            WagonAllyOf::Entry { id, .. } => format!("{id}_dead"),
+            WagonAllyOf::Owner { id } => world::owner_dead_deed(&id),
+        };
+        Some((deed, by))
+    }
+
+    /// The deeds a wagon fight writes when it ends (ENG-48): `<id>_hurt` for each company entry
+    /// with `hurt` that lived through it below full Hit Points, by the fight's Blades (rule A7).
+    pub(super) fn wagon_deeds(&mut self, kind: &EventKind) -> Vec<(String, Vec<String>)> {
+        if !matches!(kind, EventKind::CombatOver { .. }) {
+            return Vec::new();
+        }
+        let (Some(fight), Some(game)) = (self.wagon_fight.take(), self.game.as_ref()) else {
+            return Vec::new();
+        };
+        fight
+            .allies
+            .iter()
+            .filter_map(|(handle, ally)| match ally {
+                WagonAllyOf::Entry { id, hurt: true } => game
+                    .npc_now(handle)
+                    .filter(|now| now.alive && now.hp < now.max_hp)
+                    .map(|_| (format!("{id}_hurt"), fight.blades.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// A card's fight: each stat block placed hostile under a fresh handle at the effect's
+    /// `from`, or the scene's first anchor, then a fight between them and the party members who
+    /// are up. With `surprise`, the monsters roll Initiative with Disadvantage (ENG-47). With
+    /// `wagon`, whoever rides with the wagon joins it as an ally (ENG-48, rules A2 and A3).
+    fn card_fight(
+        &mut self,
+        monsters: &[world::Monster],
+        surprise: bool,
+        wagon: bool,
+        from: Option<&str>,
+        owner: bool,
+    ) -> Result<(), ApiError> {
         let mut fighters: Vec<Handle> = self
             .who(world::Who::Party, true)
             .into_iter()
             .map(Handle)
             .collect();
-        let game = self.game_mut()?;
-        let Some(anchor) = game.anchors().first().map(|a| a.id.clone()) else {
+        let blades: Vec<String> = fighters.iter().map(|h| h.0.clone()).collect();
+        let Some(anchor) = self.game_mut()?.anchor_or_first(from) else {
             return Err(error(
                 ErrorCode::Internal,
                 "The road scene has no anchor to place a card's fight at.",
             ));
         };
+        let allies = if wagon {
+            self.place_wagon_allies(owner)?
+        } else {
+            BTreeMap::new()
+        };
+        fighters.extend(allies.keys().cloned().map(Handle));
+        let game = self.game_mut()?;
         let mut named = Vec::new();
         for monster in monsters {
             let stat = monster.stat();
-            let handle = (1..)
-                .map(|n| Handle(format!("{stat}_{n}")))
-                .find(|h| !game.has_creature(&h.0))
-                .expect("some handle is free");
+            let handle = free_handle(game, stat);
             game.place_creature(
                 &handle,
                 stat,
@@ -896,9 +1023,153 @@ impl Session {
             fighters.push(handle);
         }
         self.card_npcs.extend(named);
-        let result = self.game_mut()?.start_fight(&fighters);
+        self.wagon_fight = wagon.then_some(WagonFight { blades, allies });
+        let surprised = surprise.then_some(Side::Hostile);
+        let result = self.game_mut()?.start_fight_surprised(&fighters, surprised);
+        // A fight that never started has no end to write its wounds at.
+        if result.is_err() {
+            self.wagon_fight = None;
+        }
         self.after_decision(result)
     }
+
+    /// Places whoever rides with the wagon as allies (ENG-48, rules A2, A3 and A10), by handle.
+    /// A team animal takes `<animal>_<wagon>_<n>`, a company entry its id, a roster person
+    /// their id; one already in the scene joins as they stand, and one with no room is left out.
+    fn place_wagon_allies(
+        &mut self,
+        owner: bool,
+    ) -> Result<BTreeMap<String, WagonAllyOf>, ApiError> {
+        let plan = self
+            .campaign
+            .as_ref()
+            .map(|c| c.wagon_allies(owner))
+            .unwrap_or_default();
+        let mut allies = BTreeMap::new();
+        let mut taken: Vec<String> = Vec::new();
+        for ally in plan {
+            let game = self.game.as_mut().ok_or_else(no_scene)?;
+            let first = game.anchor_or_first(None).unwrap_or_default();
+            let (handle, of, placed) = match ally {
+                campaign::WagonAlly::Animal { wagon, animal } => {
+                    // The first handle of this wagon's kind not taken in this fight and not a
+                    // dead one's: a horse that lived through an earlier fight here joins as it
+                    // stands, a new one is placed.
+                    let base = format!("{animal}_{wagon}");
+                    let handle = (1..)
+                        .map(|n| Handle(format!("{base}_{n}")))
+                        .find(|h| !taken.contains(&h.0) && !game.is_dead(&h.0))
+                        .expect("some handle is free");
+                    taken.push(handle.0.clone());
+                    let placed = if game.has_creature(&handle.0) {
+                        game.make_ally(&handle.0)
+                    } else {
+                        game.place_ally(&handle, &animal, &first, None)
+                    };
+                    (handle.0, WagonAllyOf::Animal { wagon, animal }, placed)
+                }
+                campaign::WagonAlly::Beast {
+                    id,
+                    monster,
+                    name,
+                    at,
+                    hurt,
+                } => {
+                    let placed = if game.has_creature(&id) {
+                        game.make_ally(&id)
+                    } else {
+                        let at = game.anchor_or_first(at.as_deref()).unwrap_or_default();
+                        game.place_ally(&Handle(id.clone()), &monster, &at, name.as_deref())
+                    };
+                    let of = WagonAllyOf::Entry {
+                        id: id.clone(),
+                        hurt,
+                    };
+                    (id, of, placed)
+                }
+                campaign::WagonAlly::Person {
+                    person,
+                    at,
+                    hurt,
+                    owner,
+                } => {
+                    let id = person.id.clone();
+                    // One creature, never two (rule A10): a person a mention placed joins as
+                    // they stand.
+                    let placed = if game.has_creature(&id) {
+                        game.make_ally(&id)
+                    } else {
+                        let at = game.anchor_or_first(at.as_deref()).unwrap_or_default();
+                        game.place_npc(
+                            &id,
+                            &person.monster,
+                            person.side,
+                            &at,
+                            &person.name,
+                            &person.carries,
+                            person.hp,
+                        )
+                        .and_then(|()| game.make_ally(&id))
+                    };
+                    if placed.is_ok() && !self.npcs_here.contains(&id) {
+                        self.npcs_here.push(id.clone());
+                        if let Some(campaign) = self.campaign.as_mut() {
+                            campaign.met(&id);
+                        }
+                    }
+                    let of = if owner {
+                        WagonAllyOf::Owner { id: id.clone() }
+                    } else {
+                        WagonAllyOf::Entry {
+                            id: id.clone(),
+                            hurt,
+                        }
+                    };
+                    (id, of, placed)
+                }
+            };
+            match placed {
+                Ok(()) => {
+                    allies.insert(handle, of);
+                }
+                Err(e) => eprintln!("wagon fight: {handle} is not placed: {}", e.message),
+            }
+        }
+        self.push_entries();
+        Ok(allies)
+    }
+}
+
+/// The card's wagon fight under way (ENG-48).
+#[derive(Debug, Clone)]
+pub(super) struct WagonFight {
+    /// The Blades in the fight, in its order, downed ones included (rule A7)
+    blades: Vec<String>,
+    /// The allies that still live, by handle
+    allies: BTreeMap<String, WagonAllyOf>,
+}
+
+/// What an ally of a wagon fight is, for its deeds (ENG-48).
+#[derive(Debug, Clone)]
+enum WagonAllyOf {
+    /// A team animal of wagon `wagon`
+    Animal { wagon: u32, animal: String },
+    /// A company entry, animal or roster person
+    Entry { id: String, hurt: bool },
+    /// The caravan's NPC owner
+    Owner { id: String },
+}
+
+/// The first free handle `<stat>_<n>` in the scene.
+fn free_handle(game: &adapter::game::Game, stat: &str) -> Handle {
+    (1..)
+        .map(|n| Handle(format!("{stat}_{n}")))
+        .find(|h| !game.has_creature(&h.0))
+        .expect("some handle is free")
+}
+
+fn no_scene() -> ApiError {
+    error(ErrorCode::NoScene, "No scene is loaded.")
 }
 
 /// The roll of a world table: DM only, so the size of a deck's pile never reaches a player.

@@ -1,0 +1,12 @@
+{
+    "_comment": "Who rides with the test wagon besides its team and Old Tobin (ENG-48): a stray dog that rides on the contract the party kept a fire for it, and stands with the wagon in a wagon fight. Not shipped content.",
+    "company": [
+        {
+            "id": "dog",
+            "monster": "mastiff",
+            "name": "the stray dog",
+            "if": "kept_the_fire",
+            "hurt": true
+        }
+    ]
+}

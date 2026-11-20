@@ -97,6 +97,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0086](0086-merchant-death-outcome.md) | When the Merchant dies the Blades decide at once (bring the purse in, or take it), the wagon goes on, and the gate is a changed arrival line | Accepted | 2026-11-13 | Stas |
 | [0087](0087-a-lie-lives-in-quoted-speech.md) | A lie lives only in a character's quoted speech: no player view, card text, table line, place name or narrator's own sentence states a false fact; the place line beside a false claim is exact (which bank, how far to the border) | Proposed | 2026-11-15 | Stas (rule accepted 2026-11-14 12:03Z; the record on merge) |
 | [0088](0088-the-world-counts-only-what-exists.md) | The world counts only what exists: coin, goods, land and holdings, debts and wages, days, a creature's own state; regard is never a number, it is deeds named persons saw or were told of; the test: can it be handed over, owed or lost? | Proposed | 2026-11-15 | Stas (rule accepted 2026-11-14 14:08Z; the record on merge) |
+| [0089](0089-card-pick-fight-first.md) | The DM picks a card that can come to a fight first, then continuity, then the clearest problem; prompt only | Accepted | 2026-11-18 | Stas |
 
 ## Open questions to watch
 

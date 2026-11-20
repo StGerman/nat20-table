@@ -95,6 +95,41 @@ fn the_planted_fixture_replays_and_its_digest_shows_both_contradictions() {
         "{archer} attacks after the line"
     );
 
+    // A line said in the fight lists its participants, the goblin and Bren among them; a line out
+    // of a fight lists none (AGT-106).
+    assert!(
+        adjacent.fight.contains(&"bren".to_owned()),
+        "{:?}",
+        adjacent.fight
+    );
+    assert!(
+        adjacent.fight.contains(&goblin.to_owned()),
+        "{:?}",
+        adjacent.fight
+    );
+    // Out of a fight only the first line after the fight's end lists it: the surrender's
+    // `end_combat` leaves no `combat_over` prompt, so the event says the fight is over.
+    let after: Vec<_> = run
+        .digests
+        .iter()
+        .filter(|d| d.mode.as_deref() != Some("combat") && !d.combat_over && !d.fight.is_empty())
+        .collect();
+    assert_eq!(
+        after.len(),
+        1,
+        "{:?}",
+        after.iter().map(|d| d.line).collect::<Vec<_>>()
+    );
+    assert!(after[0].fight.contains(&goblin.to_owned()));
+    assert!(
+        after[0]
+            .engine_lines
+            .iter()
+            .any(|l| l.contains("surrender")),
+        "{:?}",
+        after[0].engine_lines
+    );
+
     // Every digest carries the party's sheets once the party is in the scene.
     assert!(run.digests.iter().all(|d| d.inventory.len() == 4));
     assert!(
@@ -163,4 +198,48 @@ fn a_log_cut_short_digests_no_line_said_after_its_end() {
     let last: serde_json::Value = serde_json::from_str(lines[lines.len() / 2 - 1]).unwrap();
     let reached = last["response"]["log_head"].as_u64().unwrap();
     assert!(run.digests.iter().all(|d| d.log_head <= reached));
+}
+
+/// A living world's digest lists its people (AGT-109): every roster person with each form of the
+/// name, alive or not, and the place the engine has, so the judge can tell a person nobody knows.
+#[test]
+fn a_living_world_digest_lists_the_world_s_people() {
+    let path = repo().join("contract/fixtures/mention.jsonl");
+    let text = fs::read_to_string(&path).unwrap();
+    // The fixture's first session only: the second starts over.
+    let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+    let second = lines
+        .iter()
+        .skip(1)
+        .position(|l| l.contains("\"cmd\":\"new_session\""))
+        .map_or(lines.len(), |i| i + 1);
+    let log = lines[..second]
+        .join("\n")
+        .replace("$CONTRACT_VERSION", nat20_api_contract::CONTRACT_VERSION);
+    let head = log
+        .lines()
+        .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+        .filter_map(|e| e["response"]["log_head"].as_u64())
+        .max()
+        .unwrap();
+    let transcript = read_transcript(&format!(
+        "{{\"speaker\":\"dm\",\"channel\":\"table\",\"kind\":\"narration\",\"text\":\"Osric nods.\",\"rolls\":[],\"log_head\":{head}}}\n"
+    ))
+    .unwrap();
+    let run = digest_run(
+        &nat20_api_server::paths::data_dir(),
+        Vec::new(),
+        &log,
+        &transcript,
+    )
+    .unwrap();
+    assert_eq!(run.diverged, None);
+    let people = &run.digests[0].people;
+    assert!(!people.is_empty(), "the world's people are listed");
+    for person in people {
+        assert!(
+            person["id"].is_string() && person["names"].is_array() && person["alive"].is_boolean(),
+            "{person}"
+        );
+    }
 }

@@ -25,12 +25,13 @@ const TONES: readonly Tone[] = ["dm", "speech", "intent", "engine", "options", "
 export const TONE_STYLE: Record<Tone, Style> = Object.fromEntries(TONES.map((tone) => [tone, THEME.tones[tone] ?? {}])) as Record<Tone, Style>;
 
 /** Ink `Text` props for a style in a palette. */
-export function textProps(style: Style, palette: Palette): { color?: string; bold?: boolean; italic?: boolean; dimColor?: boolean } {
+export function textProps(style: Style, palette: Palette): { color?: string; bold?: boolean; italic?: boolean; underline?: boolean; dimColor?: boolean } {
   const color = style.accent ? palette[style.accent] : undefined;
   return {
     ...(color ? { color } : {}),
     ...(style.bold ? { bold: true } : {}),
     ...(style.italic ? { italic: true } : {}),
+    ...(style.underline ? { underline: true } : {}),
     // Secondary text dims itself when there is no colour to mark it.
     ...(style.dim || (style.accent === "hint" && !color) ? { dimColor: true } : {}),
   };

@@ -33,6 +33,8 @@ export class Transcript {
     decision?: string;
     wake?: DmWake;
     narrated?: boolean;
+    person?: string;
+    authored?: string;
   }): TranscriptRecord {
     const record: TranscriptRecord = {
       at: this.clock(),
@@ -48,6 +50,8 @@ export class Transcript {
       ...(entry.decision ? { decision: entry.decision } : {}),
       ...(entry.wake ? { wake: entry.wake } : {}),
       ...(entry.narrated !== undefined ? { narrated: entry.narrated } : {}),
+      ...(entry.person ? { person: entry.person } : {}),
+      ...(entry.authored !== undefined ? { authored: entry.authored } : {}),
     };
     this.records.push(record);
     if (this.file) appendFileSync(this.file, JSON.stringify(record) + "\n");

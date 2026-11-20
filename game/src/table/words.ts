@@ -349,7 +349,7 @@ function endedRu(reason: string, stop: StopKind | undefined): string {
       return "сбой программы; всё сыгранное сохранено";
     case undefined:
       if (/escort contract is done/.test(reason)) return "подряд выполнен, обоз дошёл";
-      if (/adventure is over/.test(reason)) return "приключение окончено";
+      if (/adventure is over/.test(reason)) return "история подошла к концу";
       if (/day limit/.test(reason)) return "последний день игры прошёл";
       if (/stops before/.test(reason)) return "игра кончается перед следующей сценой";
       return "игра окончена";
@@ -445,7 +445,12 @@ export interface UiWords {
   runOver: string;
   sceneOf(number: number, of: number): string;
   minutes(count: number): string;
-  commandHelp: Record<"options" | "sheet" | "where" | "map" | "log" | "usage" | "pause" | "suggest" | "panel" | "help" | "quit", string>;
+  commandHelp: Record<"options" | "sheet" | "where" | "map" | "who" | "log" | "usage" | "pause" | "suggest" | "panel" | "mouse" | "help" | "quit", string>;
+  /** The first drag with the mouse on (AGT-108), said once: how to select text. */
+  dragHint: string;
+  /** What `/mouse` says when it turns the clicks off (text selects as usual), and on again. */
+  mouseOff: string;
+  mouseOn: string;
   noCommand(name: string, commands: string): string;
   busy: string;
   pausedTyped: string;
@@ -549,11 +554,13 @@ export const UI_WORDS: Record<Language, UiWords> = {
       sheet: "your character sheet",
       where: "places and the creatures you can see, with distances",
       map: "the places you know, the roads, and where the caravan is",
+      who: "who this is: /who Name; with no name, everyone. Also /кто",
       log: "the last engine lines, with their roll ids",
       usage: "tokens and API-equivalent cost so far, per agent",
       pause: "AI players wait until you type /pause again",
       suggest: "turn the three suggested moves out of a fight off or on",
       panel: "fold the situation panel to one line, or open it again",
+      mouse: "select text by dragging instead of clicking names; /мышь too",
       help: "every command and key",
       quit: "end the run (the run folder keeps everything so far)",
     },
@@ -585,6 +592,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Enter      send the line",
         "  /          on an empty line, the commands to choose from; type to narrow",
         "  Tab        complete a /command, or put the next suggestion in the line",
+        "  Tab        with nothing typed: the card of the newest underlined name; Tab again: the one before it. While you type: Shift+Tab",
         "  ↑/↓        light a command, an option or a suggestion; Enter runs it",
         "  Esc        close this, go back from a sub-list, or clear the line",
         "  Shift+↑/↓  scroll the story, or this; PgUp/PgDn too",
@@ -595,6 +603,9 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Ctrl+C     stop after this decision; twice, at once",
       ].join("\n"),
     answeredLater: "answered at your next prompt",
+    dragHint: "To select text, hold the Fn key (bottom left, with the globe) as you drag. Or type /mouse: then text selects as usual.",
+    mouseOff: "Text now selects as usual, and a click on a name opens nothing. Scroll the story with Shift and ↑/↓. /mouse brings the clicks back.",
+    mouseOn: "A click on an underlined name shows who it is again; two fingers on the trackpad scroll the story.",
     stopping: "Stopping after the current decision; Ctrl+C again stops at once.",
     wait: (who, seconds) => (seconds === undefined ? `waiting... ${who ?? "The table is playing"} (/help for commands)` : `${who ?? "The table is playing"}${seconds >= 1 ? ` · ${seconds}s` : ""} (/help for commands)`),
     dmThinking: "The DM is thinking",
@@ -668,11 +679,13 @@ export const UI_WORDS: Record<Language, UiWords> = {
       sheet: "лист вашего персонажа",
       where: "места и все, кого вы видите, и до них сколько шагов",
       map: "знакомые места, дороги и где сейчас обоз",
+      who: "кто это: /кто Имя; без имени: все, кого вы знаете",
       log: "последние события стола с номерами бросков",
       usage: "сколько уже потрачено на модели, по каждому за столом",
       pause: "игроки за столом ждут, пока вы снова не наберёте /pause",
       suggest: "выключить или включить три подсказки вне боя",
       panel: "свернуть боковую панель в одну строку или раскрыть её",
+      mouse: "выделять текст вместо щелчков по именам; /мышь: то же",
       help: "все команды и клавиши",
       quit: "закончить игру (всё сыгранное сохранится в папке игры)",
     },
@@ -704,6 +717,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Enter      отправить строку",
         "  /          в пустой строке: список команд; печатайте, чтобы сузить",
         "  Tab        дописать /команду или взять следующую подсказку в строку",
+        "  Tab        когда в строке ничего не набрано: карточка последнего подчёркнутого имени; ещё раз Tab: имя перед ним. Пока набираете текст: Shift+Tab",
         "  ↑/↓        выбрать команду, вариант или подсказку; Enter выполняет",
         "  Esc        закрыть, вернуться из подсписка или очистить строку",
         "  Shift+↑/↓  листать историю или это окно; PgUp/PgDn тоже",
@@ -714,6 +728,9 @@ export const UI_WORDS: Record<Language, UiWords> = {
         "  Ctrl+C     остановить после этого решения; дважды — сразу",
       ].join("\n"),
     answeredLater: "сработает, когда придёт ваша очередь",
+    dragHint: "Чтобы выделить текст, тяните, удерживая клавишу Fn (внизу слева, с глобусом). Или наберите /мышь: тогда текст выделяется как обычно.",
+    mouseOff: "Теперь текст выделяется как обычно, а щелчок по имени ничего не открывает. Листать историю: Shift и стрелки ↑/↓. /мышь вернёт щелчки.",
+    mouseOn: "Щелчок по подчёркнутому имени снова показывает, кто это; два пальца на трекпаде листают историю.",
     stopping: "Остановка после текущего решения; ещё раз Ctrl+C — сразу.",
     wait: (who, seconds) => (seconds === undefined ? `ждём... ${who ?? "Стол играет"} (/help — команды)` : `${who ?? "Стол играет"}${seconds >= 1 ? ` · ${seconds} с` : ""} (/help — команды)`),
     dmThinking: "Рассказчик думает",

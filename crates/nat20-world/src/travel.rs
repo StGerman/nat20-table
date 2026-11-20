@@ -18,7 +18,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     caravan::{Caravan, CaravanError, Goods, Owner},
     clock::Clock,
-    deck::{Deck, DeckError, DeckState, Deed, DeedBook, Drawn, PickError, ScoutSkill, When},
+    company::{CompanyEntry, CompanyFile, RIDES_PREFIX, owner_dead_deed},
+    deck::{
+        Card, Deck, DeckError, DeckState, Deed, DeedBook, Deeds, Drawn, OWNER_CAST, Once,
+        PickError, ScoutSkill, When,
+    },
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
     map::{MapError, Position, WorldMap},
@@ -198,8 +202,15 @@ impl Memory {
 
     /// Remembers a deed done today by `by` in the contract under way, as [`World::remember`]
     /// does. Returns whether it is new.
-    pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
-        remember_in(&mut self.deeds, deed, by, self.clock.day, self.contract)
+    pub fn remember(&mut self, deed: &str, by: Vec<String>, saw: Vec<String>) -> bool {
+        remember_in(
+            &mut self.deeds,
+            deed,
+            by,
+            saw,
+            self.clock.day,
+            self.contract,
+        )
     }
 
     /// This memory taken up at `start` by the next contract or site (ENG-37, ENG-44): the
@@ -346,6 +357,7 @@ impl SavedWorld {
                 offered: contract.deck.offered,
                 pending: contract.deck.pending,
                 road: contract.deck.road,
+                cast_dead: BTreeSet::new(),
             },
             npcs: memory.npcs,
             escort: contract.escort,
@@ -383,6 +395,8 @@ pub struct World {
     pub npcs: Vec<NpcDef>,
     /// The escort contract's terms; none until [`World::with_escort`]
     pub escort: Option<EscortTerms>,
+    /// Who may ride with the wagon (ENG-48); none until [`World::with_company`]
+    pub company: Vec<CompanyEntry>,
     /// What changes
     pub state: WorldState,
 }
@@ -497,6 +511,7 @@ impl World {
             deck: Deck::default(),
             npcs: Vec::new(),
             escort: None,
+            company: Vec::new(),
         })
     }
 
@@ -516,6 +531,47 @@ impl World {
         Ok(self)
     }
 
+    /// The world with who may ride with the wagon (ENG-48), checked against the roster and
+    /// the deck (rule A9): so after [`World::with_deck`] and [`World::with_npcs`].
+    pub fn with_company(mut self, file: CompanyFile) -> Result<Self, MapError> {
+        file.validate(&self.npcs)?;
+        file.check_readers(&self.deck)?;
+        self.company = file.company;
+        Ok(self)
+    }
+
+    /// The company entries that ride on the contract under way (rule A2), in file order.
+    pub fn riding(&self) -> Vec<&CompanyEntry> {
+        self.company
+            .iter()
+            .filter(|e| {
+                let alive = e
+                    .npc
+                    .as_ref()
+                    .is_none_or(|n| self.state.npcs.get(n).is_some_and(|s| s.alive));
+                e.rides(&self.state.deeds, self.state.contract, alive)
+            })
+            .collect()
+    }
+
+    /// The deeds a card is offered against: the deeds remembered, and `rides:<id>` for each
+    /// company entry that rides now (ENG-48).
+    pub fn deeds_now(&self) -> DeedBook {
+        let mut deeds = self.state.deeds.clone();
+        for entry in self.riding() {
+            deeds.insert(
+                format!("{RIDES_PREFIX}{}", entry.id),
+                Deed {
+                    by: Vec::new(),
+                    day: self.state.clock.day,
+                    contract: self.state.contract,
+                    saw: Vec::new(),
+                },
+            );
+        }
+        deeds
+    }
+
     /// The world with an escort contract, checked against the map. `blades` are the Hired
     /// Blades in party order. A state that already holds the contract (a roster's) keeps it;
     /// otherwise it starts now and the advance is due: the payments are returned.
@@ -525,6 +581,31 @@ impl World {
         blades: Vec<String>,
     ) -> Result<(Self, Vec<Wage>), MapError> {
         terms.validate(&self.map)?;
+        // The death card (ENG-49, rule M1) reads the owner's death in its own `if` and goes
+        // once, so no draw can take it before the engine puts it on the table, or after.
+        if let (Some(card), Owner::Npc(owner)) = (&terms.death_card, &self.state.caravan.owner) {
+            let deed = owner_dead_deed(owner);
+            let fits = self.deck.card(card).is_some_and(|c| {
+                c.once == Once::WORLD
+                    && c.if_deeds.as_ref().is_some_and(|d| d.ids().contains(&deed))
+            });
+            if !fits {
+                return Err(MapError(format!(
+                    "the escort's death_card {card} is not a card of the deck that goes once and reads {deed} in its if"
+                )));
+            }
+        }
+        // Rule A9 for the owner (ENG-49): a wagon fight can kill the NPC owner, so the death
+        // needs a reader that speaks: a card or choice with it in `if`, the death card among them.
+        if let Owner::Npc(owner) = &self.state.caravan.owner
+            && self.deck.owner_may_fall()
+            && !self.deck.read_in_if().contains(&owner_dead_deed(owner))
+        {
+            return Err(MapError(format!(
+                "a wagon fight can kill {owner}, and no card or choice reads {} in its if",
+                owner_dead_deed(owner)
+            )));
+        }
         let advance = match &self.state.escort {
             Some(_) => Vec::new(),
             None => {
@@ -545,7 +626,7 @@ impl World {
     ) -> impl Iterator<Item = (&'a NpcDef, &'a NpcState)> + 'a {
         self.npcs
             .iter()
-            .filter(move |d| d.place == place)
+            .filter(move |d| d.place.as_deref() == Some(place))
             .filter_map(|d| {
                 self.state
                     .npcs
@@ -553,6 +634,77 @@ impl World {
                     .filter(|s| s.alive)
                     .map(|s| (d, s))
             })
+    }
+
+    /// Whether the caravan's NPC owner is dead (ENG-49).
+    pub fn owner_dead(&self) -> bool {
+        matches!(&self.state.caravan.owner, Owner::Npc(id) if self.state.npcs.get(id).is_some_and(|s| !s.alive))
+    }
+
+    /// Puts the escort's death card on the table when it is due (ENG-49, rule M1): the NPC
+    /// owner is dead, the contract is under way, nothing waits on the table, and the card has
+    /// not been put before. Returns the card put.
+    pub fn put_death_card(&mut self) -> Option<String> {
+        let card = self.escort.as_ref()?.death_card.clone()?;
+        let under_way = self.state.escort.as_ref().is_some_and(|e| !e.done);
+        if !under_way
+            || !self.owner_dead()
+            || self.state.deck.waiting()
+            || self.state.deck.gone.contains(&card)
+        {
+            return None;
+        }
+        let deeds = self.deeds_now();
+        self.deck
+            .put_card(&card, &deeds, &mut self.state.deck)
+            .then_some(card)
+    }
+
+    /// Shares the escort's purse out among the Blades who are `alive` (ENG-49): the shares, in
+    /// party order. Nothing while the NPC owner lives (rule M3), or once settled or shared.
+    pub fn share_purse(&mut self, alive: impl Fn(&str) -> bool) -> Vec<Wage> {
+        if !self.owner_dead() {
+            return Vec::new();
+        }
+        self.state
+            .escort
+            .as_mut()
+            .map(|e| e.share(alive))
+            .unwrap_or_default()
+    }
+
+    /// Who of a card's cast is dead (API-58, rule A8), for the next draw: every roster person
+    /// the world holds dead, and `owner` when the caravan's NPC owner is one of them.
+    fn mark_cast_dead(&mut self) {
+        let dead: BTreeSet<String> = self
+            .state
+            .npcs
+            .iter()
+            .filter(|(_, s)| !s.alive)
+            .map(|(id, _)| id.clone())
+            .collect();
+        let owner_dead = self.owner_dead();
+        self.state.deck.cast_dead = dead;
+        if owner_dead {
+            self.state.deck.cast_dead.insert(OWNER_CAST.to_owned());
+        }
+    }
+
+    /// Checks every card's `cast` and `tells` (API-58): each a roster person's id or `owner`.
+    /// `owner` is allowed whoever owns the caravan: a world's deck serves campaigns with an NPC
+    /// owner and with a player one, and with a player owner `owner` names nobody to place or mark.
+    pub fn check_cast(&self) -> Result<(), MapError> {
+        for card in &self.deck.cards {
+            for who in card.cast.iter().chain(&card.tells) {
+                if who != OWNER_CAST && !self.npcs.iter().any(|n| n.id == *who) {
+                    return Err(MapError(format!(
+                        "the card {} names {who} in its cast or tells, who is not in the roster",
+                        card.id
+                    )));
+                }
+            }
+        }
+        Ok(())
     }
 
     /// The place the caravan is in, if it is in one.
@@ -607,22 +759,140 @@ impl World {
         carried
     }
 
-    /// Remembers a deed done today by `by` in the contract under way. A deed done again
-    /// keeps its first record. Returns whether it is new.
-    pub fn remember(&mut self, deed: &str, by: Vec<String>) -> bool {
+    /// Remembers a deed done today by `by` in the contract under way, seen by the roster
+    /// people in `saw` (API-59). A deed done again keeps its first record. Returns whether it
+    /// is new.
+    pub fn remember(&mut self, deed: &str, by: Vec<String>, saw: Vec<String>) -> bool {
         let state = &mut self.state;
-        remember_in(&mut state.deeds, deed, by, state.clock.day, state.contract)
+        remember_in(
+            &mut state.deeds,
+            deed,
+            by,
+            saw,
+            state.clock.day,
+            state.contract,
+        )
+    }
+
+    /// The roster ids a card's `cast` names: `owner` is the caravan's NPC owner, if an NPC
+    /// owns it (API-59).
+    pub fn cast_of(&self, card: &str) -> Vec<String> {
+        self.people_of(card, |c| &c.cast)
+    }
+
+    /// The roster ids a card's `tells` names, `owner` resolved as in [`World::cast_of`].
+    pub fn tells_of(&self, card: &str) -> Vec<String> {
+        self.people_of(card, |c| &c.tells)
+    }
+
+    fn people_of(&self, card: &str, list: impl Fn(&Card) -> &Vec<String>) -> Vec<String> {
+        let Some(card) = self.deck.card(card) else {
+            return Vec::new();
+        };
+        list(card)
+            .iter()
+            .filter_map(|who| match (who.as_str(), &self.state.caravan.owner) {
+                (OWNER_CAST, Owner::Npc(id)) => Some(id.clone()),
+                (OWNER_CAST, _) => None,
+                (id, _) => Some(id.to_owned()),
+            })
+            .collect()
+    }
+
+    /// Everyone in `party` sees roster person `id` here (API-59): at the place the caravan is
+    /// at, or on the road. A sight also makes them more than a name heard.
+    pub fn seen_by(&mut self, id: &str, party: &[String]) {
+        let here = self.place_here().map(str::to_owned);
+        if let Some(state) = self.state.npcs.get_mut(id) {
+            for who in party {
+                state.seen.insert(who.clone(), here.clone());
+                state.heard.remove(who);
+            }
+        }
+    }
+
+    /// A roster saved before API-59 (rule N7): a person it holds met reads as seen by the
+    /// whole of `party`, at the place they live.
+    pub fn seen_from_met(&mut self, party: &[String]) {
+        for def in &self.npcs {
+            if let Some(state) = self.state.npcs.get_mut(&def.id)
+                && state.met
+                && state.seen.is_empty()
+            {
+                for who in party {
+                    state.seen.insert(who.clone(), def.place.clone());
+                }
+            }
+        }
+    }
+
+    /// Everyone in `party` who has not seen roster person `id` hears of them (API-59).
+    pub fn heard_by(&mut self, id: &str, party: &[String]) {
+        if let Some(state) = self.state.npcs.get_mut(id) {
+            for who in party {
+                if !state.seen.contains_key(who) {
+                    state.heard.insert(who.clone());
+                }
+            }
+        }
+    }
+
+    /// Roster people `saw` are shown deed `deed` (API-59): a card read it while they were on
+    /// it. A deed not remembered takes nobody.
+    pub fn shown_deed(&mut self, deed: &str, saw: &[String]) {
+        if let Some(record) = self.state.deeds.get_mut(deed) {
+            for who in saw {
+                if !record.saw.contains(who) {
+                    record.saw.push(who.clone());
+                }
+            }
+        }
+    }
+
+    /// The card `card` is shown (API-59): its cast sees the party, its `tells` are heard of,
+    /// and the cast is shown every deed the card's own `if` reads.
+    pub fn card_shown(&mut self, card: &str, party: &[String]) {
+        let cast = self.cast_of(card);
+        for id in &cast {
+            self.seen_by(id, party);
+        }
+        for id in self.tells_of(card) {
+            self.heard_by(&id, party);
+        }
+        let read = self.deck.card(card).and_then(|c| c.if_deeds.clone());
+        self.shown_if(read.as_ref(), &cast);
+    }
+
+    /// Choice `choice` of card `card` is chosen (API-59): the card's cast is shown every deed
+    /// the choice's `if` reads.
+    pub fn choice_chosen(&mut self, card: &str, choice: &str) {
+        let cast = self.cast_of(card);
+        let read = self
+            .deck
+            .card(card)
+            .and_then(|c| c.choices.iter().find(|ch| ch.id == choice))
+            .and_then(|ch| ch.if_deeds.clone());
+        self.shown_if(read.as_ref(), &cast);
+    }
+
+    /// Shows `cast` every deed an `if` reads.
+    fn shown_if(&mut self, read: Option<&Deeds>, cast: &[String]) {
+        for deed in read.map(Deeds::ids).unwrap_or_default() {
+            self.shown_deed(deed, cast);
+        }
     }
 
     /// Draws after a leg along `road`. Returns what the draw did: a card on the table, or cards
     /// offered for the DM's pick (API-53); none when the zone has no card in play.
     pub fn draw_after_leg(&mut self, road: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
+        self.mark_cast_dead();
         let zone = self.map.road(road)?.zone.clone();
+        let deeds = self.deeds_now();
         let drawn = self.deck.draw(
             &zone,
             When::Road,
             &self.state.discovered,
-            &self.state.deeds,
+            &deeds,
             &mut self.state.deck,
             dice,
         );
@@ -635,11 +905,13 @@ impl World {
     /// Draws an arrival card of `place` when a leg ends there (ENG-35): on the table, or
     /// offered for a pick (API-53).
     pub fn draw_on_arrival(&mut self, place: &str, dice: &mut impl WorldDice) -> Option<Drawn> {
+        self.mark_cast_dead();
+        let deeds = self.deeds_now();
         let drawn = self.deck.draw(
             place,
             When::Arrival,
             &self.state.discovered,
-            &self.state.deeds,
+            &deeds,
             &mut self.state.deck,
             dice,
         );
@@ -668,24 +940,45 @@ impl World {
     /// The scout's check succeeded (API-54): the card on the table opens its forewarned
     /// choice. Returns whether the choices changed.
     pub fn forewarn(&mut self) -> bool {
-        self.deck.forewarn(&self.state.deeds, &mut self.state.deck)
+        let deeds = self.deeds_now();
+        self.deck.forewarn(&deeds, &mut self.state.deck)
+    }
+
+    /// Takes off the offered cards each one whose `cast` holds someone who died since the
+    /// draw offered it (rule A8, API-58), so neither the DM nor a fallback can pick it.
+    pub fn drop_dead_offers(&mut self) {
+        self.mark_cast_dead();
+        let (deck, state) = (&self.deck, &mut self.state.deck);
+        let dead = &state.cast_dead;
+        let keep: Vec<String> = state
+            .offered
+            .iter()
+            .filter(|id| {
+                deck.card(id)
+                    .is_none_or(|c| !c.cast.iter().any(|p| dead.contains(p)))
+            })
+            .cloned()
+            .collect();
+        state.offered = keep;
     }
 
     /// The DM picks one of the offered cards (API-53): it goes on the table.
     pub fn pick_card(&mut self, card: &str) -> Result<(), PickError> {
-        self.deck
-            .pick(card, &self.state.deeds, &mut self.state.deck)
+        let deeds = self.deeds_now();
+        self.deck.pick(card, &deeds, &mut self.state.deck)
     }
 
     /// Draws a night card after a night in camp where the caravan is: on the table, or offered
     /// for a pick (API-53).
     pub fn draw_at_night(&mut self, dice: &mut impl WorldDice) -> Option<Drawn> {
+        self.mark_cast_dead();
         let zone = self.zone_here();
+        let deeds = self.deeds_now();
         let drawn = self.deck.draw(
             &zone,
             When::Night,
             &self.state.discovered,
-            &self.state.deeds,
+            &deeds,
             &mut self.state.deck,
             dice,
         );
@@ -842,11 +1135,29 @@ impl World {
 
 /// Writes `deed` into `book` as done on `day` in `contract` by `by`, unless the book holds it
 /// already: a deed done again keeps its first record. Returns whether it is new.
-fn remember_in(book: &mut DeedBook, deed: &str, by: Vec<String>, day: u32, contract: u32) -> bool {
+fn remember_in(
+    book: &mut DeedBook,
+    deed: &str,
+    by: Vec<String>,
+    saw: Vec<String>,
+    day: u32,
+    contract: u32,
+) -> bool {
     if book.contains_key(deed) {
         return false;
     }
-    book.insert(deed.to_string(), Deed { by, day, contract });
+    let mut saw = saw;
+    saw.sort();
+    saw.dedup();
+    book.insert(
+        deed.to_string(),
+        Deed {
+            by,
+            day,
+            contract,
+            saw,
+        },
+    );
     true
 }
 
@@ -870,7 +1181,7 @@ mod tests {
     #[test]
     fn the_next_contract_keeps_the_memory_and_starts_after_the_saved_day() {
         let mut done = world("maren");
-        done.remember("helped_farmer", vec!["bren".into()]);
+        done.remember("helped_farmer", vec!["bren".into()], vec![]);
         done.state.deck.gone.insert("ghost".into());
         done.state
             .deck
@@ -908,7 +1219,7 @@ mod tests {
         assert!(next.state.deck.discard.contains("mud"));
         assert!(next.state.discovered.contains("ruin"));
         // A deed written now records the second contract.
-        next.remember("paid_toll", vec![]);
+        next.remember("paid_toll", vec![], vec![]);
         assert_eq!(next.state.deeds["paid_toll"].contract, 2);
         // From the start place itself, no trip: the day after.
         let mut again = world("maren");
@@ -925,8 +1236,8 @@ mod tests {
     #[test]
     fn a_memory_saved_at_a_site_is_carried_from_where_it_left_the_party() {
         let mut memory = Memory::new(8);
-        assert!(memory.remember("yard_yielded", vec!["bren".into()]));
-        assert!(!memory.remember("yard_yielded", vec!["maren".into()]));
+        assert!(memory.remember("yard_yielded", vec!["bren".into()], vec![]));
+        assert!(!memory.remember("yard_yielded", vec!["maren".into()], vec![]));
         assert_eq!(memory.deeds["yard_yielded"].day, 1);
         assert_eq!(memory.deeds["yard_yielded"].contract, 1);
         memory.left_at = Some("inn".into());
@@ -1011,15 +1322,16 @@ mod tests {
     #[test]
     fn a_deed_keeps_its_first_record() {
         let mut world = world("maren");
-        assert!(world.remember("paid_toll", vec!["bren".into()]));
+        assert!(world.remember("paid_toll", vec!["bren".into()], vec![]));
         world.delay(24 * 60);
-        assert!(!world.remember("paid_toll", vec!["maren".into()]));
+        assert!(!world.remember("paid_toll", vec!["maren".into()], vec![]));
         assert_eq!(
             world.state.deeds["paid_toll"],
             Deed {
                 by: vec!["bren".into()],
                 day: 1,
                 contract: 1,
+                saw: vec![],
             }
         );
         // A roster saved before deeds reads as the first contract with none.
@@ -1284,9 +1596,163 @@ mod tests {
     }
 
     #[test]
+    fn a_card_with_a_dead_person_in_its_cast_is_never_drawn() {
+        let deck: crate::deck::DeckFile = serde_json::from_str(
+            r#"{"cards": [
+              {"id": "tobin_sings", "zone": "hills", "target": "blades", "text": "A song.", "cast": ["owner"],
+               "choices": [{"id": "a", "text": "A.", "effects": [{"do": "remember", "deed": "chose_a"}]}, {"id": "b", "text": "B.", "effects": [{"do": "remember", "deed": "chose_b"}]}]},
+              {"id": "ned_waves", "zone": "hills", "target": "blades", "text": "Ned waves.", "cast": ["ned"], "tells": ["tobin"],
+               "choices": [{"id": "a", "text": "A.", "effects": [{"do": "remember", "deed": "chose_a"}]}, {"id": "b", "text": "B.", "effects": [{"do": "remember", "deed": "chose_b"}]}]}
+            ]}"#,
+        )
+        .unwrap();
+        let npcs: NpcFile = serde_json::from_str(
+            r#"{"npcs": [{"id": "tobin", "name": "Tobin", "monster": "commoner"},
+                         {"id": "ned", "name": "Ned", "monster": "commoner"}]}"#,
+        )
+        .unwrap();
+        let mut w = world("npc:tobin")
+            .with_deck(Deck::from_files([deck]))
+            .unwrap()
+            .with_npcs(npcs)
+            .unwrap();
+        w.check_cast().unwrap();
+        w.state.npcs.get_mut("tobin").unwrap().alive = false;
+        // The owner is dead: only Ned's card, which only names him, is in the pile.
+        let mut dice = crate::dice::ListDice::new([1]);
+        assert_eq!(
+            w.draw_after_leg("inn_ruin", &mut dice),
+            Some(Drawn::Table {
+                card: "ned_waves".into(),
+                soon: false
+            })
+        );
+        w.state.deck.pending = None;
+        w.state.npcs.get_mut("ned").unwrap().alive = false;
+        let mut dice = crate::dice::ListDice::new([1]);
+        assert_eq!(w.draw_after_leg("inn_ruin", &mut dice), None);
+        w.deck.cards[1].cast = vec!["nobody".into()];
+        assert!(w.check_cast().unwrap_err().0.contains("nobody"));
+        // A world's deck serves a player Merchant too: `owner` is accepted with either owner.
+        w.deck.cards[1].cast = vec![OWNER_CAST.into()];
+        let owner = std::mem::replace(&mut w.state.caravan.owner, "bren".parse().unwrap());
+        assert!(w.check_cast().is_ok());
+        w.state.caravan.owner = owner;
+        // Offered while both lived, then Ned dies before the pick: his card is taken off the
+        // offer, so neither the DM nor a fallback can pick it.
+        w.deck.cards[1].cast = vec!["ned".into()];
+        w.state.npcs.get_mut("tobin").unwrap().alive = true;
+        w.state.deck.offered = vec!["ned_waves".into(), "tobin_sings".into()];
+        w.drop_dead_offers();
+        assert_eq!(w.state.deck.offered, vec!["tobin_sings".to_string()]);
+        assert!(matches!(
+            w.pick_card("ned_waves"),
+            Err(PickError::NotOffered(_))
+        ));
+        w.pick_card("tobin_sings").unwrap();
+    }
+
+    /// ENG-49: a wagon fight that can kill the NPC owner needs a reader of the death (rule
+    /// A9), the escort's death card must go once and read it, and the engine puts that card
+    /// on the table once the owner is dead, and only once.
+    #[test]
+    fn the_owner_s_death_needs_a_reader_and_the_death_card_comes_once() {
+        let deck = |reader: &str| -> Deck {
+            let file: crate::deck::DeckFile = serde_json::from_str(&format!(
+                r#"{{"cards": [
+                  {{"id": "wolves", "zone": "hills", "target": "blades", "text": "Wolves.",
+                   "choices": [{{"id": "a", "text": "A.", "effects": [{{"do": "fight", "monsters": ["wolf"], "wagon": true}}]}},
+                               {{"id": "b", "text": "B.", "effects": [{{"do": "remember", "deed": "chose_b"}}]}}]}},
+                  {{"id": "tobin_falls", "zone": "hills", "target": "blades", "text": "Tobin is dead.", {reader}
+                   "choices": [{{"id": "a", "text": "A.", "effects": [{{"do": "remember", "deed": "chose_a"}}]}},
+                               {{"id": "b", "text": "B.", "effects": [{{"do": "share_purse"}}]}}]}}
+                ]}}"#
+            ))
+            .unwrap();
+            Deck::from_files([file])
+        };
+        let npcs = || -> NpcFile {
+            serde_json::from_str(
+                r#"{"npcs": [{"id": "tobin", "name": "Tobin", "monster": "commoner"}]}"#,
+            )
+            .unwrap()
+        };
+        let terms = |card: Option<&str>| EscortTerms {
+            comment: None,
+            destination: "inn".into(),
+            wage_cp: crate::escort::SKILLED_WAGE_CP,
+            advance_days: 0,
+            purse_cp: 1000,
+            death_card: card.map(String::from),
+        };
+        let blades = || vec!["bren".to_string(), "maren".to_string()];
+        let with = |reader: &str| {
+            world("npc:tobin")
+                .with_deck(deck(reader))
+                .unwrap()
+                .with_npcs(npcs())
+                .unwrap()
+        };
+        // No reader of tobin_dead: rule A9 refuses the contract.
+        let err = with("").with_escort(terms(None), blades()).unwrap_err();
+        assert!(err.0.contains("a wagon fight can kill tobin"), "{}", err.0);
+        // A reader that may come back is no death card.
+        let err = with(r#""if": "tobin_dead","#)
+            .with_escort(terms(Some("tobin_falls")), blades())
+            .unwrap_err();
+        assert!(err.0.contains("death_card tobin_falls"), "{}", err.0);
+        let (mut w, _) = with(r#""if": "tobin_dead", "once": true,"#)
+            .with_escort(terms(Some("tobin_falls")), blades())
+            .unwrap();
+        // Alive, nothing is put and the purse is never shared; dead, the card is put once.
+        assert_eq!(w.put_death_card(), None);
+        assert_eq!(w.share_purse(|_| true), Vec::new());
+        w.state.npcs.get_mut("tobin").unwrap().alive = false;
+        assert!(w.owner_dead());
+        assert_eq!(w.put_death_card(), Some("tobin_falls".into()));
+        assert!(w.state.deck.waiting());
+        w.state.deck.pending = None;
+        assert_eq!(w.put_death_card(), None, "never twice");
+        assert_eq!(
+            w.share_purse(|_| true).len(),
+            2,
+            "dead, the purse is shared"
+        );
+    }
+
+    #[test]
+    fn a_person_is_seen_or_heard_of_and_an_old_roster_s_met_reads_as_seen() {
+        let npcs: NpcFile = serde_json::from_str(
+            r#"{"npcs": [{"id": "tobin", "name": "Tobin", "monster": "commoner"},
+                         {"id": "ned", "name": "Ned", "monster": "commoner"}]}"#,
+        )
+        .unwrap();
+        let mut w = world("npc:tobin").with_npcs(npcs).unwrap();
+        let party = ["bren".to_string(), "maren".to_string()];
+        w.heard_by("ned", &party[..1]);
+        w.seen_by("ned", &party);
+        // A sight replaces a name heard; a name heard after a sight changes nothing.
+        w.heard_by("ned", &party);
+        let ned = &w.state.npcs["ned"];
+        assert!(ned.heard.is_empty());
+        assert_eq!(ned.seen.len(), 2);
+        // A deed keeps who saw it, and a later card shows it to more.
+        assert!(w.remember("paid", vec!["bren".into()], vec!["ned".into()]));
+        w.shown_deed("paid", &["tobin".into(), "ned".into()]);
+        assert_eq!(w.state.deeds["paid"].saw, ["ned", "tobin"]);
+        // Rule N7: a roster saved before API-59 held Tobin met and nobody seen.
+        w.state.npcs.get_mut("tobin").unwrap().met = true;
+        w.seen_from_met(&party);
+        assert_eq!(
+            w.state.npcs["tobin"].seen.keys().collect::<Vec<_>>(),
+            ["bren", "maren"]
+        );
+    }
+
+    #[test]
     fn a_saved_world_keeps_memory_and_contract_apart_and_reads_back_whole() {
         let mut w = world("npc:tobin");
-        w.remember("paid", vec!["bren".into()]);
+        w.remember("paid", vec!["bren".into()], vec![]);
         w.state.scout = Some("bren".into());
         w.state.deck.discard.insert("mud".into());
         w.state.deck.gone_for_contract.insert("toll".into());

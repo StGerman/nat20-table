@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
-import { engineBinary, REPO } from "../src/paths.ts";
+import { checkBinary, engineBinary, engineEnv, prebuiltEngine, REPO } from "../src/paths.ts";
 
 test("the preflight fails on an API key in the shell, says how to fix it, and never prints the key", () => {
   const key = "sk-ant-preflight-test-key";
@@ -41,4 +41,35 @@ test("check:ts runs the debug engine, never a release build a pin bump left stal
   assert.equal(engineBinary({}), existsSync(release) ? release : debug);
   const pkg = JSON.parse(readFileSync(path.join(REPO, "package.json"), "utf8")) as { scripts: Record<string, string> };
   assert.match(pkg.scripts["check:ts"], /NAT20_ENGINE_BUILD=debug node .*--test/);
+});
+
+test("a fetched engine runs only where the checkout has no cargo build, and names every content directory (CON-19)", () => {
+  const fetched = path.join(REPO, ".nat20/engine");
+  const has = (...files: string[]) => (file: string) => files.includes(file);
+  const bin = path.join(fetched, "bin/nat20-api-server");
+  const release = path.join(REPO, "target/release/nat20-api-server");
+  const debug = path.join(REPO, "target/debug/nat20-api-server");
+
+  // No cargo build: the fetched engine and its checks, with the content directories set.
+  assert.equal(prebuiltEngine({}, has(bin)), fetched);
+  assert.equal(engineBinary({}, has(bin)), bin);
+  assert.equal(checkBinary("nat20-audit", {}, has(bin)), path.join(fetched, "bin/nat20-audit"));
+  const env = engineEnv({}, has(bin));
+  assert.equal(env.NAT20_REGISTRY_ROOT, path.join(fetched, "core/registries"));
+  assert.deepEqual(Object.keys(env).sort(), ["NAT20_DATA_DIR", "NAT20_MAPS_DIR", "NAT20_PREGENS_DIR", "NAT20_REGISTRY_ROOT", "NAT20_WORLDS_DIR"]);
+  assert.equal(engineEnv({ NAT20_MAPS_DIR: "/mine" }, has(bin)).NAT20_MAPS_DIR, "/mine", "a variable already set wins");
+
+  // A cargo build wins, unless asked otherwise; NAT20_API_SERVER and the debug build of check:ts always do.
+  assert.equal(engineBinary({}, has(bin, release)), release);
+  assert.equal(engineBinary({}, has(bin, debug)), debug);
+  assert.equal(checkBinary("nat20-digest", {}, has(bin, debug)), undefined);
+  assert.deepEqual(engineEnv({}, has(bin, debug)), {});
+  assert.equal(engineBinary({ NAT20_ENGINE_BUILD: "prebuilt" }, has(bin, release)), bin);
+  assert.equal(engineBinary({ NAT20_API_SERVER: "/opt/engine" }, has(bin)), "/opt/engine");
+  assert.equal(engineBinary({ NAT20_ENGINE_BUILD: "debug" }, has(bin)), debug);
+  assert.equal(engineBinary({ NAT20_ENGINE_DIR: "/elsewhere" }, has("/elsewhere/bin/nat20-api-server")), "/elsewhere/bin/nat20-api-server");
+
+  // Nothing fetched: as before.
+  assert.equal(prebuiltEngine({}, has()), undefined);
+  assert.equal(engineBinary({}, has()), debug);
 });

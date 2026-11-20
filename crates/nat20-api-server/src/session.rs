@@ -11,11 +11,11 @@ use nat20_world as world;
 use nat20_ledger::{Asset, Entry, Holder, Holdings, Journal, Reason};
 
 use nat20_api_contract::{
-    Aim, ApiError, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult, EndCombatReason,
-    ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend, LedgerGoods, LedgerReason,
-    Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId, ROSTER_FORMAT, ReactionTrigger,
-    RejectReason, RollId, RollView, Roster, RosterStart, RosterWorld, SceneFile, State, TimeSpan,
-    Visibility,
+    Aim, ApiError, ArrivalPurse, Awaiting, CheckSpec, CombatOverReason, Command, CommandResult,
+    EndCombatReason, ErrorCode, Event, EventKind, Goods, Handle, HelpSpec, HitDiceSpend,
+    LedgerGoods, LedgerReason, Lodging, Mode, MoveTarget, NightView, OptionId, Pace, PromptId,
+    ROSTER_FORMAT, ReactionTrigger, RejectReason, RollId, RollView, Roster, RosterStart,
+    RosterWorld, SceneFile, State, TimeSpan, Visibility,
 };
 
 mod cards;
@@ -66,8 +66,13 @@ pub struct Session {
     contract_start: Option<RosterStart>,
     /// The place NPCs placed in the current scene (API-48), written back when it is left.
     npcs_here: Vec<String>,
+    /// The roster people on the card whose effects run now (API-59): a deed they write is
+    /// seen by them. None outside a card's resolution
+    card_cast: Option<Vec<String>>,
     /// A card fight's or the scene's named NPCs by handle, until they die (ENG-36, API-57)
     card_npcs: HashMap<String, String>,
+    /// The card's wagon fight under way (ENG-48): its Blades and its allies
+    wagon_fight: Option<cards::WagonFight>,
     /// Who rolled each logged roll, by roll id (ENG-36)
     rollers: HashMap<String, String>,
     /// Who dealt the last damage to each creature, by handle (ENG-36)
@@ -105,7 +110,9 @@ impl Session {
             contract_start: roster.as_ref().and_then(|r| r.contract_start.clone()),
             roster,
             npcs_here: Vec::new(),
+            card_cast: None,
             card_npcs: HashMap::new(),
+            wagon_fight: None,
             arrival_due: None,
             rollers: HashMap::new(),
             last_blow: HashMap::new(),
@@ -235,6 +242,7 @@ impl Session {
         // So are creature handles: a card fight's named NPC who lived through it stays behind,
         // and a new creature with the same handle here is not them (ENG-36).
         self.card_npcs.clear();
+        self.wagon_fight = None;
         // A scene creature that is a person of the story writes `killed_<npc>` as a card
         // fight's does (API-57).
         self.card_npcs.extend(
@@ -259,7 +267,11 @@ impl Session {
 
     /// Pays the escort's wages from the merchant's purse (API-47): one `wage` ledger entry per
     /// Blade, each logged before the next. The world has already taken the coin from the purse.
-    fn pay_wages(&mut self, wages: Vec<nat20_world::Wage>) -> Result<(), ApiError> {
+    pub(super) fn pay_wages(
+        &mut self,
+        wages: Vec<nat20_world::Wage>,
+        reason: LedgerReason,
+    ) -> Result<(), ApiError> {
         let Some((merchant, purse_now)) = self.campaign.as_ref().and_then(|c| c.merchant_purse())
         else {
             return Ok(());
@@ -280,7 +292,7 @@ impl Session {
         }
         for wage in wages {
             self.game_mut()?
-                .receive(&merchant, &wage.blade, wage.copper, LedgerReason::Wage)?;
+                .receive(&merchant, &wage.blade, wage.copper, reason)?;
             self.push_entries();
         }
         self.check_merchant();
@@ -294,6 +306,19 @@ impl Session {
     pub(super) fn settle_if_arrived(&mut self) -> Result<bool, ApiError> {
         if !self.card_free() {
             return Ok(false);
+        }
+        // A fight ended with the caravan's NPC owner dead: the death card comes before any
+        // travel, rest or pay (ENG-49, rule M1).
+        if self
+            .campaign
+            .as_mut()
+            .and_then(|c| c.world.put_death_card())
+            .is_some()
+        {
+            self.show_card()?;
+            if !self.card_free() {
+                return Ok(false);
+            }
         }
         if let Some(place) = self.arrival_due.take() {
             self.draw_card(|world, dice| world.draw_on_arrival(&place, dice))?;
@@ -337,12 +362,27 @@ impl Session {
         let game = self.game.as_ref();
         let wages = campaign.escort_arrive(place, |b| game.is_some_and(|g| g.is_dead(b)));
         let settled = campaign.world.state.escort.as_ref().is_some_and(|e| e.done);
-        self.pay_wages(wages)?;
+        // Whose purse paid (ENG-49, rule M4): the owner's, a dead owner's carried in, or none.
+        let purse = if !campaign.world.owner_dead() {
+            ArrivalPurse::Owner
+        } else if campaign
+            .world
+            .state
+            .escort
+            .as_ref()
+            .is_some_and(|e| e.purse_shared)
+        {
+            ArrivalPurse::Shared
+        } else {
+            ArrivalPurse::Carried
+        };
+        self.pay_wages(wages, LedgerReason::Wage)?;
         if settled && !settled_before {
             self.push(Pending::public(
                 None,
                 EventKind::EscortSettled {
                     destination: place.to_owned(),
+                    purse,
                 },
             ));
         }
@@ -524,7 +564,17 @@ impl Session {
             .as_mut()
             .map(|c| std::mem::take(&mut c.due))
             .unwrap_or_default();
-        self.pay_wages(due)?;
+        self.pay_wages(due, LedgerReason::Wage)?;
+        // A roster saved with the NPC owner dead and the death card never put (a save from
+        // before ENG-49): it comes now, before any travel or rest (rule M1).
+        if self
+            .campaign
+            .as_mut()
+            .and_then(|c| c.world.put_death_card())
+            .is_some()
+        {
+            self.show_card()?;
+        }
         Ok(CommandResult::StartCampaign {
             state: self.state_for(viewer)?,
         })
@@ -843,6 +893,96 @@ impl Session {
         let result = self.game_mut()?.start_combat(encounter_id);
         self.after_decision(result)?;
         Ok(CommandResult::StartCombat {
+            state: self.state_for(viewer)?,
+        })
+    }
+
+    /// `mention`: the DM's narration named people of the roster (API-58). Each one with the
+    /// party who is not yet in the scene stands in it from now on; a fight places nobody.
+    /// Logs `npc_named` (DM only).
+    pub fn mention(&mut self, npcs: &[String], viewer: &Viewer) -> Result<CommandResult, ApiError> {
+        if *viewer != Viewer::Dm {
+            return Err(error(
+                ErrorCode::NotVisible,
+                "mention is the DM's word; send it as dm.",
+            ));
+        }
+        let Some(campaign) = self.campaign.as_ref() else {
+            return Err(error(
+                ErrorCode::NoCampaign,
+                "No campaign is running, so the world has no roster to name.",
+            ));
+        };
+        if npcs.is_empty() {
+            return Err(error(
+                ErrorCode::BadRequest,
+                "A mention names at least one person.",
+            ));
+        }
+        for (i, id) in npcs.iter().enumerate() {
+            if npcs[..i].contains(id) {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{id} is named twice."),
+                ));
+            }
+            if !campaign.knows_npc(id) {
+                return Err(error(
+                    ErrorCode::BadRequest,
+                    format!("{id} is not a person of the world's roster."),
+                ));
+            }
+        }
+        let mut placed = Vec::new();
+        let (Some(campaign), Some(game)) = (self.campaign.as_mut(), self.game.as_mut()) else {
+            return Err(error(ErrorCode::NoScene, "No scene is loaded."));
+        };
+        if game.mode() != Mode::Combat {
+            let first = game.anchors().first().map(|a| a.id.clone());
+            for id in npcs {
+                if game.has_creature(id) {
+                    continue;
+                }
+                let Some(npc) = first
+                    .as_deref()
+                    .and_then(|first| campaign.mention_placement(id, game.scene_id(), first))
+                else {
+                    continue;
+                };
+                if let Err(e) = game.place_npc(
+                    &npc.id,
+                    &npc.monster,
+                    npc.side,
+                    &npc.anchor,
+                    &npc.name,
+                    &npc.carries,
+                    npc.hp,
+                ) {
+                    eprintln!("mention: {id} is not placed: {}", e.message);
+                    continue;
+                }
+                self.npcs_here.push(id.clone());
+                placed.push(Handle(id.clone()));
+            }
+        }
+        // Everyone at the table now knows them (rule N4): seen if they stand here, else heard of.
+        for id in npcs {
+            if game.has_creature(id) {
+                campaign.met(id);
+            } else {
+                campaign.heard_of(id);
+            }
+        }
+        self.push_entries();
+        self.push(Pending {
+            round: None,
+            visibility: Visibility::Dm,
+            kind: EventKind::NpcNamed {
+                npcs: npcs.to_vec(),
+                placed,
+            },
+        });
+        Ok(CommandResult::Mention {
             state: self.state_for(viewer)?,
         })
     }
@@ -1494,7 +1634,8 @@ impl Session {
             _ => {}
         }
         let death = self.follow_blows(&kind);
-        let deeds = self.scene_deeds(&kind);
+        let mut deeds = self.scene_deeds(&kind);
+        deeds.extend(self.wagon_deeds(&kind));
         self.log.push(Event {
             seq,
             round: pending.round,
@@ -1504,7 +1645,7 @@ impl Session {
             kind,
         });
         // A named NPC's death writes its deed right after the death (ENG-36, API-52).
-        if let Some((deed, by)) = death {
+        for (deed, by) in death {
             self.remember(&deed, by);
         }
         // So does a scene check's or a scene fight's, right after its `check_resolved` or

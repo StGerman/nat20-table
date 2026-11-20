@@ -5,7 +5,7 @@ title: "A card's fight can start with its monsters surprised"
 pri: P2
 dest: Ours
 size: S
-state: todo
+state: done
 area: "2. Engine correctness (core)"
 ---
 
@@ -13,4 +13,4 @@ A card's fight can start with its monsters surprised (allies in fights, option A
 
 ## Status
 
-(right after the M12 exit pair, its own PR; Stas 2026-11-12 21:22Z, scope table #365 §9)
+Done in the PR that marks this file: `surprise` on the deck `fight` effect (`crates/nat20-world/src/deck.rs`), `start_fight_surprised` in `adapter/game.rs`, protocol §4.13; the wire is unchanged. MAP-22 uses it next.
