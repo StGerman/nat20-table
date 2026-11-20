@@ -87,7 +87,11 @@ test("a model player passes as a normal answer, plays from its card's Talk and s
   const prompt = playerPrompt("maren", card, "cleric");
   assert.match(prompt, /If not, just PASS: that is a normal answer/);
   assert.match(prompt, /your card's "Talk and silence" and "With the party", and your notes/);
-  assert.match(prompt, /Don't repeat what someone else already said/);
+  assert.match(prompt, /Speak to change something: something Maren saw or knows/);
+  assert.match(prompt, /never hand the speaker's words back/);
+  assert.match(prompt, /A question put to someone the DM plays is theirs to answer after this round/);
+  assert.match(prompt, /What you raised your hand for is still yours/);
+  assert.match(prompt, /not a line to deliver/);
   assert.match(prompt, /usually one call: submit_decision with the option .*, a line in say if Maren would speak, and end_turn: true/);
   assert.match(prompt, /The line reacts to what happened since your last turn/);
   assert.match(prompt, /"Do you raise your hand\?": .*Call no tool: your final answer starts with SPEAK \(a line to say\), BOTH \(a line and a deed\), ACT: and one sentence/);

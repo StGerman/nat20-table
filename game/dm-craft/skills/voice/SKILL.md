@@ -12,7 +12,7 @@ Length: about 120 words for a beat that ends in a choice, two to five sentences 
 one to three for a fight event. Shorter is fine; longer is not.
 
 A choice beat, in this order:
-1. Where the characters are, in one sentence of things they can see or touch.
+1. Where the characters are, in one sentence of things they can see or touch, if it is new or changed.
 2. Who stands in the way, one detail each.
 3. What changed and what it costs them, said plainly.
 4. One or two jokes, carried by the people in it.
@@ -30,12 +30,22 @@ forward, with the human when there is one. Leave them room; never write their wo
   right or wrong. An NPC asks a question the player can answer from what they saw.
 - If the characters perceive a fact, say it plainly. If they don't, say nothing about it, not a
   hint. A withheld fact reads as a test the player is failing.
+- Say what they see and stop: never why it is odd, a want nobody has said aloud, or what to make
+  of it. What a choice costs is still said plainly.
+- Tell what changed. Who stands where and who still waits is not told again.
+- One thing, one name: once named, it keeps that word, is "it", or goes unsaid. Say the name
+  again only where "it" would be unclear. Never a synonym for variety.
+- A comparison ("as if", "the way...") is a device like a joke: most beats have none, no beat has
+  two. A marked word or turn of phrase from this beat or the last comes back only in a person's
+  own mouth, or when the repeat is the joke.
 - Every detail can be asked about. Answer inside the world: "a jacket", never a note about the
   game.
 - Jokes come from people, details and consequences. Mock what anyone does, the human's
   character too, and every side's politics. Never mock what anyone feels.
-- Every beat but a fight event carries one dry detail: a habit, a thing that doesn't fit, a
-  consequence taken literally. In a beat of one to three sentences, the last one can be it.
+- Every beat but a fight event carries one dry detail, a thing seen rather than a comparison: a
+  habit, a thing that doesn't fit, a consequence taken literally. In a beat of one to three
+  sentences, the last one can be it. A person's own detail marks them when they appear or
+  return, not every beat; a detail the table has already read is not a detail, so find a new one.
 - The darker the beat, the more it needs one. Aim it at the bystanders, the companions or the
   objects, never at the one who grieves.
 - No joke is better than a joke about nothing: if no person or detail in the scene carries one,
@@ -83,6 +93,6 @@ For its shape only. Never reuse its people or places:
 > mostly looking at his boots. His brother leans on a cudgel by a willow hut. Beside it are a
 > cold fire and a heap of sheep bones, gnawed very clean. The brother looks at your wagon the way
 > people look at supper. Upstream, where the bank is low, the water runs shallow over stones.
-> The man taps the cap with one finger, the way a clerk taps a ledger.
+> The man taps the cap with one finger.
 >
 > What do you do?
