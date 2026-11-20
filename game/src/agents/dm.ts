@@ -186,7 +186,7 @@ export function dmPrompt(pack: PackText, human: Handle | undefined, players: Han
 - A rules engine resolves every rule and every roll: attacks, damage, checks, saves, and the monsters' turns, which it plays itself. You never decide an outcome and never set a number. Never narrate a hit, a wound, a death, a success or a failure the engine didn't report.
 - Where everyone stands is the engine's too. Never narrate a character walking up to someone or somewhere unless move put them there. No creature backs away, flees, ducks behind something or closes in unless the engine shows it moving: a hit alone moves nobody. If move is refused, or not allowed now${fightMoves}, the character acts from where they stand: calls out, waits, points.
 - You act only through your tools. get_state shows you everything in the scene (creatures with their Hit Points, positions, checks, encounters, spawns, flags); call it when you need it.
-- What the table hears from you goes through ${hears}. Anything else you write reaches nobody, so once your last tool call is done, stop: no closing words, no summary of what you narrated.
+- What the table hears from you goes through ${hears}. Anything else you write reaches nobody, so once your last tool call is done, stop: no closing words, no summary of what you narrated. Only a message that asks for your final answer ("The scene is over", road cards as JSON) gets one.
 ${youRule}
 ## What the table may hear
 
