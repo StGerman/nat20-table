@@ -1,8 +1,8 @@
 ---
 type: Milestone
 title: "Allies in fights («Свои в бою»)"
-description: "Whoever rides with the wagon is in its fights under the engine's script, the Merchant can die, and names the story has said open a person card"
-state: open
+description: "Whoever rides with the wagon is in its fights under the engine's script, the Merchant can die, and names the story has said open a person card; closed 2026-11-20 with rows 10 and 11 not passed"
+state: closed
 ---
 
 # Exit criterion
@@ -28,5 +28,7 @@ In design §13 merge order: ENG-47, MAP-22, MON-12 (core PR and pin), API-58, EN
 
 # Status
 
-open, no number yet. Design and estimate accepted by Stas (table #412); his goal 2026-11-16 21:37Z: the full scope, every PR 🟢, done = ready for exit runs. Estimate (design §14): 21 PRs, 351 to 362 USD build, 10.5 to 19.5 USD runs, Stas 7.9 to 8.5 h (before the describer's re-price to S: build 341 to 352 USD, Stas 5 to 10 min less), 3 to 6 days. Milestone 13 closed 2026-11-16, so no M13 file waits.
+closed 2026-11-20 by Stas, with rows 10 and 11 not passed («А свои в бою закрываем сейчас», in the tech talk thread). Rows 1 to 8: the stack's tests in CI. Row 9: `full-2026-11-18T20-29-10-067Z` on 1d79d30, audit, leak scan and judge pass, one fight, no ally hurt. Row 10 failed in Stas's session `full-2026-11-18T20-57-38-635Z` (the describer showed none of its 12 lines) and moved to AGT-133 (Stas, 2026-11-18 21:42Z: rows 9 and 12 stand). Row 11 was not played: Stas closed the milestone without it. Row 12: `play:card` `night_wolves` on 1d79d30 with Vera's read (`/mnt/project-files/engine/allies/runs/row12-2026-11-18/`); Tam died in one seed, and Tam hurt is not reachable by seed with scripted seats. The later run `full-2026-11-20T11-57-47-274Z` failed its contract on a night at Wendford, which is MAP-30's and not this milestone's.
+
+Earlier: no number yet. Design and estimate accepted by Stas (table #412); his goal 2026-11-16 21:37Z: the full scope, every PR 🟢, done = ready for exit runs. Estimate (design §14): 21 PRs, 351 to 362 USD build, 10.5 to 19.5 USD runs, Stas 7.9 to 8.5 h (before the describer's re-price to S: build 341 to 352 USD, Stas 5 to 10 min less), 3 to 6 days. Milestone 13 closed 2026-11-16, so no M13 file waits.
 §16 answered by Stas 2026-11-16 (table #419): no target for ally deaths, the describer rewords `look` only, the rest as recommended.
