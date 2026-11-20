@@ -7,6 +7,7 @@ import type { Handle, State } from "@nat20-table/engine-client";
 import type { Language } from "../agents/language.ts";
 import { cardName } from "../agents/player.ts";
 import { REPO, type GameEngine } from "../engine.ts";
+import { checkBinary, engineEnv } from "../paths.ts";
 import { Adventure, russianNames } from "../pack/adventure.ts";
 import { knownPlaceNames, peopleBook, shortRu, worldSeatNames } from "../pack/campaign.ts";
 import type { PeopleBook } from "../table/seat-lines.ts";
@@ -253,10 +254,12 @@ export function refuseApiKey(): void {
 
 /** The audit and the leak scan over a run folder (`nat20-audit`, decision 0033). */
 export function audit(scenes: string, runDir: string): { passed: boolean; output: string } {
-  const run = spawnSync("cargo", ["run", "--quiet", "-p", "nat20-duel", "--bin", "nat20-audit", "--", "--pack", scenes, runDir], {
-    cwd: REPO,
-    encoding: "utf8",
-  });
+  // A fetched engine brings its own nat20-audit (CON-19); a checkout with Rust builds it with cargo.
+  const args = ["--pack", scenes, runDir];
+  const binary = checkBinary("nat20-audit");
+  const run = binary
+    ? spawnSync(binary, args, { cwd: REPO, encoding: "utf8", env: { ...process.env, ...engineEnv() } })
+    : spawnSync("cargo", ["run", "--quiet", "-p", "nat20-duel", "--bin", "nat20-audit", "--", ...args], { cwd: REPO, encoding: "utf8" });
   if (run.error) return { passed: false, output: `nat20-audit didn't run: ${run.error.message}` };
   return { passed: run.status === 0, output: `${run.stdout}${run.stderr}`.trim() };
 }

@@ -3,6 +3,8 @@ node_modules/
 .cargo/config.toml
 /runs/
 /rosters/
+# A released engine, fetched by npm run engine:fetch (CON-19)
+/.nat20/
 
 # Langfuse keys (AGT-16) and any other local secret
 .env

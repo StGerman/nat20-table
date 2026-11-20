@@ -1,0 +1,90 @@
+# The released engine (CON-19): on an Apple Silicon runner, builds nat20-api-server, nat20-audit and
+# nat20-digest, packs them with core's assets (tools/release/package.mjs), proves a clean clone with
+# no Rust plays a scripted scene to its end on them, audit included, and on a `play-*` tag publishes
+# the archive as a GitHub Release asset for `npm run engine:fetch`. A pull request that touches the
+# release path runs the same build and proof, and publishes nothing. Not part of ci-ok.
+name: release
+
+on:
+  push:
+    tags: ["play-*"]
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - tools/release/**
+      - package.json
+      - game/src/paths.ts
+      - game/src/engine.ts
+      - game/src/play/engine-fetch.ts
+      - game/src/play/preflight.ts
+      - game/src/play/run.ts
+      - game/src/check/digest.ts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  ASSET: nat20-engine-darwin-arm64.tar.gz
+
+jobs:
+  engine:
+    name: engine (darwin-arm64)
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Rust release pinned in rust-toolchain.toml
+        run: rustup toolchain install
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Build the engine and the checks
+        run: cargo build --locked --release -p nat20-api-server -p nat20-duel
+      - name: Pack
+        run: node tools/release/package.mjs "$RUNNER_TEMP/dist/$ASSET"
+      - name: A clean clone with no Rust plays a scripted scene on the packed engine
+        run: |
+          git clone --quiet "$GITHUB_WORKSPACE" "$RUNNER_TEMP/clean"
+          # The binaries must not fall back to the checkout or the cargo cache they were built in.
+          mv "$GITHUB_WORKSPACE/crates" "$RUNNER_TEMP/crates.hidden"
+          mv "$HOME/.cargo/git/checkouts" "$RUNNER_TEMP/checkouts.hidden"
+          cd "$RUNNER_TEMP/clean"
+          npm ci
+          export PATH="$(echo "$PATH" | tr : '\n' | grep -v -e cargo -e rustup | paste -sd: -)"
+          if command -v cargo >/dev/null; then echo "cargo is still on PATH"; exit 1; fi
+          npm run engine:fetch -- --file "$RUNNER_TEMP/dist/$ASSET"
+          npm run play:scene -- --dm scripted --players scripted --no-upload
+          node -e 'const fs=require("fs");const d=fs.readdirSync("runs").map(n=>"runs/"+n)[0];const a=JSON.parse(fs.readFileSync(d+"/audit.json","utf8"));console.log(a.output);if(!a.passed)process.exit(1)'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: startsWith(github.ref, 'refs/tags/play-')
+        with:
+          name: engine
+          path: ${{ runner.temp }}/dist/
+          retention-days: 1
+
+  # Only this job can write, and it runs no code from the checkout: it uploads what the engine job built and proved.
+  publish:
+    name: publish
+    needs: engine
+    if: startsWith(github.ref, 'refs/tags/play-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: engine
+          path: dist
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" "dist/$ASSET" "dist/$ASSET.sha256" --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --title "$TAG" \
+            --notes "Engine binaries for Apple Silicon Macs, built from $GITHUB_SHA. Check out this tag, then: npm ci && npm run engine:fetch. See the README, Play it."
