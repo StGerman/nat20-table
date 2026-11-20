@@ -31,6 +31,7 @@
     "play:cheap": "node --experimental-strip-types --no-warnings game/src/play/full.ts --profile cheap",
     "play:demo": "node --experimental-strip-types --no-warnings game/src/play/full.ts --profile demo",
     "play:unattended": "node --experimental-strip-types --no-warnings game/src/play/full.ts --profile unattended",
+    "audit:show": "node --experimental-strip-types --no-warnings game/src/check/show.ts",
     "audit:narration": "node --experimental-strip-types --no-warnings game/src/check/cli.ts",
     "runs:verdict": "node --experimental-strip-types --no-warnings game/src/play/runs.ts verdict",
     "runs:finish": "node --experimental-strip-types --no-warnings game/src/play/runs.ts finish",
