@@ -1,12 +1,14 @@
 // The page replays a recorded seat wire (AGT-142; scope exit row 4, first part): the story it draws
-// is the reducer's, which the node tests hold to the terminal seat's; every die the stage lands
-// shows the engine's d20 faces and nothing else (Rule 4); it fits three widths in light and dark.
+// is the reducer's, every roll a token in it; every die the stage lands shows the engine's d20
+// faces and nothing else (Rule 4); the dock offers moves as chips and the whole sheet, by cost; it
+// fits three widths in light and dark.
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HostMessageSchema, type HostMessage } from "../src/seat-wire/messages.ts";
 import { EMPTY, reduce, settle, type PageView } from "../src/page/reduce.ts";
+import { NAMES_RU, NARRATION, narratedFight } from "../test/page-wires.ts";
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../test/fixtures");
 
@@ -50,11 +52,12 @@ for (const w of WIRES) {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await replay(page, w);
     const want = expected(w);
-    // A row's words, name tokens included, without its roll tokens.
-    const rows = await page.locator(".story .row:not(.preview)").evaluateAll((els) => els.map((e) => [...e.childNodes].filter((n) => !(n instanceof HTMLElement && n.classList.contains("token"))).map((n) => n.textContent ?? "").join("")));
-    expect(rows).toEqual(want.story.filter((l) => l.text !== "").map((l) => l.text.trimStart()));
-    const tokens = await page.locator(".story [data-roll]").evaluateAll((els) => els.map((e) => e.getAttribute("data-roll")));
-    expect(tokens).toEqual(want.story.flatMap((l) => (l.text === "" ? [] : l.rolls)));
+    // One element per story row, in the reducer's order.
+    const rows = await page.locator(".story [data-row]").evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-row"))));
+    expect(rows).toEqual(want.story.map((l) => l.id));
+    // Every roll of every row is reachable from a token (a turn-order token holds several).
+    const tokens = await page.locator(".story [data-rolls]").evaluateAll((els) => els.flatMap((e) => e.getAttribute("data-rolls")!.split(" ")));
+    expect(tokens.sort()).toEqual(want.story.flatMap((l) => l.rolls).sort());
     const landed = await page.evaluate(() => window.__nat20!.landed);
     expect(landed.map(({ roll, faces }) => ({ roll, faces }))).toEqual(ownRolls(w));
     expect(landed.every((l) => l.gl), "the stage drew WebGL dice").toBe(true);
@@ -141,6 +144,53 @@ for (const scheme of ["light", "dark"] as const) {
       expect(overflow).toBeLessThanOrEqual(0);
       await expect(page.locator(".pill")).toBeVisible();
       await expect(page.locator(".dock")).toBeVisible();
+      await expect(page.locator(".capsule .ask")).toBeVisible();
     });
   }
 }
+
+/** Replays the narrated fight (test/page-wires.ts) with the names a live host sends. */
+async function narrated(page: Page): Promise<void> {
+  const body = narratedFight();
+  await page.route("**/fixtures/narrated.jsonl", (route) => route.fulfill({ body, contentType: "application/x-ndjson" }));
+  const names = Object.entries(NAMES_RU).map(([k, v]) => `${k}:${v}`).join(",");
+  await page.goto(`/index.html?replay=/fixtures/narrated.jsonl&language=ru&handle=bren&names=${encodeURIComponent(names)}`);
+  await page.waitForFunction(() => window.__nat20?.done === true, undefined, { timeout: 100_000 });
+}
+
+test("a fight turn: the round's rolls sit in its sentences, turn order is one token, the dock offers chips, the sheet and what is left", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await narrated(page);
+  const told = page.locator(".story .beat.narration").filter({ hasText: NARRATION.slice(0, 30) });
+  await expect(told).toHaveCount(1);
+  // Turn order: one token for six rolls, and it opens every one of them.
+  const order = told.locator(".roll.num");
+  await expect(order).toHaveText("порядок ходов");
+  await order.click();
+  await expect(page.locator('[data-test="roll-pop"] li')).toHaveCount(6);
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-test="roll-pop"]')).toHaveCount(0);
+  // No terminal in the window: no echo, no hint, no roll id.
+  await expect(page.locator(".story")).not.toContainText("/options");
+  await expect(page.locator(".story")).not.toContainText("> ");
+  // The dock: a few chips with their cost, end turn, the whole sheet by cost; health and the turn's budget.
+  const chips = page.locator(".dock .chips .chip");
+  await expect(chips.first()).toContainText("Удар длинным мечом");
+  await expect(chips.first()).toContainText("действие");
+  await expect(page.locator('.dock [data-move="end_turn"]')).toHaveText("Закончить ход");
+  await expect(page.locator('[data-test="hp"]')).toContainText("12 из 20");
+  await expect(page.locator('[data-test="budget"] .b')).toHaveCount(3);
+  await expect(page.locator(".capsule .ask")).toHaveAttribute("placeholder", "Что делает Брен?");
+  await page.locator('[data-test="all-moves"]').click();
+  await expect(page.locator(".sheet .group h3")).toContainText(["Действие", "Быстрое действие"]);
+  await expect(page.locator('.sheet [data-move="fighter/second_wind"] .left')).toHaveText("осталось 2");
+  await expect(page.locator('[data-test="turn"]')).toContainText("Раунд 1 · ваш ход");
+});
+
+test("the end of the run is said once", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await replay(page, WIRES[1]);
+  const end = await page.locator(".story .beat.end").textContent();
+  expect(end).toBeTruthy();
+  await expect(page.locator(".dock")).not.toContainText(end!);
+});

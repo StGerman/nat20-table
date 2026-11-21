@@ -34,6 +34,12 @@ function recorded(text: string): HostMessage[] {
     .map((r) => HostMessageSchema.parse(r.event !== undefined ? { type: "event", seq: r.seq, event: r.event } : r.message));
 }
 
+/** `names=bren:Брен,torva:Торва`: the names a live host sends at `hello`, for a replay that should read as the table does. */
+function namesParam(raw: string | null): { names?: Record<string, string> } {
+  if (!raw) return {};
+  return { names: Object.fromEntries(raw.split(",").map((pair) => pair.split(":")).filter((p) => p.length === 2 && p[0] && p[1])) };
+}
+
 function Page(): ReturnType<typeof h> {
   const params = new URLSearchParams(location.search);
   const [view, dispatch] = useReducer(step, EMPTY);
@@ -50,15 +56,22 @@ function Page(): ReturnType<typeof h> {
       let stopped = false;
       void (async () => {
         const messages = recorded(await (await fetch(replay)).text());
-        dispatch({ type: "host", message: { type: "hello", ...__WIRE__, run: replay, language: params.get("language") === "ru" ? "ru" : "en", handle: params.get("handle") ?? "bren", title: params.get("title") ?? "" } });
+        dispatch({ type: "host", message: { type: "hello", ...__WIRE__, run: replay, language: params.get("language") === "ru" ? "ru" : "en", handle: params.get("handle") ?? "bren", title: params.get("title") ?? "", ...namesParam(params.get("names")) } });
         const to = Number(params.get("to") ?? Infinity);
+        let unpainted = 0;
         for (const message of messages) {
           if (stopped || (message.type === "event" && message.seq > to)) break;
           dispatch({ type: "host", message });
+          // The window paints after the human's own roll, so its die takes the stage, and every few
+          // messages between; a frame per message made a long wire slower to replay than the run was.
+          const e = message.type === "event" ? (message.event as { kind?: string; own?: boolean; roll?: string }) : undefined;
+          if (!(e?.kind === "engine" && e.own && e.roll) && ++unpainted < 24) continue;
+          unpainted = 0;
           // The stage holds the story while the die lands, as it does at the table.
           do await new Promise((r) => requestAnimationFrame(r));
           while (stage.current !== undefined && !stopped);
         }
+        await new Promise((r) => requestAnimationFrame(r));
         if (window.__nat20) window.__nat20.done = true;
       })();
       return () => {

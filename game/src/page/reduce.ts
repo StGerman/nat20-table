@@ -4,21 +4,24 @@
 // It keeps the terminal seat's rules (game/src/ui/ink-seat.ts): other characters' engine lines wait
 // for the narration that tells them and become its roll tokens, `unnarrated`, an ask and the kinds in
 // RELEASES show them as they are; the human's own line shows at once and its roll takes the stage
-// first; nobody is shown dead before the story has told it (`asTold`). Every line is laid out by the
-// terminal's own `eventLines`, so the page composes no sentence of its own.
+// first; nobody is shown dead before the story has told it (`asTold`). The story is drawn from the
+// data, not from the terminal's lines (Stas, 2026-11-21): a roll joins the line it belongs to, the
+// human's press is not echoed (the engine's line says what it did), and a turn's bookkeeping the
+// turn pill shows stays out. Every word is still the host's: the page composes no sentence.
 import type { Event } from "@nat20-table/engine-client";
 import type { HumanPrompt, TableEvent } from "../table/types.ts";
 import type { SeatCard } from "../table/seat-data.ts";
-import { UI_WORDS, SEAT_WORDS, type UiWords } from "../table/words.ts";
-import { eventLines, speakerOf, type Line, type Tone } from "../ui/lines.ts";
+import { SEAT_WORDS } from "../table/words.ts";
+import { speakerOf } from "../ui/lines.ts";
 import { asTold, nameSpans, type Person } from "../ui/people.ts";
 import type { HostMessage } from "../seat-wire/messages.ts";
 
 /** A roll the seat was shown: the engine's player view, never a target number (Rule 3). */
 export interface RollToken {
   id: string;
-  /** Who rolled, as the seat names them. */
+  /** Who rolled, as the seat names them, and their handle. */
   roller: string;
+  by: string;
   label: string;
   kind: string;
   /** Each d20's faces, kept and dropped: the stage shows these and nothing else (Rule 4). */
@@ -31,16 +34,50 @@ export interface RollToken {
   own: boolean;
 }
 
-/** One row of the story column. */
+/** What a story row is (design §5.2, content layer): the page lays each out its own way. */
+export type Beat =
+  /** The Narrator's paragraph; `asks` when it is a question to the human. */
+  | "narration"
+  /** A character speaks: `who` and the words. */
+  | "speech"
+  /** The human's own words, as they sent them. */
+  | "words"
+  /** What a character sets out to do, as its player declared it. */
+  | "act"
+  /** An engine line no narration told: the record as the host wrote it. */
+  | "fact"
+  /** A heading in the story: a round, a scene, where the road is. */
+  | "place"
+  /** Words the table shows as they are: a road card's, the road's. */
+  | "info"
+  /** The run is over. */
+  | "end";
+
+/** One row of the story column. Every word in it is the host's: the page composes no sentence. */
 export interface StoryLine {
   id: number;
-  tone: Tone;
+  beat: Beat;
   text: string;
-  /** The roll tokens drawn in it: a narration's rolls, or the roll of an engine line. */
+  /** The roll tokens drawn in it: a narration's rolls, or the rolls of an engine line and of the rolls that joined it. */
   rolls: string[];
-  /** The human's own words, echoed. */
-  said?: true;
+  /** Who speaks or acts, as the seat names them, and their handle. */
+  who?: string;
+  person?: string;
+  /** Whom it is said to, as the seat names them; the human's own name when it is said to them. */
+  to?: string;
+  /** An info row's title. */
+  title?: string;
+  /** The Narrator asks the human. */
+  asks?: true;
+  /** The same speaker as the row above: no second name over it. */
+  cont?: true;
+  /** A fact's engine event kind and who did it, so the rolls that belong to it can join it. */
+  event?: string;
+  actor?: string;
 }
+
+/** A row before it is numbered. */
+type Row = Omit<StoryLine, "id">;
 
 type Options = Extract<TableEvent, { kind: "options" }>;
 
@@ -83,7 +120,7 @@ export interface PageView {
   seq: number;
   story: StoryLine[];
   /** Other characters' engine lines waiting for their narration, with their rolls. */
-  held: Array<Line & { roll?: string }>;
+  held: Row[];
   /** Every roll the seat was shown, by id. */
   rolls: Record<string, RollToken>;
   /** The human's own roll on the stage, until the page has shown it (`settle`). */
@@ -126,18 +163,24 @@ export interface PageView {
   looked: number;
   /** The speaker of the message the last row belongs to. */
   speaker?: string;
+  /** The first row since the human last answered: the rows before it are read (the story dims them). */
+  fresh: number;
   next: number;
 }
 
-export const EMPTY: PageView = { seq: 0, story: [], held: [], rolls: {}, dock: { form: "waiting" }, spent: [], people: [], answering: false, told: [], untold: [], alive: {}, sawPeople: false, looked: 0, next: 0 };
+export const EMPTY: PageView = { seq: 0, story: [], held: [], rolls: {}, dock: { form: "waiting" }, spent: [], people: [], answering: false, told: [], untold: [], alive: {}, sawPeople: false, looked: 0, next: 0, fresh: 0 };
 
 /** The kinds that show the held engine lines above them; a narration tells them instead (ink-seat.ts RELEASES). */
 const RELEASES = new Set<TableEvent["kind"]>(["options", "reaction", "question", "end"]);
-/** A command's answers, shown over the story. */
-const OVERLAYS = new Set((["en", "ru"] as const).flatMap((l) => [SEAT_WORDS[l].sheet, SEAT_WORDS[l].where, SEAT_WORDS[l].log, SEAT_WORDS[l].usage]));
+/** A command's answers, shown over the story (/options too: the dock holds the list). */
+const OVERLAYS = new Set((["en", "ru"] as const).flatMap((l) => [SEAT_WORDS[l].sheet, SEAT_WORDS[l].where, SEAT_WORDS[l].log, SEAT_WORDS[l].usage, SEAT_WORDS[l].options]));
 const REFUSED = new Set([SEAT_WORDS.en.notAccepted, SEAT_WORDS.ru.notAccepted]);
-/** The tones whose rows tell a death (ink-seat.ts TELLING). */
-const TELLING = new Set<Tone>(["dm", "speech", "engine", "status", "end"]);
+/** The beats whose rows tell a death (ink-seat.ts TELLING). */
+const TELLING = new Set<Beat>(["narration", "speech", "fact", "place", "end"]);
+/** Engine lines the page leaves out: whose turn starts and ends is the turn pill's, and each word on a card lands on the card. */
+const UNSHOWN = new Set(["turn_start", "turn_end", "card_advice"]);
+/** The facts a roll joins: an action and its attack and damage, a fight's start and its turn order. */
+const JOINS = new Set(["action", "combat_started"]);
 
 /** The page's wire: it refuses a host built from another (as the engine client refuses another engine). */
 export interface Built {
@@ -201,34 +244,66 @@ export function answered(view: PageView): PageView {
   return { ...v, dock: v.dock.form === "ended" ? v.dock : { form: "waiting", ...(v.busy ? { on: v.busy } : {}) } };
 }
 
-function words(view: PageView): UiWords {
-  return UI_WORDS[view.hello?.language ?? "en"];
-}
-
 /** How the seat labels a character: the host's names, else the handle as the terminal shows it. */
 function namer(view: PageView): (handle: string) => string {
   const names = view.hello?.names ?? {};
   return (handle) => names[handle] ?? handle.charAt(0).toUpperCase() + handle.slice(1);
 }
 
-function linesOf(view: PageView, event: TableEvent, continued = false): Line[] {
-  return eventLines(event, view.hello?.handle, continued, words(view), namer(view));
+/** The row a message makes: the Narrator's paragraph, a character's words, a declared intent, a question. */
+function rowOf(v: PageView, event: TableEvent): Row | undefined {
+  const named = namer(v);
+  const to = (handle: string | undefined) => (handle ? { to: named(handle) } : {});
+  switch (event.kind) {
+    case "narration":
+      return event.speaker === "dm" ? { beat: "narration", text: event.text, rolls: [], ...to(event.to) } : { beat: "speech", text: event.text, rolls: [], who: named(event.speaker), person: event.speaker, ...to(event.to) };
+    case "speech":
+      return { beat: "speech", text: event.text, rolls: [], who: named(event.speaker), person: event.speaker, ...to(event.to) };
+    case "intent":
+      return { beat: "act", text: event.text, rolls: [], who: named(event.speaker), person: event.speaker };
+    case "question":
+      return { beat: "narration", text: event.text, rolls: [], asks: true };
+    default:
+      return undefined;
+  }
+}
+
+/** An engine line's row, or none for the lines the page leaves out. */
+function factOf(event: Extract<TableEvent, { kind: "engine" }>): Row | undefined {
+  const e = event.event as (Event & { actor?: string }) | undefined;
+  if (e && UNSHOWN.has(e.kind)) return undefined;
+  if (e?.kind === "round") return { beat: "place", text: event.text, rolls: [] };
+  return { beat: "fact", text: event.text, rolls: event.roll ? [event.roll] : [], ...(e ? { event: e.kind } : {}), ...(e?.actor ? { actor: e.actor } : {}) };
+}
+
+/** The rows that are not messages: a status, an info, the end. */
+function othersOf(v: PageView, event: TableEvent): Row[] {
+  switch (event.kind) {
+    case "status":
+      // "Your turn: pick a number…" is the terminal's prompt: the turn pill and the dock say it here.
+      return event.text === SEAT_WORDS[v.hello?.language ?? "en"].yourTurn ? [] : [{ beat: "place", text: event.text, rolls: [] }];
+    case "info":
+      return [{ beat: "info", title: event.title, text: event.text, rolls: [] }];
+    case "end":
+      return [{ beat: "end", text: event.text, rolls: [] }];
+    default:
+      return [];
+  }
 }
 
 function shown(v: PageView, event: TableEvent): PageView {
   if (RELEASES.has(event.kind)) v = release(v);
   switch (event.kind) {
     case "said": {
-      // The human's answer as the terminal echoes it. What it settles leaves the dock; a command leaves it standing.
-      // Out of a fight a pick or words answer the list; in a fight it stays until the turn ends.
-      const kind = event.intent.kind;
-      const settles = kind !== "command";
-      const done = v.options && !v.options.budget && v.ask?.prompt.kind !== "pick" && (kind === "option" || kind === "text");
-      const next = add(
-        { ...v, ...(settles ? { reaction: undefined, question: undefined, refusal: undefined, overlay: undefined } : {}), ...(done ? { options: undefined } : {}) },
-        [{ tone: "prompt", text: `> ${event.text}` }],
-        true,
-      );
+      // What it settles leaves the dock; a command leaves it standing. Out of a fight a pick or words
+      // answer the list; in a fight it stays until the turn ends. Only words show in the story: a
+      // press is told by the engine's own line, and a command by its answer.
+      const intent = event.intent;
+      const settles = intent.kind !== "command";
+      const done = v.options && !v.options.budget && v.ask?.prompt.kind !== "pick" && (intent.kind === "option" || intent.kind === "text");
+      const base = { ...v, ...(settles ? { reaction: undefined, question: undefined, refusal: undefined, overlay: undefined, fresh: v.next } : {}), ...(done ? { options: undefined } : {}) };
+      const handle = v.hello?.handle ?? "";
+      const next = intent.kind === "text" ? add(base, [{ beat: "words", text: intent.text, rolls: [], who: namer(v)(handle), person: handle }]) : base;
       return { ...answered(next), sent: undefined };
     }
     case "situation":
@@ -244,15 +319,14 @@ function shown(v: PageView, event: TableEvent): PageView {
       if (v.card) v = { ...v, card: onCard(v.card, event) };
       const roll = rollOf(event, v);
       const rolls = roll ? { ...v.rolls, [roll.id]: roll } : v.rolls;
-      // The token goes on the event's first row only.
-      const lines = linesOf(v, event).map((l, i) => ({ ...l, ...(event.roll && i === 0 ? { roll: event.roll } : {}) }));
+      const row = factOf(event);
       // The human's own line shows at once, its roll on the stage first; others' wait for their narration.
-      if (event.own) return { ...add({ ...v, rolls }, lines), ...(roll && roll.d20.length > 0 ? { stage: roll.id } : {}) };
-      return { ...v, rolls, held: [...v.held, ...lines] };
+      if (event.own) return { ...add({ ...v, rolls }, row ? [row] : []), ...(roll && roll.d20.length > 0 ? { stage: roll.id } : {}) };
+      return { ...v, rolls, held: row ? joined(v.held, [row], rolls) : v.held };
     }
     case "narration": {
       // The lines it narrates go nowhere: the narration tells them, and their rolls are its tokens.
-      const told = new Set([...(event.rolls ?? []), ...v.held.flatMap((l) => (l.roll ? [l.roll] : []))]);
+      const told = new Set([...(event.rolls ?? []), ...v.held.flatMap((l) => l.rolls)]);
       const next = message({ ...v, held: [], preview: undefined }, event, [...told].filter((id) => id in v.rolls));
       return release(next);
     }
@@ -270,12 +344,12 @@ function shown(v: PageView, event: TableEvent): PageView {
       return { ...next, dock: dockFor(next) };
     }
     case "end": {
-      const next = add({ ...v, overlay: undefined, reaction: undefined, question: undefined, ask: undefined }, linesOf(v, event));
+      const next = add({ ...v, overlay: undefined, reaction: undefined, question: undefined, ask: undefined }, othersOf(v, event));
       return { ...next, dock: { form: "ended", text: event.text } };
     }
   }
   if (speakerOf(event) !== undefined) return message(v, event, []);
-  return add(v, linesOf(v, event));
+  return add(v, othersOf(v, event));
 }
 
 /** The card the seat sent, keeping what the table already said on it when it is the same card. */
@@ -323,6 +397,7 @@ function rollOf(event: Extract<TableEvent, { kind: "engine" }>, view: PageView):
   return {
     id: r.id,
     roller: event.names?.[r.roller] ?? namer(view)(r.roller),
+    by: r.roller,
     label: r.label,
     kind: r.kind,
     d20: r.dice.filter((d) => d.dice.endsWith("d20")).flatMap((d) => d.results),
@@ -333,38 +408,58 @@ function rollOf(event: Extract<TableEvent, { kind: "engine" }>, view: PageView):
   };
 }
 
-/** A message: on the row above when the speaker is the same. */
+/** A message: no second name over it when the speaker is the same as the row above's. */
 function message(v: PageView, event: TableEvent, rolls: string[]): PageView {
   const speaker = speakerOf(event);
-  const continued = speaker === v.speaker;
-  const next = print(v, linesOf(v, event, continued), !continued, rolls);
+  const row = rowOf(v, event);
+  if (!row) return v;
+  const next = print(v, [{ ...row, rolls, ...(speaker === v.speaker ? { cont: true as const } : {}) }]);
   return { ...next, speaker };
 }
 
-/** Rows that are not a message's: they end the message above, after a blank row. */
-function add(v: PageView, lines: Array<Line & { roll?: string }>, said = false): PageView {
-  if (lines.length === 0) return v;
-  return { ...print(v, lines, v.speaker !== undefined, [], said), speaker: undefined };
+/** Rows that are not a message's: they end the message above. */
+function add(v: PageView, rows: Row[]): PageView {
+  if (rows.length === 0) return v;
+  return { ...print(v, rows), speaker: undefined };
 }
 
-function print(v: PageView, lines: Array<Line & { roll?: string }>, gap: boolean, rolls: string[], said = false): PageView {
-  if (lines.length === 0) return v;
-  const blank = gap && v.story.length > 0 && v.story.at(-1)!.text !== "" ? [{ tone: "status" as const, text: "" }] : [];
+/**
+ * `rows` after `before`, each roll line joined to the line it belongs to: an attack and its damage
+ * to the action, a fight's turn-order rolls to its start. The joined line's own words stay with its
+ * token (the token shows them), so no roll is lost.
+ */
+export function joined<T extends Row>(before: T[], rows: Row[], rolls: Record<string, RollToken>): T[] {
+  const out = [...before];
+  for (const row of rows) {
+    const last = out.at(-1);
+    if (last && joins(last, row, rolls)) out[out.length - 1] = { ...last, rolls: [...last.rolls, ...row.rolls] };
+    else out.push(row as T);
+  }
+  return out;
+}
+
+function joins(last: Row, row: Row, rolls: Record<string, RollToken>): boolean {
+  if (last.beat !== "fact" || row.beat !== "fact" || row.event !== "roll" || row.rolls.length !== 1) return false;
+  const roll = rolls[row.rolls[0]];
+  if (!roll || !JOINS.has(last.event ?? "")) return false;
+  if (last.event === "combat_started") return roll.kind === "initiative";
+  return roll.kind !== "initiative" && last.actor !== undefined && last.actor === roll.by;
+}
+
+function print(v: PageView, rows: Row[]): PageView {
+  if (rows.length === 0) return v;
+  // A roll line joins the line above it, already drawn or not.
+  const tail = v.story.length > 0 ? [v.story.at(-1)!] : [];
+  const merged = joined<Row & { id?: number }>(tail, rows, v.rolls);
   let next = v.next;
-  const rows: StoryLine[] = [...blank, ...lines].map((line, i) => ({
-    id: next++,
-    tone: line.tone,
-    text: line.text,
-    rolls: "roll" in line && line.roll ? [line.roll] : i === blank.length ? rolls : [],
-    ...(said ? { said: true as const } : {}),
-  }));
-  let out: PageView = { ...v, story: [...v.story, ...rows], next };
+  const numbered = merged.map((row): StoryLine => ("id" in row && row.id !== undefined ? (row as StoryLine) : { ...row, id: next++ }));
+  let out: PageView = { ...v, story: [...v.story.slice(0, v.story.length - tail.length), ...numbered], next };
   // A row that names a dead person after the death tells it: their card says so from now on.
   if (v.untold.length > 0) {
     const people = v.situation?.situation?.people ?? [];
     const told = v.untold.filter((id) => {
       const p = people.find((q) => q.id === id);
-      return p !== undefined && tells(lines, p);
+      return p !== undefined && tells(rows, p);
     });
     if (told.length > 0) out = { ...out, told: [...out.told, ...told], untold: out.untold.filter((id) => !told.includes(id)) };
   }
@@ -408,8 +503,8 @@ function peopleNow(v: PageView): Person[] {
   return asTold(v.situation?.situation?.people ?? [], (id) => v.told.includes(id), (id) => v.alive[id]);
 }
 
-function tells(lines: ReadonlyArray<{ tone: Tone; text: string }>, p: Person): boolean {
-  return lines.some((line) => TELLING.has(line.tone) && nameSpans(line.text, [p]).some((span) => span.person));
+function tells(rows: ReadonlyArray<{ beat: Beat; text: string }>, p: Person): boolean {
+  return rows.some((row) => TELLING.has(row.beat) && nameSpans(row.text, [p]).some((span) => span.person));
 }
 
 /** The dock's form for the open ask, from its prompt and the last list (design §5.1). */
@@ -434,4 +529,43 @@ function dockFor(v: PageView): Dock {
     case "road":
       return { form: "moves", ask: ask.id, prompt: ask.prompt, ...(v.options ? { options: v.options } : {}) };
   }
+}
+
+/**
+ * A narration cut into sentences, each with the rolls it tells (design §5.2: a roll lives inside the
+ * sentence that tells it). The narration names no roll, so a roll goes after the first sentence
+ * that names its roller, from the sentence the roll before it went to (the next one, for another
+ * roller); failing that, after the last. A fight's turn-order rolls stay together where it starts.
+ */
+export function placed(text: string, ids: readonly string[], rolls: Record<string, RollToken>): Array<{ text: string; rolls: string[] }> {
+  const parts = text.split(/(?<=[.!?…»])\s+/u);
+  const out = parts.map((t) => ({ text: t, rolls: [] as string[] }));
+  const names = (i: number, stem: string) => out[i].text.toLocaleLowerCase().includes(stem);
+  let at = 0;
+  let last: string | undefined;
+  for (const id of ids) {
+    const roll = rolls[id];
+    // A fight's turn order is told where the fight starts: its rolls stay together.
+    if (!roll || roll.kind === "initiative") {
+      out[at].rolls.push(id);
+      continue;
+    }
+    const stem = stemOf(roll.roller);
+    // Another roller is told in a later sentence, if one names them; the same roller, in this one or later.
+    const from = last !== undefined && last !== roll.by ? at + 1 : at;
+    let i = stem ? out.findIndex((_, j) => j >= from && names(j, stem)) : -1;
+    if (i < 0 && stem) i = out.findIndex((_, j) => j >= at && names(j, stem));
+    if (i < 0) i = out.length - 1;
+    out[i].rolls.push(id);
+    at = i;
+    last = roll.by;
+  }
+  return out;
+}
+
+/** A name's first word without its last letter, so «Брен» finds «Брену» and «Торва» finds «Торвы». */
+function stemOf(name: string): string | undefined {
+  const word = name.trim().split(/\s+/)[0]?.toLocaleLowerCase() ?? "";
+  if (word.length < 3) return undefined;
+  return word.length > 3 ? word.slice(0, -1) : word;
 }

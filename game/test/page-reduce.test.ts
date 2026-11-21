@@ -1,14 +1,17 @@
 // The page reducer (AGT-142): the window's screen as a pure function of the host's messages.
 // Each recorded seat wire is replayed through the reducer and through the terminal seat, fed the
-// same calls the web seat makes; after every message both must show the same story, the same list
-// and the same people. No engine and no model: the wires are fixtures of loop.test.ts.
+// same calls the web seat makes; after every message both must hold the same list of moves. The
+// story is drawn from the data, not from the terminal's lines (Stas, 2026-11-21): no echo of a
+// press, no terminal hint, no roll id, a roll with the line it belongs to, and every roll still
+// reachable as a token. No engine and no model: the wires are fixtures of loop.test.ts.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { HostMessageSchema, WIRE_HASH, WIRE_VERSION, type HostMessage } from "../src/seat-wire/schema.ts";
-import { answered, EMPTY, reduce, settle, type PageView } from "../src/page/reduce.ts";
+import { answered, EMPTY, placed, reduce, settle, type PageView } from "../src/page/reduce.ts";
+import { NAMES_RU, NARRATION, narratedFight, TALK } from "./page-wires.ts";
 import type { HumanPrompt, PlayerIntent, TableEvent } from "../src/table/types.ts";
 import { InkSeat } from "../src/ui/ink-seat.ts";
 
@@ -91,16 +94,17 @@ function replay(w: Wire, check: (page: PageView, ink: InkSeat, at: number) => vo
 }
 
 for (const w of WIRES) {
-  test(`page reducer: ${w.records.length} records of ${w.seat}'s ${w.language} wire draw what the terminal seat draws`, () => {
+  test(`page reducer: ${w.records.length} records of ${w.seat}'s ${w.language} wire hold the terminal seat's list, and a story with no terminal in it`, () => {
     let checked = 0;
     replay(w, (page, ink, at) => {
       const view = (ink as unknown as Peek).getView();
-      assert.deepEqual(
-        page.story.map((l) => l.text),
-        view.lines.map((l) => l.text),
-        `story after record ${at + 1}`,
-      );
       assert.deepEqual(page.options?.lines, view.options?.lines, `options after record ${at + 1}`);
+      for (const row of page.story) {
+        assert.ok(!row.text.startsWith(">"), `no echo of a press: ${row.text}`);
+        assert.ok(!/\[r\d+\]/.test(row.text), `no roll id in the words: ${row.text}`);
+        assert.ok(!/\/(options|help|where|sheet)\b/.test(row.text), `no terminal command in the story: ${row.text}`);
+        assert.notEqual(row.text, "", "no blank rows: the page spaces its beats");
+      }
       checked++;
     });
     assert.equal(checked, w.records.length);
@@ -144,12 +148,12 @@ test("page reducer: another character's line waits for the narration that tells 
   assert.equal(v.story.length, 0, "nothing drawn yet");
   assert.equal(v.held.length, 1);
   v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 2, event: { kind: "narration", speaker: "dm", text: "Ilsa is quick." } }));
-  assert.deepEqual(v.story.map((l) => l.text), ["DM: Ilsa is quick."]);
+  assert.deepEqual(v.story.map((l) => [l.beat, l.text]), [["narration", "Ilsa is quick."]]);
   assert.deepEqual(v.story[0].rolls, ["r5"], "the narration carries the roll as its token");
   // The same line released by an ask shows as it is.
   let u = reduce(reduce(EMPTY, hello(w)), HostMessageSchema.parse({ type: "event", seq: 1, event: line }));
   u = reduce(u, HostMessageSchema.parse({ type: "ask", id: "a1", prompt: { kind: "explore" } }));
-  assert.deepEqual(u.story.map((l) => l.text.trim()), ["ilsa rolls initiative: 1d20 (19) = 20. [r5]"]);
+  assert.deepEqual(u.story.map((l) => [l.beat, l.text]), [["fact", "ilsa rolls initiative: 1d20 (19) = 20."]]);
   assert.equal(u.held.length, 0);
   assert.ok(u.story.at(-1)!.rolls.includes("r5"));
 });
@@ -300,4 +304,49 @@ test("page reducer: the card leaves the dock when the human is asked something e
     else if (lastCard >= 0 && page.ask && page.ask.prompt.kind !== "card") cleared = true;
   });
   assert.ok(lastCard >= 0 && cleared);
+});
+
+test("page reducer: a press is told by the engine's line, not echoed; the human's own words are a row of their own", () => {
+  let v = reduce(EMPTY, hello(WIRES[1]));
+  v = reduce(v, HostMessageSchema.parse({ type: "ask", id: "a1", prompt: { kind: "explore" } }));
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 1, event: { kind: "said", intent: { kind: "option", number: 3 }, text: "3. Идти дальше с обозом" } }));
+  assert.equal(v.story.length, 0, "a press draws nothing");
+  v = reduce(v, HostMessageSchema.parse({ type: "ask", id: "a2", prompt: { kind: "explore" } }));
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 2, event: { kind: "said", intent: { kind: "command", name: "sheet" }, text: "/sheet" } }));
+  assert.equal(v.story.length, 0, "a command draws nothing: its answer does");
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 3, event: { kind: "said", intent: { kind: "text", text: "Осматриваюсь." }, text: "Осматриваюсь." } }));
+  assert.deepEqual(v.story.map((l) => [l.beat, l.person, l.text]), [["words", "bren", "Осматриваюсь."]]);
+  assert.equal(v.fresh, 0, "what came before the answer is read");
+});
+
+test("page reducer: a roll joins the action it belongs to, and a fight's turn-order rolls join its start", () => {
+  const page = replay(WIRES[1], () => {});
+  const start = page.story.find((l) => l.event === "combat_started");
+  assert.ok(start, "the fight's start is a row");
+  assert.equal(start.rolls.length, 6, "six turn-order rolls on it");
+  assert.ok(start.rolls.every((id) => page.rolls[id].kind === "initiative"));
+  assert.ok(!page.story.some((l) => l.event === "roll" && page.rolls[l.rolls[0]]?.kind === "initiative"), "no turn-order roll has a row of its own");
+  const attack = page.story.find((l) => l.event === "action" && l.text.startsWith("Гоблин 2: удар саблей"));
+  assert.ok(attack);
+  assert.deepEqual(attack.rolls.map((id) => page.rolls[id].kind), ["attack", "damage"], "the attack and its damage sit on the action");
+  assert.ok(!page.story.some((l) => l.event === "turn_start" || l.event === "turn_end" || l.event === "card_advice"), "the turn pill and the card hold these");
+});
+
+test("page reducer: a live Narrator's round carries its rolls, each in the sentence that names its roller", () => {
+  const records = narratedFight().trim().split("\n").map((l) => JSON.parse(l) as { seq?: number; event?: TableEvent; message?: HostMessage });
+  let v = reduce(EMPTY, HostMessageSchema.parse({ ...hello(WIRES[1]), names: NAMES_RU }));
+  for (const r of records) v = settle(reduce(v, HostMessageSchema.parse(r.event ? { type: "event", seq: r.seq, event: r.event } : r.message)));
+  const told = v.story.find((l) => l.text === NARRATION);
+  assert.ok(told, "the narration is a row");
+  assert.equal(told.beat, "narration");
+  assert.deepEqual(v.story.at(-1) && [v.story.at(-1)!.beat, v.story.at(-1)!.who, v.story.at(-1)!.to, v.story.at(-1)!.text], ["speech", "Ильза", "Брен", TALK]);
+  const parts = placed(told.text, told.rolls, v.rolls);
+  assert.equal(parts.length, 4);
+  const by = (i: number) => [...new Set(parts[i].rolls.map((id) => (v.rolls[id].kind === "initiative" ? "order" : v.rolls[id].by)))];
+  assert.deepEqual(by(0), ["order", "ilsa"]);
+  assert.deepEqual(by(1), ["goblin_warrior_1"]);
+  assert.deepEqual(by(2), ["goblin_warrior_2"]);
+  assert.deepEqual(by(3), ["torva", "maren"]);
+  assert.deepEqual(parts.flatMap((p) => p.rolls).sort(), [...told.rolls].sort(), "every roll it tells has a place");
+  assert.equal(v.dock.form, "moves");
 });
