@@ -292,6 +292,20 @@ fn world_for(handle: &str, full: WorldFull) -> WorldPlayer {
                 heard: n.heard.clone(),
             })
             .collect(),
+        // The peoples of the persons this character has seen or heard of (API-63): known
+        // through one of their own, never before.
+        peoples: view
+            .peoples
+            .iter()
+            .filter(|p| {
+                view.npcs.iter().any(|n| {
+                    n.people.as_deref() == Some(p.id.as_str())
+                        && (n.seen.iter().any(|s| s.by.0 == handle)
+                            || n.heard_by.iter().any(|h| h.0 == handle))
+                })
+            })
+            .cloned()
+            .collect(),
     }
 }
 
@@ -416,6 +430,7 @@ fn player_roll(full: &RollView) -> RollView {
 #[cfg(test)]
 mod turned_back_tests {
     use super::*;
+    use nat20_api_contract::{NpcAttitude, NpcSeen, PeopleView};
 
     /// The DM's world from the travel fixture: on the tower trail, 8 miles from the
     /// undiscovered tower, having set out from the inn.
@@ -432,6 +447,70 @@ mod turned_back_tests {
             .to_owned();
         let v: serde_json::Value = serde_json::from_str(&line).unwrap();
         serde_json::from_value(v["response"]["result"]["state"]["world"].clone()).unwrap()
+    }
+
+    #[test]
+    fn a_people_is_known_only_through_one_of_its_own() {
+        let mut view = dm_world();
+        view.peoples = vec![
+            PeopleView {
+                id: "corrins".into(),
+                name: "the Corrins".into(),
+                line: "Roadfolk.".into(),
+            },
+            PeopleView {
+                id: "hillmen".into(),
+                name: "the hillmen".into(),
+                line: "Nobody has met one.".into(),
+            },
+        ];
+        let person = |id: &str, seen_by: &[&str], heard_by: &[&str]| NpcDm {
+            id: id.into(),
+            name: id.into(),
+            names: vec![],
+            look: None,
+            heard: None,
+            people: Some("corrins".into()),
+            remembers: vec![],
+            place: None,
+            anchor: None,
+            monster: "commoner".into(),
+            attitude: NpcAttitude::Friendly,
+            alive: true,
+            met: false,
+            hp: None,
+            notes: None,
+            seen: seen_by
+                .iter()
+                .map(|h| NpcSeen {
+                    by: Handle((*h).into()),
+                    place: None,
+                })
+                .collect(),
+            heard_by: heard_by.iter().map(|h| Handle((*h).into())).collect(),
+        };
+        view.npcs = vec![
+            person("bel", &["bren"], &[]),
+            person("tam", &[], &["maren"]),
+        ];
+        let peoples = |handle: &str| {
+            world_for(
+                handle,
+                WorldFull {
+                    view: view.clone(),
+                    drivers: Vec::new(),
+                    reach: Default::default(),
+                    trip: None,
+                },
+            )
+            .peoples
+            .into_iter()
+            .map(|p| p.id)
+            .collect::<Vec<_>>()
+        };
+        assert_eq!(peoples("bren"), ["corrins"], "seen");
+        assert_eq!(peoples("maren"), ["corrins"], "heard of");
+        assert!(peoples("ilsa").is_empty(), "neither: never before");
     }
 
     #[test]
@@ -494,6 +573,7 @@ mod remembered_tests {
             names: vec![],
             look: None,
             heard: None,
+            people: None,
             remembers: ["fed", "shooed", "paid", "sang", "unseen"]
                 .map(line)
                 .to_vec(),

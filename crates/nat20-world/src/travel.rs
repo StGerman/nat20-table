@@ -26,7 +26,7 @@ use crate::{
     dice::WorldDice,
     escort::{EscortState, EscortTerms, Wage},
     map::{MapError, Position, WorldMap},
-    npcs::{self, NpcDef, NpcFile, NpcState},
+    npcs::{self, NpcDef, NpcFile, NpcState, PeopleDef},
 };
 
 /// The hour the party wakes after a night.
@@ -393,6 +393,8 @@ pub struct World {
     pub deck: Deck,
     /// The place NPCs; none until [`World::with_npcs`]
     pub npcs: Vec<NpcDef>,
+    /// The peoples the NPC file records (API-63); none until [`World::with_npcs`]
+    pub peoples: Vec<PeopleDef>,
     /// The escort contract's terms; none until [`World::with_escort`]
     pub escort: Option<EscortTerms>,
     /// Who may ride with the wagon (ENG-48); none until [`World::with_company`]
@@ -510,6 +512,7 @@ impl World {
             },
             deck: Deck::default(),
             npcs: Vec::new(),
+            peoples: Vec::new(),
             escort: None,
             company: Vec::new(),
         })
@@ -528,6 +531,7 @@ impl World {
         file.validate(&self.map)?;
         npcs::settle(&file.npcs, &mut self.state.npcs);
         self.npcs = file.npcs;
+        self.peoples = file.peoples;
         Ok(self)
     }
 
