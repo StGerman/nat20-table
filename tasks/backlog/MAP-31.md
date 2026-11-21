@@ -13,7 +13,7 @@ Osric Hale, Bertil Pell and Wenna Thorne speak in every *Silent Mill* run, but t
 
 Done means:
 - In the Mill, each of the three is a creature in the scenes they stand in (Osric and Bertil in s1 and s6, Wenna in s5 and s6). The DM narrates a death from the engine's state.
-- Each death is a deed (`<id>_dead`, as with `odda_vell_dead`). The scenes that need the dead person still run: s6 has someone to pay or blame, and s5 can end with Wenna dead.
+- Each death is the engine's `killed_<id>` deed, the one every named NPC's death writes (`killed_col`), with `by` naming the last blow; `<id>_dead` stays the owner and company form. The scenes that need the dead person still run: s6 has someone to pay or blame, and s5 can end with Wenna dead.
 - Wend reads the deed. Bertil joins `worlds/wend/npcs.json`. Wendford's cards and its people say who holds the common chest, the mill and Wenna's place once someone is dead.
 
 This needs a short design (who replaces whom, what the village remembers) and Zoya's board check before it gets rows. Lowest layer (decision 0080): the deed and the scene state are a test with no model; whether the DM tells the death plainly needs a live run smaller than an exit run.
