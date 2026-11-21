@@ -96,6 +96,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0085](0085-one-file-per-task.md) | One file per task under `tasks/`, a folder per milestone (OKF); no change log, no committed index, closed tasks stay put | Proposed | 2026-11-15 | Stas (decision card) |
 | [0086](0086-merchant-death-outcome.md) | When the Merchant dies the Blades decide at once (bring the purse in, or take it), the wagon goes on, and the gate is a changed arrival line | Accepted | 2026-11-13 | Stas |
 | [0089](0089-card-pick-fight-first.md) | The DM picks a card that can come to a fight first, then continuity, then the clearest problem; prompt only | Accepted | 2026-11-18 | Stas |
+| [0090](0090-local-web-client-in-a-shell.md) | The first client is a local web page in a Tauri shell, on our own JSON seat wire over a local WebSocket; settles the deferred part of 0016 for a local client | Proposed | 2026-11-21 | Claude proposed; Stas on merge |
 
 ## Open questions to watch
 
