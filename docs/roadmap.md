@@ -1,16 +1,16 @@
 # Roadmap
 
-As of 2026-11-21, main 6c5e205 (table #459 merged 08:31Z). Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api`, nat20-runs and Yan's Glass Table plan of 2026-11-21 (scope `docs/scope/glass-table-scope.md` §7). The page of 2026-11-11 (main 4c57c7e) is in `git log -- docs/roadmap.md`.
+As of 2026-11-21, main d63e333 (table #461 merged). Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api`, nat20-runs and Yan's Glass Table plan of 2026-11-21 (scope `docs/scope/glass-table-scope.md` §7). The page of 2026-11-11 (main 4c57c7e) is in `git log -- docs/roadmap.md`.
 
 ## Order
 
 | # | Milestone | Gate (one line) | Status |
 |---|---|---|---|
 | — | Tech talk demo (December, date not set) | three rehearsals and one recorded full run on the stage SHA; a dress rehearsal the day before the talk | open: CON-19, AGT-135, AGT-136 done; rows 4 to 6 are Stas's at his Mac. The talk moved off 2026-12-02 with no date; Stas picks it (2026-11-21 08:36Z). It no longer gates Glass Table |
-| — | Glass Table (the Mac app) | one pair on one signed DMG: the all-AI half from its bundled binaries, then Stas in the app (scope §4, 8 rows) | open: scope, design, 0090 merged (table #459); rows in table #461; first (Stas 2026-11-21 07:29Z); code starts on Stas's go, earliest 2026-11-22, with the Apple account active; spike CON-20 first. Exit pair 11-25 to 11-29 from a go on 11-22 (calendar below) |
-| — | Sign in with ChatGPT (a second model backend) | no spec on main; its design is Proposed in that thread, not accepted | right after Glass Table (Stas 2026-11-21 08:34Z: «Давай запланируем сразу после Glass Table»; "before «Камень A»" is my reading of «сразу после»). Waits on Stas accepting its design. That thread's estimate: 8 to 10 days, uncalibrated. Row AGT-147 (lobby part) |
-| — | «Камень A» (the post on the flats) | scope and design in table #417, not merged | after Sign in with ChatGPT (reading above); after Glass Table (Stas 2026-11-21 07:29Z). Exit 12-06 to 12-15 from a go on 11-22 (calendar below); its `escort_dismissed` PR is built for two seats, +5 USD and 10 min of Stas |
-| — | Arachas plus glue | no spec yet; inputs shelved by the M13 scope §3 | after «Камень A»: starts 12-06 to 12-15; not priced, no spec |
+| — | Glass Table (the Mac app) | one pair on one signed DMG: the all-AI half from its bundled binaries, then Stas in the app (scope §4, 8 rows) | open: scope, design, 0090 merged (table #459); rows merged (table #461); first (Stas 2026-11-21 07:29Z); code starts on Stas's go, earliest 2026-11-22, with the Apple account active; spike CON-20 first. Exit pair 11-25 to 11-29 from a go on 11-22 (calendar below) |
+| — | Sign in with ChatGPT (the table moves to ChatGPT) | one pair on one build, both halves on terra through SIWC, the all-AI half within 50% of a Plus five-hour window (scope §4, 7 rows) | design accepted by Stas 2026-11-21 10:59Z, Narrator on terra; a full switch, not a second provider (11:08Z); scope, 0091 and rows AGT-147 to AGT-152 in table #467; AGT-147 moved in from the backlog at P1. Right after Glass Table (Stas 2026-11-21 08:34Z; "before «Камень A»" is my reading of «сразу после»). Cost (scope §5): 9 to 12 thread-days, uncalibrated; Stas about 1.5 h review, 15 min sign-in, one evening at his Mac for the bench and Langfuse runs, one exit half; runs on his ChatGPT Plus, judge about 0.40 USD a run |
+| — | «Камень A» (the post on the flats) | scope and design in table #417, not merged | after Sign in with ChatGPT (reading above); after Glass Table (Stas 2026-11-21 07:29Z). Exit 12-07 to 12-17 from a go on 11-22 (calendar below); its `escort_dismissed` PR is built for two seats, +5 USD and 10 min of Stas |
+| — | Arachas plus glue | no spec yet; inputs shelved by the M13 scope §3 | after «Камень A»: starts 12-07 to 12-17; not priced, no spec |
 | — | The Silent Mill plus glue | no spec yet | after Arachas (Stas 2026-11-07 19:34Z); not priced, no spec |
 | — | Allies in fights («Свои в бою») | — | closed 2026-11-20, rows 10 and 11 not passed (Stas); row 10 moved to AGT-133 |
 | 13 | Dramaturg mechanism | — | done 2026-11-16, pair passed first time on b7e737d |
@@ -42,7 +42,7 @@ Not ordered, no spec, no number unless its bullet gives one (Stas, review of tab
 - The talk's date, and whether it shows the app (answer under Calendar).
 - The core pin freeze at a17ac1f "until after the talk" (tech-talk milestone): keep it until a December date, or lift it now.
 - Developer ID and notary key as repository secrets for the `release` workflow (CON-21; signing place answered 2026-11-21 07:46Z).
-- The "Sign in with ChatGPT" design (Proposed, in its thread, not on main): accept it, and its scope with exit rows, before its rows are written; it is next after Glass Table.
+- The "Sign in with ChatGPT" PR, table #467 (scope, 0091, rows AGT-147 to AGT-152): review and merge, part of its 1.5 h; design accepted 2026-11-21 10:59Z. Later: 15 min to sign in on your Mac, one exit half after the all-AI half passes.
 - Tech talk rows 4 to 6: the traced run, three rehearsals and the recorded run, the dress rehearsal the day before the talk.
 - table #417 («Камень A» scope, design, 0087, 0088): open since 2026-11-15, last update 2026-11-20; 14 days untouched on 2026-12-04. It waits behind Glass Table and Sign in with ChatGPT by your order; its review can run beside them so its rows are ready by about 12-03 to 12-10.
 - nat20-runs #3 (flag answers for the Mill run 20-38-39): untouched since 2026-11-03, 18 days. Merge or close.
@@ -57,9 +57,9 @@ Start G = the day you say go, the Apple account is active and table #461 is merg
 | Spike CON-20 on your Mac, one evening | 11-22 | 11-23 |
 | Stack AGT-140 to AGT-146, CON-21 built; one review session, two evenings; DMG installed by you | 11-24 | 11-27 |
 | Exit pair on one DMG, AI half first | 11-25 | 11-29 (11-30 with one failed pair) |
-| Sign in with ChatGPT, 8 to 10 days after (its estimate, uncalibrated), its design accepted meanwhile | 12-03 | 12-10 |
-| «Камень A», 3 to 5 days after its rows (its scope §7), #417 reviewed meanwhile | 12-06 | 12-15 |
-| Arachas, then the Mill | start 12-06 | start 12-15 |
+| Sign in with ChatGPT, 9 to 12 thread-days after (scope §5, uncalibrated), its scope PR merged meanwhile | 12-04 | 12-12 |
+| «Камень A», 3 to 5 days after its rows (its scope §7), #417 reviewed meanwhile | 12-07 | 12-17 |
+| Arachas, then the Mill | start 12-07 | start 12-17 |
 
 Not priced: a spike that fails (Electron fallback, decision 0090), and Apple's review time.
 

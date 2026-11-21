@@ -182,6 +182,58 @@ pub fn scan_inputs(inputs: &str, secrets: &Secrets) -> Result<LeakReport, String
     Ok(report)
 }
 
+/// One line of `seat-wire.jsonl`, as `game/src/seat-wire/web-seat.ts` writes it (AGT-141): an
+/// event with its `seq`, or another message the window was sent (an ask, a preview, suggestions).
+#[derive(Debug, Clone, Deserialize)]
+pub struct SeatWireRecord {
+    /// The event's number, from 1; none on a line that is not an event.
+    pub seq: Option<u64>,
+    /// The human's character, whose window was sent it.
+    pub seat: String,
+    /// The seat event, with the data beside its text (AGT-140).
+    pub event: Option<Value>,
+    /// A message other than an event, as it was sent.
+    pub message: Option<Value>,
+}
+
+/// Scans a `seat-wire.jsonl`, everything a window was sent, as the human's inputs are scanned
+/// (AGT-141, Glass Table design §4.3 Rule 3). The echo of the human's own input (`said`) is
+/// theirs, and skipped like a typed line.
+pub fn scan_seat_wire(wire: &str, secrets: &Secrets) -> Result<LeakReport, String> {
+    let mut report = LeakReport::default();
+    for (index, line) in wire.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let record: SeatWireRecord = serde_json::from_str(line)
+            .map_err(|error| format!("seat-wire line {}: {error}", index + 1))?;
+        let (sent, what) = match (&record.event, &record.message, record.seq) {
+            (Some(event), None, Some(seq)) => (event, format!("seq {seq}")),
+            (None, Some(message), None) => (message, "a message".to_string()),
+            _ => {
+                return Err(format!(
+                    "seat-wire line {}: neither an event with its seq nor a message",
+                    index + 1
+                ));
+            }
+        };
+        if sent.get("kind").and_then(Value::as_str) == Some("said") {
+            report.human_lines += 1;
+            continue;
+        }
+        report.inputs += 1;
+        report.seats.insert(record.seat.clone());
+        for leak in leaks_in(&record.seat, &sent.to_string(), secrets) {
+            report.leaks.push(format!(
+                "seat-wire line {} ({what}) to {}: {leak}",
+                index + 1,
+                record.seat
+            ));
+        }
+    }
+    Ok(report)
+}
+
 /// Every leak in `text` given to the player of `seat`.
 pub fn leaks_in(seat: &str, text: &str, secrets: &Secrets) -> Vec<String> {
     leaks_skipping(seat, text, secrets, &[])
@@ -443,5 +495,32 @@ mod tests {
         let secrets = Secrets::of_scenes(&[scene]);
         assert_eq!(secrets.ids, BTreeSet::from(["giant_rat".to_string()]));
         assert_eq!(secrets.not_scanned, BTreeSet::from(["rats".to_string()]));
+    }
+
+    #[test]
+    fn a_window_s_events_and_messages_are_scanned_and_the_human_s_echo_is_skipped() {
+        let wire = [
+            r#"{"seq":1,"seat":"bren","event":{"kind":"engine","text":"bren hits.","seq":4}}"#,
+            r#"{"seq":2,"seat":"bren","event":{"kind":"said","text":"I guess it is DC 15","intent":{"kind":"text","text":"I guess it is DC 15"}}}"#,
+            r#"{"seq":3,"seat":"bren","event":{"kind":"info","title":"Where","text":"The yard_fight is near."}}"#,
+            r#"{"seat":"bren","message":{"type":"preview","text":"The goblin_warrior waits."}}"#,
+        ]
+        .join("\n");
+        let report = scan_seat_wire(&wire, &secrets()).unwrap();
+        assert_eq!(report.inputs, 3);
+        assert_eq!(
+            report.human_lines, 1,
+            "the echo of the human's own words is theirs"
+        );
+        assert_eq!(report.leaks.len(), 2, "{:?}", report.leaks);
+        assert!(
+            report.leaks[0]
+                .starts_with("seat-wire line 3 (seq 3) to bren: the DM-only id yard_fight")
+        );
+        assert!(
+            report.leaks[1].starts_with("seat-wire line 4 (a message) to bren:"),
+            "a preview is scanned too: {:?}",
+            report.leaks
+        );
     }
 }

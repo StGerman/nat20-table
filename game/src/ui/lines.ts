@@ -3,10 +3,11 @@
 // rendered them for the human's viewer, with their roll id (dice, total and outcome; no AC or DC).
 import type { Handle } from "@nat20-table/engine-client";
 import type { TableEvent } from "../table/types.ts";
-import { THEME, type Palette, type Style } from "./palette.ts";
+import type { Style } from "./palette.ts";
 import { UI_WORDS, type UiWords } from "../table/words.ts";
 
 export type { Style };
+// The tones' styles and Ink's text props are in tones.ts: this file reads no theme, so a window's page can draw the same lines (AGT-142).
 
 /** What a line means on screen; `TONE_STYLE` says how that looks. */
 export type Tone = "dm" | "speech" | "intent" | "engine" | "options" | "prompt" | "info" | "status" | "end" | "error";
@@ -14,27 +15,6 @@ export type Tone = "dm" | "speech" | "intent" | "engine" | "options" | "prompt" 
 export interface Line {
   text: string;
   tone: Tone;
-}
-
-const TONES: readonly Tone[] = ["dm", "speech", "intent", "engine", "options", "prompt", "info", "status", "end", "error"];
-
-/**
- * Each tone in the Mill Table accent code, from the theme file's `tones` (M10 U2): narration and
- * plain values carry no accent, engine lines are secondary text, your turn and the run's end are rust.
- */
-export const TONE_STYLE: Record<Tone, Style> = Object.fromEntries(TONES.map((tone) => [tone, THEME.tones[tone] ?? {}])) as Record<Tone, Style>;
-
-/** Ink `Text` props for a style in a palette. */
-export function textProps(style: Style, palette: Palette): { color?: string; bold?: boolean; italic?: boolean; underline?: boolean; dimColor?: boolean } {
-  const color = style.accent ? palette[style.accent] : undefined;
-  return {
-    ...(color ? { color } : {}),
-    ...(style.bold ? { bold: true } : {}),
-    ...(style.italic ? { italic: true } : {}),
-    ...(style.underline ? { underline: true } : {}),
-    // Secondary text dims itself when there is no colour to mark it.
-    ...(style.dim || (style.accent === "hint" && !color) ? { dimColor: true } : {}),
-  };
 }
 
 const name = (handle: string) => handle.charAt(0).toUpperCase() + handle.slice(1);
@@ -92,6 +72,9 @@ export function eventLines(event: TableEvent, you?: Handle, continued = false, u
       return [{ tone: "end", text: `${ui.runOver}: ${event.text}` }];
     case "situation":
       // The panel draws it; nothing goes into the log.
+      return [];
+    case "said":
+      // The terminal seat echoes what was typed itself (AGT-140).
       return [];
   }
 }

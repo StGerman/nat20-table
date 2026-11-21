@@ -16,6 +16,7 @@
 // overlays, and a reaction, the DM's question, a refusal and the pause stand in the action zone
 // until they are settled (AGT-69 step 2). Written with `createElement`, not JSX, so the game still runs as plain `.ts`
 // with no build step.
+import { textOnly } from "../table/seat-data.ts";
 import type { Handle } from "@nat20-table/engine-client";
 import { Box, render, Text, useInput, useWindowSize, type Instance, type RenderOptions } from "ink";
 import { createElement as h, useEffect, useState, useSyncExternalStore } from "react";
@@ -25,7 +26,8 @@ import { edit, editFor, EMPTY, type Edit } from "./editor.ts";
 import { COMMAND_HELP, promptHint, readLine, type Typed } from "./input.ts";
 import { commandMatches, PICKER_ROWS, pickerRows, type CommandEntry } from "./commands.ts";
 import { actionRows, frameLayout, freshText, headerText, maxOffset, MIN_STORY_ROWS, NARROW_PANEL_ROWS, page, previewRows, rowsFor, RULE_COLUMNS, scrollRows, stepWithin, storyCell, storyRows, storyWindow, WHEEL_ROWS, type Scroll } from "./frame.ts";
-import { eventLines, speakerOf, textProps, TONE_STYLE, wrapText, type Line } from "./lines.ts";
+import { eventLines, speakerOf, wrapText, type Line } from "./lines.ts";
+import { textProps, TONE_STYLE } from "./tones.ts";
 import { paletteFor, type Palette, type Style } from "./palette.ts";
 import { cardRows, endsTurn, foldedRows, situationRows, turnRows, type PanelSize, type Row } from "./panel.ts";
 import { cardText, costText } from "../table/guide.ts";
@@ -431,13 +433,16 @@ export class InkSeat implements Seat {
   };
 
   show(event: TableEvent): void {
+    // The terminal seat echoes the human's input itself, as it is typed: the event is for a window (AGT-140).
+    if (event.kind === "said") return;
     // Engine lines are drawn when they show: at once for the human's own, else when released.
     // These show the held engine lines above them first, released here, so the record keeps the screen's order.
     if (RELEASES.has(event.kind)) this.release();
     // Only info, options and status lines are a command's answer; anything else keeps its kind.
     const answers = this.answeringCommand && (event.kind === "info" || event.kind === "options" || event.kind === "status");
     // The same options list again, over the one already pinned, changes nothing on the screen: the record skips it (AGT-114).
-    const repeated = event.kind === "options" && this.view.options !== undefined && JSON.stringify(this.view.options) === JSON.stringify(event);
+    // Its text only: the data beside it (AGT-140) changes as others vote, and draws nothing here.
+    const repeated = event.kind === "options" && this.view.options !== undefined && JSON.stringify(textOnly(this.view.options)) === JSON.stringify(textOnly(event));
     if (!repeated) {
       if (event.kind !== "engine") this.drawn(answers ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
       else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));

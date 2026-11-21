@@ -1,0 +1,1399 @@
+# narration
+dm	DM: Goblins and wolves wait in the mill yard.
+# engine
+engine	  Combat begins: goblin_4, ilsa, wolf_3, wolf_2, goblin_3, maren, goblin_2, torva, bren, goblin_1, wolf_1.
+# engine
+engine	  goblin_4 rolls initiative: 1d20 (19) = 21. [r4]
+# engine
+engine	  ilsa rolls initiative: 1d20 (19) = 20. [r5]
+# engine
+engine	  wolf_3 rolls initiative: 1d20 (18) = 20. [r6]
+# engine
+engine	  wolf_2 rolls initiative: 1d20 (10) = 12. [r7]
+# engine
+engine	  goblin_3 rolls initiative: 1d20 (7) = 9. [r8]
+# engine
+engine	  maren rolls initiative: 1d20 (9) = 8. [r9]
+# engine
+engine	  goblin_2 rolls initiative: 1d20 (5) = 7. [r10]
+# engine
+engine	  torva rolls initiative: 1d20 (5) = 6. [r11]
+# engine
+engine	  bren rolls initiative: 1d20 (3) = 5. [r12]
+# engine
+engine	  goblin_1 rolls initiative: 1d20 (3) = 5. [r13]
+# engine
+engine	  wolf_1 rolls initiative: 1d20 (1) = 3. [r14]
+# engine
+engine	  Round 1 begins.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4 uses Shortbow attack on torva.
+# engine
+engine	  goblin_4 rolls an attack roll vs torva: 1d20 (14) = 18, hit. [r18]
+# engine
+engine	  goblin_4 rolls piercing damage: 1d6 (1) = 3. [r19]
+# engine
+engine	  torva takes 3 piercing damage.
+# engine
+engine	  goblin_4's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa's turn.
+# engine
+engine	  ilsa uses Fire Bolt on wolf_1.
+# engine
+engine	  ilsa rolls an attack roll vs wolf_1: 1d20 (1) = 5, miss. [r25]
+# engine
+engine	  ilsa's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  wolf_3's turn.
+# engine
+engine	  wolf_3 moves.
+# engine
+engine	  wolf_3 uses Wolf Bite attack on torva.
+# engine
+engine	  wolf_3 rolls an attack roll vs torva: 1d20 (19) = 23, hit. [r30]
+# engine
+engine	  wolf_3 rolls piercing damage: 1d6 (2) = 4. [r31]
+# engine
+engine	  torva takes 4 piercing damage.
+# engine
+engine	  torva is now prone.
+# engine
+engine	  wolf_3's turn ends.
+# engine
+engine	  wolf_2's turn.
+# engine
+engine	  wolf_2 moves.
+# engine
+engine	  wolf_2's turn ends.
+# engine
+engine	  goblin_3's turn.
+# engine
+engine	  goblin_3 uses Shortbow attack on bren.
+# engine
+engine	  goblin_3 rolls an attack roll vs bren: 1d20 (18) = 22, hit. [r41]
+# engine
+engine	  goblin_3 rolls piercing damage: 1d6 (1) = 3. [r42]
+# engine
+engine	  bren takes 3 piercing damage.
+# engine
+engine	  bren has 17/20 Hit Points.
+# engine
+engine	  goblin_3's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren's turn.
+# engine
+engine	  maren uses Guiding Bolt on goblin_1.
+# engine
+engine	  maren rolls an attack roll vs goblin_1: 1d20 (15) = 19, hit. [r48]
+# engine
+engine	  maren rolls radiant damage: 4d6 (2, 5, 3, 6) = 16. [r49]
+# engine
+engine	  goblin_1 takes 16 radiant damage.
+# engine
+engine	  goblin_1 is dead.
+# engine
+engine	  maren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  goblin_2's turn.
+# engine
+engine	  goblin_2 uses Shortbow attack on bren.
+# engine
+engine	  goblin_2 rolls an attack roll vs bren: 1d20 (14) = 18, miss. [r57]
+# engine
+engine	  goblin_2's turn ends.
+# engine
+engine	  torva's turn.
+# engine
+engine	  torva is no longer prone.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  torva uses Barbarian Reckless Attack (Unarmed) on wolf_3.
+# engine
+engine	  torva rolls an attack roll vs wolf_3: 2d20 (12, 3, kept 12) = 17, hit. [r62]
+# engine
+engine	  torva rolls bludgeoning damage:  = 4. [r63]
+# engine
+engine	  wolf_3 takes 4 bludgeoning damage.
+# engine
+engine	  torva's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  bren's turn.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Help Assist Attack Roll → wolf_3 (walk)
+options	  8. Help Assist Attack Roll, another target…
+options	  9. Longsword attack → wolf_3 (walk)
+options	  10. Longsword attack, another target…
+options	  11. Unarmed Attack → wolf_3 (walk)
+options	  12. Unarmed Attack, another target…
+options	  13. Potion of Healing → bren
+options	  14. Potion of Healing → torva
+options	  15. Potion of Healing, another target…
+options	  16. Move…
+options	  17. End turn
+# info
+info	Sheet:
+info	  Bren, level 2 human fighter
+info	  Hit Points 17 of 20 · Armor Class 19 · Speed 30 ft · Initiative +2 · Proficiency Bonus +2 · Passive Perception 12
+info	  Experience: 300 XP, the next level at 900.
+info	  Purse: 54 gold.
+info	  Abilities: STR 17 (+3; save +5, proficient) · DEX 14 (+2; save +2) · CON 14 (+2; save +4, proficient) · INT 8 (-1; save -1) · WIS 10 (+0; save +0) · CHA 12 (+1; save +1)
+info	  Skills you are trained in: Acrobatics +4, Athletics +5, Insight +2, Intimidation +3, Medicine +2, Perception +2, Persuasion +3, Survival +2
+info	  Other skills: Animal Handling +0, Arcana -1, Deception +1, History -1, Investigation -1, Nature -1, Performance +1, Religion -1, Sleight of Hand +2, Stealth +2
+info	  Limited uses: Action Surge 1 of 1 (short rest), Second Wind 2 of 2 (long rest; a short rest gives back 1)
+info	  Hit Point Dice: d10 2 of 2
+info	  Equipment: Chainmail (equipped), Longsword (equipped), Shield (equipped), Potion of Healing
+info	  Features: Savage Attacker, Skilled, Fighting Style: Defense, Second Wind, Action Surge, Tactical Mind
+# info
+info	Where:
+info	  Scene m5_s3_yard, combat, round 1.
+info	  You: Bren (bren), 17/20 HP, conscious.
+info	  - Torva (torva, party): unhurt, 5 ft away
+info	  - Maren (maren, party): unhurt, 10 ft away
+info	  - Ilsa (ilsa, party): unhurt, 11 ft away
+info	  - Goblin Warrior (goblin_1, hostile): down, 43 ft away
+info	  - Goblin Warrior (goblin_2, hostile): unhurt, 45 ft away
+info	  - Goblin Warrior (goblin_3, hostile): unhurt, 45 ft away
+info	  - Goblin Warrior (goblin_4, hostile): unhurt, 45 ft away
+info	  - Wolf (wolf_1, hostile): unhurt, 46 ft away
+info	  - Wolf (wolf_2, hostile): unhurt, 11 ft away
+info	  - Wolf (wolf_3, hostile): unhurt, 8 ft away
+info	  Places: the yard gate (yard_gate, 0 ft); the woodpile (woodpile, 43 ft); the mill door (mill_door, 45 ft); the kennel (kennel, 46 ft).
+# options
+options	Move…:
+options	  1. Move next to wolf_3 (hostile, 8 ft)
+options	  2. Move next to wolf_2 (hostile, 11 ft)
+options	  3. Move next to goblin_2 (hostile, 45 ft; 30 ft this turn, stops short)
+options	  4. Dash, then move next to goblin_2 (hostile, 45 ft)
+options	  5. Move next to goblin_3 (hostile, 45 ft; 30 ft this turn, stops short)
+options	  6. Dash, then move next to goblin_3 (hostile, 45 ft)
+options	  7. Move next to goblin_4 (hostile, 45 ft; 30 ft this turn, stops short)
+options	  8. Dash, then move next to goblin_4 (hostile, 45 ft)
+options	  9. Move next to wolf_1 (hostile, 46 ft; 30 ft this turn, stops short)
+options	  10. Dash, then move next to wolf_1 (hostile, 46 ft)
+options	  11. Move next to torva (party, 5 ft)
+options	  12. Move next to maren (party, 10 ft)
+options	  13. Move next to ilsa (party, 11 ft)
+options	  14. Move to the yard gate (0 ft)
+options	  15. Move to the woodpile (43 ft; 30 ft this turn, stops short)
+options	  16. Dash, then move to the woodpile (43 ft)
+options	  17. Move to the mill door (45 ft; 30 ft this turn, stops short)
+options	  18. Dash, then move to the mill door (45 ft)
+options	  19. Move to the kennel (46 ft; 30 ft this turn, stops short)
+options	  20. Dash, then move to the kennel (46 ft)
+# engine
+engine	  bren moves.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Help Assist Attack Roll → wolf_3
+options	  8. Help Assist Attack Roll → wolf_2
+options	  9. Longsword attack → wolf_3
+options	  10. Longsword attack → wolf_2
+options	  11. Longsword attack, another target…
+options	  12. Unarmed Attack → wolf_3
+options	  13. Unarmed Attack → wolf_2
+options	  14. Unarmed Attack, another target…
+options	  15. Potion of Healing → bren
+options	  16. Potion of Healing → torva
+options	  17. Potion of Healing, another target…
+options	  18. Move…
+options	  19. End turn
+# engine
+engine	  bren uses Longsword attack on wolf_3.
+# engine
+engine	  bren rolls an attack roll vs wolf_3: 1d20 (9) = 14, hit. [r71]
+# engine
+engine	  bren rolls slashing damage: 1d8 (7) = 10. [r72]
+# engine
+engine	  wolf_3 takes 10 slashing damage.
+# engine
+engine	  wolf_3 is dead.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → torva
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# engine
+engine	  bren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  wolf_1's turn.
+# engine
+engine	  wolf_1 moves.
+# engine
+engine	  wolf_1 uses Wolf Bite attack on bren.
+# engine
+engine	  wolf_1 rolls an attack roll vs bren: 2d20 (5, 14, kept 14) = 18, miss. [r82]
+# engine
+engine	  wolf_1's turn ends.
+# engine
+engine	  Round 2 begins.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4 uses Shortbow attack on maren.
+# engine
+engine	  goblin_4 rolls an attack roll vs maren: 1d20 (3) = 7, miss. [r87]
+# engine
+engine	  goblin_4's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa's turn.
+# engine
+engine	  ilsa uses Fire Bolt on goblin_2.
+# engine
+engine	  ilsa rolls an attack roll vs goblin_2: 1d20 (1) = 5, miss. [r91]
+# engine
+engine	  ilsa's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  wolf_2's turn.
+# engine
+engine	  wolf_2 uses Wolf Bite attack on bren.
+# engine
+engine	  wolf_2 rolls an attack roll vs bren: 2d20 (5, 13, kept 13) = 17, miss. [r97]
+# engine
+engine	  wolf_2's turn ends.
+# engine
+engine	  goblin_3's turn.
+# engine
+engine	  goblin_3 uses Shortbow attack on bren.
+# engine
+engine	  goblin_3 rolls an attack roll vs bren: 1d20 (7) = 11, miss. [r101]
+# engine
+engine	  goblin_3's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren's turn.
+# engine
+engine	  maren uses Guiding Bolt on goblin_2.
+# engine
+engine	  maren rolls an attack roll vs goblin_2: 1d20 (1) = 5, miss. [r105]
+# engine
+engine	  maren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  goblin_2's turn.
+# engine
+engine	  goblin_2 uses Shortbow attack on bren.
+# engine
+engine	  goblin_2 rolls an attack roll vs bren: 1d20 (5) = 9, miss. [r110]
+# engine
+engine	  goblin_2's turn ends.
+# engine
+engine	  torva's turn.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  torva moves.
+# engine
+engine	  torva uses Barbarian Reckless Attack (Unarmed) on wolf_1.
+# engine
+engine	  torva rolls an attack roll vs wolf_1: 2d20 (12, 14, kept 14) = 19, hit. [r116]
+# engine
+engine	  torva rolls bludgeoning damage:  = 4. [r117]
+# engine
+engine	  wolf_1 takes 4 bludgeoning damage.
+# engine
+engine	  torva's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  bren's turn.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Help Assist Attack Roll → wolf_1
+options	  8. Help Assist Attack Roll → wolf_2
+options	  9. Longsword attack → wolf_1
+options	  10. Longsword attack → wolf_2
+options	  11. Longsword attack, another target…
+options	  12. Unarmed Attack → wolf_1
+options	  13. Unarmed Attack → wolf_2
+options	  14. Unarmed Attack, another target…
+options	  15. Potion of Healing → bren
+options	  16. Potion of Healing → torva
+options	  17. Potion of Healing, another target…
+options	  18. Move…
+options	  19. End turn
+# engine
+engine	  bren uses Longsword attack on wolf_1.
+# engine
+engine	  bren rolls an attack roll vs wolf_1: 1d20 (17) = 22, hit. [r124]
+# engine
+engine	  bren rolls slashing damage: 1d8 (5) = 8. [r125]
+# engine
+engine	  wolf_1 takes 8 slashing damage.
+# engine
+engine	  wolf_1 is dead.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → torva
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# options
+options	Move…:
+options	  1. Move next to wolf_2 (hostile, 6 ft)
+options	  2. Move next to goblin_4 (hostile, 42 ft; 30 ft this turn, stops short)
+options	  3. Move next to goblin_3 (hostile, 42 ft; 30 ft this turn, stops short)
+options	  4. Move next to goblin_2 (hostile, 44 ft; 30 ft this turn, stops short)
+options	  5. Move next to torva (party, 4 ft)
+options	  6. Move next to ilsa (party, 13 ft)
+options	  7. Move next to maren (party, 14 ft)
+options	  8. Move to the yard gate (5 ft)
+options	  9. Move to the kennel (41 ft; 30 ft this turn, stops short)
+options	  10. Move to the mill door (42 ft; 30 ft this turn, stops short)
+options	  11. Move to the woodpile (43 ft; 30 ft this turn, stops short)
+# engine
+engine	  bren moves.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → torva
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# engine
+engine	  bren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  Round 3 begins.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4 uses Shortbow attack on torva.
+# engine
+engine	  goblin_4 rolls an attack roll vs torva: 2d20 (14, 20, kept 20) = 24, critical hit. [r138]
+# engine
+engine	  goblin_4 rolls critical piercing damage: 2d6 (1, 3) + 2d4 (4, 1) = 11. [r139]
+# engine
+engine	  torva takes 11 piercing damage.
+# engine
+engine	  goblin_4's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa's turn.
+# engine
+engine	  ilsa uses Fire Bolt on goblin_2.
+# engine
+engine	  ilsa rolls an attack roll vs goblin_2: 1d20 (10) = 14, miss. [r145]
+# engine
+engine	  ilsa's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  wolf_2's turn.
+# engine
+engine	  wolf_2 uses Wolf Bite attack on bren.
+# engine
+engine	  wolf_2 rolls an attack roll vs bren: 1d20 (16) = 20, hit. [r151]
+# engine
+engine	  wolf_2 rolls piercing damage: 1d6 (5) = 7. [r152]
+# engine
+engine	  bren takes 7 piercing damage.
+# engine
+engine	  bren has 10/20 Hit Points.
+# engine
+engine	  bren is now prone.
+# engine
+engine	  wolf_2's turn ends.
+# engine
+engine	  goblin_3's turn.
+# engine
+engine	  goblin_3 uses Shortbow attack on torva.
+# engine
+engine	  goblin_3 rolls an attack roll vs torva: 2d20 (6, 16, kept 16) = 20, hit. [r159]
+# engine
+engine	  goblin_3 rolls piercing damage: 1d6 (6) + 1d4 (3) = 11. [r160]
+# engine
+engine	  torva takes 11 piercing damage.
+# engine
+engine	  torva is unconscious.
+# engine
+engine	  torva is now unconscious.
+# engine
+engine	  goblin_3's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren's turn.
+# engine
+engine	  maren uses Guiding Bolt on goblin_2.
+# engine
+engine	  maren rolls an attack roll vs goblin_2: 1d20 (17) = 21, hit. [r169]
+# engine
+engine	  maren rolls radiant damage: 4d6 (1, 6, 6, 2) = 15. [r170]
+# engine
+engine	  goblin_2 takes 15 radiant damage.
+# engine
+engine	  goblin_2 is dead.
+# engine
+engine	  maren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  torva's turn.
+# engine
+engine	  torva rolls a death saving throw: 1d20 (17) = 17, success. [r179]
+# engine
+engine	  torva's turn ends.
+# engine
+engine	  bren's turn.
+# engine
+engine	  bren is no longer prone.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Help Assist Attack Roll → wolf_2
+options	  8. Help Stabilize…
+options	  9. Longsword attack → wolf_2
+options	  10. Longsword attack, another target…
+options	  11. Unarmed Attack → wolf_2
+options	  12. Unarmed Attack, another target…
+options	  13. Potion of Healing → bren
+options	  14. Potion of Healing → torva
+options	  15. Potion of Healing, another target…
+options	  16. Move…
+options	  17. End turn
+# engine
+engine	  bren uses Longsword attack on wolf_2.
+# engine
+engine	  bren rolls an attack roll vs wolf_2: 1d20 (5) = 10, miss. [r184]
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → torva
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# options
+options	Move…:
+options	  1. Move next to wolf_2 (hostile, 4 ft)
+options	  2. Move next to goblin_4 (hostile, 41 ft; 15 ft this turn, stops short)
+options	  3. Move next to goblin_3 (hostile, 41 ft; 15 ft this turn, stops short)
+options	  4. Move next to ilsa (party, 14 ft)
+options	  5. Move next to maren (party, 15 ft)
+options	  6. Move to the yard gate (7 ft)
+options	  7. Move to the kennel (40 ft; 15 ft this turn, stops short)
+options	  8. Move to the mill door (41 ft; 15 ft this turn, stops short)
+options	  9. Move to the woodpile (43 ft; 15 ft this turn, stops short)
+# engine
+engine	  bren moves.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → torva
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# engine
+engine	  bren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  Round 4 begins.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4's turn ends.
+# engine
+engine	  ilsa's turn.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa moves.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa uses Dash.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  wolf_2's turn.
+# engine
+engine	  wolf_2 uses Wolf Bite attack on bren.
+# engine
+engine	  wolf_2 rolls an attack roll vs bren: 1d20 (9) = 13, miss. [r206]
+# engine
+engine	  wolf_2's turn ends.
+# engine
+engine	  goblin_3's turn.
+# engine
+engine	  goblin_3's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren's turn.
+# engine
+engine	  maren uses Sacred Flame on goblin_3.
+# engine
+engine	  goblin_3 rolls a Dexterity saving throw: 1d20 (19) = 21, success. [r212]
+# engine
+engine	  maren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  torva's turn.
+# engine
+engine	  torva rolls a death saving throw: 1d20 (15) = 15, success. [r218]
+# engine
+engine	  torva's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  bren's turn.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Help Assist Attack Roll → wolf_2
+options	  8. Help Stabilize…
+options	  9. Longsword attack → wolf_2
+options	  10. Longsword attack, another target…
+options	  11. Unarmed Attack → wolf_2
+options	  12. Unarmed Attack, another target…
+options	  13. Potion of Healing → bren
+options	  14. Potion of Healing → torva
+options	  15. Potion of Healing, another target…
+options	  16. Move…
+options	  17. End turn
+# engine
+engine	  bren uses Longsword attack on wolf_2.
+# engine
+engine	  bren rolls an attack roll vs wolf_2: 1d20 (19) = 24, hit. [r222]
+# engine
+engine	  bren rolls slashing damage: 1d8 (7) = 10. [r223]
+# engine
+engine	  wolf_2 takes 10 slashing damage.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → torva
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# options
+options	Move…:
+options	  1. Move next to wolf_2 (hostile, 4 ft)
+options	  2. Move next to goblin_4 (hostile, 41 ft; 30 ft this turn, stops short)
+options	  3. Move next to goblin_3 (hostile, 41 ft; 30 ft this turn, stops short)
+options	  4. Move next to ilsa (party, 3 ft)
+options	  5. Move next to maren (party, 15 ft)
+options	  6. Move to the yard gate (7 ft)
+options	  7. Move to the kennel (40 ft; 30 ft this turn, stops short)
+options	  8. Move to the mill door (41 ft; 30 ft this turn, stops short)
+options	  9. Move to the woodpile (43 ft; 30 ft this turn, stops short)
+# engine
+engine	  bren moves.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → torva
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# engine
+engine	  bren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  Round 5 begins.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4's turn ends.
+# engine
+engine	  ilsa's turn.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa uses Dash.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  wolf_2's turn.
+# engine
+engine	  wolf_2 uses Wolf Bite attack on bren.
+# engine
+engine	  wolf_2 rolls an attack roll vs bren: 1d20 (15) = 19, hit. [r246]
+# engine
+engine	  wolf_2 rolls piercing damage: 1d6 (6) = 8. [r247]
+# engine
+engine	  bren takes 8 piercing damage.
+# engine
+engine	  bren has 2/20 Hit Points.
+# engine
+engine	  bren is now prone.
+# engine
+engine	  wolf_2's turn ends.
+# engine
+engine	  goblin_3's turn.
+# engine
+engine	  goblin_3's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren's turn.
+# engine
+engine	  maren uses Sacred Flame on goblin_3.
+# engine
+engine	  goblin_3 rolls a Dexterity saving throw: 1d20 (3) = 5, failure. [r256]
+# engine
+engine	  maren rolls radiant damage: 1d8 (2) = 2. [r257]
+# engine
+engine	  goblin_3 takes 2 radiant damage.
+# engine
+engine	  maren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  torva's turn.
+# engine
+engine	  torva rolls a death saving throw: 1d20 (3) = 3, failure. [r264]
+# engine
+engine	  torva's turn ends.
+# engine
+engine	  bren's turn.
+# engine
+engine	  bren is no longer prone.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Help Assist Attack Roll → wolf_2
+options	  8. Help Stabilize…
+options	  9. Longsword attack → wolf_2
+options	  10. Longsword attack, another target…
+options	  11. Unarmed Attack → wolf_2
+options	  12. Unarmed Attack, another target…
+options	  13. Potion of Healing → bren
+options	  14. Potion of Healing → torva
+options	  15. Potion of Healing, another target…
+options	  16. Move…
+options	  17. End turn
+# engine
+engine	  bren uses Longsword attack on wolf_2.
+# engine
+engine	  bren rolls an attack roll vs wolf_2: 1d20 (6) = 11, miss. [r269]
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → torva
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# options
+options	Move…:
+options	  1. Move next to wolf_2 (hostile, 4 ft)
+options	  2. Move next to goblin_4 (hostile, 41 ft; 15 ft this turn, stops short)
+options	  3. Move next to goblin_3 (hostile, 41 ft; 15 ft this turn, stops short)
+options	  4. Move next to ilsa (party, 3 ft)
+options	  5. Move next to maren (party, 15 ft)
+options	  6. Move to the yard gate (7 ft)
+options	  7. Move to the kennel (40 ft; 15 ft this turn, stops short)
+options	  8. Move to the mill door (41 ft; 15 ft this turn, stops short)
+options	  9. Move to the woodpile (43 ft; 15 ft this turn, stops short)
+# engine
+engine	  bren moves.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → torva
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# engine
+engine	  bren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  Round 6 begins.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4's turn ends.
+# engine
+engine	  ilsa's turn.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa uses Dash.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  wolf_2's turn.
+# engine
+engine	  wolf_2 uses Wolf Bite attack on bren.
+# engine
+engine	  wolf_2 rolls an attack roll vs bren: 1d20 (20) = 24, critical hit. [r290]
+# engine
+engine	  wolf_2 rolls critical piercing damage: 2d6 (6, 4) = 12. [r291]
+# engine
+engine	  bren takes 12 piercing damage.
+# engine
+engine	  bren has 0/20 Hit Points.
+# engine
+engine	  bren is unconscious.
+# engine
+engine	  bren is now prone.
+# engine
+engine	  bren is now unconscious.
+# engine
+engine	  wolf_2's turn ends.
+# engine
+engine	  goblin_3's turn.
+# engine
+engine	  goblin_3's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren's turn.
+# engine
+engine	  maren uses Sacred Flame on goblin_3.
+# engine
+engine	  goblin_3 rolls a Dexterity saving throw: 1d20 (7) = 9, failure. [r302]
+# engine
+engine	  maren rolls radiant damage: 1d8 (2) = 2. [r303]
+# engine
+engine	  goblin_3 takes 2 radiant damage.
+# engine
+engine	  maren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  Round 7 begins.
+# engine
+engine	  torva's turn.
+# engine
+engine	  torva rolls a death saving throw: 1d20 (13) = 13, success. [r311]
+# engine
+engine	  torva is stable.
+# engine
+engine	  torva's turn ends.
+# engine
+engine	  bren's turn.
+# engine
+engine	  bren rolls a death saving throw: 1d20 (5) = 5, failure. [r315]
+# engine
+engine	  bren's turn ends.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4's turn ends.
+# engine
+engine	  ilsa's turn.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa uses Dash.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  wolf_2's turn.
+# engine
+engine	  wolf_2 moves.
+# engine
+engine	  wolf_2 uses Wolf Bite attack on ilsa.
+# engine
+engine	  ilsa uses Shield.
+# engine
+engine	  wolf_2 rolls an attack roll vs ilsa: 1d20 (19) = 23, hit. [r336]
+# engine
+engine	  wolf_2 rolls piercing damage: 1d6 (1) = 3. [r337]
+# engine
+engine	  ilsa takes 3 piercing damage.
+# engine
+engine	  ilsa is now prone.
+# engine
+engine	  wolf_2's turn ends.
+# engine
+engine	  goblin_3's turn.
+# engine
+engine	  goblin_3's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren's turn.
+# engine
+engine	  maren uses Sacred Flame on goblin_3.
+# engine
+engine	  goblin_3 rolls a Dexterity saving throw: 1d20 (2) = 4, failure. [r347]
+# engine
+engine	  maren rolls radiant damage: 1d8 (6) = 6. [r348]
+# engine
+engine	  goblin_3 takes 6 radiant damage.
+# engine
+engine	  goblin_3 is dead.
+# engine
+engine	  maren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  torva's turn.
+# engine
+engine	  torva's turn ends.
+# engine
+engine	  bren's turn.
+# engine
+engine	  bren rolls a death saving throw: 1d20 (20) = 20, success. [r358]
+# engine
+engine	  bren regains 1 Hit Points.
+# engine
+engine	  bren has 1/20 Hit Points.
+# engine
+engine	  bren is conscious.
+# engine
+engine	  bren is no longer unconscious.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Help Assist Attack Roll → wolf_2 (walk)
+options	  8. Longsword attack → wolf_2 (walk)
+options	  9. Longsword attack, another target…
+options	  10. Unarmed Attack → wolf_2 (walk)
+options	  11. Unarmed Attack, another target…
+options	  12. Potion of Healing → bren
+options	  13. Potion of Healing → torva
+options	  14. Potion of Healing, another target…
+options	  15. Move…
+options	  16. End turn
+# options
+options	Move…:
+options	  1. Move next to wolf_2 (hostile, 6 ft)
+options	  2. Move next to goblin_4 (hostile, 41 ft; 30 ft this turn, stops short)
+options	  3. Dash, then move next to goblin_4 (hostile, 41 ft)
+options	  4. Move next to ilsa (party, 3 ft)
+options	  5. Move next to maren (party, 15 ft)
+options	  6. Move to the yard gate (7 ft)
+options	  7. Move to the kennel (40 ft; 30 ft this turn, stops short)
+options	  8. Dash, then move to the kennel (40 ft)
+options	  9. Move to the mill door (41 ft; 30 ft this turn, stops short)
+options	  10. Dash, then move to the mill door (41 ft)
+options	  11. Move to the woodpile (43 ft; 30 ft this turn, stops short)
+options	  12. Dash, then move to the woodpile (43 ft)
+# engine
+engine	  bren moves.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Help Assist Attack Roll → wolf_2
+options	  8. Longsword attack → wolf_2
+options	  9. Longsword attack, another target…
+options	  10. Unarmed Attack → wolf_2
+options	  11. Unarmed Attack, another target…
+options	  12. Potion of Healing → bren
+options	  13. Potion of Healing, another target…
+options	  14. Move…
+options	  15. End turn
+# engine
+engine	  bren uses Longsword attack on wolf_2.
+# engine
+engine	  bren rolls an attack roll vs wolf_2: 2d20 (12, 18, kept 12) = 17, hit. [r365]
+# engine
+engine	  bren rolls slashing damage: 1d8 (6) = 9. [r366]
+# engine
+engine	  wolf_2 takes 9 slashing damage.
+# engine
+engine	  wolf_2 is dead.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing, another target…
+options	  5. Move…
+options	  6. End turn
+# engine
+engine	  bren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  Round 8 begins.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4 uses Shortbow attack on bren.
+# engine
+engine	  goblin_4 rolls an attack roll vs bren: 2d20 (3, 8, kept 3) = 7, miss. [r378]
+# engine
+engine	  goblin_4's turn ends.
+# engine
+engine	  ilsa's turn.
+# engine
+engine	  ilsa is no longer prone.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa uses Dash.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa moves.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa's turn ends.
+# engine
+engine	  maren's turn.
+# engine
+engine	  maren moves.
+# engine
+engine	  maren uses Sacred Flame on goblin_4.
+# engine
+engine	  goblin_4 rolls a Dexterity saving throw: 1d20 (6) = 8, failure. [r398]
+# engine
+engine	  maren rolls radiant damage: 1d8 (8) = 8. [r399]
+# engine
+engine	  goblin_4 takes 8 radiant damage.
+# engine
+engine	  maren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  torva's turn.
+# engine
+engine	  torva's turn ends.
+# engine
+engine	  bren's turn.
+# engine
+engine	  bren is no longer prone.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Potion of Healing → bren
+options	  8. Potion of Healing, another target…
+options	  9. Move…
+options	  10. End turn
+# options
+options	Move…:
+options	  1. Move next to goblin_4 (hostile, 39 ft; 15 ft this turn, stops short)
+options	  2. Dash, then move next to goblin_4 (hostile, 39 ft)
+options	  3. Move next to maren (party, 15 ft)
+options	  4. Move next to ilsa (party, 26 ft; 15 ft this turn, stops short)
+options	  5. Dash, then move next to ilsa (party, 26 ft)
+options	  6. Move to the yard gate (10 ft)
+options	  7. Move to the kennel (36 ft; 15 ft this turn, stops short)
+options	  8. Dash, then move to the kennel (36 ft)
+options	  9. Move to the mill door (40 ft; 15 ft this turn, stops short)
+options	  10. Dash, then move to the mill door (40 ft)
+options	  11. Move to the woodpile (44 ft; 15 ft this turn, stops short)
+options	  12. Dash, then move to the woodpile (44 ft)
+# engine
+engine	  bren moves.
+# info
+info	Stopped short:
+info	  You moved 15 ft; stopped short, as far as movement goes: not there yet.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Potion of Healing → bren
+options	  8. Potion of Healing → maren
+options	  9. Move…
+options	  10. End turn
+# engine
+engine	  bren uses Dash.
+# engine
+engine	  bren is under Dash.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → maren
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# options
+options	Move…:
+options	  1. Move next to goblin_4 (hostile, 24 ft)
+options	  2. Move next to maren (party, 5 ft)
+options	  3. Move next to ilsa (party, 11 ft)
+options	  4. Move to the yard gate (22 ft)
+options	  5. Move to the mill door (25 ft)
+options	  6. Move to the kennel (29 ft)
+options	  7. Move to the woodpile (35 ft; 30 ft this turn, stops short)
+# engine
+engine	  bren moves.
+# engine
+engine	  bren moves.
+# engine
+engine	  bren moves.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing, another target…
+options	  5. Move…
+options	  6. End turn
+# options
+options	Move…:
+options	  1. Move next to goblin_4 (hostile, 5 ft)
+options	  2. Move next to ilsa (party, 8 ft)
+options	  3. Move next to maren (party, 21 ft; 10 ft this turn, stops short)
+options	  4. Move to the mill door (7 ft)
+options	  5. Move to the woodpile (31 ft; 10 ft this turn, stops short)
+options	  6. Move to the kennel (31 ft; 10 ft this turn, stops short)
+options	  7. Move to the yard gate (41 ft; 10 ft this turn, stops short)
+# engine
+engine	  bren moves.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing, another target…
+options	  5. Move…
+options	  6. End turn
+# engine
+engine	  bren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  Round 9 begins.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4 uses Monster Nimble Escape.
+# engine
+engine	  goblin_4 moves.
+# engine
+engine	  goblin_4 uses Shortbow attack on bren.
+# engine
+engine	  goblin_4 rolls an attack roll vs bren: 1d20 (8) = 12, miss. [r427]
+# engine
+engine	  goblin_4's turn ends.
+# engine
+engine	  ilsa's turn.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa moves.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa uses Fire Bolt on goblin_4.
+# engine
+engine	  ilsa rolls an attack roll vs goblin_4: 1d20 (7) = 11, miss. [r434]
+# engine
+engine	  ilsa's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren's turn.
+# engine
+engine	  maren moves.
+# engine
+engine	  maren moves.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren uses Dash.
+# engine
+engine	  maren moves.
+# engine
+engine	  maren moves.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  maren moves.
+# engine
+engine	  maren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  torva's turn.
+# engine
+engine	  torva's turn ends.
+# engine
+engine	  bren's turn.
+# engine
+engine	  bren is no longer under Dash.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Help Assist Attack Roll → goblin_4 (walk)
+options	  8. Longsword attack → goblin_4 (walk)
+options	  9. Longsword attack, another target…
+options	  10. Unarmed Attack → goblin_4 (walk)
+options	  11. Unarmed Attack, another target…
+options	  12. Potion of Healing → bren
+options	  13. Potion of Healing, another target…
+options	  14. Move…
+options	  15. End turn
+# options
+options	Move…:
+options	  1. Move next to goblin_4 (hostile, 35 ft)
+options	  2. Move next to ilsa (party, 22 ft)
+options	  3. Move next to maren (party, 30 ft)
+options	  4. Move to the mill door (7 ft)
+options	  5. Move to the woodpile (31 ft; 30 ft this turn, stops short)
+options	  6. Dash, then move to the woodpile (31 ft)
+options	  7. Move to the kennel (31 ft; 30 ft this turn, stops short)
+options	  8. Dash, then move to the kennel (31 ft)
+options	  9. Move to the yard gate (41 ft; 30 ft this turn, stops short)
+options	  10. Dash, then move to the yard gate (41 ft)
+# engine
+engine	  bren moves.
+# info
+info	Stopped short:
+info	  You moved 28 ft; stopped short, as far as movement goes: not there yet.
+# options
+options	  1. Dash
+options	  2. Disengage
+options	  3. Dodge
+options	  4. Fighter Action Surge
+options	  5. Fighter Second Wind
+options	  6. Help Assist Ability Check…
+options	  7. Potion of Healing → bren
+options	  8. Potion of Healing → maren
+options	  9. Potion of Healing → ilsa
+options	  10. Move…
+options	  11. End turn
+# engine
+engine	  bren uses Dash.
+# engine
+engine	  bren is under Dash.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → maren
+options	  5. Potion of Healing → ilsa
+options	  6. Potion of Healing, another target…
+options	  7. Move…
+options	  8. End turn
+# options
+options	Move…:
+options	  1. Move next to goblin_4 (hostile, 8 ft)
+options	  2. Move next to maren (party, 3 ft)
+options	  3. Move next to ilsa (party, 6 ft)
+options	  4. Move to the mill door (23 ft)
+options	  5. Move to the woodpile (43 ft; 32 ft this turn, stops short)
+options	  6. Move to the kennel (50 ft; 32 ft this turn, stops short)
+options	  7. Move to the yard gate (68 ft; 32 ft this turn, stops short)
+# engine
+engine	  bren moves.
+# engine
+engine	  bren moves.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# status
+status	— Your turn: pick a number from the list, or say what you do.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → maren
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# options
+options	Move…:
+options	  1. Move next to goblin_4 (hostile, 4 ft)
+options	  2. Move next to maren (party, 3 ft)
+options	  3. Move next to ilsa (party, 10 ft)
+options	  4. Move to the mill door (27 ft)
+options	  5. Move to the woodpile (46 ft; 28 ft this turn, stops short)
+options	  6. Move to the kennel (53 ft; 28 ft this turn, stops short)
+options	  7. Move to the yard gate (72 ft; 28 ft this turn, stops short)
+# engine
+engine	  bren moves.
+# options
+options	  1. Fighter Action Surge
+options	  2. Fighter Second Wind
+options	  3. Potion of Healing → bren
+options	  4. Potion of Healing → maren
+options	  5. Potion of Healing, another target…
+options	  6. Move…
+options	  7. End turn
+# engine
+engine	  bren's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  Round 10 begins.
+# engine
+engine	  goblin_4's turn.
+# engine
+engine	  goblin_4 uses Monster Nimble Escape.
+# engine
+engine	  goblin_4 moves.
+# engine
+engine	  goblin_4 uses Shortbow attack on bren.
+# engine
+engine	  goblin_4 rolls an attack roll vs bren: 1d20 (20) = 24, critical hit. [r475]
+# engine
+engine	  goblin_4 rolls critical piercing damage: 2d6 (2, 5) = 9. [r476]
+# engine
+engine	  bren takes 9 piercing damage.
+# engine
+engine	  bren has 0/20 Hit Points.
+# engine
+engine	  bren is unconscious.
+# engine
+engine	  bren is no longer under Dash.
+# engine
+engine	  bren is now unconscious.
+# engine
+engine	  goblin_4's turn ends.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa's turn.
+# engine
+engine	  ilsa moves.
+# engine
+engine	  ilsa moves.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  ilsa uses Fire Bolt on goblin_4.
+# engine
+engine	  ilsa rolls an attack roll vs goblin_4: 1d20 (18) = 22, hit. [r487]
+# engine
+engine	  ilsa rolls fire damage: 1d10 (7) = 7. [r488]
+# engine
+engine	  goblin_4 takes 7 fire damage.
+# engine
+engine	  goblin_4 is dead.
+# narration
+dm	DM: Steel and teeth flash in the yard.
+# engine
+engine	  Combat is over. The party side wins.
+# engine
+engine	  You gain 87 experience, 387 in all.
+# narration
+dm	DM: The yard falls quiet.
+# end
+end	The run is over: the adventure is over

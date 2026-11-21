@@ -14,7 +14,7 @@ import { ScriptedPlayer, ScriptedSeat, yardDm } from "../src/table/scripted.ts";
 import { situationOf, type Situation } from "../src/table/situation.ts";
 import type { TableEvent } from "../src/table/types.ts";
 import { INPUT_HINT, INPUT_MARK, InkSeat, SPINNER, waitText } from "../src/ui/ink-seat.ts";
-import { TONE_STYLE } from "../src/ui/lines.ts";
+import { TONE_STYLE } from "../src/ui/tones.ts";
 import { loadTheme, paletteFor, THEME, THEME_FILE, themeProblems } from "../src/ui/palette.ts";
 import { frameLayout, GOLDEN, RULE_COLUMNS } from "../src/ui/frame.ts";
 import { foldedRows, glyphsFor, rowText, situationRows, SIDE_PANE_COLUMNS, TEXT_COLUMNS, turnRows } from "../src/ui/panel.ts";
