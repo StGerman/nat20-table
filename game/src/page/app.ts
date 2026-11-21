@@ -347,7 +347,8 @@ function SpentLine({ view }: { view: PageView }): ReactNode {
   return h(
     "p",
     { className: "spent", "data-test": "spent" },
-    [...by].map(([message, names]) => h("span", { key: message, title: names.join(", ") }, `${names.join(", ")}: ${message}`)),
+    // The engine's why follows a colon, so it starts in lower case (Vera read «…: На это» as a slip).
+    [...by].map(([message, names]) => h("span", { key: message, title: names.join(", ") }, `${names.join(", ")}: ${message.charAt(0).toLocaleLowerCase()}${message.slice(1)}`)),
   );
 }
 
