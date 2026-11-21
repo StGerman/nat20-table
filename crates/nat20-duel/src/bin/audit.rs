@@ -16,7 +16,7 @@ use std::{fs, path::PathBuf, process::exit};
 
 use nat20_duel::{
     game_audit::{audit_game, read_session_log, read_transcript},
-    leak_scan::{Secrets, scan_inputs},
+    leak_scan::{Secrets, scan_inputs, scan_seat_wire},
 };
 
 const USAGE: &str = "usage: nat20-audit --pack <scenario-pack> <run-dir>";
@@ -77,7 +77,26 @@ fn main() {
         println!("  leak: {leak}");
     }
 
-    if !audit.passed() || !scan.passed() {
+    // A run played in the window (AGT-141): everything the window was sent, scanned the same way.
+    let wire_path = run.join("seat-wire.jsonl");
+    let wire = if wire_path.exists() {
+        let wire = scan_seat_wire(&read("seat-wire.jsonl"), &secrets).unwrap_or_else(|e| fail(&e));
+        println!(
+            "Seat-wire scan: {} events to {}, {} echoes of the human's input skipped, {} leaks.",
+            wire.inputs,
+            wire.seats.iter().cloned().collect::<Vec<_>>().join(", "),
+            wire.human_lines,
+            wire.leaks.len()
+        );
+        for leak in &wire.leaks {
+            println!("  leak: {leak}");
+        }
+        wire.passed()
+    } else {
+        true
+    };
+
+    if !audit.passed() || !scan.passed() || !wire {
         exit(1);
     }
 }

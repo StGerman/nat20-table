@@ -36,6 +36,8 @@ export async function testTable<S extends Seat = ScriptedSeat>(options: {
   players?: string[];
   /** The human's seat; a scripted seat that passes by default. */
   seat?: S;
+  /** The human's seat made for the run folder (a WebSeat writes `seat-wire.jsonl` there); before `seat`. */
+  seatFor?: (runDir: string) => S;
   narrationGuard?: TextGuard;
   speechGuard?: TextGuard;
   /** Guards built on the started engine (the narration guard reads its roll ids), as the run commands do. */
@@ -48,7 +50,7 @@ export async function testTable<S extends Seat = ScriptedSeat>(options: {
   const runDir = mkdtempSync(path.join(tmpdir(), "table-"));
   const engine = await GameEngine.start({ pack: options.pack ?? TEST_PACK, runDir, seed: options.seed, ...(options.roster ? { roster: options.roster } : {}) });
   const human = options.human ?? "bren";
-  const seat = options.seat ?? (new ScriptedSeat(human) as Seat as S);
+  const seat = options.seatFor?.(runDir) ?? options.seat ?? (new ScriptedSeat(human) as Seat as S);
   const table = new TableState({
     engine,
     ...(options.noHuman ? {} : { human, seat }),

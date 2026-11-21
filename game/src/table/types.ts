@@ -180,6 +180,11 @@ export interface Seat {
    * closed). Not a TableEvent and not recorded: only a sent line says it came from one.
    */
   suggest?(update: SuggestUpdate): void;
+  /**
+   * Commands the human gave with no ask open (AGT-141: a window's pause control), taken once. The
+   * loop reads them before each AI wake; the terminal seat takes commands only at a prompt.
+   */
+  takeCommands?(): Array<"pause">;
 }
 
 /** What the loop tells the seat about suggestions for the open prompt (AGT-49). */

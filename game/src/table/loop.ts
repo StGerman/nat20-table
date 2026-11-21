@@ -784,6 +784,7 @@ export class TableLoop {
    * from that summary, so context stays bounded by one scene (AGT-6).
    */
   private async closeScene(): Promise<void> {
+    this.seatCommands();
     if (this.paused) await this.waitWhilePaused();
     if (this.table.ended) return;
     const ask = "The scene is over. Sum it up for yourself in a few sentences of fiction: what happened, who you met, what you promised or suspect.";
@@ -1606,6 +1607,7 @@ export class TableLoop {
   private async playerTurn(handle: Handle): Promise<void> {
     await this.narrateNew();
     if (!this.isTurnOf(handle)) return;
+    this.seatCommands();
     if (this.paused) return this.waitWhilePaused();
     const agent = this.agents.get(handle)!;
     const tools = this.tools.get(handle)!;
@@ -1691,6 +1693,7 @@ export class TableLoop {
    * creature in reach, and no AI player attacks its friends (TASKS.md AGT-27).
    */
   private async playerReaction(handle: Handle): Promise<void> {
+    this.seatCommands();
     if (this.paused) return this.waitWhilePaused();
     const a = this.table.awaiting;
     if (a.kind !== "reaction") return;
@@ -2175,7 +2178,8 @@ export class TableLoop {
     let acted = false;
     for (const [handle, agent] of this.agents) {
       if (!this.table.grants.has(handle)) continue;
-      if (this.paused) await this.waitWhilePaused();
+      this.seatCommands();
+    if (this.paused) await this.waitWhilePaused();
       if (this.table.ended) return;
       this.table.resetRetries(handle);
       const options = await this.tools.get(handle)!.legalActions(agent.described);
@@ -2391,6 +2395,17 @@ export class TableLoop {
       case "quit":
         this.table.end("the human quit", "operator");
         return;
+    }
+  }
+
+  /** A `pause` the window sent with no ask open (AGT-141): taken as `/pause` is, before the next AI wake. */
+  private seatCommands(): void {
+    if (!this.table.human) return;
+    for (const name of this.seat.takeCommands?.() ?? []) {
+      if (name !== "pause" || this.paused) continue;
+      this.paused = true;
+      this.table.log("system", "paused", this.human);
+      this.table.show({ kind: "status", text: this.words.pausedStatus });
     }
   }
 
