@@ -77,7 +77,6 @@ button:hover, button:focus-visible { border-color: var(--accent); outline: none;
 .top .tool[aria-pressed="true"] { color: var(--paper); background: var(--ink); border-color: var(--ink); }
 /* The road card on the dock: choices with the table's initials landing on them. */
 .card { margin-bottom: 8px; }
-.card .decides { color: var(--muted); font-size: 14px; }
 .card .choices { display: grid; gap: 6px; }
 .card .choice { display: flex; align-items: center; gap: 10px; width: 100%; }
 .card .choice .text { flex: 1; }

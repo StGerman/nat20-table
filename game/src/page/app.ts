@@ -43,6 +43,16 @@ export function App({ view, send, settled }: AppProps): ReactNode {
   /** The person card open, by id, and whether the people list is open. */
   const [person, setPerson] = useState<string>();
   const [peopleOpen, setPeopleOpen] = useState(false);
+  // Esc closes what is open on top: the person card, then the people list under it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (person !== undefined) setPerson(undefined);
+      else if (peopleOpen) setPeopleOpen(false);
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [person, peopleOpen]);
   const choose = (next: Finish) => {
     setFinish(next);
     try {
@@ -184,7 +194,7 @@ function dockParts(view: PageView, dock: Dock, words: UiWords, send: (intent: Pl
 }
 
 /**
- * A road card on the dock (design §4.3): who decides, its choices as buttons while the human's word
+ * A road card on the dock (design §4.3): its choices as buttons (who decides is the story's line just above) while the human's word
  * is asked, and the table's word landing on them as initials as the engine records it; the decided
  * choice marked. Every word on it is the host's.
  */
@@ -194,7 +204,6 @@ function CardDock({ view, card, send }: { view: PageView; card: CardView; send(i
   return h(
     "section",
     { className: "card", "data-test": "card", ...(card.decided ? { "data-decided": card.decided } : {}) },
-    h("p", { className: "decides" }, card.card.decides),
     h(
       "div",
       { className: "choices", role: "group" },
@@ -228,7 +237,6 @@ function CardDock({ view, card, send }: { view: PageView; card: CardView; send(i
 /** The people the character knows, in the `/кто` lists' groups; a name opens the card. */
 function PeopleList({ view, open, close }: { view: PageView; open(id: string): void; close(): void }): ReactNode {
   const words = peopleWords(view);
-  useEscape(close);
   const groups: Array<[string, PersonState[]]> = [
     [words.lists.companion, ["companion"]],
     [words.lists.met, ["here", "elsewhere", "unconscious"]],
@@ -254,7 +262,6 @@ function PeopleList({ view, open, close }: { view: PageView; open(id: string): v
 
 /** "What your character knows" of one person: the terminal's person card, with their initial. */
 function PersonCard({ view, id, close }: { view: PageView; id: string; close(): void }): ReactNode {
-  useEscape(close);
   const p = view.people.find((q) => q.id === id);
   if (!p) return null;
   // The terminal's last row tells how to close it; the window has its own close.
@@ -265,15 +272,6 @@ function PersonCard({ view, id, close }: { view: PageView; id: string; close(): 
     h("header", null, h("span", { className: "medal", "aria-hidden": true }, initial(p.name)), h("h2", null, name), h("button", { className: "close", onClick: close, "aria-label": "×" }, "×")),
     rows.map((row, i) => h("p", { key: i, className: row.startsWith(`${peopleWords(view).remembers}:`) ? "remembers" : "line" }, row)),
   );
-}
-
-/** Esc closes what is open on top. */
-function useEscape(close: () => void): void {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  }, [close]);
 }
 
 /** The numbered list as buttons: a press sends the number, as typing it does. */
