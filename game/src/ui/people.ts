@@ -54,13 +54,15 @@ export function peopleOf(state: State, names: SeatNames, book: PeopleBook = name
     const health = inScene.get(p.handle);
     out.push({ id: p.handle, name: ru ? names.who(p.handle) : (p.names[0] ?? names.person(p.handle)), forms: [...p.names], state: "companion", ...(look ? { look } : {}), remembers: [], ...(health ? { health, inScene: true } : {}) });
   }
+  // The pack's forms of a person the world also knows (the reeve's «староста»), beside the world's.
+  const packForms = new Map((book.npcs ?? []).map((n) => [n.id, n.names]));
   for (const n of state.world?.npcs ?? []) {
     const health = inScene.get(n.id);
     const state_: PersonState = !n.alive ? "dead" : health === "down" ? "unconscious" : health ? "here" : "elsewhere";
     out.push({
       id: n.id,
       name: ru ? names.who(n.id) : (n.names?.[0] ?? n.name),
-      forms: n.names ?? [],
+      forms: [...new Set([...(n.names ?? []), ...(packForms.get(n.id) ?? [])])],
       state: state_,
       ...(n.look ? { look: line(n.id, n.look) } : {}),
       // None on a dead person's card (rule N6).
