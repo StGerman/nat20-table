@@ -315,7 +315,8 @@ function DockView({ view, send }: { view: PageView; send(intent: PlayerIntent): 
   const sheetOpen = !view.card && ((dock.form === "moves" && !chipForm && listed.length > 0) || (chipForm && all) || dock.form === "reaction" || (dock.form === "answer" && dock.question !== undefined));
   const chips = chipForm && !all ? chipsOf(listed, dock.form === "moves") : [];
   const endTurn = chipForm ? listed.find((c) => c.about?.id === "end_turn") : undefined;
-  const more = chipForm && listed.filter((c) => c.about?.id !== "end_turn").length > chips.length;
+  // The sheet is always there on a list: it also holds what is left of a use and what is not open now.
+  const more = chipForm && (listed.length > 0 || (options?.unavailable?.length ?? 0) > 0);
   return h(
     "footer",
     { ref, className: `dock ${dock.form}${sheetOpen || view.card ? " open" : ""}`, "data-form": dock.form },
