@@ -283,6 +283,12 @@ test("page reducer: a road card stays on the dock while the table says its word 
     [["Брен", "cloaks"], ["Торва", "cloaks"], ["Марен", "cloaks"], ["Ильза", "cloaks"]],
   );
   assert.equal(seen[23].card?.decided, "cloaks");
+  // A later round of advice on the same card (after an own move fell) is the person's word now: it replaces the earlier one.
+  const again = reduce(seen[22], HostMessageSchema.parse({ type: "event", seq: 9001, event: { kind: "engine", text: "Торва советует: «Встать под ивами и переждать».", seq: 9001, event: { seq: 9001, scene: "twb_road", visibility: { scope: "public" }, text: "torva says: willows.", kind: "card_advice", actor: "torva", choice: "willows" }, names: { torva: "Торва" } } }));
+  assert.deepEqual(
+    again.card?.votes.map((v) => [v.name, v.choice]),
+    [["Брен", "cloaks"], ["Марен", "cloaks"], ["Ильза", "cloaks"], ["Торва", "willows"]],
+  );
 });
 
 test("page reducer: the card leaves the dock when the human is asked something else", () => {
