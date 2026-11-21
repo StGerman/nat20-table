@@ -112,7 +112,9 @@ test("the scripted scene over the socket equals the in-process run, and the wire
     const got = window.events();
     assert.deepEqual(got.map((e) => e.seq), got.map((_, i) => i + 1), "numbered from 1 with no gap");
     assert.deepEqual(got.map((e) => e.event), expected, "the same events as the in-process seat");
-    assert.deepEqual(wire.trim().split("\n").map((l) => JSON.parse(l)), got.map((e) => ({ ...e, seat: "bren" })), "seat-wire.jsonl holds what was sent");
+    const sent = window.messages.filter((m) => m.type !== "hello" && m.type !== "refused").map((m) => (m.type === "event" ? { seq: m.seq, seat: "bren", event: m.event } : { seat: "bren", message: m }));
+    assert.deepEqual(wire.trim().split("\n").map((l) => JSON.parse(l)), sent, "seat-wire.jsonl holds everything that was sent, in order");
+    assert.ok(sent.some((l) => "message" in l && l.message?.type === "ask"), "the asks among it");
     assert.deepEqual(window.seat.prompts.length > 0, true);
   } finally {
     await window.close();
@@ -176,7 +178,7 @@ test("seat-wire.jsonl carries no DM-view field or value: the audit's seat-wire s
     assert.doesNotMatch(wire, /"(against|dc_source|advantage_sources|modifiers|dc|purse_cp|zone)":/);
     const result = audit(TEST_PACK, runDir);
     assert.ok(result.passed, result.output);
-    assert.match(result.output, /^Seat-wire scan: \d+ events to bren, \d+ echoes of the human's input skipped, 0 leaks\.$/m);
+    assert.match(result.output, /^Seat-wire scan: \d+ lines to bren, \d+ echoes of the human's input skipped, 0 leaks\.$/m);
   } finally {
     await window.close();
     await seat.close();
@@ -184,21 +186,49 @@ test("seat-wire.jsonl carries no DM-view field or value: the audit's seat-wire s
   }
 });
 
-test("the seat refuses a wrong token, a foreign origin and a second window, and takes a pause with no ask open", async () => {
+test("the seat refuses a wrong token and a foreign origin, a new window replaces the old, and a pause with no ask open waits for the loop", async () => {
   const seat = new WebSeat("bren", { runDir: (await import("node:os")).tmpdir(), run: "t" });
   const { port, token } = await seat.listen();
   try {
     await assert.rejects(new Window().connect(port, "nope"));
     await assert.rejects(new Window().connect(port, token, 0, "https://example.com"));
+    const first = new Window();
+    await first.connect(port, token, 0, "tauri://localhost");
+    const firstWs = (first as unknown as { ws: WebSocket }).ws;
+    // A laptop that slept leaves its socket half open: the reloaded page must still get in.
     const window = new Window();
-    await window.connect(port, token, 0, "tauri://localhost");
-    await assert.rejects(new Window().connect(port, token), "one window per token");
+    await window.connect(port, token);
+    await waitFor(() => firstWs.readyState === firstWs.CLOSED);
     const ws = (window as unknown as { ws: WebSocket }).ws;
     ws.send("not json");
     ws.send(JSON.stringify({ type: "intent", id: "a9", intent: { kind: "text", text: "hi", extra: 1 } }));
     ws.send(JSON.stringify({ type: "command", name: "pause" }));
     await waitFor(() => window.messages.filter((m) => m.type === "refused").length === 2);
     await waitFor(() => seat.takeCommands().length === 1 || false, 2000).catch(() => assert.fail("the pause reaches the loop's next look"));
+    await window.close();
+  } finally {
+    await seat.close();
+  }
+});
+
+test("a frame over the limit drops the window, not the table; a resume gets back what the table was doing; a quit with no ask open answers the next ask", async () => {
+  const seat = new WebSeat("bren", { runDir: (await import("node:os")).tmpdir(), run: "t" });
+  const { port, token } = await seat.listen();
+  try {
+    const big = new Window();
+    await big.connect(port, token);
+    const bigWs = (big as unknown as { ws: WebSocket }).ws;
+    bigWs.send(JSON.stringify({ type: "intent", id: "a1", intent: { kind: "text", text: "x".repeat(70 * 1024) } }));
+    await waitFor(() => bigWs.readyState === bigWs.CLOSED);
+    seat.busy("Torva");
+    seat.answering(true);
+    const window = new Window();
+    await window.connect(port, token);
+    await waitFor(() => window.messages.some((m) => m.type === "answering"));
+    assert.deepEqual(window.messages.slice(1), [{ type: "busy", on: "Torva" }, { type: "answering", on: true }], "the state the page lost on reload");
+    (window as unknown as { ws: WebSocket }).ws.send(JSON.stringify({ type: "command", name: "quit" }));
+    await waitFor(() => (seat as unknown as { quitting: boolean }).quitting);
+    assert.deepEqual(await seat.ask({ kind: "explore" }), { kind: "command", name: "quit" }, "the terminal's Ctrl+C between asks");
     await window.close();
   } finally {
     await seat.close();
@@ -246,7 +276,7 @@ test("the page's fixtures: the yard fight, and a stretch of The Way Back at a Ru
     await new TableLoop({ table: t.table, dm, players: party.slice(1).map((h) => new ScriptedPlayer(h)), maxSteps: 120, language: "ru", situation: true, campaign: { party, keepsParty: true, startDay: campaign.startDay } }).run(campaign.startScene);
     const wire = readFileSync(path.join(t.runDir, SEAT_WIRE_JSONL), "utf8");
     sameAsFixture("the-way-back-ru", wire);
-    const events = wire.trim().split("\n").map((l) => JSON.parse(l).event as TableEvent);
+    const events = wire.trim().split("\n").flatMap((l) => { const line = JSON.parse(l) as { event?: TableEvent }; return line.event ? [line.event] : []; });
     assert.ok(events.some((e) => (e.kind === "options" || e.kind === "info") && e.card), "a road card as data");
     assert.ok(events.some((e) => e.kind === "engine" && e.event?.kind === "card_advice"), "a vote on it");
     assert.ok(events.some((e) => e.kind === "situation" && e.situation?.people?.some((p) => p.remembers.length > 0)), "a person who remembers the party");

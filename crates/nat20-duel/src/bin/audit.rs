@@ -82,7 +82,7 @@ fn main() {
     let wire = if wire_path.exists() {
         let wire = scan_seat_wire(&read("seat-wire.jsonl"), &secrets).unwrap_or_else(|e| fail(&e));
         println!(
-            "Seat-wire scan: {} events to {}, {} echoes of the human's input skipped, {} leaks.",
+            "Seat-wire scan: {} lines to {}, {} echoes of the human's input skipped, {} leaks.",
             wire.inputs,
             wire.seats.iter().cloned().collect::<Vec<_>>().join(", "),
             wire.human_lines,

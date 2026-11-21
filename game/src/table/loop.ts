@@ -2179,7 +2179,7 @@ export class TableLoop {
     for (const [handle, agent] of this.agents) {
       if (!this.table.grants.has(handle)) continue;
       this.seatCommands();
-    if (this.paused) await this.waitWhilePaused();
+      if (this.paused) await this.waitWhilePaused();
       if (this.table.ended) return;
       this.table.resetRetries(handle);
       const options = await this.tools.get(handle)!.legalActions(agent.described);

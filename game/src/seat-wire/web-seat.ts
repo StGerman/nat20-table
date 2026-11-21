@@ -16,7 +16,7 @@ import type { HumanPrompt, PlayerIntent, Seat, SuggestUpdate, TableEvent } from 
 import { InkSeat } from "../ui/ink-seat.ts";
 import { HostMessageSchema, PageMessageSchema, WIRE_HASH, WIRE_VERSION, type HostMessage } from "./schema.ts";
 
-/** The file of every event the window was sent, one `{seq, seat, event}` per line. */
+/** The file of everything the window was sent: one `{seq, seat, event}` per event, one `{seat, message}` per other message (an ask, a preview, suggestions), in order. A resend on resume is not written again. */
 export const SEAT_WIRE_JSONL = "seat-wire.jsonl";
 
 /** The origins a window may connect from: the Tauri shell's page (design §3). A client with no origin is a local program, as in the tests. */
@@ -62,7 +62,9 @@ export class WebSeat implements Seat {
   /** `pause` commands the window sent with no ask open, for the loop's next look (`takeCommands`). */
   private readonly commands: Array<"pause"> = [];
   /** The state of the optional seat methods, sent again on resume. */
-  private last: { busy?: string; preview?: string; answering?: boolean } = {};
+  private last: { busy?: string; preview?: string; answering?: boolean; suggest?: HostMessage } = {};
+  /** The window asked to stop with no ask open: the next ask answers quit at once, as the terminal's Ctrl+C does. */
+  private quitting = false;
 
   constructor(handle: Handle, options: WebSeatOptions) {
     this.handle = handle;
@@ -87,7 +89,7 @@ export class WebSeat implements Seat {
       verifyClient: ({ req, origin }: { req: IncomingMessage; origin: string }) => {
         const token = new URL(req.url ?? "/", "http://127.0.0.1").searchParams.get("token") ?? "";
         const allowed = !origin || origins.includes(origin);
-        return allowed && sameToken(token, this.token) && this.client === undefined;
+        return allowed && sameToken(token, this.token);
       },
     });
     this.server = server;
@@ -95,6 +97,9 @@ export class WebSeat implements Seat {
     return new Promise((resolve, reject) => {
       server.once("error", reject);
       server.once("listening", () => {
+        // After startup a server error is logged, never thrown: the table goes on without a window.
+        server.off("error", reject);
+        server.on("error", (error) => console.error(`seat wire: ${error.message}`));
         const address = server.address();
         resolve({ port: typeof address === "object" && address ? address.port : 0, token: this.token });
       });
@@ -123,37 +128,41 @@ export class WebSeat implements Seat {
   ask(prompt: HumanPrompt): Promise<PlayerIntent> {
     // The terminal seat releases held lines for its record when the human is asked.
     void this.ink.ask(prompt);
+    if (this.quitting) return Promise.resolve({ kind: "command", name: "quit" });
     const id = `a${++this.asks}`;
+    this.last.suggest = undefined;
     return new Promise((resolve) => {
       this.open = { id, prompt, resolve };
-      this.send({ type: "ask", id, prompt });
+      this.emit({ type: "ask", id, prompt });
     });
   }
 
   busy(on: string | undefined): void {
     this.last.busy = on;
-    this.send({ type: "busy", ...(on !== undefined ? { on } : {}) });
+    this.emit({ type: "busy", ...(on !== undefined ? { on } : {}) });
   }
 
   preview(text: string | undefined): void {
     this.last.preview = text;
     this.ink.preview(text);
-    this.send({ type: "preview", ...(text !== undefined ? { text } : {}) });
+    this.emit({ type: "preview", ...(text !== undefined ? { text } : {}) });
   }
 
   unnarrated(): void {
     this.ink.unnarrated();
-    this.send({ type: "unnarrated" });
+    this.emit({ type: "unnarrated" });
   }
 
   answering(on: boolean): void {
     this.last.answering = on;
     this.ink.answering(on);
-    this.send({ type: "answering", on });
+    this.emit({ type: "answering", on });
   }
 
   suggest(update: SuggestUpdate): void {
-    this.send(update.kind === "rows" ? { type: "suggest", state: "rows", rows: update.rows } : { type: "suggest", state: update.kind });
+    const message: HostMessage = update.kind === "rows" ? { type: "suggest", state: "rows", rows: update.rows } : { type: "suggest", state: update.kind };
+    this.last.suggest = message;
+    this.emit(message);
   }
 
   /** The `pause` commands the window sent with no ask open, taken once (the loop reads them between wakes). */
@@ -164,9 +173,16 @@ export class WebSeat implements Seat {
   // --- The socket -------------------------------------------------------------------------------
 
   private connected(ws: WebSocket): void {
+    // A window with the token replaces the one before it: a socket left half open by a sleeping laptop never closes on its own.
+    if (this.client && this.client !== ws) this.client.terminate();
     this.client = ws;
     this.send({ type: "hello", wire: WIRE_VERSION, hash: WIRE_HASH, run: this.options.run, language: this.options.language ?? "en", handle: this.handle, title: this.options.title ?? "" });
     ws.on("message", (data) => this.received(String(data)));
+    ws.on("error", (error) => {
+      // An oversized or broken frame drops this window, never the table: the page resumes from its seq.
+      console.error(`seat wire: ${error.message}`);
+      ws.terminate();
+    });
     ws.on("close", () => {
       if (this.client === ws) this.client = undefined;
     });
@@ -187,7 +203,9 @@ export class WebSeat implements Seat {
         for (const e of this.events) if (e.seq > m.seq) this.send({ type: "event", seq: e.seq, event: e.event });
         if (this.last.busy !== undefined) this.send({ type: "busy", on: this.last.busy });
         if (this.last.preview !== undefined) this.send({ type: "preview", text: this.last.preview });
+        if (this.last.answering) this.send({ type: "answering", on: true });
         if (this.open) this.send({ type: "ask", id: this.open.id, prompt: this.open.prompt });
+        if (this.open && this.last.suggest) this.send(this.last.suggest);
         return;
       case "intent": {
         const open = this.open;
@@ -202,7 +220,8 @@ export class WebSeat implements Seat {
           // An open ask ends as the terminal's Ctrl+C does: the loop reads quit there.
           const open = this.open;
           this.open = undefined;
-          open?.resolve({ kind: "command", name: "quit" });
+          if (open) open.resolve({ kind: "command", name: "quit" });
+          else this.quitting = true;
         } else if (this.open) {
           const open = this.open;
           this.open = undefined;
@@ -210,6 +229,12 @@ export class WebSeat implements Seat {
         } else this.commands.push("pause");
         return;
     }
+  }
+
+  /** Writes a message other than an event to `seat-wire.jsonl` before it is sent, so the audit scans everything the window saw. */
+  private emit(message: HostMessage): void {
+    appendFileSync(this.file, JSON.stringify({ seat: this.handle, message }) + "\n");
+    this.send(message);
   }
 
   private send(message: HostMessage): void {
