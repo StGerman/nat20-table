@@ -8,6 +8,7 @@
 // terminal's own `eventLines`, so the page composes no sentence of its own.
 import type { Event } from "@nat20-table/engine-client";
 import type { HumanPrompt, TableEvent } from "../table/types.ts";
+import type { SeatCard } from "../table/seat-data.ts";
 import { UI_WORDS, SEAT_WORDS, type UiWords } from "../table/words.ts";
 import { eventLines, speakerOf, type Line, type Tone } from "../ui/lines.ts";
 import { asTold, nameSpans, type Person } from "../ui/people.ts";
@@ -42,6 +43,17 @@ export interface StoryLine {
 }
 
 type Options = Extract<TableEvent, { kind: "options" }>;
+
+/** A road card on the dock (design §4.3, AGT-143): the card as the seat read it, and the table's word on it as it comes. */
+export interface CardView {
+  card: SeatCard;
+  /** Who said which choice, in order: the human first (0062), then the others as the engine records them. */
+  votes: Array<{ who: string; name: string; choice: string }>;
+  /** An own move on the card: whose, and its words. */
+  own?: { who: string; name: string; words?: string };
+  /** The choice the card was decided on. */
+  decided?: string;
+}
 type Reaction = Extract<TableEvent, { kind: "reaction" }>;
 type Situation = Extract<TableEvent, { kind: "situation" }>;
 
@@ -83,6 +95,8 @@ export interface PageView {
   dock: Dock;
   /** The last numbered list the table showed, while it is the human's. */
   options?: Options;
+  /** The road card on the table, until the human is asked something else. */
+  card?: CardView;
   /** Options of the list before that the engine now lists as not open, each with why (design §5.1: a spent move leaves the dock with one line). */
   spent: Array<{ option: string; name: string; message: string }>;
   reaction?: Reaction;
@@ -155,7 +169,7 @@ export function reduce(view: PageView, message: HostMessage, built?: Built): Pag
       const prompt = message.prompt as unknown as HumanPrompt;
       // A fight's options belong to the human's own turn: any other prompt means it is over.
       const turnOver = r.options?.budget && prompt.kind !== "combat_turn" && prompt.kind !== "pick";
-      const next = { ...r, ask: { id: message.id, prompt }, sent: undefined, ...(turnOver ? { options: undefined } : {}), suggest: undefined };
+      const next = { ...r, ask: { id: message.id, prompt }, sent: undefined, ...(turnOver ? { options: undefined } : {}), ...(prompt.kind !== "card" ? { card: undefined } : {}), suggest: undefined };
       return { ...next, dock: dockFor(next) };
     }
     case "busy":
@@ -223,10 +237,11 @@ function shown(v: PageView, event: TableEvent): PageView {
       return { ...v, frame: event, ...(endsTurn(v, event) ? { options: undefined } : {}) };
     case "options": {
       const spent = spentMoves(v.options, event);
-      const next = { ...v, options: event, spent, refusal: undefined };
+      const next = { ...v, options: event, spent, refusal: undefined, ...(event.card ? { card: cardOf(v.card, event.card) } : {}) };
       return { ...next, dock: dockFor(next) };
     }
     case "engine": {
+      if (v.card) v = { ...v, card: onCard(v.card, event) };
       const roll = rollOf(event, v);
       const rolls = roll ? { ...v.rolls, [roll.id]: roll } : v.rolls;
       // The token goes on the event's first row only.
@@ -244,6 +259,7 @@ function shown(v: PageView, event: TableEvent): PageView {
     case "info":
       if (OVERLAYS.has(event.title)) return { ...v, overlay: { title: event.title, text: event.text, data: event, n: (v.overlay?.n ?? 0) + 1 } };
       if (REFUSED.has(event.title)) return { ...v, refusal: event.text };
+      if (event.card) v = { ...v, card: cardOf(v.card, event.card) };
       break;
     case "reaction": {
       const next = { ...v, reaction: event };
@@ -260,6 +276,37 @@ function shown(v: PageView, event: TableEvent): PageView {
   }
   if (speakerOf(event) !== undefined) return message(v, event, []);
   return add(v, linesOf(v, event));
+}
+
+/** The card the seat sent, keeping what the table already said on it when it is the same card. */
+function cardOf(before: CardView | undefined, card: SeatCard): CardView {
+  const same = before !== undefined && before.card.text === card.text;
+  const votes = card.said.map((s) => ({ who: s.who, name: s.name, choice: s.choice }));
+  return {
+    card,
+    votes: same && before.votes.length > votes.length ? before.votes : votes,
+    ...(card.own_move ? { own: card.own_move } : same && before.own ? { own: before.own } : {}),
+    ...(same && before.decided ? { decided: before.decided } : {}),
+  };
+}
+
+/** The engine's record of the table's word on the card: a choice said, an own move, the decision. */
+function onCard(view: CardView, event: Extract<TableEvent, { kind: "engine" }>): CardView {
+  const e = event.event as Event | undefined;
+  const name = (who: string) => event.names?.[who] ?? who;
+  switch (e?.kind) {
+    case "card_advice":
+      // One word per person: a later round's advice (after an own move fell, say) replaces the earlier one.
+      return view.votes.some((x) => x.who === e.actor && x.choice === e.choice)
+        ? view
+        : { ...view, votes: [...view.votes.filter((x) => x.who !== e.actor), { who: e.actor, name: name(e.actor), choice: e.choice }] };
+    case "card_own_move":
+      return { ...view, own: { who: e.actor, name: name(e.actor), words: e.words } };
+    case "card_resolved":
+      return { ...view, decided: e.choice };
+    default:
+      return view;
+  }
 }
 
 /** The options of `before` that `now` lists as not open, each with the engine's why. */

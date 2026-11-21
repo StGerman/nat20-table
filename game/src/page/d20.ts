@@ -109,23 +109,29 @@ void main() {
   float persp = 1.0 / (1.0 - p.z * 0.22);
   gl_Position = vec4(p.xy * uScale * persp + uOff, -p.z * 0.5, 1.0);
 }`;
-// Two finishes (Stas, 2026-11-21, from the die demo): liquid chrome, a mirror of a light studio with
-// dark bars and the warm table below, its surface rippling slowly; and a wireframe, a faint fill with
-// edges and numbers in the page's accent, its far side seen through it.
+// Two finishes (Stas, 2026-11-21, from the die demo): liquid chrome, a mirror of a studio built from
+// the page's own colours (walls of the page, bars of its text, a light in its accent, a table of its
+// lines), its surface rippling slowly; and a wireframe, a faint fill with edges and numbers in the
+// page's accent, its far side seen through it. WebGL cannot see the page under the die, so the
+// studio stands in for it: light chrome on a light page, dark chrome on a dark one.
 const FS = `#version 300 es
 precision highp float;
 in vec3 vN; in vec3 vP; in vec3 vBar; in vec2 vUv; flat in vec2 vCell;
-uniform sampler2D uAtlas; uniform vec3 uInk; uniform vec3 uAccent; uniform float uWire, uTime;
+uniform sampler2D uAtlas; uniform vec3 uInk; uniform vec3 uAccent; uniform vec3 uWall; uniform vec3 uLine; uniform float uWire, uTime;
 out vec4 o;
 vec3 studio(vec3 r) {
   float az = atan(r.x, r.z);
-  vec3 c = mix(vec3(0.62, 0.65, 0.70), vec3(0.93, 0.95, 0.98), clamp(r.y * 0.8 + 0.4, 0.0, 1.0));
+  // Walls of the page's background, a little darker low down; bars of its text; a softbox overhead.
+  vec3 c = mix(uWall * 0.82, uWall, clamp(r.y * 0.8 + 0.4, 0.0, 1.0));
   float bars = smoothstep(0.20, 0.12, abs(az - 0.75)) + smoothstep(0.12, 0.06, abs(az + 0.55))
              + smoothstep(0.25, 0.15, abs(az - 2.2)) + smoothstep(0.3, 0.2, abs(az + 2.0));
-  c = mix(c, vec3(0.07, 0.08, 0.10), clamp(bars, 0.0, 1.0) * smoothstep(-0.1, 0.15, r.y));
-  c += vec3(1.4) * smoothstep(0.5, 0.8, r.y) * smoothstep(0.9, 0.3, abs(az + 0.3));
-  c = mix(c, vec3(0.05, 0.06, 0.08), exp(-abs(r.y - 0.02) * 30.0) * 0.85);
-  vec3 table = mix(vec3(0.70, 0.58, 0.45), vec3(0.32, 0.25, 0.19), clamp(-r.y * 1.6, 0.0, 1.0));
+  c = mix(c, uInk, clamp(bars, 0.0, 1.0) * smoothstep(-0.1, 0.15, r.y) * 0.9);
+  // One strip light in the accent, so a turn catches the page's own colour.
+  c = mix(c, uAccent, smoothstep(0.1, 0.04, abs(az + 1.4)) * smoothstep(-0.1, 0.2, r.y));
+  c += vec3(0.6) * smoothstep(0.5, 0.8, r.y) * smoothstep(0.9, 0.3, abs(az + 0.3));
+  c = mix(c, uInk, exp(-abs(r.y - 0.02) * 30.0) * 0.6);
+  // The table: the page's line colour, falling towards its text colour under the die.
+  vec3 table = mix(uLine, mix(uLine, uInk, 0.45), clamp(-r.y * 1.6, 0.0, 1.0));
   return r.y < -0.02 ? table : c;
 }
 void main() {
@@ -146,8 +152,8 @@ void main() {
   // The surface ripples across each face, and the eye is close, so the reflection sweeps across a face as it turns.
   vec3 nl = normalize(n + 0.07 * vec3(sin(vP.y * 9.0 + uTime * 1.6), sin(vP.x * 8.0 - uTime * 1.2), sin((vP.x + vP.y) * 6.0 + uTime)));
   vec3 view = normalize(vP - vec3(0.0, 0.0, 2.4));
-  vec3 col = studio(reflect(view, nl)) * vec3(0.9, 0.92, 0.96);
-  col = mix(col, vec3(0.12, 0.13, 0.15), edge * 0.55);
+  vec3 col = studio(reflect(view, nl));
+  col = mix(col, uInk, edge * 0.55);
   bool inCell = all(greaterThan(vUv, vec2(0.0))) && all(lessThan(vUv, vec2(1.0)));
   float glyph = inCell ? textureGrad(uAtlas, (vCell + vUv) / vec2(5.0, 4.0), dFdx(vUv) / 5.0, dFdy(vUv) / 4.0).a : 0.0;
   col = mix(col, uInk, glyph);
@@ -206,10 +212,14 @@ export type Finish = (typeof FINISHES)[number];
 /** A finish and the page's colours for it, as 0..1 RGB. */
 export interface DieLook {
   finish: Finish;
-  /** The numbers on chrome. */
+  /** The page's text: the numbers and edges on chrome, the dark bars of its studio. */
   ink: V3;
-  /** The wireframe's edges, fill and numbers: the page's accent. */
+  /** The page's accent: the wireframe, and one strip light in the chrome's studio. */
   accent: V3;
+  /** The page's background: the walls of the chrome's studio. */
+  paper: V3;
+  /** The page's lines: the table the chrome reflects. */
+  line: V3;
 }
 
 /**
@@ -248,6 +258,8 @@ export function mount(canvas: HTMLCanvasElement, look: DieLook, shadow?: HTMLEle
   const wire = look.finish === "wire";
   gl.uniform3f(U("uInk"), ...look.ink);
   gl.uniform3f(U("uAccent"), ...look.accent);
+  gl.uniform3f(U("uWall"), ...look.paper);
+  gl.uniform3f(U("uLine"), ...look.line);
   gl.uniform1f(U("uWire"), wire ? 1 : 0);
   gl.enable(gl.CULL_FACE);
   // The wireframe is see-through: no depth buffer, the far side drawn first and blended under the near one.
