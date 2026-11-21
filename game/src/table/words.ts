@@ -506,6 +506,32 @@ export interface UiWords {
   suggestQuestion: { answer(name: string): string; surrender(name: string): string; other(name: string): string };
   /** The Glass Table page's die finish switch: what it says for each finish (the terminal has no die). */
   dieFinish: { chrome: string; wire: string; glass: string };
+  /** The Glass Table page's own labels (AGT-142): the capsule, the chips, the sheet of moves (the terminal has none of these). */
+  page: {
+    /** The capsule's question on the human's turn and out of a fight. */
+    ask(name: string): string;
+    /** The capsule when the Narrator asked a question. */
+    answer: string;
+    /** The capsule under a list of choices: words instead of a choice. */
+    orOwn: string;
+    /** The capsule while the table plays: who it waits on. */
+    waiting(who: string | undefined): string;
+    health: string;
+    hp(hp: number, max: number): string;
+    /** Movement left this turn, under its number. */
+    feet(left: number): string;
+    allMoves: string;
+    fewerMoves: string;
+    /** The sheet's group for moving. */
+    path: string;
+    /** The sheet's group for moves that cost nothing. */
+    free: string;
+    /** The sheet's group for the engine's options that are not open now. */
+    notNow: string;
+    /** The token that holds a fight's turn-order rolls. */
+    order: string;
+    close: string;
+  };
   panel: {
     explore: string;
     paused: string;
@@ -637,6 +663,22 @@ export const UI_WORDS: Record<Language, UiWords> = {
       other: (name) => `What does ${name} do or say?`,
     },
     dieFinish: { chrome: "Die: mirror", wire: "Die: wire", glass: "Die: glass" },
+    page: {
+      ask: (name) => `What does ${name} do?`,
+      answer: "Your answer",
+      orOwn: "Or say your own",
+      waiting: (who) => who ?? "The table plays",
+      health: "Health",
+      hp: (hp, max) => `${hp} of ${max}`,
+      feet: (left) => `${left} ft to move`,
+      allMoves: "All moves",
+      fewerMoves: "Fewer",
+      path: "Moving",
+      free: "No cost",
+      notNow: "Not now",
+      order: "turn order",
+      close: "Close",
+    },
     panel: {
       explore: "Explore",
       paused: "Paused",
@@ -764,6 +806,22 @@ export const UI_WORDS: Record<Language, UiWords> = {
       other: (name) => `Что ${name} делает или говорит?`,
     },
     dieFinish: { chrome: "Кубик: зеркальный", wire: "Кубик: проволочный", glass: "Кубик: стеклянный" },
+    page: {
+      ask: (name) => `Что делает ${name}?`,
+      answer: "Ваш ответ",
+      orOwn: "Или скажите своё",
+      waiting: (who) => who ?? "Стол играет",
+      health: "Здоровье",
+      hp: (hp, max) => `${hp} из ${max}`,
+      feet: (left) => `${plural(left, "фут", "фута", "футов")} пути`,
+      allMoves: "Все ходы",
+      fewerMoves: "Свернуть",
+      path: "Путь",
+      free: "Без затрат",
+      notNow: "Сейчас нельзя",
+      order: "порядок ходов",
+      close: "Закрыть",
+    },
     panel: {
       explore: "Без боя",
       paused: "Пауза",

@@ -34,6 +34,12 @@ function recorded(text: string): HostMessage[] {
     .map((r) => HostMessageSchema.parse(r.event !== undefined ? { type: "event", seq: r.seq, event: r.event } : r.message));
 }
 
+/** `names=bren:Брен,torva:Торва`: the names a live host sends at `hello`, for a replay that should read as the table does. */
+function namesParam(raw: string | null): { names?: Record<string, string> } {
+  if (!raw) return {};
+  return { names: Object.fromEntries(raw.split(",").map((pair) => pair.split(":")).filter((p) => p.length === 2 && p[0] && p[1])) };
+}
+
 function Page(): ReturnType<typeof h> {
   const params = new URLSearchParams(location.search);
   const [view, dispatch] = useReducer(step, EMPTY);
@@ -50,7 +56,7 @@ function Page(): ReturnType<typeof h> {
       let stopped = false;
       void (async () => {
         const messages = recorded(await (await fetch(replay)).text());
-        dispatch({ type: "host", message: { type: "hello", ...__WIRE__, run: replay, language: params.get("language") === "ru" ? "ru" : "en", handle: params.get("handle") ?? "bren", title: params.get("title") ?? "" } });
+        dispatch({ type: "host", message: { type: "hello", ...__WIRE__, run: replay, language: params.get("language") === "ru" ? "ru" : "en", handle: params.get("handle") ?? "bren", title: params.get("title") ?? "", ...namesParam(params.get("names")) } });
         const to = Number(params.get("to") ?? Infinity);
         for (const message of messages) {
           if (stopped || (message.type === "event" && message.seq > to)) break;
