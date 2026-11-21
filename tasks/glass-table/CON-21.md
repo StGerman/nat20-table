@@ -16,4 +16,4 @@ Check (exit row 6): the DMG builds signed and notarised and starts the bundled l
 
 ## Status
 
-todo. No code before 2026-12-03. Waits on Stas for the signing secrets in the repository.
+todo. No code until Stas says go (the talk moved to December with no date, Stas 2026-11-21 08:36Z). Waits on Stas for the signing secrets in the repository.

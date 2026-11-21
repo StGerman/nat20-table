@@ -6,12 +6,12 @@ As of 2026-11-21, main 6c5e205 (table #459 merged 08:31Z). Kept by Yan (decision
 
 | # | Milestone | Gate (one line) | Status |
 |---|---|---|---|
-| — | Tech talk demo (2026-12-02) | three rehearsals and one recorded full run on the stage SHA; dress rehearsal 12-01 | open: CON-19, AGT-135, AGT-136 done; rows 4 to 6 are Stas's at his Mac; core pin stays a17ac1f until after the talk |
-| — | Glass Table (the Mac app) | one pair on one signed DMG: the all-AI half from its bundled binaries, then Stas in the app (scope §4, 8 rows) | open: scope, design, 0090 merged (table #459); rows 2026-11-21; first after the talk (Stas 2026-11-21 07:29Z); no code before 12-03; spike CON-20 first. Plan: exit 12-07 to 12-12 |
+| — | Tech talk demo (December, date not set) | three rehearsals and one recorded full run on the stage SHA; a dress rehearsal the day before the talk | open: CON-19, AGT-135, AGT-136 done; rows 4 to 6 are Stas's at his Mac. The talk moved off 2026-12-02 with no date; Stas picks it (2026-11-21 08:36Z). It no longer gates Glass Table |
+| — | Glass Table (the Mac app) | one pair on one signed DMG: the all-AI half from its bundled binaries, then Stas in the app (scope §4, 8 rows) | open: scope, design, 0090 merged (table #459); rows in table #461; first (Stas 2026-11-21 07:29Z); code starts on Stas's go, earliest 2026-11-22, with the Apple account active; spike CON-20 first. Exit pair 11-25 to 11-29 from a go on 11-22 (calendar below) |
 | — | Sign in with ChatGPT (a second model backend) | no spec on main; its design is Proposed in that thread, not accepted | right after Glass Table (Stas 2026-11-21 08:34Z: «Давай запланируем сразу после Glass Table»; "before «Камень A»" is my reading of «сразу после»). Waits on Stas accepting its design. That thread's estimate: 8 to 10 days, uncalibrated. Row AGT-147 (lobby part) |
-| — | «Камень A» (the post on the flats) | scope and design in table #417, not merged | after Sign in with ChatGPT (reading above); after Glass Table (Stas 2026-11-21 07:29Z). Shift against the plan's bid 2: 4 to 9 days for Glass Table plus 8 to 10 for ChatGPT, 12 to 19 days, uncalibrated; its `escort_dismissed` PR is built for two seats, +5 USD and 10 min of Stas |
-| — | Arachas plus glue | no spec yet; inputs shelved by the M13 scope §3 | after «Камень A»; moves 12 to 19 days later than under bid 2, as «Камень A» does |
-| — | The Silent Mill plus glue | no spec yet | after Arachas (Stas 2026-11-07 19:34Z); same 12 to 19 day shift |
+| — | «Камень A» (the post on the flats) | scope and design in table #417, not merged | after Sign in with ChatGPT (reading above); after Glass Table (Stas 2026-11-21 07:29Z). Exit 12-06 to 12-15 from a go on 11-22 (calendar below); its `escort_dismissed` PR is built for two seats, +5 USD and 10 min of Stas |
+| — | Arachas plus glue | no spec yet; inputs shelved by the M13 scope §3 | after «Камень A»: starts 12-06 to 12-15; not priced, no spec |
+| — | The Silent Mill plus glue | no spec yet | after Arachas (Stas 2026-11-07 19:34Z); not priced, no spec |
 | — | Allies in fights («Свои в бою») | — | closed 2026-11-20, rows 10 and 11 not passed (Stas); row 10 moved to AGT-133 |
 | 13 | Dramaturg mechanism | — | done 2026-11-16, pair passed first time on b7e737d |
 | 12 | Not a passenger | — | closed 2026-11-14, not done (0082) |
@@ -36,14 +36,39 @@ Not ordered, no spec, no number unless its bullet gives one (Stas, review of tab
 
 ## Waiting on Stas
 
-- Apple Developer enrolment (99 USD a year, about 15 min, then Apple's review): gates the spike CON-20. Enrolled before 12-02, Apple's wait runs during talk prep.
-- The spike evening at the Mac, 60 to 90 min, from 12-03 (CON-20).
+- Your go for Glass Table code: the start of every date below. The 12-03 start in scope §7 lost its reason when the talk moved (2026-11-21 08:36Z).
+- Apple Developer enrolment (99 USD a year, about 15 min, then Apple's review, which is not ours): gates the spike CON-20. Every day it is late moves every date below by a day.
+- The spike evening at the Mac, 60 to 90 min, on the go day (CON-20).
+- The talk's date, and whether it shows the app (answer under Calendar).
+- The core pin freeze at a17ac1f "until after the talk" (tech-talk milestone): keep it until a December date, or lift it now.
 - Developer ID and notary key as repository secrets for the `release` workflow (CON-21; signing place answered 2026-11-21 07:46Z).
 - The "Sign in with ChatGPT" design (Proposed, in its thread, not on main): accept it, and its scope with exit rows, before its rows are written; it is next after Glass Table.
-- Tech talk rows 4 to 6: the traced run, three rehearsals and the recorded run, the dress rehearsal on 12-01.
-- table #417 («Камень A» scope, design, 0087, 0088): open since 2026-11-15, last update 2026-11-20; 14 days untouched on 2026-12-04. It waits behind Glass Table by your order; keep it open or close it until then.
+- Tech talk rows 4 to 6: the traced run, three rehearsals and the recorded run, the dress rehearsal the day before the talk.
+- table #417 («Камень A» scope, design, 0087, 0088): open since 2026-11-15, last update 2026-11-20; 14 days untouched on 2026-12-04. It waits behind Glass Table and Sign in with ChatGPT by your order; its review can run beside them so its rows are ready by about 12-03 to 12-10.
 - nat20-runs #3 (flag answers for the Mill run 20-38-39): untouched since 2026-11-03, 18 days. Merge or close.
 - UPS-1 (P0, since 2026-10-19): squash merge still on in the fork; Dependabot alerts not readable from a session.
+
+## Calendar from your go
+
+Start G = the day you say go, the Apple account is active and table #461 is merged; earliest 2026-11-22. Calibration as in the plan (scope §7); scope acceptance (1 to 3 of the plan's 4 to 9 days) is already spent, so the rest is 4 to 7 days.
+
+| Step | Low (G = 11-22) | High |
+|---|---|---|
+| Spike CON-20 on your Mac, one evening | 11-22 | 11-23 |
+| Stack AGT-140 to AGT-146, CON-21 built; one review session, two evenings; DMG installed by you | 11-24 | 11-27 |
+| Exit pair on one DMG, AI half first | 11-25 | 11-29 (11-30 with one failed pair) |
+| Sign in with ChatGPT, 8 to 10 days after (its estimate, uncalibrated), its design accepted meanwhile | 12-03 | 12-10 |
+| «Камень A», 3 to 5 days after its rows (its scope §7), #417 reviewed meanwhile | 12-06 | 12-15 |
+| Arachas, then the Mill | start 12-06 | start 12-15 |
+
+Not priced: a spike that fails (Electron fallback, decision 0090), and Apple's review time.
+
+**The talk date, if it shows the app.**
+- Low, 11-28: the pair passed on 11-25, with three rehearsals and the dress rehearsal on that DMG in 2 to 3 evenings.
+- High, 12-03: the pair passed by 11-30, plus the same margin.
+- Both depend on: the go and an active Apple account on 11-22; the spike passing at the first try; one review session; the pair passing first time.
+- Without a passed pair, the DMG exists from 11-24 to 11-27. It can show a scripted scene played live in the app (CON-21's check) and the recorded bench fight replayed in the page (AGT-143). A live `play:card` fight started from the app is in no row.
+- On any date, independent of Glass Table: the merged demo. The `night_wolves` fight is played live with `play:card` at the Ink seat in Russian on the release tagged `play-2026-12-02`, with the full run prerecorded. It needs only your rows 4 to 6, about 4 h.
 
 ## Delivery
 
@@ -53,7 +78,7 @@ Not ordered, no spec, no number unless its bullet gives one (Stas, review of tab
 | 12 Not a passenger (in progress, 2026-11-11) | 2.98 so far | 4 of 17 planned | 0/0 | 0.00 | 0.00 |
 | 13 Dramaturg mechanism | 3.2 | not counted | 1/1 | 18.17 | 0.40 |
 | Allies in fights | 6.5 to 7.1 | not counted | 1/0 | 22.13 | 0.66 |
-| Glass Table (plan, 2026-11-21) | 4 to 9 (own work, from 12-03) | 10 planned | target 1/1 | 21 to 26 | 0.40 to 0.67 |
+| Glass Table (plan, 2026-11-21) | 4 to 7 (8 with a failed pair) from your go | 10 planned | target 1/1 | 21 to 26 | 0.40 to 0.67 |
 
 - M12, note added 2026-11-21: closed 2026-11-14 not done (0082), 5.5 days from table #336; no exit pair passed. The row above stays as written on 2026-11-11.
 - M13: scope table #348 merged 2026-11-13 15:16Z to run 2 on 2026-11-16 (~20:50Z): 3.2 days. Pair on b7e737d: 11.08 AI + 7.09 Stas USD; Stas 23.7 min.
@@ -61,7 +86,7 @@ Not ordered, no spec, no number unless its bullet gives one (Stas, review of tab
 - PRs for M13 and Allies are not counted in this pass: the stacks share a window (table #411 to #441) and need `GET commits/<sha>/pulls` per row to split; owed at the next `roadmap`.
 - Glass Table, plan: Stas 6.3 to 7.9 h in total (review 4.1 to 5.1, at the Mac 2.2 to 4.2); build 148 to 205 USD; runs 39 to 48 USD with one failed pair.
 
-Against the baseline: M13 days 1.5, runs 0.51, Stas 0.37, pairs passed first time. Allies days 3.1 to 3.4, runs 0.62, Stas 0.61, its human half failed. Glass Table plan: days 1.9 to 4.3 (misses the 0.5 target), PRs 0.37, runs 0.59 to 0.73, Stas at the table 0.37 to 0.61.
+Against the baseline: M13 days 1.5, runs 0.51, Stas 0.37, pairs passed first time. Allies days 3.1 to 3.4, runs 0.62, Stas 0.61, its human half failed. Glass Table from your go: days 1.9 to 3.3, 3.8 with a failed pair (misses the 0.5 target), PRs 0.37, runs 0.59 to 0.73, Stas at the table 0.37 to 0.61.
 
 Cheapest saving for Glass Table: the spike CON-20 first. It finds a shell that does not hold on day 1 for S (11 USD) and one evening; found in CON-21 it costs an evening (1 to 1.5 h of Stas), a redo (21 to 40 USD) and 1 to 3 days per try.
 

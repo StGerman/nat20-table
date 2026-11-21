@@ -20,4 +20,4 @@ Check: the fixture shows the record in the player's view and nothing of it in a 
 
 ## Status
 
-todo. No code before 2026-12-03.
+todo. No code until Stas says go (the talk moved to December with no date, Stas 2026-11-21 08:36Z).

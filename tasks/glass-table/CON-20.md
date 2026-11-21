@@ -14,4 +14,4 @@ Depends on: nothing; every other row of this milestone waits on it.
 
 ## Status
 
-todo. No code before 2026-12-03. Waits on Stas: an Apple Developer account (99 USD a year; Apple's own review time is not ours to shorten) and one evening at the Mac, 60 to 90 min.
+todo. No code until Stas says go. Waits on Stas: his go, an Apple Developer account (99 USD a year; Apple's own review time is not ours to shorten) and one evening at the Mac, 60 to 90 min.
