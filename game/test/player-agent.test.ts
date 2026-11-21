@@ -92,6 +92,8 @@ test("a model player passes as a normal answer, plays from its card's Talk and s
   assert.match(prompt, /A question put to someone the DM plays is theirs to answer after this round/);
   assert.match(prompt, /What you raised your hand for is still yours/);
   assert.match(prompt, /not a line to deliver/);
+  assert.match(prompt, /it is a habit, not an opener/);
+  assert.match(prompt, /words in quotes there are lost, so if Maren has something to say, say it with say first/);
   assert.match(prompt, /usually one call: submit_decision with the option .*, a line in say if Maren would speak, and end_turn: true/);
   assert.match(prompt, /The line reacts to what happened since your last turn/);
   assert.match(prompt, /"Do you raise your hand\?": .*Call no tool: your final answer starts with SPEAK \(a line to say\), BOTH \(a line and a deed\), ACT: and one sentence/);
