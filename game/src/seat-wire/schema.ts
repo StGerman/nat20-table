@@ -48,6 +48,8 @@ export const HostMessageSchema = z.discriminatedUnion("type", [
     language: z.enum(["en", "ru"]),
     handle: z.string(),
     title: z.string(),
+    /** How the seat names each party character, by handle, in the run's language; a handle not named here is shown as the terminal shows it. */
+    names: z.record(z.string(), z.string()).optional(),
   }),
   /** One `TableEvent`, numbered from 1 in the order the seat was shown it. */
   z.strictObject({ type: z.literal("event"), seq: z.int().min(1), event: Made }),

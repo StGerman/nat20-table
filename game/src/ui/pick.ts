@@ -12,7 +12,8 @@ import { Box, render, Text, useInput, useWindowSize, type Instance, type RenderO
 import { createElement as h, useState } from "react";
 import type { RosterEntry } from "../play/run.ts";
 import { coinPhrase } from "../view.ts";
-import { textProps, wrapText } from "./lines.ts";
+import { wrapText } from "./lines.ts";
+import { textProps } from "./tones.ts";
 import { paletteFor, type Palette } from "./palette.ts";
 import type { PanelSize } from "./panel.ts";
 
