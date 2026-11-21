@@ -18,6 +18,8 @@ export interface RuDictionary {
   variants: Record<string, string>;
   /** Option ids to the rule's summary on the action card. */
   summaries: Record<string, string>;
+  /** Level-up choice ids (a spell, a feat, a skill) to the line under the choice (AGT-146). */
+  level_up: Record<string, string>;
   /** Spells, items, features, resources and effects by id. */
   things: Record<string, string>;
   /** Creature kinds by the handle's stem (`wolf` for `wolf_2`) or the stat block's id. */
@@ -152,6 +154,11 @@ export class SeatNames {
     if (this.language === "en") return name;
     const skill = id.split("/").at(-1) as Skill;
     return ruDictionary().variants[id] ?? SKILLS_RU[skill] ?? name;
+  }
+
+  /** The line under a level-up choice (AGT-146): the dictionary's at a Russian seat, which shows no English line. */
+  levelUpLine(id: string, summary: string | null | undefined): string | undefined {
+    return this.language === "ru" ? ruDictionary().level_up[id] : (summary ?? undefined);
   }
 
   /** An option's rule summary for the action card. */
