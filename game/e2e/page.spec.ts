@@ -95,7 +95,9 @@ test("a road card shows its choices, the table's word lands on them, and the dec
   const w = WIRES[1];
   await replay(page, w, 17);
   const card = page.locator('[data-test="card"]');
-  await expect(card.locator(".decides")).toHaveText("Решает хозяин обоза, а ваше слово будет советом.");
+  // Who decides is said once, by the story just above the card.
+  await expect(page.locator(".story")).toContainText("Решает хозяин обоза, а ваше слово будет советом.");
+  await expect(card).not.toContainText("Решает хозяин обоза");
   await expect(card.locator(".choice")).toHaveText(["Укрыть мешки плащами.", "Встать под ивами и переждать.", "Идти дальше сквозь дождь."]);
   await expect(card.locator(".choice").first()).toBeEnabled();
   await replay(page, w, 23);
@@ -118,6 +120,12 @@ test("a name in the story opens what the character knows of them, and «Люди
   await expect(list.locator("h3")).toContainText(["Вы встречали", "Только слышали"]);
   await list.locator('[data-person="warden_brannock"]').click();
   await expect(page.locator('[data-test="person-card"] .remembers')).toHaveText(["Помнит: you gave him a sack of wheat for a pitch by the well."]);
+  // Esc closes the card on top first, then the list under it.
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-test="person-card"]')).toHaveCount(0);
+  await expect(list).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(list).toHaveCount(0);
 });
 
 for (const scheme of ["light", "dark"] as const) {
