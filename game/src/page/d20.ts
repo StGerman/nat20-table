@@ -109,15 +109,17 @@ void main() {
   float persp = 1.0 / (1.0 - p.z * 0.22);
   gl_Position = vec4(p.xy * uScale * persp + uOff, -p.z * 0.5, 1.0);
 }`;
-// Two finishes (Stas, 2026-11-21, from the die demo): liquid chrome, a mirror of a studio built from
+// Three finishes (Stas, 2026-11-21, from the die demo): liquid chrome, a mirror of a studio built from
 // the page's own colours (walls of the page, bars of its text, a light in its accent, a table of its
-// lines), its surface rippling slowly; and a wireframe, a faint fill with edges and numbers in the
-// page's accent, its far side seen through it. WebGL cannot see the page under the die, so the
-// studio stands in for it: light chrome on a light page, dark chrome on a dark one.
+// lines), its surface rippling slowly; a wireframe, a faint fill with edges and numbers in the page's
+// accent, its far side seen through it; and liquid glass, the same studio bent through it and caught
+// on its surface, its far edges seen through it, large numbers in the page's text colour with a thin
+// outline in its background colour and no glow. WebGL cannot see the page under the die, so the
+// studio stands in for it: light on a light page, dark on a dark one.
 const FS = `#version 300 es
 precision highp float;
 in vec3 vN; in vec3 vP; in vec3 vBar; in vec2 vUv; flat in vec2 vCell;
-uniform sampler2D uAtlas; uniform vec3 uInk; uniform vec3 uAccent; uniform vec3 uWall; uniform vec3 uLine; uniform float uWire, uTime;
+uniform sampler2D uAtlas; uniform vec3 uInk; uniform vec3 uAccent; uniform vec3 uWall; uniform vec3 uLine; uniform float uMode, uTime;
 out vec4 o;
 vec3 studio(vec3 r) {
   float az = atan(r.x, r.z);
@@ -135,12 +137,14 @@ vec3 studio(vec3 r) {
   return r.y < -0.02 ? table : c;
 }
 void main() {
+  bool wire = uMode > 0.5 && uMode < 1.5;
+  bool glass = uMode > 1.5;
   vec3 d = fwidth(vBar);
-  vec3 e = smoothstep(vec3(0.0), d * (uWire > 0.5 ? 1.4 : 0.9), vBar);
+  vec3 e = smoothstep(vec3(0.0), d * (wire ? 1.4 : glass ? 1.2 : 0.9), vBar);
   float edge = 1.0 - min(min(e.x, e.y), e.z);
   vec3 soft = smoothstep(vec3(0.0), d * 8.0, vBar);
   float halo = 1.0 - min(min(soft.x, soft.y), soft.z);
-  if (uWire > 0.5) {
+  if (wire) {
     // The far side: its edges and a light fill, never its numbers (they would read mirrored).
     if (!gl_FrontFacing) { o = vec4(uAccent, 0.05 + 0.4 * edge + 0.08 * halo); return; }
     bool inCellW = all(greaterThan(vUv, vec2(0.0))) && all(lessThan(vUv, vec2(1.0)));
@@ -152,12 +156,35 @@ void main() {
   // The surface ripples across each face, and the eye is close, so the reflection sweeps across a face as it turns.
   vec3 nl = normalize(n + 0.07 * vec3(sin(vP.y * 9.0 + uTime * 1.6), sin(vP.x * 8.0 - uTime * 1.2), sin((vP.x + vP.y) * 6.0 + uTime)));
   vec3 view = normalize(vP - vec3(0.0, 0.0, 2.4));
+  vec3 H = normalize(normalize(vec3(-0.4, 0.6, 0.7)) + vec3(0.0, 0.0, 1.0));
+  bool inCell = all(greaterThan(vUv, vec2(0.0))) && all(lessThan(vUv, vec2(1.0)));
+  if (glass) {
+    // The far side: a faint fill and its edges through the glass, never its numbers.
+    if (!gl_FrontFacing) { o = vec4(mix(uWall, vec3(1.0), 0.6), 0.08 + 0.45 * edge); return; }
+    float f = pow(1.0 - max(dot(nl, -view), 0.0), 2.0);
+    // Through the glass the studio is bent and cooled; on the surface it is reflected.
+    vec3 col = mix(studio(refract(view, nl, 0.66)) * vec3(0.78, 0.88, 0.96), studio(reflect(view, nl)), 0.2 + 0.65 * f);
+    float alpha = 0.42 + 0.5 * f + 0.5 * edge;
+    col = mix(col, vec3(1.0), edge * 0.8);
+    // Large numbers (the cell read nearer its centre) in the page's text colour, with a thin outline
+    // in its background colour cut sharp from a slightly thickened copy: they read on any page.
+    vec2 guv = (vUv - 0.5) / 1.6 + 0.5;
+    vec2 auv = (vCell + guv) / vec2(5.0, 4.0);
+    vec2 gdx = dFdx(guv) / 5.0, gdy = dFdy(guv) / 4.0;
+    float glyphG = inCell ? textureGrad(uAtlas, auv, gdx, gdy).a : 0.0;
+    float rim = inCell ? smoothstep(0.1, 0.22, textureGrad(uAtlas, auv, gdx * 3.5, gdy * 3.5).a) : 0.0;
+    col = mix(col, uWall, rim);
+    alpha = max(alpha, rim);
+    col = mix(col, uInk, glyphG);
+    alpha = max(alpha, glyphG);
+    float spec = pow(max(dot(n, H), 0.0), 90.0);
+    o = vec4(col + vec3(spec), min(1.0, alpha + spec));
+    return;
+  }
   vec3 col = studio(reflect(view, nl));
   col = mix(col, uInk, edge * 0.55);
-  bool inCell = all(greaterThan(vUv, vec2(0.0))) && all(lessThan(vUv, vec2(1.0)));
   float glyph = inCell ? textureGrad(uAtlas, (vCell + vUv) / vec2(5.0, 4.0), dFdx(vUv) / 5.0, dFdy(vUv) / 4.0).a : 0.0;
   col = mix(col, uInk, glyph);
-  vec3 H = normalize(normalize(vec3(-0.4, 0.6, 0.7)) + vec3(0.0, 0.0, 1.0));
   col += vec3(pow(max(dot(n, H), 0.0), 120.0));
   o = vec4(col, 1.0);
 }`;
@@ -205,8 +232,8 @@ export interface Die {
   release(): void;
 }
 
-/** The two finishes the page offers. */
-export const FINISHES = ["chrome", "wire"] as const;
+/** The finishes the page offers. */
+export const FINISHES = ["chrome", "wire", "glass"] as const;
 export type Finish = (typeof FINISHES)[number];
 
 /** A finish and the page's colours for it, as 0..1 RGB. */
@@ -255,15 +282,15 @@ export function mount(canvas: HTMLCanvasElement, look: DieLook, shadow?: HTMLEle
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
   const U = (n: string) => gl.getUniformLocation(prog, n);
-  const wire = look.finish === "wire";
+  // The wireframe and the glass are see-through: no depth buffer, the far side drawn first and blended under the near one.
+  const through = look.finish !== "chrome";
   gl.uniform3f(U("uInk"), ...look.ink);
   gl.uniform3f(U("uAccent"), ...look.accent);
   gl.uniform3f(U("uWall"), ...look.paper);
   gl.uniform3f(U("uLine"), ...look.line);
-  gl.uniform1f(U("uWire"), wire ? 1 : 0);
+  gl.uniform1f(U("uMode"), FINISHES.indexOf(look.finish));
   gl.enable(gl.CULL_FACE);
-  // The wireframe is see-through: no depth buffer, the far side drawn first and blended under the near one.
-  if (wire) {
+  if (through) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   } else gl.enable(gl.DEPTH_TEST);
@@ -281,7 +308,7 @@ export function mount(canvas: HTMLCanvasElement, look: DieLook, shadow?: HTMLEle
     gl.uniform1f(U("uTime"), performance.now() / 1000);
     gl.uniform2f(U("uOff"), 0, FLOOR + y);
     gl.uniform1f(U("uScale"), SCALE);
-    if (wire) {
+    if (through) {
       gl.cullFace(gl.FRONT);
       gl.drawArrays(gl.TRIANGLES, 0, 60);
       gl.cullFace(gl.BACK);
