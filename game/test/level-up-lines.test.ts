@@ -11,7 +11,7 @@ import type { LevelUpChoice, Roster } from "@nat20-table/engine-client";
 import { GameEngine } from "../src/engine.ts";
 import { levelUpChoices } from "../src/table/choices.ts";
 import { ruDictionary, SeatNames } from "../src/table/seat-lines.ts";
-import { SEAT_WORDS } from "../src/table/words.ts";
+import { SEAT_WORDS, SKILLS_RU } from "../src/table/words.ts";
 import { TEST_PACK } from "./helpers.ts";
 
 /** The XP of level 5: past it the engine offers nothing a saved party has reached. */
@@ -19,10 +19,27 @@ const XP = 6500;
 const SCENE = "m5_s3_yard";
 const HANDLES = ["bren", "torva", "maren", "ilsa"];
 
+/**
+ * The refusals the walk may meet, each a known engine gap: anything else fails the test, so a new
+ * stall, or a fix that opens choices beyond these, is seen.
+ */
+const KNOWN_STALLS = [
+  /** ENG-50: the level 4 Ability Score Improvement asks what level_up cannot ask yet. */
+  /level-up cannot go on: it asks for ability scores or a spell swap/,
+  /** ENG-51: the cleric's level 4. */
+  /^Core refused an answer in maren's level-up\.$/,
+];
+
+/** What the walk was refused, by whom and after which picks. */
+const refused: string[] = [];
+
 async function started(roster?: Roster): Promise<GameEngine> {
   const engine = await GameEngine.start({ pack: TEST_PACK, runDir: mkdtempSync(path.join(tmpdir(), "level-up-")), seed: 1, ...(roster ? { roster } : {}) });
   const loaded = await engine.request("dm", { cmd: "load_scene", scene_id: SCENE });
-  assert.ok(loaded.ok, loaded.error?.message);
+  if (!loaded.ok) {
+    engine.close();
+    assert.fail(`load_scene ${SCENE}: ${loaded.error?.message}`);
+  }
   return engine;
 }
 
@@ -33,12 +50,19 @@ async function after(roster: Roster, handle: string, path: string[][]): Promise<
     let answered = 0;
     for (let tries = 0; tries < 40; tries++) {
       const r = await engine.request(handle, { cmd: "level_up", actor: handle });
-      if (!r.ok) return undefined;
+      // No more XP is the walk's end; any other refusal is recorded.
+      if (!r.ok) {
+        if (!/needs \d+\.?$/.test(r.error?.message ?? "")) refused.push(`${handle} after ${JSON.stringify(path)}: ${r.error?.message}`);
+        return undefined;
+      }
       let choice = (r.result as { choice?: LevelUpChoice | null }).choice ?? undefined;
       while (choice) {
         if (answered === path.length) return choice;
         const a = await engine.request(handle, { cmd: "answer_level_up", actor: handle, prompt_id: choice.prompt_id, picks: path[answered++]! });
-        if (!a.ok) return undefined;
+        if (!a.ok) {
+          refused.push(`${handle} after ${JSON.stringify(path)}: ${a.error?.message}`);
+          return undefined;
+        }
         choice = (a.result as { choice?: LevelUpChoice | null }).choice ?? undefined;
       }
     }
@@ -51,8 +75,7 @@ async function after(roster: Roster, handle: string, path: string[][]): Promise<
 /** Every choice each pregen meets, trying each option once per distinct choice. */
 async function reachable(): Promise<LevelUpChoice[]> {
   const first = await started();
-  const saved = await first.request("dm", { cmd: "save_roster" });
-  first.close();
+  const saved = await first.request("dm", { cmd: "save_roster" }).finally(() => first.close());
   assert.ok(saved.ok && saved.result?.cmd === "save_roster");
   const roster: Roster = { ...saved.result.roster, characters: saved.result.roster.characters.map((c) => ({ ...c, xp: XP })) };
   const found: LevelUpChoice[] = [];
@@ -64,6 +87,8 @@ async function reachable(): Promise<LevelUpChoice[]> {
       const choice = await after(roster, handle, path);
       if (!choice) continue;
       const ids = choice.options.map((o) => o.id);
+      // An earlier pick only takes ids off a later list (a spell known is not offered again), and every
+      // option of a choice is tried once, so a choice met again with the same ids adds nothing new.
       const key = `${choice.level} ${choice.label} ${[...ids].sort().join(",")}`;
       if (done.has(key)) continue;
       done.add(key);
@@ -84,6 +109,11 @@ test("every level-up choice the pregens can meet has its Russian name and line, 
     assert.ok(dictionary.level_up[id], `a Russian line for ${id}`);
   }
   for (const label of new Set(choices.map((c) => c.label))) assert.ok(dictionary.things[label], `a Russian title for ${label}`);
+  // A skill has one Russian name at the seat: the level-up's is the action card's.
+  for (const [skill, name] of Object.entries(SKILLS_RU)) if (ids.has(skill)) assert.equal(dictionary.things[skill], name, skill);
+  const unknown = refused.filter((r) => !KNOWN_STALLS.some((known) => known.test(r.split(": ").slice(1).join(": "))));
+  assert.deepEqual(unknown, [], "only the known engine gaps stop the walk");
+  assert.ok(refused.length > 0, "the known gaps still stop it: when ENG-50 or ENG-51 is fixed, drop its pattern and let the walk go on");
   const names = new SeatNames("ru");
   const talk = { names, words: SEAT_WORDS.ru };
   for (const choice of choices) {
