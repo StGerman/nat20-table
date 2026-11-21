@@ -93,7 +93,8 @@ else
 fi
 
 step "6 launched the way Finder launches it"
-BEFORE="$(ls "$REPORTS"/report-*.json 2>/dev/null | wc -l)"
+reports() { find "$REPORTS" -maxdepth 1 -name 'report-*.json' | wc -l; }
+BEFORE="$(reports)"
 # `open` goes through Launch Services, as a double-click does: no shell PATH, no terminal environment.
 if [ "${NAT20_SPIKE_NO_MODEL:-}" = "1" ]; then
   open -n --env NAT20_SPIKE_NO_MODEL=1 "$APP"
@@ -101,16 +102,16 @@ else
   open -n "$APP"
 fi
 for _ in $(seq 1 120); do
-  [ "$(ls "$REPORTS"/report-*.json 2>/dev/null | wc -l)" -gt "$BEFORE" ] && break
+  [ "$(reports)" -gt "$BEFORE" ] && break
   sleep 1
 done
-LATEST="$(ls -t "$REPORTS"/report-*.json 2>/dev/null | head -1 || true)"
-if [ -z "$LATEST" ] || [ "$(ls "$REPORTS"/report-*.json 2>/dev/null | wc -l)" -le "$BEFORE" ]; then
+if [ "$(reports)" -le "$BEFORE" ]; then
   echo "no report in 120 s: the host did not finish. Its own log says how far it got:"
-  cat "$(ls -t "$REPORTS"/host-*.log 2>/dev/null | head -1)" 2>/dev/null || echo "(no host log: the host never started)"
+  HOSTLOG="$(find "$REPORTS" -maxdepth 1 -name 'host-*.log' -print0 | xargs -0 ls -t 2>/dev/null | head -1 || true)"
+  if [ -n "$HOSTLOG" ]; then cat "$HOSTLOG"; else echo "(no host log: the host never started)"; fi
   exit 1
 fi
-cat "$LATEST"
+cat "$(find "$REPORTS" -maxdepth 1 -name 'report-*.json' -print0 | xargs -0 ls -t | head -1)"
 
 step "done"
 echo "Close the spike window. Then double-click $APP in Finder once and check the window lists the same items."
