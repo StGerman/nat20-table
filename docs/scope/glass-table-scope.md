@@ -80,9 +80,11 @@ Written in their own PR after this scope and the design merge (ids taken then): 
 
 ## 9. Questions for Stas
 
+Answered by Stas in the prototype thread, 2026-11-21 07:46Z: 2 (in GitHub: «Где подписывать сборку: в GitHub»), 3 («Лобби только с Claude - ок»), 6 («Та же сборка - да DMG»). Open: 1 (the merge), 4, 5.
+
 1. Accept the design and decision 0090 (a web page in a Tauri shell, our JSON seat wire)? Merging this PR is the yes.
-2. Signing: in the release workflow on a hosted macOS runner, with the Developer ID and notary key as repository secrets, or on your Mac for each build? The workflow saves up to 1.3 h per signed build. Recommended: the workflow.
-3. The lobby with Claude only, and a second provider as a backlog row behind its own design? Recommended: yes.
+2. Signing: in the release workflow on a hosted macOS runner, with the Developer ID and notary key as repository secrets, or on your Mac for each build? The workflow saves up to 1.3 h per signed build. Recommended: the workflow. **Answered: the release workflow.**
+3. The lobby with Claude only, and a second provider as a backlog row behind its own design? Recommended: yes. **Answered: yes.**
 4. An amendment: a milestone whose design carries no world, story or card mechanism (an app, a package, CI) takes its system design from the implementing thread without Lev's `design` pass; Zoya's board and Vera's read still apply to its player-facing lines. Recommended: yes. If no, Lev reads this design before the rows are written.
 5. From the prototype, each a few words: one line that says why, or silence, when a spent move leaves the dock (Vera had to guess; recommended: the line); a one-line player-visible record about the Corrins (Zoya writes it, you approve); portraits or initials for the valley's people.
-6. "The same build" for this milestone means the same signed DMG, and the AI half runs from its binaries (exit row 7). Recommended: yes.
+6. "The same build" for this milestone means the same signed DMG, and the AI half runs from its binaries (exit row 7). Recommended: yes. **Answered: yes.**

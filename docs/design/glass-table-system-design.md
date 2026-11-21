@@ -177,7 +177,7 @@ One `Glass Table.app` in one DMG holds every part that is ours.
 | `nat20-api-server` and the audit binaries | Rust | about 16 MB for the server; bundled binaries exist since CON-19 (table #450) |
 | Content | JSON and images | about 3 MB |
 
-What changes for it: one data root (`REPO` in `game/src/paths.ts` comes from `import.meta.url`, which does not point into an app bundle); each nested binary signed under the hardened runtime and the app notarised; the DMG built from a tag. Where signing runs (the release workflow on a hosted macOS runner, or Stas's Mac) is the scope's question 2.
+What changes for it: one data root (`REPO` in `game/src/paths.ts` comes from `import.meta.url`, which does not point into an app bundle); each nested binary signed under the hardened runtime and the app notarised; the DMG built from a tag. Signing runs in the release workflow on a hosted macOS runner (Stas, 2026-11-21, scope §9 question 2).
 
 **Unverified, and checked first by a spike (scope §6):** Tauri starting the compiled loop and the server as bundled binaries; one live model call under Bun on a Mac under the hardened runtime, with the JIT entitlement if it needs one; how the compiled loop finds Claude Code when the app is launched from Finder, which gets no shell `PATH`.
 
