@@ -298,8 +298,8 @@ export class TableState {
       this.shownRolls.add(event.roll);
       if (!event.own) this.untold.push(event.roll);
     }
-    // These show the held lines as they are (the terminal seat's RELEASES): no later narration tells them.
-    if (event.kind === "options" || event.kind === "reaction" || event.kind === "question" || event.kind === "end") this.untold = [];
+    // These show the held lines as they are (the terminal seat's RELEASES, and its ask, which every `said` follows): no later narration tells them.
+    if (event.kind === "options" || event.kind === "reaction" || event.kind === "question" || event.kind === "end" || event.kind === "said") this.untold = [];
     if (event.kind === "options") [this.lastList, this.lastReaction] = [event.lines, undefined];
     if (event.kind === "reaction") this.lastReaction = event.options.map((o, i) => `${i + 1}. ${o}`);
     if (event.kind === "narration") {
@@ -371,6 +371,8 @@ export class TableState {
     }
     if (this.unnarrated) {
       this.unnarrated = false;
+      // The seat shows the held lines as they are: no later narration tells their rolls.
+      this.untold = [];
       this.seat?.unnarrated?.();
     }
   }
