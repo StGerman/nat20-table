@@ -145,7 +145,7 @@ function Top({ view, panel, lens, canLens, setLens, openSheet, togglePeople }: {
           { className: `turnpill pill glass${mine ? " mine" : " calm"}`, role: "status", "data-test": "turn" },
           h("i", { className: "mark", "aria-hidden": true }),
           h("span", null, pill),
-          order.length > 0 ? h("span", { className: "stack", "aria-hidden": true }, order.map((handle) => h(Medal, { key: handle, handle, name: shownName(view, s, handle), className: `small${handle === view.hello?.handle ? " me" : ""}`, title: shownName(view, s, handle) }))) : null,
+          order.length > 0 ? h("span", { className: "stack", "aria-hidden": true }, order.map((handle) => h(Medal, { key: handle, handle, name: shownName(view, s, handle), className: `small${handle === view.hello?.handle ? " me" : ""}`, title: shownName(view, s, handle), foe: s?.creatures.some((c) => c.handle === handle && c.side === "hostile") }))) : null,
         )
       : h("span"),
     h(
@@ -177,9 +177,11 @@ function initial(name: string): string {
 }
 
 /** A round face: the portrait when the page has one for the handle, else the initial. */
-function Medal({ handle, name, className, title }: { handle?: string; name: string; className?: string; title?: string }): ReactNode {
+function Medal({ handle, name, className, title, foe }: { handle?: string; name: string; className?: string; title?: string; foe?: boolean }): ReactNode {
   const face = faceOf(handle);
-  return h("span", { className: ["medal", className, face ? "face" : undefined].filter(Boolean).join(" "), "aria-hidden": true, ...(title ? { title } : {}) }, face ? h("img", { src: face, alt: "", draggable: false }) : initial(name));
+  // A foe with no portrait is a plain red dot: its initial read as a word («В» as «враг», Vera, 2026-11-21).
+  const inside = face ? h("img", { src: face, alt: "", draggable: false }) : foe ? h("i", { className: "dot" }) : initial(name);
+  return h("span", { className: ["medal", className, face ? "face" : undefined, foe && !face ? "foe" : undefined].filter(Boolean).join(" "), "aria-hidden": true, ...(title ? { title } : {}) }, inside);
 }
 
 /** The portrait rail (design §5.2, the control layer's side): the human, then the party, each ringed
@@ -215,7 +217,7 @@ function Rail({ view, openSheet, lens }: { view: PageView; openSheet(): void; le
       ? h(
           "button",
           { type: "button", className: "near glass", "data-test": "near", title: `${words.page.near}: ${near.map((c) => shownName(view, s, c.handle)).join(", ")}`, "aria-label": `${words.page.near}: ${near.length}`, onClick: lens },
-          h(Medal, { handle: near[0].handle, name: shownName(view, s, near[0].handle) }),
+          h(Medal, { handle: near[0].handle, name: shownName(view, s, near[0].handle), foe: true }),
           near.length > 1 ? h("b", { className: "count" }, near.length) : null,
         )
       : null,
@@ -278,7 +280,12 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
       { key: handle, className: `who ${cls}`, "data-handle": handle, transform: `translate(${X(at.x_ft)} ${Y(at.y_ft)})` },
       h("title", null, title),
       h("circle", { r: 1.9, className: "disc" }),
-      face ? [h("clipPath", { key: "c", id }, h("circle", { r: 1.65 })), h("image", { key: "i", href: face, x: -1.65, y: -1.65, width: 3.3, height: 3.3, clipPath: `url(#${id})` })] : h("text", { className: "ini", dy: "0.35em" }, initial(name)),
+      face
+        ? [h("clipPath", { key: "c", id }, h("circle", { r: 1.65 })), h("image", { key: "i", href: face, x: -1.65, y: -1.65, width: 3.3, height: 3.3, clipPath: `url(#${id})` })]
+        : // A foe with no portrait is a plain red dot, its name below: an initial read as a word («В», Vera).
+          cls.startsWith("hostile")
+          ? h("circle", { r: 0.8, className: "dot" })
+          : h("text", { className: "ini", dy: "0.35em" }, initial(name)),
       h("text", { className: "label", ...labelAt(`who:${handle}`, X(at.x_ft), Y(at.y_ft)) }, label),
     );
   };

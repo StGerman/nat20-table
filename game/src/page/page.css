@@ -140,6 +140,7 @@ button { cursor: pointer; }
 .medal { display: inline-grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--ink); background: var(--fill-2); box-shadow: inset 0 0 0 2px var(--ink-2); }
 .medal.small { width: 28px; height: 28px; font-size: 13px; box-shadow: inset 0 0 0 1.5px var(--ink-2); background: var(--glass-solid); }
 .medal.me { background: var(--accent); color: var(--on-accent); box-shadow: none; }
+.medal.foe .dot { width: 30%; height: 30%; border-radius: 50%; background: var(--harm); }
 .stack .medal.me { box-shadow: 0 0 0 2px var(--glass-solid); }
 
 /* ---------- the dock: chips over one glass body that holds the sheet and the capsule ---------- */
@@ -266,6 +267,7 @@ span.face-btn { cursor: default; }
 .lens .who.me .disc { stroke: var(--accent); stroke-width: 0.4; }
 .lens .who.down { opacity: 0.35; }
 .lens .who .label { font: 600 1.3px var(--sans); fill: var(--ink); text-anchor: middle; }
+.lens .who .dot { fill: var(--harm); }
 .lens .who .ini { font: 600 2.2px var(--serif); fill: var(--ink); text-anchor: middle; }
 .lens.road .route { margin: 0; max-width: 100%; max-height: 100%; overflow: auto; padding: 20px 24px; border-radius: 24px; white-space: pre; font: 13px/1.55 ui-monospace, "SF Mono", Menlo, monospace; color: var(--ink); }
 
