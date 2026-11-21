@@ -13,6 +13,7 @@ import type { Handle } from "@nat20-table/engine-client";
 import type { Language } from "../agents/language.ts";
 import type { SeatNames } from "../table/seat-lines.ts";
 import type { HumanPrompt, PlayerIntent, Seat, SuggestUpdate, TableEvent } from "../table/types.ts";
+import { UI_WORDS } from "../table/words.ts";
 import { InkSeat } from "../ui/ink-seat.ts";
 import { HostMessageSchema, PageMessageSchema, WIRE_HASH, WIRE_VERSION, type HostMessage } from "./schema.ts";
 
@@ -165,6 +166,19 @@ export class WebSeat implements Seat {
     const message: HostMessage = update.kind === "rows" ? { type: "suggest", state: "rows", rows: update.rows } : { type: "suggest", state: update.kind };
     this.last.suggest = message;
     this.emit(message);
+  }
+
+  /**
+   * The host stops the table (Ctrl+C, the time limit): an open ask ends as quit, as at the terminal,
+   * and a later one answers quit at once; the window is told why while it waits.
+   */
+  stopAsking(why: string): void {
+    this.ink.stopAsking(why);
+    this.quitting = true;
+    const open = this.open;
+    this.open = undefined;
+    this.busy(UI_WORDS[this.options.language ?? "en"].stoppingFor(why));
+    open?.resolve({ kind: "command", name: "quit" });
   }
 
   /** The `pause` commands the window sent with no ask open, taken once (the loop reads them between wakes). */

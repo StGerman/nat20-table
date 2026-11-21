@@ -235,6 +235,22 @@ test("a frame over the limit drops the window, not the table; a resume gets back
   }
 });
 
+test("the host stops the table (Ctrl+C, the time limit): the open ask ends as quit, the window is told why, and a later ask answers quit at once", async () => {
+  const seat = new WebSeat("bren", { runDir: (await import("node:os")).tmpdir(), run: "t", language: "ru" });
+  await seat.listen();
+  try {
+    // No window answers: the person is away from it.
+    const asked = seat.ask({ kind: "explore" });
+    seat.stopAsking("её остановили на компьютере");
+    assert.deepEqual(await asked, { kind: "command", name: "quit" }, "nobody need answer it for the table to stop");
+    assert.deepEqual(await seat.ask({ kind: "explore" }), { kind: "command", name: "quit" });
+    const lines = readFileSync(path.join((await import("node:os")).tmpdir(), SEAT_WIRE_JSONL), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { message?: HostMessage });
+    assert.ok(lines.some((l) => l.message?.type === "busy" && l.message.on === "Игра останавливается: её остановили на компьютере."), "the window's line says why");
+  } finally {
+    await seat.close();
+  }
+});
+
 /** The page's fixtures (design §9): checked against a fresh run, and rewritten by `RECORD_FIXTURES=1`. */
 function sameAsFixture(name: string, wire: string): void {
   const file = path.join(REPO, "game/test/fixtures", `${name}.seat-wire.jsonl`);
