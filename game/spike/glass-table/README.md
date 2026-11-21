@@ -24,7 +24,7 @@ signed in. From the table checkout, on this branch:
    `game/spike/glass-table/run.sh --sign "Developer ID Application: <name> (<team>)" --notary-profile glass-table`
 4. Double-click `game/spike/glass-table/shell/target/release/bundle/macos/Glass Table Spike.app` in Finder once.
 
-Each run writes `spike-<time>.log` in the folder it was started from and a report under
-`~/Library/Application Support/glass-table-spike/`. Paste the logs.
+Each run writes `spike-<time>.log`, the host's own `host-<time>.log` and a report under
+`~/Library/Application Support/glass-table-spike/`. Paste the spike logs.
 
 The `spike-glass-table` workflow runs step 1 on a hosted Apple Silicon runner with no model call.

@@ -3,6 +3,7 @@
 //! with them. No game logic, as the design §3 asks of the real shell.
 
 use std::io::{BufRead, BufReader};
+use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 
@@ -16,16 +17,20 @@ fn start_host() -> Result<(Child, String), String> {
     let host = dir.join("glass-table-host");
     let mut child = Command::new(&host)
         .env("NAT20_API_SERVER", dir.join("nat20-api-server"))
-        .stdin(Stdio::null())
+        // Its own process group, so closing the window stops the host and whatever it started.
+        .process_group(0)
+        // Held open while the shell lives: the host exits when it closes.
+        .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
         .map_err(|e| format!("{}: {e}", host.display()))?;
     let stdout = child.stdout.take().ok_or("host has no stdout")?;
+    let mut reader = BufReader::new(stdout);
     let mut line = String::new();
-    BufReader::new(stdout)
-        .read_line(&mut line)
-        .map_err(|e| e.to_string())?;
+    reader.read_line(&mut line).map_err(|e| e.to_string())?;
+    // Keep reading, so a later stdout line from the host never meets a closed pipe.
+    std::thread::spawn(move || std::io::copy(&mut reader, &mut std::io::sink()));
     let address: serde_json::Value =
         serde_json::from_str(line.trim()).map_err(|e| format!("host said {line:?}: {e}"))?;
     Ok((child, address.to_string()))
@@ -58,7 +63,10 @@ fn main() {
             if let RunEvent::Exit = event
                 && let Some(mut child) = app.state::<Host>().0.lock().unwrap().take()
             {
-                let _ = child.kill();
+                let _ = Command::new("kill")
+                    .args(["-TERM", &format!("-{}", child.id())])
+                    .status();
+                let _ = child.wait();
             }
         });
 }

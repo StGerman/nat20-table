@@ -12,8 +12,8 @@
 // session, and CI sets NAT20_SPIKE_NO_MODEL=1 to skip it. Merges no game code: it reads the game's
 // agent environment and the engine client, and changes neither.
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
@@ -41,11 +41,19 @@ const started = Date.now();
 const here = path.dirname(process.execPath);
 const reportDir = path.join(homedir(), "Library", "Application Support", "glass-table-spike");
 const token = randomBytes(16).toString("hex");
+const logFile = path.join(reportDir, `host-${new Date(started).toISOString().replace(/[:.]/g, "-")}.log`);
 let page: Socket | undefined;
+mkdirSync(reportDir, { recursive: true });
+
+/** Launch Services drops an app's stderr, so every line also goes to a file beside the report. */
+function log(line: string): void {
+  console.error(line);
+  appendFileSync(logFile, line + "\n");
+}
 
 function record(item: Item): void {
   items.push(item);
-  console.error(`${item.ok ? "ok  " : "FAIL"} ${item.id}: ${item.detail}`);
+  log(`${item.ok ? "ok  " : "FAIL"} ${item.id}: ${item.detail}`);
   page?.send(JSON.stringify({ type: "item", item }));
 }
 
@@ -83,8 +91,26 @@ function findClaude(): { file: string; how: string } | undefined {
   return undefined;
 }
 
+/**
+ * A `claude` from npm is a `#!/usr/bin/env node` script, and a Finder launch has no node on PATH.
+ * Returns the PATH the model call needs: the app's own, plus node's folder when the file is a script.
+ */
+function pathFor(claudeFile: string): { path: string; node?: string } {
+  const base = process.env.PATH || "/usr/bin:/bin:/usr/sbin:/sbin";
+  if (readFileSync(claudeFile).subarray(0, 2).toString() !== "#!") return { path: base };
+  const shell = process.env.SHELL || "/bin/zsh";
+  const known = ["/opt/homebrew/bin/node", "/usr/local/bin/node"].find((f) => existsSync(f));
+  const node = known ?? spawnSync(shell, ["-lic", "command -v node"], { encoding: "utf8", timeout: 10_000 }).stdout?.trim().split("\n").pop();
+  return node && existsSync(node) ? { path: `${path.dirname(node)}:${base}`, node } : { path: base };
+}
+
+function sameToken(given: string | null): boolean {
+  const a = Buffer.from(given ?? "");
+  const b = Buffer.from(token);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 function writeReport(): string {
-  mkdirSync(reportDir, { recursive: true });
   const file = path.join(reportDir, `report-${new Date(started).toISOString().replace(/[:.]/g, "-")}.json`);
   const report = {
     spike: "CON-20",
@@ -103,9 +129,13 @@ const server = Bun.serve({
   port: 0,
   fetch(request, srv) {
     const url = new URL(request.url);
-    if (url.pathname === "/seat" && url.searchParams.get("token") === token && !page) {
+    // The shell's page has the tauri:// origin (http://tauri.localhost on some builds); nothing else may take the seat.
+    const origin = request.headers.get("origin") ?? "";
+    const fromShell = origin === "tauri://localhost" || origin === "http://tauri.localhost" || process.env.NAT20_SPIKE_ANY_ORIGIN === "1";
+    if (url.pathname === "/seat" && sameToken(url.searchParams.get("token")) && fromShell && !page) {
       return srv.upgrade(request) ? undefined : new Response("upgrade failed", { status: 400 });
     }
+    if (url.pathname === "/seat") log(`seat refused: origin ${JSON.stringify(origin)}, token ${sameToken(url.searchParams.get("token")) ? "right" : "wrong"}`);
     return new Response("not found", { status: 404 });
   },
   websocket: {
@@ -114,7 +144,12 @@ const server = Bun.serve({
       ws.send(JSON.stringify({ type: "hello", items }));
     },
     message(ws, data) {
-      const message = JSON.parse(String(data)) as { type: string; userAgent?: string };
+      let message: { type?: string; userAgent?: string };
+      try {
+        message = JSON.parse(String(data));
+      } catch {
+        return;
+      }
       if (message.type === "page") {
         record({ id: "5 page connected over WebSocket with the token", ok: true, detail: message.userAgent ?? "" });
       }
@@ -153,33 +188,42 @@ if (process.env.NAT20_SPIKE_NO_MODEL === "1") {
   record({ id: "4 one live model call under the hardened runtime", ok: false, detail: "skipped: NAT20_SPIKE_NO_MODEL=1 (CI)" });
 } else if (claude) {
   await timed("4 one live model call under the hardened runtime", async () => {
-    const version = spawnSync(claude.file, ["--version"], { encoding: "utf8", timeout: 15_000 });
+    const env = { ...process.env, PATH: pathFor(claude.file).path };
+    const version = spawnSync(claude.file, ["--version"], { encoding: "utf8", timeout: 15_000, env });
+    if (version.status !== 0) throw new Error(`${claude.file} --version failed with PATH=${env.PATH}: ${version.stderr || version.error?.message}`);
+    const cwd = mkdtempSync(path.join(tmpdir(), "glass-table-spike-"));
     let text = "";
     let cost = 0;
     let auth = "";
-    for await (const message of query({
-      prompt: "Ответь одним словом: да.",
-      options: {
-        pathToClaudeCodeExecutable: claude.file,
-        model: process.env.SPIKE_MODEL || "claude-haiku-5-5",
-        maxTurns: 1,
-        tools: [],
-        settingSources: [],
-        cwd: mkdtempSync(path.join(tmpdir(), "glass-table-spike-")),
-        env: agentEnv(process.env),
-        systemPrompt: "Ты проверка связи.",
-      },
-    })) {
-      if (message.type === "system" && message.subtype === "init") auth = String((message as { apiKeySource?: string }).apiKeySource ?? "");
-      if (message.type === "result") {
-        if (message.subtype !== "success") throw new Error(`result ${message.subtype}`);
-        text = message.result;
-        cost = message.total_cost_usd;
+    try {
+      for await (const message of query({
+        prompt: "Ответь одним словом: да.",
+        options: {
+          pathToClaudeCodeExecutable: claude.file,
+          model: process.env.SPIKE_MODEL || "claude-haiku-5-5",
+          maxTurns: 1,
+          tools: [],
+          settingSources: [],
+          cwd,
+          env: agentEnv(env),
+          systemPrompt: "Ты проверка связи.",
+        },
+      })) {
+        if (message.type === "system" && message.subtype === "init") auth = String((message as { apiKeySource?: string }).apiKeySource ?? "");
+        if (message.type === "result") {
+          if (message.subtype !== "success") throw new Error(`result ${message.subtype}`);
+          text = message.result;
+          cost = message.total_cost_usd;
+        }
       }
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
     }
     if (!text) throw new Error("no result text");
     return `Claude Code ${version.stdout.trim()}; answer «${text.trim()}»; key source ${auth || "?"}; api-equivalent ${cost.toFixed(4)} USD`;
   });
+} else {
+  record({ id: "4 one live model call under the hardened runtime", ok: false, detail: "not run: item 3 found no Claude Code" });
 }
 
 // Give the page a moment to connect, then write the report whatever it shows.
@@ -190,4 +234,7 @@ if (!items.some((i) => i.id.startsWith("5 "))) {
 }
 const file = writeReport();
 page?.send(JSON.stringify({ type: "done", report: file, all_ok: items.every((i) => i.ok) }));
-console.error(`report: ${file}`);
+log(`report: ${file}`);
+// The shell kills the host on exit; a host whose shell is gone (stdin closed) exits by itself.
+process.stdin.on("end", () => process.exit(0));
+process.stdin.resume();

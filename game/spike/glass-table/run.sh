@@ -6,7 +6,7 @@
 #   game/spike/glass-table/run.sh --sign "Developer ID Application: NAME (TEAMID)" --notary-profile glass-table
 #   game/spike/glass-table/run.sh --entitlements none  # the host signed with no entitlements: is JIT needed?
 #
-# Everything it prints also goes to spike-<time>.log in the folder it was started from: paste that.
+# Everything it prints also goes to spike-<time>.log under ~/Library/Application Support/glass-table-spike: paste that.
 set -euo pipefail
 
 IDENTITY="-"
@@ -21,7 +21,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-LOG="$PWD/spike-$(date +%Y%m%d-%H%M%S).log"
+case "$ENTITLEMENTS" in full|none) ;; *) echo "--entitlements takes full or none, not $ENTITLEMENTS"; exit 2 ;; esac
+REPORTS="$HOME/Library/Application Support/glass-table-spike"
+mkdir -p "$REPORTS"
+LOG="$REPORTS/spike-$(date +%Y%m%d-%H%M%S).log"
 exec > >(tee "$LOG") 2>&1
 
 REPO="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
@@ -30,7 +33,6 @@ SHELL_DIR="$SPIKE/shell"
 TRIPLE="aarch64-apple-darwin"
 TAURI_CLI="@tauri-apps/cli@2.12.6"
 APP="$SHELL_DIR/target/release/bundle/macos/Glass Table Spike.app"
-REPORTS="$HOME/Library/Application Support/glass-table-spike"
 
 step() { printf '\n== %s\n' "$*"; }
 
@@ -59,7 +61,7 @@ ls -lh "$SHELL_DIR/binaries"
 step "3 the Tauri shell"
 cd "$SHELL_DIR"
 # Tauri's own signing is off; step 4 signs every binary itself, so the report says what each needs.
-env -u APPLE_SIGNING_IDENTITY -u APPLE_CERTIFICATE npx --yes "$TAURI_CLI" build --bundles app
+env -u APPLE_SIGNING_IDENTITY -u APPLE_CERTIFICATE npx --yes "$TAURI_CLI" build --bundles app -- --locked
 du -sh "$APP"
 
 step "4 signing under the hardened runtime"
@@ -91,8 +93,7 @@ else
 fi
 
 step "6 launched the way Finder launches it"
-mkdir -p "$REPORTS"
-BEFORE="$(ls "$REPORTS" | wc -l)"
+BEFORE="$(ls "$REPORTS"/report-*.json 2>/dev/null | wc -l)"
 # `open` goes through Launch Services, as a double-click does: no shell PATH, no terminal environment.
 if [ "${NAT20_SPIKE_NO_MODEL:-}" = "1" ]; then
   open -n --env NAT20_SPIKE_NO_MODEL=1 "$APP"
@@ -100,12 +101,13 @@ else
   open -n "$APP"
 fi
 for _ in $(seq 1 120); do
-  [ "$(ls "$REPORTS" | wc -l)" -gt "$BEFORE" ] && break
+  [ "$(ls "$REPORTS"/report-*.json 2>/dev/null | wc -l)" -gt "$BEFORE" ] && break
   sleep 1
 done
 LATEST="$(ls -t "$REPORTS"/report-*.json 2>/dev/null | head -1 || true)"
-if [ -z "$LATEST" ] || [ "$(ls "$REPORTS" | wc -l)" -le "$BEFORE" ]; then
-  echo "no report in 120 s: the host did not finish. Console.app, filter 'glass-table', may say why."
+if [ -z "$LATEST" ] || [ "$(ls "$REPORTS"/report-*.json 2>/dev/null | wc -l)" -le "$BEFORE" ]; then
+  echo "no report in 120 s: the host did not finish. Its own log says how far it got:"
+  cat "$(ls -t "$REPORTS"/host-*.log 2>/dev/null | head -1)" 2>/dev/null || echo "(no host log: the host never started)"
   exit 1
 fi
 cat "$LATEST"
