@@ -251,3 +251,12 @@ test("«Лист» shows the sheet in the seat's words, and says when it is olde
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
 });
+
+test("«Лист» in English splits the seat's first line into the name and who the character is", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await replay(page, WIRES[0]);
+  await page.locator('[data-test="sheet"]').click();
+  const sheet = page.locator('[data-test="charsheet"]');
+  await expect(sheet.locator("h2")).toHaveText("Bren");
+  await expect(sheet.locator("hgroup p")).toHaveText("level 2 human fighter");
+});

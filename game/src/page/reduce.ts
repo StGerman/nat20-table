@@ -335,7 +335,8 @@ function shown(v: PageView, event: TableEvent): PageView {
       return release(next);
     }
     case "info":
-      if (SHEETS.has(event.title)) return { ...v, sheet: { title: event.title, text: event.text, n: (v.sheet?.n ?? 0) + 1, me: meOf(v) } };
+      // A sheet is a command's answer too: it takes the place of the one laid over the story.
+      if (SHEETS.has(event.title)) return { ...v, overlay: undefined, sheet: { title: event.title, text: event.text, n: (v.sheet?.n ?? 0) + 1, me: meOf(v) } };
       if (OVERLAYS.has(event.title)) return { ...v, overlay: { title: event.title, text: event.text, data: event, n: (v.overlay?.n ?? 0) + 1 } };
       if (REFUSED.has(event.title)) return { ...v, refusal: event.text };
       if (event.card) v = { ...v, card: cardOf(v.card, event.card) };

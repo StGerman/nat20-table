@@ -182,7 +182,7 @@ function Medal({ handle, name, className, title }: { handle?: string; name: stri
 }
 
 /** The portrait rail (design §5.2, the control layer's side): the human, then the party, each ringed
- *  by how they are; under it «Рядом», everyone near who is not of the party and still up. Health is
+ *  by how they are; under it «Рядом», the foes still up, nearest first. Health is
  *  the panel's: the human's own numbers, the others' bands. The frame waits for its narration, as the
  *  panel does, so nobody falls on the rail before the story tells it. */
 function Rail({ view, openSheet, lens }: { view: PageView; openSheet(): void; lens(): void }): ReactNode {
@@ -193,7 +193,7 @@ function Rail({ view, openSheet, lens }: { view: PageView; openSheet(): void; le
   const fight = s.mode === "combat";
   const mine = s.me.hp_max > 0 && s.me.hp * 4 <= s.me.hp_max ? (s.me.hp <= 0 ? "down" : "low") : "";
   const party = s.creatures.filter((c) => c.side === "party");
-  const near = s.creatures.filter((c) => c.side !== "party" && c.health !== "down").sort((a, b) => a.distance_ft - b.distance_ft);
+  const near = s.creatures.filter((c) => c.side === "hostile" && c.health !== "down").sort((a, b) => a.distance_ft - b.distance_ft);
   const ring = (health: string) => (health === "down" ? "down" : health === "bloodied" ? "low" : "");
   const now = (handle: string) => (fight && s.turn === handle ? " now" : "");
   const myName = named(view, me);
@@ -299,8 +299,9 @@ function CharSheet({ view, finish, choose, close }: { view: PageView; finish: Fi
   const [head, ...rows] = (view.sheet?.text ?? "").split("\n").filter((r) => r.trim() !== "");
   const old = view.sheet !== undefined && view.sheet.me !== meOf(view);
   const me = view.situation?.situation?.me;
-  // The seat's first line is the name, then who the character is.
-  const [title, sub] = head ? (head.includes(": ") ? [head.slice(0, head.indexOf(": ")), head.slice(head.indexOf(": ") + 2)] : [head, undefined]) : [undefined, undefined];
+  // The seat's first line is the name, then who the character is: «Брен: человек, воин, уровень 2», "Bren, level 2 human fighter".
+  const cut = head ? /^(.+?)(?::|,)\s+(.+)$/.exec(head) : null;
+  const [title, sub] = cut ? [cut[1], cut[2]] : [head, undefined];
   return h(
     "aside",
     { className: "inspector charsheet glass", role: "dialog", "aria-label": words.sheet, "data-test": "charsheet" },

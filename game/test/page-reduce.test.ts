@@ -356,11 +356,13 @@ test("page reducer: a sheet goes to «Лист», not over the story, and is old
   let v = reduce(EMPTY, hello(WIRES[1]));
   v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 1, event: me(20) }));
   v = reduce(v, HostMessageSchema.parse({ type: "ask", id: "a1", prompt: { kind: "explore" } }));
-  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 2, event: { kind: "info", title: "Лист персонажа", text: "Брен: человек, воин, уровень 2\nЗдоровье 20 из 20" } }));
-  assert.equal(v.overlay, undefined, "the sheet is not an overlay");
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 2, event: { kind: "info", title: "Где вы", text: "У фургона." } }));
+  assert.equal(v.overlay?.title, "Где вы");
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 3, event: { kind: "info", title: "Лист персонажа", text: "Брен: человек, воин, уровень 2\nЗдоровье 20 из 20" } }));
+  assert.equal(v.overlay, undefined, "the sheet is not an overlay, and takes the place of the last one");
   assert.equal(v.sheet?.n, 1);
   assert.equal(v.sheet?.me, meOf(v), "fresh while the character is as it was");
-  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 3, event: me(12) }));
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 4, event: me(12) }));
   assert.notEqual(v.sheet?.me, meOf(v), "old once the character changed");
   assert.equal(v.story.length, 0, "nothing in the story");
 });
