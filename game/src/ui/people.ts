@@ -5,7 +5,12 @@
 // (rule N8), so every card state is tested without a terminal.
 import type { HealthBand, State } from "@nat20-table/engine-client";
 import type { Language } from "../agents/language.ts";
-import { lineKey, type PeopleBook, type SeatNames } from "../table/seat-lines.ts";
+import type { PeopleBook, SeatNames } from "../table/seat-lines.ts";
+
+/** The key of a person's run-language line in a `PeopleBook`: by person and line (0067), since two people can share an English line. */
+export function lineKey(id: string, en: string): string {
+  return `${id}\u0000${en}`;
+}
 
 /** Where a person stands for the viewer. */
 export type PersonState = "here" | "elsewhere" | "companion" | "heard" | "unconscious" | "dead";

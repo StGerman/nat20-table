@@ -31,6 +31,8 @@ export interface WebSeatOptions {
   names?: SeatNames;
   /** The adventure's title, in the run's language. */
   title?: string;
+  /** The party's handles: `hello` names each as the terminal seat does. */
+  party?: readonly Handle[];
   /** Each thing the terminal seat would draw, for `seat.jsonl` (as `InkSeatOptions.record`). */
   record?: (drawn: { kind: string; text: string }) => void;
   /** The window asked to stop (a `quit` with no ask open): the run command ends the table between decisions. */
@@ -176,7 +178,7 @@ export class WebSeat implements Seat {
     // A window with the token replaces the one before it: a socket left half open by a sleeping laptop never closes on its own.
     if (this.client && this.client !== ws) this.client.terminate();
     this.client = ws;
-    this.send({ type: "hello", wire: WIRE_VERSION, hash: WIRE_HASH, run: this.options.run, language: this.options.language ?? "en", handle: this.handle, title: this.options.title ?? "" });
+    this.send({ type: "hello", wire: WIRE_VERSION, hash: WIRE_HASH, run: this.options.run, language: this.options.language ?? "en", handle: this.handle, title: this.options.title ?? "", ...(this.options.party ? { names: Object.fromEntries(this.options.party.map((h) => [h, this.ink.named(h)])) } : {}) });
     // A window that was replaced may still deliver a frame before it closes: only the current one is heard.
     ws.on("message", (data) => {
       if (this.client === ws) this.received(String(data));

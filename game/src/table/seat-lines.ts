@@ -9,6 +9,9 @@ import type { Language } from "../agents/language.ts";
 import { coinPhrase, eventLine, titled, yourLine } from "../view.ts";
 import { plural } from "./plural.ts";
 import { SKILLS_RU } from "./words.ts";
+import { lineKey } from "../ui/people.ts";
+
+export { lineKey };
 
 /** The table's Russian words for engine ids (`ru/options.json`). */
 export interface RuDictionary {
@@ -59,11 +62,6 @@ export interface PeopleBook {
   /** Each person's run-language lines, keyed by `lineKey(person, English line)`. */
   lines: ReadonlyMap<string, string>;
   party: ReadonlyArray<{ handle: string; names: readonly string[]; look?: string; look_ru?: string }>;
-}
-
-/** The key of a person's run-language line in a `PeopleBook`: by person and line (0067), since two people can share an English line. */
-export function lineKey(id: string, en: string): string {
-  return `${id}\u0000${en}`;
 }
 
 export const NO_PEOPLE: PeopleBook = { lines: new Map(), party: [] };

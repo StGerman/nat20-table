@@ -3,7 +3,8 @@
 // a header row, the story with its own scroll (the 72-column measure, or near the golden share of a
 // wide terminal, decision 0055), the side panel for the rest of the width, the action zone under the story, and the input row. Pure, so the layout is
 // tested without Ink: these functions say what goes on each row; ink-seat.ts only draws the rows.
-import { wrapText, TONE_STYLE, type Line, type Style } from "./lines.ts";
+import { wrapText, type Line, type Style } from "./lines.ts";
+import { TONE_STYLE } from "./tones.ts";
 import { FOLD_COLUMNS, FOLD_ROWS, SIDE_PANE_COLUMNS, TEXT_COLUMNS, type PanelSize, type Row } from "./panel.ts";
 import { UI_WORDS, type UiWords } from "../table/words.ts";
 
