@@ -12,6 +12,7 @@ import { mapLinesRu, sheetRu, stateRu } from "./seat-views.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
+import { cardData, positionsOf, roadData, sheetData, unavailableOf, usesOf, type SeatUnavailable, type SeatUse } from "./seat-data.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
 import type { Person } from "../ui/people.ts";
@@ -1268,14 +1269,20 @@ export class TableLoop {
       const seen = seat?.id === card.id ? seat : undefined;
       const shown = { ...card, text: seen?.text ?? card.text, choices: card.choices.map((c) => ({ ...c, text: seen?.choices.get(c.id) ?? c.text })) };
       const { choices } = cardChoices(shown, words, human, this.table.names);
-      if (showCard) this.table.show({ kind: "info", title: words.onTheRoad, text: [shown.text, owner ? words.yourCaravan : card.target === "caravan" ? words.merchantDecides : words.bladesDecide].join("\n") });
+      const decides = owner ? words.yourCaravan : card.target === "caravan" ? words.merchantDecides : words.bladesDecide;
+      // The card as the human's own world view has it, in the seat's words (AGT-140).
+      const state = await this.humanState();
+      const fell = this.fellLine?.card === card.id ? words.ownMoveFell(this.fellLine.rolled) : undefined;
+      const viewed = state?.view === "player" ? state.world?.card : undefined;
+      const data = viewed ? { card: cardData(viewed, decides, this.table.names, seen ?? {}, fell) } : {};
+      if (showCard) this.table.show({ kind: "info", title: words.onTheRoad, text: [shown.text, decides].join("\n"), ...data });
       showCard = false;
       // The fall's one line, where the list it points at follows (decision 0079, design §1.8).
-      if (this.fellLine?.card === card.id) {
-        this.table.show({ kind: "info", title: words.onTheRoad, text: words.ownMoveFell(this.fellLine.rolled) });
+      if (fell) {
+        this.table.show({ kind: "info", title: words.onTheRoad, text: fell });
         this.fellLine = undefined;
       }
-      this.cardList = { kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(takesMove(card) ? [words.ownMoveLine] : [])], choices };
+      this.cardList = { kind: "options", title: words.choicesTitle, lines: [...choiceLines(choices), ...(takesMove(card) ? [words.ownMoveLine] : [])], choices, ...data };
       this.table.show(this.cardList);
       // The prompt keeps "or your own words" after a move: words at the table are never refused (design §1.8).
       const intent = await this.ask({ kind: "card", line: words.cardPrompt }).finally(() => (this.cardList = undefined));
@@ -1471,7 +1478,7 @@ export class TableLoop {
     if (this.shown === this.top) return;
     this.shown = this.top;
     const budget = combat ? (this.lastOptions?.budget ?? undefined) : undefined;
-    this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top, ...(budget ? { budget } : {}) });
+    this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top, ...(budget ? { budget } : {}), ...this.listData });
   }
 
   /** Sends what a number stands for, as the human's own viewer: its refusal is projected for them. */
@@ -1973,6 +1980,7 @@ export class TableLoop {
   private async exploreRoundBody(human: Handle): Promise<void> {
     await this.table.flush();
     this.top = this.shown = [];
+    this.listData = {};
     let line = "";
     for (;;) {
       const asked = await this.ask(this.table.question ? { kind: "answer" } : this.shown !== this.top ? { kind: "pick" } : { kind: "explore" });
@@ -2213,6 +2221,7 @@ export class TableLoop {
       for (;;) {
         if (this.table.ended) return undefined;
         intent = await this.seat.ask(prompt);
+        this.table.show({ kind: "said", intent, text: this.table.echo(intent, this.table.names.language === "en" ? UI_WORDS.en : UI_WORDS.ru) });
         if (intent.kind === "text" || intent.kind === "option") {
           this.table.recordInput(this.human, JSON.stringify(intent), true);
         }
@@ -2328,7 +2337,13 @@ export class TableLoop {
     switch (name) {
       case "sheet": {
         const r = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
-        this.table.show({ kind: "info", title: this.words.sheet, text: r.result?.cmd === "get_sheet" ? (this.table.names.language === "en" ? formatSheet(r.result.sheet) : sheetRu(r.result.sheet, this.table.names)) : this.table.names.language === "en" || !r.error ? (r.error?.message ?? "") : refusedRu(r.error.code, undefined) });
+        const sheet = r.result?.cmd === "get_sheet" ? r.result.sheet : undefined;
+        this.table.show({
+          kind: "info",
+          title: this.words.sheet,
+          text: sheet ? (this.table.names.language === "en" ? formatSheet(sheet) : sheetRu(sheet, this.table.names)) : this.table.names.language === "en" || !r.error ? (r.error?.message ?? "") : refusedRu(r.error.code, undefined),
+          ...(sheet ? { sheet: sheetData(sheet, this.table.names) } : {}),
+        });
         return;
       }
       case "where": {
@@ -2348,7 +2363,7 @@ export class TableLoop {
         if (this.cardList) this.table.show(this.cardList);
         else if (this.isTurnOf(human)) {
           this.shown = this.top;
-          this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top });
+          this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top, ...this.listData });
         } else if (this.table.inCombat) {
           this.table.show({ kind: "info", title: this.words.options, text: this.words.notYourTurn });
         } else {
@@ -2399,8 +2414,20 @@ export class TableLoop {
     const turn = a.kind === "action" ? a.actor : undefined;
     const situation = seen ? situationOf(seen, turn, turn === this.table.human ? options : undefined, this.table.names) : undefined;
     if (situation?.people && this.describer && seen) situation.people = described(situation.people, seen, this.table.names, this.describer, this.table.roster.flatMap((r) => r.names));
-    this.table.show({ kind: "situation", ...(situation ? { situation } : {}) });
+    // The data a window draws its lenses from (AGT-140), from the same player-view state.
+    const player = seen?.view === "player" ? seen : undefined;
+    const down = player && player.me.life_state !== "conscious" ? await this.humanSheet() : undefined;
+    this.table.show({
+      kind: "situation",
+      ...(situation ? { situation } : {}),
+      ...(player ? { positions: positionsOf(player, this.table.names) } : {}),
+      ...(player?.world ? { road: roadData(player.world, this.table.names) } : {}),
+      ...(down ? { death_saves: down.death_saves } : {}),
+    });
   }
+
+  /** The unavailable options and uses left of the human's last listing, shown with the turn's options (AGT-140). */
+  private listData: { unavailable?: SeatUnavailable[]; uses?: SeatUse[] } = {};
 
   private async humanState(): Promise<State | undefined> {
     const r = this.table.observe(await this.table.engine.request(this.human, { cmd: "get_state" }));
@@ -2414,6 +2441,7 @@ export class TableLoop {
     const state = combat || this.situation || this.campaign ? await this.humanState() : undefined;
     if (!listed.ok || listed.result?.cmd !== "legal_actions") {
       this.top = this.shown = [];
+      this.listData = {};
       this.table.show({ kind: "info", title: this.words.options, text: this.table.names.language === "en" ? (listed.error?.message ?? this.words.noOptions) : this.words.noOptions });
       return;
     }
@@ -2428,16 +2456,18 @@ export class TableLoop {
       if (road.length > 0) this.table.scoutOffered = true;
       this.top = this.shown = [...this.top, ...road];
     }
-    // Out of a fight, the next level when the sheet says it is due (AGT-80): a saved party can reach it in any pack.
-    if (!combat) {
-      const sheet = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
-      if (sheet.result?.cmd === "get_sheet" && sheet.result.sheet.xp?.can_level_up) {
-        this.top = this.shown = [...this.top, { number: this.top.length + 1, label: this.words.levelUpLine((sheet.result.sheet.level ?? 0) + 1), act: { kind: "level_up" }, about: { id: "level_up" } }];
-      }
+    // The human's own sheet: the uses left beside the options (AGT-140), and out of a fight the next
+    // level when it says one is due (AGT-80): a saved party can reach it in any pack.
+    const read = this.table.observe(await this.table.engine.request(human, { cmd: "get_sheet", actor: human }));
+    const sheet = read.result?.cmd === "get_sheet" ? read.result.sheet : undefined;
+    if (!combat && sheet?.xp?.can_level_up) {
+      this.top = this.shown = [...this.top, { number: this.top.length + 1, label: this.words.levelUpLine((sheet.level ?? 0) + 1), act: { kind: "level_up" }, about: { id: "level_up" } }];
     }
+    const unavailable = unavailableOf(this.lastOptions, this.table.names);
+    this.listData = { ...(unavailable.length > 0 ? { unavailable } : {}), ...(sheet ? { uses: usesOf(sheet, this.table.names) } : {}) };
     if (state) await this.showSituation(state, this.lastOptions);
     const budget = this.lastOptions.budget ?? undefined;
-    this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top, ...(budget ? { budget } : {}) });
+    this.table.show({ kind: "options", lines: choiceLines(this.top), choices: this.top, ...(budget ? { budget } : {}), ...this.listData });
   }
 
   // --- Waking agents -------------------------------------------------------------------------------

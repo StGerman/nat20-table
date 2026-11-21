@@ -16,6 +16,7 @@
 // overlays, and a reaction, the DM's question, a refusal and the pause stand in the action zone
 // until they are settled (AGT-69 step 2). Written with `createElement`, not JSX, so the game still runs as plain `.ts`
 // with no build step.
+import { textOnly } from "../table/seat-data.ts";
 import type { Handle } from "@nat20-table/engine-client";
 import { Box, render, Text, useInput, useWindowSize, type Instance, type RenderOptions } from "ink";
 import { createElement as h, useEffect, useState, useSyncExternalStore } from "react";
@@ -431,13 +432,16 @@ export class InkSeat implements Seat {
   };
 
   show(event: TableEvent): void {
+    // The terminal seat echoes the human's input itself, as it is typed: the event is for a window (AGT-140).
+    if (event.kind === "said") return;
     // Engine lines are drawn when they show: at once for the human's own, else when released.
     // These show the held engine lines above them first, released here, so the record keeps the screen's order.
     if (RELEASES.has(event.kind)) this.release();
     // Only info, options and status lines are a command's answer; anything else keeps its kind.
     const answers = this.answeringCommand && (event.kind === "info" || event.kind === "options" || event.kind === "status");
     // The same options list again, over the one already pinned, changes nothing on the screen: the record skips it (AGT-114).
-    const repeated = event.kind === "options" && this.view.options !== undefined && JSON.stringify(this.view.options) === JSON.stringify(event);
+    // Its text only: the data beside it (AGT-140) changes as others vote, and draws nothing here.
+    const repeated = event.kind === "options" && this.view.options !== undefined && JSON.stringify(textOnly(this.view.options)) === JSON.stringify(textOnly(event));
     if (!repeated) {
       if (event.kind !== "engine") this.drawn(answers ? "command" : event.kind, eventLines(event, this.handle, false, this.ui, this.named));
       else if (event.own) this.drawn("engine", eventLines(event, this.handle, false, this.ui, this.named));

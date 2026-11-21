@@ -2,8 +2,9 @@
 // interfaces, and transcript records. None of these cross the engine boundary, so they are game
 // types, not wire (Rule 1). TableEvent and PlayerIntent map one-to-one onto AG-UI's text, state
 // and tool-call events, so a later web client can replace the terminal UI behind this boundary.
-import type { Handle, TurnBudget } from "@nat20-table/engine-client";
+import type { Event, Handle, TurnBudget } from "@nat20-table/engine-client";
 import type { Choice } from "./choices.ts";
+import type { SeatCard, SeatPositions, SeatRoad, SeatSheet, SeatUnavailable, SeatUse } from "./seat-data.ts";
 import type { Situation } from "./situation.ts";
 import type { DmTools, PlayerTools } from "./tools.ts";
 
@@ -18,10 +19,15 @@ export interface ToolOutcome {
 
 // --- The UI boundary --------------------------------------------------------------------------
 
-/** One thing the human's screen shows. Everything in it was made for the human's viewer. */
+/**
+ * One thing the human's screen shows. Everything in it was made for the human's viewer. Beside the
+ * text a terminal draws, an event may carry data a window draws it from (AGT-140, Glass Table design
+ * §4.3), each field copied from a view the projection made for the human; the terminal seat reads
+ * only the text.
+ */
 export type TableEvent =
-  /** A line of DM narration (guarded, spec §3.5) or a character's spoken line. */
-  | { kind: "narration"; speaker: string; text: string; to?: Handle }
+  /** A line of DM narration (guarded, spec §3.5) or a character's spoken line. `rolls`: the roll ids it tells (AGT-140). */
+  | { kind: "narration"; speaker: string; text: string; to?: Handle; rolls?: string[] }
   /** `to`: the character it is spoken to, the human's own included (party talk §4.4). */
   | { kind: "speech"; speaker: Handle; text: string; to?: Handle }
   /** What a character sets out to do out of combat, as its player declared it. */
@@ -31,7 +37,16 @@ export type TableEvent =
    * happened on the human's own turn, so the seat shows it at once instead of holding it for the
    * DM's narration (AGT-37).
    */
-  | { kind: "engine"; text: string; roll?: string; seq: number; own?: true }
+  | {
+      kind: "engine";
+      text: string;
+      roll?: string;
+      seq: number;
+      own?: true;
+      /** The engine event itself, projected for the human's viewer (a roll in its player view: no `against`), and the seat's name for each creature it names (AGT-140). */
+      event?: Event;
+      names?: Record<string, string>;
+    }
   /**
    * Numbered decisions the human can pick by number (`/options`), or a follow-up pick inside one
    * (`title` names it). `choices` carries the same list as data for a seat that picks by rule.
@@ -45,23 +60,51 @@ export type TableEvent =
       budget?: TurnBudget;
       /** The number Enter on an empty line takes (a road card: the first choice when the human speaks first, else the others' choice; AGT-80, AGT-87). */
       preset?: number;
+      /** The engine's options that are not open now, with why (AGT-140). */
+      unavailable?: SeatUnavailable[];
+      /** What is left of the human's limited uses and spell slots, from their own sheet (AGT-140). */
+      uses?: SeatUse[];
+      /** A road card's list: the card as the human's world view has it (AGT-140). */
+      card?: SeatCard;
     }
   /** A reaction the human may take: yes or no. */
   | { kind: "reaction"; summary: string; options: string[] }
   /** A question the DM asks the human (guarded). */
   | { kind: "question"; text: string }
   /** The answer to a slash command (`/sheet`, `/where`, `/log`), already formatted. */
-  | { kind: "info"; title: string; text: string }
+  | {
+      kind: "info";
+      title: string;
+      text: string;
+      /** `/sheet`: the human's own sheet as data (AGT-140). */
+      sheet?: SeatSheet;
+      /** A road card's words: the card as the human's world view has it (AGT-140). */
+      card?: SeatCard;
+    }
   /**
    * What the human's character perceives now, for the situation panel (an AG-UI state snapshot):
    * made from the human's own `get_state`, so it holds nothing the human can't see. Absent when the
    * refresh failed; the panel keeps its last frame, marked stale.
    */
-  | { kind: "situation"; situation?: Situation }
+  | {
+      kind: "situation";
+      situation?: Situation;
+      /** Where everyone stands and the scene's anchors, in feet, for a yard lens (AGT-140). */
+      positions?: SeatPositions;
+      /** The road as data: the trip's legs, the roads and places discovered, the contract's terms (AGT-140). */
+      road?: SeatRoad;
+      /** The human's death saves while they are down, from their own sheet (AGT-140). */
+      death_saves?: { successes: number; failures: number };
+    }
   /** Whose turn it is, the round, the scene. */
   | { kind: "status"; text: string }
   /** The run ended or stopped (scene exit, engine stop, plan limit). */
-  | { kind: "end"; text: string };
+  | { kind: "end"; text: string }
+  /**
+   * What the human sent, as the seat echoes it (AGT-140): a window rebuilt from the events keeps
+   * the player's own words. The terminal seat echoes locally and draws nothing for it.
+   */
+  | { kind: "said"; intent: PlayerIntent; text: string };
 
 /** What the human sends. */
 export type PlayerIntent =
