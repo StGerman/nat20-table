@@ -546,6 +546,8 @@ export interface UiWords {
   };
   panel: {
     explore: string;
+    /** Out of a fight with hostiles in sight (the yard before its fight starts): never «Без боя» then. */
+    foes: string;
     paused: string;
     party: string;
     round(n: number): string;
@@ -701,6 +703,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
     },
     panel: {
       explore: "Explore",
+      foes: "Foes in sight",
       paused: "Paused",
       party: " · party: ",
       round: (n) => `Round ${n}`,
@@ -852,6 +855,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
     },
     panel: {
       explore: "Без боя",
+      foes: "Враги рядом",
       paused: "Пауза",
       party: " · отряд: ",
       round: (n) => `Раунд ${n}`,

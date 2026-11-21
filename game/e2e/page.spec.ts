@@ -226,6 +226,9 @@ test("«Где все» draws everyone where the engine puts them and the scene'
   const frame = v.situation?.positions;
   expect(drawn).toEqual(["bren", ...Object.keys(frame!.creatures)].sort());
   await expect(lens.locator(".anchor text")).toHaveText(frame!.anchors.map((a) => a.name));
+  // No name covers another (Stas, 2026-11-21): creatures five feet apart, and the places they stand on.
+  const boxes = await lens.locator(".who .label, .anchor text").evaluateAll((els) => els.map((e) => { const b = e.getBoundingClientRect(); return { text: e.textContent, l: b.left, r: b.right, t: b.top, b: b.bottom }; }));
+  for (const [i, a] of boxes.entries()) for (const b of boxes.slice(i + 1)) expect(Math.min(a.r, b.r) - Math.max(a.l, b.l) <= 0.5 || Math.min(a.b, b.b) - Math.max(a.t, b.t) <= 0.5, `«${a.text}» and «${b.text}»`).toBe(true);
   // The ring of where Bren can walk this turn: the turn's 30 feet.
   await expect(lens.locator(".walk circle")).toHaveAttribute("r", "30");
   await expect(lens.locator(".walk text")).toHaveText("Сюда дойдёте за этот ход");
