@@ -3,7 +3,7 @@
 // with the terminal's own `eventLines`; its own labels are the terminal seat's words (UI_WORDS), so
 // the page says nothing the terminal does not. It talks to nothing but the seat wire.
 import { createElement as h, useEffect, useRef, useState, type ReactNode } from "react";
-import { promptHint, readLine } from "../ui/input.ts";
+import { COMMAND_HELP, promptHint, readLine } from "../ui/input.ts";
 import { UI_WORDS, type UiWords } from "../table/words.ts";
 import type { PlayerIntent } from "../table/types.ts";
 import { mount, type Die } from "./d20.ts";
@@ -11,8 +11,8 @@ import type { Dock, PageView, RollToken, StoryLine } from "./reduce.ts";
 
 export interface AppProps {
   view: PageView;
-  /** Sends an answer to the open ask, or a command with none open. */
-  send(intent: PlayerIntent): void;
+  /** Sends an answer to the open ask, or a command with none open; false when it could not go (no socket, or nothing takes it now). */
+  send(intent: PlayerIntent): boolean;
   /** The roll stage has shown the human's roll. */
   settled(): void;
 }
@@ -33,7 +33,7 @@ export function App({ view, send, settled }: AppProps): ReactNode {
     { className: "table", lang: view.hello.language },
     h(Header, { view }),
     h(Story, { view }),
-    view.overlay ? h(Overlay, { key: `${view.overlay.title}-${view.story.length}`, overlay: view.overlay }) : null,
+    view.overlay ? h(Overlay, { key: view.overlay.n, overlay: view.overlay }) : null,
     h(DockView, { view, send }),
     view.stage ? h(Stage, { key: view.stage, roll: view.rolls[view.stage], settled }) : null,
   );
@@ -82,18 +82,19 @@ function Token({ roll }: { roll: RollToken }): ReactNode {
 }
 
 /** A command's answer laid over the story, until the human closes it or the next answer. */
-function Overlay({ overlay }: { overlay: NonNullable<PageView["overlay"]> }): ReactNode {
+function Overlay({ overlay, onClose }: { overlay: NonNullable<PageView["overlay"]>; onClose?(): void }): ReactNode {
   const [open, setOpen] = useState(true);
   if (!open) return null;
+  const close = () => (onClose ? onClose() : setOpen(false));
   return h(
     "aside",
     { className: "overlay", role: "dialog", "aria-label": overlay.title },
-    h("header", null, h("h2", null, overlay.title), h("button", { className: "close", onClick: () => setOpen(false), "aria-label": "×" }, "×")),
+    h("header", null, h("h2", null, overlay.title), h("button", { className: "close", onClick: close, "aria-label": "×" }, "×")),
     h("pre", null, overlay.text),
   );
 }
 
-function DockView({ view, send }: { view: PageView; send(intent: PlayerIntent): void }): ReactNode {
+function DockView({ view, send }: { view: PageView; send(intent: PlayerIntent): boolean }): ReactNode {
   const words = ui(view);
   const dock = view.dock;
   const hint = view.ask && view.hello ? promptHint(view.ask.prompt, view.hello.handle, words, named(view, view.hello.handle)) : undefined;
@@ -102,11 +103,11 @@ function DockView({ view, send }: { view: PageView; send(intent: PlayerIntent): 
     { className: `dock ${dock.form}`, "data-form": dock.form },
     ...dockParts(view, dock, words, send),
     hint ? h("p", { className: "hint" }, hint) : null,
-    dock.form !== "ended" && dock.form !== "waiting" ? h(Capsule, { key: "ask" in dock ? dock.ask : "none", view, send }) : null,
+    dock.form !== "ended" ? h(Capsule, { key: "ask" in dock ? dock.ask : "none", view, send }) : null,
   );
 }
 
-function dockParts(view: PageView, dock: Dock, words: UiWords, send: (intent: PlayerIntent) => void): ReactNode[] {
+function dockParts(view: PageView, dock: Dock, words: UiWords, send: (intent: PlayerIntent) => boolean): ReactNode[] {
   switch (dock.form) {
     case "waiting":
       return [h("p", { key: "wait", className: "waiting", role: "status" }, words.wait(dock.on, undefined))];
@@ -137,7 +138,7 @@ function dockParts(view: PageView, dock: Dock, words: UiWords, send: (intent: Pl
 }
 
 /** The numbered list as buttons: a press sends the number, as typing it does. */
-function Moves({ lines, title, send }: { lines: string[]; title?: string; send(intent: PlayerIntent): void }): ReactNode {
+function Moves({ lines, title, send }: { lines: string[]; title?: string; send(intent: PlayerIntent): boolean }): ReactNode {
   return h(
     "div",
     { className: "moves", role: "group", "aria-label": title },
@@ -150,18 +151,25 @@ function Moves({ lines, title, send }: { lines: string[]; title?: string; send(i
 }
 
 /** The input capsule: what the human types, read as the terminal reads it. */
-function Capsule({ view, send }: { view: PageView; send(intent: PlayerIntent): void }): ReactNode {
+function Capsule({ view, send }: { view: PageView; send(intent: PlayerIntent): boolean }): ReactNode {
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState<string>();
+  const [help, setHelp] = useState(false);
   const words = ui(view);
   const submit = () => {
     const typed = readLine(draft, view.ask?.prompt, words);
     if (typed.kind === "empty") return;
     if (typed.kind === "error") return setNotice(typed.text);
-    if (typed.kind !== "intent") return setNotice(undefined);
-    setDraft("");
     setNotice(undefined);
-    send(typed.intent);
+    if (typed.kind === "help") {
+      setDraft("");
+      return setHelp(true);
+    }
+    // The window shows the panel, the people and the mouse as a window does: these are the terminal's own.
+    if (typed.kind !== "intent") return setDraft("");
+    // The line stays until it has gone, so nothing typed is lost while the socket comes back.
+    if (send(typed.intent)) setDraft("");
+    else setNotice(words.busy);
   };
   return h(
     "form",
@@ -175,7 +183,13 @@ function Capsule({ view, send }: { view: PageView; send(intent: PlayerIntent): v
     h("input", { value: draft, onChange: (e: { target: { value: string } }) => setDraft(e.target.value), autoFocus: true, "aria-label": promptHint(view.ask?.prompt ?? { kind: "explore" }, view.hello?.handle ?? "", words) }),
     h("button", { type: "submit", "aria-label": "↵" }, "↵"),
     notice ? h("p", { className: "notice" }, notice) : null,
+    help ? h(Overlay, { overlay: { title: words.help, text: helpText(words), n: 0 }, onClose: () => setHelp(false) }) : null,
   );
+}
+
+/** The commands and what each does, as the terminal's /help lists them. */
+function helpText(words: UiWords): string {
+  return words.helpText(Object.keys(COMMAND_HELP).map((name) => [name, words.commandHelp[name as keyof UiWords["commandHelp"]]] as const));
 }
 
 declare global {
@@ -196,7 +210,14 @@ function Stage({ roll, settled }: { roll: RollToken; settled(): void }): ReactNo
       return m ? [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255) as [number, number, number] : fallback;
     };
     const colours = { ink: rgb("--die-ink", [0.067, 0.067, 0.067]), paper: rgb("--die-paper", [1, 1, 1]) };
-    const dice = canvases.current.map((c) => (c ? mount(c, colours) : undefined));
+    // A die that cannot be drawn leaves the engine's line on the stage, as with no WebGL2.
+    const dice = canvases.current.map((c) => {
+      try {
+        return c ? mount(c, colours) : undefined;
+      } catch {
+        return undefined;
+      }
+    });
     void Promise.all(dice.map((die, i) => die?.rollTo(roll.d20[i]))).then(() => {
       if (gone) return;
       const faces = dice.map((die: Die | undefined, i) => die?.face() ?? roll.d20[i]);
@@ -205,6 +226,7 @@ function Stage({ roll, settled }: { roll: RollToken; settled(): void }): ReactNo
     });
     return () => {
       gone = true;
+      for (const die of dice) die?.release();
     };
   }, [roll.id]);
   return h(

@@ -78,6 +78,8 @@ export interface PageView {
   stage?: string;
   /** The open ask: its id and prompt. */
   ask?: { id: string; prompt: HumanPrompt };
+  /** The ask the page last answered, until the host takes the answer (its `said`, or a new ask): a `refused` reopens it. */
+  sent?: { id: string; prompt: HumanPrompt };
   dock: Dock;
   /** The last numbered list the table showed, while it is the human's. */
   options?: Options;
@@ -88,7 +90,7 @@ export interface PageView {
   /** Why the engine refused the last decision, over the moves until the next list. */
   refusal?: string;
   /** A command's answer laid over the story (/sheet, /where, /log, /usage). */
-  overlay?: { title: string; text: string; data?: Extract<TableEvent, { kind: "info" }> };
+  overlay?: { title: string; text: string; data?: Extract<TableEvent, { kind: "info" }>; n: number };
   /** What the human's character perceives: the panel, positions, the road. */
   situation?: Situation;
   /** The newest panel frame, waiting for the narration of the step before it or for the next decision. */
@@ -153,7 +155,7 @@ export function reduce(view: PageView, message: HostMessage, built?: Built): Pag
       const prompt = message.prompt as unknown as HumanPrompt;
       // A fight's options belong to the human's own turn: any other prompt means it is over.
       const turnOver = r.options?.budget && prompt.kind !== "combat_turn" && prompt.kind !== "pick";
-      const next = { ...r, ask: { id: message.id, prompt }, ...(turnOver ? { options: undefined } : {}), suggest: undefined };
+      const next = { ...r, ask: { id: message.id, prompt }, sent: undefined, ...(turnOver ? { options: undefined } : {}), suggest: undefined };
       return { ...next, dock: dockFor(next) };
     }
     case "busy":
@@ -167,7 +169,9 @@ export function reduce(view: PageView, message: HostMessage, built?: Built): Pag
     case "suggest":
       return { ...v, suggest: { state: message.state, ...(message.rows ? { rows: message.rows } : {}) } };
     case "refused":
-      return v;
+      // The host would not take the answer and keeps its ask open: the dock offers it again.
+      if (!v.sent || v.ask) return v;
+      return { ...v, ask: v.sent, sent: undefined, dock: dockFor({ ...v, ask: v.sent }) };
   }
 }
 
@@ -179,7 +183,7 @@ export function settle(view: PageView): PageView {
 /** The human sent an answer: the ask is closed until the host asks again. */
 export function answered(view: PageView): PageView {
   if (!view.ask) return view;
-  const v = { ...view, ask: undefined };
+  const v = { ...view, ask: undefined, sent: view.ask };
   return { ...v, dock: v.dock.form === "ended" ? v.dock : { form: "waiting", ...(v.busy ? { on: v.busy } : {}) } };
 }
 
@@ -211,7 +215,7 @@ function shown(v: PageView, event: TableEvent): PageView {
         [{ tone: "prompt", text: `> ${event.text}` }],
         true,
       );
-      return answered(next);
+      return { ...answered(next), sent: undefined };
     }
     case "situation":
       // The panel frame waits for the narration of the step before it, or for the next decision.
@@ -238,7 +242,7 @@ function shown(v: PageView, event: TableEvent): PageView {
       return release(next);
     }
     case "info":
-      if (OVERLAYS.has(event.title)) return { ...v, overlay: { title: event.title, text: event.text, data: event } };
+      if (OVERLAYS.has(event.title)) return { ...v, overlay: { title: event.title, text: event.text, data: event, n: (v.overlay?.n ?? 0) + 1 } };
       if (REFUSED.has(event.title)) return { ...v, refusal: event.text };
       break;
     case "reaction": {

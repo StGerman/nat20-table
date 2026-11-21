@@ -86,16 +86,20 @@ function Page(): ReturnType<typeof h> {
     };
   }, []);
 
-  const send = (intent: PlayerIntent) => {
+  const send = (intent: PlayerIntent): boolean => {
     const ask = view.ask;
     const ws = socket.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
     if (ask) {
       ws.send(JSON.stringify({ type: "intent", id: ask.id, intent } satisfies PageMessage));
       dispatch({ type: "answered" });
-    } else if (intent.kind === "command" && (intent.name === "pause" || intent.name === "quit")) {
-      ws.send(JSON.stringify({ type: "command", name: intent.name } satisfies PageMessage));
+      return true;
     }
+    if (intent.kind === "command" && (intent.name === "pause" || intent.name === "quit")) {
+      ws.send(JSON.stringify({ type: "command", name: intent.name } satisfies PageMessage));
+      return true;
+    }
+    return false;
   };
   return h(App, { view, send, settled: () => dispatch({ type: "settled" }) });
 }

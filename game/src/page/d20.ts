@@ -180,6 +180,8 @@ export interface Die {
   rollTo(value: number): Promise<void>;
   /** The face that looks at the viewer now. */
   face(): number;
+  /** Gives the WebGL context back (the stage closes). */
+  release(): void;
 }
 
 /** Colours as 0..1 RGB. */
@@ -203,6 +205,7 @@ export function mount(canvas: HTMLCanvasElement, colours: DieColours): Die | und
   gl.attachShader(prog, shader(gl.VERTEX_SHADER, VS));
   gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FS));
   gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) ?? "link");
   gl.useProgram(prog);
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
   gl.bufferData(gl.ARRAY_BUFFER, mesh(), gl.STATIC_DRAW);
@@ -291,5 +294,6 @@ export function mount(canvas: HTMLCanvasElement, colours: DieColours): Die | und
   }
 
   const face = () => FACES.reduce((best, f) => (qRotate(q, f.n)[2] > qRotate(q, best.n)[2] ? f : best)).num;
-  return { rollTo, face };
+  const release = () => gl.getExtension("WEBGL_lose_context")?.loseContext();
+  return { rollTo, face, release };
 }

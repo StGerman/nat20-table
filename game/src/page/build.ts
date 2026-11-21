@@ -2,13 +2,14 @@
 // and hash go in as a constant, so the page refuses a host built from another wire (design §4.1).
 import { copyFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { WIRE_HASH, WIRE_VERSION } from "../seat-wire/schema.ts";
 
 declare const Bun: {
   build(options: Record<string, unknown>): Promise<{ success: boolean; logs: unknown[] }>;
 };
 
-const here = path.dirname(new URL(import.meta.url).pathname);
+const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.resolve(here, "../../dist/page");
 mkdirSync(out, { recursive: true });
 const built = await Bun.build({

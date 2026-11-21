@@ -3,8 +3,9 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const here = path.dirname(new URL(import.meta.url).pathname);
+const here = path.dirname(fileURLToPath(import.meta.url));
 const roots: Array<[string, string]> = [
   ["/fixtures/", path.resolve(here, "../test/fixtures")],
   ["/", path.resolve(here, "../dist/page")],
@@ -15,7 +16,7 @@ createServer((req, res) => {
   const url = new URL(req.url ?? "/", "http://127.0.0.1");
   const [prefix, root] = roots.find(([p]) => url.pathname.startsWith(p))!;
   const file = path.resolve(root, `.${url.pathname.slice(prefix.length - 1)}`.replace(/\/$/, "/index.html"));
-  if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) {
+  if (!(file === root || file.startsWith(root + path.sep)) || !existsSync(file) || !statSync(file).isFile()) {
     res.writeHead(404).end();
     return;
   }
