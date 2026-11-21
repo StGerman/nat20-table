@@ -1,0 +1,17 @@
+# The Glass Table spike's shell (CON-20). Its own workspace: not a member of the table's, never built
+# in CI, never shipped. Built on a Mac by ../run.sh.
+[workspace]
+
+[package]
+name = "glass-table-spike"
+version = "0.0.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "=2.7.5", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.6", features = [] }
+serde_json = "1"
