@@ -177,7 +177,10 @@ export class WebSeat implements Seat {
     if (this.client && this.client !== ws) this.client.terminate();
     this.client = ws;
     this.send({ type: "hello", wire: WIRE_VERSION, hash: WIRE_HASH, run: this.options.run, language: this.options.language ?? "en", handle: this.handle, title: this.options.title ?? "" });
-    ws.on("message", (data) => this.received(String(data)));
+    // A window that was replaced may still deliver a frame before it closes: only the current one is heard.
+    ws.on("message", (data) => {
+      if (this.client === ws) this.received(String(data));
+    });
     ws.on("error", (error) => {
       // An oversized or broken frame drops this window, never the table: the page resumes from its seq.
       console.error(`seat wire: ${error.message}`);
