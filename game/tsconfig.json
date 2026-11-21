@@ -10,5 +10,5 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["src", "test", "spike"]
+  "include": ["src", "test", "spike", "e2e", "playwright.config.ts"]
 }

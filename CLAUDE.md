@@ -232,7 +232,7 @@ Upstream declines AI-authored contributions, so nothing goes upstream and the fo
 - A PR that makes or changes a decision with real alternatives adds or updates its record in `docs/decisions/` (options with pros and cons, who decided, when to revisit) in the same PR.
 - Never skip, disable or quarantine a test to get green. Never push an empty commit to retrigger CI.
 - From 2026-11-15 (decision 0080), two things. Every exit row in a milestone scope or design first drafted from that date names the lowest layer that tests it: a test with no model, a live run smaller than the exit run, a full run, or a person. And when a full run fails from that date, its analysis says whether a test with no model could have seen it; if one could, the fix's PR adds that test, and the rerun the exit pair's rules require is still played.
-- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `world-pure`, `tasks`, `rust-lint`, `rust-test`, `rust-test-arm64`, `visibility`, `ts`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
+- CI jobs: `contract-fresh`, `contract-compat`, `contract-pure`, `world-pure`, `tasks`, `rust-lint`, `rust-test`, `rust-test-arm64`, `visibility`, `ts`, `page`, `deny`, `advisories` (not gating), and the weekly non-blocking `core-drift`; `ci-ok` passes only when every gating job passed or was skipped on purpose, and is the one required check. Each job's purpose is in design §5.3; why CI is shaped this way is decision 0022.
 
 ## Rule 9: dependencies
 

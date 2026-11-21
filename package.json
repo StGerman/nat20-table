@@ -13,6 +13,8 @@
     "gen": "node tools/codegen/gen.mjs",
     "check:contract": "node tools/codegen/gen.mjs && git diff --exit-code -- generated packages/engine-client/src/generated && node tools/codegen/check-breaking.mjs --base origin/main",
     "check:ts": "tsc -p packages/engine-client && tsc -p game && NAT20_ENGINE_BUILD=debug node --experimental-strip-types --no-warnings --test packages/engine-client/test/*.test.ts game/test/*.test.ts",
+    "page:build": "bun game/src/page/build.ts",
+    "check:page": "bun game/src/page/build.ts && playwright test -c game/playwright.config.ts",
     "tasks": "node tools/tasks/tasks.mjs",
     "check:tasks": "node tools/tasks/tasks.mjs check",
     "spike": "node --experimental-strip-types --no-warnings game/spike/spike.ts",
@@ -39,9 +41,12 @@
     "runs:upload": "node --experimental-strip-types --no-warnings game/src/play/runs.ts upload"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "@types/node": "22.20.5",
     "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "@types/ws": "8.18.2",
+    "bun": "1.4.4",
     "json-schema-to-typescript": "16.0.0",
     "typescript": "7.0.2"
   }

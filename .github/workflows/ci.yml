@@ -275,6 +275,25 @@ jobs:
           NAT20_DIGEST: ${{ github.workspace }}/dist/nat20-digest
           NAT20_REGISTRY_ROOT: ${{ github.workspace }}/dist/registries
 
+  page:
+    name: page
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # WebKit, the nearest thing on Linux to the app's WKWebView (decision 0090).
+      - run: npx playwright install --with-deps webkit
+      - run: npm run check:page
+        env:
+          CI: "true"
+
   deny:
     name: deny
     runs-on: ubuntu-latest
@@ -315,7 +334,7 @@ jobs:
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [changes, tasks, contract-fresh, contract-compat, contract-pure, world-pure, rust-lint, rust-test, rust-test-arm64, visibility, ts, deny]
+    needs: [changes, tasks, contract-fresh, contract-compat, contract-pure, world-pure, rust-lint, rust-test, rust-test-arm64, visibility, ts, page, deny]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

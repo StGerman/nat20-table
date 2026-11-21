@@ -11,7 +11,7 @@ import type { HumanPrompt, TableEvent } from "../table/types.ts";
 import { UI_WORDS, SEAT_WORDS, type UiWords } from "../table/words.ts";
 import { eventLines, speakerOf, type Line, type Tone } from "../ui/lines.ts";
 import { asTold, nameSpans, type Person } from "../ui/people.ts";
-import type { HostMessage } from "../seat-wire/schema.ts";
+import type { HostMessage } from "../seat-wire/messages.ts";
 
 /** A roll the seat was shown: the engine's player view, never a target number (Rule 3). */
 export interface RollToken {
