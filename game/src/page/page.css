@@ -53,7 +53,8 @@ button { cursor: pointer; }
 .win { position: relative; height: 100vh; overflow: hidden; isolation: isolate; background: var(--ground); }
 .win.scene-road { --a1: #f6b28f; --a2: #f2cf86; --a3: #a9c3e2; }
 @media (prefers-color-scheme: dark) { .win.scene-road { --a1: #8c3f3a; --a2: #7a5a1e; --a3: #223f6e; } }
-.ambient { position: absolute; inset: -18%; z-index: 0; opacity: var(--a-op); filter: blur(46px); pointer-events: none;
+/* No blur filter: the gradients fade out on their own, and a 46px blur under the glass cost every frame. */
+.ambient { position: absolute; inset: -18%; z-index: 0; opacity: var(--a-op); pointer-events: none;
   background:
     radial-gradient(38% 34% at 76% 30%, var(--a1), transparent 70%),
     radial-gradient(46% 44% at 18% 22%, var(--a2), transparent 72%),
