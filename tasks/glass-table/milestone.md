@@ -20,7 +20,7 @@ Scope `docs/scope/glass-table-scope.md` §4, each row with its lowest layer (dec
 
 # Tasks
 
-In order: CON-20 (spike), AGT-140, AGT-141, AGT-142, AGT-143, AGT-144 (beside AGT-142 and AGT-143), CON-21, AGT-145. Beside the stack, after the spike: API-63 (the Corrins' line, a contract change under Rule 1), AGT-146 (level-up lines). Backlog, not in this exit: AGT-147 (a second provider). Scope and design: table #459 (merged 2026-11-21 08:31Z), `docs/design/glass-table-system-design.md` (§11 the PR order), decision 0090.
+In order: CON-20 (spike), AGT-140, AGT-141, AGT-142, AGT-143, AGT-144 (beside AGT-142 and AGT-143), CON-21, AGT-145. Beside the stack, after the spike: API-63 (the Corrins' line, a contract change under Rule 1), AGT-146 (level-up lines). Not in this exit: AGT-147 (a second provider), now in the Sign in with ChatGPT milestone (`tasks/sign-in-with-chatgpt/`). Scope and design: table #459 (merged 2026-11-21 08:31Z), `docs/design/glass-table-system-design.md` (§11 the PR order), decision 0090.
 
 # Status
 
