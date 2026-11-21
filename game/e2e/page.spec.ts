@@ -263,3 +263,32 @@ test("«Лист» in English splits the seat's first line into the name and who
   await expect(sheet.locator("h2")).toHaveText("Bren");
   await expect(sheet.locator("hgroup p")).toHaveText("level 2 human fighter");
 });
+
+// Out of a fight the pill says whether foes are in sight (Stas, 2026-11-21): «Без боя» with none,
+// «Враги рядом» with one; a foe with no portrait is a red dot on «Где все», not a letter (Vera).
+test("out of a fight the pill says «Без боя», or «Враги рядом» with a foe in sight drawn as a red dot", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const all = readFileSync(path.join(FIXTURES, "the-way-back-ru.seat-wire.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as Rec & { event?: { kind: string; situation?: { mode: string; creatures: unknown[] }; positions?: { creatures: Record<string, unknown> } } });
+  const at = all.findIndex((r) => r.event?.kind === "situation" && r.event.situation?.mode === "explore" && r.event.positions);
+  // Up to the ask that follows: the frame waits for the next decision.
+  const ask = all.findIndex((r, i) => i > at && (r as { message?: { type: string } }).message?.type === "ask");
+  const calm = all.slice(0, ask + 1);
+  const wolf = { handle: "wolf_1", name: "Волк 1", side: "hostile", health: "unhurt", conditions: [], distance_ft: 20, in_reach: false, kind: "Wolf" };
+  // Off the road, so «Где все» is the yard.
+  const last = calm[at]!;
+  const foes = calm.map((r, i) => (i === at ? { ...last, event: { ...last.event!, situation: { ...last.event!.situation!, road: undefined, creatures: [...last.event!.situation!.creatures, wolf] }, positions: { ...last.event!.positions!, creatures: { ...last.event!.positions!.creatures, wolf_1: { x_ft: 20, y_ft: 0, z_ft: 0 } } } } } : r));
+  const names = Object.entries(NAMES_RU).map(([k, v]) => `${k}:${v}`).join(",");
+  for (const [wire, pill] of [[calm, "Без боя"], [foes, "Враги рядом"]] as const) {
+    const body = wire.map((r) => JSON.stringify(r)).join("\n") + "\n";
+    await page.route("**/fixtures/explore.jsonl", (route) => route.fulfill({ body, contentType: "application/x-ndjson" }));
+    await page.goto(`/index.html?replay=/fixtures/explore.jsonl&language=ru&handle=bren&names=${encodeURIComponent(names)}`);
+    await page.waitForFunction(() => window.__nat20?.done === true, undefined, { timeout: 100_000 });
+    await expect(page.locator('[data-test="turn"]')).toHaveText(pill);
+    await page.unroute("**/fixtures/explore.jsonl");
+  }
+  await page.locator('[data-test="where"]').click();
+  const token = page.locator('[data-test="lens"] .who[data-handle="wolf_1"]');
+  await expect(token.locator(".dot")).toHaveCount(1);
+  await expect(token.locator(".ini")).toHaveCount(0);
+  await expect(token.locator(".label")).toHaveText("Волк 1");
+});
