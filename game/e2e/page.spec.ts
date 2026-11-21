@@ -61,13 +61,31 @@ for (const w of WIRES) {
   });
 }
 
-test("the die spins and lands on the engine's face", async ({ page }) => {
-  const w = WIRES[0];
-  const first = ownRolls(w)[0];
-  const seq = records(w).find((r) => r.event?.event?.roll?.id === first.roll)!.seq!;
-  await replay(page, w, seq);
-  const landed = await page.evaluate(() => window.__nat20!.landed);
-  expect(landed).toEqual([{ ...first, gl: true }]);
+// Both finishes (Stas, 2026-11-21) turn in place and land on the engine's face, numbers upright.
+for (const [finish, label] of [["chrome", "Die: mirror"], ["wire", "Die: see-through"]] as const) {
+  test(`the ${finish} die rises, turns and lands on the engine's face`, async ({ page }) => {
+    await page.addInitScript((f) => localStorage.setItem("nat20.die-finish", f), finish);
+    const w = WIRES[0];
+    const first = ownRolls(w)[0];
+    const seq = records(w).find((r) => r.event?.event?.roll?.id === first.roll)!.seq!;
+    await replay(page, w, seq);
+    const landed = await page.evaluate(() => window.__nat20!.landed);
+    expect(landed).toEqual([{ ...first, gl: true }]);
+    await expect(page.locator('[data-test="finish"]')).toHaveText(label);
+  });
+}
+
+test("the finish switch turns mirror to see-through and back, and the choice outlasts a reload", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await replay(page, WIRES[1], 40);
+  const finish = page.locator('[data-test="finish"]');
+  await expect(finish).toHaveText("Кубик: зеркальный");
+  await finish.click();
+  await expect(finish).toHaveText("Кубик: прозрачный");
+  await replay(page, WIRES[1], 40);
+  await expect(finish).toHaveText("Кубик: прозрачный");
+  await finish.click();
+  await expect(finish).toHaveText("Кубик: зеркальный");
 });
 
 for (const scheme of ["light", "dark"] as const) {

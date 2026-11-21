@@ -1,6 +1,7 @@
-// The roll stage's d20 (Glass Table design §5.2), from the WebGL prototype of 2026-11-20: a real
-// mesh, flat shading, ink edges from barycentrics, numbers from a canvas atlas. It never picks a
-// number (Rule 4): `rollTo` spins until it is given the engine's value and lands on that face.
+// The roll stage's d20 (Glass Table design §5.2), from the WebGL prototype of 2026-11-20 and the die
+// demo Stas picked from on 2026-11-21: a real mesh, edges from barycentrics, numbers from a canvas
+// atlas, in liquid chrome or a wireframe. It never picks a number (Rule 4): `rollTo` rises, turns in
+// place and comes down on the engine's value, always with the number upright.
 // With no WebGL2 `mount` returns undefined and the stage shows the number as text.
 type V3 = [number, number, number];
 type Q = [number, number, number, number];
@@ -25,19 +26,6 @@ const qNorm = (q: Q): Q => {
   const l = Math.hypot(q[0], q[1], q[2], q[3]);
   return [q[0] / l, q[1] / l, q[2] / l, q[3] / l];
 };
-
-function qSlerp(a: Q, b: Q, t: number): Q {
-  let d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
-  let bb = b;
-  if (d < 0) {
-    d = -d;
-    bb = [-b[0], -b[1], -b[2], -b[3]];
-  }
-  if (d > 0.9995) return qNorm([0, 1, 2, 3].map((i) => a[i] + (bb[i] - a[i]) * t) as Q);
-  const th = Math.acos(d);
-  const s = Math.sin(th);
-  return [0, 1, 2, 3].map((i) => a[i] * (Math.sin((1 - t) * th) / s) + bb[i] * (Math.sin(t * th) / s)) as Q;
-}
 
 function qFromRows(x: V3, y: V3, z: V3): Q {
   const [r00, r01, r02] = x;
@@ -115,29 +103,56 @@ const BY_NUM = new Map(FACES.map((f) => [f.num, f]));
 const VS = `#version 300 es
 in vec3 aPos; in vec3 aNrm; in vec3 aBar; in vec2 aUv; in vec2 aCell;
 uniform mat3 uRot; uniform vec2 uOff; uniform float uScale;
-out vec3 vN; out vec3 vBar; out vec2 vUv; flat out vec2 vCell;
+out vec3 vN; out vec3 vP; out vec3 vBar; out vec2 vUv; flat out vec2 vCell;
 void main() {
-  vec3 p = uRot * aPos; vN = uRot * aNrm; vBar = aBar; vUv = aUv; vCell = aCell;
+  vec3 p = uRot * aPos; vP = p; vN = uRot * aNrm; vBar = aBar; vUv = aUv; vCell = aCell;
   float persp = 1.0 / (1.0 - p.z * 0.22);
   gl_Position = vec4(p.xy * uScale * persp + uOff, -p.z * 0.5, 1.0);
 }`;
+// Two finishes (Stas, 2026-11-21, from the die demo): liquid chrome, a mirror of a light studio with
+// dark bars and the warm table below, its surface rippling slowly; and a wireframe, a faint fill with
+// edges and numbers in the page's accent, its far side seen through it.
 const FS = `#version 300 es
 precision highp float;
-in vec3 vN; in vec3 vBar; in vec2 vUv; flat in vec2 vCell;
-uniform sampler2D uAtlas; uniform vec3 uInk; uniform vec3 uPaper;
+in vec3 vN; in vec3 vP; in vec3 vBar; in vec2 vUv; flat in vec2 vCell;
+uniform sampler2D uAtlas; uniform vec3 uInk; uniform vec3 uAccent; uniform float uWire, uTime;
 out vec4 o;
+vec3 studio(vec3 r) {
+  float az = atan(r.x, r.z);
+  vec3 c = mix(vec3(0.62, 0.65, 0.70), vec3(0.93, 0.95, 0.98), clamp(r.y * 0.8 + 0.4, 0.0, 1.0));
+  float bars = smoothstep(0.20, 0.12, abs(az - 0.75)) + smoothstep(0.12, 0.06, abs(az + 0.55))
+             + smoothstep(0.25, 0.15, abs(az - 2.2)) + smoothstep(0.3, 0.2, abs(az + 2.0));
+  c = mix(c, vec3(0.07, 0.08, 0.10), clamp(bars, 0.0, 1.0) * smoothstep(-0.1, 0.15, r.y));
+  c += vec3(1.4) * smoothstep(0.5, 0.8, r.y) * smoothstep(0.9, 0.3, abs(az + 0.3));
+  c = mix(c, vec3(0.05, 0.06, 0.08), exp(-abs(r.y - 0.02) * 30.0) * 0.85);
+  vec3 table = mix(vec3(0.70, 0.58, 0.45), vec3(0.32, 0.25, 0.19), clamp(-r.y * 1.6, 0.0, 1.0));
+  return r.y < -0.02 ? table : c;
+}
 void main() {
-  vec3 n = normalize(vN);
-  vec3 L = normalize(vec3(-0.4, 0.6, 0.7));
-  float lit = 0.62 + 0.38 * max(dot(n, L), 0.0);
-  float rim = pow(1.0 - max(n.z, 0.0), 3.0) * 0.25;
-  vec3 col = uPaper * (lit - rim);
   vec3 d = fwidth(vBar);
-  vec3 e = smoothstep(vec3(0.0), d * 1.6, vBar);
+  vec3 e = smoothstep(vec3(0.0), d * (uWire > 0.5 ? 1.4 : 0.9), vBar);
   float edge = 1.0 - min(min(e.x, e.y), e.z);
+  vec3 soft = smoothstep(vec3(0.0), d * 8.0, vBar);
+  float halo = 1.0 - min(min(soft.x, soft.y), soft.z);
+  if (uWire > 0.5) {
+    // The far side: its edges and a light fill, never its numbers (they would read mirrored).
+    if (!gl_FrontFacing) { o = vec4(uAccent, 0.05 + 0.4 * edge + 0.08 * halo); return; }
+    bool inCellW = all(greaterThan(vUv, vec2(0.0))) && all(lessThan(vUv, vec2(1.0)));
+    float glyphW = inCellW ? textureGrad(uAtlas, (vCell + vUv) / vec2(5.0, 4.0), dFdx(vUv) / 5.0, dFdy(vUv) / 4.0).a : 0.0;
+    o = vec4(uAccent, max(0.07 + 0.85 * edge + 0.15 * halo, glyphW * 0.9));
+    return;
+  }
+  vec3 n = normalize(vN);
+  // The surface ripples across each face, and the eye is close, so the reflection sweeps across a face as it turns.
+  vec3 nl = normalize(n + 0.07 * vec3(sin(vP.y * 9.0 + uTime * 1.6), sin(vP.x * 8.0 - uTime * 1.2), sin((vP.x + vP.y) * 6.0 + uTime)));
+  vec3 view = normalize(vP - vec3(0.0, 0.0, 2.4));
+  vec3 col = studio(reflect(view, nl)) * vec3(0.9, 0.92, 0.96);
+  col = mix(col, vec3(0.12, 0.13, 0.15), edge * 0.55);
   bool inCell = all(greaterThan(vUv, vec2(0.0))) && all(lessThan(vUv, vec2(1.0)));
   float glyph = inCell ? textureGrad(uAtlas, (vCell + vUv) / vec2(5.0, 4.0), dFdx(vUv) / 5.0, dFdy(vUv) / 4.0).a : 0.0;
-  col = mix(col, uInk, max(edge, glyph));
+  col = mix(col, uInk, glyph);
+  vec3 H = normalize(normalize(vec3(-0.4, 0.6, 0.7)) + vec3(0.0, 0.0, 1.0));
+  col += vec3(pow(max(dot(n, H), 0.0), 120.0));
   o = vec4(col, 1.0);
 }`;
 
@@ -176,7 +191,7 @@ function mesh(): Float32Array {
 }
 
 export interface Die {
-  /** Spins and lands on the engine's value; resolves once it rests. */
+  /** Rises, turns in place and comes down on the engine's value; resolves once it rests. */
   rollTo(value: number): Promise<void>;
   /** The face that looks at the viewer now. */
   face(): number;
@@ -184,14 +199,24 @@ export interface Die {
   release(): void;
 }
 
-/** Colours as 0..1 RGB. */
-export interface DieColours {
+/** The two finishes the page offers. */
+export const FINISHES = ["chrome", "wire"] as const;
+export type Finish = (typeof FINISHES)[number];
+
+/** A finish and the page's colours for it, as 0..1 RGB. */
+export interface DieLook {
+  finish: Finish;
+  /** The numbers on chrome. */
   ink: V3;
-  paper: V3;
+  /** The wireframe's edges, fill and numbers: the page's accent. */
+  accent: V3;
 }
 
-/** A die on `canvas`, or undefined with no WebGL2. */
-export function mount(canvas: HTMLCanvasElement, colours: DieColours): Die | undefined {
+/**
+ * A die on `canvas`, or undefined with no WebGL2. `shadow`, when given, is an element under the
+ * canvas that the die moves as its shadow on the table: smaller and fainter the higher it hovers.
+ */
+export function mount(canvas: HTMLCanvasElement, look: DieLook, shadow?: HTMLElement): Die | undefined {
   const gl = canvas.getContext("webgl2", { antialias: true, premultipliedAlpha: false });
   if (!gl) return undefined;
   const shader = (type: number, src: string): WebGLShader => {
@@ -220,27 +245,44 @@ export function mount(canvas: HTMLCanvasElement, colours: DieColours): Die | und
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
   const U = (n: string) => gl.getUniformLocation(prog, n);
-  gl.uniform3f(U("uInk"), ...colours.ink);
-  gl.uniform3f(U("uPaper"), ...colours.paper);
-  gl.enable(gl.DEPTH_TEST);
+  const wire = look.finish === "wire";
+  gl.uniform3f(U("uInk"), ...look.ink);
+  gl.uniform3f(U("uAccent"), ...look.accent);
+  gl.uniform1f(U("uWire"), wire ? 1 : 0);
   gl.enable(gl.CULL_FACE);
+  // The wireframe is see-through: no depth buffer, the far side drawn first and blended under the near one.
+  if (wire) {
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  } else gl.enable(gl.DEPTH_TEST);
 
+  const SCALE = 0.56;
+  const FLOOR = -0.1;
   let q = BY_NUM.get(20)!.q;
-  let hop = 0;
+  /** Height above the table, in clip units. */
+  let y = 0;
   const draw = () => {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.uniformMatrix3fv(U("uRot"), false, qMat(q));
-    gl.uniform2f(U("uOff"), 0, hop);
-    gl.uniform1f(U("uScale"), 0.62);
+    gl.uniform1f(U("uTime"), performance.now() / 1000);
+    gl.uniform2f(U("uOff"), 0, FLOOR + y);
+    gl.uniform1f(U("uScale"), SCALE);
+    if (wire) {
+      gl.cullFace(gl.FRONT);
+      gl.drawArrays(gl.TRIANGLES, 0, 60);
+      gl.cullFace(gl.BACK);
+    }
     gl.drawArrays(gl.TRIANGLES, 0, 60);
+    if (shadow) {
+      const k = 1 / (1 + y * 3);
+      shadow.style.transform = `translate(-50%, -50%) scale(${k})`;
+      shadow.style.opacity = String(0.85 * k);
+    }
   };
   draw();
 
-  const LAND_MS = 900;
-  const SPIN_RATE = (2 * Math.PI) / 600;
-  const HOP_MS = 400;
   const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function rollTo(value: number): Promise<void> {
@@ -248,48 +290,79 @@ export function mount(canvas: HTMLCanvasElement, colours: DieColours): Die | und
     // Not a d20 face: the die stays where it is.
     if (!target) return Promise.resolve();
     if (reduced()) {
-      // No spin: the face shows.
+      // No motion: the face shows.
       q = target.q;
+      y = 0;
       draw();
       return Promise.resolve();
     }
-    const from = q;
-    const axis = nrm([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5]);
+    // The throw happens in place: the die rises off the table, hangs there turning, and comes down on the number.
+    const axis = nrm([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5 + 0.3]);
+    const spin = 12 + Math.random() * 3;
+    const HOVER = 0.25;
+    const BOB = 0.025;
+    const BOB_HZ = 0.9;
+    const AIR = 0.55;
+    // Pose spring a little under critical: one soft overshoot. The lift spring settles it on the table.
+    const K = 60;
+    const C = 2 * Math.sqrt(K) * 0.6;
+    const LIFT_K = 38;
+    const LIFT_C = 2 * Math.sqrt(LIFT_K) * 0.85;
+    let w: V3 = [0, 0, 0];
+    let vy = 0;
+    let t = 0;
+    let wobble = 0;
+    let landing: number | undefined;
     return new Promise((resolve) => {
-      const t0 = performance.now();
-      let land: { t0: number; spin: number; from: Q } | undefined;
+      let last = performance.now();
       const step = (now: number) => {
         if (!canvas.isConnected) {
           q = target.q;
+          y = 0;
           return resolve();
         }
-        const waited = now - t0;
-        if (!land) {
-          // One hop of spin, then the landing.
-          if (waited < HOP_MS) {
-            q = qMul(qAxis(axis, SPIN_RATE * waited), from);
-            hop = 0.08 * Math.abs(Math.sin((Math.PI * waited) / HOP_MS));
+        const dt = Math.min(0.033, (now - last) / 1000);
+        last = now;
+        t += dt;
+        if (t < 0.25) {
+          // Speed-up: the spin builds as the die leaves the hand.
+          w = scl(axis, spin * (0.2 + 0.8 * Math.pow(t / 0.25, 1.5)));
+        } else if (landing === undefined) {
+          // Air takes the spin slowly; a slow drift of the axis keeps the tumble alive.
+          w = scl(w, Math.exp(-AIR * dt));
+          wobble += dt;
+          w = add(w, scl([Math.sin(wobble * 1.7), Math.cos(wobble * 1.3), Math.sin(wobble * 0.9)], 1.2 * dt));
+          const sp = Math.hypot(...w);
+          if (t > 0.7 && (sp < 7.5 || t > 1.6)) landing = t;
+        }
+        // Height: up to the hover with a slow bob while it turns; down to the table a moment after it starts turning to the face.
+        const want = landing === undefined ? HOVER + BOB * Math.sin(2 * Math.PI * BOB_HZ * t) : 0;
+        const lag = landing === undefined ? 1 : Math.min(1, (t - landing) / 0.35);
+        vy += (LIFT_K * (want - y) * lag - LIFT_C * vy) * dt;
+        y = Math.max(0, y + vy * dt);
+        if (landing !== undefined) {
+          let err = qMul(target.q, [-q[0], -q[1], -q[2], q[3]]);
+          if (err[3] < 0) err = [-err[0], -err[1], -err[2], -err[3]];
+          const ang = 2 * Math.acos(Math.min(1, err[3]));
+          const sh = Math.sqrt(Math.max(1e-12, 1 - err[3] * err[3]));
+          const errAxis: V3 = ang > 1e-6 ? [err[0] / sh, err[1] / sh, err[2] / sh] : [0, 0, 0];
+          w = add(w, scl(sub(scl(errAxis, K * ang), scl(w, C)), dt));
+          if (ang < 0.003 && Math.hypot(...w) < 0.05 && y < 0.002 && Math.abs(vy) < 0.01) {
+            q = target.q;
+            y = 0;
             draw();
-            requestAnimationFrame(step);
-            return;
+            return resolve();
           }
-          const spin = (SPIN_RATE * LAND_MS) / 3;
-          land = { t0: now, spin, from: qMul(qAxis(axis, -spin), qMul(qAxis(axis, SPIN_RATE * waited), from)) };
         }
-        const t = Math.min(1, (now - land.t0) / LAND_MS);
-        const e = 1 - Math.pow(1 - t, 3);
-        q = qMul(qAxis(axis, land.spin * (1 - e)), qSlerp(land.from, target.q, e));
-        hop = 0.14 * Math.abs(Math.sin(Math.PI * t * 2)) * Math.pow(1 - t, 1.6);
+        const sp = Math.hypot(...w);
+        if (sp > 1e-6) q = qNorm(qMul(qAxis(scl(w, 1 / sp), sp * dt), q));
         draw();
-        if (t < 1) requestAnimationFrame(step);
-        else {
-          q = target.q;
-          hop = 0;
-          draw();
-          resolve();
-        }
+        requestAnimationFrame(step);
       };
-      requestAnimationFrame(step);
+      requestAnimationFrame((now) => {
+        last = now;
+        step(now);
+      });
     });
   }
 
