@@ -104,6 +104,8 @@ export interface PageView {
   told: string[];
   untold: string[];
   alive: Record<string, Person>;
+  /** A frame with people in it was seen: the dead in the first such frame were told of before (ink-seat.ts `sawPeople`). */
+  sawPeople: boolean;
   /** How many story rows there were when the panel was last refreshed. */
   looked: number;
   /** The speaker of the message the last row belongs to. */
@@ -111,7 +113,7 @@ export interface PageView {
   next: number;
 }
 
-export const EMPTY: PageView = { seq: 0, story: [], held: [], rolls: {}, dock: { form: "waiting" }, spent: [], people: [], answering: false, told: [], untold: [], alive: {}, looked: 0, next: 0 };
+export const EMPTY: PageView = { seq: 0, story: [], held: [], rolls: {}, dock: { form: "waiting" }, spent: [], people: [], answering: false, told: [], untold: [], alive: {}, sawPeople: false, looked: 0, next: 0 };
 
 /** The kinds that show the held engine lines above them; a narration tells them instead (ink-seat.ts RELEASES). */
 const RELEASES = new Set<TableEvent["kind"]>(["options", "reaction", "question", "end"]);
@@ -129,10 +131,16 @@ export interface Built {
 
 export function reduce(view: PageView, message: HostMessage, built?: Built): PageView {
   if (message.type === "hello") {
-    if (built && (message.wire !== built.wire || message.hash !== built.hash)) return { ...view, refused: `wire ${message.wire} ${message.hash.slice(0, 12)}, page ${built.wire} ${built.hash.slice(0, 12)}` };
-    // A new connection: the host replays from the page's `seq`; what was drawn stays.
-    return { ...view, hello: message };
+    if (built && (message.wire !== built.wire || message.hash !== built.hash)) return { ...EMPTY, refused: `wire ${message.wire} ${message.hash.slice(0, 12)}, page ${built.wire} ${built.hash.slice(0, 12)}` };
+    // Another run starts from nothing.
+    if (view.hello && view.hello.run !== message.run) return { ...EMPTY, hello: message };
+    // A new connection: the host replays from the page's `seq`, then sends what stands now (busy, answering, the open ask).
+    // What was drawn stays; what only stood at the moment goes until the host says it again.
+    const { busy: _b, preview: _p, ask: _a, suggest: _s, refused: _r, ...kept } = view;
+    return { ...kept, hello: message, answering: false, dock: view.dock.form === "ended" ? view.dock : { form: "waiting" } };
   }
+  // Nothing is drawn before an accepted `hello`.
+  if (!view.hello || view.refused) return view;
   const v = { ...view };
   switch (message.type) {
     case "event":
@@ -217,7 +225,8 @@ function shown(v: PageView, event: TableEvent): PageView {
     case "engine": {
       const roll = rollOf(event, v);
       const rolls = roll ? { ...v.rolls, [roll.id]: roll } : v.rolls;
-      const lines = linesOf(v, event).map((l) => ({ ...l, ...(event.roll ? { roll: event.roll } : {}) }));
+      // The token goes on the event's first row only.
+      const lines = linesOf(v, event).map((l, i) => ({ ...l, ...(event.roll && i === 0 ? { roll: event.roll } : {}) }));
       // The human's own line shows at once, its roll on the stage first; others' wait for their narration.
       if (event.own) return { ...add({ ...v, rolls }, lines), ...(roll && roll.d20.length > 0 ? { stage: roll.id } : {}) };
       return { ...v, rolls, held: [...v.held, ...lines] };
@@ -321,7 +330,7 @@ function release(v: PageView): PageView {
 
 function situation(v: PageView, event: Situation): PageView {
   const since = v.story.slice(v.looked);
-  const first = v.situation === undefined && (event.situation?.people?.length ?? 0) > 0;
+  const first = !v.sawPeople && (event.situation?.people?.length ?? 0) > 0;
   const told = [...v.told];
   const untold = [...v.untold];
   const alive = { ...v.alive };
@@ -334,7 +343,7 @@ function situation(v: PageView, event: Situation): PageView {
     if (first || tells(since, p)) told.push(p.id);
     else if (!untold.includes(p.id)) untold.push(p.id);
   }
-  const next: PageView = { ...v, situation: event.situation ? event : (v.situation ?? event), looked: v.story.length, told, untold, alive, ...(endsTurn(v, event) ? { options: undefined } : {}) };
+  const next: PageView = { ...v, situation: event.situation ? event : (v.situation ?? event), looked: v.story.length, told, untold, alive, sawPeople: v.sawPeople || first, ...(endsTurn(v, event) ? { options: undefined } : {}) };
   return { ...next, people: peopleNow(next) };
 }
 
@@ -374,15 +383,4 @@ function dockFor(v: PageView): Dock {
     case "road":
       return { form: "moves", ask: ask.id, prompt: ask.prompt, ...(v.options ? { options: v.options } : {}) };
   }
-}
-
-/** Every text the page draws now, for the parity test with `seat.jsonl`: the story, the dock's list, an overlay, a refusal, a reaction. */
-export function drawnText(v: PageView): string[] {
-  return [
-    ...v.story.map((l) => l.text),
-    ...(v.options ? eventLines(v.options) : []).map((l) => l.text),
-    ...(v.overlay ? eventLines({ kind: "info", title: v.overlay.title, text: v.overlay.text }) : []).map((l) => l.text),
-    ...(v.refusal ? [v.refusal] : []),
-    ...(v.reaction ? eventLines(v.reaction, undefined, false, words(v)) : []).map((l) => l.text),
-  ];
 }

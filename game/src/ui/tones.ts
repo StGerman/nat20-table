@@ -23,4 +23,3 @@ export function textProps(style: Style, palette: Palette): { color?: string; bol
     ...(style.dim || (style.accent === "hint" && !color) ? { dimColor: true } : {}),
   };
 }
-

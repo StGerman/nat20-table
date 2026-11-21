@@ -209,3 +209,46 @@ test("page reducer: its import chain is browser-safe (no node: module)", () => {
 function hello(w: Wire): HostMessage {
   return HostMessageSchema.parse({ type: "hello", wire: WIRE_VERSION, hash: WIRE_HASH, run: "fixture", language: w.language, handle: w.seat, title: "" });
 }
+
+test("page reducer: a reconnect keeps the story and drops what only stood at that moment; another run starts clean", () => {
+  const w = WIRES[0];
+  let v = reduce(EMPTY, hello(w));
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 1, event: { kind: "narration", speaker: "dm", text: "Once." } }));
+  v = reduce(v, HostMessageSchema.parse({ type: "busy", on: "Ilsa" }));
+  v = reduce(v, HostMessageSchema.parse({ type: "answering", on: true }));
+  v = reduce(v, HostMessageSchema.parse({ type: "ask", id: "a1", prompt: { kind: "explore" } }));
+  const again = reduce(v, hello(w));
+  assert.deepEqual(again.story, v.story);
+  assert.equal(again.seq, 1);
+  assert.equal(again.busy, undefined);
+  assert.equal(again.ask, undefined);
+  assert.equal(again.answering, false);
+  assert.equal(again.dock.form, "waiting");
+  const other = reduce(v, HostMessageSchema.parse({ ...hello(w), run: "another" }));
+  assert.equal(other.story.length, 0);
+  assert.equal(other.seq, 0);
+});
+
+test("page reducer: a refused host draws nothing, and a matching hello after it is accepted", () => {
+  const built = { wire: WIRE_VERSION, hash: WIRE_HASH };
+  let v = reduce(EMPTY, HostMessageSchema.parse({ ...hello(WIRES[0]), hash: "0".repeat(64) }), built);
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 1, event: { kind: "narration", speaker: "dm", text: "Once." } }));
+  assert.equal(v.story.length, 0);
+  v = reduce(v, hello(WIRES[0]), built);
+  assert.equal(v.refused, undefined);
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 1, event: { kind: "narration", speaker: "dm", text: "Once." } }));
+  assert.equal(v.story.length, 1);
+  assert.equal(reduce(EMPTY, HostMessageSchema.parse({ type: "event", seq: 1, event: { kind: "status", text: "x" } })), EMPTY, "nothing before hello");
+});
+
+test("page reducer: the dead of the first frame with people were told before; an empty first frame does not count", () => {
+  const frame = (seq: number, people: unknown[]) => HostMessageSchema.parse({ type: "event", seq, event: { kind: "situation", situation: { mode: "explore", people } } });
+  const dead = { id: "npc:old_tam", name: "Old Tam", state: "dead" };
+  let v = reduce(EMPTY, hello(WIRES[0]));
+  v = reduce(v, frame(1, []));
+  v = reduce(v, HostMessageSchema.parse({ type: "unnarrated" }));
+  v = reduce(v, frame(2, [dead]));
+  v = reduce(v, HostMessageSchema.parse({ type: "unnarrated" }));
+  assert.deepEqual(v.told, ["npc:old_tam"]);
+  assert.deepEqual(v.untold, []);
+});

@@ -64,7 +64,6 @@ export interface PeopleBook {
   party: ReadonlyArray<{ handle: string; names: readonly string[]; look?: string; look_ru?: string }>;
 }
 
-
 export const NO_PEOPLE: PeopleBook = { lines: new Map(), party: [] };
 
 export class SeatNames {
