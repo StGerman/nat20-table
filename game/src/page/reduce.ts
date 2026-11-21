@@ -296,7 +296,10 @@ function onCard(view: CardView, event: Extract<TableEvent, { kind: "engine" }>):
   const name = (who: string) => event.names?.[who] ?? who;
   switch (e?.kind) {
     case "card_advice":
-      return view.votes.some((x) => x.who === e.actor) ? view : { ...view, votes: [...view.votes, { who: e.actor, name: name(e.actor), choice: e.choice }] };
+      // One word per person: a later round's advice (after an own move fell, say) replaces the earlier one.
+      return view.votes.some((x) => x.who === e.actor && x.choice === e.choice)
+        ? view
+        : { ...view, votes: [...view.votes.filter((x) => x.who !== e.actor), { who: e.actor, name: name(e.actor), choice: e.choice }] };
     case "card_own_move":
       return { ...view, own: { who: e.actor, name: name(e.actor), words: e.words } };
     case "card_resolved":
