@@ -1,0 +1,46 @@
+# The Glass Table spike (CON-20): builds the spike app on an Apple Silicon runner with an ad-hoc
+# signature under the hardened runtime and launches it, so a build error is found here and not on
+# Stas's evening at the Mac. Calls no model (NAT20_SPIKE_NO_MODEL=1) and signs with no secret; the
+# live call, the Developer ID and notarisation are checked on his Mac. Not part of ci-ok.
+name: spike-glass-table
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/spike-glass-table.yml
+      - game/spike/glass-table/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spike:
+    name: spike (darwin-arm64, ad-hoc)
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      NAT20_SPIKE_NO_MODEL: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Rust release pinned in rust-toolchain.toml
+        run: rustup toolchain install
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Bun, the version the Bun check used
+        run: npm install -g bun@1.4.4
+      - name: Build, sign ad-hoc, launch through Launch Services, print the report
+        run: game/spike/glass-table/run.sh
+      - name: Every item but the live call works
+        run: |
+          pkill -f "Glass Table Spike" || true
+          report="$(ls -t "$HOME/Library/Application Support/glass-table-spike"/report-*.json | head -1)"
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            const bad = r.items.filter((i) => !i.ok && !i.id.startsWith("3 ") && !i.id.startsWith("4 "));
+            for (const i of bad) console.log("FAIL", i.id, i.detail);
+            process.exit(bad.length ? 1 : 0);
+          ' "$report"
