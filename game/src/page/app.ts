@@ -236,7 +236,8 @@ function Stage({ roll, finish, settled }: { roll: RollToken; finish: Finish; set
       const m = /#([0-9a-f]{6})/i.exec(css.getPropertyValue(name));
       return m ? [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255) as [number, number, number] : fallback;
     };
-    const look = { finish, ink: rgb("--die-ink", [0.067, 0.067, 0.067]), accent: rgb("--accent", [0.165, 0.349, 0.788]) };
+    // The die takes the page's own colours, so it follows light and dark.
+    const look = { finish, ink: rgb("--ink", [0.086, 0.086, 0.086]), accent: rgb("--accent", [0.165, 0.349, 0.788]), paper: rgb("--paper", [0.984, 0.98, 0.969]), line: rgb("--line", [0.851, 0.839, 0.812]) };
     // A die that cannot be drawn leaves the engine's line on the stage, as with no WebGL2.
     const dice = canvases.current.map((c, i) => {
       try {

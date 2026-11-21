@@ -8,8 +8,6 @@
   --accent: #2a59c9;
   --warn: #9b2c1f;
   --glass: rgba(251, 250, 247, 0.72);
-  /* The numbers on chrome; the wireframe takes --accent. */
-  --die-ink: #111111;
   --shadow: rgba(20, 22, 26, 0.32);
   color-scheme: light dark;
 }
@@ -22,7 +20,6 @@
     --accent: #8fb0ff;
     --warn: #ff9a8a;
     --glass: rgba(23, 24, 26, 0.72);
-    --die-ink: #111111;
     --shadow: rgba(0, 0, 0, 0.55);
   }
 }
