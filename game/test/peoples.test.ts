@@ -13,10 +13,10 @@ const LINE = "The Corrins are a small roving people: they live by families in pa
 
 test("the Corrins' line, as Stas approved it, is the Russian of the line the engine sends", () => {
   const book = peopleBook(WEND, []);
-  assert.equal(book.lines.get(lineKey("corrins", LINE)), "Коррины — невысокий кочевой народ: семьями живут в расписных повозках и латают котлы по всей долине.");
+  assert.equal(book.lines.get(lineKey("people:roadfolk", LINE)), "Коррины — невысокий кочевой народ: семьями живут в расписных повозках и латают котлы по всей долине.");
 });
 
 test("the DM's name line and the seat's names hold the people's Russian name", () => {
-  assert.ok(worldNames(WEND).includes("corrins: коррины"));
-  assert.equal(worldSeatNames(WEND).get("people:corrins"), "коррины");
+  assert.ok(worldNames(WEND).includes("roadfolk: коррины"));
+  assert.equal(worldSeatNames(WEND).get("people:roadfolk"), "коррины");
 });

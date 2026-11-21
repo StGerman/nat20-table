@@ -172,7 +172,7 @@ export function worldSeatNames(pack: string): Map<string, string> {
 
 /**
  * The seat's people book (AGT-107): the Russian of every roster line the engine sends in English
- * (`look`, `heard`, both forms of each `remembers`, and each people's `line`, API-63), keyed by the English line, and the party's
+ * (`look`, `heard`, both forms of each `remembers`, and each people's `line` under `people:<id>`, API-63), keyed by the English line, and the party's
  * forms and looks. The engine already sends only what the viewer may see (Rule 3); the book only
  * says those lines in the run's language.
  */
@@ -183,7 +183,7 @@ export function peopleBook(pack: string, party: ReadonlyArray<{ handle: string; 
   if (npcs && existsSync(npcs)) {
     type Line = { id: string; look?: string; look_ru?: string; heard?: string; heard_ru?: string; remembers?: Array<{ you?: string; you_ru?: string; company?: string; company_ru?: string }> };
     const file = JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Line[]; peoples?: Array<{ id: string; line: string; line_ru?: string }> };
-    for (const p of file.peoples ?? []) if (p.line_ru) lines.set(lineKey(p.id, p.line), p.line_ru);
+    for (const p of file.peoples ?? []) if (p.line_ru) lines.set(lineKey(`people:${p.id}`, p.line), p.line_ru);
     for (const n of file.npcs) {
       const pair = (en?: string, ru?: string) => {
         if (en && ru) lines.set(lineKey(n.id, en), ru);

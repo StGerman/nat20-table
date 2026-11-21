@@ -264,14 +264,17 @@ impl NpcFile {
                 return Err(MapError(format!("the people {} is named twice", people.id)));
             }
             let texts = [
-                Some(&people.name),
-                people.name_ru.as_ref(),
-                Some(&people.line),
-                people.line_ru.as_ref(),
+                ("name", Some(&people.name)),
+                ("name_ru", people.name_ru.as_ref()),
+                ("line", Some(&people.line)),
+                ("line_ru", people.line_ru.as_ref()),
             ];
-            if texts.into_iter().flatten().any(|t| !one_line(t)) {
+            if let Some((field, _)) = texts
+                .into_iter()
+                .find(|(_, t)| t.is_some_and(|t| !one_line(t)))
+            {
                 return Err(MapError(format!(
-                    "the people {}'s name and line are each one line",
+                    "the people {} has a {field} that is empty or more than one line",
                     people.id
                 )));
             }
@@ -436,7 +439,13 @@ mod tests {
         );
         let mut two_lines = roadfolk.clone();
         two_lines.peoples[0].line_ru = Some("Кочевой\nнарод.".into());
-        assert!(two_lines.validate(&map()).is_err());
+        assert!(
+            two_lines
+                .validate(&map())
+                .unwrap_err()
+                .0
+                .contains("a line_ru that is empty or more than one line")
+        );
         let mut bad_id = roadfolk;
         bad_id.peoples[0].id = "Corrins".into();
         assert!(bad_id.validate(&map()).is_err());
