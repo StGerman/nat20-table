@@ -264,3 +264,34 @@ test("page reducer: an answer the host refuses reopens its ask; one it takes doe
   const taken = reduce(sent, HostMessageSchema.parse({ type: "event", seq: 1, event: { kind: "said", intent: { kind: "option", number: 2 }, text: "2. Dodge" } }));
   assert.equal(reduce(taken, HostMessageSchema.parse({ type: "refused", why: "no open ask a1" })).ask, undefined);
 });
+
+test("page reducer: a road card stays on the dock while the table says its word on it, each choice with who said it, then the decision", () => {
+  const w = WIRES[1];
+  const at = (seq: number) => w.records.findIndex((r) => r.seq === seq);
+  const seen: Record<number, PageView> = {};
+  replay(w, (page, _ink, i) => {
+    for (const seq of [17, 18, 22, 23]) if (i === at(seq)) seen[seq] = page;
+  });
+  // The card arrives with its list: three choices, nobody has said anything yet.
+  assert.equal(seen[17].card?.card.choices.length, 3);
+  assert.deepEqual(seen[17].card?.votes, []);
+  assert.equal(seen[17].card?.decided, undefined);
+  // The human answered: the card stays on the dock while the others speak.
+  assert.ok(seen[18].card, "the card stays after the human's word");
+  assert.deepEqual(
+    seen[22].card?.votes.map((v) => [v.name, v.choice]),
+    [["Брен", "cloaks"], ["Торва", "cloaks"], ["Марен", "cloaks"], ["Ильза", "cloaks"]],
+  );
+  assert.equal(seen[23].card?.decided, "cloaks");
+});
+
+test("page reducer: the card leaves the dock when the human is asked something else", () => {
+  const w = WIRES[1];
+  let lastCard = -1;
+  let cleared = false;
+  replay(w, (page, _ink, i) => {
+    if (page.card) lastCard = i;
+    else if (lastCard >= 0 && page.ask && page.ask.prompt.kind !== "card") cleared = true;
+  });
+  assert.ok(lastCard >= 0 && cleared);
+});
