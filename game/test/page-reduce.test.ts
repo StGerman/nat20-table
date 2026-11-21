@@ -252,3 +252,15 @@ test("page reducer: the dead of the first frame with people were told before; an
   assert.deepEqual(v.told, ["npc:old_tam"]);
   assert.deepEqual(v.untold, []);
 });
+
+test("page reducer: an answer the host refuses reopens its ask; one it takes does not", () => {
+  let v = reduce(EMPTY, hello(WIRES[0]));
+  v = reduce(v, HostMessageSchema.parse({ type: "ask", id: "a1", prompt: { kind: "combat_turn" } }));
+  const sent = answered(v);
+  assert.equal(sent.dock.form, "waiting");
+  const back = reduce(sent, HostMessageSchema.parse({ type: "refused", why: "not a seat-wire message" }));
+  assert.equal(back.ask?.id, "a1");
+  assert.equal(back.dock.form, "moves");
+  const taken = reduce(sent, HostMessageSchema.parse({ type: "event", seq: 1, event: { kind: "said", intent: { kind: "option", number: 2 }, text: "2. Dodge" } }));
+  assert.equal(reduce(taken, HostMessageSchema.parse({ type: "refused", why: "no open ask a1" })).ask, undefined);
+});
