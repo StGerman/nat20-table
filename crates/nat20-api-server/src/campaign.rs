@@ -11,8 +11,9 @@ use nat20_api_contract::{
     Ability, CaravanView, CardChoiceDm, CardChoiceView, CardDecided, CardDm, CardSaid, CardTarget,
     CardWhen, CargoView, CarriedItem, Carries, ClockView, Coins, DeedDm, ErrorCode, EscortBlade,
     EscortDm, EscortView, EventKind, Handle, LegView, MilesToday, NpcAttitude, NpcDm, NpcRemembers,
-    NpcSeen, OfferedCard, OwnMoveDm, Pace, PlaceDm, ReachView, RejectReason, RoadDm, RosterWorld,
-    Side, Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm, WorldPosition,
+    NpcSeen, OfferedCard, OwnMoveDm, Pace, PeopleView, PlaceDm, ReachView, RejectReason, RoadDm,
+    RosterWorld, Side, Skill, Terrain, TripLegView, TripView, WagonView, Watch, WorldDm,
+    WorldPosition,
 };
 use nat20_world as world;
 use serde::de::DeserializeOwned;
@@ -970,6 +971,7 @@ impl Campaign {
                         names: d.names.clone(),
                         look: d.look.clone(),
                         heard: d.heard.clone(),
+                        people: d.people.clone(),
                         remembers: d
                             .remembers
                             .iter()
@@ -1001,6 +1003,15 @@ impl Campaign {
                             .collect(),
                         heard_by: s.heard.iter().cloned().map(Handle).collect(),
                     })
+                })
+                .collect(),
+            peoples: w
+                .peoples
+                .iter()
+                .map(|p| PeopleView {
+                    id: p.id.clone(),
+                    name: p.name.clone(),
+                    line: p.line.clone(),
                 })
                 .collect(),
         }

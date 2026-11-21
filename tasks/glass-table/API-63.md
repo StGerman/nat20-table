@@ -5,7 +5,7 @@ title: "A people's record in the world's data, and the Corrins' line in the play
 pri: P1
 dest: Ours
 size: S
-state: todo
+state: done
 ---
 
 Scope §5 (Zoya's board), design §4.3 (the one exception to "the contract does not change"). The packs' `glossary_ru` has no entry for the roadfolk, so the DM may translate the word another way and lose the underline. A people gets a place in the world's data and a field in the player's view of it, and the Corrins get this line, Zoya's A as written, approved by Stas 2026-11-21 08:29Z (scope §9 question 8):
@@ -20,4 +20,4 @@ Check: the fixture shows the record in the player's view and nothing of it in a 
 
 ## Status
 
-todo. No code until Stas says go (the talk moved to December with no date, Stas 2026-11-21 08:36Z).
+done. Contract 1.0.0-dev.80: `PeopleView`, `WorldDm.peoples`, `NpcDm.people`, `WorldPlayer.peoples` (the peoples of the persons this character has seen or heard of). World crate: `NpcFile.peoples` and `NpcDef.people`, checked at `start_campaign`. *Wend* records the Corrins (`roadfolk`) with the approved line, and Bel and Tam belong to them. The table loads the Russian line into the people book and the name into the seat's names (both under `people:<id>`), and the DM's name line holds «коррины»; the window's «Люди» (AGT-143) is the first to show them. The id is `roadfolk`, the people `customs.json` already names for `road_is_free`. Check: `allies.jsonl` and `mention.jsonl` show `peoples` only to a player who has seen Old Tobin; unit tests in `projection.rs` and `npcs.rs`; `game/test/peoples.test.ts`.

@@ -236,10 +236,11 @@ test("a campaign's place NPCs get their Russian names in the DM's name line, nev
   // Every roster person once, the pack's own Merchant left to the pack (MAP-24).
   const roster = people.filter((p) => p.id !== "odda_vell").map((p) => `${p.id}: ${p.name_ru}`);
   assert.ok(roster.includes("tam: Тэм") && roster.includes("fenn_lusk: торговец солью Фенн Ласк"));
-  assert.deepEqual(pack.placeNames, [...roster, ...places]);
+  // The world's peoples (API-63) after its people: the DM writes the roadfolk's name as the seat underlines it.
+  assert.deepEqual(pack.placeNames, [...roster, "roadfolk: коррины", ...places]);
   const party = castParty(wend);
   const dm = dmPrompt(pack, "bren", party.ai, "prompt", "ru");
-  assert.match(dm, /odda_vell: торговка зерном Одда Велл; shepherd_gwyn: пастушка Гвин; osric_hale: староста Осрик Хейл; warden_brannock: смотритель ярмарки Браннок; fenn_lusk: торговец солью Фенн Ласк;.*; wenna_thorne: подмастерье Венна Торн; wendmouth: Солтмут;/);
+  assert.match(dm, /odda_vell: торговка зерном Одда Велл; shepherd_gwyn: пастушка Гвин; osric_hale: староста Осрик Хейл; warden_brannock: смотритель ярмарки Браннок; fenn_lusk: торговец солью Фенн Ласк;.*; wenna_thorne: подмастерье Венна Торн; roadfolk: коррины; wendmouth: Солтмут;/);
   // The pack's glossary reaches the DM's Russian prompt alone (AGT-85, F4 «оилскиновый плащ»).
   assert.match(dm, /Words in Russian: write these words of the prose as given here: oilskin coat: промасленный плащ; Bald Hill: Лысая гора;/);
   assert.equal(dm.match(/odda_vell:/g)?.length, 1, "the Merchant named once");

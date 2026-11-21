@@ -23,6 +23,31 @@ pub struct NpcFile {
     pub comment: Option<String>,
     /// The place NPCs, in file order
     pub npcs: Vec<NpcDef>,
+    /// The peoples of the world (API-63), such as the roadfolk, in file order
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub peoples: Vec<PeopleDef>,
+}
+
+/// A people of the world (API-63): a name and the one line anyone in the valley could say of
+/// them, shown to a player once they have seen or heard of one of its persons.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PeopleDef {
+    /// A note for authors; ignored
+    #[serde(default, rename = "_comment", skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
+    /// The id, in snake_case
+    pub id: String,
+    /// The name players read, in English
+    pub name: String,
+    /// What a Russian run calls them; the DM's glossary holds it too
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name_ru: Option<String>,
+    /// The one line about them, in English: no number
+    pub line: String,
+    /// `line` in a Russian run: the table reads it from the world file
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_ru: Option<String>,
 }
 
 /// One place NPC as the world file names them.
@@ -55,6 +80,9 @@ pub struct NpcDef {
     /// `heard` in a Russian run
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub heard_ru: Option<String>,
+    /// The people they belong to, an id of the file's `peoples` (API-63)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub people: Option<String>,
     /// What they remember of the party: one line per deed, shown only by the rules of
     /// decision 0077
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -212,13 +240,48 @@ impl NpcFile {
     /// Checks the file against the map: ids unique and plain, and every NPC in a place the map
     /// has. The scene anchors are the server's to check: the world knows no scenes.
     pub fn validate(&self, map: &WorldMap) -> Result<(), MapError> {
+        let plain_id = |id: &str| {
+            !id.is_empty()
+                && id
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+        };
+        let one_line = |text: &str| {
+            !text.trim().is_empty()
+                && !text
+                    .chars()
+                    .any(|c| c.is_control() || matches!(c, '\u{2028}' | '\u{2029}'))
+        };
+        let mut peoples = BTreeSet::new();
+        for people in &self.peoples {
+            if !plain_id(&people.id) {
+                return Err(MapError(format!(
+                    "the people id {:?} is not a plain snake_case name",
+                    people.id
+                )));
+            }
+            if !peoples.insert(people.id.as_str()) {
+                return Err(MapError(format!("the people {} is named twice", people.id)));
+            }
+            let texts = [
+                ("name", Some(&people.name)),
+                ("name_ru", people.name_ru.as_ref()),
+                ("line", Some(&people.line)),
+                ("line_ru", people.line_ru.as_ref()),
+            ];
+            if let Some((field, _)) = texts
+                .into_iter()
+                .find(|(_, t)| t.is_some_and(|t| !one_line(t)))
+            {
+                return Err(MapError(format!(
+                    "the people {} has a {field} that is empty or more than one line",
+                    people.id
+                )));
+            }
+        }
         let mut ids = BTreeSet::new();
         for npc in &self.npcs {
-            let plain = !npc.id.is_empty()
-                && npc
-                    .id
-                    .chars()
-                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
+            let plain = plain_id(&npc.id);
             // dm and world are the table's own names, never a creature's handle
             if !plain || npc.id == "dm" || npc.id == "world" {
                 return Err(MapError(format!(
@@ -265,6 +328,12 @@ impl NpcFile {
             {
                 return Err(MapError(format!(
                     "the NPC {}'s name is one line of 1 to 40 characters",
+                    npc.id
+                )));
+            }
+            if let Some(people) = npc.people.as_deref().filter(|p| !peoples.contains(p)) {
+                return Err(MapError(format!(
+                    "the NPC {} belongs to the people {people}, which the file does not record",
                     npc.id
                 )));
             }
@@ -328,6 +397,7 @@ mod tests {
         let twice = NpcFile {
             comment: None,
             npcs: vec![npcs.npcs[0].clone(), npcs.npcs[0].clone()],
+            peoples: Vec::new(),
         };
         assert!(twice.validate(&map()).is_err());
         let bad_id = file(&REEVE.replace(r#""id": "reeve""#, r#""id": "Reeve""#));
@@ -340,6 +410,45 @@ mod tests {
         let mut two_lines = npcs.clone();
         two_lines.npcs[0].name = "Reeve\rof the town".into();
         assert!(two_lines.validate(&map()).is_err());
+    }
+
+    #[test]
+    fn a_person_s_people_is_one_the_file_records() {
+        let roadfolk = file(
+            r#"{"peoples": [{"id": "corrins", "name": "the Corrins", "name_ru": "коррины", "line": "Roadfolk.", "line_ru": "Кочевой народ."}],
+                "npcs": [{"id": "bel", "name": "Bel", "monster": "commoner", "people": "corrins"}]}"#,
+        );
+        roadfolk.validate(&map()).unwrap();
+        let mut unknown = roadfolk.clone();
+        unknown.npcs[0].people = Some("elves".into());
+        assert!(
+            unknown
+                .validate(&map())
+                .unwrap_err()
+                .0
+                .contains("does not record")
+        );
+        let mut twice = roadfolk.clone();
+        twice.peoples.push(roadfolk.peoples[0].clone());
+        assert!(
+            twice
+                .validate(&map())
+                .unwrap_err()
+                .0
+                .contains("named twice")
+        );
+        let mut two_lines = roadfolk.clone();
+        two_lines.peoples[0].line_ru = Some("Кочевой\nнарод.".into());
+        assert!(
+            two_lines
+                .validate(&map())
+                .unwrap_err()
+                .0
+                .contains("a line_ru that is empty or more than one line")
+        );
+        let mut bad_id = roadfolk;
+        bad_id.peoples[0].id = "Corrins".into();
+        assert!(bad_id.validate(&map()).is_err());
     }
 
     #[test]

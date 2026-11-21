@@ -585,6 +585,10 @@ pub struct WorldDm {
     /// (API-48, API-58).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub npcs: Vec<NpcDm>,
+    /// Every people the world file records, in its order (API-63). Empty, and left out, when
+    /// it records none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub peoples: Vec<PeopleView>,
     /// The escort contract, when the party is hired on one (API-47).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub escort: Option<EscortDm>,
@@ -681,6 +685,10 @@ pub struct NpcDm {
     /// What the valley says of them aloud (API-58), in English: a rumour, never a fact.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub heard: Option<String>,
+    /// The people they belong to, an id of `WorldDm.peoples` (API-63); absent when the world
+    /// file names none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub people: Option<String>,
     /// What they remember of the party (API-58): one line per deed, in English, every line
     /// the roster holds whether its deed is remembered or not. Empty, and left out, when none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -756,6 +764,19 @@ pub struct NpcHeard {
     pub heard: Option<String>,
 }
 
+/// A people of the world, such as the roadfolk (API-63): its name and the one line anyone in
+/// the valley could say of it. The same in the DM's and a player's view.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct PeopleView {
+    /// The id, in snake_case.
+    pub id: String,
+    /// The name, in English; the table reads the run language's name from the world file.
+    pub name: String,
+    /// The one line about them, in English, no number; the table reads the run language's
+    /// line from the world file.
+    pub line: String,
+}
+
 /// A person the party has met, as a player sees them: never Hit Points, attitude or notes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct NpcKnown {
@@ -816,6 +837,11 @@ pub struct WorldPlayer {
     /// The people this character has only heard of, in the world file's order (API-59).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub heard: Vec<NpcHeard>,
+    /// The peoples of the persons in `npcs` and `heard`, in the world file's order (API-63):
+    /// a people this character has seen or heard of none of is not here. Empty, and left out,
+    /// when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub peoples: Vec<PeopleView>,
     /// The escort contract, when the party is hired on one (API-47).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub escort: Option<EscortView>,

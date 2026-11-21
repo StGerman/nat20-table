@@ -1,5 +1,14 @@
 {
-    "_comment": "The Wend valley's people (API-48, MAP-7, MAP-24): everyone a Wend card names, with every form of their name the table may use, how they look, what the valley says of them, and what they remember of the Blades. A person with a `place` lives there and is there, as the party left them, when it comes back, at the `by_the_wagon` anchor, which every pack's scene for their place must have; the others come only with a card that lists them in its `cast`. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Stat blocks from SRD 5.2.1.",
+    "_comment": "The Wend valley's people (API-48, MAP-7, MAP-24): everyone a Wend card names, with every form of their name the table may use, how they look, what the valley says of them, and what they remember of the Blades, and the peoples a person may belong to (API-63). A person with a `place` lives there and is there, as the party left them, when it comes back, at the `by_the_wagon` anchor, which every pack's scene for their place must have; the others come only with a card that lists them in its `cast`. Our own text, CC-BY-4.0, credit 'nat20-table contributors'. Stat blocks from SRD 5.2.1.",
+    "peoples": [
+        {
+            "id": "roadfolk",
+            "name": "the Corrins",
+            "name_ru": "коррины",
+            "line": "The Corrins are a small roving people: they live by families in painted carts and mend kettles all over the valley.",
+            "line_ru": "Коррины — невысокий кочевой народ: семьями живут в расписных повозках и латают котлы по всей долине."
+        }
+    ],
     "npcs": [
         {
             "id": "shepherd_gwyn",
@@ -397,6 +406,7 @@
                 "Бел",
                 "Бел Коррин"
             ],
+            "people": "roadfolk",
             "monster": "commoner",
             "attitude": "friendly",
             "look": "A small roadfolk woman who mends pots by the fire of a painted cart.",
@@ -491,6 +501,7 @@
                 "Тэме",
                 "Тэм Коррин"
             ],
+            "people": "roadfolk",
             "monster": "commoner",
             "attitude": "friendly",
             "look": "A barefoot boy with a satchel, who cannot take his eyes off other people's swords.",

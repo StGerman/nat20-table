@@ -39,7 +39,8 @@ pub use dice::{ListDice, WorldDice};
 pub use escort::{EscortState, EscortTerms, SKILLED_WAGE_CP, Wage};
 pub use map::{Edge, Generate, MapError, Place, Position, Road, Terrain, WorldMap};
 pub use npcs::{
-    Attitude, NpcCarries, NpcCoins, NpcDef, NpcFile, NpcItem, NpcLeft, NpcState, Remembers,
+    Attitude, NpcCarries, NpcCoins, NpcDef, NpcFile, NpcItem, NpcLeft, NpcState, PeopleDef,
+    Remembers,
 };
 pub use plan::{Reach, Trip, TripLeg};
 pub use travel::{
