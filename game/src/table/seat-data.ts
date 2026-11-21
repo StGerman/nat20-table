@@ -6,35 +6,21 @@
 import type { CardPlayer, Event, Handle, PointFt, Sheet, State, WorldPlayer } from "@nat20-table/engine-client";
 import type { LegalActionsResult } from "../view.ts";
 import type { SeatNames } from "./seat-lines.ts";
+import type { TableEvent } from "./types.ts";
 import { refusedRu } from "./words.ts";
 
 /** The keys whose values name creatures or ledger holders in an engine event. */
-const HANDLE_KEYS = new Set([
-  "actor",
-  "roller",
-  "target",
-  "targets",
-  "from",
-  "to",
-  "participants",
-  "by",
-  "attacker",
-  "creature",
-  "handle",
-  "reactor",
-  "mover",
-  "owner",
-  "scout",
-  "waiting_for",
-  "provoked",
-]);
+const HANDLE_KEYS = new Set(["actor", "roller", "target", "targets", "participants", "by", "attacker", "creature", "handle", "reactor", "mover", "scout", "waiting_for", "provoked"]);
+
+/** Values under those keys that name no creature: a road card's `target` (who decides). */
+const NOT_CREATURES = new Set(["caravan", "blades"]);
 
 /** The seat's name for every creature an event names (its handles under the keys above), by handle. */
 export function eventNames(event: Event, names: SeatNames): Record<string, string> {
   const shown: Record<string, string> = {};
   const walk = (value: unknown, key?: string): void => {
     if (typeof value === "string") {
-      if (key && HANDLE_KEYS.has(key)) shown[value] = names.person(value);
+      if (key && HANDLE_KEYS.has(key) && !NOT_CREATURES.has(value)) shown[value] = names.person(value);
     } else if (Array.isArray(value)) {
       for (const v of value) walk(v, key);
     } else if (value && typeof value === "object") {
@@ -42,6 +28,8 @@ export function eventNames(event: Event, names: SeatNames): Record<string, strin
     }
   };
   walk(event);
+  // A ledger entry's ends are holders (a character, an NPC, a wagon, a market, the world), named as the seat names them.
+  if (event.kind === "ledger") for (const holder of [event.from, event.to]) shown[holder] = names.who(holder);
   return shown;
 }
 
@@ -86,7 +74,7 @@ export interface SeatSheet {
 export function sheetData(sheet: Sheet, names: SeatNames): SeatSheet {
   const shown: Record<string, string> = { [sheet.handle]: names.person(sheet.handle) };
   for (const x of [...sheet.equipment, ...sheet.features, ...sheet.spells, ...sheet.resources, ...sheet.effects]) shown[x.id] = names.thing(x.id, x.name);
-  if (sheet.concentration) shown[sheet.concentration.spell] = names.thing(sheet.concentration.spell, sheet.concentration.spell);
+  if (sheet.concentration) shown[sheet.concentration.spell] ??= names.thing(sheet.concentration.spell, sheet.concentration.spell);
   return { sheet, shown };
 }
 
@@ -151,7 +139,7 @@ export function roadData(world: WorldPlayer, names: SeatNames): SeatRoad {
           contract: {
             ...escort,
             merchant_name: names.person(escort.merchant),
-            destination_name: names.place(escort.destination),
+            destination_name: names.place(escort.destination, world.places.find((p) => p.id === escort.destination)?.name),
             blade_names: Object.fromEntries(escort.blades.map((b) => [b.handle, names.person(b.handle)])),
           },
         }
@@ -172,4 +160,15 @@ export function positionsOf(state: Extract<State, { view: "player" }>, names: Se
     creatures: Object.fromEntries(state.others.map((c) => [c.handle, c.position_ft])),
     anchors: state.anchors.map((a) => ({ id: a.id, name: names.anchor(a.id, a.name), position_ft: a.position_ft })),
   };
+}
+
+/** The data fields an event carries beside its text (AGT-140), which the human's input record leaves out. */
+const DATA_KEYS = ["event", "names", "rolls", "unavailable", "uses", "card", "sheet", "positions", "road", "death_saves"] as const;
+
+/** The event as a terminal reads it: its text, with no data beside it. */
+export function textOnly(event: TableEvent): TableEvent {
+  if (!DATA_KEYS.some((k) => k in event)) return event;
+  const copy: Record<string, unknown> = { ...event };
+  for (const k of DATA_KEYS) delete copy[k];
+  return copy as TableEvent;
 }

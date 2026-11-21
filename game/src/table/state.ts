@@ -8,7 +8,7 @@ import type { CardRu } from "../pack/campaign.ts";
 import { eventLine, noDeaths, tellable, yourLine } from "../view.ts";
 import type { Address } from "./floor.ts";
 import { type CardOnSeat, rollOf, SeatNames, seatLine } from "./seat-lines.ts";
-import { eventNames } from "./seat-data.ts";
+import { eventNames, textOnly } from "./seat-data.ts";
 import { citedRolls, Transcript } from "./transcript.ts";
 import { namedIn, type RosterNames } from "./mentions.ts";
 import type { DmWake, FallbackCause, PlayerIntent, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
@@ -266,6 +266,8 @@ export class TableState {
 
   /** Roll ids of engine lines the seat holds for the next narration (AGT-37): that narration tells them (AGT-140). */
   private untold: string[] = [];
+  /** Every roll id the seat was shown. */
+  private readonly shownRolls = new Set<string>();
   /** The last numbered list and reaction the seat was shown, for the echo of a number (AGT-140). */
   private lastList: string[] | undefined;
   private lastReaction: string[] | undefined;
@@ -292,15 +294,23 @@ export class TableState {
   show(event: TableEvent, typedByHuman = false): void {
     // A table with no human has no screen (M7 spec §4.2): the transcript has the DM's view.
     if (!this.human || !this.seat) return;
-    if (event.kind === "engine" && event.roll && !event.own) this.untold.push(event.roll);
+    if (event.kind === "engine" && event.roll) {
+      this.shownRolls.add(event.roll);
+      if (!event.own) this.untold.push(event.roll);
+    }
+    // These show the held lines as they are (the terminal seat's RELEASES): no later narration tells them.
+    if (event.kind === "options" || event.kind === "reaction" || event.kind === "question" || event.kind === "end") this.untold = [];
     if (event.kind === "options") [this.lastList, this.lastReaction] = [event.lines, undefined];
     if (event.kind === "reaction") this.lastReaction = event.options.map((o, i) => `${i + 1}. ${o}`);
     if (event.kind === "narration") {
-      const rolls = [...new Set([...this.untold, ...citedRolls(event.text)])];
+      // The ids it cites count only for rolls the seat was shown: the DM's view has more.
+      const rolls = [...new Set([...this.untold, ...citedRolls(event.text).filter((id) => this.shownRolls.has(id))])];
       this.untold = [];
       if (rolls.length > 0) event = { ...event, rolls };
     }
     // The human's input record keeps the text only, as before the data beside it (AGT-140); an echo of their own words is no input.
+    // An answer closes the reaction it answered: a later number names the list again.
+    if (event.kind === "said") this.lastReaction = undefined;
     if (event.kind !== "said") this.recordInput(this.human, JSON.stringify(textOnly(event)), typedByHuman);
     const heard = heardLine(event, this.human);
     if (heard) this.heard = [...this.heard, heard].slice(-HEARD_LINES);
@@ -692,13 +702,3 @@ export function heardLine(event: TableEvent, human: Handle): string | undefined 
   }
 }
 
-/** The data fields an event carries beside its text (AGT-140), which the human's input record leaves out. */
-const DATA_KEYS = ["event", "names", "rolls", "unavailable", "uses", "card", "sheet", "positions", "road", "death_saves"] as const;
-
-/** The event as a terminal reads it: its text, with no data beside it. */
-export function textOnly(event: TableEvent): TableEvent {
-  if (!DATA_KEYS.some((k) => k in event)) return event;
-  const copy: Record<string, unknown> = { ...event };
-  for (const k of DATA_KEYS) delete copy[k];
-  return copy as TableEvent;
-}

@@ -1980,6 +1980,7 @@ export class TableLoop {
   private async exploreRoundBody(human: Handle): Promise<void> {
     await this.table.flush();
     this.top = this.shown = [];
+    this.listData = {};
     let line = "";
     for (;;) {
       const asked = await this.ask(this.table.question ? { kind: "answer" } : this.shown !== this.top ? { kind: "pick" } : { kind: "explore" });
@@ -2440,6 +2441,7 @@ export class TableLoop {
     const state = combat || this.situation || this.campaign ? await this.humanState() : undefined;
     if (!listed.ok || listed.result?.cmd !== "legal_actions") {
       this.top = this.shown = [];
+      this.listData = {};
       this.table.show({ kind: "info", title: this.words.options, text: this.table.names.language === "en" ? (listed.error?.message ?? this.words.noOptions) : this.words.noOptions });
       return;
     }
