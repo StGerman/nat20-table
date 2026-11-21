@@ -1,6 +1,7 @@
-// The Glass Table page, part 1 (AGT-142, design §5.2): the story column as the content layer, and
-// over it the control layer in glass: the title and turn pill on top, the dock at the bottom (chips,
-// the sheet of moves, the capsule with health and the turn's budget), the roll stage over all. It
+// The Glass Table page (AGT-142, AGT-143, design §5.2): the story column as the content layer, and
+// over it the control layer in glass: the title, turn pill and tools on top («Рассказ | Где все»,
+// «Лист», «Люди»), the portrait rail on the left, the dock at the bottom (chips, the sheet of moves,
+// the capsule with health and the turn's budget), the roll stage over all. It
 // draws from the wire's data, not from the terminal's lines (Stas, 2026-11-21); every word it shows
 // is the host's or one of the page's labels in UI_WORDS. It talks to nothing but the seat wire.
 import { createElement as h, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
@@ -10,7 +11,8 @@ import type { HumanPrompt, PlayerIntent, TableEvent } from "../table/types.ts";
 import type { Choice } from "../table/choices.ts";
 import { nameSpans, PEOPLE_WORDS, personCard, type Person, type PersonState } from "../ui/people.ts";
 import { FINISHES, mount, type Die, type Finish } from "./d20.ts";
-import { placed, type CardView, type Dock, type PageView, type RollToken, type StoryLine } from "./reduce.ts";
+import { faceOf } from "./portraits.ts";
+import { meOf, placed, type CardView, type Dock, type PageView, type RollToken, type StoryLine } from "./reduce.ts";
 
 export interface AppProps {
   view: PageView;
@@ -52,21 +54,32 @@ function savedFinish(): Finish {
 
 export function App({ view, send, settled }: AppProps): ReactNode {
   const [finish, setFinish] = useState<Finish>(savedFinish);
-  /** The person card open, by id, and whether the people list is open. */
+  /** The person card open, by id; the inspector open («Люди» or «Лист»); the lens over the story. */
   const [person, setPerson] = useState<string>();
-  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [panel, setPanel] = useState<Panel>();
+  const [lens, setLens] = useState(false);
   const [pop, setPop] = useState<Pop>();
-  // Esc closes what is open on top: a roll's popover, the person card, then the people list under it.
+  // Esc closes what is open on top: a roll's popover, the person card, the inspector, then the lens.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (pop) setPop(undefined);
       else if (person !== undefined) setPerson(undefined);
-      else if (peopleOpen) setPeopleOpen(false);
+      else if (panel) setPanel(undefined);
+      else if (lens) setLens(false);
     };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
-  }, [person, peopleOpen, pop]);
+  }, [person, panel, lens, pop]);
+  // A sheet the human asked for, by «Лист» or by typing /sheet, opens in «Лист» when it comes.
+  const wantSheet = useRef(false);
+  const sheetN = view.sheet?.n ?? 0;
+  useEffect(() => {
+    if (sheetN > 0 && wantSheet.current) {
+      wantSheet.current = false;
+      setPanel("sheet");
+    }
+  }, [sheetN]);
   const choose = (next: Finish) => {
     setFinish(next);
     try {
@@ -78,25 +91,41 @@ export function App({ view, send, settled }: AppProps): ReactNode {
   if (view.refused) return h("main", { className: "refused", role: "alert" }, view.refused);
   if (!view.hello) return h("main", { className: "starting", "aria-busy": true });
   const s = view.situation?.situation;
+  const toggle = (which: Panel) => setPanel(panel === which ? undefined : which);
+  const ask = (intent: PlayerIntent): boolean => {
+    if (intent.kind === "command" && intent.name === "sheet") wantSheet.current = true;
+    return send(intent);
+  };
+  // «Лист» asks the seat for a fresh sheet when the table waits on the human, as /sheet does.
+  const openSheet = () => {
+    if (panel === "sheet") return setPanel(undefined);
+    setPanel("sheet");
+    if (view.ask) ask({ kind: "command", name: "sheet" });
+  };
+  const looks = lensOf(view);
   return h(
     "main",
     { className: `win ${s?.mode === "combat" ? "scene-fight" : "scene-road"}`, lang: view.hello.language },
     h("div", { className: "ambient", "aria-hidden": true }),
-    h(Story, { view, open: setPerson, pop: setPop }),
+    lens && looks ? h(Lens, { view, looks }) : h(Story, { view, open: setPerson, pop: setPop }),
     h("div", { className: "edge top", "aria-hidden": true }),
     h("div", { className: "edge bottom", "aria-hidden": true }),
-    h(Top, { view, finish, choose, peopleOpen, togglePeople: () => setPeopleOpen(!peopleOpen) }),
-    peopleOpen ? h(PeopleList, { view, open: setPerson, close: () => setPeopleOpen(false) }) : null,
+    h(Top, { view, panel, lens: lens && looks !== undefined, canLens: looks !== undefined, setLens, openSheet, togglePeople: () => toggle("people") }),
+    h(Rail, { view, openSheet, lens: () => setLens(true) }),
+    panel === "people" ? h(PeopleList, { view, open: setPerson, close: () => setPanel(undefined) }) : null,
+    panel === "sheet" ? h(CharSheet, { view, finish, choose, close: () => setPanel(undefined) }) : null,
     person ? h(PersonCard, { key: person, view, id: person, close: () => setPerson(undefined) }) : null,
     view.overlay ? h(Overlay, { key: view.overlay.n, overlay: view.overlay, words: ui(view) }) : null,
     pop ? h(RollPop, { pop, rolls: view.rolls, close: () => setPop(undefined) }) : null,
-    h(DockView, { view, send }),
+    h(DockView, { view, send: ask }),
     view.stage ? h(Stage, { key: view.stage, roll: view.rolls[view.stage], finish, settled }) : null,
   );
 }
 
-/** The title with where the story is, the turn pill, «Люди» and the die finish. */
-function Top({ view, finish, choose, peopleOpen, togglePeople }: { view: PageView; finish: Finish; choose(next: Finish): void; peopleOpen: boolean; togglePeople(): void }): ReactNode {
+type Panel = "people" | "sheet";
+
+/** The title with where the story is, the turn pill, the «Рассказ | Где все» switch, «Лист» and «Люди». */
+function Top({ view, panel, lens, canLens, setLens, openSheet, togglePeople }: { view: PageView; panel?: Panel; lens: boolean; canLens: boolean; setLens(on: boolean): void; openSheet(): void; togglePeople(): void }): ReactNode {
   const s = view.situation?.situation;
   const words = ui(view).panel;
   const mine = s?.mode === "combat" && s.turn === view.hello?.handle;
@@ -115,7 +144,7 @@ function Top({ view, finish, choose, peopleOpen, togglePeople }: { view: PageVie
           { className: `turnpill pill glass${mine ? " mine" : " calm"}`, role: "status", "data-test": "turn" },
           h("i", { className: "mark", "aria-hidden": true }),
           h("span", null, pill),
-          order.length > 0 ? h("span", { className: "stack", "aria-hidden": true }, order.map((handle) => h("span", { key: handle, className: `medal small${handle === view.hello?.handle ? " me" : ""}`, title: shownName(view, s, handle) }, initial(shownName(view, s, handle))))) : null,
+          order.length > 0 ? h("span", { className: "stack", "aria-hidden": true }, order.map((handle) => h(Medal, { key: handle, handle, name: shownName(view, s, handle), className: `small${handle === view.hello?.handle ? " me" : ""}`, title: shownName(view, s, handle) }))) : null,
         )
       : h("span"),
     h(
@@ -123,9 +152,15 @@ function Top({ view, finish, choose, peopleOpen, togglePeople }: { view: PageVie
       { className: "toolset" },
       h(
         "div",
+        { className: "tools glass", role: "group" },
+        h("button", { type: "button", "data-test": "story", "aria-pressed": !lens, onClick: () => setLens(false) }, ui(view).page.story),
+        h("button", { type: "button", "data-test": "where", "aria-pressed": lens, disabled: !canLens, onClick: () => setLens(true) }, ui(view).page.where),
+      ),
+      h(
+        "div",
         { className: "tools glass" },
-        h("button", { type: "button", className: "tool", "data-test": "people", "aria-pressed": peopleOpen, onClick: togglePeople }, peopleWords(view).title),
-        h("button", { type: "button", className: "tool finish", "data-test": "finish", onClick: () => choose(FINISHES[(FINISHES.indexOf(finish) + 1) % FINISHES.length]) }, ui(view).dieFinish[finish]),
+        h("button", { type: "button", "data-test": "sheet", "aria-pressed": panel === "sheet", onClick: openSheet }, ui(view).page.sheet),
+        h("button", { type: "button", "data-test": "people", "aria-pressed": panel === "people", onClick: togglePeople }, peopleWords(view).title),
       ),
     ),
   );
@@ -138,6 +173,174 @@ function peopleWords(view: PageView) {
 /** A person's initial: the first letter of the name the seat shows (Stas, scope §9 question 5: initials for the first build). */
 function initial(name: string): string {
   return /\p{L}/u.exec(name)?.[0]?.toLocaleUpperCase() ?? "?";
+}
+
+/** A round face: the portrait when the page has one for the handle, else the initial. */
+function Medal({ handle, name, className, title }: { handle?: string; name: string; className?: string; title?: string }): ReactNode {
+  const face = faceOf(handle);
+  return h("span", { className: ["medal", className, face ? "face" : undefined].filter(Boolean).join(" "), "aria-hidden": true, ...(title ? { title } : {}) }, face ? h("img", { src: face, alt: "", draggable: false }) : initial(name));
+}
+
+/** The portrait rail (design §5.2, the control layer's side): the human, then the party, each ringed
+ *  by how they are; under it «Рядом», everyone near who is not of the party and still up. Health is
+ *  the panel's: the human's own numbers, the others' bands. The frame waits for its narration, as the
+ *  panel does, so nobody falls on the rail before the story tells it. */
+function Rail({ view, openSheet, lens }: { view: PageView; openSheet(): void; lens(): void }): ReactNode {
+  const s = view.situation?.situation;
+  if (!s) return null;
+  const words = ui(view);
+  const me = view.hello?.handle ?? "";
+  const fight = s.mode === "combat";
+  const mine = s.me.hp_max > 0 && s.me.hp * 4 <= s.me.hp_max ? (s.me.hp <= 0 ? "down" : "low") : "";
+  const party = s.creatures.filter((c) => c.side === "party");
+  const near = s.creatures.filter((c) => c.side !== "party" && c.health !== "down").sort((a, b) => a.distance_ft - b.distance_ft);
+  const ring = (health: string) => (health === "down" ? "down" : health === "bloodied" ? "low" : "");
+  const now = (handle: string) => (fight && s.turn === handle ? " now" : "");
+  const myName = named(view, me);
+  const myLabel = `${myName} · ${words.page.health} ${words.page.hp(s.me.hp, s.me.hp_max)}`;
+  return h(
+    "nav",
+    { className: "rail", "aria-label": words.panel.party.replace(/[·:\s]/g, "") || myName, "data-test": "rail" },
+    h(
+      "div",
+      { className: "rail-party glass" },
+      h("button", { type: "button", className: `face-btn ${mine}${now(me)}`.trim(), "data-handle": me, title: myLabel, "aria-label": myLabel, onClick: openSheet }, h(Medal, { handle: me, name: myName })),
+      party.map((c) => {
+        const label = `${c.name} · ${words.panel.health[c.health]}`;
+        return h("span", { key: c.handle, className: `face-btn ${ring(c.health)}${now(c.handle)}`.trim(), "data-handle": c.handle, "data-health": c.health, title: label, role: "img", "aria-label": label }, h(Medal, { handle: c.handle, name: c.name }));
+      }),
+    ),
+    near.length > 0
+      ? h(
+          "button",
+          { type: "button", className: "near glass", "data-test": "near", title: `${words.page.near}: ${near.map((c) => shownName(view, s, c.handle)).join(", ")}`, "aria-label": `${words.page.near}: ${near.length}`, onClick: lens },
+          h(Medal, { handle: near[0].handle, name: shownName(view, s, near[0].handle) }),
+          near.length > 1 ? h("b", { className: "count" }, near.length) : null,
+        )
+      : null,
+  );
+}
+
+/** What «Где все» shows now: the yard in a fight or wherever positions came, else the road. */
+type Looks = { kind: "yard"; positions: NonNullable<NonNullable<PageView["situation"]>["positions"]> } | { kind: "road"; map: string[] };
+
+function lensOf(view: PageView): Looks | undefined {
+  const s = view.situation;
+  const positions = s?.positions;
+  const road = s?.situation?.road?.map;
+  if (positions && (s?.situation?.mode === "combat" || !road)) return { kind: "yard", positions };
+  if (road && road.length > 0) return { kind: "road", map: road };
+  return undefined;
+}
+
+/** «Где все» (design §5.2): the yard drawn from the engine's positions and the scene's anchors, in
+ *  feet, with nothing invented between them; out of a fight, the road as the seat lays it out. */
+function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
+  const words = ui(view).page;
+  if (looks.kind === "road") return h("section", { className: "lens road", "data-test": "lens" }, h("pre", { className: "route glass" }, looks.map.join("\n")));
+  const s = view.situation?.situation;
+  const me = view.hello?.handle ?? "";
+  const p = looks.positions;
+  const who = Object.entries(p.creatures).map(([handle, at]) => ({ handle, at, c: s?.creatures.find((x) => x.handle === handle) }));
+  const budget = view.dock.form === "moves" && view.dock.prompt.kind === "combat_turn" ? view.dock.options?.budget : undefined;
+  const walk = budget?.movement_ft ?? 0;
+  const xs = [p.me.x_ft - walk, p.me.x_ft + walk, ...who.map((w) => w.at.x_ft), ...p.anchors.map((a) => a.position_ft.x_ft)];
+  const ys = [p.me.y_ft - walk, p.me.y_ft + walk, ...who.map((w) => w.at.y_ft), ...p.anchors.map((a) => a.position_ft.y_ft)];
+  const pad = 8;
+  const [x0, x1, y0, y1] = [Math.min(...xs) - pad, Math.max(...xs) + pad, Math.min(...ys) - pad, Math.max(...ys) + pad];
+  // North is up: the engine's y grows away from the viewer, the screen's grows down.
+  const X = (x: number) => x - x0;
+  const Y = (y: number) => y1 - y;
+  const token = (handle: string, name: string, at: { x_ft: number; y_ft: number }, cls: string, title: string, label: string) => {
+    const face = faceOf(handle);
+    const id = `clip-${handle}`;
+    return h(
+      "g",
+      { key: handle, className: `who ${cls}`, "data-handle": handle, transform: `translate(${X(at.x_ft)} ${Y(at.y_ft)})` },
+      h("title", null, title),
+      h("circle", { r: 1.9, className: "disc" }),
+      face ? [h("clipPath", { key: "c", id }, h("circle", { r: 1.65 })), h("image", { key: "i", href: face, x: -1.65, y: -1.65, width: 3.3, height: 3.3, clipPath: `url(#${id})` })] : h("text", { className: "ini", dy: "0.35em" }, initial(name)),
+      h("text", { className: "label", y: cls === "me" ? -2.6 : 3.6 }, label),
+    );
+  };
+  return h(
+    "section",
+    { className: "lens yard", "data-test": "lens" },
+    h(
+      "svg",
+      { viewBox: `0 0 ${x1 - x0} ${y1 - y0}`, role: "img", "aria-label": words.where },
+      walk > 0
+        ? h(
+            "g",
+            { className: "walk" },
+            h("circle", { cx: X(p.me.x_ft), cy: Y(p.me.y_ft), r: walk }),
+            h("text", { x: X(p.me.x_ft), y: Y(p.me.y_ft) - walk - 1.2 }, words.walk),
+          )
+        : null,
+      p.anchors.map((a) => {
+        // A place someone stands on keeps its name above them, clear of theirs below (and of «вы» above the human).
+        const near = (at: { x_ft: number; y_ft: number }) => Math.hypot(at.x_ft - a.position_ft.x_ft, at.y_ft - a.position_ft.y_ft) < 4;
+        const y = near(p.me) ? -4.3 : who.some((w) => near(w.at)) ? -2.6 : 2.6;
+        return h("g", { key: a.id, className: "anchor", transform: `translate(${X(a.position_ft.x_ft)} ${Y(a.position_ft.y_ft)})` }, h("rect", { x: -0.75, y: -0.75, width: 1.5, height: 1.5, rx: 0.3 }), h("text", { y }, a.name));
+      }),
+      who.map(({ handle, at, c }) => {
+        const name = shownName(view, s, handle);
+        // One the panel no longer lists has left the fight: drawn faded where it was last.
+        return token(handle, name, at, `${c?.side ?? "gone"}${!c || c.health === "down" ? " down" : ""}`, [name, c ? ui(view).panel.health[c.health] : undefined].filter(Boolean).join(" · "), name);
+      }),
+      token(me, named(view, me), p.me, "me", named(view, me), words.you),
+    ),
+  );
+}
+
+/** «Лист» (design §5.2): the character sheet the seat showed last, in its own words, and the die's finish. */
+function CharSheet({ view, finish, choose, close }: { view: PageView; finish: Finish; choose(next: Finish): void; close(): void }): ReactNode {
+  const words = ui(view).page;
+  const [head, ...rows] = (view.sheet?.text ?? "").split("\n").filter((r) => r.trim() !== "");
+  const old = view.sheet !== undefined && view.sheet.me !== meOf(view);
+  const me = view.situation?.situation?.me;
+  // The seat's first line is the name, then who the character is.
+  const [title, sub] = head ? (head.includes(": ") ? [head.slice(0, head.indexOf(": ")), head.slice(head.indexOf(": ") + 2)] : [head, undefined]) : [undefined, undefined];
+  return h(
+    "aside",
+    { className: "inspector charsheet glass", role: "dialog", "aria-label": words.sheet, "data-test": "charsheet" },
+    h(
+      "header",
+      null,
+      h(Medal, { handle: view.hello?.handle, name: named(view, view.hello?.handle ?? "") }),
+      h("hgroup", null, h("h2", null, title ?? words.sheet), sub ? h("p", null, sub) : null),
+      h("button", { className: "close", onClick: close, "aria-label": words.close }, "×"),
+    ),
+    !view.sheet || old ? h("p", { className: "line", "data-test": "sheet-later" }, words.sheetLater) : null,
+    view.sheet
+      ? h(
+          "dl",
+          null,
+          rows.map((row, i) => {
+            // "Label: value" rows read as a label over their parts; the stats line is parts alone.
+            const m = /^([^:·]{1,40}):\s+(.*)$/.exec(row);
+            const parts = (m ? m[2] : row).split(" · ");
+            // The stats line («Здоровье 20 из 20 · Защита 19 · …») reads as tiles: a word over its number.
+            const tiles = !m && parts.length > 1 ? parts.map((part) => /^(\D+?)\s+([-+]?\d.*)$/.exec(part)) : [];
+            // The seat's sheet leads that line with Hit Points: on an old sheet they are the panel's, as
+            // the capsule shows them, so the window never says two healths at once (Vera, 2026-11-21).
+            if (tiles.length > 0 && tiles.every(Boolean))
+              return h(
+                "div",
+                { key: i, className: "tiles" },
+                tiles.map((t, j) => h("div", { key: j, className: "tile", ...(j === 0 ? { "data-test": "sheet-hp" } : {}) }, h("small", null, t![1]), h("b", null, j === 0 && old && me ? words.hp(me.hp, me.hp_max) : t![2]))),
+              );
+            return h("div", { key: i, className: "row" }, m ? h("dt", null, m[1]) : null, h("dd", null, parts.length > 1 ? parts.map((part, j) => h("span", { key: j, className: "part" }, part)) : parts[0]));
+          }),
+        )
+      : null,
+    h(
+      "div",
+      { className: "die-row", role: "group", "aria-label": words.die, "data-test": "finish" },
+      h("span", null, words.die),
+      FINISHES.map((f) => h("button", { key: f, type: "button", "data-finish": f, "aria-pressed": f === finish, onClick: () => choose(f) }, words.finish[f])),
+    ),
+  );
 }
 
 function Story({ view, open, pop }: { view: PageView; open(id: string): void; pop(p: Pop): void }): ReactNode {
@@ -187,7 +390,7 @@ function Row({ line, now, view, open, pop }: { line: StoryLine; now: boolean; vi
       return h(
         "div",
         { className: `${cls} say${line.beat === "words" ? " mine" : ""}`, "data-row": line.id, ...(line.person ? { "data-who": line.person } : {}) },
-        line.cont ? h("span", { className: "medal gapped", "aria-hidden": true }) : h("span", { className: "medal", "aria-hidden": true }, initial(line.who ?? "")),
+        line.cont ? h("span", { className: "medal gapped", "aria-hidden": true }) : h(Medal, { handle: line.person, name: line.who ?? "" }),
         line.cont ? null : h("span", { className: "say-who" }, line.to ? `${line.who} → ${line.to}` : line.who),
         h("span", { className: "say-text" }, line.beat === "words" ? line.text : spans(line.text, view.people, open), tokens(line.rolls)),
       );
@@ -421,11 +624,11 @@ function Bar({ view, send }: { view: PageView; send(intent: PlayerIntent): boole
   const name = named(view, handle);
   const budget = view.dock.form === "moves" && view.dock.prompt.kind === "combat_turn" ? view.dock.options?.budget : undefined;
   // The story's last line says the run is over; the bar does not say it twice (the stop card is AGT-144).
-  if (view.dock.form === "ended") return h("div", { className: "dock-bar ended" }, h("span", { className: "medal me", "aria-hidden": true }, initial(name)), me ? h(Health, { me, words }) : null);
+  if (view.dock.form === "ended") return h("div", { className: "dock-bar ended" }, h(Medal, { handle, name, className: "me" }), me ? h(Health, { me, words }) : null);
   return h(
     "div",
     { className: "dock-bar" },
-    h("span", { className: "medal me", "aria-hidden": true }, initial(name)),
+    h(Medal, { handle, name, className: "me" }),
     me ? h(Health, { me, words }) : null,
     h(Capsule, { key: "ask" in view.dock ? view.dock.ask : "none", view, send }),
     budget

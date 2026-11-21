@@ -66,7 +66,7 @@ for (const w of WIRES) {
 }
 
 // Every finish (Stas, 2026-11-21) turns in place and lands on the engine's face, numbers upright.
-for (const [finish, label] of [["chrome", "Die: mirror"], ["wire", "Die: wire"], ["glass", "Die: glass"]] as const) {
+for (const finish of ["chrome", "wire", "glass"] as const) {
   test(`the ${finish} die rises, turns and lands on the engine's face`, async ({ page }) => {
     await page.addInitScript((f) => localStorage.setItem("nat20.die-finish", f), finish);
     const w = WIRES[0];
@@ -75,23 +75,25 @@ for (const [finish, label] of [["chrome", "Die: mirror"], ["wire", "Die: wire"],
     await replay(page, w, seq);
     const landed = await page.evaluate(() => window.__nat20!.landed);
     expect(landed).toEqual([{ ...first, gl: true }]);
-    await expect(page.locator('[data-test="finish"]')).toHaveText(label);
+    await page.locator('[data-test="sheet"]').click();
+    await expect(page.locator(`[data-test="finish"] [data-finish="${finish}"]`)).toHaveAttribute("aria-pressed", "true");
   });
 }
 
-test("the finish switch goes mirror, wire, glass and round again, and the choice outlasts a reload", async ({ page }) => {
+test("the die's finish is chosen in «Лист», and the choice outlasts a reload", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await replay(page, WIRES[1], 40);
-  const finish = page.locator('[data-test="finish"]');
-  await expect(finish).toHaveText("Кубик: зеркальный");
-  await finish.click();
-  await expect(finish).toHaveText("Кубик: проволочный");
+  const pressed = page.locator('[data-test="finish"] [aria-pressed="true"]');
+  await page.locator('[data-test="sheet"]').click();
+  await expect(page.locator('[data-test="finish"] button')).toHaveText(["зеркальный", "проволочный", "стеклянный"]);
+  await expect(pressed).toHaveText("зеркальный");
+  await page.locator('[data-finish="wire"]').click();
+  await expect(pressed).toHaveText("проволочный");
   await replay(page, WIRES[1], 40);
-  await expect(finish).toHaveText("Кубик: проволочный");
-  await finish.click();
-  await expect(finish).toHaveText("Кубик: стеклянный");
-  await finish.click();
-  await expect(finish).toHaveText("Кубик: зеркальный");
+  await page.locator('[data-test="sheet"]').click();
+  await expect(pressed).toHaveText("проволочный");
+  await page.locator('[data-finish="glass"]').click();
+  await expect(pressed).toHaveText("стеклянный");
 });
 
 // Exit row 5 (AGT-143): a card with its votes, a name token and a person's «Помнит» on the page.
@@ -193,4 +195,59 @@ test("the end of the run is said once", async ({ page }) => {
   const end = await page.locator(".story .beat.end").textContent();
   expect(end).toBeTruthy();
   await expect(page.locator(".dock")).not.toContainText(end!);
+});
+
+// The control layer's side and top (AGT-143, design §5.2): the portrait rail, «Где все», «Лист».
+test("the rail shows the party with faces, the human first and ringed on their turn, and «Рядом» opens the yard", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await narrated(page);
+  const rail = page.locator('[data-test="rail"]');
+  const faces = rail.locator(".face-btn");
+  await expect(faces.first()).toHaveAttribute("data-handle", "bren");
+  await expect(faces.first()).toHaveClass(/\bnow\b/);
+  expect((await faces.evaluateAll((els) => els.map((e) => e.getAttribute("data-handle")))).sort()).toEqual(["bren", "ilsa", "maren", "torva"]);
+  await expect(faces.locator("img")).toHaveCount(4);
+  await expect(faces.first()).toHaveAttribute("title", "Брен · Здоровье 12 из 20");
+  const near = page.locator('[data-test="near"]');
+  await expect(near).toHaveAttribute("aria-label", /^Рядом: [12]$/);
+  await near.click();
+  await expect(page.locator('[data-test="where"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-test="lens"]')).toBeVisible();
+});
+
+test("«Где все» draws everyone where the engine puts them and the scene's anchors, and «Рассказ» brings the story back", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await narrated(page);
+  await page.locator('[data-test="where"]').click();
+  const lens = page.locator('[data-test="lens"]');
+  const drawn = await lens.locator(".who").evaluateAll((els) => els.map((e) => e.getAttribute("data-handle")).sort());
+  let v = reduce(EMPTY, HostMessageSchema.parse({ type: "hello", wire: 1, hash: "", run: "", language: "ru", handle: "bren", title: "", names: NAMES_RU }));
+  for (const r of narratedFight().trim().split("\n").map((l) => JSON.parse(l) as Rec)) v = settle(reduce(v, HostMessageSchema.parse(r.event ? { type: "event", seq: r.seq, event: r.event } : r.message)));
+  const frame = v.situation?.positions;
+  expect(drawn).toEqual(["bren", ...Object.keys(frame!.creatures)].sort());
+  await expect(lens.locator(".anchor text")).toHaveText(frame!.anchors.map((a) => a.name));
+  // The ring of where Bren can walk this turn: the turn's 30 feet.
+  await expect(lens.locator(".walk circle")).toHaveAttribute("r", "30");
+  await expect(lens.locator(".walk text")).toHaveText("Сюда дойдёте за этот ход");
+  await expect(page.locator(".story")).toHaveCount(0);
+  await page.locator('[data-test="story"]').click();
+  await expect(lens).toHaveCount(0);
+  await expect(page.locator(".story")).toBeVisible();
+});
+
+test("«Лист» shows the sheet in the seat's words, and says when it is older than the character", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await narrated(page);
+  await page.locator('[data-test="sheet"]').click();
+  const sheet = page.locator('[data-test="charsheet"]');
+  await expect(sheet.locator("h2")).toHaveText("Брен");
+  await expect(sheet.locator("hgroup p")).toHaveText("человек, воин, уровень 2");
+  await expect(sheet.locator("dt")).toContainText(["Кошелёк"]);
+  // The sheet came before the fight; Bren has been hurt since.
+  await expect(sheet.locator('[data-test="sheet-later"]')).toHaveText("Свежий лист придёт, когда очередь дойдёт до вас.");
+  // Its Hit Points are the panel's, as the capsule says them: never two healths at once.
+  await expect(sheet.locator('[data-test="sheet-hp"]')).toHaveText("Здоровье12 из 20");
+  await expect(page.locator('[data-test="hp"] b')).toHaveText("12 из 20");
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
 });

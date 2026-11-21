@@ -142,6 +142,9 @@ export interface PageView {
   refusal?: string;
   /** A command's answer laid over the story (/sheet, /where, /log, /usage). */
   overlay?: { title: string; text: string; data?: Extract<TableEvent, { kind: "info" }>; n: number };
+  /** The character sheet the seat showed last (/sheet): «Лист» draws it, and `n` counts each new one.
+   *  `me` is the panel's line on the character when it came: once that changes, the sheet is old. */
+  sheet?: { title: string; text: string; n: number; me: string };
   /** What the human's character perceives: the panel, positions, the road. */
   situation?: Situation;
   /** The newest panel frame, waiting for the narration of the step before it or for the next decision. */
@@ -173,7 +176,8 @@ export const EMPTY: PageView = { seq: 0, story: [], held: [], rolls: {}, dock: {
 /** The kinds that show the held engine lines above them; a narration tells them instead (ink-seat.ts RELEASES). */
 const RELEASES = new Set<TableEvent["kind"]>(["options", "reaction", "question", "end"]);
 /** A command's answers, shown over the story (/options too: the dock holds the list). */
-const OVERLAYS = new Set((["en", "ru"] as const).flatMap((l) => [SEAT_WORDS[l].sheet, SEAT_WORDS[l].where, SEAT_WORDS[l].log, SEAT_WORDS[l].usage, SEAT_WORDS[l].options]));
+const SHEETS = new Set((["en", "ru"] as const).map((l) => SEAT_WORDS[l].sheet));
+const OVERLAYS = new Set((["en", "ru"] as const).flatMap((l) => [SEAT_WORDS[l].where, SEAT_WORDS[l].log, SEAT_WORDS[l].usage, SEAT_WORDS[l].options]));
 const REFUSED = new Set([SEAT_WORDS.en.notAccepted, SEAT_WORDS.ru.notAccepted]);
 /** The beats whose rows tell a death (ink-seat.ts TELLING). */
 const TELLING = new Set<Beat>(["narration", "speech", "fact", "place", "end"]);
@@ -331,6 +335,7 @@ function shown(v: PageView, event: TableEvent): PageView {
       return release(next);
     }
     case "info":
+      if (SHEETS.has(event.title)) return { ...v, sheet: { title: event.title, text: event.text, n: (v.sheet?.n ?? 0) + 1, me: meOf(v) } };
       if (OVERLAYS.has(event.title)) return { ...v, overlay: { title: event.title, text: event.text, data: event, n: (v.overlay?.n ?? 0) + 1 } };
       if (REFUSED.has(event.title)) return { ...v, refusal: event.text };
       if (event.card) v = { ...v, card: cardOf(v.card, event.card) };
@@ -497,6 +502,11 @@ function situation(v: PageView, event: Situation): PageView {
 function endsTurn(v: PageView, event: Situation): boolean {
   const s = event.situation;
   return v.options?.budget !== undefined && s !== undefined && (s.mode !== "combat" || s.turn !== v.hello?.handle);
+}
+
+/** The panel's line on the human's character, to tell whether a sheet still holds. */
+export function meOf(v: PageView): string {
+  return JSON.stringify((v.frame ?? v.situation)?.situation?.me ?? null);
 }
 
 function peopleNow(v: PageView): Person[] {

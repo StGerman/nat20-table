@@ -504,8 +504,6 @@ export interface UiWords {
   /** How many commands the picker shows of how many match, when some are cut. */
   pickerCount(shown: number, total: number): string;
   suggestQuestion: { answer(name: string): string; surrender(name: string): string; other(name: string): string };
-  /** The Glass Table page's die finish switch: what it says for each finish (the terminal has no die). */
-  dieFinish: { chrome: string; wire: string; glass: string };
   /** The Glass Table page's own labels (AGT-142): the capsule, the chips, the sheet of moves (the terminal has none of these). */
   page: {
     /** The capsule's question on the human's turn and out of a fight. */
@@ -531,6 +529,20 @@ export interface UiWords {
     /** The token that holds a fight's turn-order rolls. */
     order: string;
     close: string;
+    /** The top switch between the story and the lens, and the inspector of the character's sheet. */
+    story: string;
+    where: string;
+    sheet: string;
+    /** The rail's medallion for everyone near who is not of the party. */
+    near: string;
+    /** «Где все»: the human's own token, and the ring of where they can walk this turn. */
+    you: string;
+    walk: string;
+    /** «Лист» before the seat has shown a sheet, or since the character changed: when a fresh one comes. */
+    sheetLater: string;
+    /** The die finish switch in «Лист» (the terminal has no die). */
+    die: string;
+    finish: { chrome: string; wire: string; glass: string };
   };
   panel: {
     explore: string;
@@ -662,7 +674,6 @@ export const UI_WORDS: Record<Language, UiWords> = {
       surrender: (name) => `They offer to surrender. What does ${name} do?`,
       other: (name) => `What does ${name} do or say?`,
     },
-    dieFinish: { chrome: "Die: mirror", wire: "Die: wire", glass: "Die: glass" },
     page: {
       ask: (name) => `What does ${name} do?`,
       answer: "Your answer",
@@ -678,6 +689,15 @@ export const UI_WORDS: Record<Language, UiWords> = {
       notNow: "Not now",
       order: "turn order",
       close: "Close",
+      story: "Story",
+      where: "Who's where",
+      sheet: "Sheet",
+      near: "Near",
+      you: "you",
+      walk: "You can get here this turn",
+      sheetLater: "A fresh sheet comes when the table comes to you.",
+      die: "Die",
+      finish: { chrome: "mirror", wire: "wire", glass: "glass" },
     },
     panel: {
       explore: "Explore",
@@ -805,7 +825,6 @@ export const UI_WORDS: Record<Language, UiWords> = {
       surrender: (name) => `Враги готовы сдаться. Что делает ${name}?`,
       other: (name) => `Что ${name} делает или говорит?`,
     },
-    dieFinish: { chrome: "Кубик: зеркальный", wire: "Кубик: проволочный", glass: "Кубик: стеклянный" },
     page: {
       ask: (name) => `Что делает ${name}?`,
       answer: "Ваш ответ",
@@ -821,6 +840,15 @@ export const UI_WORDS: Record<Language, UiWords> = {
       notNow: "Сейчас нельзя",
       order: "порядок ходов",
       close: "Закрыть",
+      story: "Рассказ",
+      where: "Где все",
+      sheet: "Лист",
+      near: "Рядом",
+      you: "вы",
+      walk: "Сюда дойдёте за этот ход",
+      sheetLater: "Свежий лист придёт, когда очередь дойдёт до вас.",
+      die: "Кубик",
+      finish: { chrome: "зеркальный", wire: "проволочный", glass: "стеклянный" },
     },
     panel: {
       explore: "Без боя",
