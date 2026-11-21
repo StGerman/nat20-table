@@ -44,7 +44,8 @@ function campaignWorld(pack: string): { dir: string; start: string } | undefined
 
 /**
  * The world's Russian names for the DM's name line (AGT-38, AGT-85), each `id: name_ru`: the place
- * NPCs (the pack's own NPCs carry theirs in the skeleton), then every place on the map. None for a
+ * NPCs (the pack's own NPCs carry theirs in the skeleton), the world's peoples (API-63), so the DM
+ * writes the roadfolk's name as the seat underlines it, then every place on the map. None for a
  * pack without a campaign. Place NPCs and undiscovered places are world data, so only the DM's
  * prompt gets them (Rule 3).
  */
@@ -52,10 +53,15 @@ export function worldNames(pack: string): string[] {
   const world = campaignWorld(pack);
   if (!world) return [];
   const npcs = path.join(world.dir, "npcs.json");
-  const list = existsSync(npcs) ? (JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Array<{ id: string; name_ru?: string }> }).npcs : [];
+  const file = existsSync(npcs) ? (JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Array<{ id: string; name_ru?: string }>; peoples?: Array<{ id: string; name_ru?: string }> }) : { npcs: [] };
+  const list = file.npcs;
   // A roster person the pack also lists (its Merchant, MAP-24) has the pack's name already.
   const own = new Set(((JSON.parse(readFileSync(path.join(pack, "campaign.json"), "utf8")) as { npcs?: Array<{ id: string }> }).npcs ?? []).map((n) => n.id));
-  return [...list.flatMap((npc) => (npc.name_ru && !own.has(npc.id) ? [`${npc.id}: ${npc.name_ru}`] : [])), ...placeNames(world.dir, () => true)];
+  return [
+    ...list.flatMap((npc) => (npc.name_ru && !own.has(npc.id) ? [`${npc.id}: ${npc.name_ru}`] : [])),
+    ...(file.peoples ?? []).flatMap((p) => (p.name_ru ? [`${p.id}: ${p.name_ru}`] : [])),
+    ...placeNames(world.dir, () => true),
+  ];
 }
 
 /**
@@ -158,13 +164,15 @@ export function worldSeatNames(pack: string): Map<string, string> {
       names.set(`npc:${n.id}`, shortRu(n.name_ru));
       names.set(n.id, shortRu(n.name_ru));
     }
+    // A people (API-63) is named `people:<id>`: never a handle.
+    for (const p of (JSON.parse(readFileSync(npcs, "utf8")) as { peoples?: Array<{ id: string; name_ru?: string }> }).peoples ?? []) if (p.name_ru) names.set(`people:${p.id}`, p.name_ru);
   }
   return names;
 }
 
 /**
  * The seat's people book (AGT-107): the Russian of every roster line the engine sends in English
- * (`look`, `heard`, both forms of each `remembers`), keyed by the English line, and the party's
+ * (`look`, `heard`, both forms of each `remembers`, and each people's `line` under `people:<id>`, API-63), keyed by the English line, and the party's
  * forms and looks. The engine already sends only what the viewer may see (Rule 3); the book only
  * says those lines in the run's language.
  */
@@ -174,7 +182,9 @@ export function peopleBook(pack: string, party: ReadonlyArray<{ handle: string; 
   const npcs = world ? path.join(world.dir, "npcs.json") : undefined;
   if (npcs && existsSync(npcs)) {
     type Line = { id: string; look?: string; look_ru?: string; heard?: string; heard_ru?: string; remembers?: Array<{ you?: string; you_ru?: string; company?: string; company_ru?: string }> };
-    for (const n of (JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Line[] }).npcs) {
+    const file = JSON.parse(readFileSync(npcs, "utf8")) as { npcs: Line[]; peoples?: Array<{ id: string; line: string; line_ru?: string }> };
+    for (const p of file.peoples ?? []) if (p.line_ru) lines.set(lineKey(`people:${p.id}`, p.line), p.line_ru);
+    for (const n of file.npcs) {
       const pair = (en?: string, ru?: string) => {
         if (en && ru) lines.set(lineKey(n.id, en), ru);
       };

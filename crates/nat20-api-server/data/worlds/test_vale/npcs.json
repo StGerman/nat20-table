@@ -1,5 +1,14 @@
 {
-    "_comment": "The test world's roster (API-48, API-58): the innkeeper of the Crossing Inn, by the wagon whenever the party is at the inn. The inn has no scene of its own, so she stands in the road scene, but only while the caravan is at the inn. Not shipped content. Old Tobin owns the caravan and lives on no place: a mention places him wherever the party is (API-58).",
+    "_comment": "The test world's roster (API-48, API-58): the innkeeper of the Crossing Inn, by the wagon whenever the party is at the inn. The inn has no scene of its own, so she stands in the road scene, but only while the caravan is at the inn. Not shipped content. Old Tobin owns the caravan and lives on no place: a mention places him wherever the party is (API-58). He is a carter, the test world's one people (API-63): a player learns of the carters only once they have seen or heard of him.",
+    "peoples": [
+        {
+            "id": "carters",
+            "name": "the carters",
+            "name_ru": "возчики",
+            "line": "Old road families who haul for anyone with coin.",
+            "line_ru": "Старые дорожные семьи: возят для всякого, у кого есть монета."
+        }
+    ],
     "npcs": [
         {
             "id": "innkeeper_wren",
@@ -30,6 +39,7 @@
                 "Тобина",
                 "Тобину"
             ],
+            "people": "carters",
             "monster": "commoner",
             "attitude": "friendly",
             "look": "An old carter with a pipe he never lights.",

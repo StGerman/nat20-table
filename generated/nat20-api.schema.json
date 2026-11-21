@@ -18,7 +18,7 @@
   "x-nat20-protocol": {
     "major": 1,
     "name": "nat20-api",
-    "version": "1.0.0-dev.79"
+    "version": "1.0.0-dev.80"
   },
   "$defs": {
     "Ability": {
@@ -5227,6 +5227,13 @@
             "null"
           ]
         },
+        "people": {
+          "description": "The people they belong to, an id of `WorldDm.peoples` (API-63); absent when the world\nfile names none.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "place": {
           "description": "The place they live in; absent for someone who lives on no map place (API-58).",
           "type": [
@@ -5650,6 +5657,29 @@
           "type": "string",
           "const": "fast"
         }
+      ]
+    },
+    "PeopleView": {
+      "description": "A people of the world, such as the roadfolk (API-63): its name and the one line anyone in\nthe valley could say of it. The same in the DM's and a player's view.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The id, in snake_case.",
+          "type": "string"
+        },
+        "line": {
+          "description": "The one line about them, in English, no number; the table reads the run language's\nline from the world file.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name, in English; the table reads the run language's name from the world file.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "line"
       ]
     },
     "PlaceDm": {
@@ -9170,6 +9200,13 @@
             "$ref": "#/$defs/OfferedCard"
           }
         },
+        "peoples": {
+          "description": "Every people the world file records, in its order (API-63). Empty, and left out, when\nit records none.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PeopleView"
+          }
+        },
         "places": {
           "description": "Every place, discovered or not, in map file order.",
           "type": "array",
@@ -9271,6 +9308,13 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/NpcKnown"
+          }
+        },
+        "peoples": {
+          "description": "The peoples of the persons in `npcs` and `heard`, in the world file's order (API-63):\na people this character has seen or heard of none of is not here. Empty, and left out,\nwhen none.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PeopleView"
           }
         },
         "places": {
