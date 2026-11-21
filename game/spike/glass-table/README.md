@@ -11,6 +11,7 @@ from Finder. It merges no game code.
 | `host.ts` | the stand-in for the table host: the five checks and the report |
 | `shell/` | the Tauri shell (its own Cargo workspace) and the page |
 | `run.sh` | build, sign, notarise, launch as Finder does, print the report |
+| `shell/entitlements.plist` | the entitlements Bun's docs give for a compiled Bun file under the hardened runtime; `run.sh --entitlements none` signs the host with none (the plist takes no comments: AMFI refuses them) |
 
 ## On Stas's Mac
 
