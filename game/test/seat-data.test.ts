@@ -11,6 +11,9 @@ import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedPlayer, ScriptedSeat, caravanSeat, yardDm } from "../src/table/scripted.ts";
 import type { PlayerIntent, TableEvent } from "../src/table/types.ts";
 import { UI_WORDS } from "../src/table/words.ts";
+import { eventNames } from "../src/table/seat-data.ts";
+import { SeatNames } from "../src/table/seat-lines.ts";
+import type { Event } from "@nat20-table/engine-client";
 import { eventLines } from "../src/ui/lines.ts";
 import { testTable } from "./helpers.ts";
 
@@ -116,4 +119,15 @@ test("Fair in Wend's road shows the same lines at a Russian Ink seat, with the c
   const world = (events.find((e) => e.kind === "situation" && e.road) as Extract<TableEvent, { kind: "situation" }> | undefined)?.road;
   assert.ok(world?.contract && world.contract.blades.length > 0 && /[А-Я]/.test(world.contract.merchant_name), "the contract's terms with the merchant's name");
   assert.ok(world.places.length > 0 && world.places.every((p) => p.name.length > 0));
+});
+
+test("eventNames names every creature an event names: handles, a thief, an effect's source, the placed", () => {
+  const names = new SeatNames("ru", new Map([["bren", "Брен"], ["wolf_1", "Волк 1"], ["npc:bel", "Бел"], ["npc:tam", "Там"]]));
+  const named = (event: unknown) => eventNames(event as Event, names);
+  assert.deepEqual(named({ kind: "fled", handles: ["wolf_1"] }), { wolf_1: "Волк 1" });
+  assert.deepEqual(named({ kind: "theft_noticed", thief: "npc:tam" }), { "npc:tam": "Там" });
+  assert.deepEqual(named({ kind: "npc_named", placed: ["npc:bel"] }), { "npc:bel": "Бел" });
+  assert.deepEqual(named({ kind: "effect_started", source: "bren", target: "wolf_1", effect: "x", name: "x" }), { bren: "Брен", wolf_1: "Волк 1" });
+  // A roll's dice `source` names what they are for, not a creature.
+  assert.deepEqual(named({ kind: "roll", roll: { roller: "bren", dice: [{ source: "d20", dice: "1d20", results: [3] }] } }), { bren: "Брен" });
 });

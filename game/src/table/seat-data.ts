@@ -10,7 +10,7 @@ import type { TableEvent } from "./types.ts";
 import { refusedRu } from "./words.ts";
 
 /** The keys whose values name creatures or ledger holders in an engine event. */
-const HANDLE_KEYS = new Set(["actor", "roller", "target", "targets", "participants", "by", "attacker", "creature", "handle", "reactor", "mover", "scout", "waiting_for", "provoked"]);
+const HANDLE_KEYS = new Set(["actor", "roller", "target", "targets", "participants", "by", "attacker", "creature", "handle", "handles", "reactor", "mover", "scout", "waiting_for", "provoked", "thief", "placed"]);
 
 /** Values under those keys that name no creature: a road card's `target` (who decides). */
 const NOT_CREATURES = new Set(["caravan", "blades"]);
@@ -28,6 +28,8 @@ export function eventNames(event: Event, names: SeatNames): Record<string, strin
     }
   };
   walk(event);
+  // `source` names a creature only on an effect; elsewhere it is what the dice or a modifier are for.
+  if (event.kind === "effect_started") shown[event.source] = names.person(event.source);
   // A ledger entry's ends are holders (a character, an NPC, a wagon, a market, the world), named as the seat names them.
   if (event.kind === "ledger") for (const holder of [event.from, event.to]) shown[holder] = names.who(holder);
   return shown;
