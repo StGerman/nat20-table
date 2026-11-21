@@ -1,42 +1,49 @@
 # Roadmap
 
-As of 2026-11-11, main 4c57c7e (table #341 merged 22:00Z); the line 13 updated 2026-11-13 (table #375, #378); the Allies in fights row added 2026-11-12, numbers unchanged. Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api` and nat20-runs `master` 2e65a5d.
+As of 2026-11-21, main 6c5e205 (table #459 merged 08:31Z). Kept by Yan (decision 0065); numbers from `git log origin/main`, `gh api`, nat20-runs and Yan's Glass Table plan of 2026-11-21 (scope `docs/scope/glass-table-scope.md` §7). The page of 2026-11-11 (main 4c57c7e) is in `git log -- docs/roadmap.md`.
 
 ## Order
 
 | # | Milestone | Gate (one line) | Status |
 |---|---|---|---|
-| 12 | Not a passenger: phase 1 MAP-15, MAP-17; phase 2 Own move, the readable table (AGT-97, AGT-98, AGT-94 with AGT-76, AGT-13 partial, MAP-14), ENG-21, ENG-40..42, a Plain or Fireside voice flag and one language at the seat (0067) (Stas 2026-11-08) | Vera (fallback) asks about no engine line in a DM narration sample; one own move decides a card in each run; no card before its narration; the Russian seat shows no English line; Stas plays only after the all-AI half on the same build has passed (0065); the voice comparison reported, not gated | open: scope accepted (table #336); phase 1 done (table #338); design accepted (table #339); rows on main (table #341); phase 2: 0 of 13 PRs merged, 0 open |
-| 13 | Dramaturg mechanism: the engine carries the story from one quest to the next. Its other half, the role, is done: Zoya, table #328 | a scene writes a deed, the Mill joins the world's memory, a Wendford arrival card reads it; exit = the Mill all AI, then *Fair in Wend* on its roster with Stas, one pair on one build | open: scope merged (table #348); design accepted (table #375, decision 0075, 2026-11-13); rows API-57, ENG-44, MAP-20, AGT-104 written 2026-11-13 (table #378); code after M12's exit pair (0043, scope amendment 1) |
-| — | Allies in fights («Свои в бою»): Gwyn's dog, the horses, Tam and the Merchant in card fights under the engine's script; the judge's absent-creature check | CI seeds, each ally dead and hurt at least once, deeds read; one all-AI run; AGT-106 counted | after the Dramaturg mechanism (Stas 2026-11-12 21:22Z); scope `docs/scope/allies-in-fights-scope.md` (table #365) |
-| — | Arachas plus glue | no spec yet. Inputs shelved by the M13 scope §3 (no rows): quests as `kind: errand`; fronts and clocks; a scene that reads a deed (carrier B); witnesses, the attitude step and the `saw` field (gap E); carrier C and gap D; arrival without a draw (Lev, decided here with DM-pick data); Snitt's fate and the promise to him (or the Mill plus glue); MAP-13, an existing row, lands after API-57 and before it | after Allies in fights (Stas 2026-11-12 21:22Z) |
-| — | The Silent Mill plus glue | no spec yet | after Arachas (Stas 2026-11-07 19:34Z) |
-| 11 | Word on the road | — | done 2026-11-08: pair 3 on 2294ef6 PASS and PASS; table #299 to #325 merged 21:00Z; record 0066 in table #336 |
+| — | Tech talk demo (2026-12-02) | three rehearsals and one recorded full run on the stage SHA; dress rehearsal 12-01 | open: CON-19, AGT-135, AGT-136 done; rows 4 to 6 are Stas's at his Mac; core pin stays a17ac1f until after the talk |
+| — | Glass Table (the Mac app) | one pair on one signed DMG: the all-AI half from its bundled binaries, then Stas in the app (scope §4, 8 rows) | open: scope, design, 0090 merged (table #459); rows 2026-11-21; first after the talk (Stas 2026-11-21 07:29Z); no code before 12-03; spike CON-20 first. Plan: exit 12-07 to 12-12 |
+| — | Sign in with ChatGPT (a second model backend) | no spec on main; its design is Proposed in that thread, not accepted | right after Glass Table (Stas 2026-11-21 08:34Z: «Давай запланируем сразу после Glass Table»; "before «Камень A»" is my reading of «сразу после»). Waits on Stas accepting its design. That thread's estimate: 8 to 10 days, uncalibrated. Row AGT-147 (lobby part) |
+| — | «Камень A» (the post on the flats) | scope and design in table #417, not merged | after Sign in with ChatGPT (reading above); after Glass Table (Stas 2026-11-21 07:29Z). Shift against the plan's bid 2: 4 to 9 days for Glass Table plus 8 to 10 for ChatGPT, 12 to 19 days, uncalibrated; its `escort_dismissed` PR is built for two seats, +5 USD and 10 min of Stas |
+| — | Arachas plus glue | no spec yet; inputs shelved by the M13 scope §3 | after «Камень A»; moves 12 to 19 days later than under bid 2, as «Камень A» does |
+| — | The Silent Mill plus glue | no spec yet | after Arachas (Stas 2026-11-07 19:34Z); same 12 to 19 day shift |
+| — | Allies in fights («Свои в бою») | — | closed 2026-11-20, rows 10 and 11 not passed (Stas); row 10 moved to AGT-133 |
+| 13 | Dramaturg mechanism | — | done 2026-11-16, pair passed first time on b7e737d |
+| 12 | Not a passenger | — | closed 2026-11-14, not done (0082) |
+| 11 | Word on the road | — | done 2026-11-08 (0066) |
 | 10 | Speed and polish | — | done 2026-11-01 (0056) |
 | 9 | Living world | — | done 2026-11-06 (0060) |
 | 7 | Demo acceptance | — | done 2026-11-05 (0059) |
-| 6 | Agents at the table | — | done 2026-10-27 (Stas 2026-11-08, table #334) |
-| 5 | Monsters | — | done 2026-10-23 |
-| 4 | The party | — | done 2026-10-21 |
-| 3 | Exploration and checks | — | done 2026-10-18 |
-| 2 | Repo split and contract v1 | — | done 2026-10-17 (Stas 2026-11-08, table #334); UPS-1 still open |
-| 1 | Fighter vs Goblin Warrior | — | done 2026-10-16 |
+| 6 | Agents at the table | — | done 2026-10-27 |
+| 1–5 | Fighter vs Goblin, repo split, exploration, the party, monsters | — | done 2026-10-16 to 2026-10-23; UPS-1 still open |
 | 8 | Upstream proposal | — | dropped 2026-10-18 (0023) |
+
+Order source: Stas, 2026-11-21 07:29Z, on the plan's card (scope header), and 08:34Z in the "Sign in with ChatGPT" thread; the plan recommended «Камень A» first (bid 2); the cost of the chosen order is in the «Камень A» row. No accepted decision record carries this order; the Glass Table scope carries the first part, and nothing on main carries the second.
 
 ## Backlog milestones
 
-Not ordered, no spec, no number unless its bullet gives one (Stas, review of table #337, 2026-11-08); a working number is a placeholder, not a place in the order.
+Not ordered, no spec, no number unless its bullet gives one (Stas, review of table #337, 2026-11-08).
 
 - The player as a merchant (maybe the shop that `docs/scope/living-world-scope.md` §4 and decision 0057 number M17)
 - Telegram
 - A smarter table
-- Stake before the roll (own move, any outcome), working number M20: design `docs/design/stake-before-the-roll.md` merged (table #395, status Proposed), decision 0083; no scope document (design §16 item 9); no rows until Stas takes it out of the backlog (Stas, 2026-11-15 22:06Z)
+- Stake before the roll, working number M20: design `docs/design/stake-before-the-roll.md` (Proposed), decision 0083; no rows until Stas takes it out of the backlog (2026-11-15 22:06Z)
 
 ## Waiting on Stas
 
-- nat20-runs #3: your flag answers for the Mill run 20-38-39, open since 2026-11-03, no activity since; dead stock on 2026-11-17. Merge or close.
-- UPS-1 (P0, open since 2026-10-19): the fork still allows squash merge (repos API, 2026-11-11; rebase is off). One setting.
-- UPS-24 (geometry stack, core): the Rule 9 30-day clock from core #26 and #27 (2026-10-20) runs out on 2026-11-19; adopt it or give the row a hold reason (sweep 2026-11-11, question 2).
+- Apple Developer enrolment (99 USD a year, about 15 min, then Apple's review): gates the spike CON-20. Enrolled before 12-02, Apple's wait runs during talk prep.
+- The spike evening at the Mac, 60 to 90 min, from 12-03 (CON-20).
+- Developer ID and notary key as repository secrets for the `release` workflow (CON-21; signing place answered 2026-11-21 07:46Z).
+- The "Sign in with ChatGPT" design (Proposed, in its thread, not on main): accept it, and its scope with exit rows, before its rows are written; it is next after Glass Table.
+- Tech talk rows 4 to 6: the traced run, three rehearsals and the recorded run, the dress rehearsal on 12-01.
+- table #417 («Камень A» scope, design, 0087, 0088): open since 2026-11-15, last update 2026-11-20; 14 days untouched on 2026-12-04. It waits behind Glass Table by your order; keep it open or close it until then.
+- nat20-runs #3 (flag answers for the Mill run 20-38-39): untouched since 2026-11-03, 18 days. Merge or close.
+- UPS-1 (P0, since 2026-10-19): squash merge still on in the fork; Dependabot alerts not readable from a session.
 
 ## Delivery
 
@@ -44,31 +51,31 @@ Not ordered, no spec, no number unless its bullet gives one (Stas, review of tab
 |---|---|---|---|---|---|
 | 11 Word on the road (baseline) | 2.1 | 27 | 3/1 | 35.45 | 1.09 |
 | 12 Not a passenger (in progress, 2026-11-11) | 2.98 so far | 4 of 17 planned | 0/0 | 0.00 | 0.00 |
+| 13 Dramaturg mechanism | 3.2 | not counted | 1/1 | 18.17 | 0.40 |
+| Allies in fights | 6.5 to 7.1 | not counted | 1/0 | 22.13 | 0.66 |
+| Glass Table (plan, 2026-11-21) | 4 to 9 (own work, from 12-03) | 10 planned | target 1/1 | 21 to 26 | 0.40 to 0.67 |
 
-- Days: table #298 (scope §8, design, 0063) merged 2026-11-06 18:08Z; the last M11 merge, table #325, was 2026-11-08 21:00Z: 2.12 days. Stas accepted the pair at 20:51Z (TASKS row 11).
-- PRs: #298 plus the 26 stack PRs #299 to #325 (#301 never existed). #329 and #330 are post-M11 by their rows. No core PRs; nat20-runs #6.
-- Commits mapped to M11 with `GET commits/<sha>/pulls`: be5e650 is in #321 (pair 1); 238c99b and 2294ef6 are in #325 (pairs 2 and 3).
-- Runs, `api_equivalent_usd` summed over `usage.jsonl`: pair 1 7.74 + 5.87, both FAIL; pair 2 8.82, AI FAIL, human half not played; pair 3 7.85 + 5.17, both PASS.
-- Stas, `started_at` to `ended_at` where `seats.human` is set: 39.1 min (14-55-35, started 1 min after its AI half's FAIL was uploaded) + 26.5 min (20-11-16).
-- Not counted: `usage.jsonl` covers in-game agents only. It leaves out the Claude Code threads (coordinator, the stack's builders, reviews, run analyses, Vera and Zoya), CI minutes, and Stas's review hours on 27 PRs and the flag verdicts. API-equivalent, paid from the subscription (0036).
-- M12, in progress: from table #336 (scope) merged 2026-11-08 22:35Z to table #341 (rows) merged 2026-11-11 22:00Z, 2.98 days, 1.40 of the baseline's whole 2.12, before any phase 2 PR. Target 1.06 days is already spent.
-- PRs merged: 4 of the plan's 17: docs table #336, #339, #341 (3, against scope §9 answer 4's 1), phase 1 table #338. Left: 13 phase-2 PRs of design §9 (11 table, core PR 9, its pin PR 10). 17 is 0.63 of the baseline's 27; target 13.5.
-- Review wait, last commit to merge: table #338 2.88 days (a91448c 2026-11-09 00:45Z), #339 2.80 days (7966d61 02:39Z), #341 0.001 days. From the last M12 commit (7966d61, 2026-11-09 02:39Z) to the first merge (#338, 2026-11-11 21:55Z), 2.80 of the 2.98 days had no commit: the constraint is Stas's review hours, not the threads.
-- Runs: none on an M12 build in nat20-runs (`master` 2e65a5d, last commit 2026-11-08). Exit pair, run cost and Stas's hours start at 0.
+- M12, note added 2026-11-21: closed 2026-11-14 not done (0082), 5.5 days from table #336; no exit pair passed. The row above stays as written on 2026-11-11.
+- M13: scope table #348 merged 2026-11-13 15:16Z to run 2 on 2026-11-16 (~20:50Z): 3.2 days. Pair on b7e737d: 11.08 AI + 7.09 Stas USD; Stas 23.7 min.
+- Allies: scope table #365 merged 2026-11-13 20:48Z to the close on 2026-11-20 (time of day not in the record): 6.5 to 7.1 days. Pair: 13.99 AI (PASS) + 8.14 Stas USD; row 10 failed in Stas's half; Stas 39.6 min.
+- PRs for M13 and Allies are not counted in this pass: the stacks share a window (table #411 to #441) and need `GET commits/<sha>/pulls` per row to split; owed at the next `roadmap`.
+- Glass Table, plan: Stas 6.3 to 7.9 h in total (review 4.1 to 5.1, at the Mac 2.2 to 4.2); build 148 to 205 USD; runs 39 to 48 USD with one failed pair.
 
-Milestone 11 against the baseline: 1.0 on each column (it is the baseline). Target for M12 (0065, half of each): at most 1.06 days, 1/1, 17.73 USD and 0.55 h.
+Against the baseline: M13 days 1.5, runs 0.51, Stas 0.37, pairs passed first time. Allies days 3.1 to 3.4, runs 0.62, Stas 0.61, its human half failed. Glass Table plan: days 1.9 to 4.3 (misses the 0.5 target), PRs 0.37, runs 0.59 to 0.73, Stas at the table 0.37 to 0.61.
 
-Cheapest saving for M12: Stas plays only after the all-AI half on the same build has passed (0065, into the M12 scope). Applied to M11 it saves 0.65 h of Stas and 5.87 USD (pair 1's human half), at 0 PRs. A pair that passes the first time costs about 13.02 USD, 0.37 of the baseline.
+Cheapest saving for Glass Table: the spike CON-20 first. It finds a shell that does not hold on day 1 for S (11 USD) and one evening; found in CON-21 it costs an evening (1 to 1.5 h of Stas), a redo (21 to 40 USD) and 1 to 3 days per try.
 
 ## Amendments (proposed; rules silent, followed here)
 
-- A milestone gets a number only when its `milestone.md` in `tasks/` carries a `number` (decision 0085; before it, a row of TASKS.md § Milestones); later work is listed unnumbered, in Stas's order, with its source. Why: numbers in accepted records (the shop as M17, scope §4 and 0057) have drifted from the order.
-- "PRs" counts merged table and core PRs that carry the milestone's rows, its scope PR included; fixes stacked on top after the exit pair count to the next milestone. Why: one rule for every row, so ratios compare like with like.
-- "Run cost" counts every run whose `build.table_commit` is in a milestone PR (`GET commits/<sha>/pulls`), failed runs and lone halves included. Why: stack builds are squashed away and never reach main.
-- "Days scope→exit" ends at the exit record; with none, at the last merge of the milestone's PRs. Why: M11 had no exit record until 0066 (table #336), which keeps the last merge as its end.
-- A pair counts as played once its all-AI half has run. Why: pair 2 cost 8.82 USD with no human half.
+- A milestone gets a number only when its `milestone.md` in `tasks/` carries a `number` (decision 0085); later work is listed unnumbered, in Stas's order, with its source. Why: numbers in accepted records (the shop as M17) have drifted from the order.
+- "PRs" counts merged table and core PRs that carry the milestone's rows, its scope PR included; fixes stacked on top after the exit pair count to the next milestone. Why: one rule for every row.
+- "Run cost" counts every run whose `build.table_commit` is in a milestone PR, failed runs and lone halves included. Why: stack builds are squashed away and never reach main.
+- "Days scope→exit" ends at the exit record; with none, at the last merge of the milestone's PRs, or at the close by Stas. Why: Allies and M12 closed without a passed exit.
+- A pair counts as played once its all-AI half has run. Why: M11 pair 2 cost 8.82 USD with no human half.
+- For a milestone that ships a packaged app, "the same build" (0043) means the same signed package, and the AI half runs from its bundled binaries. Why: a checkout run does not test the host the human plays on. Answered yes by Stas for Glass Table (scope §9 question 6); not yet a general rule.
+- A spike that merges no code may run beside the open milestone when Stas names its row independent. Why: it retires risk before the build is priced as firm. Not used: Stas chose Glass Table first, so CON-20 runs in its own milestone.
 
 ## Amendments (proposed; not applied, wait on Stas)
 
-- "Waiting on Stas" lists only asks with no open PR of ours: decision cards, settings, runs to play, PRs in other repos (nat20-runs); our open table and core PRs live in GitHub's open-PR list. Why: the section went stale on three merges in a row (table #336, #337, #341), each a merge that edits nothing else here. Not applied: `references/roadmap.md` lists "PR to review" among the section's items. Today 0 table and core PRs are open, so this edit lists none either way.
-- A sweep re-asks an open row outside every milestone as dead stock only when a milestone closes, once Stas has kept it at a sweep. Why: 22 such rows were kept on 2026-11-08 ("ок по всем"); asking again 3 days later costs his review minutes for no new fact. Not applied: `references/sweep.md` says ask; the 2026-11-11 sweep asks once, as one question.
+- "Waiting on Stas" lists only asks with no open PR of ours. Why: the section goes stale on every merge. Not applied: `references/roadmap.md` lists "PR to review"; this page lists table #417.
+- A sweep re-asks an open row outside every milestone as dead stock only when a milestone closes, once Stas has kept it at a sweep. Why: asking again costs his review minutes for no new fact.
