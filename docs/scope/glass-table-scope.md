@@ -15,6 +15,7 @@ Stas opens an app from the Dock, sees the Glass Table he picked, and plays a con
 4. **The lobby.** Adventure and character, the saved party (go on, new, or the last journey again), Claude's sign-in state, start. The app always plays with a saved party, kept in the app's own data folder.
 5. **The shell and the package.** One signed and notarised DMG with the shell, the compiled loop, the engine binaries and the content.
 6. **A spike before any of it**, on Stas's Mac (§6).
+7. **Lines for level-up.** A player-facing Russian line for each level-up choice, read by Vera (Lev's finding 14; Stas's answer to question 7). Without them the screen is the one where Vera «нажала бы не думая».
 
 ## 3. Out
 
@@ -23,7 +24,6 @@ Stas opens an app from the Dock, sees the Glass Table he picked, and plays a con
 - Continuing inside a day or a fight. A host crash costs at most the day since the last night's save (design §7).
 - Installing Claude Code for the player. Would Vera get through install alone? No, and this milestone does not change that; it waits on Anthropic's answer (Friends and Family D1).
 - Lev's list beyond what the prototype draws: «Журнал», fight start and end, picking a target by touching it on the yard lens (the dock's follow-up pick is in), time limits, roads off the route. They become rows only when Stas picks them.
-- New Russian lines for level-up choices, unless question 7 says otherwise: content the repo does not have. Without them the app shows what the terminal seat shows, and that is the screen where Vera «нажала бы не думая».
 - Removing or changing the terminal seat.
 
 ## 4. Exit criterion
@@ -78,11 +78,11 @@ The calendar is set by Stas's evenings, not by thread hours: acceptance of this 
 
 ## 8. Rows
 
-Written in their own PR after this scope and the design merge (ids taken then): the spike (CON, S), structured seat events (AGT, M), the seat wire (AGT, M), page 1 (AGT, M), page 2 (AGT, M), the lobby (AGT, S), the shell and package (CON, M), the exit run record (AGT, S), the peoples record with the Corrins' line (API, S; a contract change, Rule 1), and one backlog row for a second provider (AGT, P2). All P1 but the last; all `dest: Ours`. `docs/roadmap.md` is as of 2026-11-11 and owes a pass before the rows are written.
+Written in their own PR after this scope and the design merge (ids taken then): the spike (CON, S), structured seat events (AGT, M), the seat wire (AGT, M), page 1 (AGT, M), page 2 (AGT, M), the lobby (AGT, S), the shell and package (CON, M), the exit run record (AGT, S), the peoples record with the Corrins' line (API, S; a contract change, Rule 1), the level-up lines (AGT, S), and one backlog row for a second provider (AGT, P2). All P1 but the last; all `dest: Ours`. `docs/roadmap.md` is as of 2026-11-11 and owes a pass before the rows are written.
 
 ## 9. Questions for Stas
 
-Answered by Stas in the prototype thread, 2026-11-21: at 07:46Z, 2 («Где подписывать сборку: в GitHub»), 3 («Лобби только с Claude - ок») and 6 («Та же сборка - да DMG»); at 07:48Z, 4 («Лев читает») and the three parts of 5 («Ок» to each recommendation). Open: 1 (the merge), 7, 8.
+Answered by Stas in the prototype thread, 2026-11-21: at 07:46Z, 2 («Где подписывать сборку: в GitHub»), 3 («Лобби только с Claude - ок») and 6 («Та же сборка - да DMG»); at 07:48Z, 4 («Лев читает») and the three parts of 5 («Ок» to each recommendation). at 08:29Z, 7 and 8 («Принятно», to both recommendations). Open: 1 (the merge).
 
 1. Accept the design and decision 0090 (a web page in a Tauri shell, our JSON seat wire)? Merging this PR is the yes.
 2. Signing: in the release workflow on a hosted macOS runner, with the Developer ID and notary key as repository secrets, or on your Mac for each build? The workflow saves up to 1.3 h per signed build. Recommended: the workflow. **Answered: the release workflow.**
@@ -90,5 +90,5 @@ Answered by Stas in the prototype thread, 2026-11-21: at 07:46Z, 2 («Где п�
 4. An amendment: a milestone whose design carries no world, story or card mechanism (an app, a package, CI) takes its system design from the implementing thread without Lev's `design` pass; Zoya's board and Vera's read still apply to its player-facing lines. Recommended: yes. If no, Lev reads this design before the rows are written. **Answered: no. Lev read it (§5).**
 5. From the prototype, each a few words: one line that says why, or silence, when a spent move leaves the dock (Vera had to guess; recommended: the line); a one-line player-visible record about the Corrins (Zoya writes it, you approve); portraits or initials for the valley's people. **Answered: the line; one line about the Corrins by Zoya, wording in question 8; initials for the first build.**
 6. "The same build" for this milestone means the same signed DMG, and the AI half runs from its binaries (exit row 8). Recommended: yes. **Answered: yes.**
-7. Level-up: one small row that writes a player-facing Russian line for each choice, read by Vera (Lev's finding 14)? Recommended: yes; the frame alone ships a screen where the player presses without knowing what.
-8. The Corrins' line: Zoya's A as written (§5)? Vera's one doubt is whether «невысокий» says they are not human; B says «полурослики», a word no player-facing deck text uses today.
+7. Level-up: one small row that writes a player-facing Russian line for each choice, read by Vera (Lev's finding 14)? Recommended: yes; the frame alone ships a screen where the player presses without knowing what. **Answered: yes.**
+8. The Corrins' line: Zoya's A as written (§5)? Vera's one doubt is whether «невысокий» says they are not human; B says «полурослики», a word no player-facing deck text uses today. **Answered: A as written.**
