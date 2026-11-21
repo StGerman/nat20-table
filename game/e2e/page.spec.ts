@@ -50,7 +50,8 @@ for (const w of WIRES) {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await replay(page, w);
     const want = expected(w);
-    const rows = await page.locator(".story .row:not(.preview)").evaluateAll((els) => els.map((e) => (e.firstChild?.textContent ?? "")));
+    // A row's words, name tokens included, without its roll tokens.
+    const rows = await page.locator(".story .row:not(.preview)").evaluateAll((els) => els.map((e) => [...e.childNodes].filter((n) => !(n instanceof HTMLElement && n.classList.contains("token"))).map((n) => n.textContent ?? "").join("")));
     expect(rows).toEqual(want.story.filter((l) => l.text !== "").map((l) => l.text.trimStart()));
     const tokens = await page.locator(".story [data-roll]").evaluateAll((els) => els.map((e) => e.getAttribute("data-roll")));
     expect(tokens).toEqual(want.story.flatMap((l) => (l.text === "" ? [] : l.rolls)));
@@ -86,6 +87,45 @@ test("the finish switch turns mirror to see-through and back, and the choice out
   await expect(finish).toHaveText("Кубик: прозрачный");
   await finish.click();
   await expect(finish).toHaveText("Кубик: зеркальный");
+});
+
+// Exit row 5 (AGT-143): a card with its votes, a name token and a person's «Помнит» on the page.
+test("a road card shows its choices, the table's word lands on them, and the decision is marked", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const w = WIRES[1];
+  await replay(page, w, 17);
+  const card = page.locator('[data-test="card"]');
+  // Who decides is said once, by the story just above the card.
+  await expect(page.locator(".story")).toContainText("Решает хозяин обоза, а ваше слово будет советом.");
+  await expect(card).not.toContainText("Решает хозяин обоза");
+  await expect(card.locator(".choice")).toHaveText(["Укрыть мешки плащами.", "Встать под ивами и переждать.", "Идти дальше сквозь дождь."]);
+  await expect(card.locator(".choice").first()).toBeEnabled();
+  await replay(page, w, 23);
+  await expect(card.locator('[data-choice="cloaks"] .vote')).toHaveText(["Б", "Т", "М", "И"]);
+  await expect(card.locator('[data-choice="cloaks"] .vote.mine')).toHaveAttribute("title", "Брен");
+  await expect(card).toHaveAttribute("data-decided", "cloaks");
+  await expect(card.locator(".choice").first()).toBeDisabled();
+});
+
+test("a name in the story opens what the character knows of them, and «Люди» lists everyone with what they remember", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await replay(page, WIRES[1], 236);
+  // The shepherd is named in the story: her name is a token that opens her card.
+  await page.locator('.story .name[data-person="shepherd_gwyn"]').first().click();
+  await expect(page.locator('[data-test="person-card"] h2')).toHaveText("Гвин");
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-test="person-card"]')).toHaveCount(0);
+  await page.locator('[data-test="people"]').click();
+  const list = page.locator('[data-test="people-list"]');
+  await expect(list.locator("h3")).toContainText(["Вы встречали", "Только слышали"]);
+  await list.locator('[data-person="warden_brannock"]').click();
+  await expect(page.locator('[data-test="person-card"] .remembers')).toHaveText(["Помнит: you gave him a sack of wheat for a pitch by the well."]);
+  // Esc closes the card on top first, then the list under it.
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-test="person-card"]')).toHaveCount(0);
+  await expect(list).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(list).toHaveCount(0);
 });
 
 for (const scheme of ["light", "dark"] as const) {

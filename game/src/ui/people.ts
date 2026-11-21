@@ -136,6 +136,8 @@ export function nameSpans(text: string, people: readonly Person[]): NameSpan[] {
 
 /** The person card's words and the `/кто` lists', per language. */
 export interface PeopleWords {
+  /** The window's name for the people list (the terminal's `/кто`). */
+  title: string;
   here: string;
   elsewhere: string;
   lastSeen(place: string): string;
@@ -152,6 +154,7 @@ export interface PeopleWords {
 
 export const PEOPLE_WORDS: Record<Language, PeopleWords> = {
   en: {
+    title: "People",
     here: "Here with you now.",
     elsewhere: "Not here now.",
     lastSeen: (place) => `Last seen at ${place}.`,
@@ -166,6 +169,7 @@ export const PEOPLE_WORDS: Record<Language, PeopleWords> = {
     nobody: "You know nobody by name yet.",
   },
   ru: {
+    title: "Люди",
     here: "Сейчас рядом с вами.",
     elsewhere: "Сейчас не рядом.",
     lastSeen: (place) => `Последняя встреча: ${place}.`,
