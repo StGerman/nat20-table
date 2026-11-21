@@ -66,6 +66,49 @@
             }
         }
     ],
+    "creatures": [
+        {
+            "handle": "osric_hale",
+            "monster": "commoner",
+            "side": "neutral",
+            "control": "scripted",
+            "at": {
+                "kind": "anchor",
+                "anchor": "reeve_porch"
+            },
+            "npc": "osric_hale"
+        },
+        {
+            "handle": "bertil_pell",
+            "monster": "commoner",
+            "side": "neutral",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 5.0,
+                    "y_ft": 5.0,
+                    "z_ft": 0.0
+                }
+            },
+            "npc": "bertil_pell"
+        },
+        {
+            "handle": "wenna_thorne",
+            "monster": "commoner",
+            "side": "neutral",
+            "control": "scripted",
+            "at": {
+                "kind": "point",
+                "point": {
+                    "x_ft": 10.0,
+                    "y_ft": 5.0,
+                    "z_ft": 0.0
+                }
+            },
+            "npc": "wenna_thorne"
+        }
+    ],
     "party_start": [
         "green_well",
         "well_bucket",

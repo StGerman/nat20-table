@@ -70,6 +70,14 @@ export function peopleOf(state: State, names: SeatNames, book: PeopleBook = name
       ...(state_ !== "here" && state_ !== "unconscious" && n.last_seen ? { lastSeen: names.place(n.last_seen, state.world?.places.find((p) => p.id === n.last_seen)?.name) } : {}),
     });
   }
+  // The pack's own NPCs a scene places (the Silent Mill's reeve and miller): here while they stand
+  // in the scene, as the engine has them; the world's NPCs above are already listed.
+  const listed = new Set(out.map((p) => p.id));
+  for (const n of book.npcs ?? []) {
+    const health = inScene.get(n.id);
+    if (!health || listed.has(n.id)) continue;
+    out.push({ id: n.id, name: ru ? names.who(n.id) : (n.names[0] ?? names.person(n.id)), forms: [...n.names], state: health === "down" ? "unconscious" : "here", remembers: [], health, inScene: true });
+  }
   for (const n of state.world?.heard ?? []) {
     out.push({ id: n.id, name: ru ? names.who(n.id) : (n.names?.[0] ?? n.name), forms: n.names ?? [], state: "heard", ...(n.heard ? { heard: line(n.id, n.heard) } : {}), remembers: [] });
   }

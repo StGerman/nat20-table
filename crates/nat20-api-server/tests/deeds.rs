@@ -209,7 +209,9 @@ fn the_test_pack_scenes_write_deeds() {
 }
 
 /// The Mill's scenes write the deeds the Wendford cards read, and nothing else of the yard
-/// (design §4.1): the yard's two outcomes, the cellar's marker, the boss's death.
+/// (design §4.1): the yard's two outcomes, the cellar's marker, the boss's death. The green's
+/// and the wrap-up's people stand in their scenes as creatures, so each one's death is a deed
+/// too (ENG-36): the reeve, the miller and Wenna.
 #[test]
 fn the_mill_writes_its_deeds_into_the_wend_world() {
     let mill = repo().join("scenarios/the_silent_mill");
@@ -221,7 +223,10 @@ fn the_mill_writes_its_deeds_into_the_wend_world() {
                 "snitt_yielded",
                 "yard_to_the_end",
                 "wenna_saved",
-                "killed_gritch"
+                "killed_gritch",
+                "killed_osric_hale",
+                "killed_bertil_pell",
+                "killed_wenna_thorne"
             ]
             .map(String::from)
         )

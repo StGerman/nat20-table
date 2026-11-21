@@ -329,11 +329,14 @@ impl Campaign {
                     npc.id
                 )));
             }
-            let taken = file.creatures.iter().any(|c| c.handle.0 == npc.id)
-                || file
-                    .spawns
-                    .iter()
-                    .any(|s| s.creatures.iter().any(|c| c.handle.0 == npc.id));
+            // A scene that places this same person itself (`npc` names them, as the Silent Mill's
+            // green places its reeve) stands them there; the world then leaves them be
+            // (`npcs_arrive` skips a handle the scene already has).
+            let other = |c: &nat20_api_contract::SceneCreature| {
+                c.handle.0 == npc.id && c.npc.as_deref() != Some(npc.id.as_str())
+            };
+            let taken = file.creatures.iter().any(other)
+                || file.spawns.iter().any(|s| s.creatures.iter().any(other));
             if taken || self.party.iter().any(|h| h.0 == npc.id) {
                 return Err(bad(format!(
                     "The NPC id {} is already a creature's handle in scene {scene_id}.",

@@ -176,7 +176,7 @@ export function worldSeatNames(pack: string): Map<string, string> {
  * forms and looks. The engine already sends only what the viewer may see (Rule 3); the book only
  * says those lines in the run's language.
  */
-export function peopleBook(pack: string, party: ReadonlyArray<{ handle: string; names?: string[]; look?: string; look_ru?: string }>): PeopleBook {
+export function peopleBook(pack: string, party: ReadonlyArray<{ handle: string; names?: string[]; look?: string; look_ru?: string }>, own: ReadonlyArray<{ id: string; names?: string[] }> = []): PeopleBook {
   const lines = new Map<string, string>();
   const world = campaignWorld(pack);
   const npcs = world ? path.join(world.dir, "npcs.json") : undefined;
@@ -196,7 +196,11 @@ export function peopleBook(pack: string, party: ReadonlyArray<{ handle: string; 
       }
     }
   }
-  return { lines, party: party.map((p) => ({ handle: p.handle, names: p.names ?? [], ...(p.look ? { look: p.look } : {}), ...(p.look_ru ? { look_ru: p.look_ru } : {}) })) };
+  return {
+    lines,
+    party: party.map((p) => ({ handle: p.handle, names: p.names ?? [], ...(p.look ? { look: p.look } : {}), ...(p.look_ru ? { look_ru: p.look_ru } : {}) })),
+    npcs: own.flatMap((n) => (n.names && n.names.length > 0 ? [{ id: n.id, names: n.names }] : [])),
+  };
 }
 
 /** A deck card as rule N2 reads it: its player text and who it names. */
