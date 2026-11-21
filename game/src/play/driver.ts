@@ -14,7 +14,8 @@
 //
 // Settings (game/src/play/settings.ts): --profile NAME|PATH, --scene ID, --scenes ID,ID, --seed N,
 // --dm-model, --player-model, --dm-effort, --effort (the AI players'), --craft prompt|skills (D10),
-// --dm-timeout-ms, --pack DIR, --dm scripted and --players scripted (no model), --seat scripted|ink,
+// --dm-timeout-ms, --pack DIR, --dm scripted and --players scripted (no model), --seat scripted|ink|web
+// (web, AGT-144: the human plays in a browser window on the built page, `npm run page:build` first),
 // --dry-run (prints the DM's prompt and session settings, starts nothing), --no-audit (no audit and
 // no narration check), --out DIR,
 // --max-steps N, --lang en|ru (decision 0038), --verbose (with --seat ink: AGT-37), --time-limit-min N,
@@ -52,6 +53,8 @@ import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat, StopKind } from "../table/types.ts";
 import type { Instance } from "ink";
 import { InkSeat } from "../ui/ink-seat.ts";
+import { WebSeat } from "../seat-wire/web-seat.ts";
+import { openInBrowser, servePage, type PageHost } from "./page-host.ts";
 import { glyphsFor } from "../ui/panel.ts";
 import { pickOnScreen, savedCharacters } from "../ui/pick.ts";
 import { usageBlock, UsageLog } from "../usage.ts";
@@ -214,8 +217,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   if (flags.dm === "model" || flags.players === "model") refuseApiKey();
   // Scripted players never move the caravan (AGT-80): on a campaign, the road needs model players or you at the keyboard.
   // The card bench's scripted seat does move it (AGT-123), so `play:card` alone passes.
-  if (campaign && flags.players === "scripted" && flags.seat !== "ink" && !play.bench) {
-    console.error(`${flags.pack} is a campaign: scripted players never move the caravan, so play it with --players model or --seat ink.`);
+  if (campaign && flags.players === "scripted" && flags.seat !== "ink" && flags.seat !== "web" && !play.bench) {
+    console.error(`${flags.pack} is a campaign: scripted players never move the caravan, so play it with --players model, --seat ink or --seat web.`);
     process.exit(2);
   }
   if (flags.seat === "ink" && !(process.stdin.isTTY && process.stdout.isTTY)) {
@@ -262,12 +265,29 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     flags.seat === "ink" && party.human
       ? new InkSeat(party.human, { onQuit: () => quit(), verbose: flags.verbose, glyphs: glyphsFor(process.env, party.glyphs), title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title, language, names: seatNames, record: drawnTo })
       : undefined;
+  // The browser window (AGT-144): the built page on 127.0.0.1, the seat wire letting in only that origin.
+  let pageHost: PageHost | undefined;
+  const web =
+    flags.seat === "web" && party.human
+      ? await (async () => {
+          pageHost = await servePage().catch((error: unknown) => {
+            console.error(error instanceof Error ? error.message : String(error));
+            process.exit(2);
+          });
+          const seat = new WebSeat(party.human!, { runDir, run: path.basename(runDir), language, names: seatNames, title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title, party: everyone, record: drawnTo, onQuit: () => quit(), origins: [pageHost.origin] });
+          const { port, token } = await seat.listen();
+          const url = `${pageHost.origin}/index.html?port=${port}&token=${token}`;
+          console.log(`The table is in your browser${openInBrowser(url) ? "" : ": open"} ${url}
+Ctrl+C here stops the run after the decision in flight.`);
+          return seat;
+        })()
+      : undefined;
   // Interactive even if CI is set in the shell: Ink would otherwise draw only the last frame. The
   // seat owns the alternate screen (AGT-69, decision 0054): the terminal comes back as it was when
   // it stops, and everything printed after that lands on the normal screen.
   if (ink && screen) ink.adopt(screen);
   else ink?.start({ interactive: true, alternateScreen: true });
-  ink?.busy(UI_WORDS[language].engineStarting);
+  (ink ?? web)?.busy(UI_WORDS[language].engineStarting);
 
   const usage = new UsageLog(path.join(runDir, "usage.jsonl"));
   // Langfuse tracing (AGT-16): on with the LANGFUSE_* keys, and only when a model plays a seat.
@@ -333,7 +353,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   writeRunRecord(runDir, record);
 
   const transcript = new Transcript(path.join(runDir, "transcript.jsonl"), () => engine.logHead);
-  const seat: Seat | undefined = ink ?? (party.human ? new ScriptedSeat(party.human, [], play.bench?.seat ?? ScriptedSeat.fight, party.ai) : undefined);
+  const seat: Seat | undefined = ink ?? web ?? (party.human ? new ScriptedSeat(party.human, [], play.bench?.seat ?? ScriptedSeat.fight, party.ai) : undefined);
   const table = new TableState({
     engine,
     human: party.human,
@@ -377,7 +397,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
       ? chainDm(chainScenes(pack.adventure.scenes), everyone, everyone[0])
       : walkOnDm(pack.adventure.scenes.map((s) => s.id), fights, everyone);
   // The narration preview (M10 S4) reaches the terminal seat only, unless --no-preview.
-  const dm: DmAgent = flags.dm === "scripted" ? scripted() : modelDm(usage, ink && !flags["no-preview"] ? (text) => ink.preview(text) : undefined);
+  const dm: DmAgent = flags.dm === "scripted" ? scripted() : modelDm(usage, !flags["no-preview"] ? (ink ? (text) => ink.preview(text) : web ? (text) => web.preview(text) : undefined) : undefined);
 
   // The time limit runs from the first scene's load; the loop stops between decisions, so a wake in
   // flight finishes or times out first.
@@ -423,14 +443,14 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     // The creatures the DM may bring in beyond the scene files (AGT-24).
     statBlocks: pack.adventure.stat_blocks,
     maxSteps: flags["max-steps"],
-    // The situation panel (AGT-36) is drawn only at the terminal.
-    situation: ink !== undefined,
+    // The situation panel (AGT-36) is drawn at the terminal and in the window.
+    situation: ink !== undefined || web !== undefined,
     names: party.names,
     stallRounds: flags["stall-rounds"],
     onProgress: progress,
     usage,
     // Three moves out of a fight for the human at the terminal (AGT-49), from a model only when the players are models.
-    ...(ink && party.human && !flags["no-suggest"] && flags.players === "model"
+    ...((ink || web) && party.human && !flags["no-suggest"] && flags.players === "model"
       ? {
           suggester: new Suggester({
             handle: party.human,
@@ -442,7 +462,7 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
         }
       : {}),
     // The person card's look in the hero's words (AGT-127), on the same terms as the suggestions.
-    ...(ink && party.human && !flags["no-describe"] && flags.players === "model"
+    ...((ink || web) && party.human && !flags["no-describe"] && flags.players === "model"
       ? { describer: new Describer({ handle: party.human, card: party.humanCard ?? "", language, choice: { model: flags["describe-model"], effort: "low" }, usage }) }
       : {}),
     ...(campaign
@@ -472,10 +492,10 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const playing = (text: string) => (ink ? ink.note(text) : console.log(text));
   playing(
     language === "ru"
-      ? playingRu({ title: pack.adventure.title_ru ?? pack.adventure.title, scenes: played.length, ai: party.ai.map((h) => seatNames.who(h)), human: party.human ? { name: seatNames.who(party.human), you: Boolean(ink) } : undefined, dmModel: flags.dm !== "scripted", playersModel: flags.players !== "scripted" })
-      : `Playing ${played.join(", ")} of ${pack.adventure.title} (seed ${engine.seed}${settings.profile ? `, profile ${settings.profile.name}` : ""}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human ? `${party.human} ${ink ? "played by you" : "scripted"}` : "no human"}. Run folder ${path.relative(process.cwd(), runDir)}/.`,
+      ? playingRu({ title: pack.adventure.title_ru ?? pack.adventure.title, scenes: played.length, ai: party.ai.map((h) => seatNames.who(h)), human: party.human ? { name: seatNames.who(party.human), you: Boolean(ink || web) } : undefined, dmModel: flags.dm !== "scripted", playersModel: flags.players !== "scripted" })
+      : `Playing ${played.join(", ")} of ${pack.adventure.title} (seed ${engine.seed}${settings.profile ? `, profile ${settings.profile.name}` : ""}): DM ${who(flags.dm, dmChoice)}, ${party.ai.join(", ")} ${who(flags.players, playerChoice)}, ${party.human ? `${party.human} ${ink || web ? "played by you" : "scripted"}` : "no human"}. Run folder ${path.relative(process.cwd(), runDir)}/.`,
   );
-  ink?.busy(undefined);
+  (ink ?? web)?.busy(undefined);
   let run: RunReport | undefined;
   let failure: unknown;
   try {
@@ -556,8 +576,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     `- Played: ${run?.scenes.join(", ") || "none"}${run && run.passedOver.length > 0 ? `; passed over: ${run.passedOver.join(", ")}` : ""}`,
     `- DM: ${who(flags.dm, dmChoice)}${flags.dm === "model" ? `, craft guidance in the ${craft === "prompt" ? "system prompt" : "skills"}` : ""}`,
     ...(language === "en" ? [] : [`- Language of the DM's and the AI players' lines: ${language}`]),
-    `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human ? `${party.human} ${ink ? "played in the terminal UI" : "on a scripted seat"}` : "no human at the table"}`,
-    ...(ink ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
+    `- AI players: ${party.ai.join(", ")}, ${who(flags.players, playerChoice)}; ${party.human ? `${party.human} ${ink ? "played in the terminal UI" : web ? "played in the browser window" : "on a scripted seat"}` : "no human at the table"}`,
+    ...(ink || web ? [`- Your decisions the engine refused: ${run?.humanRejections ?? "n/a"}`] : []),
     ...(run?.suggestions ? [`- ${suggestionLine(run.suggestions)}`] : []),
     ...(record.roster ? [`- ${rosterReport(record.roster)}`] : []),
     ...(tracer ? [`- Tracing: on, Langfuse session ${record.run_id}`] : []),
@@ -587,6 +607,8 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
     ink.stop();
     console.log(usageLines);
   }
+  await web?.close();
+  await pageHost?.close();
   // The report is the DM's view (monster Hit Points, lines said to AI players only), so the terminal
   // you just played in shows only how the run ended; the rest stays in the run folder.
   const kept = record.roster ? `\n${record.roster.saved_sha256 ? `Your party is saved as ${record.roster.name}: --roster ${record.roster.name} plays it again.` : `The party was not saved (${record.roster.not_saved}).`}` : "";
