@@ -10,7 +10,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { HostMessageSchema, WIRE_HASH, WIRE_VERSION, type HostMessage } from "../src/seat-wire/schema.ts";
-import { answered, EMPTY, placed, reduce, settle, type PageView } from "../src/page/reduce.ts";
+import { answered, EMPTY, meOf, placed, reduce, settle, type PageView } from "../src/page/reduce.ts";
 import { NAMES_RU, NARRATION, narratedFight, TALK } from "./page-wires.ts";
 import type { HumanPrompt, PlayerIntent, TableEvent } from "../src/table/types.ts";
 import { InkSeat } from "../src/ui/ink-seat.ts";
@@ -349,4 +349,20 @@ test("page reducer: a live Narrator's round carries its rolls, each in the sente
   assert.deepEqual(by(3), ["torva", "maren"]);
   assert.deepEqual(parts.flatMap((p) => p.rolls).sort(), [...told.rolls].sort(), "every roll it tells has a place");
   assert.equal(v.dock.form, "moves");
+});
+
+test("page reducer: a sheet goes to «Лист», not over the story, and is old once the character changes", () => {
+  const me = (hp: number) => ({ kind: "situation", situation: { mode: "explore", next: [], me: { handle: "bren", name: "Брен", hp, hp_max: 20, temp_hp: 0, conditions: [], life_state: "conscious", effects: [] }, creatures: [], down: [] } });
+  let v = reduce(EMPTY, hello(WIRES[1]));
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 1, event: me(20) }));
+  v = reduce(v, HostMessageSchema.parse({ type: "ask", id: "a1", prompt: { kind: "explore" } }));
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 2, event: { kind: "info", title: "Где вы", text: "У фургона." } }));
+  assert.equal(v.overlay?.title, "Где вы");
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 3, event: { kind: "info", title: "Лист персонажа", text: "Брен: человек, воин, уровень 2\nЗдоровье 20 из 20" } }));
+  assert.equal(v.overlay, undefined, "the sheet is not an overlay, and takes the place of the last one");
+  assert.equal(v.sheet?.n, 1);
+  assert.equal(v.sheet?.me, meOf(v), "fresh while the character is as it was");
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 4, event: me(12) }));
+  assert.notEqual(v.sheet?.me, meOf(v), "old once the character changed");
+  assert.equal(v.story.length, 0, "nothing in the story");
 });
