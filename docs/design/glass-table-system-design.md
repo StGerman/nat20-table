@@ -7,6 +7,7 @@
 - **Asked by:** Stas, 2026-11-20 22:05Z (a prototype on Apple's interface guidelines and Liquid Glass), 22:50Z (he picked the Glass Table look and feel), 2026-11-21 01:01Z (this design), 01:11Z (one package of the JS and Rust parts: «Звучит отлично запланируй с Яном пожалуйста»), 07:29Z (card: Glass Table goes first in the milestone order)
 - **Prototype it describes:** [Glass Table](https://claude.ai/artifact/MSgifgUKiLPXCmq4XxQf1L), version 4, with Lev's gap list and Vera's three reads
 - **Plan:** Yan, 2026-11-21, quoted in the scope §7
+- **Read by:** Lev, 2026-11-21, at Stas's ask («Лев читает»); his findings are applied here and listed in the scope §5
 
 ## 1. Summary
 
@@ -21,8 +22,8 @@ Glass Table becomes a Mac app in three layers: a typed seat wire out of the game
 ### 2.1 What it does
 
 1. One window for one human at one table: the story as the content layer, a floating control layer (toolbar, portrait rail, dock), two lenses («Где все», «Дорога») and two inspectors («Лист», «Люди»).
-2. Every state the terminal seat has today: combat turn, follow-up pick, reaction, the Narrator's question, surrender, road card with votes, road step, level-up, pause, suggestions, narration preview, refusal and notice lines. `HumanPrompt` has 11 kinds.
-3. A lobby before the table: adventure and character, sign-in state, start.
+2. Every state the terminal seat has today: combat turn, follow-up pick, reaction, the Narrator's question, surrender, road card with votes, road step, level-up, pause, suggestions, narration preview, refusal and notice lines. `HumanPrompt` has 10 kinds.
+3. A lobby before the table: adventure and character, the saved party (go on with it, start a new one, or play the last journey again: the start screen's three answers, API-51), sign-in state, start.
 4. The same run folder as today, so the audit, the judge and `runs:upload` work unchanged.
 
 ### 2.2 What it must hold
@@ -88,7 +89,8 @@ JSON messages over one WebSocket on `127.0.0.1`, a random port, a per-launch tok
 | host to page | `busy`, `preview`, `suggest`, `unnarrated`, `answering` | as the optional `Seat` methods | exists |
 | page to host | `intent` | ask id and one `PlayerIntent` | exists |
 | page to host | `resume` | last `seq` seen | new |
-| page to host | lobby requests | list packs, pick, sign-in state, start | new |
+| page to host | `command` | a command with no ask id (`pause`, `quit`), read between wakes | new: today a command is taken only inside an open ask |
+| page to host | lobby requests | list packs, pick, the saved party's three answers, sign-in state, start | new |
 
 Every `event` is appended to `seat-wire.jsonl` in the run folder before it is sent. That file gives reload and reconnect (replay from `seq`) and the fixtures for the page's tests.
 
@@ -96,7 +98,7 @@ It is a new file, apart from `seat.jsonl`. That one exists since Milestone 12: `
 
 ### 4.3 What is missing at the seat today
 
-The engine already returns all of this to the loop in player or owner view. The seat gets it as formatted text. None of it changes the engine contract, so Rule 1's order does not apply; the PR that adds these fields says so.
+The engine already returns all of this to the loop in player or owner view. The seat gets it as formatted text. None of it changes the engine contract, so Rule 1's order does not apply; the PR that adds these fields says so. One exception, outside this table: the one-line record of a people (the Corrins' line, scope §5) needs a place in the world's data and a field in the player's view of it, which is an engine contract change under Rule 1 and gets its own row.
 
 | Glass Table element | Needs | Seat has today | Gap |
 |---|---|---|---|
@@ -109,9 +111,15 @@ The engine already returns all of this to the loop in player or owner view. The 
 | Road lens | trip legs, where the caravan is, discovered places | `situation.road`: a text sketch | the legs as data from the player world view |
 | «Лист» | the sheet as data | `info`: formatted text | the owner's sheet beside `text` |
 | «Люди», name tokens, «Помнит» | people with state and what they remember | `situation.people` (AGT-107) | none |
-| Card votes as portraits | who said what on the card, in order | lines of text | votes as data on the card's `options` |
-| Death saves | the two counts; each save as an own roll | `life_state` | the counts from the contract's `death_saves` |
+| A road card | one `card` object from the player's card view: text, who decides, choices, who said what in order, the own-move row, a move that fell, what was decided | an `info` text for the card and who decides, numbered lines, the own-move row as a bare line, its endings as `info` texts (`game/src/table/loop.ts`) | the `card` object beside those texts |
+| The player's own words | an echo of every intent, so a reload keeps it | the terminal seat echoes it locally | an event from the host |
+| Contract terms | the escort contract from the player world view | not shown as data | the terms beside the road data |
+| Death saves | the two counts; each save shown on the roll stage as the player's own roll | `life_state` | the counts from the contract's `death_saves`. The engine rolls the save and no prompt kind asks for it, so the page reveals a roll already made and never draws it as a choice |
 | Level-up | each choice with a player-facing line | numbered lines | content, not wire: the Russian lines do not exist |
+
+**Words come from the host.** Russian names and lines are resolved on the host today (`game/src/ui/people.ts`, `game/src/table/situation.ts`). Every structured field carries the name the seat shows, and the page composes no sentence of its own: a line such as «На кости 18, всего 23» arrives as text. Otherwise the page could show English that the language scan, which reads `seat.jsonl`, never sees.
+
+**The own move.** The wire carries the own move as the loop has it today. Decision 0083's roll by the player's own hand has no code and no task yet; the wire does not wait for it.
 
 **Rule 3.** Each added field is copied from a view the projection already produced; the wire module never builds a view. A leak scan over `seat-wire.jsonl` runs beside the one over agent inputs. Narration is still model text behind the existing guard; the app neither adds to that risk nor removes it.
 
@@ -124,7 +132,9 @@ One pure function, `reduce(view, message) -> view`: no DOM, no clock, no network
 - which dock form is up follows from the open `ask` and the last `options`;
 - engine lines are held until their narration arrives and become tokens inside it; `unnarrated` releases them as they are;
 - an `own` roll opens the roll stage first; its token appears after;
-- spent moves leave the dock (Stas, 2026-11-20).
+- spent moves leave the dock, and one line says why (Stas, 2026-11-20 and 2026-11-21);
+- nobody is shown as dead before the story has told it: the rule the terminal seat keeps (`ink-seat.ts`, `people.ts` `asTold`) moves into the reducer with a test;
+- every roll sent to the seat is a token the player can reach by the next ask, cited by the narration or not.
 
 A recorded `seat-wire.jsonl` replayed through it gives the exact screen at any `seq`. That is the main test surface.
 
@@ -144,7 +154,7 @@ React 19, already a dependency of `game/` through Ink. Plain CSS on one token se
 ### 5.3 Debts to Apple's guidelines, kept on purpose
 
 1. The bottom dock. The guidelines say to keep critical actions out of a bottom bar on a Mac. The story reads downward and the action belongs at its last line; the menu bar commands pay for it.
-2. Pause while an AI player acts: `/pause` exists in the loop and gets a visible control.
+2. Pause while an AI player acts: `/pause` exists in the loop, but a command is consumed only inside an open ask, so the control needs the `command` message of §4.2.
 3. No undo: the engine has none and Rule 4 forbids faking one. The app confirms only what cannot be taken back.
 
 ## 6. Sign-in and model provider
@@ -158,13 +168,14 @@ Tokens never cross the seat wire and the page never shows a password field. `Log
 | What fails | What the player sees | What the system does |
 |---|---|---|
 | The page reloads or the socket drops | the same screen, a moment later | `resume` from the last `seq`; an open `ask` is sent again with its id |
-| The host dies | a card: the table stopped | the shell restarts the host; **the run is lost**, because the loop cannot continue a stopped run |
+| The host dies | a card: the table stopped, and what was kept | the shell restarts the host. With a saved party the loop saves after every night and on every exit (API-45), so the player loses at most the day; the lobby offers to go on |
+| The window is closed | nothing | the page sends `quit` and the host saves the party before it stops |
 | The engine dies | the same card | as today: a typed error |
 | The model is slow | the waiting pill names who is thinking; the preview streams | `busy`, `preview` |
 | Narration of engine lines fails | the lines as they are | `unnarrated` |
 | The engine refuses a move | one line above the dock, never "you typed it wrong" | `refusal` |
 
-A host crash loses the game. Saving a campaign is out of scope in CLAUDE.md and this design does not add it. Losing progress is on Vera's quit list, so the gap is named, not hidden.
+The app always plays with a saved party, so a crash costs at most a day of the road. What it cannot do is continue inside a day or a fight: the loop has no such restart and this design adds none. Losing progress is on Vera's quit list, so the remaining gap is named, not hidden.
 
 ## 8. The package
 
@@ -177,7 +188,7 @@ One `Glass Table.app` in one DMG holds every part that is ours.
 | `nat20-api-server` and the audit binaries | Rust | about 16 MB for the server; bundled binaries exist since CON-19 (table #450) |
 | Content | JSON and images | about 3 MB |
 
-What changes for it: one data root (`REPO` in `game/src/paths.ts` comes from `import.meta.url`, which does not point into an app bundle); each nested binary signed under the hardened runtime and the app notarised; the DMG built from a tag. Signing runs in the release workflow on a hosted macOS runner (Stas, 2026-11-21, scope §9 question 2).
+What changes for it: one read-only data root for content and one writable folder for rosters and runs, whose defaults sit under `REPO` today (`game/src/play/settings.ts`), and `REPO` in `game/src/paths.ts` comes from `import.meta.url`, which does not point into an app bundle; each nested binary signed under the hardened runtime and the app notarised; the DMG built from a tag. Signing runs in the release workflow on a hosted macOS runner (Stas, 2026-11-21, scope §9 question 2).
 
 **Unverified, and checked first by a spike (scope §6):** Tauri starting the compiled loop and the server as bundled binaries; one live model call under Bun on a Mac under the hardened runtime, with the JIT entitlement if it needs one; how the compiled loop finds Claude Code when the app is launched from Finder, which gets no shell `PATH`.
 
@@ -189,11 +200,13 @@ What changes for it: one data root (`REPO` in `game/src/paths.ts` comes from `im
 | The scripted scene shows the same lines at the Ink seat with structured events added | test, no model |
 | The scripted scene over the socket equals the in-process run; resume at every `seq` gives the same final screen | test, no model |
 | Reducer: every `HumanPrompt` kind puts up its dock form | test, no model |
+| A scripted living-world fixture on a recorded saved party: a card with votes, a name token, a person's «Помнит» | test, no model |
+| Parity: the page's drawn text at each `seq` contains each `seat.jsonl` line, and the language scan runs on the drawn text | test, no model |
 | Replay of recorded fixtures at three widths, light, dark, reduced transparency; roll faces equal the engine log | Playwright on its WebKit project in CI, no model |
 | A fight in the app; event to paint under 100 ms | a live run smaller than the exit run (`play:card`) |
 | Install, sign-in state, first turn | a person |
 
-The fixtures are recorded after `WebSeat` exists: the scripted scene (no model) and one bench fight. The runs of 2026-11-19 and 2026-11-20 that the prototype quotes have no `seat-wire.jsonl`. WebKit and not Chromium, because the app renders in WKWebView.
+The fixtures are recorded after `WebSeat` exists: the scripted scene, a scripted stretch of the living world (the scripted seat already plays cards), and one bench fight. The default scripted pack is *The Silent Mill*, which has no world, so it alone would let a build with dead name tokens pass. The runs of 2026-11-19 and 2026-11-20 that the prototype quotes have no `seat-wire.jsonl`. WebKit and not Chromium, because the app renders in WKWebView.
 
 ## 10. Trade-offs
 
