@@ -93,6 +93,9 @@ export function eventLines(event: TableEvent, you?: Handle, continued = false, u
     case "situation":
       // The panel draws it; nothing goes into the log.
       return [];
+    case "said":
+      // The terminal seat echoes what was typed itself (AGT-140).
+      return [];
   }
 }
 

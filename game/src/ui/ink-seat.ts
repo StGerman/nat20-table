@@ -431,6 +431,8 @@ export class InkSeat implements Seat {
   };
 
   show(event: TableEvent): void {
+    // The terminal seat echoes the human's input itself, as it is typed: the event is for a window (AGT-140).
+    if (event.kind === "said") return;
     // Engine lines are drawn when they show: at once for the human's own, else when released.
     // These show the held engine lines above them first, released here, so the record keeps the screen's order.
     if (RELEASES.has(event.kind)) this.release();

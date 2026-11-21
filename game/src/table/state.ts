@@ -8,9 +8,11 @@ import type { CardRu } from "../pack/campaign.ts";
 import { eventLine, noDeaths, tellable, yourLine } from "../view.ts";
 import type { Address } from "./floor.ts";
 import { type CardOnSeat, rollOf, SeatNames, seatLine } from "./seat-lines.ts";
-import { Transcript } from "./transcript.ts";
+import { eventNames } from "./seat-data.ts";
+import { citedRolls, Transcript } from "./transcript.ts";
 import { namedIn, type RosterNames } from "./mentions.ts";
-import type { DmWake, FallbackCause, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
+import type { DmWake, FallbackCause, PlayerIntent, RoadStep, Seat, StopKind, TableEvent, ToolOutcome } from "./types.ts";
+import type { UiWords } from "./words.ts";
 
 
 /** Kinds of private note an AI player keeps (spec §3.6, AGT-21). */
@@ -262,11 +264,44 @@ export class TableState {
     appendFileSync(this.inputsFile, JSON.stringify({ seat, text, ...(human ? { human: true } : {}), ...(quoted.length > 0 ? { quoted } : {}) }) + "\n");
   }
 
+  /** Roll ids of engine lines the seat holds for the next narration (AGT-37): that narration tells them (AGT-140). */
+  private untold: string[] = [];
+  /** The last numbered list and reaction the seat was shown, for the echo of a number (AGT-140). */
+  private lastList: string[] | undefined;
+  private lastReaction: string[] | undefined;
+
+  /** The human's input as the terminal seat echoes it: the list line a number names, the word for yes or no, else as typed. */
+  echo(intent: PlayerIntent, ui: UiWords): string {
+    switch (intent.kind) {
+      case "text":
+        return intent.text;
+      case "reaction":
+        return intent.take ? ui.yes : ui.no;
+      case "command":
+        return `/${intent.name}`;
+      case "back":
+        return "";
+      case "option": {
+        const lines = this.lastReaction ?? this.lastList;
+        return lines?.find((l) => l.startsWith(`${intent.number}. `)) ?? String(intent.number);
+      }
+    }
+  }
+
   /** Shows the human something, and records it as the human seat's input. */
   show(event: TableEvent, typedByHuman = false): void {
     // A table with no human has no screen (M7 spec §4.2): the transcript has the DM's view.
     if (!this.human || !this.seat) return;
-    this.recordInput(this.human, JSON.stringify(event), typedByHuman);
+    if (event.kind === "engine" && event.roll && !event.own) this.untold.push(event.roll);
+    if (event.kind === "options") [this.lastList, this.lastReaction] = [event.lines, undefined];
+    if (event.kind === "reaction") this.lastReaction = event.options.map((o, i) => `${i + 1}. ${o}`);
+    if (event.kind === "narration") {
+      const rolls = [...new Set([...this.untold, ...citedRolls(event.text)])];
+      this.untold = [];
+      if (rolls.length > 0) event = { ...event, rolls };
+    }
+    // The human's input record keeps the text only, as before the data beside it (AGT-140); an echo of their own words is no input.
+    if (event.kind !== "said") this.recordInput(this.human, JSON.stringify(textOnly(event)), typedByHuman);
     const heard = heardLine(event, this.human);
     if (heard) this.heard = [...this.heard, heard].slice(-HEARD_LINES);
     this.seat.show(event);
@@ -322,7 +357,7 @@ export class TableState {
       if (event.kind === "turn_end" || event.kind === "combat_over") this.screenTurn = undefined;
       if (text === null) continue;
       const mine = this.human !== undefined && yourLine(event, this.human) !== undefined;
-      this.show({ kind: "engine", text, seq: event.seq, ...(roll ? { roll } : {}), ...(own || mine ? { own: true as const } : {}) });
+      this.show({ kind: "engine", text, seq: event.seq, ...(roll ? { roll } : {}), ...(own || mine ? { own: true as const } : {}), event, names: eventNames(event, this.names) });
     }
     if (this.unnarrated) {
       this.unnarrated = false;
@@ -655,4 +690,15 @@ export function heardLine(event: TableEvent, human: Handle): string | undefined 
     default:
       return undefined;
   }
+}
+
+/** The data fields an event carries beside its text (AGT-140), which the human's input record leaves out. */
+const DATA_KEYS = ["event", "names", "rolls", "unavailable", "uses", "card", "sheet", "positions", "road", "death_saves"] as const;
+
+/** The event as a terminal reads it: its text, with no data beside it. */
+export function textOnly(event: TableEvent): TableEvent {
+  if (!DATA_KEYS.some((k) => k in event)) return event;
+  const copy: Record<string, unknown> = { ...event };
+  for (const k of DATA_KEYS) delete copy[k];
+  return copy as TableEvent;
 }
